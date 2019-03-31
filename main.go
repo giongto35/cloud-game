@@ -17,26 +17,31 @@ import (
 )
 
 var webRTC *webrtc.WebRTC
-var width = 800
-var height = 600
+var width = 256
+var height = 240
 
 func init() {
-	webRTC = webrtc.NewWebRTC()
-	director := ui.NewDirector()
-	director.Start("games/supermariobros.rom")
-	// start screenshot loop, wait for connection
-	go screenshotLoop(director.GetImageChannel())
+}
+
+func startGame(path string, imageChannel chan *image.RGBA) {
+	ui.Run([]string{path}, imageChannel)
 }
 
 func main() {
 	fmt.Println("http://localhost:8000")
+	webRTC = webrtc.NewWebRTC()
 
 	router := mux.NewRouter()
 	router.HandleFunc("/", getWeb).Methods("GET")
 	router.HandleFunc("/session", postSession).Methods("POST")
 
-	http.ListenAndServe(":8000", router)
+	go http.ListenAndServe(":8000", router)
 
+	// start screenshot loop, wait for connection
+	imageChannel := make(chan *image.RGBA, 2)
+	go screenshotLoop(imageChannel)
+	startGame("games/supermariobros.rom", imageChannel)
+	time.Sleep(time.Minute)
 }
 
 func getWeb(w http.ResponseWriter, r *http.Request) {

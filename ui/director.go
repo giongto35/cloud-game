@@ -3,26 +3,37 @@ package ui
 import (
 	"image"
 	"log"
-	"time"
 
-	"github.com/fogleman/nes/nes"
+	"github.com/giongto35/game-online/nes"
+	"github.com/go-gl/gl/v2.1/gl"
+	"github.com/go-gl/glfw/v3.2/glfw"
 )
 
 type View interface {
 	Enter()
 	Exit()
-	GetImageChannel() chan *image.RGBA
 	Update(t, dt float64)
 }
 
 type Director struct {
-	view      View
-	timestamp float64
+	window       *glfw.Window
+	audio        *Audio
+	view         View
+	menuView     View
+	timestamp    float64
+	imageChannel chan *image.RGBA
 }
 
-func NewDirector() *Director {
+func NewDirector(window *glfw.Window, audio *Audio, imageChannel chan *image.RGBA) *Director {
 	director := Director{}
+	director.window = window
+	director.audio = audio
+	director.imageChannel = imageChannel
 	return &director
+}
+
+func (d *Director) SetTitle(title string) {
+	d.window.SetTitle(title)
 }
 
 func (d *Director) SetView(view View) {
@@ -33,12 +44,12 @@ func (d *Director) SetView(view View) {
 	if d.view != nil {
 		d.view.Enter()
 	}
-	d.timestamp = float64(time.Now().Unix())
+	d.timestamp = glfw.GetTime()
 }
 
 func (d *Director) Step() {
-	//timestamp := glfw.GetTime()
-	timestamp := float64(time.Now().Unix())
+	gl.Clear(gl.COLOR_BUFFER_BIT)
+	timestamp := glfw.GetTime()
 	dt := timestamp - d.timestamp
 	d.timestamp = timestamp
 	if d.view != nil {
@@ -46,12 +57,22 @@ func (d *Director) Step() {
 	}
 }
 
-func (d *Director) Start(path string) {
-	d.PlayGame(path)
+func (d *Director) Start(paths []string) {
+	d.menuView = NewMenuView(d, paths)
+	if len(paths) == 1 {
+		d.PlayGame(paths[0])
+	} else {
+		d.ShowMenu()
+	}
 	d.Run()
 }
 
 func (d *Director) Run() {
+	for !d.window.ShouldClose() {
+		d.Step()
+		d.window.SwapBuffers()
+		glfw.PollEvents()
+	}
 	d.SetView(nil)
 }
 
@@ -64,9 +85,9 @@ func (d *Director) PlayGame(path string) {
 	if err != nil {
 		log.Fatalln(err)
 	}
-	d.SetView(NewGameView(d, console, path, hash))
+	d.SetView(NewGameView(d, console, path, hash, d.imageChannel))
 }
 
-func (d *Director) GetImageChannel() chan *image.RGBA {
-	return d.view.GetImageChannel()
+func (d *Director) ShowMenu() {
+	d.SetView(d.menuView)
 }
