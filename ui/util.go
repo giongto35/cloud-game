@@ -15,7 +15,7 @@ import (
 	"os/user"
 	"path"
 
-	"github.com/fogleman/nes/nes"
+	"github.com/giongto35/game-online/nes"
 	"github.com/go-gl/gl/v2.1/gl"
 	"github.com/go-gl/glfw/v3.2/glfw"
 )
@@ -187,6 +187,26 @@ func saveGIF(path string, frames []image.Image) error {
 	}
 	defer file.Close()
 	return gif.EncodeAll(file, &g)
+}
+
+func screenshot(im image.Image) {
+	for i := 0; i < 1000; i++ {
+		path := fmt.Sprintf("%03d.png", i)
+		if _, err := os.Stat(path); os.IsNotExist(err) {
+			savePNG(path, im)
+			return
+		}
+	}
+}
+
+func animation(frames []image.Image) {
+	for i := 0; i < 1000; i++ {
+		path := fmt.Sprintf("%03d.gif", i)
+		if _, err := os.Stat(path); os.IsNotExist(err) {
+			saveGIF(path, frames)
+			return
+		}
+	}
 }
 
 func writeSRAM(filename string, sram []byte) error {

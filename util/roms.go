@@ -8,7 +8,7 @@ import (
 	"path"
 	"strings"
 
-	"github.com/fogleman/nes/nes"
+	"github.com/giongto35/game-online/nes"
 )
 
 func testRom(path string) (err error) {
