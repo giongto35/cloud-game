@@ -1,8 +1,14 @@
 package webrtc
 
 import (
+	"bytes"
+	"compress/gzip"
+	"encoding/base64"
+	"encoding/json"
 	"fmt"
+	"io/ioutil"
 	"math/rand"
+	"strconv"
 	"time"
 
 	"github.com/pions/webrtc"
@@ -15,10 +21,84 @@ var config = webrtc.Configuration{ICEServers: []webrtc.ICEServer{{URLs: []string
 // Allows compressing offer/answer to bypass terminal input limits.
 const compress = false
 
+func init() {
+	//api.mediaEngine.RegisterDefaultCodecs()
+	//webrtc.RegisterDefaultCodecs()
+}
+
+func zip(in []byte) []byte {
+	var b bytes.Buffer
+	gz := gzip.NewWriter(&b)
+	_, err := gz.Write(in)
+	if err != nil {
+		panic(err)
+	}
+	err = gz.Flush()
+	if err != nil {
+		panic(err)
+	}
+	err = gz.Close()
+	if err != nil {
+		panic(err)
+	}
+	return b.Bytes()
+}
+
+func unzip(in []byte) []byte {
+	var b bytes.Buffer
+	_, err := b.Write(in)
+	if err != nil {
+		panic(err)
+	}
+	r, err := gzip.NewReader(&b)
+	if err != nil {
+		panic(err)
+	}
+	res, err := ioutil.ReadAll(r)
+	if err != nil {
+		panic(err)
+	}
+	return res
+}
+
+// Encode encodes the input in base64
+// It can optionally zip the input before encoding
+func Encode(obj interface{}) string {
+	b, err := json.Marshal(obj)
+	if err != nil {
+		panic(err)
+	}
+
+	if compress {
+		b = zip(b)
+	}
+
+	return base64.StdEncoding.EncodeToString(b)
+}
+
+// Decode decodes the input from base64
+// It can optionally unzip the input after decoding
+func Decode(in string, obj interface{}) {
+	b, err := base64.StdEncoding.DecodeString(in)
+	if err != nil {
+		panic(err)
+	}
+
+	if compress {
+		b = unzip(b)
+	}
+
+	err = json.Unmarshal(b, obj)
+	if err != nil {
+		panic(err)
+	}
+}
+
 // NewWebRTC create
 func NewWebRTC() *WebRTC {
 	w := &WebRTC{
 		ImageChannel: make(chan []byte, 2),
+		InputChannel: make(chan int, 2),
 	}
 	return w
 }
@@ -30,6 +110,7 @@ type WebRTC struct {
 	isConnected bool
 	// for yuvI420 image
 	ImageChannel chan []byte
+	InputChannel chan int
 }
 
 // StartClient start webrtc
@@ -82,6 +163,23 @@ func (w *WebRTC) StartClient(remoteSession string, width, height int) (string, e
 		if connectionState == webrtc.ICEConnectionStateFailed || connectionState == webrtc.ICEConnectionStateClosed || connectionState == webrtc.ICEConnectionStateDisconnected {
 			w.StopClient()
 		}
+	})
+	//w.listenInputChannel()
+	// Data channel
+	w.connection.OnDataChannel(func(d *webrtc.DataChannel) {
+		fmt.Printf("New DataChannel %s %d\n", d.Label(), d.ID())
+
+		// Register channel opening handling
+		d.OnOpen(func() {
+			fmt.Printf("Data channel '%s'-'%d' open.\n", d.Label(), d.ID())
+		})
+
+		// Register text message handling
+		d.OnMessage(func(msg webrtc.DataChannelMessage) {
+			fmt.Printf("Message from DataChannel '%s': '%s' byte '%b'\n", d.Label(), string(msg.Data), msg.Data)
+			i, _ := strconv.Atoi(string(msg.Data))
+			w.InputChannel <- i
+		})
 	})
 
 	offer := webrtc.SessionDescription{}

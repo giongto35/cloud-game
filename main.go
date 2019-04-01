@@ -11,9 +11,9 @@ import (
 	"time"
 
 	"github.com/giongto35/game-online/ui"
+	"github.com/giongto35/game-online/webrtc"
 	"github.com/gorilla/mux"
 	"github.com/poi5305/go-yuv2webRTC/screenshot"
-	"github.com/poi5305/go-yuv2webRTC/webrtc"
 )
 
 var webRTC *webrtc.WebRTC
@@ -23,11 +23,12 @@ var height = 240
 func init() {
 }
 
-func startGame(path string, imageChannel chan *image.RGBA) {
-	ui.Run([]string{path}, imageChannel)
+func startGame(path string, imageChannel chan *image.RGBA, inputChannel chan int) {
+	ui.Run([]string{path}, imageChannel, inputChannel)
 }
 
 func main() {
+	imageChannel := make(chan *image.RGBA, 2)
 	fmt.Println("http://localhost:8000")
 	webRTC = webrtc.NewWebRTC()
 
@@ -38,9 +39,8 @@ func main() {
 	go http.ListenAndServe(":8000", router)
 
 	// start screenshot loop, wait for connection
-	imageChannel := make(chan *image.RGBA, 2)
 	go screenshotLoop(imageChannel)
-	startGame("games/supermariobros.rom", imageChannel)
+	startGame("games/supermariobros.rom", imageChannel, webRTC.InputChannel)
 	time.Sleep(time.Minute)
 }
 

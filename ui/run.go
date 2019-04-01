@@ -25,7 +25,7 @@ func init() {
 	runtime.LockOSThread()
 }
 
-func Run(paths []string, imageChannel chan *image.RGBA) {
+func Run(paths []string, imageChannel chan *image.RGBA, inputChannel chan int) {
 	// initialize audio
 	portaudio.Initialize()
 	defer portaudio.Terminate()
@@ -58,6 +58,6 @@ func Run(paths []string, imageChannel chan *image.RGBA) {
 	gl.Enable(gl.TEXTURE_2D)
 
 	// run director
-	director := NewDirector(window, audio, imageChannel)
+	director := NewDirector(window, audio, imageChannel, inputChannel)
 	director.Start(paths)
 }
