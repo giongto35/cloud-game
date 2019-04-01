@@ -11,19 +11,37 @@ import (
 const padding = 0
 
 type GameView struct {
-	director     *Director
-	console      *nes.Console
-	title        string
-	hash         string
-	texture      uint32
-	record       bool
-	frames       []image.Image
+	director *Director
+	console  *nes.Console
+	title    string
+	hash     string
+	texture  uint32
+	record   bool
+	frames   []image.Image
+
+	keyPressed []bool
+
 	imageChannel chan *image.RGBA
+	inputChannel chan int
 }
 
-func NewGameView(director *Director, console *nes.Console, title, hash string, imageChannel chan *image.RGBA) View {
+func NewGameView(director *Director, console *nes.Console, title, hash string, imageChannel chan *image.RGBA, inputChannel chan int) View {
 	texture := createTexture()
-	return &GameView{director, console, title, hash, texture, false, nil, imageChannel}
+	gameview := &GameView{director, console, title, hash, texture, false, nil, make([]bool, 255), imageChannel, inputChannel}
+	go gameview.ListenToInputChannel()
+	return gameview
+}
+
+func (view *GameView) ListenToInputChannel() {
+	for {
+		key := <-view.inputChannel
+		if key < 0 {
+			view.keyPressed[-key] = false
+		} else {
+			view.keyPressed[key] = true
+		}
+
+	}
 }
 
 func (view *GameView) Enter() {
@@ -75,7 +93,8 @@ func (view *GameView) Update(t, dt float64) {
 	if readKey(window, glfw.KeyEscape) {
 		view.director.ShowMenu()
 	}
-	updateControllers(window, console)
+	//updateControllers(window, console)
+	view.updateControllers()
 	console.StepSeconds(dt)
 	gl.BindTexture(gl.TEXTURE_2D, view.texture)
 	setTexture(console.Buffer())
@@ -139,4 +158,18 @@ func updateControllers(window *glfw.Window, console *nes.Console) {
 	j2 := readJoystick(glfw.Joystick2, turbo)
 	console.SetButtons1(combineButtons(k1, j1))
 	console.SetButtons2(j2)
+}
+
+func (view *GameView) updateControllers() {
+	// TODO: switch case
+	var buttons [8]bool
+	buttons[nes.ButtonLeft] = view.keyPressed[37]
+	buttons[nes.ButtonUp] = view.keyPressed[38]
+	buttons[nes.ButtonRight] = view.keyPressed[39]
+	buttons[nes.ButtonDown] = view.keyPressed[40]
+	buttons[nes.ButtonA] = view.keyPressed[32]
+	buttons[nes.ButtonB] = view.keyPressed[17]
+	buttons[nes.ButtonStart] = view.keyPressed[13]
+	buttons[nes.ButtonSelect] = view.keyPressed[16]
+	view.console.Controller1.SetButtons(buttons)
 }

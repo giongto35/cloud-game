@@ -6,13 +6,8 @@ textarea {
   height: 50px;
 }
 </style>
-<div>
-  <a href="https://github.com/poi5305/go-yuv2webRTC">https://github.com/poi5305/go-yuv2webRTC</a>
-  <br />
-  <a href="https://github.com/pions/webrtc/tree/v1.2.0/examples/gstreamer-send/jsfiddle">https://github.com/pions/webrtc/tree/v1.2.0/examples/gstreamer-send/jsfiddle</a>
-</div>
 
-<div id="remoteVideos"></div> <br />
+<div id="remoteVideos" ></div> <br />
 Browser base64 Session Description <br /><textarea id="localSessionDescription" readonly="true"></textarea> <br />
 
 Golang base64 Session Description: <br /><textarea id="remoteSessionDescription"> </textarea> <br/>
@@ -37,6 +32,7 @@ function postSession(session) {
   xhttp.open("POST", "/session", true);
   xhttp.setRequestHeader("Content-type", "text/plain");
   xhttp.send(session);
+
 }
 
 let pc = new RTCPeerConnection({
@@ -49,6 +45,11 @@ let pc = new RTCPeerConnection({
 let log = msg => {
   document.getElementById('div').innerHTML += msg + '<br>'
 }
+
+let inputChannel = pc.createDataChannel('foo')
+inputChannel.onclose = () => console.log('inputChannel has closed')
+inputChannel.onopen = () => console.log('inputChannel has opened')
+inputChannel.onmessage = e => log(`Message from DataChannel '${inputChannel.label}' payload '${e.data}'`)
 
 pc.ontrack = function (event) {
   var el = document.createElement(event.track.kind)
@@ -69,6 +70,14 @@ pc.onicecandidate = event => {
 }
 
 pc.createOffer({offerToReceiveVideo: true, offerToReceiveAudio: true}).then(d => pc.setLocalDescription(d)).catch(log)
+
+document.body.onkeydown = function(e){
+  inputChannel.send(e.keyCode)
+};
+
+document.body.onkeyup = function(e){
+  inputChannel.send(-e.keyCode)
+};
 
 window.startSession = () => {
   let sd = document.getElementById('remoteSessionDescription').value
