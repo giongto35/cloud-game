@@ -176,7 +176,7 @@ func (w *WebRTC) StartClient(remoteSession string, width, height int) (string, e
 
 		// Register text message handling
 		d.OnMessage(func(msg webrtc.DataChannelMessage) {
-			fmt.Printf("Message from DataChannel '%s': '%s' byte '%b'\n", d.Label(), string(msg.Data), msg.Data)
+			//fmt.Printf("Message from DataChannel '%s': '%s' byte '%b'\n", d.Label(), string(msg.Data), msg.Data)
 			i, _ := strconv.Atoi(string(msg.Data))
 			w.InputChannel <- i
 		})

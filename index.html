@@ -8,17 +8,26 @@ textarea {
 </style>
 
 <div id="remoteVideos" ></div> <br />
-Browser base64 Session Description <br /><textarea id="localSessionDescription" readonly="true"></textarea> <br />
+<div>
+  Use Up, Down, Left, Right to Move <br />
+  Space to jump <br />
+  Ctrl to sprint <br />
+  Enter to select in menu <br />
 
-Golang base64 Session Description: <br /><textarea id="remoteSessionDescription"> </textarea> <br/>
+  Fullscreen media for better gaming experience<br />
+</div>
 
-<button onclick="window.startSession()"> Start Session </button>
+<button id="playGame" onclick="window.startSession()" disabled> Play Mario </button>
 <div id="div"></div>
-  
+
 <div>
   Refresh to retry
 </div>
 <script>
+
+var localSessionDescription = ""
+var remoteSessionDescription = ""
+
 function postSession(session) {
   if (session == "") {
     return;
@@ -26,7 +35,8 @@ function postSession(session) {
   var xhttp = new XMLHttpRequest();
   xhttp.onreadystatechange = function() {
     if (this.readyState == 4 && this.status == 200) {
-      document.getElementById('remoteSessionDescription').value = this.responseText;
+      remoteSessionDescription = this.responseText;
+        document.getElementById('playGame').disabled = false;
     }
   };
   xhttp.open("POST", "/session", true);
@@ -64,7 +74,7 @@ pc.oniceconnectionstatechange = e => log(pc.iceConnectionState)
 pc.onicecandidate = event => {
   if (event.candidate === null) {
     var session = btoa(JSON.stringify(pc.localDescription));
-    document.getElementById('localSessionDescription').value = session;
+    localSessionDescription = session;
     postSession(session)
   }
 }
@@ -80,7 +90,7 @@ document.body.onkeyup = function(e){
 };
 
 window.startSession = () => {
-  let sd = document.getElementById('remoteSessionDescription').value
+  let sd = remoteSessionDescription
   if (sd === '') {
     return alert('Session Description must not be empty')
   }
