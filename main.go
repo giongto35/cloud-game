@@ -19,6 +19,7 @@ import (
 var webRTC *webrtc.WebRTC
 var width = 256
 var height = 240
+var gameName = "supermariobros.rom"
 
 func init() {
 }
@@ -40,7 +41,7 @@ func main() {
 
 	// start screenshot loop, wait for connection
 	go screenshotLoop(imageChannel)
-	startGame("games/supermariobros.rom", imageChannel, webRTC.InputChannel)
+	startGame("games/"+gameName, imageChannel, webRTC.InputChannel)
 	time.Sleep(time.Minute)
 }
 
