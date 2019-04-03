@@ -10,10 +10,10 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/giongto35/game-online/screenshot"
 	"github.com/giongto35/game-online/ui"
 	"github.com/giongto35/game-online/webrtc"
 	"github.com/gorilla/mux"
-	"github.com/poi5305/go-yuv2webRTC/screenshot"
 )
 
 var webRTC *webrtc.WebRTC

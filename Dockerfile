@@ -5,3 +5,4 @@ COPY . /go/src/github.com/giongto35/game-online/
 
 # Install server dependencies
 RUN go get github.com/pions/webrtc
+RUN go get github.com/gordonklaus/portaudio
