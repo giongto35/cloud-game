@@ -39,13 +39,12 @@ func (d *Director) SetView(view View) {
 	if d.view != nil {
 		d.view.Enter()
 	}
-	//d.timestamp = glfw.GetTime()
-	d.timestamp = float64(time.Now().Unix())
+	d.timestamp = float64(time.Now().Nanosecond()) / float64(time.Second)
 }
 
 func (d *Director) Step() {
 	//gl.Clear(gl.COLOR_BUFFER_BIT)
-	timestamp := float64(time.Now().Unix())
+	timestamp := float64(time.Now().Nanosecond()) / float64(time.Second)
 	fmt.Println("Time stamp", timestamp)
 	dt := timestamp - d.timestamp
 	fmt.Println("dt", dt)
@@ -66,7 +65,6 @@ func (d *Director) Start(paths []string) {
 func (d *Director) Run() {
 	for {
 		d.Step()
-		//glfw.PollEvents()
 	}
 	d.SetView(nil)
 }
