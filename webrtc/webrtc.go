@@ -11,9 +11,9 @@ import (
 	"strconv"
 	"time"
 
+	vpxEncoder "github.com/giongto35/game-online/vpx-encoder"
 	"github.com/pions/webrtc"
 	"github.com/pions/webrtc/pkg/media"
-	vpxEncoder "github.com/poi5305/go-yuv2webRTC/vpx-encoder"
 )
 
 var config = webrtc.Configuration{ICEServers: []webrtc.ICEServer{{URLs: []string{"stun:stun.l.google.com:19302"}}}}
