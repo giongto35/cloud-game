@@ -3,10 +3,8 @@ package main
 import (
 	"fmt"
 	"image"
-	"image/color"
 	"io/ioutil"
 	"log"
-	"math/rand"
 	"net/http"
 	"time"
 
@@ -66,17 +64,6 @@ func postSession(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.Write([]byte(localSession))
-}
-
-func randomImage(width, height int) *image.RGBA {
-	img := image.NewRGBA(image.Rectangle{image.Point{0, 0}, image.Point{width, height}})
-	for x := 0; x < width; x++ {
-		for y := 0; y < height; y++ {
-			img.Set(x, y, color.RGBA{uint8(rand.Int31n(0xff)), uint8(rand.Int31n(0xff)), uint8(rand.Int31n(0xff)), 0xff - 1})
-		}
-	}
-
-	return img
 }
 
 func screenshotLoop(imageChannel chan *image.RGBA) {
