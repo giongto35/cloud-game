@@ -1,12 +1,13 @@
 package ui
 
 import (
+	"fmt"
 	"image"
 	"log"
+	"time"
 
 	"github.com/giongto35/game-online/nes"
-	"github.com/go-gl/gl/v2.1/gl"
-	"github.com/go-gl/glfw/v3.2/glfw"
+	"github.com/go-gl/glfw/v3.0/glfw"
 )
 
 type View interface {
@@ -16,26 +17,19 @@ type View interface {
 }
 
 type Director struct {
-	window       *glfw.Window
 	audio        *Audio
 	view         View
-	menuView     View
 	timestamp    float64
 	imageChannel chan *image.RGBA
 	inputChannel chan int
 }
 
-func NewDirector(window *glfw.Window, audio *Audio, imageChannel chan *image.RGBA, inputChannel chan int) *Director {
+func NewDirector(audio *Audio, imageChannel chan *image.RGBA, inputChannel chan int) *Director {
 	director := Director{}
-	director.window = window
 	director.audio = audio
 	director.imageChannel = imageChannel
 	director.inputChannel = inputChannel
 	return &director
-}
-
-func (d *Director) SetTitle(title string) {
-	d.window.SetTitle(title)
 }
 
 func (d *Director) SetView(view View) {
@@ -46,33 +40,33 @@ func (d *Director) SetView(view View) {
 	if d.view != nil {
 		d.view.Enter()
 	}
-	d.timestamp = glfw.GetTime()
+	//d.timestamp = glfw.GetTime()
+	d.timestamp = float64(time.Now().Unix())
 }
 
 func (d *Director) Step() {
-	gl.Clear(gl.COLOR_BUFFER_BIT)
-	timestamp := glfw.GetTime()
+	//gl.Clear(gl.COLOR_BUFFER_BIT)
+	timestamp := float64(time.Now().Unix())
+	fmt.Println("Time stamp", timestamp)
 	dt := timestamp - d.timestamp
+	fmt.Println("dt", dt)
 	d.timestamp = timestamp
+	fmt.Println("view", d.view)
 	if d.view != nil {
 		d.view.Update(timestamp, dt)
 	}
 }
 
 func (d *Director) Start(paths []string) {
-	d.menuView = NewMenuView(d, paths)
 	if len(paths) == 1 {
 		d.PlayGame(paths[0])
-	} else {
-		d.ShowMenu()
 	}
 	d.Run()
 }
 
 func (d *Director) Run() {
-	for !d.window.ShouldClose() {
+	for {
 		d.Step()
-		d.window.SwapBuffers()
 		glfw.PollEvents()
 	}
 	d.SetView(nil)
@@ -88,8 +82,4 @@ func (d *Director) PlayGame(path string) {
 		log.Fatalln(err)
 	}
 	d.SetView(NewGameView(d, console, path, hash, d.imageChannel, d.inputChannel))
-}
-
-func (d *Director) ShowMenu() {
-	d.SetView(d.menuView)
 }
