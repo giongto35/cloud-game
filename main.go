@@ -8,8 +8,8 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/giongto35/game-online/screenshot"
 	"github.com/giongto35/game-online/ui"
+	"github.com/giongto35/game-online/util"
 	"github.com/giongto35/game-online/webrtc"
 	"github.com/gorilla/mux"
 )
@@ -69,8 +69,7 @@ func postSession(w http.ResponseWriter, r *http.Request) {
 func screenshotLoop(imageChannel chan *image.RGBA) {
 	for image := range imageChannel {
 		if webRTC.IsConnected() {
-			//rgbaImg := randomImage(width, height)
-			yuv := screenshot.RgbaToYuv(image)
+			yuv := util.RgbaToYuv(image)
 			webRTC.ImageChannel <- yuv
 		}
 		time.Sleep(10 * time.Millisecond)

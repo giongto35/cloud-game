@@ -1,11 +1,8 @@
-package screenshot
+package util
 
 import (
 	"image"
 	"unsafe"
-
-	"github.com/kbinani/screenshot"
-	"github.com/nfnt/resize"
 )
 
 // https://stackoverflow.com/questions/9465815/rgb-to-yuv420-algorithm-efficiency
@@ -42,33 +39,6 @@ void rgba2yuv(void *destination, void *source, int width, int height, int stride
 }
 */
 import "C"
-
-// GetScreenSize return screen size width and height
-func GetScreenSize() (int, int) {
-	bounds := screenshot.GetDisplayBounds(0)
-	return bounds.Max.X, bounds.Max.Y
-}
-
-// GetScreenshot return rgba format
-func GetScreenshot(cx, cy, cw, ch, rw, rh int) *image.RGBA {
-	bounds := image.Rectangle{
-		Min: image.Point{
-			X: cx,
-			Y: cy,
-		},
-		Max: image.Point{
-			X: cx + cw,
-			Y: cy + ch,
-		},
-	}
-	img, err := screenshot.CaptureRect(bounds)
-
-	if err != nil {
-		panic(err)
-	}
-	img = resize.Resize(uint(rw), uint(rh), img, resize.Lanczos3).(*image.RGBA)
-	return img
-}
 
 // RgbaToYuv convert to yuv from rgba
 func RgbaToYuv(rgba *image.RGBA) []byte {

@@ -1,7 +1,6 @@
 package ui
 
 import (
-	"fmt"
 	"image"
 	"log"
 	"time"
@@ -45,11 +44,8 @@ func (d *Director) SetView(view View) {
 func (d *Director) Step() {
 	//gl.Clear(gl.COLOR_BUFFER_BIT)
 	timestamp := float64(time.Now().Nanosecond()) / float64(time.Second)
-	fmt.Println("Time stamp", timestamp)
 	dt := timestamp - d.timestamp
-	fmt.Println("dt", dt)
 	d.timestamp = timestamp
-	fmt.Println("view", d.view)
 	if d.view != nil {
 		d.view.Update(timestamp, dt)
 	}
