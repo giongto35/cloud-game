@@ -27,7 +27,7 @@ func startGame(path string, imageChannel chan *image.RGBA, inputChannel chan int
 }
 
 func main() {
-	imageChannel := make(chan *image.RGBA, 2)
+	imageChannel := make(chan *image.RGBA, 100)
 	fmt.Println("http://localhost:8000")
 	webRTC = webrtc.NewWebRTC()
 
