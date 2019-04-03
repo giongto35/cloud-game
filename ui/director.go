@@ -7,7 +7,6 @@ import (
 	"time"
 
 	"github.com/giongto35/game-online/nes"
-	"github.com/go-gl/glfw/v3.0/glfw"
 )
 
 type View interface {
@@ -67,7 +66,7 @@ func (d *Director) Start(paths []string) {
 func (d *Director) Run() {
 	for {
 		d.Step()
-		glfw.PollEvents()
+		//glfw.PollEvents()
 	}
 	d.SetView(nil)
 }
