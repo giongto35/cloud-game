@@ -56,6 +56,12 @@ let log = msg => {
   document.getElementById('div').innerHTML += msg + '<br>'
 }
 
+
+const dataChannelOptions = {
+  ordered: false, // do not guarantee order
+  maxPacketLifeTime: 3000, // in milliseconds
+};
+
 let inputChannel = pc.createDataChannel('foo')
 inputChannel.onclose = () => console.log('inputChannel has closed')
 inputChannel.onopen = () => console.log('inputChannel has opened')
@@ -81,13 +87,45 @@ pc.onicecandidate = event => {
 
 pc.createOffer({offerToReceiveVideo: true, offerToReceiveAudio: true}).then(d => pc.setLocalDescription(d)).catch(log)
 
+
+keyState = {
+  // controllers
+  a: false,
+  b: false, 
+  start: false,
+  select: false,
+  
+  // navigators
+  up: false,
+  down: false,
+  left: false,
+  right: false,
+}
+
+keyMap = {
+  37: "left",
+  38: "up",
+  39: "right",
+  40: "down",
+
+  90: "a",
+  88: "b", 
+  67: "start", 
+  86: "select",
+}
+
 document.body.onkeydown = function(e){
-  inputChannel.send(e.keyCode)
+  if (e.keyCode in keyMap) {
+    keyState[keyMap[e.keyCode]] = true;
+  }
 };
 
 document.body.onkeyup = function(e){
-  inputChannel.send(-e.keyCode)
+  if (e.keyCode in keyMap) {
+    keyState[keyMap[e.keyCode]] = false;
+  }
 };
+
 
 window.startSession = () => {
   let sd = remoteSessionDescription
@@ -96,9 +134,50 @@ window.startSession = () => {
   }
 
   try {
-    pc.setRemoteDescription(new RTCSessionDescription(JSON.parse(atob(sd))))
+    pc.setRemoteDescription(new RTCSessionDescription(JSON.parse(atob(sd))), 
+
+      // success
+      () => {
+
+        fps = 60; // input frame per second
+
+        setInterval(() => {
+          // prepare key
+          /*
+          const (
+            ButtonA = iota
+            ButtonB
+            ButtonSelect
+            ButtonStart
+            ButtonUp
+            ButtonDown
+            ButtonLeft
+            ButtonRight
+          )
+          */
+          
+          st = "";
+          ["a", "b", "select", "start", "up", "down", "left", "right"].forEach(elem => {
+            st += keyState[elem]?1:0;
+          });
+          ss = parseInt(st, 2);
+          console.log(`Key state string: ${st} ==> ${ss}`);
+
+          // send
+          inputChannel.send(ss);
+
+        }, 1000 / fps)
+
+
+      },
+
+      // error callback      
+      (exp) => {
+        console.log("setRemoteDescription failed, we are doomed");
+        console.log(exp);
+      });
   } catch (e) {
-    alert(e)
+    alert(e);
   }
 }
 

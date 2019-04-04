@@ -15,16 +15,17 @@ type View interface {
 }
 
 type Director struct {
-	audio        *Audio
+	// audio        *Audio
 	view         View
 	timestamp    float64
 	imageChannel chan *image.RGBA
 	inputChannel chan int
 }
 
-func NewDirector(audio *Audio, imageChannel chan *image.RGBA, inputChannel chan int) *Director {
+func NewDirector(imageChannel chan *image.RGBA, inputChannel chan int) *Director {
+// func NewDirector(audio *Audio, imageChannel chan *image.RGBA, inputChannel chan int) *Director {
 	director := Director{}
-	director.audio = audio
+	// director.audio = audio
 	director.imageChannel = imageChannel
 	director.inputChannel = inputChannel
 	return &director
