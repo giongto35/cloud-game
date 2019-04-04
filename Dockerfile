@@ -1,4 +1,4 @@
-From golang:1.11
+From golang:1.12
 
 RUN mkdir -p /go/src/github.com/giongto35/game-online
 COPY . /go/src/github.com/giongto35/game-online/
