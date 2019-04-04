@@ -2,10 +2,10 @@ package ui
 
 import (
 	"image"
-	"log"
+	// "log"
 	"runtime"
 
-	"github.com/gordonklaus/portaudio"
+	// "github.com/gordonklaus/portaudio"
 )
 
 const (
@@ -25,16 +25,17 @@ func init() {
 
 func Run(paths []string, imageChannel chan *image.RGBA, inputChannel chan int) {
 	// initialize audio
-	portaudio.Initialize()
-	defer portaudio.Terminate()
+	// portaudio.Initialize()
+	// defer portaudio.Terminate()
 
-	audio := NewAudio()
-	if err := audio.Start(); err != nil {
-		log.Fatalln(err)
-	}
-	defer audio.Stop()
+	// audio := NewAudio()
+	// if err := audio.Start(); err != nil {
+	// 	log.Fatalln(err)
+	// }
+	// defer audio.Stop()
 
 	// run director
-	director := NewDirector(audio, imageChannel, inputChannel)
+	director := NewDirector(imageChannel, inputChannel)
+	// director := NewDirector(audio, imageChannel, inputChannel)
 	director.Start(paths)
 }
