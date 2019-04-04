@@ -233,9 +233,6 @@ func (w *WebRTC) startStreaming(vp8Track *webrtc.Track) {
 	go func() {
 		for i := 0; w.isConnected; i++ {
 			bs := <-w.encoder.Output
-			//if i%10 == 0 {
-			//fmt.Println("On Frame", len(bs), i)
-			//}
 			vp8Track.WriteSample(media.Sample{Data: bs, Samples: 1})
 		}
 	}()
