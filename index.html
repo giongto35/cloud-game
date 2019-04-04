@@ -114,17 +114,28 @@ keyMap = {
   86: "select",
 }
 
-document.body.onkeydown = function(e){
+INPUT_FPS = 100;
+INPUT_STATE_PACKET = 10;
+
+stateUnchange = true;
+unchangePacket = INPUT_STATE_PACKET;
+
+function setState(e, bo) {
   if (e.keyCode in keyMap) {
-    keyState[keyMap[e.keyCode]] = true;
+    keyState[keyMap[e.keyCode]] = bo;
+    stateUnchange = false;
+    unchangePacket = INPUT_STATE_PACKET;
   }
+}
+
+document.body.onkeydown = function(e){
+  setState(e, true);
 };
 
 document.body.onkeyup = function(e){
-  if (e.keyCode in keyMap) {
-    keyState[keyMap[e.keyCode]] = false;
-  }
+  setState(e, false);
 };
+
 
 
 window.startSession = () => {
@@ -138,8 +149,6 @@ window.startSession = () => {
 
       // success
       () => {
-
-        fps = 60; // input frame per second
 
         setInterval(() => {
           // prepare key
@@ -156,17 +165,22 @@ window.startSession = () => {
           )
           */
           
-          st = "";
-          ["a", "b", "select", "start", "up", "down", "left", "right"].forEach(elem => {
-            st += keyState[elem]?1:0;
-          });
-          ss = parseInt(st, 2);
-          console.log(`Key state string: ${st} ==> ${ss}`);
+          if (stateUnchange || unchangePacket > 0) {
+            st = "";
+            ["a", "b", "select", "start", "up", "down", "left", "right"].forEach(elem => {
+              st += keyState[elem]?1:0;
+            });
+            ss = parseInt(st, 2);
+            console.log(`Key state string: ${st} ==> ${ss}`);
 
-          // send
-          inputChannel.send(ss);
+            // send
+            inputChannel.send(ss);
 
-        }, 1000 / fps)
+            stateUnchange = false;
+            unchangePacket--;
+          }
+
+        }, 1000 / INPUT_FPS)
 
 
       },
