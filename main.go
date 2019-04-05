@@ -75,11 +75,14 @@ func ws(w http.ResponseWriter, r *http.Request) {
 	}
 	defer c.Close()
 
+	log.Println("new connection")
 	webRTC := webrtc.NewWebRTC()
 	localSession, err := webRTC.StartClient(width, height)
 	if err != nil {
 		log.Fatalln(err)
 	}
+
+	log.Println("new connection2")
 
 	// streaming game
 	// imageChannel := make(chan *image.RGBA, 100)
