@@ -18,7 +18,7 @@ import (
 // var webRTC *webrtc.WebRTC
 var width = 256
 var height = 240
-var gameName = "Legend of Pokemon.nes"
+var gameName = "Contra.nes"
 
 // var FPS = 60
 
