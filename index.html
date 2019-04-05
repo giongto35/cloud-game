@@ -7,6 +7,27 @@ textarea {
 }
 </style>
 
+<select id="gameOp">
+    <option value="Contra.nes">Contra.nes</option>
+    <option value="Kirby's Adventure.nes">Kirby's Adventure.nes</option>
+    <option value="Mega Man 2.nes">Mega Man 2.nes</option>
+    <option value="Mega Man.nes">Mega Man.nes</option>
+    <option value="Metal Gear.nes">Metal Gear.nes</option>
+    <option value="Mike Tyson.nes">Mike Tyson.nes</option>
+    <option value="Mortal Kombat 4.nes">Mortal Kombat 4.nes</option>
+    <option value="Super Mario Bros 2.nes">Super Mario Bros 2.nes</option>
+    <option value="Super Mario Bros 3.nes">Super Mario Bros 3.nes</option>
+    <option value="Super Mario Bros.nes">Super Mario Bros.nes</option>
+    <option value="Teenage Mutant Ninja Turtles 3.nes">Teenage Mutant Ninja Turtles 3.nes</option>
+    <option value="VS Super Mario Bros.nes">VS Super Mario Bros.nes</option>
+    <option value="supermariobros.rom">supermariobros.rom</option>
+    <option value="zelda.rom">zelda.rom</option>
+</select>
+<!--button id="playGame" onclick="window.startSession()" disabled>Play Mario</button-->
+<button id="play" onclick="window.startGame()">Play</button>
+
+<br/>
+
 <div id="remoteVideos" ></div> <br />
 <div>
   Use Up, Down, Left, Right to Move <br />
@@ -18,7 +39,7 @@ textarea {
   Fullscreen media for better gaming experience<br />
 </div>
 
-<button id="playGame" onclick="window.startSession()" disabled> Play Mario </button>
+
 <div id="div"></div>
 
 <div>
@@ -37,37 +58,7 @@ let log = msg => {
 }
 
 
-//
-let pc = new RTCPeerConnection({iceServers: [{urls: 'stun:stun.l.google.com:19302'}]})
-
-var localSessionDescription = ""
-var remoteSessionDescription = ""
-
-
-var conn = new WebSocket(`ws://${location.host}/ws`);
-conn.onopen = () => {
-  log("WebSocket is opened. Send ping");
-  conn.send(JSON.stringify({"id": "ping", "data": ""}));
-}
-
-conn.onerror = error => {
-  log(`Websocket error: ${error}`);
-}
-
-conn.onmessage = e => {
-  d = JSON.parse(e.data);
-  switch (d["id"]) {
-    case "pong":
-      log("Recv pong. Start webrtc");
-      startWebRTC();
-      break;
-    case "sdp":
-      log("Got remote sdp");
-      pc.setRemoteDescription(new RTCSessionDescription(JSON.parse(atob(d["data"]))));
-      break;
-  }
-}
-
+// for http server
 window.startSession = () => {
   let sd = remoteSessionDescription
   if (sd === '') {
@@ -97,6 +88,48 @@ function postSession(session) {
   xhttp.send(session);
 
 }
+
+
+// web socket
+
+window.startGame = () => {
+  conn = new WebSocket(`ws://${location.host}/ws`);
+
+  conn.onopen = () => {
+    log("WebSocket is opened. Send ping");
+    conn.send(JSON.stringify({"id": "ping", "data": gameOp.value}));
+  }
+
+  conn.onerror = error => {
+    log(`Websocket error: ${error}`);
+  }
+
+  conn.onclose = () => {
+    log("Websocket closed");
+    // pc.close();
+  }
+
+  conn.onmessage = e => {
+    d = JSON.parse(e.data);
+    switch (d["id"]) {
+      case "pong":
+        log("Recv pong. Start webrtc");
+        startWebRTC();
+        break;
+      case "sdp":
+        log("Got remote sdp");
+        pc.setRemoteDescription(new RTCSessionDescription(JSON.parse(atob(d["data"]))));
+        break;
+    }
+  }
+}
+
+// webrtc
+let pc = new RTCPeerConnection({iceServers: [{urls: 'stun:stun.l.google.com:19302'}]})
+
+var localSessionDescription = ""
+var remoteSessionDescription = ""
+var conn;
 
 
 // input channel
@@ -214,11 +247,11 @@ pc.oniceconnectionstatechange = e => {
     startInput();
   }
   else if (pc.iceConnectionState === "disconnected") {
+  // else { // not sure about this =]
     endInput();
   }
 
 }
-
 
 
 // stream channel
@@ -241,7 +274,7 @@ pc.onicecandidate = event => {
     // postSession(session)
   } else {
     console.log(JSON.stringify(event.candidate));
-    conn.send(JSON.stringify({"id": "candidate", "data": JSON.stringify(event.candidate)}));
+    // conn.send(JSON.stringify({"id": "candidate", "data": JSON.stringify(event.candidate)}));
   }
 }
 

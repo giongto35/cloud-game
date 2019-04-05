@@ -4,7 +4,7 @@ import (
 	"image"
 
 	"fmt"
-	// "strconv"
+	"time"
 
 	"github.com/giongto35/game-online/nes"
 )
@@ -23,10 +23,12 @@ type GameView struct {
 
 	imageChannel chan *image.RGBA
 	inputChannel chan int
+
+	nanotime int64
 }
 
 func NewGameView(director *Director, console *nes.Console, title, hash string, imageChannel chan *image.RGBA, inputChannel chan int) View {
-	gameview := &GameView{director, console, title, hash, false, nil, [8]bool{false}, imageChannel, inputChannel}
+	gameview := &GameView{director, console, title, hash, false, nil, [8]bool{false}, imageChannel, inputChannel, time.Now().UnixNano()}
 	go gameview.ListenToInputChannel()
 	return gameview
 }
@@ -84,7 +86,16 @@ func (view *GameView) Update(t, dt float64) {
 	view.updateControllers()
 	//fmt.Println(console.Buffer())
 	console.StepSeconds(dt)
-	view.imageChannel <- console.Buffer()
+
+	// fps to set frame
+	n := time.Now().UnixNano()
+	if n - view.nanotime > 1000000000 / 100000 {
+		view.nanotime = n
+		view.imageChannel <- console.Buffer()
+	}
+	
+
+
 	if view.record {
 		view.frames = append(view.frames, copyImage(console.Buffer()))
 	}
