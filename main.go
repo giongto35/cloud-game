@@ -6,7 +6,7 @@ import (
 	"io/ioutil"
 	"log"
 	"net/http"
-	"time"
+	// "time"
 
 	"github.com/giongto35/game-online/ui"
 	"github.com/giongto35/game-online/util"
@@ -18,7 +18,7 @@ import (
 var width = 256
 var height = 240
 var gameName = "supermariobros.rom"
-var FPS = 60
+// var FPS = 60
 
 func init() {
 }
@@ -68,7 +68,7 @@ func postSession(w http.ResponseWriter, r *http.Request) {
 		log.Fatalln(err)
 	}
 
-	imageChannel := make(chan *image.RGBA, FPS)
+	imageChannel := make(chan *image.RGBA, 100)
 	go screenshotLoop(imageChannel, webRTC)
 	go startGame("games/" + gameName, imageChannel, webRTC.InputChannel, webRTC)
 
@@ -89,6 +89,6 @@ func screenshotLoop(imageChannel chan *image.RGBA, webRTC *webrtc.WebRTC) {
 			webRTC.ImageChannel <- yuv
 		}
 		// time.Sleep(10 * time.Millisecond)
-		time.Sleep(time.Duration(1000 / FPS) * time.Millisecond)
+		// time.Sleep(time.Duration(1000 / FPS) * time.Millisecond)
 	}
 }
