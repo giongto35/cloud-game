@@ -108,14 +108,14 @@ type WebRTC struct {
 	connection  *webrtc.PeerConnection
 	encoder     *vpxEncoder.VpxEncoder
 	isConnected bool
-	isClosed bool
+	isClosed    bool
 	// for yuvI420 image
 	ImageChannel chan []byte
 	InputChannel chan int
 }
 
 // StartClient start webrtc
-func (w *WebRTC) StartClient(remoteSession string, width, height int) (string, error) {
+func (w *WebRTC) StartClient(width, height int) (string, error) {
 	defer func() {
 		if err := recover(); err != nil {
 			fmt.Println(err)
@@ -151,6 +151,7 @@ func (w *WebRTC) StartClient(remoteSession string, width, height int) (string, e
 		return "", err
 	}
 
+	// WebRTC state callback
 	w.connection.OnICEConnectionStateChange(func(connectionState webrtc.ICEConnectionState) {
 		fmt.Printf("ICE Connection State has changed: %s\n", connectionState.String())
 		if connectionState == webrtc.ICEConnectionStateConnected {
@@ -166,8 +167,7 @@ func (w *WebRTC) StartClient(remoteSession string, width, height int) (string, e
 		}
 	})
 
-	//w.listenInputChannel()
-	// Data channel
+	// Data channel callback
 	w.connection.OnDataChannel(func(d *webrtc.DataChannel) {
 		fmt.Printf("New DataChannel %s %d\n", d.Label(), d.ID())
 
@@ -184,21 +184,26 @@ func (w *WebRTC) StartClient(remoteSession string, width, height int) (string, e
 		})
 	})
 
-	offer := webrtc.SessionDescription{}
-	Decode(remoteSession, &offer)
-	if err != nil {
-		return "", err
-	}
-	err = w.connection.SetRemoteDescription(offer)
-	if err != nil {
-		return "", err
-	}
 	answer, err := w.connection.CreateAnswer(nil)
 	if err != nil {
 		return "", err
 	}
+
 	localSession := Encode(answer)
 	return localSession, nil
+}
+
+func (w *WebRTC) SetRemoteSession(remoteSession string) error {
+	offer := webrtc.SessionDescription{}
+
+	Decode(remoteSession, &offer)
+
+	err := w.connection.SetRemoteDescription(offer)
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
 
 // StopClient disconnect
