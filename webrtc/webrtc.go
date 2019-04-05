@@ -11,7 +11,7 @@ import (
 	"math/rand"
 	"strconv"
 
-	vpxEncoder "github.com/giongto35/game-online/vpx-encoder"
+	vpxEncoder "github.com/giongto35/cloud-game/vpx-encoder"
 	"github.com/pions/webrtc"
 	"github.com/pions/webrtc/pkg/media"
 )

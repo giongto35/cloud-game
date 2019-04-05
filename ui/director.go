@@ -6,8 +6,8 @@ import (
 	"log"
 	"time"
 
-	"github.com/giongto35/game-online/nes"
-	"github.com/giongto35/game-online/webrtc"
+	"github.com/giongto35/cloud-game/nes"
+	"github.com/giongto35/cloud-game/webrtc"
 )
 
 type View interface {
