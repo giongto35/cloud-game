@@ -41,9 +41,7 @@ func startGame(path string, imageChannel chan *image.RGBA, inputChannel chan int
 }
 
 func main() {
-	// imageChannel := make(chan *image.RGBA, 100)
 	fmt.Println("http://localhost:8000")
-	// webRTC = webrtc.NewWebRTC()
 
 	// router := mux.NewRouter()
 	// router.HandleFunc("/", getWeb).Methods("GET")
@@ -77,20 +75,13 @@ func ws(w http.ResponseWriter, r *http.Request) {
 
 	log.Println("new connection")
 	webRTC := webrtc.NewWebRTC()
-	localSession, err := webRTC.StartClient(width, height)
-	if err != nil {
-		log.Fatalln(err)
-	}
-
-	log.Println("new connection2")
-
+	
 	// streaming game
-	// imageChannel := make(chan *image.RGBA, 100)
-	// go screenshotLoop(imageChannel, webRTC)
-	// go startGame("games/" + gameName, imageChannel, webRTC.InputChannel, webRTC)
 
 	// start new games and webrtc stuff?
-	for {
+	isDone := false
+
+	for !isDone {
 		mt, message, err := c.ReadMessage()
 		if err != nil {
 			log.Println("read:", err)
@@ -112,12 +103,23 @@ func ws(w http.ResponseWriter, r *http.Request) {
 			res.ID = "pong"
 
 		case "sdp":
-			webRTC.SetRemoteSession(res.Data)
+			localSession, err := webRTC.StartClient(req.Data, width, height)
+			if err != nil {
+				log.Fatalln(err)
+			}
+
 			res.ID = "sdp"
 			res.Data = localSession
 
 		case "candidate":
 			res.ID = "candidate"
+
+		case "start":
+			imageChannel := make(chan *image.RGBA, 100)
+			go screenshotLoop(imageChannel, webRTC)
+			go startGame("games/" + gameName, imageChannel, webRTC.InputChannel, webRTC)
+			res.ID = "start"
+			isDone = true
 		}
 
 		stRes, err := json.Marshal(res)
@@ -134,26 +136,26 @@ func ws(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-// func postSession(w http.ResponseWriter, r *http.Request) {
-// 	bs, err := ioutil.ReadAll(r.Body)
-// 	if err != nil {
-// 		log.Fatal(err)
-// 	}
-// 	r.Body.Close()
+func postSession(w http.ResponseWriter, r *http.Request) {
+	bs, err := ioutil.ReadAll(r.Body)
+	if err != nil {
+		log.Fatal(err)
+	}
+	r.Body.Close()
 
-// 	webRTC := webrtc.NewWebRTC()
+	webRTC := webrtc.NewWebRTC()
 
-// 	localSession, err := webRTC.StartClient(string(bs), width, height)
-// 	if err != nil {
-// 		log.Fatalln(err)
-// 	}
+	localSession, err := webRTC.StartClient(string(bs), width, height)
+	if err != nil {
+		log.Fatalln(err)
+	}
 
-// 	imageChannel := make(chan *image.RGBA, 100)
-// 	go screenshotLoop(imageChannel, webRTC)
-// 	go startGame("games/"+gameName, imageChannel, webRTC.InputChannel, webRTC)
+	imageChannel := make(chan *image.RGBA, 100)
+	go screenshotLoop(imageChannel, webRTC)
+	go startGame("games/"+gameName, imageChannel, webRTC.InputChannel, webRTC)
 
-// 	w.Write([]byte(localSession))
-// }
+	w.Write([]byte(localSession))
+}
 
 // func screenshotLoop(imageChannel chan *image.RGBA) {
 func screenshotLoop(imageChannel chan *image.RGBA, webRTC *webrtc.WebRTC) {
@@ -168,7 +170,5 @@ func screenshotLoop(imageChannel chan *image.RGBA, webRTC *webrtc.WebRTC) {
 			yuv := util.RgbaToYuv(image)
 			webRTC.ImageChannel <- yuv
 		}
-		// time.Sleep(10 * time.Millisecond)
-		// time.Sleep(time.Duration(1000 / FPS) * time.Millisecond)
 	}
 }

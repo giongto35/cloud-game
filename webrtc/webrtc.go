@@ -115,7 +115,7 @@ type WebRTC struct {
 }
 
 // StartClient start webrtc
-func (w *WebRTC) StartClient(width, height int) (string, error) {
+func (w *WebRTC) StartClient(remoteSession string, width, height int) (string, error) {
 	defer func() {
 		if err := recover(); err != nil {
 			fmt.Println(err)
@@ -151,6 +151,7 @@ func (w *WebRTC) StartClient(width, height int) (string, error) {
 		return "", err
 	}
 
+
 	// WebRTC state callback
 	w.connection.OnICEConnectionStateChange(func(connectionState webrtc.ICEConnectionState) {
 		fmt.Printf("ICE Connection State has changed: %s\n", connectionState.String())
@@ -166,6 +167,11 @@ func (w *WebRTC) StartClient(width, height int) (string, error) {
 			w.StopClient()
 		}
 	})
+
+	w.connection.OnICECandidate(func(iceCandidate *webrtc.ICECandidate) {
+		fmt.Println(iceCandidate)
+	})
+
 
 	// Data channel callback
 	w.connection.OnDataChannel(func(d *webrtc.DataChannel) {
@@ -184,6 +190,15 @@ func (w *WebRTC) StartClient(width, height int) (string, error) {
 		})
 	})
 
+	offer := webrtc.SessionDescription{}
+
+	Decode(remoteSession, &offer)
+
+	err = w.connection.SetRemoteDescription(offer)
+	if err != nil {
+		return "", err
+	}
+
 	answer, err := w.connection.CreateAnswer(nil)
 	if err != nil {
 		return "", err
@@ -191,19 +206,6 @@ func (w *WebRTC) StartClient(width, height int) (string, error) {
 
 	localSession := Encode(answer)
 	return localSession, nil
-}
-
-func (w *WebRTC) SetRemoteSession(remoteSession string) error {
-	offer := webrtc.SessionDescription{}
-
-	Decode(remoteSession, &offer)
-
-	err := w.connection.SetRemoteDescription(offer)
-	if err != nil {
-		return err
-	}
-
-	return nil
 }
 
 // StopClient disconnect

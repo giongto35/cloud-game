@@ -43,7 +43,8 @@ var remoteSessionDescription = ""
 
 var conn = new WebSocket(`ws://${location.host}/ws`);
 conn.onopen = () => {
-  log("WebSocket is opened");
+  log("WebSocket is opened. Send ping");
+  conn.send(JSON.stringify({"id": "ping", "data": ""}));
 }
 
 conn.onerror = error => {
@@ -51,10 +52,30 @@ conn.onerror = error => {
 }
 
 conn.onmessage = e => {
-  console.log(e.data);
-  // e.data in json
+  d = JSON.parse(e.data);
+  switch (d["id"]) {
+    case "pong":
+      log("Recv pong. Start webrtc");
+      startWebRTC();
+      break;
+    case "sdp":
+      pc.setRemoteDescription(new RTCSessionDescription(JSON.parse(atob(d["data"]))));
+      break;
+  }
 }
 
+window.startSession = () => {
+  let sd = remoteSessionDescription
+  if (sd === '') {
+    return alert('Session Description must not be empty')
+  }
+
+  try {
+    pc.setRemoteDescription(new RTCSessionDescription(JSON.parse(atob(sd))));
+  } catch (e) {
+    alert(e);
+  }
+}
 
 function postSession(session) {
   if (session == "") {
@@ -184,6 +205,7 @@ function endInput() {
 pc.oniceconnectionstatechange = e => {
   log(pc.iceConnectionState);
   if (pc.iceConnectionState === "connected") {
+    conn.send(JSON.stringify({"id": "start", "data": ""}));
     startInput();
   }
   else if (pc.iceConnectionState === "disconnected") {
@@ -205,40 +227,33 @@ pc.ontrack = function (event) {
 }
 
 
+
 // candidate packet from STUN
 pc.onicecandidate = event => {
   if (event.candidate === null) {
     // var session = btoa(JSON.stringify(pc.localDescription));
     // localSessionDescription = session;
     // postSession(session)
+  } else {
+    console.log(JSON.stringify(event.candidate));
   }
 }
 
 
-// create SDP
-pc.createOffer({offerToReceiveVideo: true, offerToReceiveAudio: true}).then(d => {
-  pc.setLocalDescription(d, () => {
-    // send to ws
-    session = btoa(JSON.stringify(pc.localDescription));
-    localSessionDescription = session;
-    conn.send(JSON.stringify({"id": "sdp", "data": session}));
-  });
+function startWebRTC() {
+  // create SDP
+  pc.createOffer({offerToReceiveVideo: true, offerToReceiveAudio: true}).then(d => {
+    pc.setLocalDescription(d, () => {
+      // send to ws
+      session = btoa(JSON.stringify(pc.localDescription));
+      localSessionDescription = session;
+      conn.send(JSON.stringify({"id": "sdp", "data": session}));
+    });
 
-}).catch(log);
+  }).catch(log);
 
-
-window.startSession = () => {
-  let sd = remoteSessionDescription
-  if (sd === '') {
-    return alert('Session Description must not be empty')
-  }
-
-  try {
-    pc.setRemoteDescription(new RTCSessionDescription(JSON.parse(atob(sd))));
-  } catch (e) {
-    alert(e);
-  }
 }
+
 
 </script>
 </html>
