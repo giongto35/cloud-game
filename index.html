@@ -1,3 +1,4 @@
+<!--credit to https://github.com/poi5305/go-yuv2webRTC/blob/master/index.html-->
 <html>
 
 <style>
@@ -29,6 +30,7 @@ textarea {
 var localSessionDescription = ""
 var remoteSessionDescription = ""
 
+// Register with server the session description
 function postSession(session) {
   if (session == "") {
     return;
@@ -87,7 +89,7 @@ pc.onicecandidate = event => {
 
 pc.createOffer({offerToReceiveVideo: true, offerToReceiveAudio: true}).then(d => pc.setLocalDescription(d)).catch(log)
 
-
+// Key controller
 keyState = {
   // controllers
   a: false,
@@ -165,7 +167,7 @@ function sendInput() {
     ButtonRight
   )
   */
-  
+
   if (stateUnchange || unchangePacket > 0) {
     st = "";
     ["a", "b", "select", "start", "up", "down", "left", "right"].forEach(elem => {
