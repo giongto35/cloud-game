@@ -10,9 +10,10 @@ textarea {
 <div id="remoteVideos" ></div> <br />
 <div>
   Use Up, Down, Left, Right to Move <br />
-  Space to jump <br />
-  Ctrl to sprint <br />
-  Enter to select in menu <br />
+  Z to jump (A) <br />
+  X to sprint (B) <br />
+  C is start button <br />
+  V is select button <br />
 
   Fullscreen media for better gaming experience<br />
 </div>
@@ -76,7 +77,6 @@ pc.ontrack = function (event) {
   document.getElementById('remoteVideos').appendChild(el)
 }
 
-pc.oniceconnectionstatechange = e => log(pc.iceConnectionState)
 pc.onicecandidate = event => {
   if (event.candidate === null) {
     var session = btoa(JSON.stringify(pc.localDescription));
@@ -115,7 +115,7 @@ keyMap = {
 }
 
 INPUT_FPS = 100;
-INPUT_STATE_PACKET = 10;
+INPUT_STATE_PACKET = 5;
 
 stateUnchange = true;
 unchangePacket = INPUT_STATE_PACKET;
@@ -137,7 +137,6 @@ document.body.onkeyup = function(e){
 };
 
 
-
 window.startSession = () => {
   let sd = remoteSessionDescription
   if (sd === '') {
@@ -145,54 +144,64 @@ window.startSession = () => {
   }
 
   try {
-    pc.setRemoteDescription(new RTCSessionDescription(JSON.parse(atob(sd))), 
-
-      // success
-      () => {
-
-        setInterval(() => {
-          // prepare key
-          /*
-          const (
-            ButtonA = iota
-            ButtonB
-            ButtonSelect
-            ButtonStart
-            ButtonUp
-            ButtonDown
-            ButtonLeft
-            ButtonRight
-          )
-          */
-          
-          if (stateUnchange || unchangePacket > 0) {
-            st = "";
-            ["a", "b", "select", "start", "up", "down", "left", "right"].forEach(elem => {
-              st += keyState[elem]?1:0;
-            });
-            ss = parseInt(st, 2);
-            console.log(`Key state string: ${st} ==> ${ss}`);
-
-            // send
-            inputChannel.send(ss);
-
-            stateUnchange = false;
-            unchangePacket--;
-          }
-
-        }, 1000 / INPUT_FPS)
-
-
-      },
-
-      // error callback      
-      (exp) => {
-        console.log("setRemoteDescription failed, we are doomed");
-        console.log(exp);
-      });
+    pc.setRemoteDescription(new RTCSessionDescription(JSON.parse(atob(sd))));
   } catch (e) {
     alert(e);
   }
+}
+
+var timer = null;
+function sendInput() {
+  // prepare key
+  /*
+  const (
+    ButtonA = iota
+    ButtonB
+    ButtonSelect
+    ButtonStart
+    ButtonUp
+    ButtonDown
+    ButtonLeft
+    ButtonRight
+  )
+  */
+  
+  if (stateUnchange || unchangePacket > 0) {
+    st = "";
+    ["a", "b", "select", "start", "up", "down", "left", "right"].forEach(elem => {
+      st += keyState[elem]?1:0;
+    });
+    ss = parseInt(st, 2);
+    console.log(`Key state string: ${st} ==> ${ss}`);
+
+    // send
+    inputChannel.send(ss);
+
+    stateUnchange = false;
+    unchangePacket--;
+  }
+}
+
+function startInput() {
+  if (timer == null) {
+    timer = setInterval(sendInput, 1000 / INPUT_FPS)
+  }
+}
+
+function endInput() {
+  clearInterval(timer);
+  timer = null;
+}
+
+pc.oniceconnectionstatechange = e => {
+  log(pc.iceConnectionState);
+  if (pc.iceConnectionState === "connected") {
+    startInput();
+  }
+  else if (pc.iceConnectionState === "disconnected") {
+    endInput();
+  }
+
 }
 
 </script>
