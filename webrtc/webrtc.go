@@ -1,3 +1,4 @@
+// credit to https://github.com/poi5305/go-yuv2webRTC/blob/master/webrtc/webrtc.go
 package webrtc
 
 import (
@@ -9,7 +10,6 @@ import (
 	"io/ioutil"
 	"math/rand"
 	"strconv"
-	"time"
 
 	vpxEncoder "github.com/giongto35/game-online/vpx-encoder"
 	"github.com/pions/webrtc"
@@ -20,11 +20,6 @@ var config = webrtc.Configuration{ICEServers: []webrtc.ICEServer{{URLs: []string
 
 // Allows compressing offer/answer to bypass terminal input limits.
 const compress = false
-
-func init() {
-	//api.mediaEngine.RegisterDefaultCodecs()
-	//webrtc.RegisterDefaultCodecs()
-}
 
 func zip(in []byte) []byte {
 	var b bytes.Buffer
@@ -97,8 +92,8 @@ func Decode(in string, obj interface{}) {
 // NewWebRTC create
 func NewWebRTC() *WebRTC {
 	w := &WebRTC{
-		ImageChannel: make(chan []byte, 2),
-		InputChannel: make(chan int, 2),
+		ImageChannel: make(chan []byte, 100),
+		InputChannel: make(chan int, 100),
 	}
 	return w
 }
@@ -108,7 +103,7 @@ type WebRTC struct {
 	connection  *webrtc.PeerConnection
 	encoder     *vpxEncoder.VpxEncoder
 	isConnected bool
-	isClosed bool
+	isClosed    bool
 	// for yuvI420 image
 	ImageChannel chan []byte
 	InputChannel chan int
@@ -126,7 +121,7 @@ func (w *WebRTC) StartClient(remoteSession string, width, height int) (string, e
 	// reset client
 	if w.isConnected {
 		w.StopClient()
-		time.Sleep(2 * time.Second)
+		//time.Sleep(2 * time.Second)
 	}
 
 	encoder, err := vpxEncoder.NewVpxEncoder(width, height, 20, 1200, 5)

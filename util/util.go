@@ -1,3 +1,4 @@
+// credit to https://github.com/poi5305/go-yuv2webRTC/blob/master/webrtc/webrtc.go
 package util
 
 import (

@@ -30,22 +30,13 @@ func startGame(path string, imageChannel chan *image.RGBA, inputChannel chan int
 }
 
 func main() {
-	// imageChannel := make(chan *image.RGBA, 100)
 	fmt.Println("http://localhost:8000")
-	// webRTC = webrtc.NewWebRTC()
 
 	router := mux.NewRouter()
 	router.HandleFunc("/", getWeb).Methods("GET")
 	router.HandleFunc("/session", postSession).Methods("POST")
 
-	// go http.ListenAndServe(":8000", router)
 	http.ListenAndServe(":8000", router)
-
-	// start screenshot loop, wait for connection
-
-	// go screenshotLoop(imageChannel)
-	// startGame("games/"+gameName, imageChannel, webRTC.InputChannel)
-	// time.Sleep(time.Minute)
 }
 
 func getWeb(w http.ResponseWriter, r *http.Request) {
@@ -90,7 +81,5 @@ func screenshotLoop(imageChannel chan *image.RGBA, webRTC *webrtc.WebRTC) {
 			yuv := util.RgbaToYuv(image)
 			webRTC.ImageChannel <- yuv
 		}
-		// time.Sleep(10 * time.Millisecond)
-		// time.Sleep(time.Duration(1000 / FPS) * time.Millisecond)
 	}
 }
