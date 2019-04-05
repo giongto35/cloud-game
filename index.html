@@ -62,6 +62,7 @@ conn.onmessage = e => {
       startWebRTC();
       break;
     case "sdp":
+      log("Got remote sdp");
       pc.setRemoteDescription(new RTCSessionDescription(JSON.parse(atob(d["data"]))));
       break;
   }
@@ -206,7 +207,8 @@ function endInput() {
 }
 
 pc.oniceconnectionstatechange = e => {
-  log(pc.iceConnectionState);
+  log(`iceConnectionState: ${pc.iceConnectionState}`);
+
   if (pc.iceConnectionState === "connected") {
     conn.send(JSON.stringify({"id": "start", "data": ""}));
     startInput();
@@ -239,6 +241,7 @@ pc.onicecandidate = event => {
     // postSession(session)
   } else {
     console.log(JSON.stringify(event.candidate));
+    conn.send(JSON.stringify({"id": "candidate", "data": JSON.stringify(event.candidate)}));
   }
 }
 
@@ -250,6 +253,7 @@ function startWebRTC() {
       // send to ws
       session = btoa(JSON.stringify(pc.localDescription));
       localSessionDescription = session;
+      log("Send SDP to remote peer");
       conn.send(JSON.stringify({"id": "sdp", "data": session}));
     });
 
