@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/giongto35/game-online/nes"
+	"github.com/giongto35/game-online/webrtc"
 )
 
 type View interface {
@@ -20,14 +21,16 @@ type Director struct {
 	timestamp    float64
 	imageChannel chan *image.RGBA
 	inputChannel chan int
+	webRTC *webrtc.WebRTC
 }
 
-func NewDirector(imageChannel chan *image.RGBA, inputChannel chan int) *Director {
+func NewDirector(imageChannel chan *image.RGBA, inputChannel chan int, webRTC *webrtc.WebRTC) *Director {
 // func NewDirector(audio *Audio, imageChannel chan *image.RGBA, inputChannel chan int) *Director {
 	director := Director{}
 	// director.audio = audio
 	director.imageChannel = imageChannel
 	director.inputChannel = inputChannel
+	director.webRTC = webRTC
 	return &director
 }
 
@@ -61,6 +64,11 @@ func (d *Director) Start(paths []string) {
 
 func (d *Director) Run() {
 	for {
+		// quit game
+		if d.webRTC.IsClosed() {
+			break
+		}
+
 		d.Step()
 	}
 	d.SetView(nil)
