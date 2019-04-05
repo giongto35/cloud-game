@@ -16,7 +16,7 @@ import (
 	"os/user"
 	"path"
 
-	"github.com/giongto35/game-online/nes"
+	"github.com/giongto35/cloud-game/nes"
 )
 
 var homeDir string

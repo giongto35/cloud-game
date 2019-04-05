@@ -9,9 +9,9 @@ import (
 
 	// "time"
 
-	"github.com/giongto35/game-online/ui"
-	"github.com/giongto35/game-online/util"
-	"github.com/giongto35/game-online/webrtc"
+	"github.com/giongto35/cloud-game/ui"
+	"github.com/giongto35/cloud-game/util"
+	"github.com/giongto35/cloud-game/webrtc"
 	"github.com/gorilla/mux"
 )
 
