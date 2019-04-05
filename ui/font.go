@@ -1,3 +1,4 @@
+// credit to https://github.com/fogleman/nes
 package ui
 
 import (
@@ -28,14 +29,6 @@ func init() {
 		}
 	}
 	fontMask = mask
-}
-
-func CreateGenericThumbnail(text string) image.Image {
-	im := image.NewRGBA(image.Rect(0, 0, 256, 240))
-	draw.Draw(im, im.Rect, &image.Uniform{color.Black}, image.ZP, draw.Src)
-	DrawCenteredText(im, text, 1, 2, color.RGBA{128, 128, 128, 255})
-	DrawCenteredText(im, text, 0, 0, color.White)
-	return im
 }
 
 func WordWrap(text string, maxLength int) []string {

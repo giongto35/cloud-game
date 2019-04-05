@@ -1,3 +1,4 @@
+// credit to https://github.com/fogleman/nes
 package ui
 
 import (
@@ -26,14 +27,6 @@ func init() {
 		log.Fatalln(err)
 	}
 	homeDir = u.HomeDir
-}
-
-func thumbnailURL(hash string) string {
-	return "http://www.michaelfogleman.com/static/nes/" + hash + ".png"
-}
-
-func thumbnailPath(hash string) string {
-	return homeDir + "/.nes/thumbnail/" + hash + ".png"
 }
 
 func sramPath(hash string) string {

@@ -1,3 +1,4 @@
+// credit to https://github.com/fogleman/nes
 package ui
 
 import (
@@ -22,6 +23,7 @@ func init() {
 }
 
 func Run(paths []string, imageChannel chan *image.RGBA, inputChannel chan int, webRTC *webrtc.WebRTC) {
+	// TODO: stream audio
 	// initialize audio
 	// portaudio.Initialize()
 	// defer portaudio.Terminate()

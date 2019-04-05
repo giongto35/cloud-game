@@ -1,3 +1,4 @@
+// credit to https://github.com/fogleman/nes
 package ui
 
 import (
@@ -21,11 +22,11 @@ type Director struct {
 	timestamp    float64
 	imageChannel chan *image.RGBA
 	inputChannel chan int
-	webRTC *webrtc.WebRTC
+	webRTC       *webrtc.WebRTC
 }
 
 func NewDirector(imageChannel chan *image.RGBA, inputChannel chan int, webRTC *webrtc.WebRTC) *Director {
-// func NewDirector(audio *Audio, imageChannel chan *image.RGBA, inputChannel chan int) *Director {
+	// func NewDirector(audio *Audio, imageChannel chan *image.RGBA, inputChannel chan int) *Director {
 	director := Director{}
 	// director.audio = audio
 	director.imageChannel = imageChannel
