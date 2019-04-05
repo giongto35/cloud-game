@@ -6,19 +6,32 @@ import (
 	"io/ioutil"
 	"log"
 	"net/http"
+
 	// "time"
 
 	"github.com/giongto35/game-online/ui"
 	"github.com/giongto35/game-online/util"
 	"github.com/giongto35/game-online/webrtc"
-	"github.com/gorilla/mux"
+
+	// "github.com/gorilla/mux"
+	"github.com/gorilla/websocket"
+
+	"encoding/json"
 )
 
 // var webRTC *webrtc.WebRTC
 var width = 256
 var height = 240
 var gameName = "supermariobros.rom"
+
 // var FPS = 60
+
+var upgrader = websocket.Upgrader{}
+
+type WSPacket struct {
+	ID   string `json:"id"`
+	Data string `json:"data"`
+}
 
 func init() {
 }
@@ -32,18 +45,18 @@ func main() {
 	fmt.Println("http://localhost:8000")
 	// webRTC = webrtc.NewWebRTC()
 
-	router := mux.NewRouter()
-	router.HandleFunc("/", getWeb).Methods("GET")
-	router.HandleFunc("/session", postSession).Methods("POST")
+	// router := mux.NewRouter()
+	// router.HandleFunc("/", getWeb).Methods("GET")
+	// router.HandleFunc("/session", postSession).Methods("POST")
+	// http.ListenAndServe(":8000", router)
 
-	// go http.ListenAndServe(":8000", router)
-	http.ListenAndServe(":8000", router)
+	// ignore origin
+	upgrader.CheckOrigin = func(r *http.Request) bool { return true }
 
-	// start screenshot loop, wait for connection
-	
-	// go screenshotLoop(imageChannel)
-	// startGame("games/"+gameName, imageChannel, webRTC.InputChannel)
-	// time.Sleep(time.Minute)
+	http.HandleFunc("/", getWeb)
+	http.HandleFunc("/ws", ws)
+
+	http.ListenAndServe(":8000", nil)
 }
 
 func getWeb(w http.ResponseWriter, r *http.Request) {
@@ -54,26 +67,89 @@ func getWeb(w http.ResponseWriter, r *http.Request) {
 	w.Write(bs)
 }
 
-func postSession(w http.ResponseWriter, r *http.Request) {
-	bs, err := ioutil.ReadAll(r.Body)
+func ws(w http.ResponseWriter, r *http.Request) {
+	c, err := upgrader.Upgrade(w, r, nil)
 	if err != nil {
-		log.Fatal(err)
+		log.Print("upgrade:", err)
+		return
 	}
-	r.Body.Close()
+	defer c.Close()
 
 	webRTC := webrtc.NewWebRTC()
-
-	localSession, err := webRTC.StartClient(string(bs), width, height)
+	localSession, err := webRTC.StartClient(width, height)
 	if err != nil {
 		log.Fatalln(err)
 	}
 
-	imageChannel := make(chan *image.RGBA, 100)
-	go screenshotLoop(imageChannel, webRTC)
-	go startGame("games/" + gameName, imageChannel, webRTC.InputChannel, webRTC)
+	// streaming game
+	// imageChannel := make(chan *image.RGBA, 100)
+	// go screenshotLoop(imageChannel, webRTC)
+	// go startGame("games/" + gameName, imageChannel, webRTC.InputChannel, webRTC)
 
-	w.Write([]byte(localSession))
+	// start new games and webrtc stuff?
+	for {
+		mt, message, err := c.ReadMessage()
+		if err != nil {
+			log.Println("read:", err)
+			break
+		}
+
+		req := WSPacket{}
+		err = json.Unmarshal(message, &req)
+		if err != nil {
+			log.Println("json unmarshal:", err)
+			break
+		}
+		log.Println(req)
+
+		// connectivity
+		res := WSPacket{}
+		switch req.ID {
+		case "ping":
+			res.ID = "pong"
+
+		case "sdp":
+			webRTC.SetRemoteSession(res.Data)
+			res.ID = "sdp"
+			res.Data = localSession
+
+		case "candidate":
+			res.ID = "candidate"
+		}
+
+		stRes, err := json.Marshal(res)
+		if err != nil {
+			log.Println("json marshal:", err)
+		}
+
+		err = c.WriteMessage(mt, []byte(stRes))
+		if err != nil {
+			log.Println("write:", err)
+			break
+		}
+	}
 }
+
+// func postSession(w http.ResponseWriter, r *http.Request) {
+// 	bs, err := ioutil.ReadAll(r.Body)
+// 	if err != nil {
+// 		log.Fatal(err)
+// 	}
+// 	r.Body.Close()
+
+// 	webRTC := webrtc.NewWebRTC()
+
+// 	localSession, err := webRTC.StartClient(string(bs), width, height)
+// 	if err != nil {
+// 		log.Fatalln(err)
+// 	}
+
+// 	imageChannel := make(chan *image.RGBA, 100)
+// 	go screenshotLoop(imageChannel, webRTC)
+// 	go startGame("games/"+gameName, imageChannel, webRTC.InputChannel, webRTC)
+
+// 	w.Write([]byte(localSession))
+// }
 
 // func screenshotLoop(imageChannel chan *image.RGBA) {
 func screenshotLoop(imageChannel chan *image.RGBA, webRTC *webrtc.WebRTC) {
