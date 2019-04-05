@@ -8,7 +8,7 @@ import (
 	"log"
 	"net/http"
 
-	// "time"
+	"time"
 
 	"github.com/giongto35/game-online/ui"
 	"github.com/giongto35/game-online/util"
@@ -23,7 +23,8 @@ import (
 // var webRTC *webrtc.WebRTC
 var width = 256
 var height = 240
-var gameName = "supermariobros.rom"
+// var gameName = "supermariobros.rom"
+var gameName string
 
 // var FPS = 60
 
@@ -43,6 +44,7 @@ func startGame(path string, imageChannel chan *image.RGBA, inputChannel chan int
 
 func main() {
 	fmt.Println("http://localhost:8000")
+	fmt.Println(time.Now().UnixNano())
 
 	// router := mux.NewRouter()
 	// router.HandleFunc("/", getWeb).Methods("GET")
@@ -74,7 +76,7 @@ func ws(w http.ResponseWriter, r *http.Request) {
 	}
 	defer c.Close()
 
-	log.Println("new connection")
+	log.Println("New Connection")
 	webRTC := webrtc.NewWebRTC()
 	
 	// streaming game
@@ -85,25 +87,28 @@ func ws(w http.ResponseWriter, r *http.Request) {
 	for !isDone {
 		mt, message, err := c.ReadMessage()
 		if err != nil {
-			log.Println("read:", err)
+			log.Println("[!] read:", err)
 			break
 		}
 
 		req := WSPacket{}
 		err = json.Unmarshal(message, &req)
 		if err != nil {
-			log.Println("json unmarshal:", err)
+			log.Println("[!] json unmarshal:", err)
 			break
 		}
-		log.Println(req)
+		// log.Println(req)
 
 		// connectivity
 		res := WSPacket{}
 		switch req.ID {
 		case "ping":
+			gameName = req.Data
+			log.Println("Ping from server with game:", gameName)
 			res.ID = "pong"
 
 		case "sdp":
+			log.Println("Received user SDP")
 			localSession, err := webRTC.StartClient(req.Data, width, height)
 			if err != nil {
 				log.Fatalln(err)
@@ -116,13 +121,14 @@ func ws(w http.ResponseWriter, r *http.Request) {
 			hi := pionRTC.ICECandidateInit{}
 			err = json.Unmarshal([]byte(req.Data), &hi)
 			if err != nil {
-				fmt.Println("[!] Cannot parse candidate: ", err)
+				log.Println("[!] Cannot parse candidate: ", err)
 			} else {
-				webRTC.AddCandidate(hi)
+				// webRTC.AddCandidate(hi)
 			}
 			res.ID = "candidate"
 
 		case "start":
+			log.Println("Starting game")
 			imageChannel := make(chan *image.RGBA, 100)
 			go screenshotLoop(imageChannel, webRTC)
 			go startGame("games/" + gameName, imageChannel, webRTC.InputChannel, webRTC)
