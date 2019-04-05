@@ -17,7 +17,7 @@ import (
 var webRTC *webrtc.WebRTC
 var width = 256
 var height = 240
-var gameName = "supermariobros.rom"
+var gameName = "Legend of Pokemon.nes"
 
 func init() {
 }
