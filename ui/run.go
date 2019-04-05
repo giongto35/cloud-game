@@ -6,6 +6,7 @@ import (
 	"runtime"
 
 	// "github.com/gordonklaus/portaudio"
+	"github.com/giongto35/game-online/webrtc"
 )
 
 const (
@@ -23,7 +24,7 @@ func init() {
 	runtime.LockOSThread()
 }
 
-func Run(paths []string, imageChannel chan *image.RGBA, inputChannel chan int) {
+func Run(paths []string, imageChannel chan *image.RGBA, inputChannel chan int, webRTC *webrtc.WebRTC) {
 	// initialize audio
 	// portaudio.Initialize()
 	// defer portaudio.Terminate()
@@ -35,7 +36,7 @@ func Run(paths []string, imageChannel chan *image.RGBA, inputChannel chan int) {
 	// defer audio.Stop()
 
 	// run director
-	director := NewDirector(imageChannel, inputChannel)
+	director := NewDirector(imageChannel, inputChannel, webRTC)
 	// director := NewDirector(audio, imageChannel, inputChannel)
 	director.Start(paths)
 }

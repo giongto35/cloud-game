@@ -108,6 +108,7 @@ type WebRTC struct {
 	connection  *webrtc.PeerConnection
 	encoder     *vpxEncoder.VpxEncoder
 	isConnected bool
+	isClosed bool
 	// for yuvI420 image
 	ImageChannel chan []byte
 	InputChannel chan int
@@ -164,6 +165,7 @@ func (w *WebRTC) StartClient(remoteSession string, width, height int) (string, e
 			w.StopClient()
 		}
 	})
+
 	//w.listenInputChannel()
 	// Data channel
 	w.connection.OnDataChannel(func(d *webrtc.DataChannel) {
@@ -210,11 +212,16 @@ func (w *WebRTC) StopClient() {
 		w.connection.Close()
 	}
 	w.connection = nil
+	w.isClosed = true
 }
 
 // IsConnected comment
 func (w *WebRTC) IsConnected() bool {
 	return w.isConnected
+}
+
+func (w *WebRTC) IsClosed() bool {
+	return w.isClosed
 }
 
 func (w *WebRTC) startStreaming(vp8Track *webrtc.Track) {
