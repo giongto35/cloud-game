@@ -1,6 +1,7 @@
 package main
 
 import (
+	pionRTC "github.com/pions/webrtc"
 	"fmt"
 	"image"
 	"io/ioutil"
@@ -112,6 +113,13 @@ func ws(w http.ResponseWriter, r *http.Request) {
 			res.Data = localSession
 
 		case "candidate":
+			hi := pionRTC.ICECandidateInit{}
+			err = json.Unmarshal([]byte(req.Data), &hi)
+			if err != nil {
+				fmt.Println("[!] Cannot parse candidate: ", err)
+			} else {
+				webRTC.AddCandidate(hi)
+			}
 			res.ID = "candidate"
 
 		case "start":

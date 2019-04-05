@@ -208,6 +208,13 @@ func (w *WebRTC) StartClient(remoteSession string, width, height int) (string, e
 	return localSession, nil
 }
 
+func (w *WebRTC) AddCandidate(candidate webrtc.ICECandidateInit) {
+	err := w.connection.AddICECandidate(candidate)
+	if err != nil {
+		fmt.Println("Cannot add candidate: ", err)
+	}
+}
+
 // StopClient disconnect
 func (w *WebRTC) StopClient() {
 	fmt.Println("===StopClient===")
