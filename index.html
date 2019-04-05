@@ -26,35 +26,8 @@ textarea {
 </div>
 <script>
 
-// miscs
-
-let log = msg => {
-  document.getElementById('div').innerHTML += msg + '<br>'
-  console.log(msg);
-}
-
-
-//
-let pc = new RTCPeerConnection({iceServers: [{urls: 'stun:stun.l.google.com:19302'}]})
-
 var localSessionDescription = ""
 var remoteSessionDescription = ""
-
-
-var conn = new WebSocket(`ws://${location.host}/ws`);
-conn.onopen = () => {
-  log("WebSocket is opened");
-}
-
-conn.onerror = error => {
-  log(`Websocket error: ${error}`);
-}
-
-conn.onmessage = e => {
-  console.log(e.data);
-  // e.data in json
-}
-
 
 function postSession(session) {
   if (session == "") {
@@ -73,23 +46,48 @@ function postSession(session) {
 
 }
 
+let pc = new RTCPeerConnection({
+  iceServers: [
+    {
+      urls: 'stun:stun.l.google.com:19302'
+    }
+  ]
+})
+let log = msg => {
+  document.getElementById('div').innerHTML += msg + '<br>'
+}
 
-// input channel
+
+const dataChannelOptions = {
+  ordered: false, // do not guarantee order
+  maxPacketLifeTime: 3000, // in milliseconds
+};
+
 let inputChannel = pc.createDataChannel('foo')
-inputChannel.onclose = () => {
-  log('inputChannel has closed');
+inputChannel.onclose = () => console.log('inputChannel has closed')
+inputChannel.onopen = () => console.log('inputChannel has opened')
+inputChannel.onmessage = e => log(`Message from DataChannel '${inputChannel.label}' payload '${e.data}'`)
+
+pc.ontrack = function (event) {
+  var el = document.createElement(event.track.kind)
+  el.srcObject = event.streams[0]
+  el.autoplay = true
+  el.controls = true
+
+  document.getElementById('remoteVideos').appendChild(el)
 }
 
-inputChannel.onopen = () => {
-  log('inputChannel has opened');
+pc.onicecandidate = event => {
+  if (event.candidate === null) {
+    var session = btoa(JSON.stringify(pc.localDescription));
+    localSessionDescription = session;
+    postSession(session)
+  }
 }
 
-inputChannel.onmessage = e => {
-  log(`Message from DataChannel '${inputChannel.label}' payload '${e.data}'`);
-}
+pc.createOffer({offerToReceiveVideo: true, offerToReceiveAudio: true}).then(d => pc.setLocalDescription(d)).catch(log)
 
 
-// Input handler
 keyState = {
   // controllers
   a: false,
@@ -137,6 +135,20 @@ document.body.onkeydown = function(e){
 document.body.onkeyup = function(e){
   setState(e, false);
 };
+
+
+window.startSession = () => {
+  let sd = remoteSessionDescription
+  if (sd === '') {
+    return alert('Session Description must not be empty')
+  }
+
+  try {
+    pc.setRemoteDescription(new RTCSessionDescription(JSON.parse(atob(sd))));
+  } catch (e) {
+    alert(e);
+  }
+}
 
 var timer = null;
 function sendInput() {
@@ -190,54 +202,6 @@ pc.oniceconnectionstatechange = e => {
     endInput();
   }
 
-}
-
-
-
-// stream channel
-pc.ontrack = function (event) {
-  var el = document.createElement(event.track.kind)
-  el.srcObject = event.streams[0]
-  el.autoplay = true
-  el.controls = true
-
-  document.getElementById('remoteVideos').appendChild(el)
-}
-
-
-// candidate packet from STUN
-pc.onicecandidate = event => {
-  if (event.candidate === null) {
-    // var session = btoa(JSON.stringify(pc.localDescription));
-    // localSessionDescription = session;
-    // postSession(session)
-  }
-}
-
-
-// create SDP
-pc.createOffer({offerToReceiveVideo: true, offerToReceiveAudio: true}).then(d => {
-  pc.setLocalDescription(d, () => {
-    // send to ws
-    session = btoa(JSON.stringify(pc.localDescription));
-    localSessionDescription = session;
-    conn.send(JSON.stringify({"id": "sdp", "data": session}));
-  });
-
-}).catch(log);
-
-
-window.startSession = () => {
-  let sd = remoteSessionDescription
-  if (sd === '') {
-    return alert('Session Description must not be empty')
-  }
-
-  try {
-    pc.setRemoteDescription(new RTCSessionDescription(JSON.parse(atob(sd))));
-  } catch (e) {
-    alert(e);
-  }
 }
 
 </script>
