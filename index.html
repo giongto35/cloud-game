@@ -297,8 +297,11 @@ function endInput() {
 
 
 function startWebRTC() {
+  // receiver only tracks
+  pc.addTransceiver('video', {'direction': 'recvonly'});
+
   // create SDP
-  pc.createOffer({offerToReceiveVideo: true, offerToReceiveAudio: true}).then(d => {
+  pc.createOffer({offerToReceiveVideo: true, offerToReceiveAudio: false}).then(d => {
     pc.setLocalDescription(d, () => {
       // send to ws
       session = btoa(JSON.stringify(pc.localDescription));
