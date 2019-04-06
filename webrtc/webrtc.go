@@ -108,7 +108,6 @@ type WebRTC struct {
 	connection  *webrtc.PeerConnection
 	encoder     *vpxEncoder.VpxEncoder
 	isConnected bool
-	isClosed    bool
 	// for yuvI420 image
 	ImageChannel chan []byte
 	InputChannel chan int
@@ -226,7 +225,6 @@ func (w *WebRTC) StopClient() {
 		w.connection.Close()
 	}
 	w.connection = nil
-	w.isClosed = true
 }
 
 // IsConnected comment
@@ -234,9 +232,6 @@ func (w *WebRTC) IsConnected() bool {
 	return w.isConnected
 }
 
-func (w *WebRTC) IsClosed() bool {
-	return w.isClosed
-}
 
 func (w *WebRTC) startStreaming(vp8Track *webrtc.Track) {
 	fmt.Println("Start streaming")
@@ -252,7 +247,7 @@ func (w *WebRTC) startStreaming(vp8Track *webrtc.Track) {
 
 	// receive frame buffer
 	go func() {
-		for i := 0; w.isConnected; i++ {
+		for w.isConnected {
 			bs := <-w.encoder.Output
 			vp8Track.WriteSample(media.Sample{Data: bs, Samples: 1})
 		}

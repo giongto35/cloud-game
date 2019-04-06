@@ -174,15 +174,12 @@ func postSession(w http.ResponseWriter, r *http.Request) {
 // func screenshotLoop(imageChannel chan *image.RGBA) {
 func screenshotLoop(imageChannel chan *image.RGBA, webRTC *webrtc.WebRTC) {
 	for image := range imageChannel {
-		// Client stopped
-		if webRTC.IsClosed() {
-			break
-		}
-
 		// encode frame
 		if webRTC.IsConnected() {
 			yuv := util.RgbaToYuv(image)
 			webRTC.ImageChannel <- yuv
+		} else {
+			break
 		}
 	}
 }
