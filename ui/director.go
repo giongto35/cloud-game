@@ -65,7 +65,7 @@ func (d *Director) Start(paths []string) {
 func (d *Director) Run() {
 	for {
 		// quit game
-		if !d.webRTC.IsConnected() {
+		if d.webRTC.IsClosed() {
 			break
 		}
 
