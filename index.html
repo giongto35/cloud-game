@@ -11,9 +11,7 @@ textarea {
     <option value="Contra.nes">Contra.nes</option>
     <option value="Kirby's Adventure.nes">Kirby's Adventure.nes</option>
     <option value="Mega Man 2.nes">Mega Man 2.nes</option>
-    <option value="Mega Man.nes">Mega Man.nes</option>
     <option value="Metal Gear.nes">Metal Gear.nes</option>
-    <option value="Mike Tyson.nes">Mike Tyson.nes</option>
     <option value="Mortal Kombat 4.nes">Mortal Kombat 4.nes</option>
     <option value="Super Mario Bros 2.nes">Super Mario Bros 2.nes</option>
     <option value="Super Mario Bros 3.nes">Super Mario Bros 3.nes</option>
@@ -26,9 +24,11 @@ textarea {
 <!--button id="playGame" onclick="window.startSession()" disabled>Play Mario</button-->
 <button id="play" onclick="window.startGame()">Play</button>
 
-<br/>
+<br/><br/>
 
 <div id="remoteVideos" ></div> <br />
+
+<h3>Instruction</h3>
 <div>
   Use Up, Down, Left, Right to Move <br />
   Z to jump (A) <br />
@@ -37,13 +37,13 @@ textarea {
   V is select button <br />
 
   Fullscreen media for better gaming experience<br />
-</div>
+</div><br>
 
-
-<div id="div"></div>
+<h3>Log:</h3>
+<pre id="div"></pre>
 
 <div>
-  Refresh to retry
+  <u><i>Refresh to retry</i></u>
 </div>
 <script>
 
@@ -93,6 +93,16 @@ function postSession(session) {
 // web socket
 
 window.startGame = () => {
+  // clear
+  endInput();
+  document.getElementById('div').innerHTML = "";
+  aa = document.getElementsByTagName("video");
+  for (i = 0; i < aa.length ; ++i) {
+    aa[i].remove();
+  }
+  // end clear
+
+
   conn = new WebSocket(`ws://${location.host}/ws`);
 
   conn.onopen = () => {
@@ -122,29 +132,73 @@ window.startGame = () => {
         break;
     }
   }
+
+  // webrtc
+  pc = new RTCPeerConnection({iceServers: [{urls: 'stun:stun.l.google.com:19302'}]})
+  // input channel
+  inputChannel = pc.createDataChannel('foo')
+  inputChannel.onclose = () => {
+    log('inputChannel has closed');
+  }
+
+  inputChannel.onopen = () => {
+    log('inputChannel has opened');
+  }
+
+  inputChannel.onmessage = e => {
+    log(`Message from DataChannel '${inputChannel.label}' payload '${e.data}'`);
+  }
+
+
+  pc.oniceconnectionstatechange = e => {
+    log(`iceConnectionState: ${pc.iceConnectionState}`);
+
+    if (pc.iceConnectionState === "connected") {
+      conn.send(JSON.stringify({"id": "start", "data": ""}));
+      startInput();
+    }
+    else if (pc.iceConnectionState === "disconnected") {
+    // else { // not sure about this =]
+      endInput();
+    }
+
+  }
+
+
+  // stream channel
+  pc.ontrack = function (event) {
+    var el = document.createElement(event.track.kind)
+    el.srcObject = event.streams[0]
+    el.autoplay = true
+    el.controls = true
+
+    document.getElementById('remoteVideos').appendChild(el)
+  }
+
+
+
+  // candidate packet from STUN
+  pc.onicecandidate = event => {
+    if (event.candidate === null) {
+      // var session = btoa(JSON.stringify(pc.localDescription));
+      // localSessionDescription = session;
+      // postSession(session)
+    } else {
+      console.log(JSON.stringify(event.candidate));
+      // conn.send(JSON.stringify({"id": "candidate", "data": JSON.stringify(event.candidate)}));
+    }
+  }
+
 }
 
 // webrtc
-let pc = new RTCPeerConnection({iceServers: [{urls: 'stun:stun.l.google.com:19302'}]})
-
-var localSessionDescription = ""
-var remoteSessionDescription = ""
+var pc, inputChannel;
+var localSessionDescription = "";
+var remoteSessionDescription = "";
 var conn;
 
 
-// input channel
-let inputChannel = pc.createDataChannel('foo')
-inputChannel.onclose = () => {
-  log('inputChannel has closed');
-}
 
-inputChannel.onopen = () => {
-  log('inputChannel has opened');
-}
-
-inputChannel.onmessage = e => {
-  log(`Message from DataChannel '${inputChannel.label}' payload '${e.data}'`);
-}
 
 
 // Input handler
@@ -197,6 +251,7 @@ document.body.onkeyup = function(e){
 };
 
 var timer = null;
+
 function sendInput() {
   // prepare key
   /*
@@ -237,45 +292,6 @@ function startInput() {
 function endInput() {
   clearInterval(timer);
   timer = null;
-}
-
-pc.oniceconnectionstatechange = e => {
-  log(`iceConnectionState: ${pc.iceConnectionState}`);
-
-  if (pc.iceConnectionState === "connected") {
-    conn.send(JSON.stringify({"id": "start", "data": ""}));
-    startInput();
-  }
-  else if (pc.iceConnectionState === "disconnected") {
-  // else { // not sure about this =]
-    endInput();
-  }
-
-}
-
-
-// stream channel
-pc.ontrack = function (event) {
-  var el = document.createElement(event.track.kind)
-  el.srcObject = event.streams[0]
-  el.autoplay = true
-  el.controls = true
-
-  document.getElementById('remoteVideos').appendChild(el)
-}
-
-
-
-// candidate packet from STUN
-pc.onicecandidate = event => {
-  if (event.candidate === null) {
-    // var session = btoa(JSON.stringify(pc.localDescription));
-    // localSessionDescription = session;
-    // postSession(session)
-  } else {
-    console.log(JSON.stringify(event.candidate));
-    // conn.send(JSON.stringify({"id": "candidate", "data": JSON.stringify(event.candidate)}));
-  }
 }
 
 
