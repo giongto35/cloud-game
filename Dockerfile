@@ -8,7 +8,7 @@ WORKDIR /go/src/github.com/giongto35/cloud-game
 RUN apt-get update
 #RUN apt-get install portaudio19-dev -y
 RUN apt-get install libvpx-dev -y
-RUN go get github.com/pions/webrtc
+RUN go get github.com/pion/webrtc
 #RUN go get github.com/gordonklaus/portaudio
 RUN go get github.com/gorilla/mux
 RUN go get github.com/gorilla/websocket
