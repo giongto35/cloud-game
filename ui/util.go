@@ -1,4 +1,3 @@
-// credit to https://github.com/fogleman/nes
 package ui
 
 import (

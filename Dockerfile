@@ -11,6 +11,7 @@ RUN apt-get install libvpx-dev -y
 RUN go get github.com/pions/webrtc
 #RUN go get github.com/gordonklaus/portaudio
 RUN go get github.com/gorilla/mux
+RUN go get github.com/gorilla/websocket
 RUN go install github.com/giongto35/cloud-game
 
 EXPOSE 8000

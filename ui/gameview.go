@@ -24,6 +24,7 @@ type GameView struct {
 
 	imageChannel chan *image.RGBA
 	inputChannel chan int
+
 }
 
 func NewGameView(director *Director, console *nes.Console, title, hash string, imageChannel chan *image.RGBA, inputChannel chan int) View {
@@ -85,7 +86,11 @@ func (view *GameView) Update(t, dt float64) {
 	view.updateControllers()
 	//fmt.Println(console.Buffer())
 	console.StepSeconds(dt)
+
+	// fps to set frame
 	view.imageChannel <- console.Buffer()
+
+
 	if view.record {
 		view.frames = append(view.frames, copyImage(console.Buffer()))
 	}
