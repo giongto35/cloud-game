@@ -1,8 +1,9 @@
 package main
 
 import (
-	pionRTC "github.com/pions/webrtc"
 	"os"
+
+	pionRTC "github.com/pion/webrtc"
 
 	"fmt"
 	"image"
@@ -78,7 +79,7 @@ func ws(w http.ResponseWriter, r *http.Request) {
 
 	log.Println("New Connection")
 	webRTC := webrtc.NewWebRTC()
-	
+
 	// streaming game
 
 	// start new games and webrtc stuff?
@@ -133,7 +134,7 @@ func ws(w http.ResponseWriter, r *http.Request) {
 			log.Println("Starting game")
 			imageChannel := make(chan *image.RGBA, 100)
 			go screenshotLoop(imageChannel, webRTC)
-			go startGame("games/" + gameName, imageChannel, webRTC.InputChannel, webRTC)
+			go startGame("games/"+gameName, imageChannel, webRTC.InputChannel, webRTC)
 			res.ID = "start"
 			isDone = true
 		}
@@ -152,14 +153,10 @@ func ws(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-
-
-
 type SessionPacket struct {
-	Game   string `json:"game"`
-	SDP    string `json:"sdp"`
+	Game string `json:"game"`
+	SDP  string `json:"sdp"`
 }
-
 
 func postSession(w http.ResponseWriter, r *http.Request) {
 	bs, err := ioutil.ReadAll(r.Body)
@@ -185,7 +182,7 @@ func postSession(w http.ResponseWriter, r *http.Request) {
 
 	imageChannel := make(chan *image.RGBA, 100)
 	go screenshotLoop(imageChannel, webRTC)
-	go startGame("games/" + postPacket.Game, imageChannel, webRTC.InputChannel, webRTC)
+	go startGame("games/"+postPacket.Game, imageChannel, webRTC.InputChannel, webRTC)
 
 	w.Write([]byte(localSession))
 }

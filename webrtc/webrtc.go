@@ -13,8 +13,8 @@ import (
 	"time"
 
 	vpxEncoder "github.com/giongto35/cloud-game/vpx-encoder"
-	"github.com/pions/webrtc"
-	"github.com/pions/webrtc/pkg/media"
+	"github.com/pion/webrtc"
+	"github.com/pion/webrtc/pkg/media"
 )
 
 var config = webrtc.Configuration{ICEServers: []webrtc.ICEServer{{URLs: []string{"stun:stun.l.google.com:19302"}}}}
@@ -104,7 +104,7 @@ type WebRTC struct {
 	connection  *webrtc.PeerConnection
 	encoder     *vpxEncoder.VpxEncoder
 	isConnected bool
-	isClosed bool
+	isClosed    bool
 	// for yuvI420 image
 	ImageChannel chan []byte
 	InputChannel chan int
@@ -147,7 +147,6 @@ func (w *WebRTC) StartClient(remoteSession string, width, height int) (string, e
 		return "", err
 	}
 
-
 	// WebRTC state callback
 	w.connection.OnICEConnectionStateChange(func(connectionState webrtc.ICEConnectionState) {
 		fmt.Printf("ICE Connection State has changed: %s\n", connectionState.String())
@@ -168,7 +167,6 @@ func (w *WebRTC) StartClient(remoteSession string, width, height int) (string, e
 	w.connection.OnICECandidate(func(iceCandidate *webrtc.ICECandidate) {
 		fmt.Println(iceCandidate)
 	})
-
 
 	// Data channel callback
 	w.connection.OnDataChannel(func(d *webrtc.DataChannel) {
