@@ -7,7 +7,7 @@ import (
 	"fmt"
 	// "strconv"
 
-	"github.com/giongto35/game-online/nes"
+	"github.com/giongto35/cloud-game/nes"
 )
 
 const padding = 0
