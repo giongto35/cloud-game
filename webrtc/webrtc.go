@@ -10,6 +10,7 @@ import (
 	"io/ioutil"
 	"math/rand"
 	"strconv"
+	"time"
 
 	vpxEncoder "github.com/giongto35/cloud-game/vpx-encoder"
 	"github.com/pions/webrtc"
@@ -92,8 +93,8 @@ func Decode(in string, obj interface{}) {
 // NewWebRTC create
 func NewWebRTC() *WebRTC {
 	w := &WebRTC{
-		ImageChannel: make(chan []byte, 100),
-		InputChannel: make(chan int, 100),
+		ImageChannel: make(chan []byte, 2),
+		InputChannel: make(chan int, 2),
 	}
 	return w
 }
@@ -103,7 +104,7 @@ type WebRTC struct {
 	connection  *webrtc.PeerConnection
 	encoder     *vpxEncoder.VpxEncoder
 	isConnected bool
-	isClosed    bool
+	isClosed bool
 	// for yuvI420 image
 	ImageChannel chan []byte
 	InputChannel chan int
@@ -121,7 +122,7 @@ func (w *WebRTC) StartClient(remoteSession string, width, height int) (string, e
 	// reset client
 	if w.isConnected {
 		w.StopClient()
-		//time.Sleep(2 * time.Second)
+		time.Sleep(2 * time.Second)
 	}
 
 	encoder, err := vpxEncoder.NewVpxEncoder(width, height, 20, 1200, 5)
@@ -146,6 +147,8 @@ func (w *WebRTC) StartClient(remoteSession string, width, height int) (string, e
 		return "", err
 	}
 
+
+	// WebRTC state callback
 	w.connection.OnICEConnectionStateChange(func(connectionState webrtc.ICEConnectionState) {
 		fmt.Printf("ICE Connection State has changed: %s\n", connectionState.String())
 		if connectionState == webrtc.ICEConnectionStateConnected {
@@ -161,8 +164,13 @@ func (w *WebRTC) StartClient(remoteSession string, width, height int) (string, e
 		}
 	})
 
-	//w.listenInputChannel()
-	// Data channel
+	// TODO: take a look at this
+	w.connection.OnICECandidate(func(iceCandidate *webrtc.ICECandidate) {
+		fmt.Println(iceCandidate)
+	})
+
+
+	// Data channel callback
 	w.connection.OnDataChannel(func(d *webrtc.DataChannel) {
 		fmt.Printf("New DataChannel %s %d\n", d.Label(), d.ID())
 
@@ -180,20 +188,29 @@ func (w *WebRTC) StartClient(remoteSession string, width, height int) (string, e
 	})
 
 	offer := webrtc.SessionDescription{}
+
 	Decode(remoteSession, &offer)
-	if err != nil {
-		return "", err
-	}
+
 	err = w.connection.SetRemoteDescription(offer)
 	if err != nil {
 		return "", err
 	}
+
 	answer, err := w.connection.CreateAnswer(nil)
 	if err != nil {
 		return "", err
 	}
+
 	localSession := Encode(answer)
 	return localSession, nil
+}
+
+// TODO: Take a look at this
+func (w *WebRTC) AddCandidate(candidate webrtc.ICECandidateInit) {
+	err := w.connection.AddICECandidate(candidate)
+	if err != nil {
+		fmt.Println("Cannot add candidate: ", err)
+	}
 }
 
 // StopClient disconnect
@@ -233,7 +250,7 @@ func (w *WebRTC) startStreaming(vp8Track *webrtc.Track) {
 
 	// receive frame buffer
 	go func() {
-		for i := 0; w.isConnected; i++ {
+		for w.isConnected {
 			bs := <-w.encoder.Output
 			vp8Track.WriteSample(media.Sample{Data: bs, Samples: 1})
 		}
