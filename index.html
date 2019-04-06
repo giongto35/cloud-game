@@ -36,14 +36,14 @@ textarea {
   C is start button <br />
   V is select button <br />
 
-  Fullscreen media for better gaming experience<br />
+  <!--Fullscreen media for better gaming experience<br /-->
 </div><br>
 
 <h3>Log:</h3>
 <pre id="div"></pre>
 
 <div>
-  <u><i>Refresh to retry</i></u>
+  🎮<u><i>Refresh to retry when checking is too long</i></u>
 </div>
 <script>
 
@@ -167,10 +167,11 @@ window.startGame = () => {
 
   // stream channel
   pc.ontrack = function (event) {
-    var el = document.createElement(event.track.kind)
-    el.srcObject = event.streams[0]
-    el.autoplay = true
-    el.controls = true
+    var el = document.createElement(event.track.kind);
+    // console.log(event.streams);
+    el.srcObject = event.streams[0];
+    el.autoplay = true;
+    el.poster = new URL("https://orig00.deviantart.net/cdcd/f/2017/276/a/a/october_2nd___gameboy_poltergeist_by_wanyo-dbpdmnd.gif");
 
     document.getElementById('remoteVideos').appendChild(el)
   }
