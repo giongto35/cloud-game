@@ -20,14 +20,14 @@ type GameView struct {
 	record   bool
 	frames   []image.Image
 
-	keyPressed [8]bool
+	keyPressed [10]bool
 
 	imageChannel chan *image.RGBA
 	inputChannel chan int
 }
 
 func NewGameView(director *Director, console *nes.Console, title, hash string, imageChannel chan *image.RGBA, inputChannel chan int) View {
-	gameview := &GameView{director, console, title, hash, false, nil, [8]bool{false}, imageChannel, inputChannel}
+	gameview := &GameView{director, console, title, hash, false, nil, [10]bool{false}, imageChannel, inputChannel}
 	go gameview.ListenToInputChannel()
 	return gameview
 }
@@ -35,7 +35,8 @@ func NewGameView(director *Director, console *nes.Console, title, hash string, i
 func (view *GameView) ListenToInputChannel() {
 	for {
 		key := <-view.inputChannel
-		s := fmt.Sprintf("%.8b", key)
+		s := fmt.Sprintf("%.10b", key)
+		fmt.Println(s)
 		for i := 0; i < len(s); i++ {
 			if s[i] == '1' {
 				view.keyPressed[i] = true
@@ -107,5 +108,17 @@ func (view *GameView) updateControllers() {
 	// buttons[nes.ButtonStart] = view.keyPressed[13]
 	// buttons[nes.ButtonSelect] = view.keyPressed[16]
 	// view.console.Controller1.SetButtons(buttons)
-	view.console.Controller1.SetButtons(view.keyPressed)
+	var gameKeys [8]bool
+	copy(gameKeys[:], view.keyPressed[:8])
+
+	if view.keyPressed[8] {
+		fmt.Println("saving", view.hash)
+		view.console.SaveState(savePath(view.hash))
+	}
+	if view.keyPressed[9] {
+		fmt.Println("loading", view.hash)
+		view.console.LoadState(savePath(view.hash))
+	}
+
+	view.console.Controller1.SetButtons(gameKeys)
 }

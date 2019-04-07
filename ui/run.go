@@ -20,7 +20,7 @@ func init() {
 	runtime.LockOSThread()
 }
 
-func Run(paths []string, imageChannel chan *image.RGBA, inputChannel chan int) {
+func Run(paths []string, roomID string, imageChannel chan *image.RGBA, inputChannel chan int) {
 	// TODO: stream audio
 	// initialize audio
 	// portaudio.Initialize()
@@ -33,7 +33,7 @@ func Run(paths []string, imageChannel chan *image.RGBA, inputChannel chan int) {
 	// defer audio.Stop()
 
 	// run director
-	director := NewDirector(imageChannel, inputChannel)
+	director := NewDirector(roomID, imageChannel, inputChannel)
 	// director := NewDirector(audio, imageChannel, inputChannel)
 	director.Start(paths)
 }

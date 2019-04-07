@@ -45,13 +45,15 @@ func combineButtons(a, b [8]bool) [8]bool {
 	return result
 }
 
-func hashFile(path string) (string, error) {
+// hashFile : signature of a room, maybe not need path
+func hashFile(path string, roomID string) (string, error) {
 	data, err := ioutil.ReadFile(path)
 	if err != nil {
 		return "", err
 	}
-	return fmt.Sprintf("%x", md5.Sum(data)), nil
+	return fmt.Sprintf("%x", md5.Sum(append(data, []byte(roomID)...))), nil
 }
+
 func copyImage(src image.Image) *image.RGBA {
 	dst := image.NewRGBA(src.Bounds())
 	draw.Draw(dst, dst.Rect, src, image.ZP, draw.Src)

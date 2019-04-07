@@ -63,8 +63,8 @@ var rooms map[string]*Room
 func init() {
 }
 
-func startGame(path string, imageChannel chan *image.RGBA, inputChannel chan int) {
-	ui.Run([]string{path}, imageChannel, inputChannel)
+func startGame(path string, roomID string, imageChannel chan *image.RGBA, inputChannel chan int) {
+	ui.Run([]string{path}, roomID, imageChannel, inputChannel)
 }
 
 func main() {
@@ -118,7 +118,7 @@ func initRoom(roomID, gameName string) string {
 		rtcSessions:  []*webrtc.WebRTC{},
 	}
 	go fanoutScreen(imageChannel, roomID)
-	go startGame("games/"+gameName, imageChannel, inputChannel)
+	go startGame("games/"+gameName, roomID, imageChannel, inputChannel)
 
 	return roomID
 }
@@ -255,7 +255,7 @@ func postSession(w http.ResponseWriter, r *http.Request) {
 			rtcSessions:  []*webrtc.WebRTC{},
 		}
 		go fanoutScreen(imageChannel, roomID)
-		go startGame("games/"+postPacket.Game, imageChannel, inputChannel)
+		go startGame("games/"+postPacket.Game, roomID, imageChannel, inputChannel)
 		// fanin input channel
 		// fanout output channel
 	} else {

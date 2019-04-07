@@ -20,14 +20,16 @@ type Director struct {
 	timestamp    float64
 	imageChannel chan *image.RGBA
 	inputChannel chan int
+	roomID       string
 }
 
-func NewDirector(imageChannel chan *image.RGBA, inputChannel chan int) *Director {
+func NewDirector(roomID string, imageChannel chan *image.RGBA, inputChannel chan int) *Director {
 	// func NewDirector(audio *Audio, imageChannel chan *image.RGBA, inputChannel chan int) *Director {
 	director := Director{}
 	// director.audio = audio
 	director.imageChannel = imageChannel
 	director.inputChannel = inputChannel
+	director.roomID = roomID
 	return &director
 }
 
@@ -70,7 +72,7 @@ func (d *Director) Run() {
 }
 
 func (d *Director) PlayGame(path string) {
-	hash, err := hashFile(path)
+	hash, err := hashFile(path, d.roomID)
 	if err != nil {
 		log.Fatalln(err)
 	}
