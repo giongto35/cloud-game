@@ -1,0 +1,160 @@
+<head>
+  <link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.8.1/css/all.css" integrity="sha384-50oBUHEmvpQ+1lW4y57PTFmhCaXp0ML5d60M1M7uH2+nqUivzIebhndOJK28anvf" crossorigin="anonymous">
+
+  <link type="text/css" rel="stylesheet" href="/static/css/gameboy.css">
+</head>
+  
+  
+<body>
+  <div id="gameboy" class="green">
+    <div id="canvas"></div>
+    <div id="border"></div>
+    <div id="border-top"></div>
+    <div id="border-left"></div>
+    <div id="border-bottom"></div>
+    <div id="border-right"></div>
+    <div id="screw-small-right" class="screw small"></div>
+    <div id="screw-small-left" class="screw small"></div>
+    <div id="screw-large-right" class="screw large"></div>
+    <div id="screw-large-left" class="screw large"></div>
+    <div id="backboard"></div>
+    <div id="motherboard"></div>
+    <div id="motherboard-capacitors" class="capacitors"></div>
+    <div id="chip-short" class="chip"></div>
+    <div id="chip-diagonal" class="chip"></div>
+    <div id="chip-tall" class="chip"></div>
+    <div id="chip-capacitors" class="capacitors"></div>
+    <div id="contrast-knob"></div>
+    <div id="link-port"></div>
+    <div id="circuit-bottom" class="circuit"></div>
+    <div id="circuit-top" class="circuit"></div>
+    <div id="transistors"></div>
+    <div id="processor"></div>
+    <div id="component"></div>
+    <div id="controller"></div>
+    <div id="speaker"></div>
+    <div id="whitescreen"></div>
+    <div id="glass"></div>
+    <div id="glass-gameboy-text">GAME BOY</div>
+    <div id="glass-color-text">C</div>
+    <div id="screen">
+      <video id="loading-screen" autoplay=true poster="https://orig00.deviantart.net/cdcd/f/2017/276/a/a/october_2nd___gameboy_poltergeist_by_wanyo-dbpdmnd.gif">
+      </video>
+
+      <div id="menu-screen">
+        <img id="box-art" src="/static/img/boxarts/Contra (USA).png">
+        <div id="title">
+          <p>Contra</p>
+        </div>
+
+        <img class="arrow left" src="/static/img/arrow2_e.gif">
+        <img class="arrow right" src="/static/img/arrow2_e.gif">
+      </div>
+
+    </div>
+    <div id="screen-gameboy-text">GAME BOY</div>
+    <div id="screen-nintendo-text">Nintendo</div>
+    <div id="joystick-pad"></div>
+    <div id="joystick">.</div>
+    <div id="control"></div>
+    <div id="control-b" class="control-button">B</div>
+    <div id="control-a" class="control-button">A</div>
+    <div id="start-select-box"></div>
+    <div id="start-select-button"></div>
+    <div id="cover-vertical"></div>
+    <div id="cover-horizontal"></div>
+    <div id="gloss"></div>
+    <div id="speaker-holes"></div>
+    <div id="power"></div>
+  </div>
+
+  <div id="colors">
+    <div class="color" data-color="red"></div>
+    <div class="color" data-color="purple"></div>
+    <div class="color" data-color="green"></div>
+    <div class="color" data-color="yellow"></div>
+    <div class="color" data-color="teal"></div>
+    <div class="color" data-color="transparent"></div><br><br>
+    <div>Animation powered by bchanx <a href="http://bchanx.com/animated-gameboy-in-css-blog"><i class="fas fa-blog"></i></a> <a href="https://github.com/bchanx/animated-gameboy-in-css"><i class="fab fa-github"></i></a></div><br>
+    <div>Rocked by <a href="https://github.com/giongto35">giongto35</a> <i class="far fa-handshake"></i> <a href="https://trich.im">trichimtrich</a></div>
+  </div>
+
+  <div style="position:absolute; top:30%; left: 5%;">
+    <h3>Instruction</h3>
+    <div>
+      Use Up, Down, Left, Right to Move <br />
+      Z to jump (A) <br />
+      X to sprint (B) <br />
+      C is start (in game) <br />
+      V is select game <br />
+      Q is super quit <br />
+
+      <!--Fullscreen media for better gaming experience<br /-->
+    </div><br>
+
+    <h3>Log:</h3>
+    <pre id="div"></pre>
+
+    <div>
+      <i class="fas fa-gamepad"></i> <u><i>Refresh to retry when checking is too long</i></u>
+    </div>  
+  </div>
+  
+
+  <script src="https://code.jquery.com/jquery-3.3.1.min.js"></script>
+  <script src="/static/js/const.js"></script>
+  
+  <script>
+    /* 
+      GLOBAL VARS
+    */
+   // Game state
+    screenState = "loader";
+    gameIdx = 0;
+    
+    // Input vars
+    keyState = {
+      // controllers
+      a: false,
+      b: false, 
+      start: false,
+      select: false,
+      
+      // navigators
+      up: false,
+      down: false,
+      left: false,
+      right: false,
+
+      // unofficial
+      quit: false
+    }
+
+    stateUnchange = true;
+    unchangePacket = INPUT_STATE_PACKET;
+    inputTimer = null;
+
+    // Connection vars
+    var pc, inputChannel;
+    var localSessionDescription = "";
+    var remoteSessionDescription = "";
+    var conn;
+
+
+    /* 
+      FUNCTIONS
+    */
+  
+    // miscs
+    function log(msg) {
+      if (DEBUG) {
+        document.getElementById('div').innerHTML += msg + '<br>'
+        console.log(msg);
+      }
+    }
+  </script>
+
+  <script src="/static/js/gameboy_loader.js"></script>
+  <script src="/static/js/gameboy_controller.js"></script>
+  <script src="/static/js/{{.Service}}.js"></script>
+</body>
