@@ -47,14 +47,15 @@ func (view *GameView) ListenToInputChannel() {
 }
 
 func (view *GameView) Enter() {
+	// Always reset game
 	// view.console.SetAudioChannel(view.director.audio.channel)
 	// view.console.SetAudioSampleRate(view.director.audio.sampleRate)
 	// load state
-	if err := view.console.LoadState(savePath(view.hash)); err == nil {
-		return
-	} else {
-		view.console.Reset()
-	}
+	//if err := view.console.LoadState(savePath(view.hash)); err == nil {
+	//return
+	//} else {
+	view.console.Reset()
+	//}
 	// load sram
 	cartridge := view.console.Cartridge
 	if cartridge.Battery != 0 {
@@ -73,7 +74,7 @@ func (view *GameView) Exit() {
 		writeSRAM(sramPath(view.hash), cartridge.SRAM)
 	}
 	// save state
-	view.console.SaveState(savePath(view.hash))
+	//view.console.SaveState(savePath(view.hash))
 }
 
 func (view *GameView) Update(t, dt float64) {
