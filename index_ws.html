@@ -22,7 +22,7 @@ textarea {
     <option value="zelda.rom">zelda.rom</option>
 </select>
 <button id="play" onclick="window.startGame()">Play</button>
-Room ID: <input type="text" name="roomID"><br>
+Room ID: <input type="text" id="roomID"><br>
 
 <br/><br/>
 
@@ -99,13 +99,19 @@ window.startGame = () => {
         log("Got remote sdp");
         pc.setRemoteDescription(new RTCSessionDescription(JSON.parse(atob(d["data"]))));
         break;
+      case "start":
+        log("Got start");
+        document.getElementById('roomID').value = d["room_id"]
+        break;
     }
   }
 
   // webrtc
   pc = new RTCPeerConnection({iceServers: [{urls: 'stun:stun.l.google.com:19302'}]})
   // input channel
-  inputChannel = pc.createDataChannel('foo')
+  let r = Math.random().toString(36).substring(7)
+  console.log("data chan name", r)
+  inputChannel = pc.createDataChannel(r)
   inputChannel.onclose = () => {
     log('inputChannel has closed');
   }
@@ -166,10 +172,6 @@ var pc, inputChannel;
 var localSessionDescription = "";
 var remoteSessionDescription = "";
 var conn;
-
-
-
-
 
 // Input handler
 keyState = {

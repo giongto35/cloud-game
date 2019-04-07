@@ -83,6 +83,26 @@ func getWeb(w http.ResponseWriter, r *http.Request) {
 	w.Write(bs)
 }
 
+func startSession(webRTC *webrtc.WebRTC, gameName string, roomID string) string {
+	if roomID == "" {
+		roomID = generateRoomID()
+		imageChannel := make(chan *image.RGBA, 100)
+		inputChannel := make(chan int, 100)
+		rooms[roomID] = &Room{
+			imageChannel: imageChannel,
+			inputChannel: inputChannel,
+			rtcSessions:  []*webrtc.WebRTC{},
+		}
+		go fanoutScreen(imageChannel, roomID)
+		go startGame("games/"+gameName, imageChannel, inputChannel, webRTC)
+	}
+
+	rooms[roomID].rtcSessions = append(rooms[roomID].rtcSessions, webRTC)
+	faninInput(rooms[roomID].inputChannel, webRTC)
+
+	return roomID
+}
+
 func ws(w http.ResponseWriter, r *http.Request) {
 	c, err := upgrader.Upgrade(w, r, nil)
 	if err != nil {
@@ -100,6 +120,7 @@ func ws(w http.ResponseWriter, r *http.Request) {
 	isDone := false
 
 	var gameName string
+	var roomID string
 
 	for !isDone {
 		mt, message, err := c.ReadMessage()
@@ -121,6 +142,7 @@ func ws(w http.ResponseWriter, r *http.Request) {
 		switch req.ID {
 		case "ping":
 			gameName = req.Data
+			roomID = req.RoomID
 			log.Println("Ping from server with game:", gameName)
 			res.ID = "pong"
 
@@ -133,7 +155,6 @@ func ws(w http.ResponseWriter, r *http.Request) {
 
 			res.ID = "sdp"
 			res.Data = localSession
-			res.RoomID = generateRoomID()
 
 		case "candidate":
 			hi := pionRTC.ICECandidateInit{}
@@ -147,10 +168,9 @@ func ws(w http.ResponseWriter, r *http.Request) {
 
 		case "start":
 			log.Println("Starting game")
-			imageChannel := make(chan *image.RGBA, 100)
-			//go screenshotLoop(imageChannel, webRTC)
-			go startGame("games/"+gameName, imageChannel, webRTC.InputChannel, webRTC)
 			res.ID = "start"
+			res.RoomID = startSession(webRTC, gameName, roomID)
+
 			isDone = true
 		}
 
@@ -197,7 +217,6 @@ func postSession(w http.ResponseWriter, r *http.Request) {
 	}
 
 	roomID := postPacket.RoomID
-	fmt.Println("RoomID", roomID)
 	if roomID == "" {
 		fmt.Println("Init Room")
 		//generate new room
@@ -255,8 +274,6 @@ func fanoutScreen(imageChannel chan *image.RGBA, roomID string) {
 				webRTC.ImageChannel <- yuv
 			}
 		}
-		// time.Sleep(10 * time.Millisecond)
-		// time.Sleep(time.Duration(1000 / FPS) * time.Millisecond)
 	}
 }
 
