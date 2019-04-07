@@ -4,6 +4,7 @@ import (
 	"math/rand"
 	"os"
 	"strconv"
+	"time"
 
 	pionRTC "github.com/pion/webrtc"
 
@@ -31,16 +32,18 @@ var index string = "./index_http.html"
 var upgrader = websocket.Upgrader{}
 
 type WSPacket struct {
-	ID   string `json:"id"`
-	Data string `json:"data"`
+	ID     string `json:"id"`
+	Data   string `json:"data"`
+	RoomID string `json:"room_id"`
 }
 
 type Room struct {
 	imageChannel chan *image.RGBA
+	inputChannel chan int
 	rtcSessions  []*webrtc.WebRTC
 }
 
-var rooms map[string]Room
+var rooms map[string]*Room
 
 func init() {
 }
@@ -50,8 +53,10 @@ func startGame(path string, imageChannel chan *image.RGBA, inputChannel chan int
 }
 
 func main() {
+	rand.Seed(time.Now().UTC().UnixNano())
 	fmt.Printf("Usage: %s [ws]\n", os.Args[0])
 	fmt.Println("http://localhost:8000")
+	rooms = map[string]*Room{}
 	if len(os.Args) > 1 {
 		log.Println("Using websocket")
 		index = "./index_ws.html"
@@ -128,7 +133,7 @@ func ws(w http.ResponseWriter, r *http.Request) {
 
 			res.ID = "sdp"
 			res.Data = localSession
-			//res.RoomID = generateRoomID()
+			res.RoomID = generateRoomID()
 
 		case "candidate":
 			hi := pionRTC.ICECandidateInit{}
@@ -143,7 +148,7 @@ func ws(w http.ResponseWriter, r *http.Request) {
 		case "start":
 			log.Println("Starting game")
 			imageChannel := make(chan *image.RGBA, 100)
-			go screenshotLoop(imageChannel, webRTC)
+			//go screenshotLoop(imageChannel, webRTC)
 			go startGame("games/"+gameName, imageChannel, webRTC.InputChannel, webRTC)
 			res.ID = "start"
 			isDone = true
@@ -191,34 +196,51 @@ func postSession(w http.ResponseWriter, r *http.Request) {
 		log.Fatalln(err)
 	}
 
-	if postPacket.RoomID == "" {
+	roomID := postPacket.RoomID
+	fmt.Println("RoomID", roomID)
+	if roomID == "" {
+		fmt.Println("Init Room")
+		//generate new room
+		roomID = generateRoomID()
+
 		imageChannel := make(chan *image.RGBA, 100)
-		rooms[postPacket.RoomID] = Room{
+		inputChannel := make(chan int, 100)
+		rooms[roomID] = &Room{
 			imageChannel: imageChannel,
+			inputChannel: inputChannel,
 			rtcSessions:  []*webrtc.WebRTC{},
 		}
-		go screenshotLoop(imageChannel, room)
+		go fanoutScreen(imageChannel, roomID)
+		go startGame("games/"+postPacket.Game, imageChannel, inputChannel, webRTC)
+		// fanin input channel
+		// fanout output channel
 	} else {
-		// if there is room, reuse image channel
-		rooms[postPacket.RoomID] = append(rooms[postPacket.RoomID], webRTC)
+		// if there is room, reuse image channel, add webRTC session
 	}
-	go startGame("games/"+postPacket.Game, imageChannel, webRTC.InputChannel, webRTC)
+	rooms[roomID].rtcSessions = append(rooms[roomID].rtcSessions, webRTC)
+	faninInput(rooms[roomID].inputChannel, webRTC)
 
-	w.Write([]byte(localSession))
+	res := SessionPacket{
+		SDP:    localSession,
+		RoomID: roomID,
+	}
+	stRes, err := json.Marshal(res)
+	if err != nil {
+		log.Println("json marshal:", err)
+	}
+
+	//w.Write([]byte(localSession))
+	w.Write(stRes)
 }
 
 // generateRoomID generate a unique room ID containing 16 digits
 func generateRoomID() string {
 	roomID := strconv.FormatInt(rand.Int63(), 16)
-	for len(roomID) < 16 {
-		roomID = "0" + roomID
-	}
-	fmt.Println(roomID)
 	return roomID
 }
 
-// func screenshotLoop(imageChannel chan *image.RGBA) {
-func screenshotLoop(imageChannel chan *image.RGBA, roomID string) {
+// func fanoutScreen(imageChannel chan *image.RGBA) {
+func fanoutScreen(imageChannel chan *image.RGBA, roomID string) {
 	for image := range imageChannel {
 		yuv := util.RgbaToYuv(image)
 		for _, webRTC := range rooms[roomID].rtcSessions {
@@ -228,6 +250,7 @@ func screenshotLoop(imageChannel chan *image.RGBA, roomID string) {
 			}
 
 			// encode frame
+			// fanout imageChannel
 			if webRTC.IsConnected() {
 				webRTC.ImageChannel <- yuv
 			}
@@ -235,4 +258,24 @@ func screenshotLoop(imageChannel chan *image.RGBA, roomID string) {
 		// time.Sleep(10 * time.Millisecond)
 		// time.Sleep(time.Duration(1000 / FPS) * time.Millisecond)
 	}
+}
+
+// func faninInput(input chan int) {
+func faninInput(inputChannel chan int, webRTC *webrtc.WebRTC) {
+	go func() {
+		for {
+			fmt.Println("spawning")
+			// Client stopped
+			if webRTC.IsClosed() {
+				return
+			}
+
+			// encode frame
+			if webRTC.IsConnected() {
+				input := <-webRTC.InputChannel
+				fmt.Println("received input", input)
+				inputChannel <- input
+			}
+		}
+	}()
 }

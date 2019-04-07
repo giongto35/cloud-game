@@ -75,7 +75,8 @@ window.startGame = () => {
 
   conn.onopen = () => {
     log("WebSocket is opened. Send ping");
-    conn.send(JSON.stringify({"id": "ping", "data": gameOp.value}));
+    roomID = document.getElementById('roomID').value
+    conn.send(JSON.stringify({"id": "ping", "data": gameOp.value, "room_id": roomID}));
   }
 
   conn.onerror = error => {
