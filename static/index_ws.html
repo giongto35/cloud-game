@@ -36,6 +36,8 @@ Room ID: <input type="text" id="roomID"><br>
   X to sprint (B) <br />
   C is start button <br />
   V is select button <br />
+  S to save <br />
+  L to load <br />
 
   <!--Fullscreen media for better gaming experience<br /-->
 </div><br>
@@ -200,6 +202,8 @@ keyMap = {
   88: "b", 
   67: "start", 
   86: "select",
+  83: "save",
+  76: "load",
 }
 
 INPUT_FPS = 100;
@@ -243,7 +247,7 @@ function sendInput() {
   
   if (stateUnchange || unchangePacket > 0) {
     st = "";
-    ["a", "b", "select", "start", "up", "down", "left", "right"].forEach(elem => {
+    ["a", "b", "select", "start", "up", "down", "left", "right", "save", "load"].forEach(elem => {
       st += keyState[elem]?1:0;
     });
     ss = parseInt(st, 2);
