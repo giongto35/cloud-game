@@ -2,6 +2,7 @@ package main
 
 import (
 	"os"
+	"html/template"
 
 	pionRTC "github.com/pion/webrtc"
 
@@ -15,16 +16,21 @@ import (
 	"github.com/giongto35/cloud-game/util"
 	"github.com/giongto35/cloud-game/webrtc"
 
-	"github.com/gorilla/mux"
 	"github.com/gorilla/websocket"
 
 	"encoding/json"
+
 )
 
 // var webRTC *webrtc.WebRTC
 var width = 256
 var height = 240
-var index string = "./index_http.html"
+var indexFN string = "./static/gameboy.html"
+var service string = "http"
+
+type IndexPageData struct {
+	Service string
+}
 
 var upgrader = websocket.Upgrader{}
 
@@ -33,40 +39,53 @@ type WSPacket struct {
 	Data string `json:"data"`
 }
 
-func init() {
+
+type SessionPacket struct {
+	Game string `json:"game"`
+	SDP  string `json:"sdp"`
 }
+
 
 func startGame(path string, imageChannel chan *image.RGBA, inputChannel chan int, webRTC *webrtc.WebRTC) {
 	ui.Run([]string{path}, imageChannel, inputChannel, webRTC)
 }
 
+
+
 func main() {
 	fmt.Printf("Usage: %s [ws]\n", os.Args[0])
 	fmt.Println("http://localhost:8000")
+
 	if len(os.Args) > 1 {
+		service = "ws"
 		log.Println("Using websocket")
-		index = "./index_ws.html"
 
 		// ignore origin
 		upgrader.CheckOrigin = func(r *http.Request) bool { return true }
-		http.HandleFunc("/", getWeb)
 		http.HandleFunc("/ws", ws)
-		http.ListenAndServe(":8000", nil)
 	} else {
 		log.Println("Using http")
-		router := mux.NewRouter()
-		router.HandleFunc("/", getWeb).Methods("GET")
-		router.HandleFunc("/session", postSession).Methods("POST")
-		http.ListenAndServe(":8000", router)
+		http.HandleFunc("/session", postSession)
 	}
+
+	http.HandleFunc("/", getWeb)
+	http.Handle("/static/", http.StripPrefix("/static/", http.FileServer(http.Dir("./static")))) 
+	http.ListenAndServe(":8000", nil)
 }
 
+
 func getWeb(w http.ResponseWriter, r *http.Request) {
-	bs, err := ioutil.ReadFile(index)
-	if err != nil {
-		log.Fatal(err)
+	tmpl := template.Must(template.ParseFiles(indexFN))
+	data := IndexPageData {
+		Service: service,
 	}
-	w.Write(bs)
+	tmpl.Execute(w, data)
+	
+	// bs, err := ioutil.ReadFile(index)
+	// if err != nil {
+	// 	log.Fatal(err)
+	// }
+	// w.Write(bs)
 }
 
 func ws(w http.ResponseWriter, r *http.Request) {
@@ -153,10 +172,6 @@ func ws(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-type SessionPacket struct {
-	Game string `json:"game"`
-	SDP  string `json:"sdp"`
-}
 
 func postSession(w http.ResponseWriter, r *http.Request) {
 	bs, err := ioutil.ReadAll(r.Body)
