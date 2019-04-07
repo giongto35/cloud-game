@@ -35,6 +35,13 @@ type WSPacket struct {
 	Data string `json:"data"`
 }
 
+type Room struct {
+	imageChannel chan *image.RGBA
+	rtcSessions  []*webrtc.WebRTC
+}
+
+var rooms map[string]Room
+
 func init() {
 }
 
@@ -184,8 +191,17 @@ func postSession(w http.ResponseWriter, r *http.Request) {
 		log.Fatalln(err)
 	}
 
-	imageChannel := make(chan *image.RGBA, 100)
-	go screenshotLoop(imageChannel, webRTC)
+	if postPacket.RoomID == "" {
+		imageChannel := make(chan *image.RGBA, 100)
+		rooms[postPacket.RoomID] = Room{
+			imageChannel: imageChannel,
+			rtcSessions:  []*webrtc.WebRTC{},
+		}
+		go screenshotLoop(imageChannel, room)
+	} else {
+		// if there is room, reuse image channel
+		rooms[postPacket.RoomID] = append(rooms[postPacket.RoomID], webRTC)
+	}
 	go startGame("games/"+postPacket.Game, imageChannel, webRTC.InputChannel, webRTC)
 
 	w.Write([]byte(localSession))
@@ -202,17 +218,19 @@ func generateRoomID() string {
 }
 
 // func screenshotLoop(imageChannel chan *image.RGBA) {
-func screenshotLoop(imageChannel chan *image.RGBA, webRTC *webrtc.WebRTC) {
+func screenshotLoop(imageChannel chan *image.RGBA, roomID string) {
 	for image := range imageChannel {
-		// Client stopped
-		if webRTC.IsClosed() {
-			break
-		}
+		yuv := util.RgbaToYuv(image)
+		for _, webRTC := range rooms[roomID].rtcSessions {
+			// Client stopped
+			if webRTC.IsClosed() {
+				continue
+			}
 
-		// encode frame
-		if webRTC.IsConnected() {
-			yuv := util.RgbaToYuv(image)
-			webRTC.ImageChannel <- yuv
+			// encode frame
+			if webRTC.IsConnected() {
+				webRTC.ImageChannel <- yuv
+			}
 		}
 		// time.Sleep(10 * time.Millisecond)
 		// time.Sleep(time.Duration(1000 / FPS) * time.Millisecond)
