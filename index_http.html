@@ -21,9 +21,9 @@ textarea {
     <option value="supermariobros.rom">supermariobros.rom</option>
     <option value="zelda.rom">zelda.rom</option>
 </select>
-<button id="playGame" onclick="window.startSession()" disabled>Play Mario</button>
+<button id="playGame" onclick="window.startSession()">Play Mario</button>
 
-Room ID: <input type="text" name="roomID"><br>
+Room ID: <input type="text" id="roomID"><br>
 
 <br/><br/>
 
@@ -72,11 +72,14 @@ function postSession(session) {
   var xhttp = new XMLHttpRequest();
   xhttp.onreadystatechange = function() {
     if (this.readyState == 4 && this.status == 200) {
-      remoteSessionDescription = this.responseText;
+      d = JSON.parse(this.responseText);
+      remoteSessionDescription = d["sdp"]
+      document.getElementById('roomID').value = d["room_id"]
       document.getElementById('playGame').disabled = false;
     }
   };
-  roomID = document.getElementById('roomID').text
+
+  roomID = document.getElementById('roomID').value
   xhttp.open("POST", "/session", true);
   xhttp.setRequestHeader("Content-type", "application/json");
   xhttp.send(JSON.stringify({"game": gameOp.value, "room_id": roomID, "sdp": session}));
@@ -115,6 +118,7 @@ pc.onicecandidate = event => {
   if (event.candidate === null) {
     var session = btoa(JSON.stringify(pc.localDescription));
     localSessionDescription = session;
+    console.log("ice candidate")
     postSession(session)
   }
 }
@@ -169,6 +173,7 @@ document.body.onkeyup = function(e){
 };
 
 window.startSession = () => {
+  console.log("Start session")
   let sd = remoteSessionDescription
   if (sd === '') {
     return alert('Session Description must not be empty')
