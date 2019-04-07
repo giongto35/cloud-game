@@ -48,8 +48,8 @@ var rooms map[string]*Room
 func init() {
 }
 
-func startGame(path string, imageChannel chan *image.RGBA, inputChannel chan int, webRTC *webrtc.WebRTC) {
-	ui.Run([]string{path}, imageChannel, inputChannel, webRTC)
+func startGame(path string, imageChannel chan *image.RGBA, inputChannel chan int) {
+	ui.Run([]string{path}, imageChannel, inputChannel)
 }
 
 func main() {
@@ -83,18 +83,25 @@ func getWeb(w http.ResponseWriter, r *http.Request) {
 	w.Write(bs)
 }
 
+// initRoom initilize room returns roomID
+func initRoom(roomID, gameName string) string {
+	roomID = generateRoomID()
+	imageChannel := make(chan *image.RGBA, 100)
+	inputChannel := make(chan int, 100)
+	rooms[roomID] = &Room{
+		imageChannel: imageChannel,
+		inputChannel: inputChannel,
+		rtcSessions:  []*webrtc.WebRTC{},
+	}
+	go fanoutScreen(imageChannel, roomID)
+	go startGame("games/"+gameName, imageChannel, inputChannel)
+
+	return roomID
+}
+
 func startSession(webRTC *webrtc.WebRTC, gameName string, roomID string) string {
 	if roomID == "" {
-		roomID = generateRoomID()
-		imageChannel := make(chan *image.RGBA, 100)
-		inputChannel := make(chan int, 100)
-		rooms[roomID] = &Room{
-			imageChannel: imageChannel,
-			inputChannel: inputChannel,
-			rtcSessions:  []*webrtc.WebRTC{},
-		}
-		go fanoutScreen(imageChannel, roomID)
-		go startGame("games/"+gameName, imageChannel, inputChannel, webRTC)
+		roomID = initRoom(roomID, gameName)
 	}
 
 	rooms[roomID].rtcSessions = append(rooms[roomID].rtcSessions, webRTC)
@@ -230,7 +237,7 @@ func postSession(w http.ResponseWriter, r *http.Request) {
 			rtcSessions:  []*webrtc.WebRTC{},
 		}
 		go fanoutScreen(imageChannel, roomID)
-		go startGame("games/"+postPacket.Game, imageChannel, inputChannel, webRTC)
+		go startGame("games/"+postPacket.Game, imageChannel, inputChannel)
 		// fanin input channel
 		// fanout output channel
 	} else {
@@ -281,7 +288,6 @@ func fanoutScreen(imageChannel chan *image.RGBA, roomID string) {
 func faninInput(inputChannel chan int, webRTC *webrtc.WebRTC) {
 	go func() {
 		for {
-			fmt.Println("spawning")
 			// Client stopped
 			if webRTC.IsClosed() {
 				return
@@ -290,7 +296,6 @@ func faninInput(inputChannel chan int, webRTC *webrtc.WebRTC) {
 			// encode frame
 			if webRTC.IsConnected() {
 				input := <-webRTC.InputChannel
-				fmt.Println("received input", input)
 				inputChannel <- input
 			}
 		}
