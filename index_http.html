@@ -23,6 +23,8 @@ textarea {
 </select>
 <button id="playGame" onclick="window.startSession()" disabled>Play Mario</button>
 
+Room ID: <input type="text" name="roomID"><br>
+
 <br/><br/>
 
 <body scroll="no" style="overflow: hidden">
@@ -60,6 +62,8 @@ let log = msg => {
 
 var localSessionDescription = ""
 var remoteSessionDescription = ""
+var roomID = ""
+
 // Register with server the session description
 function postSession(session) {
   if (session == "") {
@@ -72,9 +76,10 @@ function postSession(session) {
       document.getElementById('playGame').disabled = false;
     }
   };
+  roomID = document.getElementById('roomID').text
   xhttp.open("POST", "/session", true);
   xhttp.setRequestHeader("Content-type", "application/json");
-  xhttp.send(JSON.stringify({"game": gameOp.value, "sdp": session}));
+  xhttp.send(JSON.stringify({"game": gameOp.value, "room_id": roomID, "sdp": session}));
 
 }
 let pc = new RTCPeerConnection({
@@ -121,7 +126,7 @@ keyState = {
   b: false, 
   start: false,
   select: false,
-  
+
   // navigators
   up: false,
   down: false,

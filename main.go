@@ -1,7 +1,9 @@
 package main
 
 import (
+	"math/rand"
 	"os"
+	"strconv"
 
 	pionRTC "github.com/pion/webrtc"
 
@@ -119,6 +121,7 @@ func ws(w http.ResponseWriter, r *http.Request) {
 
 			res.ID = "sdp"
 			res.Data = localSession
+			//res.RoomID = generateRoomID()
 
 		case "candidate":
 			hi := pionRTC.ICECandidateInit{}
@@ -154,8 +157,9 @@ func ws(w http.ResponseWriter, r *http.Request) {
 }
 
 type SessionPacket struct {
-	Game string `json:"game"`
-	SDP  string `json:"sdp"`
+	Game   string `json:"game"`
+	RoomID string `json:"room_id"`
+	SDP    string `json:"sdp"`
 }
 
 func postSession(w http.ResponseWriter, r *http.Request) {
@@ -185,6 +189,16 @@ func postSession(w http.ResponseWriter, r *http.Request) {
 	go startGame("games/"+postPacket.Game, imageChannel, webRTC.InputChannel, webRTC)
 
 	w.Write([]byte(localSession))
+}
+
+// generateRoomID generate a unique room ID containing 16 digits
+func generateRoomID() string {
+	roomID := strconv.FormatInt(rand.Int63(), 16)
+	for len(roomID) < 16 {
+		roomID = "0" + roomID
+	}
+	fmt.Println(roomID)
+	return roomID
 }
 
 // func screenshotLoop(imageChannel chan *image.RGBA) {
