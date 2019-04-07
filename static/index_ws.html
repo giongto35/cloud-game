@@ -109,9 +109,7 @@ window.startGame = () => {
   // webrtc
   pc = new RTCPeerConnection({iceServers: [{urls: 'stun:stun.l.google.com:19302'}]})
   // input channel
-  let r = Math.random().toString(36).substring(7)
-  console.log("data chan name", r)
-  inputChannel = pc.createDataChannel(r)
+  inputChannel = pc.createDataChannel('foo')
   inputChannel.onclose = () => {
     log('inputChannel has closed');
   }
@@ -172,6 +170,10 @@ var pc, inputChannel;
 var localSessionDescription = "";
 var remoteSessionDescription = "";
 var conn;
+
+
+
+
 
 // Input handler
 keyState = {
