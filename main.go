@@ -24,10 +24,14 @@ import (
 	"encoding/json"
 )
 
+const gameboyIndex = "./static/gameboy.html"
+const httpIndex = "./static/index_http.html"
+const wsIndex = "./static/index_ws.html"
+
 // var webRTC *webrtc.WebRTC
 var width = 256
 var height = 240
-var indexFN string = "./static/gameboy.html"
+var indexFN string = wsIndex
 var service string = "http"
 
 type IndexPageData struct {
@@ -87,16 +91,20 @@ func main() {
 }
 
 func getWeb(w http.ResponseWriter, r *http.Request) {
-	tmpl := template.Must(template.ParseFiles(indexFN))
-	data := IndexPageData{
-		Service: service,
+	if indexFN != gameboyIndex {
+		bs, err := ioutil.ReadFile(indexFN)
+		if err != nil {
+			log.Fatal(err)
+		}
+		w.Write(bs)
+	} else {
+		// gameboy index
+		tmpl := template.Must(template.ParseFiles(indexFN))
+		data := IndexPageData{
+			Service: service,
+		}
+		tmpl.Execute(w, data)
 	}
-	tmpl.Execute(w, data)
-	// bs, err := ioutil.ReadFile(index)
-	// if err != nil {
-	// 	log.Fatal(err)
-	// }
-	// w.Write(bs)
 }
 
 // initRoom initilize room returns roomID
