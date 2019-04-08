@@ -58,9 +58,9 @@ body {
   -webkit-transform:translateX(50%);	
   transform:translateX(50%);
   /* Apply animation to this element */	
-  -moz-animation: horizontally 5s linear infinite alternate;
-  -webkit-animation: horizontally 5s linear infinite alternate;
-  animation: horizontally 5s linear infinite alternate;
+  -moz-animation: horizontally 1s linear infinite alternate;
+  -webkit-animation: horizontally 1s linear infinite alternate;
+  animation: horizontally 1s linear infinite alternate;
 }
 /* Move it (define the animation) */
 @-moz-keyframes horizontally {
@@ -283,8 +283,8 @@ body {
   right: 0;
   border-radius: 15px 15px 170px 170px / 15px 15px 35px 35px;
   background-color: #b0b0b0;
-  -webkit-animation: canvas 8s  linear;
-  animation: canvas 8s  linear;
+  -webkit-animation: canvas 1s  linear;
+  animation: canvas 1s  linear;
   z-index: 1;
 }
 @-moz-keyframes border {
@@ -425,8 +425,8 @@ body {
   border: 4px #808080 solid;
   border-radius: 15px 15px 170px 170px / 15px 15px 35px 35px;
   z-index: 2;
-  -webkit-animation: border 8s  linear;
-  animation: border 8s  linear;
+  -webkit-animation: border 1s  linear;
+  animation: border 1s  linear;
 }
 #border-top,
 #border-bottom {
@@ -497,8 +497,8 @@ body {
 #border-top {
   top: 20px;
   right: 11px;
-  -webkit-animation: border-top 8s  linear;
-  animation: border-top 8s  linear;
+  -webkit-animation: border-top 1s  linear;
+  animation: border-top 1s  linear;
 }
 @-moz-keyframes border-left {
   0% {
@@ -552,8 +552,8 @@ body {
   left: 11px;
   top: 20px;
   width: 20px;
-  -webkit-animation: border-left 8s  linear;
-  animation: border-left 8s  linear;
+  -webkit-animation: border-left 1s  linear;
+  animation: border-left 1s  linear;
 }
 @-moz-keyframes border-bottom {
   0% {
@@ -607,8 +607,8 @@ body {
   top: 516px;
   left: 11px;
   height: 30px;
-  -webkit-animation: border-bottom 8s  linear;
-  animation: border-bottom 8s  linear;
+  -webkit-animation: border-bottom 1s  linear;
+  animation: border-bottom 1s  linear;
 }
 @-moz-keyframes border-right {
   0% {
@@ -680,8 +680,8 @@ body {
   right: 11px;
   top: 26px;
   width: 8px;
-  -webkit-animation: border-right 8s  linear;
-  animation: border-right 8s  linear;
+  -webkit-animation: border-right 1s  linear;
+  animation: border-right 1s  linear;
 }
 .screw {
   border-radius: 100%;
@@ -761,8 +761,8 @@ body {
 }
 #screw-small-right {
   right: 25px;
-  -webkit-animation: screw-small-right 8s  linear;
-  animation: screw-small-right 8s  linear;
+  -webkit-animation: screw-small-right 1s  linear;
+  animation: screw-small-right 1s  linear;
 }
 @-moz-keyframes screw-small-left {
   0% {
@@ -826,8 +826,8 @@ body {
 }
 #screw-small-left {
   left: 25px;
-  -webkit-animation: screw-small-left 8s  linear;
-  animation: screw-small-left 8s  linear;
+  -webkit-animation: screw-small-left 1s  linear;
+  animation: screw-small-left 1s  linear;
 }
 @-moz-keyframes screw-large-right {
   0% {
@@ -891,8 +891,8 @@ body {
 }
 #screw-large-right {
   right: 3px;
-  -webkit-animation: screw-large-right 8s  linear;
-  animation: screw-large-right 8s  linear;
+  -webkit-animation: screw-large-right 1s  linear;
+  animation: screw-large-right 1s  linear;
 }
 @-moz-keyframes screw-large-left {
   0% {
@@ -956,8 +956,8 @@ body {
 }
 #screw-large-left {
   left: 3px;
-  -webkit-animation: screw-large-left 8s  linear;
-  animation: screw-large-left 8s  linear;
+  -webkit-animation: screw-large-left 1s  linear;
+  animation: screw-large-left 1s  linear;
 }
 @-moz-keyframes backboard {
   0% {
@@ -1051,8 +1051,8 @@ body {
   left: 60px;
   bottom: 340px;
   background-color: #222222;
-  -webkit-animation: backboard 8s  linear;
-  animation: backboard 8s  linear;
+  -webkit-animation: backboard 1s  linear;
+  animation: backboard 1s  linear;
 }
 @-moz-keyframes motherboard {
   0% {
@@ -1231,8 +1231,8 @@ body {
   top: 75px;
   overflow: hidden;
   background-color: #4ca879;
-  -webkit-animation: motherboard 8s  linear;
-  animation: motherboard 8s  linear;
+  -webkit-animation: motherboard 1s  linear;
+  animation: motherboard 1s  linear;
 }
 #motherboard::before {
   content: "";
@@ -1242,8 +1242,8 @@ body {
   height: 100%;
   background-color: #66947d;
   box-shadow: -6px 0 #66947d, 9px 0 #66947d;
-  -webkit-animation: motherboard-before 8s  linear;
-  animation: motherboard-before 8s  linear;
+  -webkit-animation: motherboard-before 1s  linear;
+  animation: motherboard-before 1s  linear;
 }
 .chip {
   z-index: 4;
@@ -1360,8 +1360,8 @@ body {
   height: 400px;
   top: 75px;
   right: 35px;
-  -webkit-animation: chip-tall 8s  linear;
-  animation: chip-tall 8s  linear;
+  -webkit-animation: chip-tall 1s  linear;
+  animation: chip-tall 1s  linear;
 }
 #chip-tall::before {
   content: "";
@@ -1371,8 +1371,8 @@ body {
   width: 4px;
   height: 100%;
   background-color: #267146;
-  -webkit-animation: chip-tall-before 8s  linear;
-  animation: chip-tall-before 8s  linear;
+  -webkit-animation: chip-tall-before 1s  linear;
+  animation: chip-tall-before 1s  linear;
 }
 #chip-tall::after {
   content: "";
@@ -1382,8 +1382,8 @@ body {
   width: 4px;
   height: 100%;
   background-color: #267146;
-  -webkit-animation: chip-tall-after 8s  linear;
-  animation: chip-tall-after 8s  linear;
+  -webkit-animation: chip-tall-after 1s  linear;
+  animation: chip-tall-after 1s  linear;
 }
 @-moz-keyframes chip-short {
   0% {
@@ -1552,8 +1552,8 @@ body {
   height: 140px;
   top: 75px;
   right: 35px;
-  -webkit-animation: chip-short 8s  linear;
-  animation: chip-short 8s  linear;
+  -webkit-animation: chip-short 1s  linear;
+  animation: chip-short 1s  linear;
 }
 #chip-short::before {
   content: "";
@@ -1564,8 +1564,8 @@ body {
   position: absolute;
   left: 36px;
   box-shadow: 6px 0 #66947d;
-  -webkit-animation: chip-details 8s  linear;
-  animation: chip-details 8s  linear;
+  -webkit-animation: chip-details 1s  linear;
+  animation: chip-details 1s  linear;
 }
 #chip-short::after {
   content: "";
@@ -1575,8 +1575,8 @@ body {
   position: absolute;
   left: -14px;
   box-shadow: 6px 0 #66947d;
-  -webkit-animation: chip-details 8s  linear;
-  animation: chip-details 8s  linear;
+  -webkit-animation: chip-details 1s  linear;
+  animation: chip-details 1s  linear;
 }
 @-moz-keyframes chip-diagonal {
   0% {
@@ -1630,8 +1630,8 @@ body {
   transform-origin: 0 100%;
   -webkit-transform: rotateZ(-40deg);
   transform: rotateZ(-40deg);
-  -webkit-animation: chip-diagonal 8s  linear;
-  animation: chip-diagonal 8s  linear;
+  -webkit-animation: chip-diagonal 1s  linear;
+  animation: chip-diagonal 1s  linear;
 }
 #chip-diagonal::before {
   content: "";
@@ -1642,8 +1642,8 @@ body {
   left: -11px;
   top: -9px;
   box-shadow: 5px 4px #66947d;
-  -webkit-animation: chip-details-diagonal 8s  linear;
-  animation: chip-details-diagonal 8s  linear;
+  -webkit-animation: chip-details-diagonal 1s  linear;
+  animation: chip-details-diagonal 1s  linear;
 }
 .capacitors {
   position: absolute;
@@ -1717,8 +1717,8 @@ body {
 #chip-capacitors {
   left: 240px;
   top: 130px;
-  -webkit-animation: chip-capacitors 8s  linear;
-  animation: chip-capacitors 8s  linear;
+  -webkit-animation: chip-capacitors 1s  linear;
+  animation: chip-capacitors 1s  linear;
 }
 @-moz-keyframes motherboard-capacitors {
   0% {
@@ -1785,8 +1785,8 @@ body {
   top: 265px;
   -webkit-transform: rotateZ(-90deg);
   transform: rotateZ(-90deg);
-  -webkit-animation: motherboard-capacitors 8s  linear;
-  animation: motherboard-capacitors 8s  linear;
+  -webkit-animation: motherboard-capacitors 1s  linear;
+  animation: motherboard-capacitors 1s  linear;
 }
 @-moz-keyframes contrast-knob {
   0% {
@@ -1934,8 +1934,8 @@ body {
   width: 28px;
   height: 28px;
   background-color: #808080;
-  -webkit-animation: contrast-knob 8s  linear;
-  animation: contrast-knob 8s  linear;
+  -webkit-animation: contrast-knob 1s  linear;
+  animation: contrast-knob 1s  linear;
 }
 #contrast-knob:before {
   content: '';
@@ -1946,8 +1946,8 @@ body {
   height: 32px;
   border-radius: 50%;
   background-color: #303030;
-  -webkit-animation: contrast-knob-before 8s  linear;
-  animation: contrast-knob-before 8s  linear;
+  -webkit-animation: contrast-knob-before 1s  linear;
+  animation: contrast-knob-before 1s  linear;
 }
 @-moz-keyframes link-port {
   0% {
@@ -2026,8 +2026,8 @@ body {
   width: 34px;
   height: 34px;
   background-color: #ffffff;
-  -webkit-animation: link-port 8s  linear;
-  animation: link-port 8s  linear;
+  -webkit-animation: link-port 1s  linear;
+  animation: link-port 1s  linear;
 }
 .circuit {
   z-index: 4;
@@ -2160,16 +2160,16 @@ body {
   left: 155px;
   -webkit-transform: rotateZ(-90deg);
   transform: rotateZ(-90deg);
-  -webkit-animation: circuit-bottom 8s  linear;
-  animation: circuit-bottom 8s  linear;
+  -webkit-animation: circuit-bottom 1s  linear;
+  animation: circuit-bottom 1s  linear;
 }
 #circuit-bottom::before {
-  -webkit-animation: circuit-bottom-before 8s  linear;
-  animation: circuit-bottom-before 8s  linear;
+  -webkit-animation: circuit-bottom-before 1s  linear;
+  animation: circuit-bottom-before 1s  linear;
 }
 #circuit-bottom::after {
-  -webkit-animation: circuit-bottom-after 8s  linear;
-  animation: circuit-bottom-after 8s  linear;
+  -webkit-animation: circuit-bottom-after 1s  linear;
+  animation: circuit-bottom-after 1s  linear;
 }
 @-moz-keyframes circuit-top {
   0% {
@@ -2275,16 +2275,16 @@ body {
   height: 80px;
   top: 100px;
   left: 70px;
-  -webkit-animation: circuit-top 8s  linear;
-  animation: circuit-top 8s  linear;
+  -webkit-animation: circuit-top 1s  linear;
+  animation: circuit-top 1s  linear;
 }
 #circuit-top::before {
-  -webkit-animation: circuit-top-before 8s  linear;
-  animation: circuit-top-before 8s  linear;
+  -webkit-animation: circuit-top-before 1s  linear;
+  animation: circuit-top-before 1s  linear;
 }
 #circuit-top::after {
-  -webkit-animation: circuit-top-after 8s  linear;
-  animation: circuit-top-after 8s  linear;
+  -webkit-animation: circuit-top-after 1s  linear;
+  animation: circuit-top-after 1s  linear;
 }
 @-moz-keyframes transistors {
   0% {
@@ -2356,8 +2356,8 @@ body {
   border-radius: 50%;
   background-color: #303030;
   box-shadow: 16px 0, 32px 0, 48px 0;
-  -webkit-animation: transistors 8s  linear;
-  animation: transistors 8s  linear;
+  -webkit-animation: transistors 1s  linear;
+  animation: transistors 1s  linear;
 }
 @-moz-keyframes processor {
   0% {
@@ -2498,8 +2498,8 @@ body {
   letter-spacing: 3px;
   font-weight: 700;
   font-family: 'Oxygen', Helvetica, arial, sans-serif;
-  -webkit-animation: processor 8s  linear;
-  animation: processor 8s  linear;
+  -webkit-animation: processor 1s  linear;
+  animation: processor 1s  linear;
 }
 #processor::before {
   content: "llllll";
@@ -2513,8 +2513,8 @@ body {
   transform-origin: 0 0;
   left: 48px;
   bottom: -9px;
-  -webkit-animation: processor-before 8s  linear;
-  animation: processor-before 8s  linear;
+  -webkit-animation: processor-before 1s  linear;
+  animation: processor-before 1s  linear;
 }
 #processor::after {
   content: "llllll";
@@ -2528,8 +2528,8 @@ body {
   transform-origin: 0 0;
   left: 7px;
   top: 50px;
-  -webkit-animation: processor-after 8s  linear;
-  animation: processor-after 8s  linear;
+  -webkit-animation: processor-after 1s  linear;
+  animation: processor-after 1s  linear;
 }
 @-moz-keyframes component {
   0% {
@@ -2626,8 +2626,8 @@ body {
   border-bottom-right-radius: 3px;
   width: 14px;
   height: 55px;
-  -webkit-animation: component 8s  linear;
-  animation: component 8s  linear;
+  -webkit-animation: component 1s  linear;
+  animation: component 1s  linear;
 }
 @-moz-keyframes controller {
   0% {
@@ -2805,8 +2805,8 @@ body {
   top: 390px;
   left: 68px;
   background-color: #9d9d9d;
-  -webkit-animation: controller 8s  linear;
-  animation: controller 8s  linear;
+  -webkit-animation: controller 1s  linear;
+  animation: controller 1s  linear;
 }
 #controller::before {
   content: "";
@@ -2816,8 +2816,8 @@ body {
   height: 6px;
   left: -18px;
   bottom: 25px;
-  -webkit-animation: controller-before 8s  linear;
-  animation: controller-before 8s  linear;
+  -webkit-animation: controller-before 1s  linear;
+  animation: controller-before 1s  linear;
 }
 #controller::after {
   content: "";
@@ -2827,8 +2827,8 @@ body {
   bottom: -24px;
   left: 45px;
   background-color: #303030;
-  -webkit-animation: controller-after 8s  linear;
-  animation: controller-after 8s  linear;
+  -webkit-animation: controller-after 1s  linear;
+  animation: controller-after 1s  linear;
 }
 @-moz-keyframes speaker {
   0% {
@@ -2917,8 +2917,8 @@ body {
   bottom: 24px;
   border-radius: 100%;
   background-color: #222222;
-  -webkit-animation: speaker 8s  linear;
-  animation: speaker 8s  linear;
+  -webkit-animation: speaker 1s  linear;
+  animation: speaker 1s  linear;
 }
 #speaker::after {
   content: "";
@@ -3029,8 +3029,8 @@ body {
   left: 76px;
   background-color: #ffffff;
   border: 5px #808080 solid;
-  -webkit-animation: whitescreen 8s  linear;
-  animation: whitescreen 8s  linear;
+  -webkit-animation: whitescreen 1s  linear;
+  animation: whitescreen 1s  linear;
 }
 @-moz-keyframes screen {
   0% {
@@ -3158,8 +3158,8 @@ body {
   bottom: 278px;
   border-radius: 10px 10px 50% 50% / 10px 10px 20px 20px;
   background-color: #222222;
-  -webkit-animation: screen 8s  linear;
-  animation: screen 8s  linear;
+  -webkit-animation: screen 1s  linear;
+  animation: screen 1s  linear;
 }
 @-moz-keyframes glass-gameboy-text {
   0% {
@@ -3210,8 +3210,8 @@ body {
   white-space: nowrap;
   -webkit-transform: skew(-5deg);
   transform: skew(-5deg);
-  -webkit-animation: glass-gameboy-text 8s  linear;
-  animation: glass-gameboy-text 8s  linear;
+  -webkit-animation: glass-gameboy-text 1s  linear;
+  animation: glass-gameboy-text 1s  linear;
 }
 @-moz-keyframes glass-color-text {
   0% {
@@ -3352,8 +3352,8 @@ body {
   font-size: 23px;
   letter-spacing: -2px;
   font-weight: 700;
-  -webkit-animation: glass-color-text 8s  linear;
-  animation: glass-color-text 8s  linear;
+  -webkit-animation: glass-color-text 1s  linear;
+  animation: glass-color-text 1s  linear;
 }
 #glass-color-text::before {
   content: "L";
@@ -3367,8 +3367,8 @@ body {
   border-radius: 50%;
   width: 7px;
   height: 7px;
-  -webkit-animation: glass-color-text-before 8s  linear;
-  animation: glass-color-text-before 8s  linear;
+  -webkit-animation: glass-color-text-before 1s  linear;
+  animation: glass-color-text-before 1s  linear;
 }
 #glass-color-text::after {
   content: "R";
@@ -3382,8 +3382,8 @@ body {
   border-radius: 50%;
   width: 7px;
   height: 7px;
-  -webkit-animation: glass-color-text-after 8s  linear;
-  animation: glass-color-text-after 8s  linear;
+  -webkit-animation: glass-color-text-after 1s  linear;
+  animation: glass-color-text-after 1s  linear;
 }
 @-moz-keyframes glass {
   0% {
@@ -3498,8 +3498,8 @@ body {
   left: 80px;
   top: 60px;
   background-color: #f0f0f0;
-  -webkit-animation: glass 8s  linear;
-  animation: glass 8s  linear;
+  -webkit-animation: glass 1s  linear;
+  animation: glass 1s  linear;
 }
 @-moz-keyframes screen-gameboy-text {
   0% {
@@ -3667,8 +3667,8 @@ body {
   background-position: 130px;
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
-  -webkit-animation: screen-gameboy-text 8s  linear;
-  animation: screen-gameboy-text 8s  linear;
+  -webkit-animation: screen-gameboy-text 1s  linear;
+  animation: screen-gameboy-text 1s  linear;
 }
 @-moz-keyframes screen-nintendo-text {
   0% {
@@ -3730,8 +3730,8 @@ body {
   font-family: Arial Black, sans-serif;
   font-weight: 700;
   font-size: 13px;
-  -webkit-animation: screen-nintendo-text 8s  linear;
-  animation: screen-nintendo-text 8s  linear;
+  -webkit-animation: screen-nintendo-text 1s  linear;
+  animation: screen-nintendo-text 1s  linear;
 }
 @-moz-keyframes joystick-pad {
   0% {
@@ -3861,8 +3861,8 @@ body {
   background-color: #f0f0f0;
   left: 11px;
   bottom: 130px;
-  -webkit-animation: joystick-pad 8s  linear;
-  animation: joystick-pad 8s  linear;
+  -webkit-animation: joystick-pad 1s  linear;
+  animation: joystick-pad 1s  linear;
 }
 @-moz-keyframes joystick {
   0% {
@@ -4060,8 +4060,8 @@ body {
   line-height: 44px;
   text-indent: 43px;
   color: #222222;
-  -webkit-animation: joystick 8s  linear;
-  animation: joystick 8s  linear;
+  -webkit-animation: joystick 1s  linear;
+  animation: joystick 1s  linear;
 }
 #joystick::before,
 #joystick::after {
@@ -4083,8 +4083,8 @@ body {
   text-align: center;
   font-size: 16px;
   color: #222222;
-  -webkit-animation: joystick-control 8s  linear;
-  animation: joystick-control 8s  linear;
+  -webkit-animation: joystick-control 1s  linear;
+  animation: joystick-control 1s  linear;
 }
 #joystick::after {
   -webkit-transform: rotateZ(-90deg);
@@ -4235,8 +4235,8 @@ body {
   box-shadow: 0 3px;
   -webkit-transform: rotate(-18deg);
   transform: rotate(-18deg);
-  -webkit-animation: control 8s  linear;
-  animation: control 8s  linear;
+  -webkit-animation: control 1s  linear;
+  animation: control 1s  linear;
 }
 .control-button {
   position: absolute;
@@ -4332,8 +4332,8 @@ body {
   color: white;
   right: 97px;
   bottom: 156px;
-  -webkit-animation: control-b 8s  linear;
-  animation: control-b 8s  linear;
+  -webkit-animation: control-b 1s  linear;
+  animation: control-b 1s  linear;
 }
 @-moz-keyframes control-a {
   0% {
@@ -4414,8 +4414,8 @@ body {
   color: white;
   right: 34px;
   bottom: 176px;
-  -webkit-animation: control-a 8s  linear;
-  animation: control-a 8s  linear;
+  -webkit-animation: control-a 1s  linear;
+  animation: control-a 1s  linear;
 }
 @-moz-keyframes start-select-box {
   0% {
@@ -4550,8 +4550,8 @@ body {
   bottom: 85px;
   left: 120px;
   background-color: #f0f0f0;
-  -webkit-animation: start-select-box 8s  linear;
-  animation: start-select-box 8s  linear;
+  -webkit-animation: start-select-box 1s  linear;
+  animation: start-select-box 1s  linear;
 }
 #start-select-box::before {
   content: "";
@@ -4564,8 +4564,8 @@ body {
   background-color: #9d9d9d;
   left: 5px;
   box-shadow: 50px 0 #9d9d9d;
-  -webkit-animation: start-select-pad 8s  linear;
-  animation: start-select-pad 8s  linear;
+  -webkit-animation: start-select-pad 1s  linear;
+  animation: start-select-pad 1s  linear;
 }
 @-moz-keyframes start-select-button {
   0% {
@@ -4637,8 +4637,8 @@ body {
   background-color: #303030;
   border-radius: 80% / 100%;
   box-shadow: 50px 0 #303030;
-  -webkit-animation: start-select-button 8s  linear;
-  animation: start-select-button 8s  linear;
+  -webkit-animation: start-select-button 1s  linear;
+  animation: start-select-button 1s  linear;
 }
 #cover-vertical {
   position: absolute;
@@ -4787,8 +4787,8 @@ body {
 }
 #gameboy.transparent #cover-vertical {
   background-color: rgba(140, 46, 217, 0.125);
-  -webkit-animation: cover-vertical-transparent 8s  linear;
-  animation: cover-vertical-transparent 8s  linear;
+  -webkit-animation: cover-vertical-transparent 1s  linear;
+  animation: cover-vertical-transparent 1s  linear;
   box-shadow: 34px 0 rgba(140, 46, 217, 0.125), 68px 0 rgba(140, 46, 217, 0.125), 102px 0 rgba(140, 46, 217, 0.125), 136px 0 rgba(140, 46, 217, 0.125), 170px 0 rgba(140, 46, 217, 0.125), 204px 0 rgba(140, 46, 217, 0.125), 238px 0 rgba(140, 46, 217, 0.125), 272px 0 rgba(140, 46, 217, 0.125), 306px 0 rgba(140, 46, 217, 0.125);
 }
 @-moz-keyframes cover-vertical-teal {
@@ -4931,8 +4931,8 @@ body {
 }
 #gameboy.teal #cover-vertical {
   background-color: #01b4dd;
-  -webkit-animation: cover-vertical-teal 8s  linear;
-  animation: cover-vertical-teal 8s  linear;
+  -webkit-animation: cover-vertical-teal 1s  linear;
+  animation: cover-vertical-teal 1s  linear;
   box-shadow: 34px 0 #01b4dd, 68px 0 #01b4dd, 102px 0 #01b4dd, 136px 0 #01b4dd, 170px 0 #01b4dd, 204px 0 #01b4dd, 238px 0 #01b4dd, 272px 0 #01b4dd, 306px 0 #01b4dd;
 }
 @-moz-keyframes cover-vertical-yellow {
@@ -5075,8 +5075,8 @@ body {
 }
 #gameboy.yellow #cover-vertical {
   background-color: #f9e52e;
-  -webkit-animation: cover-vertical-yellow 8s  linear;
-  animation: cover-vertical-yellow 8s  linear;
+  -webkit-animation: cover-vertical-yellow 1s  linear;
+  animation: cover-vertical-yellow 1s  linear;
   box-shadow: 34px 0 #f9e52e, 68px 0 #f9e52e, 102px 0 #f9e52e, 136px 0 #f9e52e, 170px 0 #f9e52e, 204px 0 #f9e52e, 238px 0 #f9e52e, 272px 0 #f9e52e, 306px 0 #f9e52e;
 }
 @-moz-keyframes cover-vertical-green {
@@ -5219,8 +5219,8 @@ body {
 }
 #gameboy.green #cover-vertical {
   background-color: #85e367;
-  -webkit-animation: cover-vertical-green 8s  linear;
-  animation: cover-vertical-green 8s  linear;
+  -webkit-animation: cover-vertical-green 1s  linear;
+  animation: cover-vertical-green 1s  linear;
   box-shadow: 34px 0 #85e367, 68px 0 #85e367, 102px 0 #85e367, 136px 0 #85e367, 170px 0 #85e367, 204px 0 #85e367, 238px 0 #85e367, 272px 0 #85e367, 306px 0 #85e367;
 }
 @-moz-keyframes cover-vertical-purple {
@@ -5363,8 +5363,8 @@ body {
 }
 #gameboy.purple #cover-vertical {
   background-color: #5151dd;
-  -webkit-animation: cover-vertical-purple 8s  linear;
-  animation: cover-vertical-purple 8s  linear;
+  -webkit-animation: cover-vertical-purple 1s  linear;
+  animation: cover-vertical-purple 1s  linear;
   box-shadow: 34px 0 #5151dd, 68px 0 #5151dd, 102px 0 #5151dd, 136px 0 #5151dd, 170px 0 #5151dd, 204px 0 #5151dd, 238px 0 #5151dd, 272px 0 #5151dd, 306px 0 #5151dd;
 }
 @-moz-keyframes cover-vertical-red {
@@ -5507,8 +5507,8 @@ body {
 }
 #gameboy.red #cover-vertical {
   background-color: #ff0151;
-  -webkit-animation: cover-vertical-red 8s  linear;
-  animation: cover-vertical-red 8s  linear;
+  -webkit-animation: cover-vertical-red 1s  linear;
+  animation: cover-vertical-red 1s  linear;
   box-shadow: 34px 0 #ff0151, 68px 0 #ff0151, 102px 0 #ff0151, 136px 0 #ff0151, 170px 0 #ff0151, 204px 0 #ff0151, 238px 0 #ff0151, 272px 0 #ff0151, 306px 0 #ff0151;
 }
 #cover-horizontal {
@@ -5704,8 +5704,8 @@ body {
 }
 #gameboy.transparent #cover-horizontal {
   background-color: rgba(140, 46, 217, 0.125);
-  -webkit-animation: cover-horizontal-transparent 8s  linear;
-  animation: cover-horizontal-transparent 8s  linear;
+  -webkit-animation: cover-horizontal-transparent 1s  linear;
+  animation: cover-horizontal-transparent 1s  linear;
   box-shadow: 0 -38px rgba(140, 46, 217, 0.125), 0 -76px rgba(140, 46, 217, 0.125), 0 -114px rgba(140, 46, 217, 0.125), 0 -152px rgba(140, 46, 217, 0.125), 0 -190px rgba(140, 46, 217, 0.125), 0 -228px rgba(140, 46, 217, 0.125), 0 -266px rgba(140, 46, 217, 0.125), 0 -304px rgba(140, 46, 217, 0.125), 0 -342px rgba(140, 46, 217, 0.125), 0 -380px rgba(140, 46, 217, 0.125), 0 -418px rgba(140, 46, 217, 0.125), 0 -456px rgba(140, 46, 217, 0.125), 0 -494px rgba(140, 46, 217, 0.125), 0 -532px rgba(140, 46, 217, 0.125);
 }
 @-moz-keyframes cover-horizontal-teal {
@@ -5893,8 +5893,8 @@ body {
 }
 #gameboy.teal #cover-horizontal {
   background-color: #01b4dd;
-  -webkit-animation: cover-horizontal-teal 8s  linear;
-  animation: cover-horizontal-teal 8s  linear;
+  -webkit-animation: cover-horizontal-teal 1s  linear;
+  animation: cover-horizontal-teal 1s  linear;
   box-shadow: 0 -38px #01b4dd, 0 -76px #01b4dd, 0 -114px #01b4dd, 0 -152px #01b4dd, 0 -190px #01b4dd, 0 -228px #01b4dd, 0 -266px #01b4dd, 0 -304px #01b4dd, 0 -342px #01b4dd, 0 -380px #01b4dd, 0 -418px #01b4dd, 0 -456px #01b4dd, 0 -494px #01b4dd, 0 -532px #01b4dd;
 }
 @-moz-keyframes cover-horizontal-yellow {
@@ -6082,8 +6082,8 @@ body {
 }
 #gameboy.yellow #cover-horizontal {
   background-color: #f9e52e;
-  -webkit-animation: cover-horizontal-yellow 8s  linear;
-  animation: cover-horizontal-yellow 8s  linear;
+  -webkit-animation: cover-horizontal-yellow 1s  linear;
+  animation: cover-horizontal-yellow 1s  linear;
   box-shadow: 0 -38px #f9e52e, 0 -76px #f9e52e, 0 -114px #f9e52e, 0 -152px #f9e52e, 0 -190px #f9e52e, 0 -228px #f9e52e, 0 -266px #f9e52e, 0 -304px #f9e52e, 0 -342px #f9e52e, 0 -380px #f9e52e, 0 -418px #f9e52e, 0 -456px #f9e52e, 0 -494px #f9e52e, 0 -532px #f9e52e;
 }
 @-moz-keyframes cover-horizontal-green {
@@ -6271,8 +6271,8 @@ body {
 }
 #gameboy.green #cover-horizontal {
   background-color: #85e367;
-  -webkit-animation: cover-horizontal-green 8s  linear;
-  animation: cover-horizontal-green 8s  linear;
+  -webkit-animation: cover-horizontal-green 1s  linear;
+  animation: cover-horizontal-green 1s  linear;
   box-shadow: 0 -38px #85e367, 0 -76px #85e367, 0 -114px #85e367, 0 -152px #85e367, 0 -190px #85e367, 0 -228px #85e367, 0 -266px #85e367, 0 -304px #85e367, 0 -342px #85e367, 0 -380px #85e367, 0 -418px #85e367, 0 -456px #85e367, 0 -494px #85e367, 0 -532px #85e367;
 }
 @-moz-keyframes cover-horizontal-purple {
@@ -6460,8 +6460,8 @@ body {
 }
 #gameboy.purple #cover-horizontal {
   background-color: #5151dd;
-  -webkit-animation: cover-horizontal-purple 8s  linear;
-  animation: cover-horizontal-purple 8s  linear;
+  -webkit-animation: cover-horizontal-purple 1s  linear;
+  animation: cover-horizontal-purple 1s  linear;
   box-shadow: 0 -38px #5151dd, 0 -76px #5151dd, 0 -114px #5151dd, 0 -152px #5151dd, 0 -190px #5151dd, 0 -228px #5151dd, 0 -266px #5151dd, 0 -304px #5151dd, 0 -342px #5151dd, 0 -380px #5151dd, 0 -418px #5151dd, 0 -456px #5151dd, 0 -494px #5151dd, 0 -532px #5151dd;
 }
 @-moz-keyframes cover-horizontal-red {
@@ -6649,8 +6649,8 @@ body {
 }
 #gameboy.red #cover-horizontal {
   background-color: #ff0151;
-  -webkit-animation: cover-horizontal-red 8s  linear;
-  animation: cover-horizontal-red 8s  linear;
+  -webkit-animation: cover-horizontal-red 1s  linear;
+  animation: cover-horizontal-red 1s  linear;
   box-shadow: 0 -38px #ff0151, 0 -76px #ff0151, 0 -114px #ff0151, 0 -152px #ff0151, 0 -190px #ff0151, 0 -228px #ff0151, 0 -266px #ff0151, 0 -304px #ff0151, 0 -342px #ff0151, 0 -380px #ff0151, 0 -418px #ff0151, 0 -456px #ff0151, 0 -494px #ff0151, 0 -532px #ff0151;
 }
 @-moz-keyframes gloss {
@@ -6713,8 +6713,8 @@ body {
   left: 54px;
   border-bottom-left-radius: 116px 20px;
   border-bottom-right-radius: 116px 20px;
-  -webkit-animation: gloss 8s  linear;
-  animation: gloss 8s  linear;
+  -webkit-animation: gloss 1s  linear;
+  animation: gloss 1s  linear;
 }
 #gameboy.transparent #gloss {
   background-color: rgba(242, 232, 251, 0.43125);
@@ -6777,8 +6777,8 @@ body {
   z-index: 14;
   border-radius: 50%;
   box-shadow: 9.5px 8px #222222, 19px 16px #222222, 0px -19px #222222, 9.5px -11px #222222, 19px -3px #222222, 28.5px 5px #222222, 38px 13px #222222, 0px -38px #222222, 9.5px -30px #222222, 19px -22px #222222, 28.5px -14px #222222, 38px -6px #222222, 47.5px 2px #222222, 57px 10px #222222, 9.5px -49px #222222, 19px -41px #222222, 28.5px -33px #222222, 38px -25px #222222, 47.5px -17px #222222, 57px -9px #222222, 66.5px -1px #222222, 28px -52px #222222, 37.5px -44px #222222, 47px -36px #222222, 56.5px -28px #222222, 66px -20px #222222, 47px -56px #222222, 56.5px -48px #222222, 66px -40px #222222;
-  -webkit-animation: speaker-holes 8s  linear;
-  animation: speaker-holes 8s  linear;
+  -webkit-animation: speaker-holes 1s  linear;
+  animation: speaker-holes 1s  linear;
 }
 @-moz-keyframes power {
   0% {
@@ -6865,8 +6865,8 @@ body {
   border-radius: 50%;
   background-color: #ff0151;
   box-shadow: 5px 0 #222222, 8px 0 #b0b0b0, 12px 0 #222222, 15px 0 #b0b0b0, 19px 0 #222222, 22px 0 #b0b0b0;
-  -webkit-animation: power 8s  linear;
-  animation: power 8s  linear;
+  -webkit-animation: power 1s  linear;
+  animation: power 1s  linear;
 }
 #colors {
   font-family: 'Oxygen', Helvetica, arial, sans-serif;

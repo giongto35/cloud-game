@@ -79,6 +79,8 @@ KEY_MAP = {
     86: "select", // v
 
     81: "quit" // q
+    83: "save", // s
+    76: "load", // l
 }
 
 /*
@@ -93,7 +95,7 @@ KEY_MAP = {
         ButtonRight
       )
       */
-KEY_BIT = ["a", "b", "select", "start", "up", "down", "left", "right"];
+KEY_BIT = ["a", "b", "select", "start", "up", "down", "left", "right", "save", "load"];
 
 
 INPUT_FPS = 100;
