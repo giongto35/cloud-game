@@ -28,10 +28,9 @@ const gameboyIndex = "./static/gameboy.html"
 const httpIndex = "./static/index_http.html"
 const wsIndex = "./static/index_ws.html"
 
-// var webRTC *webrtc.WebRTC
 var width = 256
 var height = 240
-var indexFN string = wsIndex
+var indexFN string = gameboyIndex
 var service string = "ws"
 
 // Time allowed to write a message to the peer.
