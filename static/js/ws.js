@@ -14,7 +14,7 @@ function startGame() {
 
     conn.onopen = () => {
         log("WebSocket is opened. Send ping");
-        roomID = document.getElementById('roomID').value
+        roomID = roomID.value
         conn.send(JSON.stringify({"id": "ping", "data": GAME_LIST[gameIdx].nes, "room_id": roomID, "player_index": parseInt(playerIndex.value, 10)}));
     }
 
@@ -39,7 +39,7 @@ function startGame() {
             break;
         case "start":
             log("Got start");
-            document.getElementById('roomID').value = d["room_id"]
+            currentRoomID.value = d["room_id"]
             break;
         }
     }
@@ -94,7 +94,6 @@ function startGame() {
             // conn.send(JSON.stringify({"id": "candidate", "data": JSON.stringify(event.candidate)}));
         }
     }
-        
 
     function startWebRTC() {
         // receiver only tracks

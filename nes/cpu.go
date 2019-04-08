@@ -279,7 +279,7 @@ func (cpu *CPU) PrintInstruction() {
 		w2 = "  "
 	}
 	fmt.Printf(
-		"%4X  %s %s %s  %s %28s"+
+		"%4X  %s %s %s  %s %21s"+
 			"A:%02X X:%02X Y:%02X P:%02X SP:%02X CYC:%3d\n",
 		cpu.PC, w0, w1, w2, name, "",
 		cpu.A, cpu.X, cpu.Y, cpu.Flags(), cpu.SP, (cpu.Cycles*3)%341)
