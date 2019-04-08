@@ -78,9 +78,9 @@ KEY_MAP = {
     67: "start", // c
     86: "select", // v
 
-    81: "quit" // q
+    81: "quit", // q
     83: "save", // s
-    76: "load", // l
+    76: "load" // l
 }
 
 /*
