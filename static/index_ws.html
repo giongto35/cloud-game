@@ -23,6 +23,10 @@ textarea {
 </select>
 <button id="play" onclick="window.startGame()">Play</button>
 Room ID: <input type="text" id="roomID"><br>
+Play as player(1,2): <select id="playerIndex">
+    <option value="1">1</option>
+    <option value="2">2</option>
+</select>
 
 <br/><br/>
 
@@ -31,14 +35,15 @@ Room ID: <input type="text" id="roomID"><br>
 
 <h3>Instruction</h3>
 <div>
+  C is start button. Use it to start game<br />
+  V is select button <br />
+
+  Player 1
   Use Up, Down, Left, Right to Move <br />
   Z to jump (A) <br />
   X to sprint (B) <br />
-  C is start button <br />
-  V is select button <br />
   S to save <br />
   L to load <br />
-
   <!--Fullscreen media for better gaming experience<br /-->
 </div><br>
 
@@ -77,8 +82,7 @@ window.startGame = () => {
 
   conn.onopen = () => {
     log("WebSocket is opened. Send ping");
-    roomID = document.getElementById('roomID').value
-    conn.send(JSON.stringify({"id": "ping", "data": gameOp.value, "room_id": roomID}));
+    conn.send(JSON.stringify({"id": "ping", "data": gameOp.value, "room_id": roomID.value, "player_index": parseInt(playerIndex.value, 10)}));
   }
 
   conn.onerror = error => {
@@ -103,7 +107,7 @@ window.startGame = () => {
         break;
       case "start":
         log("Got start");
-        document.getElementById('roomID').value = d["room_id"]
+        roomID.value = d["room_id"]
         break;
     }
   }
@@ -247,7 +251,7 @@ function sendInput() {
   
   if (stateUnchange || unchangePacket > 0) {
     st = "";
-    ["a", "b", "select", "start", "up", "down", "left", "right", "save", "load"].forEach(elem => {
+    ["a", "b", "select", "start", "up", "down", "left", "right", "save", "load"].reverse().forEach(elem => {
       st += keyState[elem]?1:0;
     });
     ss = parseInt(st, 2);

@@ -41,9 +41,10 @@ type IndexPageData struct {
 var upgrader = websocket.Upgrader{}
 
 type WSPacket struct {
-	ID     string `json:"id"`
-	Data   string `json:"data"`
-	RoomID string `json:"room_id"`
+	ID          string `json:"id"`
+	Data        string `json:"data"`
+	RoomID      string `json:"room_id"`
+	PlayerIndex int    `json:"player_index"`
 }
 
 type SessionPacket struct {
@@ -123,13 +124,14 @@ func initRoom(roomID, gameName string) string {
 	return roomID
 }
 
-func startSession(webRTC *webrtc.WebRTC, gameName string, roomID string) string {
+func startSession(webRTC *webrtc.WebRTC, gameName string, roomID string, playerIndex int) string {
 	if roomID == "" {
 		roomID = initRoom(roomID, gameName)
 	}
 
+	// TODO: Might have race condition
 	rooms[roomID].rtcSessions = append(rooms[roomID].rtcSessions, webRTC)
-	faninInput(rooms[roomID].inputChannel, webRTC)
+	faninInput(rooms[roomID].inputChannel, webRTC, playerIndex)
 
 	return roomID
 }
@@ -152,6 +154,7 @@ func ws(w http.ResponseWriter, r *http.Request) {
 
 	var gameName string
 	var roomID string
+	var playerIndex int
 
 	for !isDone {
 		mt, message, err := c.ReadMessage()
@@ -174,6 +177,7 @@ func ws(w http.ResponseWriter, r *http.Request) {
 		case "ping":
 			gameName = req.Data
 			roomID = req.RoomID
+			playerIndex = req.PlayerIndex
 			log.Println("Ping from server with game:", gameName)
 			res.ID = "pong"
 
@@ -200,7 +204,7 @@ func ws(w http.ResponseWriter, r *http.Request) {
 		case "start":
 			log.Println("Starting game")
 			res.ID = "start"
-			res.RoomID = startSession(webRTC, gameName, roomID)
+			res.RoomID = startSession(webRTC, gameName, roomID, playerIndex)
 
 			isDone = true
 		}
@@ -262,7 +266,7 @@ func postSession(w http.ResponseWriter, r *http.Request) {
 		// if there is room, reuse image channel, add webRTC session
 	}
 	rooms[roomID].rtcSessions = append(rooms[roomID].rtcSessions, webRTC)
-	faninInput(rooms[roomID].inputChannel, webRTC)
+	faninInput(rooms[roomID].inputChannel, webRTC, 1)
 
 	res := SessionPacket{
 		SDP:    localSession,
@@ -283,7 +287,7 @@ func generateRoomID() string {
 	return roomID
 }
 
-// func fanoutScreen(imageChannel chan *image.RGBA) {
+// fanoutScreen fanout outputs to all webrtc in the same room
 func fanoutScreen(imageChannel chan *image.RGBA, roomID string) {
 	for image := range imageChannel {
 		yuv := util.RgbaToYuv(image)
@@ -302,8 +306,8 @@ func fanoutScreen(imageChannel chan *image.RGBA, roomID string) {
 	}
 }
 
-// func faninInput(input chan int) {
-func faninInput(inputChannel chan int, webRTC *webrtc.WebRTC) {
+// faninInput fan-in of the same room to inputChannel
+func faninInput(inputChannel chan int, webRTC *webrtc.WebRTC, playerIndex int) {
 	go func() {
 		for {
 			// Client stopped
@@ -314,6 +318,10 @@ func faninInput(inputChannel chan int, webRTC *webrtc.WebRTC) {
 			// encode frame
 			if webRTC.IsConnected() {
 				input := <-webRTC.InputChannel
+				// the first 10 bits belong to player 1
+				// the next 10 belongs to player 2 ...
+				// We standardize and put it to inputChannel (20 bytes)
+				input = input << ((uint(playerIndex) - 1) * ui.NumKeys / 2)
 				inputChannel <- input
 			}
 		}

@@ -4,13 +4,37 @@ package ui
 import (
 	"image"
 
-	"fmt"
 	// "strconv"
 
 	"github.com/giongto35/cloud-game/nes"
 )
 
 const padding = 0
+
+// List key pressed
+const (
+	a1 = iota
+	b1
+	select1
+	start1
+	up1
+	down1
+	left1
+	right1
+	save1
+	load1
+	a2
+	b2
+	select2
+	start2
+	up2
+	down2
+	left2
+	right2
+	save2
+	load2
+)
+const NumKeys = 20
 
 type GameView struct {
 	director *Director
@@ -20,29 +44,25 @@ type GameView struct {
 	record   bool
 	frames   []image.Image
 
-	keyPressed [10]bool
+	// equivalent to the list key pressed const above
+	keyPressed [20]bool
 
 	imageChannel chan *image.RGBA
 	inputChannel chan int
 }
 
 func NewGameView(director *Director, console *nes.Console, title, hash string, imageChannel chan *image.RGBA, inputChannel chan int) View {
-	gameview := &GameView{director, console, title, hash, false, nil, [10]bool{false}, imageChannel, inputChannel}
+	gameview := &GameView{director, console, title, hash, false, nil, [NumKeys]bool{false}, imageChannel, inputChannel}
 	go gameview.ListenToInputChannel()
 	return gameview
 }
 
 func (view *GameView) ListenToInputChannel() {
 	for {
-		key := <-view.inputChannel
-		s := fmt.Sprintf("%.10b", key)
-		fmt.Println(s)
-		for i := 0; i < len(s); i++ {
-			if s[i] == '1' {
-				view.keyPressed[i] = true
-			} else {
-				view.keyPressed[i] = false
-			}
+		keysInBinary := <-view.inputChannel
+		for i := 0; i < NumKeys; i++ {
+			view.keyPressed[i] = ((keysInBinary & 1) == 1)
+			keysInBinary = keysInBinary >> 1
 		}
 	}
 }
@@ -85,7 +105,6 @@ func (view *GameView) Update(t, dt float64) {
 	console := view.console
 	//updateControllers(window, console)
 	view.updateControllers()
-	//fmt.Println(console.Buffer())
 	console.StepSeconds(dt)
 
 	// fps to set frame
@@ -98,27 +117,20 @@ func (view *GameView) Update(t, dt float64) {
 
 func (view *GameView) updateControllers() {
 	// TODO: switch case
-	// var buttons [8]bool
-	// buttons[nes.ButtonLeft] = view.keyPressed[37]
-	// buttons[nes.ButtonUp] = view.keyPressed[38]
-	// buttons[nes.ButtonRight] = view.keyPressed[39]
-	// buttons[nes.ButtonDown] = view.keyPressed[40]
-	// buttons[nes.ButtonA] = view.keyPressed[32]
-	// buttons[nes.ButtonB] = view.keyPressed[17]
-	// buttons[nes.ButtonStart] = view.keyPressed[13]
-	// buttons[nes.ButtonSelect] = view.keyPressed[16]
-	// view.console.Controller1.SetButtons(buttons)
-	var gameKeys [8]bool
-	copy(gameKeys[:], view.keyPressed[:8])
+	// Divide keyPressed to player 1 and player 2
+	// First 10 keys are player 1
+	var player1Keys [8]bool
+	copy(player1Keys[:], view.keyPressed[:8])
+	var player2Keys [8]bool
+	copy(player2Keys[:], view.keyPressed[10:18])
 
-	if view.keyPressed[8] {
-		fmt.Println("saving", view.hash)
+	view.console.Controller1.SetButtons(player1Keys)
+	view.console.Controller2.SetButtons(player2Keys)
+
+	if view.keyPressed[save1] || view.keyPressed[save2] {
 		view.console.SaveState(savePath(view.hash))
 	}
-	if view.keyPressed[9] {
-		fmt.Println("loading", view.hash)
+	if view.keyPressed[load1] || view.keyPressed[load2] {
 		view.console.LoadState(savePath(view.hash))
 	}
-
-	view.console.Controller1.SetButtons(gameKeys)
 }
