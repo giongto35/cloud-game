@@ -3,9 +3,8 @@
 
   <link type="text/css" rel="stylesheet" href="/static/css/gameboy.css">
 </head>
-  
-  
-<body>
+
+<body scroll="no" style="overflow: hidden">
   <div id="gameboy" class="green">
     <div id="canvas"></div>
     <div id="border"></div>
@@ -88,8 +87,14 @@
       C is start (in game) <br />
       V is select game <br />
       Q is super quit <br />
+      S to save <br />
+      L to load <br />
 
-      Room ID: <input type="text" id="roomID"><br>
+      Room ID: <input type="text" id="roomID"><br />
+      Play as player(1,2): <select id="playerIndex">
+          <option value="1">1</option>
+          <option value="2">2</option>
+      </select>
       <!--Fullscreen media for better gaming experience<br /-->
     </div><br>
 
