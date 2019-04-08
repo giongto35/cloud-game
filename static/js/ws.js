@@ -89,7 +89,11 @@ function startGame() {
     // candidate packet from STUN
     pc.onicecandidate = event => {
         if (event.candidate === null) {
-
+            // send to ws
+            session = btoa(JSON.stringify(pc.localDescription));
+            localSessionDescription = session;
+            log("Send SDP to remote peer");
+            conn.send(JSON.stringify({"id": "sdp", "data": session}));
         } else {
             console.log(JSON.stringify(event.candidate));
             // conn.send(JSON.stringify({"id": "candidate", "data": JSON.stringify(event.candidate)}));
@@ -102,13 +106,7 @@ function startGame() {
 
         // create SDP
         pc.createOffer({offerToReceiveVideo: true, offerToReceiveAudio: false}).then(d => {
-            pc.setLocalDescription(d, () => {
-                // send to ws
-                session = btoa(JSON.stringify(pc.localDescription));
-                localSessionDescription = session;
-                log("Send SDP to remote peer");
-                conn.send(JSON.stringify({"id": "sdp", "data": session}));
-            });
-        }).catch(log);
+            pc.setLocalDescription(d).catch(log);
+        })
     }
 }
