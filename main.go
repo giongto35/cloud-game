@@ -34,6 +34,10 @@ var height = 240
 var indexFN string = gameboyIndex
 var service string = "ws"
 
+// Time allowed to write a message to the peer.
+var readWait = 30 * time.Second
+var writeWait = 30 * time.Second
+
 type IndexPageData struct {
 	Service string
 }
@@ -157,6 +161,7 @@ func ws(w http.ResponseWriter, r *http.Request) {
 	var playerIndex int
 
 	for !isDone {
+		c.SetReadDeadline(time.Now().Add(readWait))
 		mt, message, err := c.ReadMessage()
 		if err != nil {
 			log.Println("[!] read:", err)
@@ -214,6 +219,7 @@ func ws(w http.ResponseWriter, r *http.Request) {
 			log.Println("json marshal:", err)
 		}
 
+		c.SetWriteDeadline(time.Now().Add(writeWait))
 		err = c.WriteMessage(mt, []byte(stRes))
 		if err != nil {
 			log.Println("write:", err)
