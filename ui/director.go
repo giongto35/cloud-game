@@ -45,7 +45,6 @@ func (d *Director) SetView(view View) {
 }
 
 func (d *Director) Step() {
-	//gl.Clear(gl.COLOR_BUFFER_BIT)
 	timestamp := float64(time.Now().Nanosecond()) / float64(time.Second)
 	dt := timestamp - d.timestamp
 	d.timestamp = timestamp
