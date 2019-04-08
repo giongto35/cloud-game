@@ -108,7 +108,7 @@ function sendInput() {
     // prepare key
     if (stateUnchange || unchangePacket > 0) {
         st = "";
-        KEY_BIT.reverse().forEach(elem => {
+        KEY_BIT.slice().reverse().forEach(elem => {
             st += keyState[elem] ? 1 : 0;
         });
         ss = parseInt(st, 2);

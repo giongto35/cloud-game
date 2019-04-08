@@ -318,7 +318,6 @@ func faninInput(inputChannel chan int, webRTC *webrtc.WebRTC, playerIndex int) {
 			// encode frame
 			if webRTC.IsConnected() {
 				input := <-webRTC.InputChannel
-				fmt.Println("received", input)
 				// the first 10 bits belong to player 1
 				// the next 10 belongs to player 2 ...
 				// We standardize and put it to inputChannel (20 bytes)
