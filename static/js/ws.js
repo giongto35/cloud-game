@@ -2,7 +2,7 @@
 
 function startGame() {
     log("Starting game screen");
-    
+
     // clear
     endInput();
     document.getElementById('div').innerHTML = "";
@@ -15,7 +15,7 @@ function startGame() {
     conn.onopen = () => {
         log("WebSocket is opened. Send ping");
         roomID = document.getElementById('roomID').value
-        conn.send(JSON.stringify({"id": "ping", "data": GAME_LIST[gameIdx].nes, "room_id": roomID}));
+        conn.send(JSON.stringify({"id": "ping", "data": GAME_LIST[gameIdx].nes, "room_id": roomID, "player_index": parseInt(playerIndex.value, 10)}));
     }
 
     conn.onerror = error => {
