@@ -12,10 +12,10 @@ function startGame() {
 
     conn = new WebSocket(`ws://${location.host}/ws`);
 
+    // Clear old roomID
     conn.onopen = () => {
         log("WebSocket is opened. Send ping");
-        roomID = roomID.value
-        conn.send(JSON.stringify({"id": "ping", "data": GAME_LIST[gameIdx].nes, "room_id": roomID, "player_index": parseInt(playerIndex.value, 10)}));
+        conn.send(JSON.stringify({"id": "ping", "data": GAME_LIST[gameIdx].nes, "room_id": roomID.value, "player_index": parseInt(playerIndex.value, 10)}));
     }
 
     conn.onerror = error => {
@@ -39,7 +39,8 @@ function startGame() {
             break;
         case "start":
             log("Got start");
-            currentRoomID.value = d["room_id"]
+            roomID.value = ""
+            currentRoomID.innerText = d["room_id"]
             break;
         }
     }
