@@ -23,6 +23,8 @@ type Director struct {
 	roomID       string
 }
 
+const FPS = 60
+
 func NewDirector(roomID string, imageChannel chan *image.RGBA, inputChannel chan int) *Director {
 	// func NewDirector(audio *Audio, imageChannel chan *image.RGBA, inputChannel chan int) *Director {
 	director := Director{}
@@ -61,7 +63,8 @@ func (d *Director) Start(paths []string) {
 }
 
 func (d *Director) Run() {
-	for {
+	c := time.Tick(time.Second / FPS)
+	for range c {
 		// quit game
 		// TODO: Check if noone using
 
