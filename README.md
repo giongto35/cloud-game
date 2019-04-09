@@ -15,16 +15,20 @@ https://www.youtube.com/watch?v=qkjV2VIwVIo
 
 ## Try the game
 
-For the best gaming experience, please select the closest region to you.  
+For the best gaming experience, please select the closest region to you. 
+
 Southeast Asia:  
 * nes.webgame2d.com  
 * nes.playcloud.games  
+
 US West:  
 * usw.nes.webgame2d.com  
 * usw.nes.playcloud.games  
+
 US East:  
 * use.nes.webgame2d.com  
 * use.nes.playcloud.games  
+
 Europe:  
 * eu.nes.webgame2d.com  
 * eu.nes.playcloud.games  
