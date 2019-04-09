@@ -185,6 +185,10 @@ func (w *WebRTC) StartClient(remoteSession string, width, height int) (string, e
 			// Input is key state, represented as binary string, 1001011. We compress it to binary number
 			w.InputChannel <- i
 		})
+
+		d.OnClose(func() {
+			w.isClosed = true
+		})
 	})
 
 	offer := webrtc.SessionDescription{}
@@ -224,7 +228,7 @@ func (w *WebRTC) StopClient() {
 		w.connection.Close()
 	}
 	w.connection = nil
-	w.isClosed = true
+	//w.isClosed = true
 }
 
 // IsConnected comment
