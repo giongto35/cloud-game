@@ -81,8 +81,6 @@ function startGame() {
     pc.ontrack = function (event) {
         log("New stream, yay!");
         document.getElementById("loading-screen").srcObject = event.streams[0];
-        // document.getElementById("loading-screen").width = 270;
-        // document.getElementById("loading-screen").height = 240;
     }
 
 
