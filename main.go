@@ -1,31 +1,25 @@
 package main
 
 import (
-	"html/template"
-	"math/rand"
-	"os"
-	"strconv"
-	"time"
-
-	pionRTC "github.com/pion/webrtc"
-
+	"encoding/json"
 	"fmt"
 	"image"
 	"io/ioutil"
 	"log"
+	"math/rand"
 	"net/http"
+	_ "net/http/pprof"
+	"strconv"
+	"time"
 
 	"github.com/giongto35/cloud-game/ui"
 	"github.com/giongto35/cloud-game/util"
 	"github.com/giongto35/cloud-game/webrtc"
-
 	"github.com/gorilla/websocket"
-
-	"encoding/json"
+	pionRTC "github.com/pion/webrtc"
 )
 
 const gameboyIndex = "./static/gameboy.html"
-const httpIndex = "./static/index_http.html"
 const wsIndex = "./static/index_ws.html"
 
 var width = 256
@@ -50,12 +44,6 @@ type WSPacket struct {
 	PlayerIndex int    `json:"player_index"`
 }
 
-type SessionPacket struct {
-	Game   string `json:"game"`
-	RoomID string `json:"room_id"`
-	SDP    string `json:"sdp"`
-}
-
 type Room struct {
 	imageChannel chan *image.RGBA
 	inputChannel chan int
@@ -64,54 +52,33 @@ type Room struct {
 
 var rooms map[string]*Room
 
-func init() {
-}
-
-func startGame(path string, roomID string, imageChannel chan *image.RGBA, inputChannel chan int) {
-	ui.Run([]string{path}, roomID, imageChannel, inputChannel)
-}
-
 func main() {
 	rand.Seed(time.Now().UTC().UnixNano())
-	fmt.Printf("Usage: %s [ws]\n", os.Args[0])
 	fmt.Println("http://localhost:8000")
 	rooms = map[string]*Room{}
 
-	if len(os.Args) > 1 {
-		service = "ws"
-		log.Println("Using websocket")
-
-		// ignore origin
-		upgrader.CheckOrigin = func(r *http.Request) bool { return true }
-		http.HandleFunc("/ws", ws)
-	} else {
-		log.Println("Using http")
-		http.HandleFunc("/session", postSession)
-	}
+	// ignore origin
+	upgrader.CheckOrigin = func(r *http.Request) bool { return true }
+	http.HandleFunc("/ws", ws)
 
 	http.HandleFunc("/", getWeb)
 	http.Handle("/static/", http.StripPrefix("/static/", http.FileServer(http.Dir("./static"))))
 	http.ListenAndServe(":8000", nil)
 }
 
-func getWeb(w http.ResponseWriter, r *http.Request) {
-	if indexFN != gameboyIndex {
-		bs, err := ioutil.ReadFile(indexFN)
-		if err != nil {
-			log.Fatal(err)
-		}
-		w.Write(bs)
-	} else {
-		// gameboy index
-		tmpl := template.Must(template.ParseFiles(indexFN))
-		data := IndexPageData{
-			Service: service,
-		}
-		tmpl.Execute(w, data)
-	}
+func startGame(path string, roomID string, imageChannel chan *image.RGBA, inputChannel chan int) {
+	ui.Run([]string{path}, roomID, imageChannel, inputChannel)
 }
 
-// initRoom initilize room returns roomID
+func getWeb(w http.ResponseWriter, r *http.Request) {
+	bs, err := ioutil.ReadFile(indexFN)
+	if err != nil {
+		log.Fatal(err)
+	}
+	w.Write(bs)
+}
+
+// init initilize room returns roomID
 func initRoom(roomID, gameName string) string {
 	roomID = generateRoomID()
 	imageChannel := make(chan *image.RGBA, 100)
@@ -127,7 +94,9 @@ func initRoom(roomID, gameName string) string {
 	return roomID
 }
 
+// startSession handles one session call
 func startSession(webRTC *webrtc.WebRTC, gameName string, roomID string, playerIndex int) string {
+	// If the roomID is empty, we spawn a new room
 	if roomID == "" {
 		roomID = initRoom(roomID, gameName)
 	}
@@ -168,15 +137,15 @@ func ws(w http.ResponseWriter, r *http.Request) {
 		}
 
 		req := WSPacket{}
+		res := WSPacket{}
+
 		err = json.Unmarshal(message, &req)
 		if err != nil {
 			log.Println("[!] json unmarshal:", err)
 			break
 		}
-		// log.Println(req)
 
 		// connectivity
-		res := WSPacket{}
 		switch req.ID {
 		case "ping":
 			gameName = req.Data
@@ -226,64 +195,6 @@ func ws(w http.ResponseWriter, r *http.Request) {
 		}
 
 	}
-}
-
-func postSession(w http.ResponseWriter, r *http.Request) {
-	bs, err := ioutil.ReadAll(r.Body)
-	if err != nil {
-		log.Fatal(err)
-	}
-	r.Body.Close()
-
-	var postPacket SessionPacket
-	err = json.Unmarshal(bs, &postPacket)
-	if err != nil {
-		log.Fatalln(err)
-	}
-
-	log.Println("Got session with game request:", postPacket.Game)
-
-	webRTC := webrtc.NewWebRTC()
-
-	localSession, err := webRTC.StartClient(postPacket.SDP, width, height)
-	if err != nil {
-		log.Fatalln(err)
-	}
-
-	roomID := postPacket.RoomID
-	if roomID == "" {
-		fmt.Println("Init Room")
-		//generate new room
-		roomID = generateRoomID()
-
-		imageChannel := make(chan *image.RGBA, 100)
-		inputChannel := make(chan int, 100)
-		rooms[roomID] = &Room{
-			imageChannel: imageChannel,
-			inputChannel: inputChannel,
-			rtcSessions:  []*webrtc.WebRTC{},
-		}
-		go fanoutScreen(imageChannel, roomID)
-		go startGame("games/"+postPacket.Game, roomID, imageChannel, inputChannel)
-		// fanin input channel
-		// fanout output channel
-	} else {
-		// if there is room, reuse image channel, add webRTC session
-	}
-	rooms[roomID].rtcSessions = append(rooms[roomID].rtcSessions, webRTC)
-	faninInput(rooms[roomID].inputChannel, webRTC, 1)
-
-	res := SessionPacket{
-		SDP:    localSession,
-		RoomID: roomID,
-	}
-	stRes, err := json.Marshal(res)
-	if err != nil {
-		log.Println("json marshal:", err)
-	}
-
-	//w.Write([]byte(localSession))
-	w.Write(stRes)
 }
 
 // generateRoomID generate a unique room ID containing 16 digits
