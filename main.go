@@ -145,7 +145,8 @@ func ws(w http.ResponseWriter, r *http.Request) {
 			break
 		}
 
-		// connectivity
+		// SDP connection initializations follows WebRTC convention
+		// https://developer.mozilla.org/en-US/docs/Web/API/WebRTC_API/Protocols
 		switch req.ID {
 		case "ping":
 			gameName = req.Data
@@ -165,6 +166,7 @@ func ws(w http.ResponseWriter, r *http.Request) {
 			res.Data = localSession
 
 		case "candidate":
+			// Unuse code
 			hi := pionRTC.ICECandidateInit{}
 			err = json.Unmarshal([]byte(req.Data), &hi)
 			if err != nil {
