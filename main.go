@@ -44,10 +44,15 @@ type WSPacket struct {
 	PlayerIndex int    `json:"player_index"`
 }
 
+// Room is a game session. multi webRTC sessions can connect to a same game.
+// A room stores all the channel for interaction between all webRTCs session and emulator
 type Room struct {
 	imageChannel chan *image.RGBA
 	inputChannel chan int
-	rtcSessions  []*webrtc.WebRTC
+	// closedChannel is to fire exit event when there is no webRTC session running
+	closedChannel chan bool
+
+	rtcSessions []*webrtc.WebRTC
 }
 
 var rooms map[string]*Room
@@ -66,8 +71,8 @@ func main() {
 	http.ListenAndServe(":8000", nil)
 }
 
-func startGame(path string, roomID string, imageChannel chan *image.RGBA, inputChannel chan int) {
-	ui.Run([]string{path}, roomID, imageChannel, inputChannel)
+func startGame(path string, roomID string, imageChannel chan *image.RGBA, inputChannel chan int, closedChannel chan bool) {
+	ui.Run([]string{path}, roomID, imageChannel, inputChannel, closedChannel)
 }
 
 func getWeb(w http.ResponseWriter, r *http.Request) {
@@ -78,18 +83,20 @@ func getWeb(w http.ResponseWriter, r *http.Request) {
 	w.Write(bs)
 }
 
-// init initilize room returns roomID
+// init initilizes a room returns roomID
 func initRoom(roomID, gameName string) string {
 	roomID = generateRoomID()
 	imageChannel := make(chan *image.RGBA, 100)
 	inputChannel := make(chan int, 100)
+	closedChannel := make(chan bool)
 	rooms[roomID] = &Room{
-		imageChannel: imageChannel,
-		inputChannel: inputChannel,
-		rtcSessions:  []*webrtc.WebRTC{},
+		imageChannel:  imageChannel,
+		inputChannel:  inputChannel,
+		closedChannel: closedChannel,
+		rtcSessions:   []*webrtc.WebRTC{},
 	}
 	go fanoutScreen(imageChannel, roomID)
-	go startGame("games/"+gameName, roomID, imageChannel, inputChannel)
+	go startGame("games/"+gameName, roomID, imageChannel, inputChannel, closedChannel)
 
 	return roomID
 }
@@ -208,6 +215,8 @@ func generateRoomID() string {
 // fanoutScreen fanout outputs to all webrtc in the same room
 func fanoutScreen(imageChannel chan *image.RGBA, roomID string) {
 	for image := range imageChannel {
+		isRoomRunning := false
+
 		yuv := util.RgbaToYuv(image)
 		for _, webRTC := range rooms[roomID].rtcSessions {
 			// Client stopped
@@ -220,6 +229,11 @@ func fanoutScreen(imageChannel chan *image.RGBA, roomID string) {
 			if webRTC.IsConnected() {
 				webRTC.ImageChannel <- yuv
 			}
+			isRoomRunning = true
+		}
+
+		if isRoomRunning == false {
+			rooms[roomID].closedChannel <- true
 		}
 	}
 }
@@ -238,8 +252,8 @@ func faninInput(inputChannel chan int, webRTC *webrtc.WebRTC, playerIndex int) {
 				input := <-webRTC.InputChannel
 				// the first 10 bits belong to player 1
 				// the next 10 belongs to player 2 ...
-				// We standardize and put it to inputChannel (20 bytes)
-				input = input << ((uint(playerIndex) - 1) * ui.NumKeys / 2)
+				// We standardize and put it to inputChannel (20 bits)
+				input = input << ((uint(playerIndex) - 1) * ui.NumKeys)
 				inputChannel <- input
 			}
 		}
