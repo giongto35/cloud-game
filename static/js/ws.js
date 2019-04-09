@@ -73,9 +73,7 @@ function startGame() {
         else if (pc.iceConnectionState === "disconnected") {
             endInput();
         }
-
     }
-
 
     // stream channel
     pc.ontrack = function (event) {
@@ -94,7 +92,6 @@ function startGame() {
             conn.send(JSON.stringify({"id": "sdp", "data": session}));
         } else {
             console.log(JSON.stringify(event.candidate));
-            // conn.send(JSON.stringify({"id": "candidate", "data": JSON.stringify(event.candidate)}));
         }
     }
 
