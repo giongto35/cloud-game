@@ -16,19 +16,20 @@ type View interface {
 
 type Director struct {
 	// audio        *Audio
-	view         View
-	timestamp    float64
-	imageChannel chan *image.RGBA
-	inputChannel chan int
-	roomID       string
+	view          View
+	timestamp     float64
+	imageChannel  chan *image.RGBA
+	inputChannel  chan int
+	closedChannel chan bool
+	roomID        string
 }
 
-func NewDirector(roomID string, imageChannel chan *image.RGBA, inputChannel chan int) *Director {
-	// func NewDirector(audio *Audio, imageChannel chan *image.RGBA, inputChannel chan int) *Director {
+func NewDirector(roomID string, imageChannel chan *image.RGBA, inputChannel chan int, closedChannel chan bool) *Director {
 	director := Director{}
 	// director.audio = audio
 	director.imageChannel = imageChannel
 	director.inputChannel = inputChannel
+	director.closedChannel = closedChannel
 	director.roomID = roomID
 	return &director
 }
@@ -61,9 +62,17 @@ func (d *Director) Start(paths []string) {
 }
 
 func (d *Director) Run() {
+L:
 	for {
 		// quit game
-		// TODO: Check if noone using
+
+		select {
+		// if there is event from close channel => the game is ended
+		case <-d.closedChannel:
+			log.Println("Closed game")
+			break L
+		default:
+		}
 
 		d.Step()
 	}
@@ -71,6 +80,7 @@ func (d *Director) Run() {
 }
 
 func (d *Director) PlayGame(path string) {
+	// Generate hash that is indentifier of a room (game path + ropomID)
 	hash, err := hashFile(path, d.roomID)
 	if err != nil {
 		log.Fatalln(err)
@@ -79,5 +89,6 @@ func (d *Director) PlayGame(path string) {
 	if err != nil {
 		log.Fatalln(err)
 	}
+	// Set GameView as current view
 	d.SetView(NewGameView(d, console, path, hash, d.imageChannel, d.inputChannel))
 }
