@@ -1,7 +1,7 @@
 # Cloud Gaming Service Lite
 
-Cloud Gaming Service is an open source Cloud Gaming Service building on ![WebRTC](https://github.com/pion/webrtc).
-
+Cloud Gaming Service is an open source Cloud Gaming Service building on ![WebRTC](https://github.com/pion).  
+  
 With Cloud gaming, you can play any of your favourite NES game directly on your browser without installing it on your machine. It also brings modern online multiplayer gaming experience to NES game, so two people can play the game together . Joystick gaming is the past :P.
 
 ## Feature
@@ -31,23 +31,23 @@ Europe:
 
 ## Run on local
 
-You can host the server yourself by running `./run_local.sh`. It will spawn a docker environment and you can access the emulator on `localhost:8000`. 
+You can host the server yourself by running `./run_local.sh`. It will spawn a docker environment and you can access the emulator on `localhost:8000`.  
 
-You can open port, so other person can access your local machine and play the game together.
+You can open port, so other person can access your local machine and play the game together.  
 
 # Credits
 
-Pion Webrtc team for the incredible Golang Webrtc library and their supports https://github.com/pion/webrtc/
-fogleman for the awesome nes emulator https://github.com/fogleman/nes
-poi5305 for the video encoding https://github.com/poi5305/go-yuv2webRTC
-bchanx for the gameboy https://github.com/bchanx/animated-gameboy-in-css
-And last but not least, my longtime friend Tri as the co-author.
+Pion Webrtc team for the incredible Golang Webrtc library and their supports https://github.com/pion/webrtc/  
+fogleman for the awesome nes emulator https://github.com/fogleman/nes  
+poi5305 for the video encoding https://github.com/poi5305/go-yuv2webRTC  
+bchanx for the gameboy https://github.com/bchanx/animated-gameboy-in-css  
+And last but not least, my longtime friend Tri as the co-author.  
 
 # Contributor
 
 Nguyen Huu Thanh  
-https://www.linkedin.com/in/huuthanhnguyen/
+https://www.linkedin.com/in/huuthanhnguyen/  
 
-Tri Dang Minh
-https://trich.im
+Tri Dang Minh  
+https://trich.im  
 
