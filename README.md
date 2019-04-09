@@ -5,7 +5,13 @@ Cloud Gaming Service is an open source Cloud Gaming Service building on ![WebRTC
 With Cloud gaming, you can play any of your favourite NES game directly on your browser without installing it on your machine. It also brings modern online multiplayer gaming experience to NES game, so two people can play the game together . Joystick gaming is the past :P.
 
 ## Feature
-1. 
+1. Can play NES games directly from browser.  
+2. Can multiplayer over internet. A person host a game and the other person can join the same game as 1st or 2nd player.  
+3. Save (S) and Load (L) at any point in time.  
+4. If you save the roomID, next time you can come back to continue play in that room.  
+
+## Demo
+https://www.youtube.com/watch?v=qkjV2VIwVIo
 
 ## Try the game
 
@@ -23,90 +29,19 @@ Europe:
   eu.nes.webgame2d.com  
   eu.nes.playcloud.games  
 
-## Development environment
+## Run on local
 
-You can host the server yourself by running `./run_local.sh`. It will spawn a docker environment and run it on `localhost:8000`. 
+You can host the server yourself by running `./run_local.sh`. It will spawn a docker environment and you can access the emulator on `localhost:8000`. 
 
-## Architecture
-![Techstack](document/images/techstack.jpg)
-
-# Code architecture
-
-## Document
-[**Frontend**](cs2dclient)
-
-[**Backend**](cs2dserver)
-
-[**AIEnvironment**](gym)
-
-## Codebase
-```
-.
-├── cs2dclient
-│   ├── index.html
-│   ├── src
-│   │   ├── config.js: javascript config
-│   │   ├── index.html
-│   │   ├── main.js
-│   │   ├── sprites
-│   │   │   ├── Leaderboard.js: Leaderboard object
-│   │   │   ├── Map.js: Map object
-│   │   │   ├── Player.js: Player object
-│   │   │   └── Shoot.js: Shoot object
-│   │   ├── states
-│   │   │   ├── Boot.js Boot screen
-│   │   │   ├── const.js
-│   │   │   ├── Game.js: Game master
-│   │   │   ├── message_pb.js: Protobuf Message
-│   │   │   ├── Splash.js
-│   │   │   └── utils.js
-│   │   └── utils.js
-├── cs2dserver
-│   ├── buildwall.js
-│   ├── cmd
-│   │   └── server
-│   │       └── server.go: Entrypoint running server
-│   ├── game
-│   │   ├── common
-│   │   ├── config
-│   │   │   └── 1.map: Map represented 0 and 1
-│   │   ├── eventmanager
-│   │   ├── gameconst
-│   │   ├── game.go
-│   │   ├── mappkg
-│   │   ├── objmanager
-│   │   ├── playerpkg
-│   │   ├── shape
-│   │   ├── shootpkg
-│   │   ├── types.go
-│   │   └── ws
-│   │       ├── types.go
-│   │       ├── wsclient.go
-│   │       └── wshub.go
-│   ├── generate.sh: Generate protobuf for server + client + AI environment
-│   ├── message.proto
-│   └── Message_proto
-│       └── message.pb.go
-├── gym: Training script for game (IN PROGRESS)
-│   ├── cs2denv.py: Agent to communicate with server. Can connect to localhost or prod server
-│   ├── lib
-│   │   ├── common.py
-│   ├── loadtest.py: Load test script to server
-│   ├── message_pb2.py
-│   ├── messenger.py
-│   ├── test_env.py
-│   ├── train2.py
-│   └── train.py
-├── Dockerfile
-└── run_local.sh
-```
+You can open port, so other person can access your local machine and play the game together.
 
 # Credits
 
 Pion Webrtc team for the incredible Golang Webrtc library and their supports https://github.com/pion/webrtc/
-Fogleman for the awesome nes emulator https://github.com/fogleman/nes
+fogleman for the awesome nes emulator https://github.com/fogleman/nes
 poi5305 for the video encoding https://github.com/poi5305/go-yuv2webRTC
-And last but not least, my longtime friend: https://github.com/trichimtrich for his
+bchanx for the gameboy https://github.com/bchanx/animated-gameboy-in-css
+And last but not least, my longtime friend Tri as the co-author.
 
 # Contributor
 
