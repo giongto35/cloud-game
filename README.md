@@ -1,6 +1,6 @@
 # Cloud Gaming Service Lite
 
-Cloud Gaming Service is an open source Cloud Gaming Service building on ![WebRTC](https://github.com/pion).  
+Cloud Gaming Service is an open source Cloud Gaming Service building on [WebRTC](https://github.com/pion).  
   
 With Cloud gaming, you can play any of your favourite NES game directly on your browser without installing it on your machine. It also brings modern online multiplayer gaming experience to NES game, so two people can play the game together . Joystick gaming is the past :P.
 
@@ -17,17 +17,17 @@ https://www.youtube.com/watch?v=qkjV2VIwVIo
 
 For the best gaming experience, please select the closest region to you.  
 Southeast Asia:  
-  nes.webgame2d.com  
-  nes.playcloud.games  
+    nes.webgame2d.com  
+    nes.playcloud.games  
 US West:  
-  usw.nes.webgame2d.com  
-  usw.nes.playcloud.games  
+    usw.nes.webgame2d.com  
+    usw.nes.playcloud.games  
 US East:  
-  use.nes.webgame2d.com  
-  use.nes.playcloud.games  
+    use.nes.webgame2d.com  
+    use.nes.playcloud.games  
 Europe:  
-  eu.nes.webgame2d.com  
-  eu.nes.playcloud.games  
+    eu.nes.webgame2d.com  
+    eu.nes.playcloud.games  
 
 ## Run on local
 
