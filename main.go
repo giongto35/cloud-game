@@ -227,12 +227,14 @@ func fanoutScreen(imageChannel chan *image.RGBA, roomID string) {
 			// encode frame
 			// fanout imageChannel
 			if webRTC.IsConnected() {
+				// NOTE: can block here
 				webRTC.ImageChannel <- yuv
 			}
 			isRoomRunning = true
 		}
 
 		if isRoomRunning == false {
+			log.Println("Closed room", roomID)
 			rooms[roomID].closedChannel <- true
 		}
 	}

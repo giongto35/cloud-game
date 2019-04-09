@@ -69,7 +69,6 @@ L:
 		select {
 		// if there is event from close channel => the game is ended
 		case <-d.closedChannel:
-			log.Println("Closed game")
 			break L
 		default:
 		}
