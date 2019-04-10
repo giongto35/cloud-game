@@ -2,7 +2,9 @@
 
 Cloud Gaming Service is an open source Cloud Gaming Service building on [WebRTC](https://github.com/pion).  
   
-With Cloud gaming, you can play any of your favourite NES game directly on your browser without installing it on your machine. It also brings modern online multiplayer gaming experience to classic NES game, so two people can play the game together . Joystick gaming is the past :P.
+With cloud gaming, you can play any of your favourite NES game directly on your browser without installing it. It also brings modern online multiplayer gaming experience to classic NES game, so two people can play the game together.
+
+![screenshot](static/img/landing-page.png)
 
 ## Feature
 1. Can play NES games directly from browser.  
@@ -19,20 +21,20 @@ https://www.youtube.com/watch?v=qkjV2VIwVIo
 For the best gaming experience, please select the closest region to you. 
 
 Southeast Asia:  
-* nes.webgame2d.com  
-* nes.playcloud.games  
+* [nes.webgame2d.com]nes.webgame2d.com  
+* [nes.playcloud.games]nes.playcloud.games
 
-US West:  
-* usw.nes.webgame2d.com  
-* usw.nes.playcloud.games  
+US West (Los Angeles):  
+* [usw.nes.webgame2d.com]usw.nes.webgame2d.com  
+* [usw.nes.playcloud.games]usw.nes.playcloud.games
 
 US East:  
-* use.nes.webgame2d.com  
-* use.nes.playcloud.games  
+* [use.nes.webgame2d.com]use.nes.webgame2d.com
+* [use.nes.playcloud.games]use.nes.playcloud.games  
 
 Europe:  
-* eu.nes.webgame2d.com  
-* eu.nes.playcloud.games  
+* [eu.nes.webgame2d.com]eu.nes.webgame2d.com
+* [eu.nes.playcloud.games]eu.nes.playcloud.games
 
 ## Run on local
 
@@ -40,6 +42,19 @@ You can host the server yourself by running `./run_local.sh`. It will spawn a do
 
 You can open port, so other person can access your local machine and play the game together.  
 
+## Development environment
+
+Install Golang https://golang.org/doc/install  
+
+Install dependencies  
+
+  * `apt-get install libvpx-dev -y` (or alternatives of libvpx on other OS)  
+  * `go get github.com/pion/webrtc/`  
+  * `go get github.com/gorilla/mux`  
+  * `go get github.com/gorilla/websocket`  
+
+Then we can run the main directly
+  * `go run main.go`
 
 ## Code structure
 
@@ -72,10 +87,6 @@ This project demos the simplest cloud game with NES. Integrating with other emul
 * poi5305 for the video encoding https://github.com/poi5305/go-yuv2webRTC  
 * bchanx for the gameboy https://github.com/bchanx/animated-gameboy-in-css  
 * And last but not least, my longtime friend Tri as the co-author.  
-
-## LICENSE
-
-[MIT License](LICENSE)
 
 ## Contributor
 
