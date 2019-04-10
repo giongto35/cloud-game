@@ -59,7 +59,7 @@ GAME_LIST = [
 
     {
         name: "Zelda",
-        nes: "zelda.nes",
+        nes: "zelda.rom",
         art: "Zelda II - The Adventure of Link (Europe) (Rev A).png"
     }
 ];
