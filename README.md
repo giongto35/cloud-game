@@ -21,20 +21,20 @@ https://www.youtube.com/watch?v=qkjV2VIwVIo
 For the best gaming experience, please select the closest region to you. 
 
 Southeast Asia:  
-* [nes.webgame2d.com]nes.webgame2d.com  
-* [nes.playcloud.games]nes.playcloud.games
+* [http://nes.webgame2d.com](http://nes.webgame2d.com)
+* [http://nes.playcloud.games](http://nes.playcloud.games)
 
 US West (Los Angeles):  
-* [usw.nes.webgame2d.com]usw.nes.webgame2d.com  
-* [usw.nes.playcloud.games]usw.nes.playcloud.games
+* [http://usw.nes.webgame2d.com](http://usw.nes.webgame2d.com)
+* [http://usw.nes.playcloud.games](http://usw.nes.playcloud.games)
 
 US East:  
-* [use.nes.webgame2d.com]use.nes.webgame2d.com
-* [use.nes.playcloud.games]use.nes.playcloud.games  
+* [http://use.nes.webgame2d.com](http://use.nes.webgame2d.com)
+* [http://use.nes.playcloud.games](http://use.nes.playcloud.games)
 
 Europe:  
-* [eu.nes.webgame2d.com]eu.nes.webgame2d.com
-* [eu.nes.playcloud.games]eu.nes.playcloud.games
+* [http://eu.nes.webgame2d.com](http://eu.nes.webgame2d.com)
+* [http://eu.nes.playcloud.games](http://eu.nes.playcloud.games)
 
 ## Run on local
 
@@ -82,10 +82,10 @@ This project demos the simplest cloud game with NES. Integrating with other emul
 
 ## Credits
 
-* Pion Webrtc team for the incredible Golang Webrtc library and their supports https://github.com/pion/webrtc/  
-* fogleman for the awesome nes emulator https://github.com/fogleman/nes  
-* poi5305 for the video encoding https://github.com/poi5305/go-yuv2webRTC  
-* bchanx for the gameboy https://github.com/bchanx/animated-gameboy-in-css  
+* *Pion* Webrtc team for the incredible Golang Webrtc library and their supports https://github.com/pion/webrtc/  
+* *fogleman* for the awesome nes emulator https://github.com/fogleman/nes  
+* *poi5305* for the video encoding https://github.com/poi5305/go-yuv2webRTC  
+* *bchanx* for the gameboy https://github.com/bchanx/animated-gameboy-in-css  
 * And last but not least, my longtime friend Tri as the co-author.  
 
 ## Contributor
