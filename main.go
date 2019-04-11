@@ -85,7 +85,10 @@ func getWeb(w http.ResponseWriter, r *http.Request) {
 
 // init initilizes a room returns roomID
 func initRoom(roomID, gameName string) string {
-	roomID = generateRoomID()
+	// if no roomID is given, generate it
+	if roomID == "" {
+		roomID = generateRoomID()
+	}
 	imageChannel := make(chan *image.RGBA, 100)
 	inputChannel := make(chan int, 100)
 	closedChannel := make(chan bool)
@@ -101,10 +104,29 @@ func initRoom(roomID, gameName string) string {
 	return roomID
 }
 
+// isRoomRunning check if there is any running sessions.
+// TODO: If we remove sessions from room anytime a session is closed, we can check if the sessions list is empty or not.
+func isRoomRunning(roomID string) bool {
+	// If no roomID is registered
+	if _, ok := rooms[roomID]; !ok {
+		return false
+	}
+
+	// If there is running session
+	for _, s := range rooms[roomID].rtcSessions {
+		if !s.IsClosed() {
+			return true
+		}
+	}
+	return false
+}
+
 // startSession handles one session call
 func startSession(webRTC *webrtc.WebRTC, gameName string, roomID string, playerIndex int) string {
-	// If the roomID is empty, we spawn a new room
-	if roomID == "" {
+	// If the roomID is empty,
+	// or the roomID doesn't have any running sessions (room was closed)
+	// we spawn a new room
+	if roomID == "" || !isRoomRunning(roomID) {
 		roomID = initRoom(roomID, gameName)
 	}
 
