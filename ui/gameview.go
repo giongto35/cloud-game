@@ -69,7 +69,8 @@ func (view *GameView) ListenToInputChannel() {
 	for {
 		keysInBinary := <-view.inputChannel
 		for i := 0; i < NumKeys*2; i++ {
-			view.keyPressed[i] = ((keysInBinary & 1) == 1)
+			b := ((keysInBinary & 1) == 1)
+			view.keyPressed[i] = (view.keyPressed[i] && b) || b
 			keysInBinary = keysInBinary >> 1
 		}
 	}

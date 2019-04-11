@@ -138,6 +138,7 @@ document.body.onkeydown = function (e) {
       }
     }
 
+    // game keys
     setState(e, true);
   }
 };
