@@ -84,7 +84,12 @@ func (view *GameView) Enter() {
 	// view.console.SetAudioSampleRate(view.director.audio.sampleRate)
 
 	// load state
-	view.console.Reset()
+	if err := view.console.LoadState(savePath(view.hash)); err == nil {
+		return
+	} else {
+		view.console.Reset()
+	}
+	//view.console.Reset()
 
 	// load sram
 	cartridge := view.console.Cartridge
