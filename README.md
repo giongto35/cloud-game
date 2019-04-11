@@ -48,9 +48,18 @@ Install Golang https://golang.org/doc/install
 
 Install dependencies  
 
-  * `apt-get install libvpx-dev -y` (or alternatives of libvpx on other OS)  
+  * Install [libvpx](https://www.webmproject.org/code/) and [pkg-config](https://www.freedesktop.org/wiki/Software/pkg-config/)
+```
+# Ubuntu
+apt-get install -y pkg-config libvpx-dev
+
+# MacOS
+brew install libvpx pkg-config
+
+# Windows
+...
+```
   * `go get github.com/pion/webrtc/`  
-  * `go get github.com/gorilla/mux`  
   * `go get github.com/gorilla/websocket`  
 
 Then we can run the main directly
