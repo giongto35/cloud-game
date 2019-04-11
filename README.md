@@ -25,14 +25,14 @@ Southeast Asia:
 * [http://nes.playcloud.games](http://nes.playcloud.games)
 
 US West (Los Angeles):  
-* [http://usw.nes.webgame2d.com](http://usw.nes.webgame2d.com)
-* [http://usw.nes.playcloud.games](http://usw.nes.playcloud.games)
+* [http://us.nes.webgame2d.com](http://us.nes.webgame2d.com)
+* [http://us.nes.playcloud.games](http://us.nes.playcloud.games)
 
-US East:  
+US East: (Haven't hosted)  
 * [http://use.nes.webgame2d.com](http://use.nes.webgame2d.com)
 * [http://use.nes.playcloud.games](http://use.nes.playcloud.games)
 
-Europe:  
+Europe: (Haven't hosted)  
 * [http://eu.nes.webgame2d.com](http://eu.nes.webgame2d.com)
 * [http://eu.nes.playcloud.games](http://eu.nes.playcloud.games)
 
