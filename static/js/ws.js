@@ -86,9 +86,18 @@ function startGame() {
 
     // stream channel
     pc.ontrack = function (event) {
-        log("New stream, yay!");
-        document.getElementById("game-screen").srcObject = event.streams[0];
-        $("#game-screen").show();
+        console.log(event.streams);
+        var el = document.createElement(event.track.kind);
+        el.srcObject = event.streams[0];
+        el.autoplay = true;
+        el.width = 800;
+        el.height = 600;
+        el.poster = new URL("https://orig00.deviantart.net/cdcd/f/2017/276/a/a/october_2nd___gameboy_poltergeist_by_wanyo-dbpdmnd.gif");
+        document.getElementById('remoteVideos').appendChild(el)
+
+        // log("New stream, yay!");
+        // document.getElementById("game-screen").srcObject = event.streams[0];
+        // $("#game-screen").show();
     }
 
 
@@ -108,9 +117,10 @@ function startGame() {
     function startWebRTC() {
         // receiver only tracks
         pc.addTransceiver('video', {'direction': 'recvonly'});
+        pc.addTransceiver('audio', {'direction': 'recvonly'});
 
         // create SDP
-        pc.createOffer({offerToReceiveVideo: true, offerToReceiveAudio: false}).then(d => {
+        pc.createOffer({offerToReceiveVideo: true, offerToReceiveAudio: true}).then(d => {
             pc.setLocalDescription(d).catch(log);
         })
     }

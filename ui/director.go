@@ -6,13 +6,15 @@ import (
 	"time"
 
 	"github.com/giongto35/cloud-game/nes"
+	// "github.com/gordonklaus/portaudio"
 )
 
 type Director struct {
-	// audio        *Audio
+	// audio         *Audio
 	view          *GameView
 	timestamp     float64
 	imageChannel  chan *image.RGBA
+	audioChanel   chan float32
 	inputChannel  chan int
 	closedChannel chan bool
 	roomID        string
@@ -21,10 +23,11 @@ type Director struct {
 
 const FPS = 60
 
-func NewDirector(roomID string, imageChannel chan *image.RGBA, inputChannel chan int, closedChannel chan bool) *Director {
+func NewDirector(roomID string, imageChannel chan *image.RGBA, audioChanel chan float32, inputChannel chan int, closedChannel chan bool) *Director {
 	director := Director{}
 	// director.audio = audio
 	director.imageChannel = imageChannel
+	director.audioChanel = audioChanel
 	director.inputChannel = inputChannel
 	director.closedChannel = closedChannel
 	director.roomID = roomID
@@ -53,6 +56,13 @@ func (d *Director) Step() {
 }
 
 func (d *Director) Start(paths []string) {
+	// portaudio.Initialize()
+	// defer portaudio.Terminate()
+
+	// audio := NewAudio()
+	// audio.Start()
+	// d.audio = audio
+
 	if len(paths) == 1 {
 		d.PlayGame(paths[0])
 	}
@@ -60,9 +70,10 @@ func (d *Director) Start(paths []string) {
 }
 
 func (d *Director) Run() {
-	c := time.Tick(time.Second / FPS)
+	// c := time.Tick(time.Second / FPS)
 L:
-	for range c {
+	// for range c {
+	for {
 		// quit game
 
 		select {
@@ -89,7 +100,7 @@ func (d *Director) PlayGame(path string) {
 		log.Fatalln(err)
 	}
 	// Set GameView as current view
-	d.SetView(NewGameView(console, path, hash, d.imageChannel, d.inputChannel))
+	d.SetView(NewGameView(console, path, hash, d.imageChannel, d.audioChanel, d.inputChannel))
 }
 
 func (d *Director) SaveGame() error {
