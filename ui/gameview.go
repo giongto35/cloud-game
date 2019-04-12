@@ -125,10 +125,5 @@ func (view *GameView) updateControllers() {
 	view.console.Controller1.SetButtons(player1Keys)
 	view.console.Controller2.SetButtons(player2Keys)
 
-	// if view.keyPressed[save1] || view.keyPressed[save2] {
-	// 	view.console.SaveState(savePath(view.hash))
-	// }
-	// if view.keyPressed[load1] || view.keyPressed[load2] {
-	// 	view.console.LoadState(savePath(view.hash))
-	// }
+
 }
