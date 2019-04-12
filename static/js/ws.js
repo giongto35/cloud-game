@@ -18,7 +18,9 @@ function startGame() {
     // Clear old roomID
     conn.onopen = () => {
         log("WebSocket is opened. Send ping");
-        conn.send(JSON.stringify({"id": "ping", "data": GAME_LIST[gameIdx].nes, "room_id": roomID.value, "player_index": parseInt(playerIndex.value, 10)}));
+        conn.send(JSON.stringify({"id": "ping", "data": GAME_LIST[gameIdx].nes, "room_id": roomID.value, "player_index": parseInt(playerIndex.value, 10)}));inputTimer
+        log("Send ping pong frequently")
+        pingpongTimer = setInterval(sendPing, 1000 / PINGPONGPS)
     }
 
     conn.onerror = error => {
@@ -33,8 +35,12 @@ function startGame() {
         d = JSON.parse(e.data);
         switch (d["id"]) {
         case "pong":
+            // TODO: Change name use one session
             log("Recv pong. Start webrtc");
             startWebRTC();
+            break;
+        case "pingpong":
+            // TODO: Calc time
             break;
         case "sdp":
             log("Got remote sdp");
@@ -52,6 +58,11 @@ function startGame() {
             log(`Got load response: ${d["data"]}`);
             break;
         }
+    }
+
+    function sendPing() {
+        // TODO: format the package with time
+        conn.send(JSON.stringify({"id": "pingpong", "data": "pingpong"}));
     }
 
     // webrtc
