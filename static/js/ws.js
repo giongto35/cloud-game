@@ -6,8 +6,11 @@ function startGame() {
     // clear
     endInput();
     document.getElementById('div').innerHTML = "";
-    $("#loading-screen").show();
-    $("#menu-screen").fadeOut();
+    if (!DEBUG) {
+        $("#menu-screen").fadeOut(400, function() {
+            $("#game-screen").show();
+        });    
+    }
     // end clear
 
     conn = new WebSocket(`ws://${location.host}/ws`);
@@ -41,6 +44,12 @@ function startGame() {
             log("Got start");
             roomID.value = ""
             currentRoomID.innerText = d["room_id"]
+            break;
+        case "save":
+            log(`Got save response: ${d["data"]}`);
+            break;
+        case "load":
+            log(`Got load response: ${d["data"]}`);
             break;
         }
     }
@@ -78,7 +87,8 @@ function startGame() {
     // stream channel
     pc.ontrack = function (event) {
         log("New stream, yay!");
-        document.getElementById("loading-screen").srcObject = event.streams[0];
+        document.getElementById("game-screen").srcObject = event.streams[0];
+        $("#game-screen").show();
     }
 
 

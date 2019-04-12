@@ -37,7 +37,7 @@
     <div id="glass-gameboy-text">GAME BOY</div>
     <div id="glass-color-text">C</div>
     <div id="screen">
-      <video id="loading-screen" autoplay=true poster="https://orig00.deviantart.net/cdcd/f/2017/276/a/a/october_2nd___gameboy_poltergeist_by_wanyo-dbpdmnd.gif">
+      <video id="game-screen" autoplay=true poster="https://orig00.deviantart.net/cdcd/f/2017/276/a/a/october_2nd___gameboy_poltergeist_by_wanyo-dbpdmnd.gif">
       </video>
 
       <div id="menu-screen">
@@ -78,7 +78,7 @@
     <div>Rocked by <a href="https://github.com/giongto35">giongto35</a> <i class="far fa-handshake"></i> <a href="https://trich.im">trichimtrich</a></div>
   </div>
 
-  <div style="position:absolute; top:30%; left: 5%;">
+  <div style="position:absolute; top:17%; left: 5%;">
     <h3>Instruction</h3>
     <div>
       Menu:
@@ -119,61 +119,7 @@
 
   <script src="https://code.jquery.com/jquery-3.3.1.min.js"></script>
   <script src="/static/js/const.js"></script>
-  
-  <script>
-    /* 
-      GLOBAL VARS
-    */
-   // Game state
-    screenState = "loader";
-    gameIdx = 0;
-    
-    // Input vars
-    keyState = {
-      // controllers
-      a: false,
-      b: false, 
-      start: false,
-      select: false,
-      
-      // navigators
-      up: false,
-      down: false,
-      left: false,
-      right: false,
-
-      // game meta keys
-      save: false,
-      load: false,
-
-      // unofficial
-      quit: false
-    }
-
-    stateUnchange = true;
-    unchangePacket = INPUT_STATE_PACKET;
-    inputTimer = null;
-
-    // Connection vars
-    var pc, inputChannel;
-    var localSessionDescription = "";
-    var remoteSessionDescription = "";
-    var conn;
-
-
-    /* 
-      FUNCTIONS
-    */
-  
-    // miscs
-    function log(msg) {
-      if (DEBUG) {
-        document.getElementById('div').innerHTML += msg + '<br>'
-        console.log(msg);
-      }
-    }
-  </script>
-
+  <script src="/static/js/global.js"></script>
   <script src="/static/js/gameboy_loader.js"></script>
   <script src="/static/js/gameboy_controller.js"></script>
   <script src="/static/js/ws.js"></script>
