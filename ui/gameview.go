@@ -3,13 +3,8 @@ package ui
 
 import (
 	"image"
-
-	// "strconv"
-
 	"github.com/giongto35/cloud-game/nes"
 )
-
-const padding = 0
 
 // List key pressed
 const (
@@ -21,8 +16,7 @@ const (
 	down1
 	left1
 	right1
-	save1
-	load1
+
 	a2
 	b2
 	select2
@@ -31,13 +25,10 @@ const (
 	down2
 	left2
 	right2
-	save2
-	load2
 )
-const NumKeys = 10
+const NumKeys = 8
 
 type GameView struct {
-	director *Director
 	console  *nes.Console
 	title    string
 	hash     string
@@ -49,9 +40,8 @@ type GameView struct {
 	inputChannel chan int
 }
 
-func NewGameView(director *Director, console *nes.Console, title, hash string, imageChannel chan *image.RGBA, inputChannel chan int) View {
+func NewGameView(console *nes.Console, title, hash string, imageChannel chan *image.RGBA, inputChannel chan int) *GameView {
 	gameview := &GameView{
-		director:     director,
 		console:      console,
 		title:        title,
 		hash:         hash,
@@ -126,19 +116,19 @@ func (view *GameView) Update(t, dt float64) {
 
 func (view *GameView) updateControllers() {
 	// Divide keyPressed to player 1 and player 2
-	// First 10 keys are player 1
+	// First 8 keys are player 1
 	var player1Keys [8]bool
 	copy(player1Keys[:], view.keyPressed[:8])
 	var player2Keys [8]bool
-	copy(player2Keys[:], view.keyPressed[10:18])
+	copy(player2Keys[:], view.keyPressed[8:])
 
 	view.console.Controller1.SetButtons(player1Keys)
 	view.console.Controller2.SetButtons(player2Keys)
 
-	if view.keyPressed[save1] || view.keyPressed[save2] {
-		view.console.SaveState(savePath(view.hash))
-	}
-	if view.keyPressed[load1] || view.keyPressed[load2] {
-		view.console.LoadState(savePath(view.hash))
-	}
+	// if view.keyPressed[save1] || view.keyPressed[save2] {
+	// 	view.console.SaveState(savePath(view.hash))
+	// }
+	// if view.keyPressed[load1] || view.keyPressed[load2] {
+	// 	view.console.LoadState(savePath(view.hash))
+	// }
 }

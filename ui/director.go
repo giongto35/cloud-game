@@ -8,20 +8,15 @@ import (
 	"github.com/giongto35/cloud-game/nes"
 )
 
-type View interface {
-	Enter()
-	Exit()
-	Update(t, dt float64)
-}
-
 type Director struct {
 	// audio        *Audio
-	view          View
+	view          *GameView
 	timestamp     float64
 	imageChannel  chan *image.RGBA
 	inputChannel  chan int
 	closedChannel chan bool
 	roomID        string
+	hash		  string
 }
 
 const FPS = 60
@@ -33,10 +28,11 @@ func NewDirector(roomID string, imageChannel chan *image.RGBA, inputChannel chan
 	director.inputChannel = inputChannel
 	director.closedChannel = closedChannel
 	director.roomID = roomID
+	director.hash = ""
 	return &director
 }
 
-func (d *Director) SetView(view View) {
+func (d *Director) SetView(view *GameView) {
 	if d.view != nil {
 		d.view.Exit()
 	}
@@ -87,10 +83,27 @@ func (d *Director) PlayGame(path string) {
 	if err != nil {
 		log.Fatalln(err)
 	}
+	d.hash = hash
 	console, err := nes.NewConsole(path)
 	if err != nil {
 		log.Fatalln(err)
 	}
 	// Set GameView as current view
-	d.SetView(NewGameView(d, console, path, hash, d.imageChannel, d.inputChannel))
+	d.SetView(NewGameView(console, path, hash, d.imageChannel, d.inputChannel))
+}
+
+func (d *Director) SaveGame() error {
+	if d.hash != "" {
+		return d.view.console.SaveState(savePath(d.hash))
+	} else {
+		return nil
+	}
+}
+
+func (d *Director) LoadGame() error {
+	if d.hash != "" {
+		return d.view.console.LoadState(savePath(d.hash))
+	} else {
+		return nil
+	}
 }

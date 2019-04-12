@@ -21,25 +21,27 @@ function showMenuScreen() {
         log(`> [Warning] Websocket connection: ${err}`);
     }
 
-
-    $("#loading-screen").hide();
-    $("#menu-screen").hide();
-
-    // show
-
-    $("#loading-screen").show().delay(1000).fadeOut(400, () => {
-        log("Loading menu screen");
-        $("#menu-screen").fadeIn(400, () => {
-            chooseGame(7);
-            screenState = "menu";
+    $("#game-screen").hide();
+    if (!DEBUG) {
+        $("#menu-screen").hide();
+        // show
+        $("#game-screen").show().delay(1000).fadeOut(400, () => {
+            log("Loading menu screen");
+            $("#menu-screen").fadeIn(400, () => {
+                chooseGame(gameIdx, true);
+                screenState = "menu";
+            });
         });
-    });
+
+    } else {
+        screenState = "debug";
+    }
 }
 
 
 // game menu
-function chooseGame(idx) {
-    if (idx < 0 || idx == gameIdx || idx >= GAME_LIST.length) return false;
+function chooseGame(idx, force=false) {
+    if (idx < 0 || (idx == gameIdx && !force) || idx >= GAME_LIST.length) return false;
 
     $("#menu-screen #box-art").fadeOut(400, function () {
         $(this).attr("src", `/static/img/boxarts/${GAME_LIST[idx].art}`);
@@ -75,23 +77,43 @@ function setState(e, bo) {
 document.body.onkeyup = function (e) {
     if (screenState === "menu") {
         switch (KEY_MAP[e.keyCode]) {
-            case "left":
-                chooseGame(gameIdx - 1);
-                break;
+        case "left":
+            chooseGame(gameIdx - 1);
+            break;
 
-            case "right":
-                chooseGame(gameIdx + 1);
-                break;
+        case "right":
+            chooseGame(gameIdx + 1);
+            break;
 
-            case "select":
-                startGame();
+        case "select":
+            startGame();
         }
     } else if (screenState === "game") {
         setState(e, false);
+        
+        switch (KEY_MAP[e.keyCode]) {
+        case "save":
+            conn.send(JSON.stringify({"id": "save", "data": ""}));
+            break;
+        case "load":
+            conn.send(JSON.stringify({"id": "load", "data": ""}));
+            break;
+        case "full":
+            // Fullscreen
+            screen = document.getElementById("game-screen");
+
+            console.log(screen.height, window.innerHeight);
+            if (screen.height === window.innerHeight) {
+                closeFullscreen();
+            } else {
+                openFullscreen(screen);
+            }
+            break;
+        }
     }
 
     // global reset
-    if (KEY_MAP[e.keyCode] == "quit") {
+    if (KEY_MAP[e.keyCode] === "quit") {
         endInput();
         showMenuScreen();
     }
@@ -125,19 +147,6 @@ function closeFullscreen() {
 
 document.body.onkeydown = function (e) {
   if (screenState === "game") {
-    // Meta key not related to Game
-    if (e.keyCode === 70) {
-        // Fullscreen
-      screen = document.getElementById("loading-screen")
-
-      console.log(screen.height, window.innerHeight)
-      if (screen.height === window.innerHeight) {
-        closeFullscreen()
-      } else {
-        openFullscreen(screen)
-      }
-    }
-
     // game keys
     setState(e, true);
   }
@@ -155,7 +164,9 @@ function sendInput() {
         console.log(`Key state string: ${st} ==> ${ss}`);
 
         // send
-        inputChannel.send(ss);
+        a = new Uint8Array(1);
+        a[0] = ss;
+        inputChannel.send(a);
 
         stateUnchange = false;
         unchangePacket--;

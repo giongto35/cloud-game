@@ -6,10 +6,9 @@ import (
 	"compress/gzip"
 	"encoding/base64"
 	"encoding/json"
-	"fmt"
+	"log"
 	"io/ioutil"
 	"math/rand"
-	"strconv"
 	"time"
 
 	vpxEncoder "github.com/giongto35/cloud-game/vpx-encoder"
@@ -114,7 +113,7 @@ type WebRTC struct {
 func (w *WebRTC) StartClient(remoteSession string, width, height int) (string, error) {
 	defer func() {
 		if err := recover(); err != nil {
-			fmt.Println(err)
+			log.Println(err)
 			w.StopClient()
 		}
 	}()
@@ -131,7 +130,7 @@ func (w *WebRTC) StartClient(remoteSession string, width, height int) (string, e
 	}
 	w.encoder = encoder
 
-	fmt.Println("=== StartClient ===")
+	log.Println("=== StartClient ===")
 
 	w.connection, err = webrtc.NewPeerConnection(config)
 	if err != nil {
@@ -149,11 +148,11 @@ func (w *WebRTC) StartClient(remoteSession string, width, height int) (string, e
 
 	// WebRTC state callback
 	w.connection.OnICEConnectionStateChange(func(connectionState webrtc.ICEConnectionState) {
-		fmt.Printf("ICE Connection State has changed: %s\n", connectionState.String())
+		log.Printf("ICE Connection State has changed: %s\n", connectionState.String())
 		if connectionState == webrtc.ICEConnectionStateConnected {
 			go func() {
 				w.isConnected = true
-				fmt.Println("ConnectionStateConnected")
+				log.Println("ConnectionStateConnected")
 				w.startStreaming(vp8Track)
 			}()
 
@@ -165,25 +164,21 @@ func (w *WebRTC) StartClient(remoteSession string, width, height int) (string, e
 
 	// TODO: take a look at this
 	w.connection.OnICECandidate(func(iceCandidate *webrtc.ICECandidate) {
-		fmt.Println(iceCandidate)
+		log.Println(iceCandidate)
 	})
 
 	// Data channel callback
 	w.connection.OnDataChannel(func(d *webrtc.DataChannel) {
-		fmt.Printf("New DataChannel %s %d\n", d.Label(), d.ID())
+		log.Printf("New DataChannel %s %d\n", d.Label(), d.ID())
 
 		// Register channel opening handling
 		d.OnOpen(func() {
-			fmt.Printf("Data channel '%s'-'%d' open.\n", d.Label(), d.ID())
+			log.Printf("Data channel '%s'-'%d' open.\n", d.Label(), d.ID())
 		})
 
 		// Register text message handling
 		d.OnMessage(func(msg webrtc.DataChannelMessage) {
-			//fmt.Printf("Message from DataChannel '%s': '%s' byte '%b'\n", d.Label(), string(msg.Data), msg.Data)
-			i, _ := strconv.Atoi(string(msg.Data))
-			// TODO: check if we can send int directly
-			// Input is key state, represented as binary string, 1001011. We compress it to binary number
-			w.InputChannel <- i
+			w.InputChannel <- int(msg.Data[0])
 		})
 
 		d.OnClose(func() {
@@ -213,13 +208,13 @@ func (w *WebRTC) StartClient(remoteSession string, width, height int) (string, e
 func (w *WebRTC) AddCandidate(candidate webrtc.ICECandidateInit) {
 	err := w.connection.AddICECandidate(candidate)
 	if err != nil {
-		fmt.Println("Cannot add candidate: ", err)
+		log.Println("Cannot add candidate: ", err)
 	}
 }
 
 // StopClient disconnect
 func (w *WebRTC) StopClient() {
-	fmt.Println("===StopClient===")
+	log.Println("===StopClient===")
 	w.isConnected = false
 	if w.encoder != nil {
 		w.encoder.Release()
@@ -241,7 +236,7 @@ func (w *WebRTC) IsClosed() bool {
 }
 
 func (w *WebRTC) startStreaming(vp8Track *webrtc.Track) {
-	fmt.Println("Start streaming")
+	log.Println("Start streaming")
 	// send screenshot
 	go func() {
 		for w.isConnected {
