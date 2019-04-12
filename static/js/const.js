@@ -99,4 +99,5 @@ KEY_BIT = ["a", "b", "select", "start", "up", "down", "left", "right"];
 
 
 INPUT_FPS = 100;
+PINGPONGPS = 5;
 INPUT_STATE_PACKET = 5;
