@@ -18,6 +18,8 @@ import (
 	"github.com/giongto35/cloud-game/webrtc"
 	"github.com/gorilla/websocket"
 	pionRTC "github.com/pion/webrtc"
+
+	"github.com/hraban/opus"
 )
 
 const (
@@ -48,6 +50,7 @@ type WSPacket struct {
 // A room stores all the channel for interaction between all webRTCs session and emulator
 type Room struct {
 	imageChannel chan *image.RGBA
+	audioChanel chan float32
 	inputChannel chan int
 	// closedChannel is to fire exit event when there is no webRTC session running
 	closedChannel chan bool
@@ -96,21 +99,24 @@ func initRoom(roomID, gameName string) string {
 		roomID = generateRoomID()
 	}
 	imageChannel := make(chan *image.RGBA, 100)
+	audioChannel := make(chan float32, 48000)
 	inputChannel := make(chan int, 100)
 	closedChannel := make(chan bool)
 
 	// create director
-	director := ui.NewDirector(roomID, imageChannel, inputChannel, closedChannel)
+	director := ui.NewDirector(roomID, imageChannel, audioChannel, inputChannel, closedChannel)
 	
 	rooms[roomID] = &Room{
 		imageChannel:  imageChannel,
+		audioChanel:   audioChannel,
 		inputChannel:  inputChannel,
 		closedChannel: closedChannel,
 		rtcSessions:   []*webrtc.WebRTC{},
-		director: director,
+		director:      director,
 	}
 
 	go fanoutScreen(imageChannel, roomID)
+	go fanoutAudio(audioChannel, roomID)
 	go director.Start([]string{"games/" + gameName})
 
 	return roomID
@@ -144,7 +150,7 @@ func startSession(webRTC *webrtc.WebRTC, gameName string, roomID string, playerI
 
 	// TODO: Might have race condition
 	rooms[roomID].rtcSessions = append(rooms[roomID].rtcSessions, webRTC)
-	faninInput(rooms[roomID].inputChannel, webRTC, playerIndex)
+	go faninInput(rooms[roomID].inputChannel, webRTC, playerIndex)
 
 	return roomID
 }
@@ -298,30 +304,79 @@ func fanoutScreen(imageChannel chan *image.RGBA, roomID string) {
 		}
 
 		if isRoomRunning == false {
-			log.Println("Closed room", roomID)
+			log.Println("Closed room from screen routine", roomID)
 			rooms[roomID].closedChannel <- true
 		}
 	}
 }
 
-// faninInput fan-in of the same room to inputChannel
-func faninInput(inputChannel chan int, webRTC *webrtc.WebRTC, playerIndex int) {
-	go func() {
-		for {
-			// Client stopped
-			if webRTC.IsClosed() {
-				return
+// fanoutAudio fanout outputs to all webrtc in the same room
+func fanoutAudio(audioChanel chan float32, roomID string) {
+	enc, err := opus.NewEncoder(48000, 1, opus.AppVoIP)
+	if err != nil {
+		log.Println("[!] Cannot create audio encoder")
+		return
+	}
+	pcm := make([]float32, 120)
+	c := 0
+
+	for audio := range audioChanel {
+		if c >= cap(pcm) {
+			data := make([]byte, 1000)
+			n, err := enc.EncodeFloat32(pcm, data)
+			if err != nil {
+				log.Println("[!] Failed to decode")
+				continue
+			}
+			data = data[:n]
+
+			isRoomRunning := false
+			for _, webRTC := range rooms[roomID].rtcSessions {
+				// Client stopped
+				if webRTC.IsClosed() {
+					continue
+				}
+	
+				// encode frame
+				// fanout imageChannel
+				if webRTC.IsConnected() {
+					// NOTE: can block here
+					webRTC.AudioChannel <- data
+				}
+				isRoomRunning = true
 			}
 
-			// encode frame
-			if webRTC.IsConnected() {
-				input := <-webRTC.InputChannel
-				// the first 8 bits belong to player 1
-				// the next 8 belongs to player 2 ...
-				// We standardize and put it to inputChannel (16 bits)
-				input = input << ((uint(playerIndex) - 1) * ui.NumKeys)
-				inputChannel <- input
+			if isRoomRunning == false {
+				log.Println("Closed room from audio routine", roomID)
+				rooms[roomID].closedChannel <- true
 			}
+
+			c = 0
+		} else {
+			pcm[c] = audio
+			c++
 		}
-	}()
+
+
+	}
+}
+
+// faninInput fan-in of the same room to inputChannel
+func faninInput(inputChannel chan int, webRTC *webrtc.WebRTC, playerIndex int) {
+	for {
+		// Client stopped
+		if webRTC.IsClosed() {
+			return
+		}
+
+		// encode frame
+		if webRTC.IsConnected() {
+			input := <-webRTC.InputChannel
+			// the first 8 bits belong to player 1
+			// the next 8 belongs to player 2 ...
+			// We standardize and put it to inputChannel (16 bits)
+			input = input << ((uint(playerIndex) - 1) * ui.NumKeys)
+			inputChannel <- input
+		}
+	}
 }

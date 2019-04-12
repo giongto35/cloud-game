@@ -37,16 +37,19 @@ type GameView struct {
 	keyPressed [NumKeys * 2]bool
 
 	imageChannel chan *image.RGBA
+	audioChanel chan float32
 	inputChannel chan int
+
 }
 
-func NewGameView(console *nes.Console, title, hash string, imageChannel chan *image.RGBA, inputChannel chan int) *GameView {
+func NewGameView(console *nes.Console, title, hash string, imageChannel chan *image.RGBA, audioChanel chan float32, inputChannel chan int) *GameView {
 	gameview := &GameView{
 		console:      console,
 		title:        title,
 		hash:         hash,
 		keyPressed:   [NumKeys * 2]bool{false},
 		imageChannel: imageChannel,
+		audioChanel:  audioChanel,
 		inputChannel: inputChannel,
 	}
 
@@ -70,8 +73,10 @@ func (view *GameView) ListenToInputChannel() {
 func (view *GameView) Enter() {
 	// Always reset game
 	// Legacy Audio code. TODO: Add it back to support audio
-	// view.console.SetAudioChannel(view.director.audio.channel)
-	// view.console.SetAudioSampleRate(view.director.audio.sampleRate)
+	// view.console.SetAudioChannel(view.audio.channel)
+	// view.console.SetAudioSampleRate(view.audio.sampleRate)
+	view.console.SetAudioSampleRate(48000)
+	view.console.SetAudioChannel(view.audioChanel)
 
 	// load state
 	if err := view.console.LoadState(savePath(view.hash)); err == nil {
@@ -92,8 +97,8 @@ func (view *GameView) Enter() {
 
 // Exit ...
 func (view *GameView) Exit() {
-	// view.console.SetAudioChannel(nil)
-	// view.console.SetAudioSampleRate(0)
+	view.console.SetAudioChannel(nil)
+	view.console.SetAudioSampleRate(0)
 	// save sram
 	cartridge := view.console.Cartridge
 	if cartridge.Battery != 0 {

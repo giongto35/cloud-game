@@ -93,6 +93,7 @@ func Decode(in string, obj interface{}) {
 func NewWebRTC() *WebRTC {
 	w := &WebRTC{
 		ImageChannel: make(chan []byte, 2),
+		AudioChannel: make(chan []byte, 2),
 		InputChannel: make(chan int, 2),
 	}
 	return w
@@ -106,6 +107,7 @@ type WebRTC struct {
 	isClosed    bool
 	// for yuvI420 image
 	ImageChannel chan []byte
+	AudioChannel chan []byte
 	InputChannel chan int
 }
 
@@ -137,11 +139,21 @@ func (w *WebRTC) StartClient(remoteSession string, width, height int) (string, e
 		return "", err
 	}
 
-	vp8Track, err := w.connection.NewTrack(webrtc.DefaultPayloadTypeVP8, rand.Uint32(), "video", "pion2")
+	vp8Track, err := w.connection.NewTrack(webrtc.DefaultPayloadTypeVP8, rand.Uint32(), "video", "pion2a")
 	if err != nil {
 		return "", err
 	}
 	_, err = w.connection.AddTrack(vp8Track)
+	if err != nil {
+		return "", err
+	}
+
+	
+	opusTrack, err := w.connection.NewTrack(webrtc.DefaultPayloadTypeOpus, rand.Uint32(), "audio", "pion2b")
+	if err != nil {
+		return "", err
+	}
+	_, err = w.connection.AddTrack(opusTrack)
 	if err != nil {
 		return "", err
 	}
@@ -153,7 +165,7 @@ func (w *WebRTC) StartClient(remoteSession string, width, height int) (string, e
 			go func() {
 				w.isConnected = true
 				log.Println("ConnectionStateConnected")
-				w.startStreaming(vp8Track)
+				w.startStreaming(vp8Track, opusTrack)
 			}()
 
 		}
@@ -235,7 +247,7 @@ func (w *WebRTC) IsClosed() bool {
 	return w.isClosed
 }
 
-func (w *WebRTC) startStreaming(vp8Track *webrtc.Track) {
+func (w *WebRTC) startStreaming(vp8Track *webrtc.Track, opusTrack *webrtc.Track) {
 	log.Println("Start streaming")
 	// send screenshot
 	go func() {
@@ -254,4 +266,13 @@ func (w *WebRTC) startStreaming(vp8Track *webrtc.Track) {
 			vp8Track.WriteSample(media.Sample{Data: bs, Samples: 1})
 		}
 	}()
+
+	// send audio
+	go func() {
+		for w.isConnected {
+			data := <-w.AudioChannel
+			opusTrack.WriteSample(media.Sample{Data: data, Samples: 1})
+		}
+	}()
+
 }
