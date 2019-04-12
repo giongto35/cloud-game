@@ -1,6 +1,7 @@
 package main
 
 import (
+	"os"
 	"encoding/json"
 	"fmt"
 	"image"
@@ -19,21 +20,20 @@ import (
 	pionRTC "github.com/pion/webrtc"
 )
 
-const gameboyIndex = "./static/gameboy.html"
-const wsIndex = "./static/index_ws.html"
+const (
+	width  = 256
+	height = 240
+	scale  = 3
+	title  = "NES"
+	gameboyIndex = "./static/gameboy.html"
+	debugIndex = "./static/index_ws.html"
+)
 
-var width = 256
-var height = 240
-var indexFN string = gameboyIndex
-var service string = "ws"
+var indexFN = gameboyIndex
 
 // Time allowed to write a message to the peer.
 var readWait = 30 * time.Second
 var writeWait = 30 * time.Second
-
-type IndexPageData struct {
-	Service string
-}
 
 var upgrader = websocket.Upgrader{}
 
@@ -53,11 +53,20 @@ type Room struct {
 	closedChannel chan bool
 
 	rtcSessions []*webrtc.WebRTC
+
+	director *ui.Director
 }
 
 var rooms map[string]*Room
 
 func main() {
+	fmt.Println("Usage: ./game [debug]")
+	if len(os.Args) > 1  {
+		// debug
+		indexFN = debugIndex
+		fmt.Println("Use debug version")
+	}
+
 	rand.Seed(time.Now().UTC().UnixNano())
 	fmt.Println("http://localhost:8000")
 	rooms = map[string]*Room{}
@@ -71,9 +80,6 @@ func main() {
 	http.ListenAndServe(":8000", nil)
 }
 
-func startGame(path string, roomID string, imageChannel chan *image.RGBA, inputChannel chan int, closedChannel chan bool) {
-	ui.Run([]string{path}, roomID, imageChannel, inputChannel, closedChannel)
-}
 
 func getWeb(w http.ResponseWriter, r *http.Request) {
 	bs, err := ioutil.ReadFile(indexFN)
@@ -92,14 +98,20 @@ func initRoom(roomID, gameName string) string {
 	imageChannel := make(chan *image.RGBA, 100)
 	inputChannel := make(chan int, 100)
 	closedChannel := make(chan bool)
+
+	// create director
+	director := ui.NewDirector(roomID, imageChannel, inputChannel, closedChannel)
+	
 	rooms[roomID] = &Room{
 		imageChannel:  imageChannel,
 		inputChannel:  inputChannel,
 		closedChannel: closedChannel,
 		rtcSessions:   []*webrtc.WebRTC{},
+		director: director,
 	}
+
 	go fanoutScreen(imageChannel, roomID)
-	go startGame("games/"+gameName, roomID, imageChannel, inputChannel, closedChannel)
+	go director.Start([]string{"games/" + gameName})
 
 	return roomID
 }
@@ -140,12 +152,12 @@ func startSession(webRTC *webrtc.WebRTC, gameName string, roomID string, playerI
 func ws(w http.ResponseWriter, r *http.Request) {
 	c, err := upgrader.Upgrade(w, r, nil)
 	if err != nil {
-		log.Print("upgrade:", err)
+		log.Print("[!] WS upgrade:", err)
 		return
 	}
 	defer c.Close()
 
-	log.Println("New Connection")
+	log.Println("New ws connection")
 	webRTC := webrtc.NewWebRTC()
 
 	// streaming game
@@ -207,10 +219,40 @@ func ws(w http.ResponseWriter, r *http.Request) {
 
 		case "start":
 			log.Println("Starting game")
+			roomID = startSession(webRTC, gameName, roomID, playerIndex)
 			res.ID = "start"
-			res.RoomID = startSession(webRTC, gameName, roomID, playerIndex)
+			res.RoomID = roomID
 
-			isDone = true
+			// maybe we wont close websocket
+			// isDone = true
+		
+		case "save":
+			log.Println("Saving game state")
+			res.ID = "save"
+			res.Data = "ok"
+			if roomID != "" {
+				err = rooms[roomID].director.SaveGame()
+				if err != nil {
+					log.Println("[!] Cannot save game state: ", err)
+					res.Data = "error"
+				}
+			} else {
+				res.Data = "error"
+			}
+
+		case "load":
+			log.Println("Loading game state")
+			res.ID = "load"
+			res.Data = "ok"
+			if roomID != "" {
+				err = rooms[roomID].director.LoadGame()
+				if err != nil {
+					log.Println("[!] Cannot load game state: ", err)
+					res.Data = "error"
+				}
+			} else {
+				res.Data = "error"
+			}
 		}
 
 		stRes, err := json.Marshal(res)
@@ -274,9 +316,9 @@ func faninInput(inputChannel chan int, webRTC *webrtc.WebRTC, playerIndex int) {
 			// encode frame
 			if webRTC.IsConnected() {
 				input := <-webRTC.InputChannel
-				// the first 10 bits belong to player 1
-				// the next 10 belongs to player 2 ...
-				// We standardize and put it to inputChannel (20 bits)
+				// the first 8 bits belong to player 1
+				// the next 8 belongs to player 2 ...
+				// We standardize and put it to inputChannel (16 bits)
 				input = input << ((uint(playerIndex) - 1) * ui.NumKeys)
 				inputChannel <- input
 			}

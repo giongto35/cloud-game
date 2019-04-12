@@ -1,6 +1,3 @@
-// miscs
-DEBUG = true;
-
 // list game
 GAME_LIST = [
     {
@@ -78,9 +75,11 @@ KEY_MAP = {
     67: "start", // c
     86: "select", // v
 
+    // non-game
     81: "quit", // q
     83: "save", // s
-    76: "load" // l
+    76: "load", // l
+    70: "full", // f
 }
 
 /*
@@ -95,7 +94,8 @@ KEY_MAP = {
         ButtonRight
       )
       */
-KEY_BIT = ["a", "b", "select", "start", "up", "down", "left", "right", "save", "load"];
+// KEY_BIT = ["a", "b", "select", "start", "up", "down", "left", "right", "save", "load"];
+KEY_BIT = ["a", "b", "select", "start", "up", "down", "left", "right"];
 
 
 INPUT_FPS = 100;
