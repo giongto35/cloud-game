@@ -10,7 +10,7 @@ RUN apt-get update
 #RUN go get github.com/gordonklaus/portaudio
 #RUN apt-get install portaudio19-dev -y
 
-RUN apt-get install pkg-config libvpx-dev -y
+RUN apt-get install pkg-config libvpx-dev libopus-dev libopusfile-dev -y
 RUN go get github.com/pion/webrtc
 RUN go get github.com/gorilla/websocket
 RUN go install github.com/giongto35/cloud-game
