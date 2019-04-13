@@ -30,7 +30,7 @@ func fanoutAudio(audioChannel chan float32, roomID string) {
 	var output float32
 	pcm := make([]float32, 240)
 
-	enc, err := opus.NewEncoder(48000, 1, opus.AppAudio)
+	enc, err := opus.NewEncoder(48000, 2, opus.AppVoIP)
 	if err != nil {
 		log.Println("[!] Cannot create audio encoder")
 		return
@@ -40,21 +40,23 @@ func fanoutAudio(audioChannel chan float32, roomID string) {
 	// var err error
 	// enc := opus.EncoderCreate(48000, 1, opus.ApplicationAudio, &err2)
 
-	c := time.Tick(time.Millisecond * 5)
+	// c := time.Tick(time.Millisecond * 5)
+	c := time.Tick(time.Microsecond * 2500)
 
 	for range c {
 		for i := 0; i < len(pcm); i++ {
-			select {
-			case sample := <- audioChannel:
-				output = sample
-			default:
-				output = 0
-				
+			if i % 2 == 1 {
+				select {
+				case sample := <- audioChannel:
+					output = sample
+				default:
+					output = 0
+					
+				}
+				pcm[i] = output
 			}
-			pcm[i] = output
 		}
 
-		
 		data := make([]byte, 1000)
 		n, err := enc.EncodeFloat32(pcm, data)
 		// n := opus.EncodeFloat(enc, pcm, int32(c), data, 1000)
