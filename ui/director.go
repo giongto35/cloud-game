@@ -10,7 +10,6 @@ import (
 )
 
 type Director struct {
-	// audio         *Audio
 	view          *GameView
 	timestamp     float64
 	imageChannel  chan *image.RGBA
@@ -25,7 +24,6 @@ const FPS = 60
 
 func NewDirector(roomID string, imageChannel chan *image.RGBA, audioChanel chan float32, inputChannel chan int, closedChannel chan bool) *Director {
 	director := Director{}
-	// director.audio = audio
 	director.imageChannel = imageChannel
 	director.audioChanel = audioChanel
 	director.inputChannel = inputChannel

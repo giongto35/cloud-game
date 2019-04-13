@@ -40,6 +40,7 @@ type GameView struct {
 	audioChanel chan float32
 	inputChannel chan int
 
+
 }
 
 func NewGameView(console *nes.Console, title, hash string, imageChannel chan *image.RGBA, audioChanel chan float32, inputChannel chan int) *GameView {
@@ -71,10 +72,9 @@ func (view *GameView) ListenToInputChannel() {
 
 // Enter enter the game view.
 func (view *GameView) Enter() {
-	// Always reset game
-	// Legacy Audio code. TODO: Add it back to support audio
 	// view.console.SetAudioChannel(view.audio.channel)
 	// view.console.SetAudioSampleRate(view.audio.sampleRate)
+	
 	view.console.SetAudioSampleRate(48000)
 	view.console.SetAudioChannel(view.audioChanel)
 

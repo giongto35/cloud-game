@@ -19,8 +19,75 @@ import (
 	"github.com/gorilla/websocket"
 	pionRTC "github.com/pion/webrtc"
 
-	"github.com/hraban/opus"
+	// "github.com/hraban/opus"
+	"gopkg.in/hraban/opus.v2"
+	// "github.com/xlab/opus-go/opus"
 )
+
+
+// fanoutAudio fanout outputs to all webrtc in the same room
+func fanoutAudio(audioChannel chan float32, roomID string) {
+	var output float32
+	pcm := make([]float32, 240)
+
+	enc, err := opus.NewEncoder(48000, 1, opus.AppAudio)
+	if err != nil {
+		log.Println("[!] Cannot create audio encoder")
+		return
+	}
+
+	// var err2 int32
+	// var err error
+	// enc := opus.EncoderCreate(48000, 1, opus.ApplicationAudio, &err2)
+
+	c := time.Tick(time.Millisecond * 5)
+
+	for range c {
+		for i := 0; i < len(pcm); i++ {
+			select {
+			case sample := <- audioChannel:
+				output = sample
+			default:
+				output = 0
+				
+			}
+			pcm[i] = output
+		}
+
+		
+		data := make([]byte, 1000)
+		n, err := enc.EncodeFloat32(pcm, data)
+		// n := opus.EncodeFloat(enc, pcm, int32(c), data, 1000)
+
+		if err != nil {
+			log.Println("[!] Failed to decode")
+			continue
+		}
+		data = data[:n]
+
+		isRoomRunning := false
+		for _, webRTC := range rooms[roomID].rtcSessions {
+			// Client stopped
+			if webRTC.IsClosed() {
+				continue
+			}
+
+			// encode frame
+			// fanout imageChannel
+			if webRTC.IsConnected() {
+				// NOTE: can block here
+				webRTC.AudioChannel <- data
+			}
+			isRoomRunning = true
+		}
+
+		if isRoomRunning == false {
+			log.Println("Closed room from audio routine", roomID)
+			rooms[roomID].closedChannel <- true
+		}
+
+	}
+}
 
 const (
 	width  = 256
@@ -307,57 +374,6 @@ func fanoutScreen(imageChannel chan *image.RGBA, roomID string) {
 			log.Println("Closed room from screen routine", roomID)
 			rooms[roomID].closedChannel <- true
 		}
-	}
-}
-
-// fanoutAudio fanout outputs to all webrtc in the same room
-func fanoutAudio(audioChanel chan float32, roomID string) {
-	enc, err := opus.NewEncoder(48000, 1, opus.AppVoIP)
-	if err != nil {
-		log.Println("[!] Cannot create audio encoder")
-		return
-	}
-	pcm := make([]float32, 120)
-	c := 0
-
-	for audio := range audioChanel {
-		if c >= cap(pcm) {
-			data := make([]byte, 1000)
-			n, err := enc.EncodeFloat32(pcm, data)
-			if err != nil {
-				log.Println("[!] Failed to decode")
-				continue
-			}
-			data = data[:n]
-
-			isRoomRunning := false
-			for _, webRTC := range rooms[roomID].rtcSessions {
-				// Client stopped
-				if webRTC.IsClosed() {
-					continue
-				}
-	
-				// encode frame
-				// fanout imageChannel
-				if webRTC.IsConnected() {
-					// NOTE: can block here
-					webRTC.AudioChannel <- data
-				}
-				isRoomRunning = true
-			}
-
-			if isRoomRunning == false {
-				log.Println("Closed room from audio routine", roomID)
-				rooms[roomID].closedChannel <- true
-			}
-
-			c = 0
-		} else {
-			pcm[c] = audio
-			c++
-		}
-
-
 	}
 }
 

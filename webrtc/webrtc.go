@@ -93,7 +93,7 @@ func Decode(in string, obj interface{}) {
 func NewWebRTC() *WebRTC {
 	w := &WebRTC{
 		ImageChannel: make(chan []byte, 2),
-		AudioChannel: make(chan []byte, 2),
+		AudioChannel: make(chan []byte, 1000),
 		InputChannel: make(chan int, 2),
 	}
 	return w
@@ -135,6 +135,12 @@ func (w *WebRTC) StartClient(remoteSession string, width, height int) (string, e
 	log.Println("=== StartClient ===")
 
 	w.connection, err = webrtc.NewPeerConnection(config)
+	// m := webrtc.MediaEngine{}
+	// m.RegisterCodec(webrtc.NewRTPOpusCodec(webrtc.DefaultPayloadTypeOpus, 48000))
+	// m.RegisterCodec(webrtc.NewRTPVP8Codec(webrtc.DefaultPayloadTypeVP8, 1))
+	// api := webrtc.NewAPI(webrtc.WithMediaEngine(m))
+	// w.connection, err = api.NewPeerConnection(config)
+
 	if err != nil {
 		return "", err
 	}
@@ -271,7 +277,8 @@ func (w *WebRTC) startStreaming(vp8Track *webrtc.Track, opusTrack *webrtc.Track)
 	go func() {
 		for w.isConnected {
 			data := <-w.AudioChannel
-			opusTrack.WriteSample(media.Sample{Data: data, Samples: 1})
+			// opusTrack.Write(data)
+			opusTrack.WriteSample(media.Sample{Data: data, Samples: 1000})
 		}
 	}()
 
