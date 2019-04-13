@@ -63,7 +63,6 @@ function chooseGame(idx, force=false) {
 function setState(e, bo) {
     if (e.keyCode in KEY_MAP) {
         keyState[KEY_MAP[e.keyCode]] = bo;
-        stateUnchange = false;
         unchangePacket = INPUT_STATE_PACKET;
     }
 }
@@ -149,7 +148,7 @@ document.body.onkeydown = function (e) {
 
 function sendInput() {
     // prepare key
-    if (stateUnchange || unchangePacket > 0) {
+    if (unchangePacket > 0) {
         st = "";
         KEY_BIT.slice().reverse().forEach(elem => {
             st += keyState[elem] ? 1 : 0;
@@ -162,7 +161,6 @@ function sendInput() {
         a[0] = ss;
         inputChannel.send(a);
 
-        stateUnchange = false;
         unchangePacket--;
     }
 }

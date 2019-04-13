@@ -98,6 +98,21 @@ function startWebRTC() {
     pc.createOffer({offerToReceiveVideo: true, offerToReceiveAudio: false}).then(d => {
         pc.setLocalDescription(d).catch(log);
     })
+
+    // input channel
+    inputChannel = pc.createDataChannel('foo')
+    inputChannel.onclose = () => {
+        log('inputChannel has closed');
+    }
+
+    inputChannel.onopen = () => {
+        log('inputChannel has opened');
+    }
+
+    inputChannel.onmessage = e => {
+        log(`Message from DataChannel '${inputChannel.label}' payload '${e.data}'`);
+    }
+
 }
 
 function startGame() {
@@ -113,20 +128,6 @@ function startGame() {
         });
     }
     // end clear
-
-    // input channel
-    inputChannel = pc.createDataChannel('foo')
-    inputChannel.onclose = () => {
-        log('inputChannel has closed');
-    }
-
-    inputChannel.onopen = () => {
-        log('inputChannel has opened');
-    }
-
-    inputChannel.onmessage = e => {
-        log(`Message from DataChannel '${inputChannel.label}' payload '${e.data}'`);
-    }
 
     startInput();
 }
