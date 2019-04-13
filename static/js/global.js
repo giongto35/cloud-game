@@ -32,7 +32,6 @@ keyState = {
     quit: false
 }
 
-stateUnchange = true;
 unchangePacket = INPUT_STATE_PACKET;
 inputTimer = null;
 
