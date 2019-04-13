@@ -134,7 +134,11 @@ func (w *WebRTC) StartClient(remoteSession string, width, height int) (string, e
 
 	log.Println("=== StartClient ===")
 
+	webrtc.NewRTPOpusCodec(webrtc.DefaultPayloadTypeOpus, 48000)
+	webrtc.NewRTPVP8Codec(webrtc.DefaultPayloadTypeVP8, 90000)
+	
 	w.connection, err = webrtc.NewPeerConnection(config)
+	
 	// m := webrtc.MediaEngine{}
 	// m.RegisterCodec(webrtc.NewRTPOpusCodec(webrtc.DefaultPayloadTypeOpus, 48000))
 	// m.RegisterCodec(webrtc.NewRTPVP8Codec(webrtc.DefaultPayloadTypeVP8, 1))

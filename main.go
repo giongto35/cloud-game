@@ -19,9 +19,7 @@ import (
 	"github.com/gorilla/websocket"
 	pionRTC "github.com/pion/webrtc"
 
-	// "github.com/hraban/opus"
 	"gopkg.in/hraban/opus.v2"
-	// "github.com/xlab/opus-go/opus"
 )
 
 
@@ -31,21 +29,26 @@ func fanoutAudio(audioChannel chan float32, roomID string) {
 	pcm := make([]float32, 240)
 
 	enc, err := opus.NewEncoder(48000, 2, opus.AppVoIP)
+	// ix, _ := enc.DTX() //false
+	// ix1, _ := enc.Bitrate() //120000
+	// ix2, _ := enc.Complexity() //9
+	// ix3, _ := enc.MaxBandwidth() //1105
+	// ix4, _ := enc.PacketLossPerc() //0
+
+	enc.SetMaxBandwidth(opus.Fullband)
+	enc.SetBitrateToAuto()
+	enc.SetComplexity(10)
+	
 	if err != nil {
 		log.Println("[!] Cannot create audio encoder")
 		return
 	}
 
-	// var err2 int32
-	// var err error
-	// enc := opus.EncoderCreate(48000, 1, opus.ApplicationAudio, &err2)
-
-	// c := time.Tick(time.Millisecond * 5)
 	c := time.Tick(time.Microsecond * 2500)
 
 	for range c {
 		for i := 0; i < len(pcm); i++ {
-			if i % 2 == 1 {
+			if i % 2 == 0 {
 				select {
 				case sample := <- audioChannel:
 					output = sample
@@ -56,10 +59,10 @@ func fanoutAudio(audioChannel chan float32, roomID string) {
 				pcm[i] = output
 			}
 		}
+		log.Println(pcm)
 
 		data := make([]byte, 1000)
 		n, err := enc.EncodeFloat32(pcm, data)
-		// n := opus.EncodeFloat(enc, pcm, int32(c), data, 1000)
 
 		if err != nil {
 			log.Println("[!] Failed to decode")
@@ -90,6 +93,64 @@ func fanoutAudio(audioChannel chan float32, roomID string) {
 
 	}
 }
+
+// // fanoutAudio fanout outputs to all webrtc in the same room
+// func fanoutAudio(audioChannel chan float32, roomID string) {
+// 	pcm := make([]float32, 240)
+// 	c := 0
+
+// 	enc, err := opus.NewEncoder(48000, 2, opus.AppAudio)
+// 	if err != nil {
+// 		log.Println("[!] Cannot create audio encoder")
+// 		return
+// 	}
+
+// 	// var err2 int32
+// 	// var err error
+// 	// enc := opus.EncoderCreate(48000, 2, opus.ApplicationAudio, &err2)
+
+// 	// c := time.Tick(time.Millisecond * 5)
+// 	for audio := range audioChannel {
+// 		pcm[c] = audio
+// 		pcm[c + 1] = 0
+// 		c += 2
+// 		if c >= cap(pcm) {
+// 			data := make([]byte, 2880)
+// 			n, err := enc.EncodeFloat32(pcm, data)
+// 			// n := opus.EncodeFloat(enc, pcm, int32(len(pcm)), data, 1000)
+	
+// 			if err != nil {
+// 				log.Println("[!] Failed to decode")
+// 				continue
+// 			}
+// 			data = data[:n]
+	
+// 			isRoomRunning := false
+// 			for _, webRTC := range rooms[roomID].rtcSessions {
+// 				// Client stopped
+// 				if webRTC.IsClosed() {
+// 					continue
+// 				}
+	
+// 				// encode frame
+// 				// fanout imageChannel
+// 				if webRTC.IsConnected() {
+// 					// NOTE: can block here
+// 					webRTC.AudioChannel <- data
+// 				}
+// 				isRoomRunning = true
+// 			}
+	
+// 			if isRoomRunning == false {
+// 				log.Println("Closed room from audio routine", roomID)
+// 				rooms[roomID].closedChannel <- true
+// 			}
+
+// 			c = 0
+// 		}
+
+// 	}
+// }
 
 const (
 	width  = 256
