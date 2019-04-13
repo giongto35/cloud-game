@@ -278,7 +278,7 @@ func (w *WebRTC) startStreaming(vp8Track *webrtc.Track, opusTrack *webrtc.Track)
 		for w.isConnected {
 			data := <-w.AudioChannel
 			// opusTrack.Write(data)
-			opusTrack.WriteSample(media.Sample{Data: data, Samples: 1000})
+			opusTrack.WriteSample(media.Sample{Data: data, Samples: uint32(len(data))})
 		}
 	}()
 
