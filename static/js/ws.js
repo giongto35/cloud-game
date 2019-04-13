@@ -84,18 +84,21 @@ function startGame() {
         }
     }
 
+    var stream = new MediaStream();
+    document.getElementById("game-screen2").srcObject = stream;
     // stream channel
     pc.ontrack = function (event) {
-        console.log(event.streams);
-        var el = document.createElement(event.track.kind);
-        el.srcObject = event.streams[0];
-        el.autoplay = true;
-        el.width = 800;
-        el.height = 600;
-        el.poster = new URL("https://orig00.deviantart.net/cdcd/f/2017/276/a/a/october_2nd___gameboy_poltergeist_by_wanyo-dbpdmnd.gif");
-        document.getElementById('remoteVideos').appendChild(el)
+        console.log(event);
+        stream.addTrack(event.track);
+        // var el = document.createElement(event.track.kind);
+        // el.srcObject = event.streams[0];
+        // el.autoplay = true;
+        // el.width = 800;
+        // el.height = 600;
+        // el.poster = new URL("https://orig00.deviantart.net/cdcd/f/2017/276/a/a/october_2nd___gameboy_poltergeist_by_wanyo-dbpdmnd.gif");
+        // document.getElementById('remoteVideos').appendChild(el)
 
-        // log("New stream, yay!");
+        log("New stream, yay!");
         // document.getElementById("game-screen").srcObject = event.streams[0];
         // $("#game-screen").show();
     }
@@ -109,6 +112,7 @@ function startGame() {
             localSessionDescription = session;
             log("Send SDP to remote peer");
             conn.send(JSON.stringify({"id": "sdp", "data": session}));
+            console.log(session);
         } else {
             console.log(JSON.stringify(event.candidate));
         }
