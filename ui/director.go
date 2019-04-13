@@ -68,10 +68,10 @@ func (d *Director) Start(paths []string) {
 }
 
 func (d *Director) Run() {
-	// c := time.Tick(time.Second / FPS)
+	c := time.Tick(time.Second / FPS)
 L:
-	// for range c {
-	for {
+	for range c {
+	// for {
 		// quit game
 
 		select {
