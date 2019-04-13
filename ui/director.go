@@ -16,7 +16,7 @@ type Director struct {
 	inputChannel  chan int
 	closedChannel chan bool
 	roomID        string
-	hash		  string
+	hash          string
 }
 
 const FPS = 60
@@ -94,7 +94,8 @@ func (d *Director) PlayGame(path string) {
 
 func (d *Director) SaveGame() error {
 	if d.hash != "" {
-		return d.view.console.SaveState(savePath(d.hash))
+		d.view.Save(d.hash)
+		return nil
 	} else {
 		return nil
 	}
@@ -102,7 +103,8 @@ func (d *Director) SaveGame() error {
 
 func (d *Director) LoadGame() error {
 	if d.hash != "" {
-		return d.view.console.LoadState(savePath(d.hash))
+		d.view.Load(d.hash)
+		return nil
 	} else {
 		return nil
 	}
