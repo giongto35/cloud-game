@@ -112,7 +112,6 @@ function startGame() {
             localSessionDescription = session;
             log("Send SDP to remote peer");
             conn.send(JSON.stringify({"id": "sdp", "data": session}));
-            console.log(session);
         } else {
             console.log(JSON.stringify(event.candidate));
         }
