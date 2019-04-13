@@ -1,7 +1,6 @@
 package main
 
 import (
-	"os"
 	"encoding/json"
 	"fmt"
 	"image"
@@ -10,6 +9,7 @@ import (
 	"math/rand"
 	"net/http"
 	_ "net/http/pprof"
+	"os"
 	"strconv"
 	"time"
 
@@ -21,15 +21,15 @@ import (
 )
 
 const (
-	width  = 256
-	height = 240
-	scale  = 3
-	title  = "NES"
+	width        = 256
+	height       = 240
+	scale        = 3
+	title        = "NES"
 	gameboyIndex = "./static/gameboy.html"
-	debugIndex = "./static/index_ws.html"
+	debugIndex   = "./static/index_ws.html"
 )
 
-var indexFN = gameboyIndex
+var indexFN = debugIndex
 
 // Time allowed to write a message to the peer.
 var readWait = 30 * time.Second
@@ -61,7 +61,7 @@ var rooms map[string]*Room
 
 func main() {
 	fmt.Println("Usage: ./game [debug]")
-	if len(os.Args) > 1  {
+	if len(os.Args) > 1 {
 		// debug
 		indexFN = debugIndex
 		fmt.Println("Use debug version")
@@ -79,7 +79,6 @@ func main() {
 	http.Handle("/static/", http.StripPrefix("/static/", http.FileServer(http.Dir("./static"))))
 	http.ListenAndServe(":8000", nil)
 }
-
 
 func getWeb(w http.ResponseWriter, r *http.Request) {
 	bs, err := ioutil.ReadFile(indexFN)
@@ -101,13 +100,13 @@ func initRoom(roomID, gameName string) string {
 
 	// create director
 	director := ui.NewDirector(roomID, imageChannel, inputChannel, closedChannel)
-	
+
 	rooms[roomID] = &Room{
 		imageChannel:  imageChannel,
 		inputChannel:  inputChannel,
 		closedChannel: closedChannel,
 		rtcSessions:   []*webrtc.WebRTC{},
-		director: director,
+		director:      director,
 	}
 
 	go fanoutScreen(imageChannel, roomID)
@@ -163,13 +162,13 @@ func ws(w http.ResponseWriter, r *http.Request) {
 	// streaming game
 
 	// start new games and webrtc stuff?
-	isDone := false
+	//isDone := false
 
 	var gameName string
 	var roomID string
 	var playerIndex int
 
-	for !isDone {
+	for {
 		c.SetReadDeadline(time.Now().Add(readWait))
 		mt, message, err := c.ReadMessage()
 		if err != nil {
@@ -189,14 +188,14 @@ func ws(w http.ResponseWriter, r *http.Request) {
 		// SDP connection initializations follows WebRTC convention
 		// https://developer.mozilla.org/en-US/docs/Web/API/WebRTC_API/Protocols
 		switch req.ID {
-		case "ping":
-			gameName = req.Data
-			roomID = req.RoomID
-			playerIndex = req.PlayerIndex
-			log.Println("Ping from server with game:", gameName)
-			res.ID = "pong"
+		//case "ping":
+		//gameName = req.Data
+		//roomID = req.RoomID
+		//playerIndex = req.PlayerIndex
+		//log.Println("Ping from server with game:", gameName)
+		//res.ID = "pong"
 
-		case "sdp":
+		case "initwebrtc":
 			log.Println("Received user SDP")
 			localSession, err := webRTC.StartClient(req.Data, width, height)
 			if err != nil {
@@ -218,6 +217,11 @@ func ws(w http.ResponseWriter, r *http.Request) {
 			res.ID = "candidate"
 
 		case "start":
+			gameName = req.Data
+			roomID = req.RoomID
+			playerIndex = req.PlayerIndex
+			//log.Println("Ping from server with game:", gameName)
+			//res.ID = "pong"
 			log.Println("Starting game")
 			roomID = startSession(webRTC, gameName, roomID, playerIndex)
 			res.ID = "start"
@@ -225,7 +229,7 @@ func ws(w http.ResponseWriter, r *http.Request) {
 
 			// maybe we wont close websocket
 			// isDone = true
-		
+
 		case "save":
 			log.Println("Saving game state")
 			res.ID = "save"
@@ -262,10 +266,10 @@ func ws(w http.ResponseWriter, r *http.Request) {
 
 		c.SetWriteDeadline(time.Now().Add(writeWait))
 		err = c.WriteMessage(mt, []byte(stRes))
-		if err != nil {
-			log.Println("write:", err)
-			break
-		}
+		//if err != nil {
+		//log.Println("write:", err)
+		//break
+		//}
 
 	}
 }
