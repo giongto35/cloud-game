@@ -51,7 +51,7 @@ conn.onmessage = e => {
 
 function sendPing() {
     // TODO: format the package with time
-    //conn.send(JSON.stringify({"id": "pingpong", "data": "pingpong"}));
+    conn.send(JSON.stringify({"id": "pingpong", "data": "pingpong"}));
 }
 
 function startWebRTC() {
@@ -77,7 +77,6 @@ function startWebRTC() {
 
         if (pc.iceConnectionState === "connected") {
             //conn.send(JSON.stringify({"id": "start", "data": ""}));
-            screenState = "game";
         }
         else if (pc.iceConnectionState === "disconnected") {
             endInput();
@@ -117,6 +116,8 @@ function startWebRTC() {
 
 function startGame() {
     log("Starting game screen");
+    screenState = "game";
+
     conn.send(JSON.stringify({"id": "start", "data": GAME_LIST[gameIdx].nes, "room_id": roomID.value, "player_index": parseInt(playerIndex.value, 10)}));inputTimer
 
     // clear menu screen
