@@ -58,6 +58,20 @@ function startWebRTC() {
     // webrtc
     pc = new RTCPeerConnection({iceServers: [{urls: 'stun:stun.l.google.com:19302'}]})
 
+    // input channel
+    inputChannel = pc.createDataChannel('foo')
+    inputChannel.onclose = () => {
+        log('inputChannel has closed');
+    }
+
+    inputChannel.onopen = () => {
+        log('inputChannel has opened');
+    }
+
+    inputChannel.onmessage = e => {
+        log(`Message from DataChannel '${inputChannel.label}' payload '${e.data}'`);
+    }
+
     pc.oniceconnectionstatechange = e => {
         log(`iceConnectionState: ${pc.iceConnectionState}`);
 
@@ -98,20 +112,6 @@ function startWebRTC() {
     pc.createOffer({offerToReceiveVideo: true, offerToReceiveAudio: false}).then(d => {
         pc.setLocalDescription(d).catch(log);
     })
-
-    // input channel
-    inputChannel = pc.createDataChannel('foo')
-    inputChannel.onclose = () => {
-        log('inputChannel has closed');
-    }
-
-    inputChannel.onopen = () => {
-        log('inputChannel has opened');
-    }
-
-    inputChannel.onmessage = e => {
-        log(`Message from DataChannel '${inputChannel.label}' payload '${e.data}'`);
-    }
 
 }
 

@@ -57,7 +57,7 @@ type Room struct {
 	director *ui.Director
 }
 
-var rooms map[string]*Room
+var rooms = map[string]*Room{}
 
 func main() {
 	fmt.Println("Usage: ./game [debug]")
@@ -132,8 +132,24 @@ func isRoomRunning(roomID string) bool {
 	return false
 }
 
+// startSession cleans all of the dependencies of old game to current webRTC session
+func cleanSession(webrtc *webrtc.WebRTC) {
+	roomID := webrtc.RoomID
+	if !isRoomRunning(roomID) {
+		return
+	}
+
+	for id, session := range rooms[roomID].rtcSessions {
+		if session == webrtc {
+			rooms[roomID].rtcSessions = append(rooms[roomID].rtcSessions[:id], rooms[roomID].rtcSessions[id+1:]...)
+			break
+		}
+	}
+}
+
 // startSession handles one session call
 func startSession(webRTC *webrtc.WebRTC, gameName string, roomID string, playerIndex int) string {
+	cleanSession(webRTC)
 	// If the roomID is empty,
 	// or the roomID doesn't have any running sessions (room was closed)
 	// we spawn a new room
@@ -143,6 +159,7 @@ func startSession(webRTC *webrtc.WebRTC, gameName string, roomID string, playerI
 
 	// TODO: Might have race condition
 	rooms[roomID].rtcSessions = append(rooms[roomID].rtcSessions, webRTC)
+	webRTC.AttachRoomID(roomID)
 	faninInput(rooms[roomID].inputChannel, webRTC, playerIndex)
 
 	return roomID
