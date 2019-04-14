@@ -53,6 +53,7 @@ type Room struct {
 	closedChannel chan bool
 
 	rtcSessions []*webrtc.WebRTC
+	//sessionsLock sync.Mutex
 
 	director *ui.Director
 }
@@ -135,13 +136,18 @@ func isRoomRunning(roomID string) bool {
 // startSession cleans all of the dependencies of old game to current webRTC session
 func cleanSession(webrtc *webrtc.WebRTC) {
 	roomID := webrtc.RoomID
-	if !isRoomRunning(roomID) {
+	// If no roomID is registered
+	if _, ok := rooms[roomID]; !ok {
 		return
 	}
 
+	// We search for session in sessions list and we also remove closed session
 	for id, session := range rooms[roomID].rtcSessions {
 		if session == webrtc {
 			rooms[roomID].rtcSessions = append(rooms[roomID].rtcSessions[:id], rooms[roomID].rtcSessions[id+1:]...)
+			if !isRoomRunning(roomID) {
+				rooms[roomID].closedChannel <- true
+			}
 			break
 		}
 	}
@@ -159,6 +165,7 @@ func startSession(webRTC *webrtc.WebRTC, gameName string, roomID string, playerI
 
 	// TODO: Might have race condition
 	rooms[roomID].rtcSessions = append(rooms[roomID].rtcSessions, webRTC)
+
 	webRTC.AttachRoomID(roomID)
 	faninInput(rooms[roomID].inputChannel, webRTC, playerIndex)
 

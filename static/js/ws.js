@@ -59,7 +59,7 @@ function startWebRTC() {
     pc = new RTCPeerConnection({iceServers: [{urls: 'stun:stun.l.google.com:19302'}]})
 
     // input channel
-    inputChannel = pc.createDataChannel('foo')
+    inputChannel = pc.createDataChannel('foo', {ordered: false})
     inputChannel.onclose = () => {
         log('inputChannel has closed');
     }
