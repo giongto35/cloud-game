@@ -6,8 +6,8 @@ import (
 	"compress/gzip"
 	"encoding/base64"
 	"encoding/json"
-	"log"
 	"io/ioutil"
+	"log"
 	"math/rand"
 	"time"
 
@@ -107,6 +107,8 @@ type WebRTC struct {
 	// for yuvI420 image
 	ImageChannel chan []byte
 	InputChannel chan int
+
+	RoomID string
 }
 
 // StartClient start webrtc
@@ -202,6 +204,10 @@ func (w *WebRTC) StartClient(remoteSession string, width, height int) (string, e
 
 	localSession := Encode(answer)
 	return localSession, nil
+}
+
+func (w *WebRTC) AttachRoomID(roomID string) {
+	w.RoomID = roomID
 }
 
 // TODO: Take a look at this
