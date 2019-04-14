@@ -29,7 +29,7 @@ const (
 	debugIndex   = "./static/index_ws.html"
 )
 
-var indexFN = debugIndex
+var indexFN = gameboyIndex
 
 // Time allowed to write a message to the peer.
 var readWait = 30 * time.Second
