@@ -19,7 +19,9 @@ import (
 	"github.com/gorilla/websocket"
 	pionRTC "github.com/pion/webrtc"
 
-	"gopkg.in/hraban/opus.v2"
+	// "gopkg.in/hraban/opus.v2"
+	"github.com/xlab/opus-go/opus"
+	"github.com/gordonklaus/portaudio"
 )
 
 const (
@@ -311,22 +313,68 @@ func fanoutScreen(imageChannel chan *image.RGBA, roomID string) {
 }
 
 
+var cc chan float32 = make(chan float32, 100000)
+
+func Callback(out []float32) {
+	var output float32
+	for i := range out {
+		if i % 2 == 0 {
+			select {
+			case sample := <-cc:
+				output = sample
+			default:
+				output = 0
+			}
+			out[i] = output
+	
+		}
+	}
+}
+
 // fanoutAudio fanout outputs to all webrtc in the same room
 func fanoutAudio(audioChannel chan float32, roomID string) {
 	var output float32
 	pcm := make([]float32, 240)
 
-	enc, err := opus.NewEncoder(48000, 2, opus.AppVoIP)
-	// ix, _ := enc.DTX() //false
-	// ix1, _ := enc.Bitrate() //120000
-	// ix2, _ := enc.Complexity() //9
-	// ix3, _ := enc.MaxBandwidth() //1105
-	// ix4, _ := enc.PacketLossPerc() //0
+	portaudio.Initialize()
+	defer portaudio.Terminate()
 
-	enc.SetMaxBandwidth(opus.Fullband)
-	enc.SetBitrateToAuto()
-	enc.SetComplexity(10)
+	host, err := portaudio.DefaultHostApi()
+	if err != nil {
+		log.Println(err)
+		return
+	}
+	parameters := portaudio.HighLatencyParameters(nil, host.DefaultOutputDevice)
+	stream, err := portaudio.OpenStream(parameters, Callback)
+	if err != nil {
+		log.Println(err)
+		return
+	}
+	log.Println(parameters.SampleRate, parameters.Output.Channels)
+	stream.Start()
+
+
+
+	// dec, err := opus.NewDecoder(48000, 2)
+
+
+	// enc, err := opus.NewEncoder(48000, 2, opus.AppAudio)
+	// // ix, _ := enc.DTX() //false
+	// // ix1, _ := enc.Bitrate() //120000
+	// // ix2, _ := enc.Complexity() //9
+	// // ix3, _ := enc.MaxBandwidth() //1105
+	// // ix4, _ := enc.PacketLossPerc() //0
+
+	// enc.SetMaxBandwidth(opus.Fullband)
+	// enc.SetBitrateToAuto()
+	// enc.SetComplexity(10)
+
+	var err2 int32
+	dec := opus.DecoderCreate(48000, 2, &err2)
+	enc := opus.EncoderCreate(48000, 2, opus.ApplicationAudio, &err2)
+
 	
+
 	if err != nil {
 		log.Println("[!] Cannot create audio encoder")
 		return
@@ -346,18 +394,29 @@ func fanoutAudio(audioChannel chan float32, roomID string) {
 					
 				}
 				pcm[i] = output
-				// pcm[i] = <- audioChannel
 			}
 		}
 
 		data := make([]byte, 1000)
-		n, err := enc.EncodeFloat32(pcm, data)
+		// n, err := enc.EncodeFloat32(pcm, data)
+		
+		n := opus.EncodeFloat(enc, pcm, 120, data, 1000)
 
 		if err != nil {
 			log.Println("[!] Failed to decode")
 			continue
 		}
 		data = data[:n]
+
+		pcm2 := make([]float32, 1000)
+		// n2, err := dec.DecodeFloat32(data, pcm2)
+		n2 := opus.DecodeFloat(dec, string(data), n, pcm2, 1000, 0)
+		pcm2 = pcm2[:n2]
+		for i := 0; i < int(n2); i++ {
+			cc <- pcm2[i]
+		}
+		log.Println(n, n2)
+
 
 		isRoomRunning := false
 		for _, webRTC := range rooms[roomID].rtcSessions {
