@@ -58,16 +58,59 @@ function startGame() {
     pc = new RTCPeerConnection({iceServers: [{urls: 'stun:stun.l.google.com:19302'}]})
     // input channel
     inputChannel = pc.createDataChannel('foo')
-    inputChannel.onclose = () => {
-        log('inputChannel has closed');
-    }
-
-    inputChannel.onopen = () => {
-        log('inputChannel has opened');
-    }
-
+    inputChannel.onclose = () => log('inputChannel has closed');
+    inputChannel.onopen = () => log('inputChannel has opened');
     inputChannel.onmessage = e => {
-        log(`Message from DataChannel '${inputChannel.label}' payload '${e.data}'`);
+        console.log(e);
+        log(`Message '${e.data}'`);
+    }
+
+    window.AudioContext = window.AudioContext || window.webkitAudioContext;
+    var context = new AudioContext();
+    var delayTime = 0;
+    var init = 0;
+    var audioStack = [];
+    var nextTime = 0;
+
+    function scheduleBuffers() {
+        while ( audioStack.length) {
+            var buffer = audioStack.shift();
+            var source    = context.createBufferSource();
+            source.buffer = buffer;
+            source.connect(context.destination);
+            if (nextTime == 0)
+                nextTime = context.currentTime + 0.05;  /// add 50ms latency to work well across systems - tune this if you like
+            source.start(nextTime);
+            nextTime+=source.buffer.duration; // Make the next buffer wait the length of the last buffer before being played
+        };
+    }
+
+    sampleRate = 16000;
+    channels = 1;
+    bitDepth = 16;
+    decoder = new OpusDecoder(sampleRate, channels);
+    function damn(opusChunk) {
+        pcmChunk = decoder.decode_float(opusChunk);
+        myBuffer = context.createBuffer(channels, pcmChunk.length, sampleRate);
+        nowBuffering = myBuffer.getChannelData(0, bitDepth, sampleRate);
+        for (var i = 0; i < pcmChunk.length; i++) {
+            nowBuffering[i] = pcmChunk[i];
+        }
+        return myBuffer;
+    }
+
+    pc.ondatachannel = function (ev) {
+        log(`New data channel '${ev.channel.label}'`);
+        ev.channel.onopen = () => log('channelX has opened');
+        ev.channel.onclose = () => log('channelX has closed');
+
+        ev.channel.onmessage = (e) => {
+            audioStack.push(damn(e.data));
+            if ((init!=0) || (audioStack.length > 10)) { // make sure we put at least 10 chunks in the buffer before starting
+                init++;
+                scheduleBuffers();
+            }
+        }
     }
 
 
@@ -84,8 +127,9 @@ function startGame() {
         }
     }
 
-    var stream = new MediaStream();
+    window.stream = new MediaStream();
     document.getElementById("game-screen2").srcObject = stream;
+
     // stream channel
     pc.ontrack = function (event) {
         console.log(event);

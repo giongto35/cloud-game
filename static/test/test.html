@@ -1,19 +1,38 @@
 <html> 
 <body>
     <button onclick="play()">hihi</button>
+    <button onclick="alert(1)">hoho</button>
+    <b>hehe</b>
+    <script src="/static/js/libopus.js"></script>
+    <script src="/static/js/opus.js"></script>
     <script>
-        var audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        a = new ArrayBuffer(3);
+        v = new DataView(a);
+        v.setInt8(0, -28);
+        v.setInt8(1, -1);
+        v.setInt8(2, -2);
+        console.log(a);
+        b = new Uint8Array(a);
+        console.log(b);
+
+        d = new OpusDecoder(48000, 2);
+        console.log(d);
+        console.log(d.decode_float(a));
+
+
 
         // Stereo
+        var audioCtx = new (window.AudioContext || window.webkitAudioContext)();
         var channels = 1;
-        var sampleRate = 16000;
+        var sampleRate = 48000;
         var bitDepth = 16;
 
         // Create an empty two second stereo buffer at the
         // sample rate of the AudioContext
         var req = new XMLHttpRequest();
         var sound;
-        req.open('GET', "/static/sinewave.raw", false);
+        req.open('GET', "/static/ex3.raw", false);
+        // req.open('GET', "/static/sinewave.raw", false);
         req.overrideMimeType('text\/plain; charset=x-user-defined');
         req.onreadystatechange = function (aEvt) {
             if (req.readyState == 4) {
