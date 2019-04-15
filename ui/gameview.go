@@ -27,6 +27,9 @@ const (
 	right2
 )
 const NumKeys = 8
+const SampleRate = 16000
+const Channels = 1
+const TimeFrame = 40
 
 type GameView struct {
 	console  *nes.Console
@@ -39,9 +42,8 @@ type GameView struct {
 	imageChannel chan *image.RGBA
 	audioChanel chan float32
 	inputChannel chan int
-
-
 }
+
 
 func NewGameView(console *nes.Console, title, hash string, imageChannel chan *image.RGBA, audioChanel chan float32, inputChannel chan int) *GameView {
 	gameview := &GameView{
@@ -72,10 +74,7 @@ func (view *GameView) ListenToInputChannel() {
 
 // Enter enter the game view.
 func (view *GameView) Enter() {
-	// view.console.SetAudioChannel(view.audio.channel)
-	// view.console.SetAudioSampleRate(view.audio.sampleRate)
-	
-	view.console.SetAudioSampleRate(48000)
+	view.console.SetAudioSampleRate(SampleRate)
 	view.console.SetAudioChannel(view.audioChanel)
 
 	// load state
@@ -124,11 +123,10 @@ func (view *GameView) updateControllers() {
 	// First 8 keys are player 1
 	var player1Keys [8]bool
 	copy(player1Keys[:], view.keyPressed[:8])
+
 	var player2Keys [8]bool
 	copy(player2Keys[:], view.keyPressed[8:])
 
 	view.console.Controller1.SetButtons(player1Keys)
 	view.console.Controller2.SetButtons(player2Keys)
-
-
 }

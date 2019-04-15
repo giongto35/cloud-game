@@ -139,17 +139,11 @@ func (w *WebRTC) StartClient(remoteSession string, width, height int) (string, e
 	
 	w.connection, err = webrtc.NewPeerConnection(config)
 	
-	// m := webrtc.MediaEngine{}
-	// m.RegisterCodec(webrtc.NewRTPOpusCodec(webrtc.DefaultPayloadTypeOpus, 48000))
-	// m.RegisterCodec(webrtc.NewRTPVP8Codec(webrtc.DefaultPayloadTypeVP8, 1))
-	// api := webrtc.NewAPI(webrtc.WithMediaEngine(m))
-	// w.connection, err = api.NewPeerConnection(config)
-
 	if err != nil {
 		return "", err
 	}
 
-	vp8Track, err := w.connection.NewTrack(webrtc.DefaultPayloadTypeVP8, rand.Uint32(), "video", "pion2a")
+	vp8Track, err := w.connection.NewTrack(webrtc.DefaultPayloadTypeVP8, rand.Uint32(), "video", "pion2")
 	if err != nil {
 		return "", err
 	}
@@ -159,14 +153,7 @@ func (w *WebRTC) StartClient(remoteSession string, width, height int) (string, e
 	}
 
 	
-	opusTrack, err := w.connection.NewTrack(webrtc.DefaultPayloadTypeOpus, rand.Uint32(), "audio", "pion2b")
-	if err != nil {
-		return "", err
-	}
-	_, err = w.connection.AddTrack(opusTrack)
-	if err != nil {
-		return "", err
-	}
+	audioTrack, err := w.connection.CreateDataChannel("foo2", nil)
 
 	// WebRTC state callback
 	w.connection.OnICEConnectionStateChange(func(connectionState webrtc.ICEConnectionState) {
@@ -175,7 +162,7 @@ func (w *WebRTC) StartClient(remoteSession string, width, height int) (string, e
 			go func() {
 				w.isConnected = true
 				log.Println("ConnectionStateConnected")
-				w.startStreaming(vp8Track, opusTrack)
+				w.startStreaming(vp8Track, audioTrack)
 			}()
 
 		}
@@ -188,6 +175,7 @@ func (w *WebRTC) StartClient(remoteSession string, width, height int) (string, e
 	w.connection.OnICECandidate(func(iceCandidate *webrtc.ICECandidate) {
 		log.Println(iceCandidate)
 	})
+
 
 	// Data channel callback
 	w.connection.OnDataChannel(func(d *webrtc.DataChannel) {
@@ -257,7 +245,8 @@ func (w *WebRTC) IsClosed() bool {
 	return w.isClosed
 }
 
-func (w *WebRTC) startStreaming(vp8Track *webrtc.Track, opusTrack *webrtc.Track) {
+// func (w *WebRTC) startStreaming(vp8Track *webrtc.Track, opusTrack *webrtc.Track) {
+func (w *WebRTC) startStreaming(vp8Track *webrtc.Track, audioTrack *webrtc.DataChannel) {
 	log.Println("Start streaming")
 	// send screenshot
 	go func() {
@@ -281,8 +270,7 @@ func (w *WebRTC) startStreaming(vp8Track *webrtc.Track, opusTrack *webrtc.Track)
 	go func() {
 		for w.isConnected {
 			data := <-w.AudioChannel
-			opusTrack.Write(data)
-			// opusTrack.WriteSample(media.Sample{Data: data, Samples: uint32(len(data))})
+			audioTrack.Send(data)
 		}
 	}()
 
