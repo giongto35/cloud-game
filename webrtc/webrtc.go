@@ -6,6 +6,7 @@ import (
 	"compress/gzip"
 	"encoding/base64"
 	"encoding/json"
+	"fmt"
 	"io/ioutil"
 	"log"
 	"math/rand"
@@ -108,6 +109,8 @@ type WebRTC struct {
 	ImageChannel chan []byte
 	InputChannel chan int
 
+	Done chan struct{}
+
 	RoomID string
 }
 
@@ -184,7 +187,9 @@ func (w *WebRTC) StartClient(remoteSession string, width, height int) (string, e
 		})
 
 		d.OnClose(func() {
-			w.isClosed = true
+			fmt.Println("closed webrtc")
+			w.Done <- struct{}{}
+			close(w.Done)
 		})
 	})
 
