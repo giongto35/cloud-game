@@ -113,7 +113,7 @@ func initRoom(roomID, gameName string) string {
 	}
 	rooms[roomID] = room
 
-	go startRoom(room, imageChannel, roomID)
+	go room.start()
 	go director.Start([]string{"games/" + gameName})
 
 	return roomID
@@ -280,20 +280,19 @@ func generateRoomID() string {
 	return roomID
 }
 
-// startRoom fanout outputs to all webrtc in the same room
-func startRoom(room *Room, imageChannel chan *image.RGBA, roomID string) {
+func (r *Room) start() {
 	// fanout Screen
 	for {
 		select {
-		case <-room.Done:
-			removeRoom(room)
+		case <-r.Done:
+			r.remove()
 			return
-		case image := <-imageChannel:
+		case image := <-r.imageChannel:
 			//isRoomRunning := false
 
 			yuv := util.RgbaToYuv(image)
-			room.sessionsLock.Lock()
-			for _, webRTC := range room.rtcSessions {
+			r.sessionsLock.Lock()
+			for _, webRTC := range r.rtcSessions {
 				// Client stopped
 				if webRTC.IsClosed() {
 					continue
@@ -307,14 +306,14 @@ func startRoom(room *Room, imageChannel chan *image.RGBA, roomID string) {
 				}
 				//isRoomRunning = true
 			}
-			room.sessionsLock.Unlock()
-
-			//if isRoomRunning == false {
-			//log.Println("Closed room", roomID)
-			//rooms[roomID].closedChannel <- true
-			//}
+			r.sessionsLock.Unlock()
 		}
 	}
+}
+
+func (r *Room) remove() {
+	log.Println("Closing room", r)
+	r.director.Done <- struct{}{}
 }
 
 // startWebRTCSession fan-in of the same room to inputChannel
@@ -351,15 +350,6 @@ func cleanSession(webrtc *webrtc.WebRTC) {
 		return
 	}
 	removeSession(room, webrtc)
-}
-
-func removeRoom(room *Room) {
-	log.Println("Closing room")
-	room.director.Done <- struct{}{}
-	// close channel
-	// TODO: BUg here, closing happens after init, so it is closing the current room instead of previous room
-	//close(room.inputChannel)
-	//close(room.imageChannel)
 }
 
 func removeSession(room *Room, webrtc *webrtc.WebRTC) {
