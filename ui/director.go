@@ -10,23 +10,24 @@ import (
 
 type Director struct {
 	// audio        *Audio
-	view          *GameView
-	timestamp     float64
-	imageChannel  chan *image.RGBA
-	inputChannel  chan int
-	closedChannel chan bool
-	roomID        string
-	hash          string
+	view         *GameView
+	timestamp    float64
+	imageChannel chan *image.RGBA
+	inputChannel chan int
+	Done         chan struct{}
+
+	roomID string
+	hash   string
 }
 
 const FPS = 60
 
-func NewDirector(roomID string, imageChannel chan *image.RGBA, inputChannel chan int, closedChannel chan bool) *Director {
+func NewDirector(roomID string, imageChannel chan *image.RGBA, inputChannel chan int) *Director {
 	director := Director{}
 	// director.audio = audio
+	director.Done = make(chan struct{})
 	director.imageChannel = imageChannel
 	director.inputChannel = inputChannel
-	director.closedChannel = closedChannel
 	director.roomID = roomID
 	director.hash = ""
 	return &director
@@ -67,7 +68,7 @@ L:
 
 		select {
 		// if there is event from close channel => the game is ended
-		case <-d.closedChannel:
+		case <-d.Done:
 			break L
 		default:
 		}

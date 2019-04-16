@@ -11,6 +11,7 @@ import (
 	_ "net/http/pprof"
 	"os"
 	"strconv"
+	"sync"
 	"time"
 
 	"github.com/giongto35/cloud-game/ui"
@@ -49,11 +50,11 @@ type WSPacket struct {
 type Room struct {
 	imageChannel chan *image.RGBA
 	inputChannel chan int
-	// closedChannel is to fire exit event when there is no webRTC session running
-	closedChannel chan bool
+	// Done channel is to fire exit event when there is no webRTC session running
+	Done chan struct{}
 
-	rtcSessions []*webrtc.WebRTC
-	//sessionsLock sync.Mutex
+	rtcSessions  []*webrtc.WebRTC
+	sessionsLock *sync.Mutex
 
 	director *ui.Director
 }
@@ -95,22 +96,24 @@ func initRoom(roomID, gameName string) string {
 	if roomID == "" {
 		roomID = generateRoomID()
 	}
+	log.Println("Init new room", roomID)
 	imageChannel := make(chan *image.RGBA, 100)
 	inputChannel := make(chan int, 100)
-	closedChannel := make(chan bool)
 
 	// create director
-	director := ui.NewDirector(roomID, imageChannel, inputChannel, closedChannel)
+	director := ui.NewDirector(roomID, imageChannel, inputChannel)
 
-	rooms[roomID] = &Room{
-		imageChannel:  imageChannel,
-		inputChannel:  inputChannel,
-		closedChannel: closedChannel,
-		rtcSessions:   []*webrtc.WebRTC{},
-		director:      director,
+	room := &Room{
+		imageChannel: imageChannel,
+		inputChannel: inputChannel,
+		rtcSessions:  []*webrtc.WebRTC{},
+		sessionsLock: &sync.Mutex{},
+		director:     director,
+		Done:         make(chan struct{}),
 	}
+	rooms[roomID] = room
 
-	go fanoutScreen(imageChannel, roomID)
+	go startRoom(room, imageChannel, roomID)
 	go director.Start([]string{"games/" + gameName})
 
 	return roomID
@@ -133,26 +136,6 @@ func isRoomRunning(roomID string) bool {
 	return false
 }
 
-// startSession cleans all of the dependencies of old game to current webRTC session
-func cleanSession(webrtc *webrtc.WebRTC) {
-	roomID := webrtc.RoomID
-	// If no roomID is registered
-	if _, ok := rooms[roomID]; !ok {
-		return
-	}
-
-	// We search for session in sessions list and we also remove closed session
-	for id, session := range rooms[roomID].rtcSessions {
-		if session == webrtc {
-			rooms[roomID].rtcSessions = append(rooms[roomID].rtcSessions[:id], rooms[roomID].rtcSessions[id+1:]...)
-			if !isRoomRunning(roomID) {
-				rooms[roomID].closedChannel <- true
-			}
-			break
-		}
-	}
-}
-
 // startSession handles one session call
 func startSession(webRTC *webrtc.WebRTC, gameName string, roomID string, playerIndex int) string {
 	cleanSession(webRTC)
@@ -165,9 +148,10 @@ func startSession(webRTC *webrtc.WebRTC, gameName string, roomID string, playerI
 
 	// TODO: Might have race condition
 	rooms[roomID].rtcSessions = append(rooms[roomID].rtcSessions, webRTC)
+	room := rooms[roomID]
 
 	webRTC.AttachRoomID(roomID)
-	faninInput(rooms[roomID].inputChannel, webRTC, playerIndex)
+	go startWebRTCSession(room, webRTC, playerIndex)
 
 	return roomID
 }
@@ -251,9 +235,6 @@ func ws(w http.ResponseWriter, r *http.Request) {
 			res.ID = "start"
 			res.RoomID = roomID
 
-			// maybe we wont close websocket
-			// isDone = true
-
 		case "save":
 			log.Println("Saving game state")
 			res.ID = "save"
@@ -290,11 +271,6 @@ func ws(w http.ResponseWriter, r *http.Request) {
 
 		c.SetWriteDeadline(time.Now().Add(writeWait))
 		err = c.WriteMessage(mt, []byte(stRes))
-		//if err != nil {
-		//log.Println("write:", err)
-		//break
-		//}
-
 	}
 }
 
@@ -304,52 +280,99 @@ func generateRoomID() string {
 	return roomID
 }
 
-// fanoutScreen fanout outputs to all webrtc in the same room
-func fanoutScreen(imageChannel chan *image.RGBA, roomID string) {
-	for image := range imageChannel {
-		isRoomRunning := false
+// startRoom fanout outputs to all webrtc in the same room
+func startRoom(room *Room, imageChannel chan *image.RGBA, roomID string) {
+	// fanout Screen
+	for {
+		select {
+		case <-room.Done:
+			removeRoom(room)
+			return
+		case image := <-imageChannel:
+			//isRoomRunning := false
 
-		yuv := util.RgbaToYuv(image)
-		for _, webRTC := range rooms[roomID].rtcSessions {
-			// Client stopped
-			if webRTC.IsClosed() {
-				continue
+			yuv := util.RgbaToYuv(image)
+			room.sessionsLock.Lock()
+			for _, webRTC := range room.rtcSessions {
+				// Client stopped
+				if webRTC.IsClosed() {
+					continue
+				}
+
+				// encode frame
+				// fanout imageChannel
+				if webRTC.IsConnected() {
+					// NOTE: can block here
+					webRTC.ImageChannel <- yuv
+				}
+				//isRoomRunning = true
 			}
+			room.sessionsLock.Unlock()
 
-			// encode frame
-			// fanout imageChannel
-			if webRTC.IsConnected() {
-				// NOTE: can block here
-				webRTC.ImageChannel <- yuv
-			}
-			isRoomRunning = true
-		}
-
-		if isRoomRunning == false {
-			log.Println("Closed room", roomID)
-			rooms[roomID].closedChannel <- true
+			//if isRoomRunning == false {
+			//log.Println("Closed room", roomID)
+			//rooms[roomID].closedChannel <- true
+			//}
 		}
 	}
 }
 
-// faninInput fan-in of the same room to inputChannel
-func faninInput(inputChannel chan int, webRTC *webrtc.WebRTC, playerIndex int) {
-	go func() {
-		for {
-			// Client stopped
-			if webRTC.IsClosed() {
-				return
-			}
-
-			// encode frame
-			if webRTC.IsConnected() {
-				input := <-webRTC.InputChannel
-				// the first 8 bits belong to player 1
-				// the next 8 belongs to player 2 ...
-				// We standardize and put it to inputChannel (16 bits)
-				input = input << ((uint(playerIndex) - 1) * ui.NumKeys)
-				inputChannel <- input
-			}
+// startWebRTCSession fan-in of the same room to inputChannel
+func startWebRTCSession(room *Room, webRTC *webrtc.WebRTC, playerIndex int) {
+	inputChannel := room.inputChannel
+	fmt.Println("room, inputChannel", room, inputChannel)
+	for {
+		select {
+		case <-webRTC.Done:
+			fmt.Println("One session closed")
+			removeSession(room, webRTC)
+		default:
 		}
-	}()
+		// Client stopped
+		if webRTC.IsClosed() {
+			return
+		}
+
+		// encode frame
+		if webRTC.IsConnected() {
+			input := <-webRTC.InputChannel
+			// the first 8 bits belong to player 1
+			// the next 8 belongs to player 2 ...
+			// We standardize and put it to inputChannel (16 bits)
+			input = input << ((uint(playerIndex) - 1) * ui.NumKeys)
+			inputChannel <- input
+		}
+	}
+}
+
+func cleanSession(webrtc *webrtc.WebRTC) {
+	room, ok := rooms[webrtc.RoomID]
+	if !ok {
+		return
+	}
+	removeSession(room, webrtc)
+}
+
+func removeRoom(room *Room) {
+	log.Println("Closing room")
+	room.director.Done <- struct{}{}
+	// close channel
+	// TODO: BUg here, closing happens after init, so it is closing the current room instead of previous room
+	//close(room.inputChannel)
+	//close(room.imageChannel)
+}
+
+func removeSession(room *Room, webrtc *webrtc.WebRTC) {
+	room.sessionsLock.Lock()
+	defer room.sessionsLock.Unlock()
+	for i, s := range room.rtcSessions {
+		if s == webrtc {
+			room.rtcSessions = append(room.rtcSessions[:i], room.rtcSessions[i+1:]...)
+			break
+		}
+	}
+	// If room has no sessions, close room
+	if len(room.rtcSessions) == 0 {
+		room.Done <- struct{}{}
+	}
 }
