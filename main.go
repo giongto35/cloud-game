@@ -146,6 +146,7 @@ func isRoomRunning(roomID string) bool {
 
 // startSession handles one session call
 func startSession(webRTC *webrtc.WebRTC, gameName string, roomID string, playerIndex int) (rRoomID string, isNewRoom bool) {
+	isNewRoom = false
 	cleanSession(webRTC)
 	// If the roomID is empty,
 	// or the roomID doesn't have any running sessions (room was closed)
@@ -162,7 +163,7 @@ func startSession(webRTC *webrtc.WebRTC, gameName string, roomID string, playerI
 	webRTC.AttachRoomID(roomID)
 	go startWebRTCSession(room, webRTC, playerIndex)
 
-	return roomID, false
+	return roomID, isNewRoom
 }
 
 // Session represents a session connected from the browser to the current server
@@ -184,7 +185,6 @@ func ws(w http.ResponseWriter, r *http.Request) {
 	var roomID string
 	var playerIndex int
 
-	var oclient *Client
 	// Create connection to overlord
 	client := NewClient(c, webrtc.NewWebRTC())
 
@@ -252,10 +252,17 @@ func ws(w http.ResponseWriter, r *http.Request) {
 		//log.Println("Ping from server with game:", gameName)
 		//res.ID = "pong"
 		log.Println("Starting game")
+		roomServerID := <-GetServerIDOfRoom(wssession.oclient, roomID)
+		log.Println("Server of RoomID ", roomID, " is ", roomServerID)
+		if roomServerID != "" && wssession.ServerID != roomServerID {
+			// TODO: Re -register
+			return
+		}
+
 		roomID, isNewRoom = startSession(client.peerconnection, gameName, roomID, playerIndex)
 		if isNewRoom {
-			oclient.send(WSPacket{
-				ID:   "RegisterRoom",
+			wssession.oclient.send(WSPacket{
+				ID:   "registerRoom",
 				Data: roomID,
 			})
 		}
@@ -375,12 +382,14 @@ func removeSession(w *webrtc.WebRTC, room *Room) {
 	}
 }
 
-func GetServerIDOfRoom(oc Client, roomID string) chan string {
+func GetServerIDOfRoom(oc *Client, roomID string) chan string {
 	res := make(chan string)
 
 	oc.syncSend(WSPacket{
-		ID: "getRoom",
+		ID:   "getRoom",
+		Data: roomID,
 	}, func(resp WSPacket) {
+		log.Println("GetRoom", resp.Data)
 		res <- resp.Data
 	})
 	return res
@@ -426,6 +435,9 @@ func (s *Session) NewOverlordClient() {
 	)
 
 	go oclient.listen()
+
+	s.oclient = oclient
+	// TODO: return oclient
 
 	return
 }

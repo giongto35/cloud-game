@@ -10,7 +10,7 @@ import (
 	"github.com/giongto35/cloud-game/webrtc"
 )
 
-var overlordRooms = map[string]string{}
+var roomToServer = map[string]string{}
 
 // servers are the map serverID to server Client
 var servers = map[string]Client{}
@@ -46,10 +46,17 @@ func wso(w http.ResponseWriter, r *http.Request) {
 	})
 
 	client.syncReceive("registerRoom", func(resp WSPacket) WSPacket {
-		log.Println("received registerRoom")
-		overlordRooms[resp.Data] = serverID
+		log.Println("Received registerRoom ", resp.Data, serverID)
+		roomToServer[resp.Data] = serverID
 		return WSPacket{
 			ID: "registerRoom",
+		}
+	})
+
+	client.syncReceive("getRoom", func(resp WSPacket) WSPacket {
+		return WSPacket{
+			ID:   "getRoom",
+			Data: roomToServer[resp.Data],
 		}
 	})
 
