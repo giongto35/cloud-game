@@ -2,6 +2,8 @@ package vpxencoder
 
 import (
 	"fmt"
+	"log"
+	"time"
 	"unsafe"
 )
 
@@ -113,6 +115,8 @@ func (v *VpxEncoder) init() error {
 func (v *VpxEncoder) startLooping() {
 	go func() {
 		for {
+			beginEncoding := time.Now()
+
 			yuv := <-v.Input
 			// Add Image
 			v.vpxCodexIter = nil
@@ -140,6 +144,8 @@ func (v *VpxEncoder) startLooping() {
 				}
 				v.Output <- bs
 			}
+
+			log.Println("Encoding time: ", time.Now().Sub(beginEncoding))
 		}
 	}()
 }

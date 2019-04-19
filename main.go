@@ -203,6 +203,10 @@ func ws(w http.ResponseWriter, r *http.Request) {
 		//log.Println("Ping from server with game:", gameName)
 		//res.ID = "pong"
 
+		case "pingpong":
+			res.ID = "pingpong"
+			res.Data = req.Data
+
 		case "initwebrtc":
 			log.Println("Received user SDP")
 			localSession, err := webRTC.StartClient(req.Data, width, height)
