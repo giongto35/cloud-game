@@ -36,14 +36,8 @@ var indexFN = gameboyIndex
 var readWait = 30 * time.Second
 var writeWait = 30 * time.Second
 
+var IsOverlord = false
 var upgrader = websocket.Upgrader{}
-
-type WSPacket struct {
-	ID          string `json:"id"`
-	Data        string `json:"data"`
-	RoomID      string `json:"room_id"`
-	PlayerIndex int    `json:"player_index"`
-}
 
 // Room is a game session. multi webRTC sessions can connect to a same game.
 // A room stores all the channel for interaction between all webRTCs session and emulator
@@ -67,6 +61,11 @@ func main() {
 		// debug
 		indexFN = debugIndex
 		fmt.Println("Use debug version")
+	}
+	if len(os.Args) == 3 {
+		if os.Args[3] == "overlord" {
+			IsOverlord = true
+		}
 	}
 
 	rand.Seed(time.Now().UTC().UnixNano())
@@ -164,115 +163,260 @@ func ws(w http.ResponseWriter, r *http.Request) {
 	}
 	defer c.Close()
 
-	log.Println("New ws connection")
-	webRTC := webrtc.NewWebRTC()
-
-	// streaming game
-
-	// start new games and webrtc stuff?
-	//isDone := false
-
 	var gameName string
 	var roomID string
 	var playerIndex int
 
-	for {
-		c.SetReadDeadline(time.Now().Add(readWait))
-		mt, message, err := c.ReadMessage()
+	client := NewClient(c, webrtc.NewWebRTC())
+	//&Client{
+	//conn: c,
+	////wsOverlord: createOverlordClient(),
+	//peerconnection: webrtc.NewWebRTC(),
+	//}
+
+	client.syncReceive("initwebrtc", func(req WSPacket) WSPacket {
+		log.Println("Received user SDP")
+		localSession, err := client.peerconnection.StartClient(req.Data, width, height)
 		if err != nil {
-			log.Println("[!] read:", err)
-			break
+			log.Fatalln(err)
 		}
 
-		req := WSPacket{}
-		res := WSPacket{}
+		return WSPacket{
+			ID:   "sdp",
+			Data: localSession,
+		}
+	})
 
-		err = json.Unmarshal(message, &req)
-		if err != nil {
-			log.Println("[!] json unmarshal:", err)
-			break
+	client.syncReceive("save", func(req WSPacket) (res WSPacket) {
+		log.Println("Saving game state")
+		res.ID = "save"
+		res.Data = "ok"
+		if roomID != "" {
+			err = rooms[roomID].director.SaveGame()
+			if err != nil {
+				log.Println("[!] Cannot save game state: ", err)
+				res.Data = "error"
+			}
+		} else {
+			res.Data = "error"
 		}
 
-		// SDP connection initializations follows WebRTC convention
-		// https://developer.mozilla.org/en-US/docs/Web/API/WebRTC_API/Protocols
-		switch req.ID {
-		//case "ping":
-		//gameName = req.Data
-		//roomID = req.RoomID
-		//playerIndex = req.PlayerIndex
+		return res
+	})
+
+	client.syncReceive("load", func(req WSPacket) (res WSPacket) {
+		log.Println("Loading game state")
+		res.ID = "load"
+		res.Data = "ok"
+		if roomID != "" {
+			err = rooms[roomID].director.LoadGame()
+			if err != nil {
+				log.Println("[!] Cannot load game state: ", err)
+				res.Data = "error"
+			}
+		} else {
+			res.Data = "error"
+		}
+
+		return res
+	})
+
+	client.syncReceive("start", func(req WSPacket) (res WSPacket) {
+		gameName = req.Data
+		roomID = req.RoomID
+		playerIndex = req.PlayerIndex
 		//log.Println("Ping from server with game:", gameName)
 		//res.ID = "pong"
+		log.Println("Starting game")
+		roomID = startSession(client.peerconnection, gameName, roomID, playerIndex)
+		res.ID = "start"
+		res.RoomID = roomID
 
-		case "initwebrtc":
-			log.Println("Received user SDP")
-			localSession, err := webRTC.StartClient(req.Data, width, height)
-			if err != nil {
-				log.Fatalln(err)
-			}
+		return res
+	})
 
-			res.ID = "sdp"
-			res.Data = localSession
-
-		case "candidate":
-			// Unuse code
-			hi := pionRTC.ICECandidateInit{}
-			err = json.Unmarshal([]byte(req.Data), &hi)
-			if err != nil {
-				log.Println("[!] Cannot parse candidate: ", err)
-			} else {
-				// webRTC.AddCandidate(hi)
-			}
-			res.ID = "candidate"
-
-		case "start":
-			gameName = req.Data
-			roomID = req.RoomID
-			playerIndex = req.PlayerIndex
-			//log.Println("Ping from server with game:", gameName)
-			//res.ID = "pong"
-			log.Println("Starting game")
-			roomID = startSession(webRTC, gameName, roomID, playerIndex)
-			res.ID = "start"
-			res.RoomID = roomID
-
-		case "save":
-			log.Println("Saving game state")
-			res.ID = "save"
-			res.Data = "ok"
-			if roomID != "" {
-				err = rooms[roomID].director.SaveGame()
-				if err != nil {
-					log.Println("[!] Cannot save game state: ", err)
-					res.Data = "error"
-				}
-			} else {
-				res.Data = "error"
-			}
-
-		case "load":
-			log.Println("Loading game state")
-			res.ID = "load"
-			res.Data = "ok"
-			if roomID != "" {
-				err = rooms[roomID].director.LoadGame()
-				if err != nil {
-					log.Println("[!] Cannot load game state: ", err)
-					res.Data = "error"
-				}
-			} else {
-				res.Data = "error"
-			}
-		}
-
-		stRes, err := json.Marshal(res)
+	client.syncReceive("candidate", func(req WSPacket) (res WSPacket) {
+		// Unuse code
+		hi := pionRTC.ICECandidateInit{}
+		err = json.Unmarshal([]byte(req.Data), &hi)
 		if err != nil {
-			log.Println("json marshal:", err)
+			log.Println("[!] Cannot parse candidate: ", err)
+		} else {
+			// webRTC.AddCandidate(hi)
 		}
+		res.ID = "candidate"
 
-		c.SetWriteDeadline(time.Now().Add(writeWait))
-		err = c.WriteMessage(mt, []byte(stRes))
-	}
+		return res
+	})
+
+	client.listen()
 }
+
+//func wsold(w http.ResponseWriter, r *http.Request) {
+//c, err := upgrader.Upgrade(w, r, nil)
+//if err != nil {
+//log.Print("[!] WS upgrade:", err)
+//return
+//}
+//defer c.Close()
+
+//client := &Client{
+//ws:             c,
+//wsOverlord:     createOverlordClient(),
+//peerconnection: webrtc.NewWebRTC(),
+//}
+
+//if IsOverlord {
+
+//}
+
+//log.Println("New ws connection")
+
+//// streaming game
+
+//// start new games and webrtc stuff?
+////isDone := false
+
+//var gameName string
+//var roomID string
+//var playerIndex int
+
+//for {
+//c.SetReadDeadline(time.Now().Add(readWait))
+//mt, message, err := c.ReadMessage()
+//if err != nil {
+//log.Println("[!] read:", err)
+//break
+//}
+
+//req := WSPacket{}
+//res := WSPacket{}
+
+//err = json.Unmarshal(message, &req)
+//if err != nil {
+//log.Println("[!] json unmarshal:", err)
+//break
+//}
+
+//// SDP connection initializations follows WebRTC convention
+//// https://developer.mozilla.org/en-US/docs/Web/API/WebRTC_API/Protocols
+//switch req.ID {
+////case "ping":
+////gameName = req.Data
+////roomID = req.RoomID
+////playerIndex = req.PlayerIndex
+////log.Println("Ping from server with game:", gameName)
+////res.ID = "pong"
+
+//case "initwebrtc":
+//log.Println("Received user SDP")
+//localSession, err := client.peerconnection.StartClient(req.Data, width, height)
+//if err != nil {
+//log.Fatalln(err)
+//}
+
+//res.ID = "sdp"
+//res.Data = localSession
+
+//// Master received request Offer
+////case "requestOffer":
+//// Master ask the host connecting to master to request offer from browser
+
+////case "receivedRemoteSDP":
+////log.Println("Received remote rtc")
+//// Relay message to overlord, so overlord will send to the correct host
+//// TODO: Include room to data
+////res.id = "overlordrelaysdp"
+////res.Data = req.Data
+
+////case "receivedRelaySDPFromOverlord":
+////// initwebrtc
+////log.Println("Received user SDP")
+////localSession, err := client.peerconnection.StartClient(req.Data, width, height)
+////if err != nil {
+////log.Fatalln(err)
+////}
+
+////res.ID = "sdp"
+////res.Data = localSession
+
+//case "candidate":
+//// Unuse code
+//hi := pionRTC.ICECandidateInit{}
+//err = json.Unmarshal([]byte(req.Data), &hi)
+//if err != nil {
+//log.Println("[!] Cannot parse candidate: ", err)
+//} else {
+//// webRTC.AddCandidate(hi)
+//}
+//res.ID = "candidate"
+
+//case "remoteStart":
+//gameName = req.Data
+//roomID = req.RoomID
+//log.Println("Received Remote start", gameName, roomID)
+
+//roomID = startSession(client.peerconnection, gameName, roomID, playerIndex)
+//res.ID = "start"
+//res.RoomID = roomID
+
+//case "start":
+//gameName = req.Data
+//roomID = req.RoomID
+//playerIndex = req.PlayerIndex
+////log.Println("Ping from server with game:", gameName)
+////res.ID = "pong"
+//log.Println("Starting game")
+//if overlord.isRemoteRoom(roomID) {
+//res.ID = "overlordRequestOffer"
+//} else {
+//roomID = startSession(client.peerconnnection, gameName, roomID, playerIndex)
+//}
+//res.ID = "start"
+//res.RoomID = roomID
+
+//case "save":
+//log.Println("Saving game state")
+//res.ID = "save"
+//res.Data = "ok"
+//if roomID != "" {
+//err = rooms[roomID].director.SaveGame()
+//if err != nil {
+//log.Println("[!] Cannot save game state: ", err)
+//res.Data = "error"
+//}
+//} else {
+//res.Data = "error"
+//}
+
+//case "load":
+//log.Println("Loading game state")
+//res.ID = "load"
+//res.Data = "ok"
+//if roomID != "" {
+//err = rooms[roomID].director.LoadGame()
+//if err != nil {
+//log.Println("[!] Cannot load game state: ", err)
+//res.Data = "error"
+//}
+//} else {
+//res.Data = "error"
+//}
+//}
+
+//stRes, err := json.Marshal(res)
+//if err != nil {
+//log.Println("json marshal:", err)
+//}
+
+//c.SetWriteDeadline(time.Now().Add(writeWait))
+//if strings.HasPrefix(res.ID, "overlord") {
+//overlord.ws.WriteMessage(res.Data)
+//}
+//c.WriteMessage(res.Data)
+//err = c.WriteMessage(mt, []byte(stRes))
+//}
+//}
 
 // generateRoomID generate a unique room ID containing 16 digits
 func generateRoomID() string {
@@ -324,7 +468,7 @@ func startWebRTCSession(room *Room, webRTC *webrtc.WebRTC, playerIndex int) {
 		select {
 		case <-webRTC.Done:
 			fmt.Println("One session closed")
-			removeSession(room, webRTC)
+			removeSession(webRTC, room)
 		default:
 		}
 		// Client stopped
@@ -344,19 +488,19 @@ func startWebRTCSession(room *Room, webRTC *webrtc.WebRTC, playerIndex int) {
 	}
 }
 
-func cleanSession(webrtc *webrtc.WebRTC) {
-	room, ok := rooms[webrtc.RoomID]
+func cleanSession(w *webrtc.WebRTC) {
+	room, ok := rooms[w.RoomID]
 	if !ok {
 		return
 	}
-	removeSession(room, webrtc)
+	removeSession(w, room)
 }
 
-func removeSession(room *Room, webrtc *webrtc.WebRTC) {
+func removeSession(w *webrtc.WebRTC, room *Room) {
 	room.sessionsLock.Lock()
 	defer room.sessionsLock.Unlock()
 	for i, s := range room.rtcSessions {
-		if s == webrtc {
+		if s == w {
 			room.rtcSessions = append(room.rtcSessions[:i], room.rtcSessions[i+1:]...)
 			break
 		}
@@ -366,3 +510,13 @@ func removeSession(room *Room, webrtc *webrtc.WebRTC) {
 		room.Done <- struct{}{}
 	}
 }
+
+//func (o *Overlord) isRemoteRoom(roomID string) bool {
+//err := c.WriteMessage(websocket.TextMessage, []byte(stRes))
+//o.ws.WriteMessage()
+//_, message, err := o.ws.ReadMessage()
+//if message == "isRemoteRoom" {
+//return true
+//}
+//return false
+//}

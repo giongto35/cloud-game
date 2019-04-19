@@ -27,6 +27,16 @@ conn.onmessage = e => {
         log("Got remote sdp");
         pc.setRemoteDescription(new RTCSessionDescription(JSON.parse(atob(d["data"]))));
         break;
+    //case "requestOffer":
+        //pc.createOffer({offerToReceiveVideo: true, offerToReceiveAudio: false}).then(d => {
+            //pc.setLocalDescription(d).catch(log);
+        //})
+
+    //case "sdpremote":
+        //log("Got remote sdp");
+        //pc.setRemoteDescription(new RTCSessionDescription(JSON.parse(atob(d["data"]))));
+        //conn.send(JSON.stringify({"id": "remotestart", "data": GAME_LIST[gameIdx].nes, "room_id": roomID.value, "player_index": parseInt(playerIndex.value, 10)}));inputTimer
+        //break;
     case "pong":
         // TODO: Change name use one session
         log("Recv pong. Start webrtc");
@@ -51,7 +61,7 @@ conn.onmessage = e => {
 
 function sendPing() {
     // TODO: format the package with time
-    conn.send(JSON.stringify({"id": "pingpong", "data": "pingpong"}));
+    //conn.send(JSON.stringify({"id": "pingpong", "data": "pingpong"}));
 }
 
 function startWebRTC() {
