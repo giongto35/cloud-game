@@ -145,13 +145,14 @@ func isRoomRunning(roomID string) bool {
 }
 
 // startSession handles one session call
-func startSession(webRTC *webrtc.WebRTC, gameName string, roomID string, playerIndex int) string {
+func startSession(webRTC *webrtc.WebRTC, gameName string, roomID string, playerIndex int) (rRoomID string, isNewRoom bool) {
 	cleanSession(webRTC)
 	// If the roomID is empty,
 	// or the roomID doesn't have any running sessions (room was closed)
 	// we spawn a new room
 	if roomID == "" || !isRoomRunning(roomID) {
 		roomID = initRoom(roomID, gameName)
+		isNewRoom = true
 	}
 
 	// TODO: Might have race condition
@@ -161,40 +162,14 @@ func startSession(webRTC *webrtc.WebRTC, gameName string, roomID string, playerI
 	webRTC.AttachRoomID(roomID)
 	go startWebRTCSession(room, webRTC, playerIndex)
 
-	return roomID
+	return roomID, false
 }
 
-// If it's overlord, handle overlord connection (from host to overlord)
-func wso(w http.ResponseWriter, r *http.Request) {
-	fmt.Println("Connected")
-	c, err := upgrader.Upgrade(w, r, nil)
-	if err != nil {
-		log.Print("[!] WS upgrade:", err)
-		return
-	}
-	defer c.Close()
-
-	client := NewClient(c, webrtc.NewWebRTC())
-
-	client.syncReceive("ping", func(req WSPacket) WSPacket {
-		log.Println("received Ping, sending Pong")
-		return WSPacket{
-			ID: "pong",
-		}
-	})
-	client.listen()
-}
-
-const overlordHost = "ws://localhost:9000/wso"
-
-func createOverlordClient() (*websocket.Conn, error) {
-	c, _, err := websocket.DefaultDialer.Dial(overlordHost, nil)
-	if err != nil {
-		log.Fatal("dial:", err)
-		return nil, err
-	}
-
-	return c, nil
+// Session represents a session connected from the browser to the current server
+type Session struct {
+	client   *Client
+	oclient  *Client
+	ServerID string
 }
 
 // Handle normal traffic (from browser to host)
@@ -209,11 +184,22 @@ func ws(w http.ResponseWriter, r *http.Request) {
 	var roomID string
 	var playerIndex int
 
+	var oclient *Client
+	// Create connection to overlord
 	client := NewClient(c, webrtc.NewWebRTC())
 
-	client.syncReceive("initwebrtc", func(req WSPacket) WSPacket {
+	wssession := Session{
+		client: client,
+		// The server session is maintaining
+	}
+
+	if !IsOverlord {
+		wssession.NewOverlordClient()
+	}
+
+	client.syncReceive("initwebrtc", func(resp WSPacket) WSPacket {
 		log.Println("Received user SDP")
-		localSession, err := client.peerconnection.StartClient(req.Data, width, height)
+		localSession, err := client.peerconnection.StartClient(resp.Data, width, height)
 		if err != nil {
 			log.Fatalln(err)
 		}
@@ -224,83 +210,74 @@ func ws(w http.ResponseWriter, r *http.Request) {
 		}
 	})
 
-	client.syncReceive("save", func(req WSPacket) (res WSPacket) {
+	client.syncReceive("save", func(resp WSPacket) (req WSPacket) {
 		log.Println("Saving game state")
-		res.ID = "save"
-		res.Data = "ok"
+		req.ID = "save"
+		req.Data = "ok"
 		if roomID != "" {
 			err = rooms[roomID].director.SaveGame()
 			if err != nil {
 				log.Println("[!] Cannot save game state: ", err)
-				res.Data = "error"
+				req.Data = "error"
 			}
 		} else {
-			res.Data = "error"
+			req.Data = "error"
 		}
 
-		return res
+		return req
 	})
 
-	client.syncReceive("load", func(req WSPacket) (res WSPacket) {
+	client.syncReceive("load", func(resp WSPacket) (req WSPacket) {
 		log.Println("Loading game state")
-		res.ID = "load"
-		res.Data = "ok"
+		req.ID = "load"
+		req.Data = "ok"
 		if roomID != "" {
 			err = rooms[roomID].director.LoadGame()
 			if err != nil {
 				log.Println("[!] Cannot load game state: ", err)
-				res.Data = "error"
+				req.Data = "error"
 			}
 		} else {
-			res.Data = "error"
+			req.Data = "error"
 		}
 
-		return res
+		return req
 	})
 
-	client.syncReceive("start", func(req WSPacket) (res WSPacket) {
-		gameName = req.Data
-		roomID = req.RoomID
-		playerIndex = req.PlayerIndex
+	client.syncReceive("start", func(resp WSPacket) (req WSPacket) {
+		gameName = resp.Data
+		roomID = resp.RoomID
+		playerIndex = resp.PlayerIndex
+		isNewRoom := false
 		//log.Println("Ping from server with game:", gameName)
 		//res.ID = "pong"
 		log.Println("Starting game")
-		roomID = startSession(client.peerconnection, gameName, roomID, playerIndex)
-		res.ID = "start"
-		res.RoomID = roomID
+		roomID, isNewRoom = startSession(client.peerconnection, gameName, roomID, playerIndex)
+		if isNewRoom {
+			oclient.send(WSPacket{
+				ID:   "RegisterRoom",
+				Data: roomID,
+			})
+		}
+		req.ID = "start"
+		req.RoomID = roomID
 
-		return res
+		return req
 	})
 
-	client.syncReceive("candidate", func(req WSPacket) (res WSPacket) {
+	client.syncReceive("candidate", func(resp WSPacket) (req WSPacket) {
 		// Unuse code
 		hi := pionRTC.ICECandidateInit{}
-		err = json.Unmarshal([]byte(req.Data), &hi)
+		err = json.Unmarshal([]byte(resp.Data), &hi)
 		if err != nil {
 			log.Println("[!] Cannot parse candidate: ", err)
 		} else {
 			// webRTC.AddCandidate(hi)
 		}
-		res.ID = "candidate"
+		req.ID = "candidate"
 
-		return res
+		return req
 	})
-
-	// Create connection to overlord
-	if !IsOverlord {
-		oc, err := createOverlordClient()
-		if err != nil {
-			log.Println("Cannot connect to overlord")
-		}
-		oclient := NewClient(oc, webrtc.NewWebRTC())
-		oclient.syncSend(WSPacket{
-			ID: "ping",
-		},
-			func(resp WSPacket) {
-				log.Println("pong")
-			},
-		)
-	}
 
 	client.listen()
 }
@@ -398,12 +375,57 @@ func removeSession(w *webrtc.WebRTC, room *Room) {
 	}
 }
 
-//func (o *Overlord) isRemoteRoom(roomID string) bool {
-//err := c.WriteMessage(websocket.TextMessage, []byte(stRes))
-//o.ws.WriteMessage()
-//_, message, err := o.ws.ReadMessage()
-//if message == "isRemoteRoom" {
-//return true
-//}
-//return false
-//}
+func GetServerIDOfRoom(oc Client, roomID string) chan string {
+	res := make(chan string)
+
+	oc.syncSend(WSPacket{
+		ID: "getRoom",
+	}, func(resp WSPacket) {
+		res <- resp.Data
+	})
+	return res
+}
+
+const overlordHost = "ws://localhost:9000/wso"
+
+func createOverlordConnection() (*websocket.Conn, error) {
+	c, _, err := websocket.DefaultDialer.Dial(overlordHost, nil)
+	if err != nil {
+		log.Fatal("dial:", err)
+		return nil, err
+	}
+
+	return c, nil
+}
+
+func (s *Session) NewOverlordClient() {
+	oc, err := createOverlordConnection()
+	if err != nil {
+		log.Println("Cannot connect to overlord")
+	}
+	oclient := NewClient(oc, webrtc.NewWebRTC())
+	oclient.syncSend(
+		WSPacket{
+			ID: "ping",
+		},
+		func(resp WSPacket) {
+			log.Println("Received pong full flow")
+		},
+	)
+
+	// Received from overlord the serverID
+	oclient.syncReceive(
+		"serverID",
+		func(response WSPacket) (request WSPacket) {
+			// Stick session with serverID got from overlord
+			log.Println("Received serverID ", response.Data)
+			s.ServerID = response.Data
+
+			return EmptyPacket
+		},
+	)
+
+	go oclient.listen()
+
+	return
+}
