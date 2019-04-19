@@ -63,22 +63,31 @@ func main() {
 		fmt.Println("Use debug version")
 	}
 	if len(os.Args) == 3 {
-		if os.Args[3] == "overlord" {
+		if os.Args[2] == "overlord" {
 			IsOverlord = true
 		}
+		fmt.Println("Running as overlord ")
 	}
 
 	rand.Seed(time.Now().UTC().UnixNano())
-	fmt.Println("http://localhost:8000")
 	rooms = map[string]*Room{}
 
 	// ignore origin
 	upgrader.CheckOrigin = func(r *http.Request) bool { return true }
-	http.HandleFunc("/ws", ws)
 
 	http.HandleFunc("/", getWeb)
 	http.Handle("/static/", http.StripPrefix("/static/", http.FileServer(http.Dir("./static"))))
-	http.ListenAndServe(":8000", nil)
+	http.HandleFunc("/ws", ws)
+
+	if !IsOverlord {
+		fmt.Println("http://localhost:8000")
+		http.ListenAndServe(":8000", nil)
+	} else {
+		fmt.Println("http://localhost:9000")
+		// Overlord expose one more path for handle overlord connections
+		http.HandleFunc("/wso", wso)
+		http.ListenAndServe(":9000", nil)
+	}
 }
 
 func getWeb(w http.ResponseWriter, r *http.Request) {
@@ -155,7 +164,9 @@ func startSession(webRTC *webrtc.WebRTC, gameName string, roomID string, playerI
 	return roomID
 }
 
-func ws(w http.ResponseWriter, r *http.Request) {
+// If it's overlord, handle overlord connection (from host to overlord)
+func wso(w http.ResponseWriter, r *http.Request) {
+	fmt.Println("Connected")
 	c, err := upgrader.Upgrade(w, r, nil)
 	if err != nil {
 		log.Print("[!] WS upgrade:", err)
@@ -163,6 +174,37 @@ func ws(w http.ResponseWriter, r *http.Request) {
 	}
 	defer c.Close()
 
+	client := NewClient(c, webrtc.NewWebRTC())
+
+	client.syncReceive("ping", func(req WSPacket) WSPacket {
+		log.Println("received Ping, sending Pong")
+		return WSPacket{
+			ID: "pong",
+		}
+	})
+	client.listen()
+}
+
+const overlordHost = "ws://localhost:9000/wso"
+
+func createOverlordClient() (*websocket.Conn, error) {
+	c, _, err := websocket.DefaultDialer.Dial(overlordHost, nil)
+	if err != nil {
+		log.Fatal("dial:", err)
+		return nil, err
+	}
+
+	return c, nil
+}
+
+// Handle normal traffic (from browser to host)
+func ws(w http.ResponseWriter, r *http.Request) {
+	c, err := upgrader.Upgrade(w, r, nil)
+	if err != nil {
+		log.Print("[!] WS upgrade:", err)
+		return
+	}
+	defer c.Close()
 	var gameName string
 	var roomID string
 	var playerIndex int
@@ -243,6 +285,22 @@ func ws(w http.ResponseWriter, r *http.Request) {
 
 		return res
 	})
+
+	// Create connection to overlord
+	if !IsOverlord {
+		oc, err := createOverlordClient()
+		if err != nil {
+			log.Println("Cannot connect to overlord")
+		}
+		oclient := NewClient(oc, webrtc.NewWebRTC())
+		oclient.syncSend(WSPacket{
+			ID: "ping",
+		},
+			func(resp WSPacket) {
+				log.Println("pong")
+			},
+		)
+	}
 
 	client.listen()
 }

@@ -10,8 +10,8 @@ import (
 )
 
 type Client struct {
-	conn           *websocket.Conn
-	wsoverlord     *websocket.Conn
+	conn *websocket.Conn
+
 	peerconnection *webrtc.WebRTC
 
 	// sendCallback is callback based on packetID
@@ -35,7 +35,8 @@ func NewClient(conn *websocket.Conn, webrtc *webrtc.WebRTC) *Client {
 	sendCallback := map[string]func(WSPacket){}
 	recvCallback := map[string]func(WSPacket){}
 	return &Client{
-		conn:           conn,
+		conn: conn,
+
 		peerconnection: webrtc,
 		sendCallback:   sendCallback,
 		recvCallback:   recvCallback,
@@ -49,7 +50,7 @@ func (c *Client) syncSend(packet WSPacket, callback func(msg WSPacket)) {
 		return
 	}
 
-	c.conn.WriteMessage(0, data)
+	c.conn.WriteMessage(websocket.TextMessage, data)
 	c.sendCallback[packet.PacketID] = callback
 }
 
