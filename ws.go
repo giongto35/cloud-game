@@ -3,6 +3,8 @@ package main
 import (
 	"encoding/json"
 	"log"
+	"math/rand"
+	"strconv"
 	"time"
 
 	"github.com/giongto35/cloud-game/webrtc"
@@ -31,6 +33,8 @@ type WSPacket struct {
 	PacketID     string
 }
 
+var EmptyPacket = WSPacket{}
+
 func NewClient(conn *websocket.Conn, webrtc *webrtc.WebRTC) *Client {
 	sendCallback := map[string]func(WSPacket){}
 	recvCallback := map[string]func(WSPacket){}
@@ -43,22 +47,39 @@ func NewClient(conn *websocket.Conn, webrtc *webrtc.WebRTC) *Client {
 	}
 }
 
-// syncSend sends a packet and trigger callback when the packet comes back
-func (c *Client) syncSend(packet WSPacket, callback func(msg WSPacket)) {
-	data, err := json.Marshal(packet)
+// send sends a normal packet
+func (c *Client) send(request WSPacket) {
+	data, err := json.Marshal(request)
 	if err != nil {
 		return
 	}
 
 	c.conn.WriteMessage(websocket.TextMessage, data)
-	c.sendCallback[packet.PacketID] = callback
+}
+
+// syncSend sends a packet and trigger callback when the packet comes back
+func (c *Client) syncSend(request WSPacket, callback func(response WSPacket)) {
+	request.PacketID = strconv.Itoa(rand.Int())
+	data, err := json.Marshal(request)
+	if err != nil {
+		return
+	}
+
+	c.conn.WriteMessage(websocket.TextMessage, data)
+	c.sendCallback[request.PacketID] = callback
 }
 
 // syncReceive receive and response back
-func (c *Client) syncReceive(id string, f func(request WSPacket) (response WSPacket)) {
-	c.recvCallback[id] = func(request WSPacket) {
-		packet := f(request)
+func (c *Client) syncReceive(id string, f func(response WSPacket) (request WSPacket)) {
+	c.recvCallback[id] = func(response WSPacket) {
+		packet := f(response)
+		// Add Meta data
+		packet.PacketID = response.PacketID
 
+		// Skip rqeuest if it is EmptyPacket
+		if packet == EmptyPacket {
+			return
+		}
 		resp, err := json.Marshal(packet)
 		if err != nil {
 			log.Println("[!] json marshal error:", err)
