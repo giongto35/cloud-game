@@ -1,5 +1,6 @@
 var pc;
 var curPacketID = "";
+var curSessionID = "";
 // web socket
 
 conn = new WebSocket(`ws://${location.host}/ws`);

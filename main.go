@@ -54,7 +54,12 @@ type Room struct {
 }
 
 var rooms = map[string]*Room{}
+
+// ID to peerconnection
+var peerconnections = map[string]*webrtc.WebRTC{}
 var port string = "8000"
+var serverID = ""
+var oclient *Client
 
 func main() {
 	fmt.Println("Usage: ./game [debug]")
@@ -83,6 +88,11 @@ func main() {
 	http.Handle("/static/", http.StripPrefix("/static/", http.FileServer(http.Dir("./static"))))
 	http.HandleFunc("/ws", ws)
 
+	if !IsOverlord {
+		oclient = NewOverlordClient()
+	}
+
+	log.Println("oclient ", oclient)
 	if !IsOverlord {
 		fmt.Println("http://localhost:8000")
 		http.ListenAndServe(":"+port, nil)
@@ -173,7 +183,6 @@ func startSession(webRTC *webrtc.WebRTC, gameName string, roomID string, playerI
 // Session represents a session connected from the browser to the current server
 type Session struct {
 	client         *Client
-	oclient        *Client
 	peerconnection *webrtc.WebRTC
 	ServerID       string
 }
@@ -192,15 +201,12 @@ func ws(w http.ResponseWriter, r *http.Request) {
 
 	// Create connection to overlord
 	client := NewClient(c)
+	sessionID := strconv.Itoa(rand.Int())
 
 	wssession := &Session{
 		client:         client,
 		peerconnection: webrtc.NewWebRTC(),
 		// The server session is maintaining
-	}
-
-	if !IsOverlord {
-		wssession.NewOverlordClient()
 	}
 
 	client.receive("initwebrtc", func(resp WSPacket) WSPacket {
@@ -211,8 +217,9 @@ func ws(w http.ResponseWriter, r *http.Request) {
 		}
 
 		return WSPacket{
-			ID:   "sdp",
-			Data: localSession,
+			ID:        "sdp",
+			Data:      localSession,
+			SessionID: sessionID,
 		}
 	})
 
@@ -258,7 +265,7 @@ func ws(w http.ResponseWriter, r *http.Request) {
 		//log.Println("Ping from server with game:", gameName)
 		//res.ID = "pong"
 		log.Println("Starting game")
-		roomServerID := getServerIDOfRoom(wssession.oclient, roomID)
+		roomServerID := getServerIDOfRoom(oclient, roomID)
 		log.Println("Server of RoomID ", roomID, " is ", roomServerID)
 		if roomServerID != "" && wssession.ServerID != roomServerID {
 			// TODO: Re -register
@@ -268,13 +275,14 @@ func ws(w http.ResponseWriter, r *http.Request) {
 
 		roomID, isNewRoom = startSession(wssession.peerconnection, gameName, roomID, playerIndex)
 		if isNewRoom {
-			wssession.oclient.send(WSPacket{
+			oclient.send(WSPacket{
 				ID:   "registerRoom",
 				Data: roomID,
 			}, nil)
 		}
 		req.ID = "start"
 		req.RoomID = roomID
+		req.SessionID = sessionID
 
 		return req
 	})
@@ -403,7 +411,6 @@ func getServerIDOfRoom(oc *Client, roomID string) string {
 func bridgeConnection(session *Session, serverID string, gameName string, roomID string, playerIndex int) {
 	log.Println("Bridging connection to other Host ", serverID)
 	client := session.client
-	oclient := session.oclient
 	// Ask client to init
 
 	log.Println("Requesting offer to browser", serverID)
@@ -450,7 +457,7 @@ func createOverlordConnection() (*websocket.Conn, error) {
 	return c, nil
 }
 
-func (s *Session) NewOverlordClient() {
+func NewOverlordClient() *Client {
 	oc, err := createOverlordConnection()
 	if err != nil {
 		log.Println("Cannot connect to overlord")
@@ -471,7 +478,7 @@ func (s *Session) NewOverlordClient() {
 		func(response WSPacket) (request WSPacket) {
 			// Stick session with serverID got from overlord
 			log.Println("Received serverID ", response.Data)
-			s.ServerID = response.Data
+			serverID = response.Data
 
 			return EmptyPacket
 		},
@@ -484,7 +491,11 @@ func (s *Session) NewOverlordClient() {
 		func(resp WSPacket) (req WSPacket) {
 			log.Println("Received a sdp request from overlord")
 			log.Println("Start peerconnection from the sdp")
-			localSession, err := s.peerconnection.StartClient(resp.Data, width, height)
+			peerconnection := webrtc.NewWebRTC()
+			// init new peerconnection from sessionID
+			localSession, err := peerconnection.StartClient(resp.Data, width, height)
+			peerconnections[resp.SessionID] = peerconnection
+
 			if err != nil {
 				log.Fatalln(err)
 			}
@@ -504,7 +515,8 @@ func (s *Session) NewOverlordClient() {
 			log.Println("Received a start request from overlord")
 			log.Println("Add the connection to current room on the host")
 
-			roomID, isNewRoom := startSession(s.peerconnection, resp.Data, resp.RoomID, resp.PlayerIndex)
+			peerconnection := peerconnections[resp.SessionID]
+			roomID, isNewRoom := startSession(peerconnection, resp.Data, resp.RoomID, resp.PlayerIndex)
 			// Bridge always access to old room
 			// TODO: log warn
 			if isNewRoom == true {
@@ -518,8 +530,5 @@ func (s *Session) NewOverlordClient() {
 	)
 	go oclient.listen()
 
-	s.oclient = oclient
-	// TODO: return oclient
-
-	return
+	return oclient
 }
