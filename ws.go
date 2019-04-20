@@ -47,18 +47,8 @@ func NewClient(conn *websocket.Conn, webrtc *webrtc.WebRTC) *Client {
 	}
 }
 
-// send sends a normal packet
-func (c *Client) send(request WSPacket) {
-	data, err := json.Marshal(request)
-	if err != nil {
-		return
-	}
-
-	c.conn.WriteMessage(websocket.TextMessage, data)
-}
-
-// syncSend sends a packet and trigger callback when the packet comes back
-func (c *Client) syncSend(request WSPacket, callback func(response WSPacket)) {
+// send sends a packet and trigger callback when the packet comes back
+func (c *Client) send(request WSPacket, callback func(response WSPacket)) {
 	request.PacketID = strconv.Itoa(rand.Int())
 	data, err := json.Marshal(request)
 	if err != nil {
@@ -66,11 +56,14 @@ func (c *Client) syncSend(request WSPacket, callback func(response WSPacket)) {
 	}
 
 	c.conn.WriteMessage(websocket.TextMessage, data)
+	if callback == nil {
+		return
+	}
 	c.sendCallback[request.PacketID] = callback
 }
 
-// syncReceive receive and response back
-func (c *Client) syncReceive(id string, f func(response WSPacket) (request WSPacket)) {
+// receive receive and response back
+func (c *Client) receive(id string, f func(response WSPacket) (request WSPacket)) {
 	c.recvCallback[id] = func(response WSPacket) {
 		packet := f(response)
 		// Add Meta data
@@ -87,6 +80,16 @@ func (c *Client) syncReceive(id string, f func(response WSPacket) (request WSPac
 		c.conn.SetWriteDeadline(time.Now().Add(writeWait))
 		c.conn.WriteMessage(websocket.TextMessage, resp)
 	}
+}
+
+// syncSend sends a packet and wait for callback till the packet comes back
+func (c *Client) syncSend(request WSPacket) (response WSPacket) {
+	res := make(chan WSPacket)
+	f := func(resp WSPacket) {
+		res <- resp
+	}
+	c.send(request, f)
+	return <-res
 }
 
 func (c *Client) listen() {

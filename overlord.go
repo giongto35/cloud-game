@@ -36,16 +36,17 @@ func wso(w http.ResponseWriter, r *http.Request) {
 			ID:   "serverID",
 			Data: serverID,
 		},
+		nil,
 	)
 
-	client.syncReceive("ping", func(resp WSPacket) WSPacket {
+	client.receive("ping", func(resp WSPacket) WSPacket {
 		log.Println("received Ping, sending Pong")
 		return WSPacket{
 			ID: "pong",
 		}
 	})
 
-	client.syncReceive("registerRoom", func(resp WSPacket) WSPacket {
+	client.receive("registerRoom", func(resp WSPacket) WSPacket {
 		log.Println("Received registerRoom ", resp.Data, serverID)
 		roomToServer[resp.Data] = serverID
 		return WSPacket{
@@ -53,7 +54,7 @@ func wso(w http.ResponseWriter, r *http.Request) {
 		}
 	})
 
-	client.syncReceive("getRoom", func(resp WSPacket) WSPacket {
+	client.receive("getRoom", func(resp WSPacket) WSPacket {
 		return WSPacket{
 			ID:   "getRoom",
 			Data: roomToServer[resp.Data],
