@@ -7,14 +7,11 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/giongto35/cloud-game/webrtc"
 	"github.com/gorilla/websocket"
 )
 
 type Client struct {
 	conn *websocket.Conn
-
-	peerconnection *webrtc.WebRTC
 
 	// sendCallback is callback based on packetID
 	sendCallback map[string]func(req WSPacket)
@@ -30,20 +27,19 @@ type WSPacket struct {
 	PlayerIndex int    `json:"player_index"`
 
 	TargetHostID string `json:"target_id"`
-	PacketID     string
+	PacketID     string `json:"packet_id"`
 }
 
 var EmptyPacket = WSPacket{}
 
-func NewClient(conn *websocket.Conn, webrtc *webrtc.WebRTC) *Client {
+func NewClient(conn *websocket.Conn) *Client {
 	sendCallback := map[string]func(WSPacket){}
 	recvCallback := map[string]func(WSPacket){}
 	return &Client{
 		conn: conn,
 
-		peerconnection: webrtc,
-		sendCallback:   sendCallback,
-		recvCallback:   recvCallback,
+		sendCallback: sendCallback,
+		recvCallback: recvCallback,
 	}
 }
 
@@ -94,6 +90,7 @@ func (c *Client) syncSend(request WSPacket) (response WSPacket) {
 
 func (c *Client) listen() {
 	for {
+		log.Println("Waiting for message")
 		_, rawMsg, err := c.conn.ReadMessage()
 		if err != nil {
 			log.Println("[!] read:", err)
@@ -109,6 +106,8 @@ func (c *Client) listen() {
 		if callback, ok := c.sendCallback[wspacket.PacketID]; ok {
 			callback(wspacket)
 			delete(c.sendCallback, wspacket.PacketID)
+			// Skip receiveCallback to avoid duplication
+			continue
 		}
 		// Check if some receiver with the ID is registered
 		if callback, ok := c.recvCallback[wspacket.ID]; ok {
