@@ -131,13 +131,11 @@ func initRoom(roomID, gameName string) string {
 // TODO: If we remove sessions from room anytime a session is closed, we can check if the sessions list is empty or not.
 func isRoomRunning(roomID string) bool {
 	// If no roomID is registered
-	fmt.Println("rooms list ", rooms)
 	if _, ok := rooms[roomID]; !ok {
 		return false
 	}
 
 	// If there is running session
-	fmt.Println("Running session", len(rooms[roomID].rtcSessions))
 	for _, s := range rooms[roomID].rtcSessions {
 		if !s.IsClosed() {
 			return true
@@ -153,7 +151,6 @@ func startSession(webRTC *webrtc.WebRTC, gameName string, roomID string, playerI
 	// If the roomID is empty,
 	// or the roomID doesn't have any running sessions (room was closed)
 	// we spawn a new room
-	log.Println("Is Room Running", isRoomRunning(roomID))
 	if roomID == "" || !isRoomRunning(roomID) {
 		roomID = initRoom(roomID, gameName)
 		isNewRoom = true
