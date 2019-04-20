@@ -33,6 +33,9 @@ conn.onmessage = e => {
         curPacketID = d["packet_id"];
         log("Received request offer ", curPacketID)
         startWebRTC();
+        //pc.createOffer({offerToReceiveVideo: true, offerToReceiveAudio: false}).then(d => {
+            //pc.setLocalDescription(d).catch(log);
+        //})
 
     //case "sdpremote":
         //log("Got remote sdp");
