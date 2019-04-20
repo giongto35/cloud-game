@@ -54,6 +54,7 @@ type Room struct {
 }
 
 var rooms = map[string]*Room{}
+var port string = "8000"
 
 func main() {
 	fmt.Println("Usage: ./game [debug]")
@@ -62,11 +63,14 @@ func main() {
 		indexFN = debugIndex
 		fmt.Println("Use debug version")
 	}
-	if len(os.Args) == 3 {
+	if len(os.Args) >= 3 {
 		if os.Args[2] == "overlord" {
 			IsOverlord = true
 		}
 		fmt.Println("Running as overlord ")
+	}
+	if len(os.Args) >= 4 {
+		port = os.Args[3]
 	}
 
 	rand.Seed(time.Now().UTC().UnixNano())
@@ -81,7 +85,7 @@ func main() {
 
 	if !IsOverlord {
 		fmt.Println("http://localhost:8000")
-		http.ListenAndServe(":8000", nil)
+		http.ListenAndServe(":"+port, nil)
 	} else {
 		fmt.Println("http://localhost:9000")
 		// Overlord expose one more path for handle overlord connections
@@ -480,7 +484,6 @@ func (s *Session) NewOverlordClient() {
 		func(resp WSPacket) (req WSPacket) {
 			log.Println("Received a sdp request from overlord")
 			log.Println("Start peerconnection from the sdp")
-
 			localSession, err := s.peerconnection.StartClient(resp.Data, width, height)
 			if err != nil {
 				log.Fatalln(err)
