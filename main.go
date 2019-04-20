@@ -61,6 +61,9 @@ var port string = "8000"
 var serverID = ""
 var oclient *Client
 
+// Temp
+var overlordHost = "ws://localhost:9000/wso"
+
 func main() {
 	fmt.Println("Usage: ./game [debug]")
 	if len(os.Args) > 1 {
@@ -71,6 +74,9 @@ func main() {
 	if len(os.Args) >= 3 {
 		if os.Args[2] == "overlord" {
 			IsOverlord = true
+		} else {
+			// If the third arg is not overlord, it is path to overlord
+			overlordHost = os.Args[2]
 		}
 		fmt.Println("Running as overlord ")
 	}
@@ -447,8 +453,6 @@ func bridgeConnection(session *Session, serverID string, gameName string, roomID
 	})
 	log.Println("Game is started on remote host")
 }
-
-const overlordHost = "ws://localhost:9000/wso"
 
 func createOverlordConnection() (*websocket.Conn, error) {
 	c, _, err := websocket.DefaultDialer.Dial(overlordHost, nil)
