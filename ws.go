@@ -28,6 +28,8 @@ type WSPacket struct {
 
 	TargetHostID string `json:"target_id"`
 	PacketID     string `json:"packet_id"`
+	// Globally ID of a session
+	SessionID string `json:"session_id"`
 }
 
 var EmptyPacket = WSPacket{}
@@ -52,24 +54,30 @@ func (c *Client) send(request WSPacket, callback func(response WSPacket)) {
 	}
 
 	c.conn.WriteMessage(websocket.TextMessage, data)
+	wrapperCallback := func(resp WSPacket) {
+		resp.PacketID = request.PacketID
+		resp.SessionID = request.SessionID
+		callback(resp)
+	}
 	if callback == nil {
 		return
 	}
-	c.sendCallback[request.PacketID] = callback
+	c.sendCallback[request.PacketID] = wrapperCallback
 }
 
 // receive receive and response back
 func (c *Client) receive(id string, f func(response WSPacket) (request WSPacket)) {
 	c.recvCallback[id] = func(response WSPacket) {
-		packet := f(response)
+		req := f(response)
 		// Add Meta data
-		packet.PacketID = response.PacketID
+		req.PacketID = response.PacketID
+		req.SessionID = response.SessionID
 
 		// Skip rqeuest if it is EmptyPacket
-		if packet == EmptyPacket {
+		if req == EmptyPacket {
 			return
 		}
-		resp, err := json.Marshal(packet)
+		resp, err := json.Marshal(req)
 		if err != nil {
 			log.Println("[!] json marshal error:", err)
 		}
