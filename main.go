@@ -262,19 +262,22 @@ func ws(w http.ResponseWriter, r *http.Request) {
 		roomID = resp.RoomID
 		playerIndex = resp.PlayerIndex
 		isNewRoom := false
-		//log.Println("Ping from server with game:", gameName)
-		//res.ID = "pong"
+
 		log.Println("Starting game")
-		roomServerID := getServerIDOfRoom(oclient, roomID)
-		log.Println("Server of RoomID ", roomID, " is ", roomServerID)
-		if roomServerID != "" && wssession.ServerID != roomServerID {
-			// TODO: Re -register
-			go bridgeConnection(wssession, roomServerID, gameName, roomID, playerIndex)
-			return
+		// If we are connecting to overlord, request serverID from roomID
+		if oclient != nil {
+			roomServerID := getServerIDOfRoom(oclient, roomID)
+			log.Println("Server of RoomID ", roomID, " is ", roomServerID)
+			if roomServerID != "" && wssession.ServerID != roomServerID {
+				// TODO: Re -register
+				go bridgeConnection(wssession, roomServerID, gameName, roomID, playerIndex)
+				return
+			}
 		}
 
 		roomID, isNewRoom = startSession(wssession.peerconnection, gameName, roomID, playerIndex)
-		if isNewRoom {
+		// Register room to overlord if we are connecting to overlord
+		if isNewRoom && oclient != nil {
 			oclient.send(WSPacket{
 				ID:   "registerRoom",
 				Data: roomID,
@@ -450,7 +453,6 @@ const overlordHost = "ws://localhost:9000/wso"
 func createOverlordConnection() (*websocket.Conn, error) {
 	c, _, err := websocket.DefaultDialer.Dial(overlordHost, nil)
 	if err != nil {
-		log.Fatal("dial:", err)
 		return nil, err
 	}
 
@@ -461,6 +463,8 @@ func NewOverlordClient() *Client {
 	oc, err := createOverlordConnection()
 	if err != nil {
 		log.Println("Cannot connect to overlord")
+		log.Println("Run as a single server")
+		return nil
 	}
 	oclient := NewClient(oc)
 	oclient.send(
