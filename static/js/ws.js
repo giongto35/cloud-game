@@ -27,6 +27,7 @@ conn.onmessage = e => {
     case "sdp":
         log("Got remote sdp");
         pc.setRemoteDescription(new RTCSessionDescription(JSON.parse(atob(d["data"]))));
+        //conn.send(JSON.stringify({"id": "sdpdon", "packet_id": d["packet_id"]}));
         break;
     case "requestOffer":
         curPacketID = d["packet_id"];
