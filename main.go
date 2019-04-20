@@ -131,11 +131,13 @@ func initRoom(roomID, gameName string) string {
 // TODO: If we remove sessions from room anytime a session is closed, we can check if the sessions list is empty or not.
 func isRoomRunning(roomID string) bool {
 	// If no roomID is registered
+	fmt.Println("rooms list ", rooms)
 	if _, ok := rooms[roomID]; !ok {
 		return false
 	}
 
 	// If there is running session
+	fmt.Println("Running session", len(rooms[roomID].rtcSessions))
 	for _, s := range rooms[roomID].rtcSessions {
 		if !s.IsClosed() {
 			return true
@@ -151,6 +153,7 @@ func startSession(webRTC *webrtc.WebRTC, gameName string, roomID string, playerI
 	// If the roomID is empty,
 	// or the roomID doesn't have any running sessions (room was closed)
 	// we spawn a new room
+	log.Println("Is Room Running", isRoomRunning(roomID))
 	if roomID == "" || !isRoomRunning(roomID) {
 		roomID = initRoom(roomID, gameName)
 		isNewRoom = true
@@ -412,19 +415,24 @@ func bridgeConnection(session *Session, serverID string, gameName string, roomID
 	// Ask overlord to relay SDP packet to serverID
 	resp.TargetHostID = serverID
 	remoteTargetSDP := oclient.syncSend(resp)
-	log.Println("Got back remote host SDP, sending to browser", remoteTargetSDP.Data)
+	log.Println("Got back remote host SDP, sending to browser")
 	// Send back remote SDP of remote server to browser
-	client.syncSend(WSPacket{
+	//client.syncSend(WSPacket{
+	//ID:   "sdp",
+	//Data: remoteTargetSDP.Data,
+	//})
+	client.send(WSPacket{
 		ID:   "sdp",
 		Data: remoteTargetSDP.Data,
-	})
+	}, nil)
 	log.Println("Init session done, start game on target host")
 
 	oclient.syncSend(WSPacket{
-		ID:          "start",
-		Data:        gameName,
-		RoomID:      roomID,
-		PlayerIndex: playerIndex,
+		ID:           "start",
+		Data:         gameName,
+		TargetHostID: serverID,
+		RoomID:       roomID,
+		PlayerIndex:  playerIndex,
 	})
 	log.Println("Game is started on remote host")
 }
