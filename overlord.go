@@ -72,7 +72,7 @@ func wso(w http.ResponseWriter, r *http.Request) {
 		log.Println("Received a relay sdp request from a host")
 		// TODO: Abstract
 		if resp.TargetHostID != serverID {
-			log.Println("sending relay sdp to target host", resp.TargetHostID)
+			log.Println("sending relay sdp to target host", resp)
 			// relay SDP to target host and get back sdp
 			// TODO: Async
 			sdp := servers[resp.TargetHostID].syncSend(
