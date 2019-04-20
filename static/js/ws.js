@@ -1,4 +1,5 @@
 var pc;
+var curPacketID = "";
 // web socket
 
 conn = new WebSocket(`ws://${location.host}/ws`);
@@ -27,10 +28,10 @@ conn.onmessage = e => {
         log("Got remote sdp");
         pc.setRemoteDescription(new RTCSessionDescription(JSON.parse(atob(d["data"]))));
         break;
-    //case "requestOffer":
-        //pc.createOffer({offerToReceiveVideo: true, offerToReceiveAudio: false}).then(d => {
-            //pc.setLocalDescription(d).catch(log);
-        //})
+    case "requestOffer":
+        curPacketID = d["packet_id"];
+        log("Received request offer ", curPacketID)
+        startWebRTC();
 
     //case "sdpremote":
         //log("Got remote sdp");
@@ -108,7 +109,8 @@ function startWebRTC() {
             session = btoa(JSON.stringify(pc.localDescription));
             localSessionDescription = session;
             log("Send SDP to remote peer");
-            conn.send(JSON.stringify({"id": "initwebrtc", "data": session}));
+            // TODO: Fix curPacketID
+            conn.send(JSON.stringify({"id": "initwebrtc", "data": session, "packet_id": curPacketID}));
         } else {
             console.log(JSON.stringify(event.candidate));
         }

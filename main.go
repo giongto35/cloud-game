@@ -168,9 +168,10 @@ func startSession(webRTC *webrtc.WebRTC, gameName string, roomID string, playerI
 
 // Session represents a session connected from the browser to the current server
 type Session struct {
-	client   *Client
-	oclient  *Client
-	ServerID string
+	client         *Client
+	oclient        *Client
+	peerconnection *webrtc.WebRTC
+	ServerID       string
 }
 
 // Handle normal traffic (from browser to host)
@@ -186,10 +187,11 @@ func ws(w http.ResponseWriter, r *http.Request) {
 	var playerIndex int
 
 	// Create connection to overlord
-	client := NewClient(c, webrtc.NewWebRTC())
+	client := NewClient(c)
 
 	wssession := &Session{
-		client: client,
+		client:         client,
+		peerconnection: webrtc.NewWebRTC(),
 		// The server session is maintaining
 	}
 
@@ -199,7 +201,7 @@ func ws(w http.ResponseWriter, r *http.Request) {
 
 	client.receive("initwebrtc", func(resp WSPacket) WSPacket {
 		log.Println("Received user SDP")
-		localSession, err := client.peerconnection.StartClient(resp.Data, width, height)
+		localSession, err := wssession.peerconnection.StartClient(resp.Data, width, height)
 		if err != nil {
 			log.Fatalln(err)
 		}
@@ -252,15 +254,15 @@ func ws(w http.ResponseWriter, r *http.Request) {
 		//log.Println("Ping from server with game:", gameName)
 		//res.ID = "pong"
 		log.Println("Starting game")
-		roomServerID := GetServerIDOfRoom(wssession.oclient, roomID)
+		roomServerID := getServerIDOfRoom(wssession.oclient, roomID)
 		log.Println("Server of RoomID ", roomID, " is ", roomServerID)
 		if roomServerID != "" && wssession.ServerID != roomServerID {
 			// TODO: Re -register
-			bridgeConnection(wssession, roomServerID)
+			go bridgeConnection(wssession, roomServerID, gameName, roomID, playerIndex)
 			return
 		}
 
-		roomID, isNewRoom = startSession(client.peerconnection, gameName, roomID, playerIndex)
+		roomID, isNewRoom = startSession(wssession.peerconnection, gameName, roomID, playerIndex)
 		if isNewRoom {
 			wssession.oclient.send(WSPacket{
 				ID:   "registerRoom",
@@ -383,7 +385,7 @@ func removeSession(w *webrtc.WebRTC, room *Room) {
 	}
 }
 
-func GetServerIDOfRoom(oc *Client, roomID string) string {
+func getServerIDOfRoom(oc *Client, roomID string) string {
 	packet := oc.syncSend(
 		WSPacket{
 			ID:   "getRoom",
@@ -394,8 +396,37 @@ func GetServerIDOfRoom(oc *Client, roomID string) string {
 	return packet.Data
 }
 
-func bridgeConnection(session *Session, serverID string) {
+func bridgeConnection(session *Session, serverID string, gameName string, roomID string, playerIndex int) {
+	log.Println("Bridging connection to other Host ", serverID)
+	client := session.client
+	oclient := session.oclient
 	// Ask client to init
+
+	log.Println("Requesting offer to browser", serverID)
+	resp := client.syncSend(WSPacket{
+		ID:   "requestOffer",
+		Data: "",
+	})
+
+	log.Println("Sending offer to overlord to relay message to target host", resp.TargetHostID)
+	// Ask overlord to relay SDP packet to serverID
+	resp.TargetHostID = serverID
+	remoteTargetSDP := oclient.syncSend(resp)
+	log.Println("Got back remote host SDP, sending to browser", remoteTargetSDP.Data)
+	// Send back remote SDP of remote server to browser
+	client.syncSend(WSPacket{
+		ID:   "sdp",
+		Data: remoteTargetSDP.Data,
+	})
+	log.Println("Init session done, start game on target host")
+
+	oclient.syncSend(WSPacket{
+		ID:          "start",
+		Data:        gameName,
+		RoomID:      roomID,
+		PlayerIndex: playerIndex,
+	})
+	log.Println("Game is started on remote host")
 }
 
 const overlordHost = "ws://localhost:9000/wso"
@@ -415,7 +446,7 @@ func (s *Session) NewOverlordClient() {
 	if err != nil {
 		log.Println("Cannot connect to overlord")
 	}
-	oclient := NewClient(oc, webrtc.NewWebRTC())
+	oclient := NewClient(oc)
 	oclient.send(
 		WSPacket{
 			ID: "ping",
@@ -437,6 +468,46 @@ func (s *Session) NewOverlordClient() {
 		},
 	)
 
+	// Received from overlord the sdp. This is happens when bridging
+	// TODO: refactor
+	oclient.receive(
+		"initwebrtc",
+		func(resp WSPacket) (req WSPacket) {
+			log.Println("Received a sdp request from overlord")
+			log.Println("Start peerconnection from the sdp")
+
+			localSession, err := s.peerconnection.StartClient(resp.Data, width, height)
+			if err != nil {
+				log.Fatalln(err)
+			}
+
+			return WSPacket{
+				ID:   "sdp",
+				Data: localSession,
+			}
+		},
+	)
+
+	// Received start from overlord. This is happens when bridging
+	// TODO: refactor
+	oclient.receive(
+		"start",
+		func(resp WSPacket) (req WSPacket) {
+			log.Println("Received a start request from overlord")
+			log.Println("Add the connection to current room on the host")
+
+			roomID, isNewRoom := startSession(s.peerconnection, resp.Data, resp.RoomID, resp.PlayerIndex)
+			// Bridge always access to old room
+			// TODO: log warn
+			if isNewRoom == true {
+				log.Fatal("Bridge should not spawn new room")
+			}
+
+			req.ID = "start"
+			req.RoomID = roomID
+			return req
+		},
+	)
 	go oclient.listen()
 
 	s.oclient = oclient
