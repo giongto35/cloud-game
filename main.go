@@ -2,6 +2,7 @@ package main
 
 import (
 	"encoding/json"
+	"flag"
 	"fmt"
 	"image"
 	"io/ioutil"
@@ -9,7 +10,6 @@ import (
 	"math/rand"
 	"net/http"
 	_ "net/http/pprof"
-	"os"
 	"strconv"
 	"sync"
 	"time"
@@ -57,32 +57,30 @@ var rooms = map[string]*Room{}
 
 // ID to peerconnection
 var peerconnections = map[string]*webrtc.WebRTC{}
-var port string = "8000"
 var serverID = ""
 var oclient *Client
 
-// Temp
-var overlordHost = "ws://localhost:9000/wso"
+const defaultoverlord = "ws://localhost:9000/wso"
+
+var isDebug = flag.Bool("debug", false, "Is game running in debug mode?")
+var overlordHost = flag.String("overlordhost", defaultoverlord, "Specify the path for overlord. If the flag is `overlord`, the server will be run as overlord")
+var port = flag.String("port", "8000", "Port of the game")
 
 func main() {
+	flag.Parse()
 	fmt.Println("Usage: ./game [debug]")
-	if len(os.Args) > 1 {
+	if *isDebug {
 		// debug
 		indexFN = debugIndex
 		fmt.Println("Use debug version")
 	}
-	if len(os.Args) >= 3 {
-		if os.Args[2] == "overlord" {
-			fmt.Println("Running as overlord ")
-			IsOverlord = true
-		} else {
-			fmt.Println("Running as slave ")
-			// If the third arg is not overlord, it is path to overlord
-			overlordHost = os.Args[2]
-		}
-	}
-	if len(os.Args) >= 4 {
-		port = os.Args[3]
+
+	if *overlordHost == "overlord" {
+		fmt.Println("Running as overlord ")
+		IsOverlord = true
+	} else {
+		fmt.Println("Running as slave ")
+		IsOverlord = false
 	}
 
 	rand.Seed(time.Now().UTC().UnixNano())
@@ -102,7 +100,7 @@ func main() {
 	log.Println("oclient ", oclient)
 	if !IsOverlord {
 		fmt.Println("http://localhost:8000")
-		http.ListenAndServe(":"+port, nil)
+		http.ListenAndServe(":"+*port, nil)
 	} else {
 		fmt.Println("http://localhost:9000")
 		// Overlord expose one more path for handle overlord connections
@@ -456,7 +454,7 @@ func bridgeConnection(session *Session, serverID string, gameName string, roomID
 }
 
 func createOverlordConnection() (*websocket.Conn, error) {
-	c, _, err := websocket.DefaultDialer.Dial(overlordHost, nil)
+	c, _, err := websocket.DefaultDialer.Dial(*overlordHost, nil)
 	if err != nil {
 		return nil, err
 	}
