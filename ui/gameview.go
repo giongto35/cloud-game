@@ -3,6 +3,7 @@ package ui
 
 import (
 	"image"
+
 	"github.com/giongto35/cloud-game/nes"
 )
 
@@ -29,9 +30,9 @@ const (
 const NumKeys = 8
 
 type GameView struct {
-	console  *nes.Console
-	title    string
-	hash     string
+	console *nes.Console
+	title   string
+	hash    string
 
 	// equivalent to the list key pressed const above
 	keyPressed [NumKeys * 2]bool
@@ -53,21 +54,29 @@ func NewGameView(console *nes.Console, title, hash string, imageChannel chan *im
 		inputChannel: inputChannel,
 	}
 
-	go gameview.ListenToInputChannel()
 	return gameview
 }
 
 // ListenToInputChannel listen from input channel streamm, which is exposed to WebRTC session
-func (view *GameView) ListenToInputChannel() {
-	for {
-		keysInBinary := <-view.inputChannel
-		for i := 0; i < NumKeys*2; i++ {
-			b := ((keysInBinary & 1) == 1)
-			view.keyPressed[i] = (view.keyPressed[i] && b) || b
-			keysInBinary = keysInBinary >> 1
-		}
+func (view *GameView) UpdateInput(keysInBinary int) {
+	for i := 0; i < NumKeys*2; i++ {
+		b := ((keysInBinary & 1) == 1)
+		view.keyPressed[i] = (view.keyPressed[i] && b) || b
+		keysInBinary = keysInBinary >> 1
 	}
 }
+
+// ListenToInputChannel listen from input channel streamm, which is exposed to WebRTC session
+//func (view *GameView) ListenToInputChannel() {
+//for {
+//keysInBinary := <-view.inputChannel
+//for i := 0; i < NumKeys*2; i++ {
+//b := ((keysInBinary & 1) == 1)
+//view.keyPressed[i] = (view.keyPressed[i] && b) || b
+//keysInBinary = keysInBinary >> 1
+//}
+//}
+//}
 
 // Enter enter the game view.
 func (view *GameView) Enter() {
@@ -151,6 +160,5 @@ func (view *GameView) updateControllers() {
 
 	view.console.Controller1.SetButtons(player1Keys)
 	view.console.Controller2.SetButtons(player2Keys)
-
 
 }
