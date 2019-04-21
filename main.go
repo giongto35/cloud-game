@@ -99,7 +99,7 @@ func main() {
 
 	log.Println("oclient ", oclient)
 	if !IsOverlord {
-		fmt.Println("http://localhost:8000")
+		fmt.Println("http://localhost:" + *port)
 		http.ListenAndServe(":"+*port, nil)
 	} else {
 		fmt.Println("http://localhost:9000")
