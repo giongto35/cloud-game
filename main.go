@@ -73,12 +73,13 @@ func main() {
 	}
 	if len(os.Args) >= 3 {
 		if os.Args[2] == "overlord" {
+			fmt.Println("Running as overlord ")
 			IsOverlord = true
 		} else {
+			fmt.Println("Running as slave ")
 			// If the third arg is not overlord, it is path to overlord
 			overlordHost = os.Args[2]
 		}
-		fmt.Println("Running as overlord ")
 	}
 	if len(os.Args) >= 4 {
 		port = os.Args[3]
@@ -536,6 +537,8 @@ func NewOverlordClient() *Client {
 			return req
 		},
 	)
+	// heartbeat to keep pinging overlord. We not ping from server to browser, so we don't call heartbeat in browserClient
+	go oclient.heartbeat()
 	go oclient.listen()
 
 	return oclient

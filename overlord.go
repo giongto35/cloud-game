@@ -62,6 +62,7 @@ func wso(w http.ResponseWriter, r *http.Request) {
 	})
 
 	client.receive("getRoom", func(resp WSPacket) WSPacket {
+		log.Println("Received a getroom request")
 		return WSPacket{
 			ID:   "getRoom",
 			Data: roomToServer[resp.Data],
