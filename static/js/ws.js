@@ -1,4 +1,5 @@
 var pc;
+var curPacketID = "";
 // web socket
 
 conn = new WebSocket(`ws://${location.host}/ws`);
@@ -26,7 +27,21 @@ conn.onmessage = e => {
     case "sdp":
         log("Got remote sdp");
         pc.setRemoteDescription(new RTCSessionDescription(JSON.parse(atob(d["data"]))));
+        //conn.send(JSON.stringify({"id": "sdpdon", "packet_id": d["packet_id"]}));
         break;
+    case "requestOffer":
+        curPacketID = d["packet_id"];
+        log("Received request offer ", curPacketID)
+        startWebRTC();
+        //pc.createOffer({offerToReceiveVideo: true, offerToReceiveAudio: false}).then(d => {
+            //pc.setLocalDescription(d).catch(log);
+        //})
+
+    //case "sdpremote":
+        //log("Got remote sdp");
+        //pc.setRemoteDescription(new RTCSessionDescription(JSON.parse(atob(d["data"]))));
+        //conn.send(JSON.stringify({"id": "remotestart", "data": GAME_LIST[gameIdx].nes, "room_id": roomID.value, "player_index": parseInt(playerIndex.value, 10)}));inputTimer
+        //break;
     case "pong":
         // TODO: Change name use one session
         log("Recv pong. Start webrtc");
@@ -99,7 +114,8 @@ function startWebRTC() {
             session = btoa(JSON.stringify(pc.localDescription));
             localSessionDescription = session;
             log("Send SDP to remote peer");
-            conn.send(JSON.stringify({"id": "initwebrtc", "data": session}));
+            // TODO: Fix curPacketID
+            conn.send(JSON.stringify({"id": "initwebrtc", "data": session, "packet_id": curPacketID}));
         } else {
             console.log(JSON.stringify(event.candidate));
         }
