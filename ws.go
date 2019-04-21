@@ -3,6 +3,7 @@ package main
 import (
 	"encoding/json"
 	"log"
+	"sync"
 	"time"
 
 	"github.com/gorilla/websocket"
@@ -12,8 +13,10 @@ import (
 type Client struct {
 	conn *websocket.Conn
 
+	sendLock sync.Mutex
 	// sendCallback is callback based on packetID
-	sendCallback map[string]func(req WSPacket)
+	sendCallback     map[string]func(req WSPacket)
+	sendCallbackLock sync.Mutex
 	// recvCallback is callback when receive based on ID of the packet
 	recvCallback map[string]func(req WSPacket)
 }
@@ -52,7 +55,10 @@ func (c *Client) send(request WSPacket, callback func(response WSPacket)) {
 		return
 	}
 
+	// TODO: Consider using lock free
+	c.sendLock.Lock()
 	c.conn.WriteMessage(websocket.TextMessage, data)
+	c.sendLock.Unlock()
 	wrapperCallback := func(resp WSPacket) {
 		resp.PacketID = request.PacketID
 		resp.SessionID = request.SessionID
@@ -61,7 +67,9 @@ func (c *Client) send(request WSPacket, callback func(response WSPacket)) {
 	if callback == nil {
 		return
 	}
+	c.sendCallbackLock.Lock()
 	c.sendCallback[request.PacketID] = wrapperCallback
+	c.sendCallbackLock.Unlock()
 }
 
 // receive receive and response back
@@ -81,7 +89,9 @@ func (c *Client) receive(id string, f func(response WSPacket) (request WSPacket)
 			log.Println("[!] json marshal error:", err)
 		}
 		c.conn.SetWriteDeadline(time.Now().Add(writeWait))
+		c.sendLock.Lock()
 		c.conn.WriteMessage(websocket.TextMessage, resp)
+		c.sendLock.Unlock()
 	}
 }
 
@@ -120,9 +130,15 @@ func (c *Client) listen() {
 		}
 
 		// Check if some async send is waiting for the response based on packetID
-		if callback, ok := c.sendCallback[wspacket.PacketID]; ok {
+		// TODO: Change to read lock
+		c.sendCallbackLock.Lock()
+		callback, ok := c.sendCallback[wspacket.PacketID]
+		c.sendCallbackLock.Unlock()
+		if ok {
 			go callback(wspacket)
+			c.sendCallbackLock.Lock()
 			delete(c.sendCallback, wspacket.PacketID)
+			c.sendCallbackLock.Unlock()
 			// Skip receiveCallback to avoid duplication
 			continue
 		}
