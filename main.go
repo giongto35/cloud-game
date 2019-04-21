@@ -14,6 +14,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/giongto35/cloud-game/config"
 	"github.com/giongto35/cloud-game/ui"
 	"github.com/giongto35/cloud-game/util"
 	"github.com/giongto35/cloud-game/webrtc"
@@ -60,22 +61,16 @@ var peerconnections = map[string]*webrtc.WebRTC{}
 var serverID = ""
 var oclient *Client
 
-const defaultoverlord = "ws://localhost:9000/wso"
-
-var isDebug = flag.Bool("debug", false, "Is game running in debug mode?")
-var overlordHost = flag.String("overlordhost", defaultoverlord, "Specify the path for overlord. If the flag is `overlord`, the server will be run as overlord")
-var port = flag.String("port", "8000", "Port of the game")
-
 func main() {
 	flag.Parse()
 	fmt.Println("Usage: ./game [debug]")
-	if *isDebug {
+	if *config.IsDebug {
 		// debug
 		indexFN = debugIndex
 		fmt.Println("Use debug version")
 	}
 
-	if *overlordHost == "overlord" {
+	if *config.OverlordHost == "overlord" {
 		fmt.Println("Running as overlord ")
 		IsOverlord = true
 	} else {
@@ -99,8 +94,8 @@ func main() {
 
 	log.Println("oclient ", oclient)
 	if !IsOverlord {
-		fmt.Println("http://localhost:" + *port)
-		http.ListenAndServe(":"+*port, nil)
+		fmt.Println("http://localhost:" + *config.Port)
+		http.ListenAndServe(":"+*config.Port, nil)
 	} else {
 		fmt.Println("http://localhost:9000")
 		// Overlord expose one more path for handle overlord connections
@@ -454,7 +449,7 @@ func bridgeConnection(session *Session, serverID string, gameName string, roomID
 }
 
 func createOverlordConnection() (*websocket.Conn, error) {
-	c, _, err := websocket.DefaultDialer.Dial(*overlordHost, nil)
+	c, _, err := websocket.DefaultDialer.Dial(*config.OverlordHost, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -470,14 +465,6 @@ func NewOverlordClient() *Client {
 		return nil
 	}
 	oclient := NewClient(oc)
-	oclient.send(
-		WSPacket{
-			ID: "ping",
-		},
-		func(resp WSPacket) {
-			log.Println("Received pong full flow")
-		},
-	)
 
 	// Received from overlord the serverID
 	oclient.receive(

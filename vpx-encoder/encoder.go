@@ -5,6 +5,8 @@ import (
 	"log"
 	"time"
 	"unsafe"
+
+	"github.com/giongto35/cloud-game/config"
 )
 
 // https://chromium.googlesource.com/webm/libvpx/+/master/examples/simple_encoder.c
@@ -145,7 +147,9 @@ func (v *VpxEncoder) startLooping() {
 				v.Output <- bs
 			}
 
-			log.Println("Encoding time: ", time.Now().Sub(beginEncoding))
+			if *config.IsMonitor {
+				log.Println("Encoding time: ", time.Now().Sub(beginEncoding))
+			}
 		}
 	}()
 }
