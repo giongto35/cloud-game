@@ -46,13 +46,6 @@ func wso(w http.ResponseWriter, r *http.Request) {
 		nil,
 	)
 
-	client.receive("ping", func(resp WSPacket) WSPacket {
-		log.Println("received Ping, sending Pong")
-		return WSPacket{
-			ID: "pong",
-		}
-	})
-
 	client.receive("registerRoom", func(resp WSPacket) WSPacket {
 		log.Println("Received registerRoom ", resp.Data, serverID)
 		roomToServer[resp.Data] = serverID
