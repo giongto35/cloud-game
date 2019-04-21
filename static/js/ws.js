@@ -48,6 +48,7 @@ conn.onmessage = e => {
         //startWebRTC();
         break;
     case "pingpong":
+        console.log("Ping: ", Date.now() - d["data"])
         // TODO: Calc time
         break;
     case "start":
@@ -66,7 +67,7 @@ conn.onmessage = e => {
 
 function sendPing() {
     // TODO: format the package with time
-    //conn.send(JSON.stringify({"id": "pingpong", "data": "pingpong"}));
+    conn.send(JSON.stringify({"id": "pingpong", "data": Date.now().toString()}));
 }
 
 function startWebRTC() {
