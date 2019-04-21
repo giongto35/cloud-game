@@ -43,12 +43,7 @@ conn.onmessage = e => {
         //pc.setRemoteDescription(new RTCSessionDescription(JSON.parse(atob(d["data"]))));
         //conn.send(JSON.stringify({"id": "remotestart", "data": GAME_LIST[gameIdx].nes, "room_id": roomID.value, "player_index": parseInt(playerIndex.value, 10)}));inputTimer
         //break;
-    case "pong":
-        // TODO: Change name use one session
-        log("Recv pong. Start webrtc");
-        //startWebRTC();
-        break;
-    case "pingpong":
+    case "heartbeat":
         console.log("Ping: ", Date.now() - d["data"])
         // TODO: Calc time
         break;
@@ -68,7 +63,7 @@ conn.onmessage = e => {
 
 function sendPing() {
     // TODO: format the package with time
-    conn.send(JSON.stringify({"id": "pingpong", "data": Date.now().toString()}));
+    conn.send(JSON.stringify({"id": "heartbeat", "data": Date.now().toString()}));
 }
 
 function startWebRTC() {

@@ -62,6 +62,8 @@ var serverID = ""
 var oclient *Client
 
 func main() {
+	rand.Seed(time.Now().UTC().UnixNano())
+
 	flag.Parse()
 	fmt.Println("Usage: ./game [debug]")
 	if *config.IsDebug {
@@ -208,6 +210,10 @@ func ws(w http.ResponseWriter, r *http.Request) {
 		peerconnection: webrtc.NewWebRTC(),
 		// The server session is maintaining
 	}
+
+	client.receive("heartbeat", func(resp WSPacket) WSPacket {
+		return resp
+	})
 
 	client.receive("initwebrtc", func(resp WSPacket) WSPacket {
 		log.Println("Received user SDP")
@@ -401,12 +407,14 @@ func removeSession(w *webrtc.WebRTC, room *Room) {
 }
 
 func getServerIDOfRoom(oc *Client, roomID string) string {
+	log.Println("Request overlord roomID")
 	packet := oc.syncSend(
 		WSPacket{
 			ID:   "getRoom",
 			Data: roomID,
 		},
 	)
+	log.Println("Received roomID from overlord")
 
 	return packet.Data
 }

@@ -108,7 +108,7 @@ func (c *Client) heartbeat() {
 
 func (c *Client) listen() {
 	for {
-		log.Println("Waiting for message")
+		log.Println("Waiting for message ...")
 		_, rawMsg, err := c.conn.ReadMessage()
 		if err != nil {
 			log.Println("[!] read:", err)
@@ -116,7 +116,7 @@ func (c *Client) listen() {
 		}
 		wspacket := WSPacket{}
 		err = json.Unmarshal(rawMsg, &wspacket)
-		if err != nil || wspacket.ID == "heartbeat" {
+		if err != nil {
 			continue
 		}
 
