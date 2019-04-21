@@ -88,7 +88,7 @@ func (c *Client) receive(id string, f func(response WSPacket) (request WSPacket)
 		if err != nil {
 			log.Println("[!] json marshal error:", err)
 		}
-		c.conn.SetWriteDeadline(time.Now().Add(writeWait))
+		//c.conn.SetWriteDeadline(time.Now().Add(writeWait))
 		c.sendLock.Lock()
 		c.conn.WriteMessage(websocket.TextMessage, resp)
 		c.sendLock.Unlock()

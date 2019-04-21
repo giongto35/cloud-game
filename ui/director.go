@@ -44,6 +44,10 @@ func (d *Director) SetView(view *GameView) {
 	d.timestamp = float64(time.Now().Nanosecond()) / float64(time.Second)
 }
 
+func (d *Director) UpdateInput(input int) {
+	d.view.UpdateInput(input)
+}
+
 func (d *Director) Step() {
 	timestamp := float64(time.Now().Nanosecond()) / float64(time.Second)
 	dt := timestamp - d.timestamp
@@ -68,6 +72,8 @@ L:
 
 		select {
 		// if there is event from close channel => the game is ended
+		case input := <-d.inputChannel:
+			d.UpdateInput(input)
 		case <-d.Done:
 			break L
 		default:
