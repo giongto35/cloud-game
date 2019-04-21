@@ -12,12 +12,13 @@ import (
 	"math/rand"
 	"time"
 
+	"github.com/giongto35/cloud-game/config"
 	vpxEncoder "github.com/giongto35/cloud-game/vpx-encoder"
 	"github.com/pion/webrtc"
 	"github.com/pion/webrtc/pkg/media"
 )
 
-var config = webrtc.Configuration{ICEServers: []webrtc.ICEServer{{URLs: []string{"stun:stun.l.google.com:19302"}}}}
+var webrtcconfig = webrtc.Configuration{ICEServers: []webrtc.ICEServer{{URLs: []string{"stun:stun.l.google.com:19302"}}}}
 
 // Allows compressing offer/answer to bypass terminal input limits.
 const compress = false
@@ -144,7 +145,7 @@ func (w *WebRTC) StartClient(remoteSession string, width, height int) (string, e
 
 	log.Println("=== StartClient ===")
 
-	w.connection, err = webrtc.NewPeerConnection(config)
+	w.connection, err = webrtc.NewPeerConnection(webrtcconfig)
 	if err != nil {
 		return "", err
 	}
@@ -274,7 +275,9 @@ func (w *WebRTC) startStreaming(vp8Track *webrtc.Track) {
 	go func() {
 		for w.isConnected {
 			bs := <-w.encoder.Output
-			log.Println("FPS : ", w.calculateFPS())
+			if *config.IsMonitor {
+				log.Println("FPS : ", w.calculateFPS())
+			}
 			vp8Track.WriteSample(media.Sample{Data: bs, Samples: 1})
 		}
 	}()
