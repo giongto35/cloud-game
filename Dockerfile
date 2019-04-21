@@ -13,6 +13,7 @@ RUN apt-get update
 RUN apt-get install pkg-config libvpx-dev -y
 RUN go get github.com/pion/webrtc
 RUN go get github.com/gorilla/websocket
+RUN go get github.com/satori/go.uuid
 RUN go install github.com/giongto35/cloud-game
 
 EXPOSE 8000
