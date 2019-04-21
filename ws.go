@@ -96,6 +96,16 @@ func (c *Client) syncSend(request WSPacket) (response WSPacket) {
 	return <-res
 }
 
+// heartbeat maintains connection to server
+func (c *Client) heartbeat() {
+	// send heartbeat every 1s
+	timer := time.Tick(time.Second)
+
+	for range timer {
+		c.send(WSPacket{ID: "heartbeat"}, nil)
+	}
+}
+
 func (c *Client) listen() {
 	for {
 		log.Println("Waiting for message")
@@ -106,20 +116,20 @@ func (c *Client) listen() {
 		}
 		wspacket := WSPacket{}
 		err = json.Unmarshal(rawMsg, &wspacket)
-		if err != nil {
+		if err != nil || wspacket.ID == "heartbeat" {
 			continue
 		}
 
 		// Check if some async send is waiting for the response based on packetID
 		if callback, ok := c.sendCallback[wspacket.PacketID]; ok {
-			callback(wspacket)
+			go callback(wspacket)
 			delete(c.sendCallback, wspacket.PacketID)
 			// Skip receiveCallback to avoid duplication
 			continue
 		}
 		// Check if some receiver with the ID is registered
 		if callback, ok := c.recvCallback[wspacket.ID]; ok {
-			callback(wspacket)
+			go callback(wspacket)
 		}
 	}
 }
