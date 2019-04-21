@@ -10,7 +10,6 @@ import (
 	"math/rand"
 	"net/http"
 	_ "net/http/pprof"
-	"strconv"
 	"sync"
 	"time"
 
@@ -20,6 +19,7 @@ import (
 	"github.com/giongto35/cloud-game/webrtc"
 	"github.com/gorilla/websocket"
 	pionRTC "github.com/pion/webrtc"
+	uuid "github.com/satori/go.uuid"
 )
 
 const (
@@ -203,7 +203,8 @@ func ws(w http.ResponseWriter, r *http.Request) {
 
 	// Create connection to overlord
 	client := NewClient(c)
-	sessionID := strconv.Itoa(rand.Int())
+	//sessionID := strconv.Itoa(rand.Int())
+	sessionID := uuid.Must(uuid.NewV4()).String()
 
 	wssession := &Session{
 		client:         client,
@@ -315,7 +316,8 @@ func ws(w http.ResponseWriter, r *http.Request) {
 
 // generateRoomID generate a unique room ID containing 16 digits
 func generateRoomID() string {
-	roomID := strconv.FormatInt(rand.Int63(), 16)
+	//roomID := strconv.FormatInt(rand.Int63(), 16)
+	roomID := uuid.Must(uuid.NewV4()).String()
 	return roomID
 }
 
