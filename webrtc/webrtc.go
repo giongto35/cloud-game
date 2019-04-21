@@ -99,6 +99,11 @@ func NewWebRTC() *WebRTC {
 	return w
 }
 
+type InputDataPair struct {
+	data int
+	time time.Time
+}
+
 // WebRTC connection
 type WebRTC struct {
 	connection  *webrtc.PeerConnection
@@ -109,7 +114,9 @@ type WebRTC struct {
 	ImageChannel chan []byte
 	InputChannel chan int
 
-	Done chan struct{}
+	Done     chan struct{}
+	lastTime time.Time
+	curFPS   int
 
 	RoomID string
 }
@@ -183,7 +190,12 @@ func (w *WebRTC) StartClient(remoteSession string, width, height int) (string, e
 
 		// Register text message handling
 		d.OnMessage(func(msg webrtc.DataChannelMessage) {
+			//layout .:= "2006-01-02T15:04:05.000Z"
+			//if t, err := time.Parse(layout, string(msg.Data[1])); err == nil {
+			//fmt.Println("Delay ", time.Now().Sub(t))
+			//} else {
 			w.InputChannel <- int(msg.Data[0])
+			//}
 		})
 
 		d.OnClose(func() {
@@ -262,7 +274,16 @@ func (w *WebRTC) startStreaming(vp8Track *webrtc.Track) {
 	go func() {
 		for w.isConnected {
 			bs := <-w.encoder.Output
+			log.Println("FPS : ", w.calculateFPS())
 			vp8Track.WriteSample(media.Sample{Data: bs, Samples: 1})
 		}
 	}()
+}
+
+func (w *WebRTC) calculateFPS() int {
+	elapsedTime := time.Now().Sub(w.lastTime)
+	w.lastTime = time.Now()
+	curFPS := time.Second / elapsedTime
+	w.curFPS = int(float32(w.curFPS)*0.9 + float32(curFPS)*0.1)
+	return w.curFPS
 }
