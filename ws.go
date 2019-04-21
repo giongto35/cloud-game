@@ -3,11 +3,10 @@ package main
 import (
 	"encoding/json"
 	"log"
-	"math/rand"
-	"strconv"
 	"time"
 
 	"github.com/gorilla/websocket"
+	uuid "github.com/satori/go.uuid"
 )
 
 type Client struct {
@@ -47,7 +46,7 @@ func NewClient(conn *websocket.Conn) *Client {
 
 // send sends a packet and trigger callback when the packet comes back
 func (c *Client) send(request WSPacket, callback func(response WSPacket)) {
-	request.PacketID = strconv.Itoa(rand.Int())
+	request.PacketID = uuid.Must(uuid.NewV4()).String()
 	data, err := json.Marshal(request)
 	if err != nil {
 		return
