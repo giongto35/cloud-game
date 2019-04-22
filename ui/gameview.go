@@ -3,6 +3,7 @@ package ui
 
 import (
 	"image"
+
 	"github.com/giongto35/cloud-game/nes"
 )
 
@@ -27,55 +28,60 @@ const (
 	right2
 )
 const NumKeys = 8
-const SampleRate = 16000
-const Channels = 1
-const TimeFrame = 60
+
+// Audio consts
+const (
+	SampleRate = 16000
+	Channels = 1
+	TimeFrame = 60
+)
+
 
 type GameView struct {
-	console  *nes.Console
-	title    string
-	hash     string
+	console *nes.Console
+	title   string
+	hash    string
 
 	// equivalent to the list key pressed const above
 	keyPressed [NumKeys * 2]bool
 
+	savingPath  string
+	loadingPath string
+
 	imageChannel chan *image.RGBA
-	audioChanel chan float32
+	audioChannel chan float32
 	inputChannel chan int
 }
 
 
-func NewGameView(console *nes.Console, title, hash string, imageChannel chan *image.RGBA, audioChanel chan float32, inputChannel chan int) *GameView {
+func NewGameView(console *nes.Console, title, hash string, imageChannel chan *image.RGBA, audioChannel chan float32, inputChannel chan int) *GameView {
 	gameview := &GameView{
 		console:      console,
 		title:        title,
 		hash:         hash,
 		keyPressed:   [NumKeys * 2]bool{false},
 		imageChannel: imageChannel,
-		audioChanel:  audioChanel,
+		audioChannel:  audioChannel,
 		inputChannel: inputChannel,
 	}
 
-	go gameview.ListenToInputChannel()
 	return gameview
 }
 
 // ListenToInputChannel listen from input channel streamm, which is exposed to WebRTC session
-func (view *GameView) ListenToInputChannel() {
-	for {
-		keysInBinary := <-view.inputChannel
-		for i := 0; i < NumKeys*2; i++ {
-			b := ((keysInBinary & 1) == 1)
-			view.keyPressed[i] = (view.keyPressed[i] && b) || b
-			keysInBinary = keysInBinary >> 1
-		}
+func (view *GameView) UpdateInput(keysInBinary int) {
+	for i := 0; i < NumKeys*2; i++ {
+		b := ((keysInBinary & 1) == 1)
+		view.keyPressed[i] = (view.keyPressed[i] && b) || b
+		keysInBinary = keysInBinary >> 1
 	}
 }
+
 
 // Enter enter the game view.
 func (view *GameView) Enter() {
 	view.console.SetAudioSampleRate(SampleRate)
-	view.console.SetAudioChannel(view.audioChanel)
+	view.console.SetAudioChannel(view.audioChannel)
 
 	// load state
 	if err := view.console.LoadState(savePath(view.hash)); err == nil {
@@ -112,10 +118,34 @@ func (view *GameView) Update(t, dt float64) {
 	}
 	console := view.console
 	view.updateControllers()
+	view.UpdateEvents()
 	console.StepSeconds(dt)
 
 	// fps to set frame
 	view.imageChannel <- console.Buffer()
+}
+
+func (view *GameView) Save(hash string) {
+	// put saving event to queue, process in updateEvent
+	view.savingPath = savePath(view.hash)
+}
+
+func (view *GameView) Load(path string) {
+	// put saving event to queue, process in updateEvent
+	view.loadingPath = savePath(view.hash)
+}
+
+func (view *GameView) UpdateEvents() {
+	// If there is saving event, save and discard the save event
+	if view.savingPath != "" {
+		view.console.SaveState(view.savingPath)
+		view.savingPath = ""
+	}
+	// If there is loading event, save and discard the load event
+	if view.loadingPath != "" {
+		view.console.LoadState(view.loadingPath)
+		view.loadingPath = ""
+	}
 }
 
 func (view *GameView) updateControllers() {

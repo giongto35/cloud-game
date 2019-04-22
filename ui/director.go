@@ -10,24 +10,26 @@ import (
 )
 
 type Director struct {
-	view          *GameView
-	timestamp     float64
-	imageChannel  chan *image.RGBA
-	audioChanel   chan float32
-	inputChannel  chan int
-	closedChannel chan bool
-	roomID        string
-	hash		  string
+	// audio        *Audio
+	view         *GameView
+	timestamp    float64
+	imageChannel chan *image.RGBA
+	audioChannel chan float32
+	inputChannel chan int
+	Done         chan struct{}
+
+	roomID string
+	hash   string
 }
 
 const FPS = 60
 
-func NewDirector(roomID string, imageChannel chan *image.RGBA, audioChanel chan float32, inputChannel chan int, closedChannel chan bool) *Director {
+func NewDirector(roomID string, imageChannel chan *image.RGBA, audioChannel chan float32, inputChannel chan int) *Director {
 	director := Director{}
+	director.Done = make(chan struct{})
+	director.audioChannel = audioChannel
 	director.imageChannel = imageChannel
-	director.audioChanel = audioChanel
 	director.inputChannel = inputChannel
-	director.closedChannel = closedChannel
 	director.roomID = roomID
 	director.hash = ""
 	return &director
@@ -42,6 +44,10 @@ func (d *Director) SetView(view *GameView) {
 		d.view.Enter()
 	}
 	d.timestamp = float64(time.Now().Nanosecond()) / float64(time.Second)
+}
+
+func (d *Director) UpdateInput(input int) {
+	d.view.UpdateInput(input)
 }
 
 func (d *Director) Step() {
@@ -76,7 +82,9 @@ L:
 
 		select {
 		// if there is event from close channel => the game is ended
-		case <-d.closedChannel:
+		case input := <-d.inputChannel:
+			d.UpdateInput(input)
+		case <-d.Done:
 			break L
 		default:
 		}
@@ -98,12 +106,13 @@ func (d *Director) PlayGame(path string) {
 		log.Fatalln(err)
 	}
 	// Set GameView as current view
-	d.SetView(NewGameView(console, path, hash, d.imageChannel, d.audioChanel, d.inputChannel))
+	d.SetView(NewGameView(console, path, hash, d.imageChannel, d.audioChannel, d.inputChannel))
 }
 
 func (d *Director) SaveGame() error {
 	if d.hash != "" {
-		return d.view.console.SaveState(savePath(d.hash))
+		d.view.Save(d.hash)
+		return nil
 	} else {
 		return nil
 	}
@@ -111,7 +120,8 @@ func (d *Director) SaveGame() error {
 
 func (d *Director) LoadGame() error {
 	if d.hash != "" {
-		return d.view.console.LoadState(savePath(d.hash))
+		d.view.Load(d.hash)
+		return nil
 	} else {
 		return nil
 	}

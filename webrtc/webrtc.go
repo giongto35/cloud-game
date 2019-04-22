@@ -6,17 +6,19 @@ import (
 	"compress/gzip"
 	"encoding/base64"
 	"encoding/json"
-	"log"
+	"fmt"
 	"io/ioutil"
+	"log"
 	"math/rand"
 	"time"
 
+	"github.com/giongto35/cloud-game/config"
 	vpxEncoder "github.com/giongto35/cloud-game/vpx-encoder"
 	"github.com/pion/webrtc"
 	"github.com/pion/webrtc/pkg/media"
 )
 
-var config = webrtc.Configuration{ICEServers: []webrtc.ICEServer{{URLs: []string{"stun:stun.l.google.com:19302"}}}}
+var webrtcconfig = webrtc.Configuration{ICEServers: []webrtc.ICEServer{{URLs: []string{"stun:stun.l.google.com:19302"}}}}
 
 // Allows compressing offer/answer to bypass terminal input limits.
 const compress = false
@@ -99,6 +101,11 @@ func NewWebRTC() *WebRTC {
 	return w
 }
 
+type InputDataPair struct {
+	data int
+	time time.Time
+}
+
 // WebRTC connection
 type WebRTC struct {
 	connection  *webrtc.PeerConnection
@@ -109,6 +116,12 @@ type WebRTC struct {
 	ImageChannel chan []byte
 	AudioChannel chan []byte
 	InputChannel chan int
+
+	Done     chan struct{}
+	lastTime time.Time
+	curFPS   int
+
+	RoomID string
 }
 
 // StartClient start webrtc
@@ -134,11 +147,7 @@ func (w *WebRTC) StartClient(remoteSession string, width, height int) (string, e
 
 	log.Println("=== StartClient ===")
 
-	webrtc.NewRTPOpusCodec(webrtc.DefaultPayloadTypeOpus, 48000)
-	webrtc.NewRTPVP8Codec(webrtc.DefaultPayloadTypeVP8, 90000)
-	
-	w.connection, err = webrtc.NewPeerConnection(config)
-	
+	w.connection, err = webrtc.NewPeerConnection(webrtcconfig)
 	if err != nil {
 		return "", err
 	}
@@ -152,10 +161,13 @@ func (w *WebRTC) StartClient(remoteSession string, width, height int) (string, e
 		return "", err
 	}
 
-	
-	// dd := false
-	// audioTrack, err := w.connection.CreateDataChannel("foo2", &webrtc.DataChannelInit{Ordered: &dd})
-	audioTrack, err := w.connection.CreateDataChannel("foo2", nil)
+	// audio track
+	dfalse := false
+	var d0 uint16 = 0
+	audioTrack, err := w.connection.CreateDataChannel("b", &webrtc.DataChannelInit{
+		Ordered: &dfalse,
+		MaxRetransmits: &d0,
+	})
 
 	// WebRTC state callback
 	w.connection.OnICEConnectionStateChange(func(connectionState webrtc.ICEConnectionState) {
@@ -190,11 +202,18 @@ func (w *WebRTC) StartClient(remoteSession string, width, height int) (string, e
 
 		// Register text message handling
 		d.OnMessage(func(msg webrtc.DataChannelMessage) {
+			//layout .:= "2006-01-02T15:04:05.000Z"
+			//if t, err := time.Parse(layout, string(msg.Data[1])); err == nil {
+			//fmt.Println("Delay ", time.Now().Sub(t))
+			//} else {
 			w.InputChannel <- int(msg.Data[0])
+			//}
 		})
 
 		d.OnClose(func() {
-			w.isClosed = true
+			fmt.Println("closed webrtc")
+			w.Done <- struct{}{}
+			close(w.Done)
 		})
 	})
 
@@ -214,6 +233,10 @@ func (w *WebRTC) StartClient(remoteSession string, width, height int) (string, e
 
 	localSession := Encode(answer)
 	return localSession, nil
+}
+
+func (w *WebRTC) AttachRoomID(roomID string) {
+	w.RoomID = roomID
 }
 
 // TODO: Take a look at this
@@ -264,6 +287,9 @@ func (w *WebRTC) startStreaming(vp8Track *webrtc.Track, audioTrack *webrtc.DataC
 	go func() {
 		for w.isConnected {
 			bs := <-w.encoder.Output
+			if *config.IsMonitor {
+				log.Println("FPS : ", w.calculateFPS())
+			}
 			vp8Track.WriteSample(media.Sample{Data: bs, Samples: 1})
 		}
 	}()
@@ -278,4 +304,12 @@ func (w *WebRTC) startStreaming(vp8Track *webrtc.Track, audioTrack *webrtc.DataC
 		}
 	}()
 
+}
+
+func (w *WebRTC) calculateFPS() int {
+	elapsedTime := time.Now().Sub(w.lastTime)
+	w.lastTime = time.Now()
+	curFPS := time.Second / elapsedTime
+	w.curFPS = int(float32(w.curFPS)*0.9 + float32(curFPS)*0.1)
+	return w.curFPS
 }
