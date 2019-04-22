@@ -65,18 +65,30 @@ func NewGameView(console *nes.Console, title, hash string, imageChannel chan *im
 		inputChannel: inputChannel,
 	}
 
+	go gameview.ListenToInputChannel()
 	return gameview
 }
 
 // ListenToInputChannel listen from input channel streamm, which is exposed to WebRTC session
-func (view *GameView) UpdateInput(keysInBinary int) {
-	for i := 0; i < NumKeys*2; i++ {
-		b := ((keysInBinary & 1) == 1)
-		view.keyPressed[i] = (view.keyPressed[i] && b) || b
-		keysInBinary = keysInBinary >> 1
+//func (view *GameView) UpdateInput(keysInBinary int) {
+//for i := 0; i < NumKeys*2; i++ {
+//b := ((keysInBinary & 1) == 1)
+//view.keyPressed[i] = (view.keyPressed[i] && b) || b
+//keysInBinary = keysInBinary >> 1
+//}
+//}
+
+// ListenToInputChannel listen from input channel streamm, which is exposed to WebRTC session
+func (view *GameView) ListenToInputChannel() {
+	for {
+		keysInBinary := <-view.inputChannel
+		for i := 0; i < NumKeys*2; i++ {
+			b := ((keysInBinary & 1) == 1)
+			view.keyPressed[i] = (view.keyPressed[i] && b) || b
+			keysInBinary = keysInBinary >> 1
+		}
 	}
 }
-
 
 // Enter enter the game view.
 func (view *GameView) Enter() {
