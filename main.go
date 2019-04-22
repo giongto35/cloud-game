@@ -3,13 +3,13 @@ package main
 import (
 	"encoding/json"
 	"flag"
-	"fmt"
 	"image"
 	"io/ioutil"
 	"log"
 	"math/rand"
 	"net/http"
 	_ "net/http/pprof"
+	"strings"
 	"sync"
 	"time"
 
@@ -65,18 +65,21 @@ func main() {
 	rand.Seed(time.Now().UTC().UnixNano())
 
 	flag.Parse()
-	fmt.Println("Usage: ./game [debug]")
+	log.Println("Usage: ./game [debug]")
 	if *config.IsDebug {
 		// debug
 		indexFN = debugIndex
-		fmt.Println("Use debug version")
+		log.Println("Use debug version")
 	}
 
 	if *config.OverlordHost == "overlord" {
-		fmt.Println("Running as overlord ")
+		log.Println("Running as overlord ")
 		IsOverlord = true
 	} else {
-		fmt.Println("Running as slave ")
+		if strings.HasPrefix(*config.OverlordHost, "ws") && !strings.HasSuffix(*config.OverlordHost, "wso") {
+			log.Fatal("Overlord connection is invalid. Should have the form `ws://.../wso`")
+		}
+		log.Println("Running as slave ")
 		IsOverlord = false
 	}
 
@@ -96,10 +99,10 @@ func main() {
 
 	log.Println("oclient ", oclient)
 	if !IsOverlord {
-		fmt.Println("http://localhost:" + *config.Port)
+		log.Println("http://localhost:" + *config.Port)
 		http.ListenAndServe(":"+*config.Port, nil)
 	} else {
-		fmt.Println("http://localhost:9000")
+		log.Println("http://localhost:9000")
 		// Overlord expose one more path for handle overlord connections
 		http.HandleFunc("/wso", wso)
 		http.ListenAndServe(":9000", nil)
@@ -360,11 +363,10 @@ func (r *Room) remove() {
 // startWebRTCSession fan-in of the same room to inputChannel
 func startWebRTCSession(room *Room, webRTC *webrtc.WebRTC, playerIndex int) {
 	inputChannel := room.inputChannel
-	fmt.Println("room, inputChannel", room, inputChannel)
+	log.Println("room, inputChannel", room, inputChannel)
 	for {
 		select {
 		case <-webRTC.Done:
-			fmt.Println("One session closed")
 			removeSession(webRTC, room)
 		default:
 		}
