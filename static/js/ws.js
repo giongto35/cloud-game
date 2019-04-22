@@ -138,6 +138,7 @@ function startWebRTC() {
         log(`iceConnectionState: ${pc.iceConnectionState}`);
 
         if (pc.iceConnectionState === "connected") {
+
             //conn.send(JSON.stringify({"id": "start", "data": ""}));
         }
         else if (pc.iceConnectionState === "disconnected") {
@@ -205,6 +206,5 @@ function startGame() {
         });
     }
     // end clear
-
-    // startInput();
+    startInput();
 }
