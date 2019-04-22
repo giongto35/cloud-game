@@ -117,7 +117,7 @@ func (c *Client) heartbeat() {
 
 func (c *Client) listen() {
 	for {
-		log.Println("Waiting for message ...")
+		//log.Println("Waiting for message ...")
 		_, rawMsg, err := c.conn.ReadMessage()
 		if err != nil {
 			log.Println("[!] read:", err)
