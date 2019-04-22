@@ -1,69 +1,80 @@
+var pc;
+var curPacketID = "";
+var curSessionID = "";
 // web socket
 
-function startGame() {
-    log("Starting game screen");
+conn = new WebSocket(`ws://${location.host}/ws`);
 
-    // clear
-    endInput();
-    document.getElementById('div').innerHTML = "";
-    if (!DEBUG) {
-        $("#menu-screen").fadeOut(400, function() {
-            $("#game-screen").show();
-        });    
+// Clear old roomID
+conn.onopen = () => {
+    log("WebSocket is opened. Send ping");
+    log("Send ping pong frequently")
+    // pingpongTimer = setInterval(sendPing, 1000 / PINGPONGPS)
+
+    startWebRTC();
+}
+
+conn.onerror = error => {
+    log(`Websocket error: ${error}`);
+}
+
+conn.onclose = () => {
+    log("Websocket closed");
+}
+
+conn.onmessage = e => {
+    d = JSON.parse(e.data);
+    switch (d["id"]) {
+    case "sdp":
+        log("Got remote sdp");
+        pc.setRemoteDescription(new RTCSessionDescription(JSON.parse(atob(d["data"]))));
+        //conn.send(JSON.stringify({"id": "sdpdon", "packet_id": d["packet_id"]}));
+        break;
+    case "requestOffer":
+        curPacketID = d["packet_id"];
+        log("Received request offer ", curPacketID)
+        startWebRTC();
+        //pc.createOffer({offerToReceiveVideo: true, offerToReceiveAudio: false}).then(d => {
+            //pc.setLocalDescription(d).catch(log);
+        //})
+
+    //case "sdpremote":
+        //log("Got remote sdp");
+        //pc.setRemoteDescription(new RTCSessionDescription(JSON.parse(atob(d["data"]))));
+        //conn.send(JSON.stringify({"id": "remotestart", "data": GAME_LIST[gameIdx].nes, "room_id": roomID.value, "player_index": parseInt(playerIndex.value, 10)}));inputTimer
+        //break;
+    case "heartbeat":
+        console.log("Ping: ", Date.now() - d["data"])
+        // TODO: Calc time
+        break;
+    case "start":
+        log("Got start");
+        roomID.value = ""
+        currentRoomID.innerText = d["room_id"]
+        break;
+    case "save":
+        log(`Got save response: ${d["data"]}`);
+        break;
+    case "load":
+        log(`Got load response: ${d["data"]}`);
+        break;
     }
-    // end clear
+}
 
-    conn = new WebSocket(`ws://${location.host}/ws`);
+function sendPing() {
+    // TODO: format the package with time
+    conn.send(JSON.stringify({"id": "heartbeat", "data": Date.now().toString()}));
+}
 
-    // Clear old roomID
-    conn.onopen = () => {
-        log("WebSocket is opened. Send ping");
-        conn.send(JSON.stringify({"id": "ping", "data": GAME_LIST[gameIdx].nes, "room_id": roomID.value, "player_index": parseInt(playerIndex.value, 10)}));
-    }
-
-    conn.onerror = error => {
-        log(`Websocket error: ${error}`);
-    }
-
-    conn.onclose = () => {
-        log("Websocket closed");
-    }
-
-    conn.onmessage = e => {
-        d = JSON.parse(e.data);
-        switch (d["id"]) {
-        case "pong":
-            log("Recv pong. Start webrtc");
-            startWebRTC();
-            break;
-        case "sdp":
-            log("Got remote sdp");
-            pc.setRemoteDescription(new RTCSessionDescription(JSON.parse(atob(d["data"]))));
-            break;
-        case "start":
-            log("Got start");
-            roomID.value = ""
-            currentRoomID.innerText = d["room_id"]
-            break;
-        case "save":
-            log(`Got save response: ${d["data"]}`);
-            break;
-        case "load":
-            log(`Got load response: ${d["data"]}`);
-            break;
-        }
-    }
-
+function startWebRTC() {
     // webrtc
     pc = new RTCPeerConnection({iceServers: [{urls: 'stun:stun.l.google.com:19302'}]})
-    // input channel
-    inputChannel = pc.createDataChannel('foo')
+
+    // input channel, ordered + reliable
+    inputChannel = pc.createDataChannel('a', {
+        ordered: true,
+    });
     inputChannel.onclose = () => log('inputChannel has closed');
-    inputChannel.onopen = () => log('inputChannel has opened');
-    inputChannel.onmessage = e => {
-        console.log(e);
-        log(`Message '${e.data}'`);
-    }
 
     window.AudioContext = window.AudioContext || window.webkitAudioContext;
     var context = new AudioContext();
@@ -123,14 +134,11 @@ function startGame() {
         }
     }
 
-
     pc.oniceconnectionstatechange = e => {
         log(`iceConnectionState: ${pc.iceConnectionState}`);
 
         if (pc.iceConnectionState === "connected") {
-            conn.send(JSON.stringify({"id": "start", "data": ""}));
-            startInput();
-            screenState = "game";
+            //conn.send(JSON.stringify({"id": "start", "data": ""}));
         }
         else if (pc.iceConnectionState === "disconnected") {
             endInput();
@@ -165,20 +173,38 @@ function startGame() {
             session = btoa(JSON.stringify(pc.localDescription));
             localSessionDescription = session;
             log("Send SDP to remote peer");
-            conn.send(JSON.stringify({"id": "sdp", "data": session}));
+            // TODO: Fix curPacketID
+            conn.send(JSON.stringify({"id": "initwebrtc", "data": session, "packet_id": curPacketID}));
         } else {
             console.log(JSON.stringify(event.candidate));
         }
     }
 
-    function startWebRTC() {
-        // receiver only tracks
-        pc.addTransceiver('video', {'direction': 'recvonly'});
-        pc.addTransceiver('audio', {'direction': 'recvonly'});
+    // receiver only tracks
+    pc.addTransceiver('video', {'direction': 'recvonly'});
 
-        // create SDP
-        pc.createOffer({offerToReceiveVideo: true, offerToReceiveAudio: true}).then(d => {
-            pc.setLocalDescription(d).catch(log);
-        })
+    // create SDP
+    pc.createOffer({offerToReceiveVideo: true, offerToReceiveAudio: false}).then(d => {
+        pc.setLocalDescription(d).catch(log);
+    })
+
+}
+
+function startGame() {
+    log("Starting game screen");
+    screenState = "game";
+
+    conn.send(JSON.stringify({"id": "start", "data": GAME_LIST[gameIdx].nes, "room_id": roomID.value, "player_index": parseInt(playerIndex.value, 10)}));
+
+    // clear menu screen
+    endInput();
+    document.getElementById('div').innerHTML = "";
+    if (!DEBUG) {
+        $("#menu-screen").fadeOut(400, function() {
+            $("#game-screen").show();
+        });
     }
+    // end clear
+
+    // startInput();
 }
