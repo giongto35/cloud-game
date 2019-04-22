@@ -72,8 +72,13 @@ function startGame() {
     var audioStack = [];
     var nextTime = 0;
 
+    var isRun = false;
+
     function scheduleBuffers() {
+        if (isRun) return;
+        console.log("daaaa");
         while ( audioStack.length) {
+            isRun = true;
             var buffer = audioStack.shift();
             var source    = context.createBufferSource();
             source.buffer = buffer;
@@ -83,6 +88,8 @@ function startGame() {
             source.start(nextTime);
             nextTime+=source.buffer.duration; // Make the next buffer wait the length of the last buffer before being played
         };
+        console.log("diii");
+        isRun = false;
     }
 
     sampleRate = 16000;
@@ -93,9 +100,7 @@ function startGame() {
         pcmChunk = decoder.decode_float(opusChunk);
         myBuffer = context.createBuffer(channels, pcmChunk.length, sampleRate);
         nowBuffering = myBuffer.getChannelData(0, bitDepth, sampleRate);
-        for (var i = 0; i < pcmChunk.length; i++) {
-            nowBuffering[i] = pcmChunk[i];
-        }
+        nowBuffering.set(pcmChunk);
         return myBuffer;
     }
 
@@ -105,6 +110,11 @@ function startGame() {
         ev.channel.onclose = () => log('channelX has closed');
 
         ev.channel.onmessage = (e) => {
+            // source = context.createBufferSource();
+            // source.buffer = buf;
+            // source.connect(context.destination);
+            // source.start(0);
+
             audioStack.push(damn(e.data));
             if ((init!=0) || (audioStack.length > 10)) { // make sure we put at least 10 chunks in the buffer before starting
                 init++;

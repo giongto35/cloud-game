@@ -153,6 +153,8 @@ func (w *WebRTC) StartClient(remoteSession string, width, height int) (string, e
 	}
 
 	
+	// dd := false
+	// audioTrack, err := w.connection.CreateDataChannel("foo2", &webrtc.DataChannelInit{Ordered: &dd})
 	audioTrack, err := w.connection.CreateDataChannel("foo2", nil)
 
 	// WebRTC state callback
@@ -270,6 +272,8 @@ func (w *WebRTC) startStreaming(vp8Track *webrtc.Track, audioTrack *webrtc.DataC
 	go func() {
 		for w.isConnected {
 			data := <-w.AudioChannel
+			// time.Sleep()
+			// time.Sleep(time.Millisecond * time.Duration(rand.Intn(100)))
 			audioTrack.Send(data)
 		}
 	}()
