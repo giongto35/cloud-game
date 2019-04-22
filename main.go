@@ -9,6 +9,7 @@ import (
 	"math/rand"
 	"net/http"
 	_ "net/http/pprof"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -319,8 +320,8 @@ func ws(w http.ResponseWriter, r *http.Request) {
 
 // generateRoomID generate a unique room ID containing 16 digits
 func generateRoomID() string {
-	//roomID := strconv.FormatInt(rand.Int63(), 16)
-	roomID := uuid.Must(uuid.NewV4()).String()
+	roomID := strconv.FormatInt(rand.Int63(), 16)
+	//roomID := uuid.Must(uuid.NewV4()).String()
 	return roomID
 }
 
