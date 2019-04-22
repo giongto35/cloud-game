@@ -12,7 +12,6 @@ textarea {
 
 <button id="play" onclick="window.startGame()">Play</button>
 <button id="play" onclick="pc.close()">Stop</button>
-<button id="play" onclick="window.hihi()">Magic</button><br/><br/>
 Your current room: <b><label id="currentRoomID" style="color:blue"></b> <br />
   You can join a remote game by roomID.<br />
 Room ID: <input type="text" id="roomID">
@@ -25,7 +24,7 @@ Play as player(1,2): <select id="playerIndex">
 
 <body scroll="no" style="overflow: hidden">
 <div id="remoteVideos">
-  <video id="game-screen2" autoplay=true width=400 height=300 poster="https://orig00.deviantart.net/cdcd/f/2017/276/a/a/october_2nd___gameboy_poltergeist_by_wanyo-dbpdmnd.gif">
+  <video id="game-screen" autoplay=true width=400 height=300 poster="https://orig00.deviantart.net/cdcd/f/2017/276/a/a/october_2nd___gameboy_poltergeist_by_wanyo-dbpdmnd.gif">
 </div> <br />
 
 <h3>Instruction</h3>
@@ -64,11 +63,6 @@ Play as player(1,2): <select id="playerIndex">
 <script src="/static/js/ws.js"></script>
 
 <script>
-  function hihi() {
-    track = stream.getAudioTracks()[0];
-    console.log(track);
-  }
-
   GAME_LIST.forEach(e => {
     ee = document.createElement("option");
     ee.value = e.nes;
