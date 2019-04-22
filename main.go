@@ -21,6 +21,8 @@ import (
 	"github.com/gorilla/websocket"
 	pionRTC "github.com/pion/webrtc"
 	uuid "github.com/satori/go.uuid"
+
+	"gopkg.in/hraban/opus.v2"
 )
 
 const (
@@ -142,7 +144,8 @@ func initRoom(roomID, gameName string) string {
 	}
 	rooms[roomID] = room
 
-	go room.start()
+	go room.startVideo()
+	go room.startAudio()
 	go director.Start([]string{"games/" + gameName})
 
 	return roomID
@@ -326,7 +329,7 @@ func generateRoomID() string {
 	return roomID
 }
 
-func (r *Room) start() {
+func (r *Room) startVideo() {
 	// fanout Screen
 	for {
 		select {
@@ -353,6 +356,68 @@ func (r *Room) start() {
 				//isRoomRunning = true
 			}
 			r.sessionsLock.Unlock()
+		}
+	}
+}
+
+func (r *Room) startAudio() {
+	log.Println("Enter fan audio")
+
+	enc, err := opus.NewEncoder(ui.SampleRate, ui.Channels, opus.AppAudio)
+
+	maxBufferSize := ui.TimeFrame * ui.SampleRate / 1000
+	pcm := make([]float32, maxBufferSize) // 640 * 1000 / 16000 == 40 ms
+	idx := 0
+
+	if err != nil {
+		log.Println("[!] Cannot create audio encoder")
+		return
+	}
+
+	var count byte = 0
+
+	// fanout Audio
+	for {
+		select {
+		case <-r.Done:
+			r.remove()
+			return
+		case sample := <-r.audioChannel:
+			pcm[idx] = sample
+			idx ++
+			if idx == len(pcm) {
+				data := make([]byte, 640)
+
+				n, err := enc.EncodeFloat32(pcm, data)
+		
+				if err != nil {
+					log.Println("[!] Failed to decode")
+					continue
+				}
+				data = data[:n]
+				data = append(data, count)
+		
+				r.sessionsLock.Lock()
+				for _, webRTC := range r.rtcSessions {
+					// Client stopped
+					if webRTC.IsClosed() {
+						continue
+					}
+
+					// encode frame
+					// fanout audioChannel
+					if webRTC.IsConnected() {
+						// NOTE: can block here
+						webRTC.AudioChannel <- data
+					}
+					//isRoomRunning = true
+				}
+				r.sessionsLock.Unlock()
+
+				idx = 0
+				count = (count + 1) & 0xff
+
+			}
 		}
 	}
 }

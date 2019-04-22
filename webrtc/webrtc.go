@@ -163,11 +163,46 @@ func (w *WebRTC) StartClient(remoteSession string, width, height int) (string, e
 
 	// audio track
 	dfalse := false
+	dtrue := true
 	var d0 uint16 = 0
+	var d1 uint16 = 1
 	audioTrack, err := w.connection.CreateDataChannel("b", &webrtc.DataChannelInit{
 		Ordered: &dfalse,
 		MaxRetransmits: &d0,
+		Negotiated: &dtrue,
+		ID: &d1,
 	})
+	if err != nil {
+		return "", err
+	}
+
+	// input channel
+	inputTrack, err :=  w.connection.CreateDataChannel("a", &webrtc.DataChannelInit{
+		Ordered: &dtrue,
+		Negotiated: &dtrue,
+		ID: &d0,
+	})
+
+	inputTrack.OnOpen(func() {
+		log.Printf("Data channel '%s'-'%d' open.\n", inputTrack.Label(), inputTrack.ID())
+	})
+
+	// Register text message handling
+	inputTrack.OnMessage(func(msg webrtc.DataChannelMessage) {
+		//layout .:= "2006-01-02T15:04:05.000Z"
+		//if t, err := time.Parse(layout, string(msg.Data[1])); err == nil {
+		//fmt.Println("Delay ", time.Now().Sub(t))
+		//} else {
+		w.InputChannel <- int(msg.Data[0])
+		//}
+	})
+
+	inputTrack.OnClose(func() {
+		fmt.Println("closed webrtc")
+		w.Done <- struct{}{}
+		close(w.Done)
+	})
+	
 
 	// WebRTC state callback
 	w.connection.OnICEConnectionStateChange(func(connectionState webrtc.ICEConnectionState) {
@@ -191,31 +226,6 @@ func (w *WebRTC) StartClient(remoteSession string, width, height int) (string, e
 	})
 
 
-	// Data channel callback
-	w.connection.OnDataChannel(func(d *webrtc.DataChannel) {
-		log.Printf("New DataChannel %s %d\n", d.Label(), d.ID())
-
-		// Register channel opening handling
-		d.OnOpen(func() {
-			log.Printf("Data channel '%s'-'%d' open.\n", d.Label(), d.ID())
-		})
-
-		// Register text message handling
-		d.OnMessage(func(msg webrtc.DataChannelMessage) {
-			//layout .:= "2006-01-02T15:04:05.000Z"
-			//if t, err := time.Parse(layout, string(msg.Data[1])); err == nil {
-			//fmt.Println("Delay ", time.Now().Sub(t))
-			//} else {
-			w.InputChannel <- int(msg.Data[0])
-			//}
-		})
-
-		d.OnClose(func() {
-			fmt.Println("closed webrtc")
-			w.Done <- struct{}{}
-			close(w.Done)
-		})
-	})
 
 	offer := webrtc.SessionDescription{}
 

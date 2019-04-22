@@ -70,69 +70,76 @@ function startWebRTC() {
     // webrtc
     pc = new RTCPeerConnection({iceServers: [{urls: 'stun:stun.l.google.com:19302'}]})
 
-    // input channel, ordered + reliable
+    // input channel, ordered + reliable, id 0
     inputChannel = pc.createDataChannel('a', {
         ordered: true,
+        negotiated: true,
+        id: 0,
     });
+    inputChannel.onopen = () => log('inputChannel has opened');
     inputChannel.onclose = () => log('inputChannel has closed');
 
-    window.AudioContext = window.AudioContext || window.webkitAudioContext;
-    var context = new AudioContext();
-    var delayTime = 0;
-    var init = 0;
+
+    // audio channel, unordered + unreliable, id 1
+    var audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    var isInit = false;
     var audioStack = [];
     var nextTime = 0;
-
-    var isRun = false;
+    var packetIdx = 0;
 
     function scheduleBuffers() {
-        if (isRun) return;
-        console.log("daaaa");
-        while ( audioStack.length) {
-            isRun = true;
+        while (audioStack.length) {
             var buffer = audioStack.shift();
-            var source    = context.createBufferSource();
+            var source = audioCtx.createBufferSource();
             source.buffer = buffer;
-            source.connect(context.destination);
+            source.connect(audioCtx.destination);
+
+            // tracking linear time
             if (nextTime == 0)
-                nextTime = context.currentTime + 0.05;  /// add 50ms latency to work well across systems - tune this if you like
+                nextTime = audioCtx.currentTime + 0.1;  /// add 100ms latency to work well across systems - tune this if you like
             source.start(nextTime);
             nextTime+=source.buffer.duration; // Make the next buffer wait the length of the last buffer before being played
+
         };
-        console.log("diii");
-        isRun = false;
     }
 
     sampleRate = 16000;
     channels = 1;
     bitDepth = 16;
     decoder = new OpusDecoder(sampleRate, channels);
-    function damn(opusChunk) {
+    function decodeChunk(opusChunk) {
         pcmChunk = decoder.decode_float(opusChunk);
-        myBuffer = context.createBuffer(channels, pcmChunk.length, sampleRate);
+        myBuffer = audioCtx.createBuffer(channels, pcmChunk.length, sampleRate);
         nowBuffering = myBuffer.getChannelData(0, bitDepth, sampleRate);
         nowBuffering.set(pcmChunk);
         return myBuffer;
     }
 
-    pc.ondatachannel = function (ev) {
-        log(`New data channel '${ev.channel.label}'`);
-        ev.channel.onopen = () => log('channelX has opened');
-        ev.channel.onclose = () => log('channelX has closed');
-
-        ev.channel.onmessage = (e) => {
-            // source = context.createBufferSource();
-            // source.buffer = buf;
-            // source.connect(context.destination);
-            // source.start(0);
-
-            audioStack.push(damn(e.data));
-            if ((init!=0) || (audioStack.length > 10)) { // make sure we put at least 10 chunks in the buffer before starting
-                init++;
-                scheduleBuffers();
-            }
+    audioChannel = pc.createDataChannel('b', {
+        ordered: false,
+        negotiated: true,
+        id: 1,
+        maxRetransmits: 0
+    })
+    audioChannel.onopen = () => log('audioChannel has opened');
+    audioChannel.onclose = () => log('audioChannel has closed');
+    
+    audioChannel.onmessage = (e) => {
+        arr = new Uint8Array(e.data);
+        idx = arr[arr.length - 1];
+        // only accept missing 5 packets
+        if (idx < packetIdx && packetIdx - idx < 251) // 256 - 5
+            return;
+        packetIdx = idx;
+        audioStack.push(decodeChunk(e.data));
+        if (isInit || (audioStack.length > 10)) { // make sure we put at least 10 chunks in the buffer before starting
+            isInit = true;
+            scheduleBuffers();
         }
     }
+
+
+    // 
 
     pc.oniceconnectionstatechange = e => {
         log(`iceConnectionState: ${pc.iceConnectionState}`);
@@ -146,24 +153,11 @@ function startWebRTC() {
         }
     }
 
-    window.stream = new MediaStream();
-    document.getElementById("game-screen2").srcObject = stream;
 
-    // stream channel
+    // video channel
     pc.ontrack = function (event) {
-        console.log(event);
-        stream.addTrack(event.track);
-        // var el = document.createElement(event.track.kind);
-        // el.srcObject = event.streams[0];
-        // el.autoplay = true;
-        // el.width = 800;
-        // el.height = 600;
-        // el.poster = new URL("https://orig00.deviantart.net/cdcd/f/2017/276/a/a/october_2nd___gameboy_poltergeist_by_wanyo-dbpdmnd.gif");
-        // document.getElementById('remoteVideos').appendChild(el)
-
-        log("New stream, yay!");
-        // document.getElementById("game-screen").srcObject = event.streams[0];
-        // $("#game-screen").show();
+        document.getElementById("game-screen").srcObject = event.streams[0];
+        $("#game-screen").show();
     }
 
 
