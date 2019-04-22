@@ -29,7 +29,7 @@ const (
 const NumKeys = 8
 const SampleRate = 16000
 const Channels = 1
-const TimeFrame = 40
+const TimeFrame = 60
 
 type GameView struct {
 	console  *nes.Console

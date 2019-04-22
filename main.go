@@ -329,21 +329,23 @@ func fanoutAudio(audioChannel chan float32, roomID string) {
 		return
 	}
 
+	var count byte = 0
+
 	for {
 		pcm[idx] = <- audioChannel
 		idx ++
 
-		if idx >= len(pcm) {
+		if idx == len(pcm) {
 			data := make([]byte, 640)
 
 			n, err := enc.EncodeFloat32(pcm, data)
-			// n := opus.EncodeFloat(enc, pcm, 120, data, 1000)
 	
 			if err != nil {
 				log.Println("[!] Failed to decode")
 				continue
 			}
 			data = data[:n]
+			// data = append(data, count)
 	
 
 			isRoomRunning := false
@@ -368,6 +370,7 @@ func fanoutAudio(audioChannel chan float32, roomID string) {
 				return
 			}
 			idx = 0
+			count = (count + 1) & 0xff
 		}
 
 	}
