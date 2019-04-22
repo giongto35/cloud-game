@@ -1,8 +1,8 @@
 # Cloud Gaming Service Lite
 
-Cloud Gaming Service is an open source Cloud Gaming Service building on [WebRTC](https://github.com/pion).  
+Cloud Gaming Service Lite is an open source Cloud Gaming Service building on [WebRTC](https://github.com/pion).  
   
-With cloud gaming, you can play any of your favourite NES game directly on your browser without installing it. It also brings modern online multiplayer gaming experience to classic NES game, so two people can play the game together.
+With cloud gaming, you can play any of your favourite NES games directly on your browser without installing it. It also brings modern online multiplayer gaming experience to classic NES game, so two people can play the game together.
 
 ![screenshot](static/img/landing-page.png)
 
@@ -34,13 +34,15 @@ US East: (Haven't hosted)
 
 Europe: (Haven't hosted)  
 * [http://eu.nes.webgame2d.com](http://eu.nes.webgame2d.com)
-* [http://eu.nes.playcloud.games](http://eu.nes.playcloud.games)
+* [http://eu.nes.playcloud.games](http://eu.nes.playcloud.games)  
+
+Note: The current state of cloud gaming service lite are not optimized for production. The service will still experience lag in the case of heavy traffic. You can try hosting your own service following the instruction in the next session.
 
 ## Run on local
 
 You can host the server yourself by running `./run_local.sh`. It will spawn a docker environment and you can access the emulator on `localhost:8000`.  
 
-You can open port, so other person can access your local machine and play the game together.  
+You can open port on your machine, so other person can access your local machine and play the game together.  
 
 ## Development environment
 

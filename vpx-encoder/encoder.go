@@ -2,7 +2,11 @@ package vpxencoder
 
 import (
 	"fmt"
+	"log"
+	"time"
 	"unsafe"
+
+	"github.com/giongto35/cloud-game/config"
 )
 
 // https://chromium.googlesource.com/webm/libvpx/+/master/examples/simple_encoder.c
@@ -113,6 +117,8 @@ func (v *VpxEncoder) init() error {
 func (v *VpxEncoder) startLooping() {
 	go func() {
 		for {
+			beginEncoding := time.Now()
+
 			yuv := <-v.Input
 			// Add Image
 			v.vpxCodexIter = nil
@@ -139,6 +145,10 @@ func (v *VpxEncoder) startLooping() {
 					continue
 				}
 				v.Output <- bs
+			}
+
+			if *config.IsMonitor {
+				log.Println("Encoding time: ", time.Now().Sub(beginEncoding))
 			}
 		}
 	}()

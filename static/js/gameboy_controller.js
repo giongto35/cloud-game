@@ -3,23 +3,17 @@
 function showMenuScreen() {
     log("Clean up connection / frame");
     // clean up before / after menu
-    try {
-        inputChannel.close();
-    } catch (err) {
-        log(`> [Warning] input channel: ${err}`);
-    }
+    //try {
+        //inputChannel.gameboyIndeoclose();
+    //} catch (err) {
+        //log(`> [Warning] peer connection: ${err}`);
+    //}
 
-    try {
-        pc.close();
-    } catch (err) {
-        log(`> [Warning] peer connection: ${err}`);
-    }
-
-    try {
-        conn.close();
-    } catch (err) {
-        log(`> [Warning] Websocket connection: ${err}`);
-    }
+    //try {
+        //conn.close();
+    //} catch (err) {
+        //log(`> [Warning] Websocket connection: ${err}`);
+    //}
 
     $("#game-screen").hide();
     if (!DEBUG) {
@@ -69,7 +63,6 @@ function chooseGame(idx, force=false) {
 function setState(e, bo) {
     if (e.keyCode in KEY_MAP) {
         keyState[KEY_MAP[e.keyCode]] = bo;
-        stateUnchange = false;
         unchangePacket = INPUT_STATE_PACKET;
     }
 }
@@ -90,7 +83,7 @@ document.body.onkeyup = function (e) {
         }
     } else if (screenState === "game") {
         setState(e, false);
-        
+
         switch (KEY_MAP[e.keyCode]) {
         case "save":
             conn.send(JSON.stringify({"id": "save", "data": ""}));
@@ -155,7 +148,7 @@ document.body.onkeydown = function (e) {
 
 function sendInput() {
     // prepare key
-    if (stateUnchange || unchangePacket > 0) {
+    if (unchangePacket > 0) {
         st = "";
         KEY_BIT.slice().reverse().forEach(elem => {
             st += keyState[elem] ? 1 : 0;
@@ -168,7 +161,6 @@ function sendInput() {
         a[0] = ss;
         inputChannel.send(a);
 
-        stateUnchange = false;
         unchangePacket--;
     }
 }
