@@ -22,14 +22,18 @@ func initOverlord() *httptest.Server {
 }
 
 func initServer(t *testing.T, overlordURL string) *httptest.Server {
-	u := "ws" + strings.TrimPrefix(overlordURL, "http")
-	fmt.Println("connecting to overlord: ", u)
+	if overlordURL == "" {
+		oclient = nil
+	} else {
+		u := "ws" + strings.TrimPrefix(overlordURL, "http")
+		fmt.Println("connecting to overlord: ", u)
 
-	oconn, _, err := websocket.DefaultDialer.Dial(u, nil)
-	if err != nil {
-		t.Fatalf("%v", err)
+		oconn, _, err := websocket.DefaultDialer.Dial(u, nil)
+		if err != nil {
+			t.Fatalf("%v", err)
+		}
+		oclient = NewOverlordClient(oconn)
 	}
-	oclient = NewOverlordClient(oconn)
 
 	server := httptest.NewServer(http.HandlerFunc(ws))
 	return server
@@ -109,11 +113,13 @@ func initClient(t *testing.T, host string) {
 		t.Fail()
 	}
 	fmt.Println("Done")
+	ws.Close()
 	// If receive roomID, the server is running correctly
 }
 
 //func TestSingleServerNoOverlord(t *testing.T) {
 //// Init slave server
+//oclient = nil
 //s := initServer(t, "")
 //defer s.Close()
 
@@ -128,4 +134,5 @@ func TestSingleServerOneOverlord(t *testing.T) {
 	defer s.Close()
 
 	initClient(t, s.URL)
+	oclient.conn.Close()
 }
