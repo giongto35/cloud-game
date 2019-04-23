@@ -29,6 +29,14 @@ const (
 )
 const NumKeys = 8
 
+// Audio consts
+const (
+	SampleRate = 16000
+	Channels = 1
+	TimeFrame = 60
+)
+
+
 type GameView struct {
 	console *nes.Console
 	title   string
@@ -41,16 +49,19 @@ type GameView struct {
 	loadingPath string
 
 	imageChannel chan *image.RGBA
+	audioChannel chan float32
 	inputChannel chan int
 }
 
-func NewGameView(console *nes.Console, title, hash string, imageChannel chan *image.RGBA, inputChannel chan int) *GameView {
+
+func NewGameView(console *nes.Console, title, hash string, imageChannel chan *image.RGBA, audioChannel chan float32, inputChannel chan int) *GameView {
 	gameview := &GameView{
 		console:      console,
 		title:        title,
 		hash:         hash,
 		keyPressed:   [NumKeys * 2]bool{false},
 		imageChannel: imageChannel,
+		audioChannel:  audioChannel,
 		inputChannel: inputChannel,
 	}
 
@@ -81,10 +92,8 @@ func (view *GameView) ListenToInputChannel() {
 
 // Enter enter the game view.
 func (view *GameView) Enter() {
-	// Always reset game
-	// Legacy Audio code. TODO: Add it back to support audio
-	// view.console.SetAudioChannel(view.director.audio.channel)
-	// view.console.SetAudioSampleRate(view.director.audio.sampleRate)
+	view.console.SetAudioSampleRate(SampleRate)
+	view.console.SetAudioChannel(view.audioChannel)
 
 	// load state
 	if err := view.console.LoadState(savePath(view.hash)); err == nil {
@@ -105,8 +114,8 @@ func (view *GameView) Enter() {
 
 // Exit ...
 func (view *GameView) Exit() {
-	// view.console.SetAudioChannel(nil)
-	// view.console.SetAudioSampleRate(0)
+	view.console.SetAudioChannel(nil)
+	view.console.SetAudioSampleRate(0)
 	// save sram
 	cartridge := view.console.Cartridge
 	if cartridge.Battery != 0 {
@@ -156,10 +165,10 @@ func (view *GameView) updateControllers() {
 	// First 8 keys are player 1
 	var player1Keys [8]bool
 	copy(player1Keys[:], view.keyPressed[:8])
+
 	var player2Keys [8]bool
 	copy(player2Keys[:], view.keyPressed[8:])
 
 	view.console.Controller1.SetButtons(player1Keys)
 	view.console.Controller2.SetButtons(player2Keys)
-
 }

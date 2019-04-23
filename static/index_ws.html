@@ -10,7 +10,8 @@ textarea {
 <select id="gameOp">
 </select>
 
-<button id="play" onclick="window.startGame()">Play</button><br/><br/>
+<button id="play" onclick="window.startGame()">Play</button>
+<button id="play" onclick="pc.close()">Stop</button>
 Your current room: <b><label id="currentRoomID" style="color:blue"></b> <br />
   You can join a remote game by roomID.<br />
 Room ID: <input type="text" id="roomID">
@@ -23,7 +24,7 @@ Play as player(1,2): <select id="playerIndex">
 
 <body scroll="no" style="overflow: hidden">
 <div id="remoteVideos">
-  <video id="game-screen" autoplay=true width=400 height=300 poster="https://orig00.deviantart.net/cdcd/f/2017/276/a/a/october_2nd___gameboy_poltergeist_by_wanyo-dbpdmnd.gif" style="display: none">
+  <video id="game-screen" autoplay=true width=400 height=300 poster="https://orig00.deviantart.net/cdcd/f/2017/276/a/a/october_2nd___gameboy_poltergeist_by_wanyo-dbpdmnd.gif">
 </div> <br />
 
 <h3>Instruction</h3>
@@ -51,6 +52,10 @@ Play as player(1,2): <select id="playerIndex">
   DEBUG = true;
 </script>
 
+<!-- https://rawgit.com/Rillke/opus.js-sample/master/index.xhtml -->
+<script src="/static/js/libopus.js"></script>
+<script src="/static/js/opus.js"></script>
+
 <script src="https://code.jquery.com/jquery-3.3.1.min.js"></script>
 <script src="/static/js/const.js"></script>
 <script src="/static/js/global.js"></script>
@@ -68,6 +73,8 @@ Play as player(1,2): <select id="playerIndex">
   $("#gameOp").on("change", function() {
     gameIdx = gameOp.selectedIndex;
   });
+
+  gameIdx = 7;
 </script>
 
 </html>
