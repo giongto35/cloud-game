@@ -117,14 +117,14 @@ func initClient(t *testing.T, host string) {
 	// If receive roomID, the server is running correctly
 }
 
-//func TestSingleServerNoOverlord(t *testing.T) {
-//// Init slave server
-//oclient = nil
-//s := initServer(t, "")
-//defer s.Close()
+func TestSingleServerNoOverlord(t *testing.T) {
+	// Init slave server
+	oclient = nil
+	s := initServer(t, "")
+	defer s.Close()
 
-//initClient(t, s.URL)
-//}
+	initClient(t, s.URL)
+}
 
 func TestSingleServerOneOverlord(t *testing.T) {
 	o := initOverlord()
