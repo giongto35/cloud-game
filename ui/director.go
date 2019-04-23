@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/giongto35/cloud-game/nes"
+	// "github.com/gordonklaus/portaudio"
 )
 
 type Director struct {
@@ -13,6 +14,7 @@ type Director struct {
 	view         *GameView
 	timestamp    float64
 	imageChannel chan *image.RGBA
+	audioChannel chan float32
 	inputChannel chan int
 	Done         chan struct{}
 
@@ -22,10 +24,10 @@ type Director struct {
 
 const FPS = 60
 
-func NewDirector(roomID string, imageChannel chan *image.RGBA, inputChannel chan int) *Director {
+func NewDirector(roomID string, imageChannel chan *image.RGBA, audioChannel chan float32, inputChannel chan int) *Director {
 	director := Director{}
-	// director.audio = audio
 	director.Done = make(chan struct{})
+	director.audioChannel = audioChannel
 	director.imageChannel = imageChannel
 	director.inputChannel = inputChannel
 	director.roomID = roomID
@@ -58,6 +60,13 @@ func (d *Director) Step() {
 }
 
 func (d *Director) Start(paths []string) {
+	// portaudio.Initialize()
+	// defer portaudio.Terminate()
+
+	// audio := NewAudio()
+	// audio.Start()
+	// d.audio = audio
+
 	if len(paths) == 1 {
 		d.PlayGame(paths[0])
 	}
@@ -68,6 +77,7 @@ func (d *Director) Run() {
 	c := time.Tick(time.Second / FPS)
 L:
 	for range c {
+	// for {
 		// quit game
 		// TODO: Anyway not using select because it will slow down
 		select {
@@ -96,7 +106,7 @@ func (d *Director) PlayGame(path string) {
 		log.Fatalln(err)
 	}
 	// Set GameView as current view
-	d.SetView(NewGameView(console, path, hash, d.imageChannel, d.inputChannel))
+	d.SetView(NewGameView(console, path, hash, d.imageChannel, d.audioChannel, d.inputChannel))
 }
 
 func (d *Director) SaveGame() error {
