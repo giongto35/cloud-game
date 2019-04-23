@@ -95,7 +95,14 @@ func main() {
 	http.HandleFunc("/ws", ws)
 
 	if !IsOverlord {
-		oclient = NewOverlordClient()
+		conn, err := createOverlordConnection()
+		if err != nil {
+			log.Println("Cannot connect to overlord")
+			log.Println("Run as a single server")
+			oclient = nil
+		} else {
+			oclient = NewOverlordClient(conn)
+		}
 	}
 
 	log.Println("oclient ", oclient)
@@ -470,13 +477,7 @@ func createOverlordConnection() (*websocket.Conn, error) {
 	return c, nil
 }
 
-func NewOverlordClient() *Client {
-	oc, err := createOverlordConnection()
-	if err != nil {
-		log.Println("Cannot connect to overlord")
-		log.Println("Run as a single server")
-		return nil
-	}
+func NewOverlordClient(oc *websocket.Conn) *Client {
 	oclient := NewClient(oc)
 
 	// Received from overlord the serverID
@@ -523,7 +524,9 @@ func NewOverlordClient() *Client {
 			log.Println("Add the connection to current room on the host")
 
 			peerconnection := peerconnections[resp.SessionID]
+			log.Println("start session")
 			roomID, isNewRoom := startSession(peerconnection, resp.Data, resp.RoomID, resp.PlayerIndex)
+			log.Println("Done, sending back")
 			// Bridge always access to old room
 			// TODO: log warn
 			if isNewRoom == true {
