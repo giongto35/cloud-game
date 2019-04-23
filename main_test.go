@@ -136,3 +136,16 @@ func TestSingleServerOneOverlord(t *testing.T) {
 	initClient(t, s.URL)
 	oclient.conn.Close()
 }
+
+//func TestTwoServerOneOverlord(t *testing.T) {
+//o := initOverlord()
+//defer o.Close()
+//// Init slave server
+//s1 := initServer(t, o.URL)
+//defer s1.Close()
+//s2 := initServer(t, o.URL)
+//defer s2.Close()
+
+//initClient(t, s1.URL)
+//oclient.conn.Close()
+//}
