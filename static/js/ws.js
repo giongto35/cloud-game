@@ -9,7 +9,7 @@ conn = new WebSocket(`ws://${location.host}/ws`);
 conn.onopen = () => {
     log("WebSocket is opened. Send ping");
     log("Send ping pong frequently")
-    pingpongTimer = setInterval(sendPing, 1000 / PINGPONGPS)
+    // pingpongTimer = setInterval(sendPing, 1000 / PINGPONGPS)
 
     startWebRTC();
 }
@@ -70,24 +70,82 @@ function startWebRTC() {
     // webrtc
     pc = new RTCPeerConnection({iceServers: [{urls: 'stun:stun.l.google.com:19302'}]})
 
-    // input channel
-    inputChannel = pc.createDataChannel('foo', {ordered: false})
-    inputChannel.onclose = () => {
-        log('inputChannel has closed');
+    // input channel, ordered + reliable, id 0
+    inputChannel = pc.createDataChannel('a', {
+        ordered: true,
+        negotiated: true,
+        id: 0,
+    });
+    inputChannel.onopen = () => log('inputChannel has opened');
+    inputChannel.onclose = () => log('inputChannel has closed');
+
+
+    // audio channel, unordered + unreliable, id 1
+    var audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    var isInit = false;
+    var audioStack = [];
+    var nextTime = 0;
+    var packetIdx = 0;
+
+    function scheduleBuffers() {
+        while (audioStack.length) {
+            var buffer = audioStack.shift();
+            var source = audioCtx.createBufferSource();
+            source.buffer = buffer;
+            source.connect(audioCtx.destination);
+
+            // tracking linear time
+            if (nextTime == 0)
+                nextTime = audioCtx.currentTime + 0.1;  /// add 100ms latency to work well across systems - tune this if you like
+            source.start(nextTime);
+            nextTime+=source.buffer.duration; // Make the next buffer wait the length of the last buffer before being played
+
+        };
     }
 
-    inputChannel.onopen = () => {
-        log('inputChannel has opened');
+    sampleRate = 16000;
+    channels = 1;
+    bitDepth = 16;
+    decoder = new OpusDecoder(sampleRate, channels);
+    function decodeChunk(opusChunk) {
+        pcmChunk = decoder.decode_float(opusChunk);
+        myBuffer = audioCtx.createBuffer(channels, pcmChunk.length, sampleRate);
+        nowBuffering = myBuffer.getChannelData(0, bitDepth, sampleRate);
+        nowBuffering.set(pcmChunk);
+        return myBuffer;
     }
 
-    inputChannel.onmessage = e => {
-        log(`Message from DataChannel '${inputChannel.label}' payload '${e.data}'`);
+    audioChannel = pc.createDataChannel('b', {
+        ordered: false,
+        negotiated: true,
+        id: 1,
+        maxRetransmits: 0
+    })
+    audioChannel.onopen = () => log('audioChannel has opened');
+    audioChannel.onclose = () => log('audioChannel has closed');
+    
+    audioChannel.onmessage = (e) => {
+        arr = new Uint8Array(e.data);
+        idx = arr[arr.length - 1];
+        // only accept missing 5 packets
+        if (idx < packetIdx && packetIdx - idx < 251) // 256 - 5
+            return;
+        packetIdx = idx;
+        audioStack.push(decodeChunk(e.data));
+        if (isInit || (audioStack.length > 10)) { // make sure we put at least 10 chunks in the buffer before starting
+            isInit = true;
+            scheduleBuffers();
+        }
     }
+
+
+    // 
 
     pc.oniceconnectionstatechange = e => {
         log(`iceConnectionState: ${pc.iceConnectionState}`);
 
         if (pc.iceConnectionState === "connected") {
+
             //conn.send(JSON.stringify({"id": "start", "data": ""}));
         }
         else if (pc.iceConnectionState === "disconnected") {
@@ -95,9 +153,9 @@ function startWebRTC() {
         }
     }
 
-    // stream channel
+
+    // video channel
     pc.ontrack = function (event) {
-        log("New stream, yay!");
         document.getElementById("game-screen").srcObject = event.streams[0];
         $("#game-screen").show();
     }
@@ -131,10 +189,10 @@ function startGame() {
     log("Starting game screen");
     screenState = "game";
 
-    conn.send(JSON.stringify({"id": "start", "data": GAME_LIST[gameIdx].nes, "room_id": roomID.value, "player_index": parseInt(playerIndex.value, 10)}));inputTimer
+    conn.send(JSON.stringify({"id": "start", "data": GAME_LIST[gameIdx].nes, "room_id": roomID.value, "player_index": parseInt(playerIndex.value, 10)}));
 
     // clear menu screen
-    //endInput();
+    endInput();
     document.getElementById('div').innerHTML = "";
     if (!DEBUG) {
         $("#menu-screen").fadeOut(400, function() {
@@ -142,6 +200,5 @@ function startGame() {
         });
     }
     // end clear
-
     startInput();
 }
