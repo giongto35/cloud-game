@@ -90,6 +90,8 @@ func initClient(t *testing.T, host string) {
 
 	time.Sleep(time.Second * 3)
 	fmt.Println("Sending start...")
+
+	roomID := make(chan string)
 	client.send(WSPacket{
 		ID:          "start",
 		Data:        "Contra.nes",
@@ -98,12 +100,27 @@ func initClient(t *testing.T, host string) {
 	}, func(resp WSPacket) {
 		fmt.Println("Received response")
 		fmt.Println("RoomID:", resp.RoomID)
+		roomID <- resp.RoomID
 	})
 
-	time.Sleep(time.Hour)
+	respRoomID := <-roomID
+	if respRoomID == "" {
+		fmt.Println("RoomID should not be empty")
+		t.Fail()
+	}
+	fmt.Println("Done")
+	// If receive roomID, the server is running correctly
 }
 
-func TestMain(t *testing.T) {
+//func TestSingleServerNoOverlord(t *testing.T) {
+//// Init slave server
+//s := initServer(t, "")
+//defer s.Close()
+
+//initClient(t, s.URL)
+//}
+
+func TestSingleServerOneOverlord(t *testing.T) {
 	o := initOverlord()
 	defer o.Close()
 	// Init slave server
