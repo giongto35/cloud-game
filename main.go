@@ -132,7 +132,7 @@ func initRoom(roomID, gameName string) string {
 	if roomID == "" {
 		roomID = generateRoomID()
 	}
-	log.Println("Init new room", roomID)
+	log.Println("Init new room", roomID, gameName)
 	imageChannel := make(chan *image.RGBA, 100)
 	audioChannel := make(chan float32, ui.SampleRate)
 	inputChannel := make(chan int, 100)
@@ -226,6 +226,11 @@ func ws(w http.ResponseWriter, r *http.Request) {
 		peerconnection: webrtc.NewWebRTC(),
 		// The server session is maintaining
 	}
+
+	client.send(WSPacket{
+		ID:   "gamelist",
+		Data: getEncodedGameList(),
+	}, nil)
 
 	client.receive("heartbeat", func(resp WSPacket) WSPacket {
 		return resp
@@ -391,19 +396,19 @@ func (r *Room) startAudio() {
 			return
 		case sample := <-r.audioChannel:
 			pcm[idx] = sample
-			idx ++
+			idx++
 			if idx == len(pcm) {
 				data := make([]byte, 640)
 
 				n, err := enc.EncodeFloat32(pcm, data)
-		
+
 				if err != nil {
 					log.Println("[!] Failed to decode")
 					continue
 				}
 				data = data[:n]
 				data = append(data, count)
-		
+
 				r.sessionsLock.Lock()
 				for _, webRTC := range r.rtcSessions {
 					// Client stopped

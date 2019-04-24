@@ -1,6 +1,7 @@
 var pc;
 var curPacketID = "";
 var curSessionID = "";
+var gamelist = [];
 // web socket
 
 conn = new WebSocket(`ws://${location.host}/ws`);
@@ -25,6 +26,27 @@ conn.onclose = () => {
 conn.onmessage = e => {
     d = JSON.parse(e.data);
     switch (d["id"]) {
+
+    case "gamelist":
+        files = JSON.parse(d["data"])
+        // parse files list to gamelist
+        gamelist = []
+        files.forEach(file => {
+            var file = file
+            var name = file.substr(0, file.indexOf('.'));
+            // var image = name + '.png'
+            gamelist.push({file: file, name: name})
+        })
+
+        // Update Game Options 
+        gamelist.forEach(game => {
+          ee = document.createElement("option");
+          ee.value = game.file;
+          ee.innerHTML = game.name;
+          gameOp.append(ee);
+        });
+        log("Received game list", gamelist)
+        break;
     case "sdp":
         log("Got remote sdp");
         pc.setRemoteDescription(new RTCSessionDescription(JSON.parse(atob(d["data"]))));
@@ -189,7 +211,7 @@ function startGame() {
     log("Starting game screen");
     screenState = "game";
 
-    conn.send(JSON.stringify({"id": "start", "data": GAME_LIST[gameIdx].nes, "room_id": roomID.value, "player_index": parseInt(playerIndex.value, 10)}));
+    conn.send(JSON.stringify({"id": "start", "data": gamelist[gameIdx].file, "room_id": roomID.value, "player_index": parseInt(playerIndex.value, 10)}));
 
     // clear menu screen
     endInput();

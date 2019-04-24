@@ -63,18 +63,18 @@ Play as player(1,2): <select id="playerIndex">
 <script src="/static/js/ws.js"></script>
 
 <script>
-  GAME_LIST.forEach(e => {
-    ee = document.createElement("option");
-    ee.value = e.nes;
-    ee.innerHTML = e.name;
-    gameOp.append(ee);
-  });
+  <!--GAME_LIST.forEach(e => {-->
+    <!--ee = document.createElement("option");-->
+    <!--ee.value = e.nes;-->
+    <!--ee.innerHTML = e.name;-->
+    <!--gameOp.append(ee);-->
+  <!--});-->
 
   $("#gameOp").on("change", function() {
     gameIdx = gameOp.selectedIndex;
   });
 
-  gameIdx = 7;
+  gameIdx = 1;
 </script>
 
 </html>
