@@ -12,6 +12,7 @@ With cloud gaming, you can play any of your favourite NES games directly on your
 2. Can multiplayer over internet. A person host a game and the other person can join the same game as 1st or 2nd player.  
 3. Save (S) and Load (L) at any point in time.  
 4. If you save the roomID, next time you can come back to continue play in that room.  
+5. The game can be hosted on local and your game session can be accessed over internet.
 
 ## Demo
 https://www.youtube.com/watch?v=qkjV2VIwVIo
@@ -42,7 +43,7 @@ Note: The current state of cloud gaming service lite are not optimized for produ
 
 You can host the server yourself by running `./run_local.sh`. It will spawn a docker environment and you can access the emulator on `localhost:8000`.  
 
-You can open port on your machine, so other person can access your local machine and play the game together.  
+Given the roomID, the game session on your local can be accessed over ethernet. The server will bypass NAT and set up a peer connection from remote service to local.
 
 ## Development environment
 
