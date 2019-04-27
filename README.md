@@ -90,7 +90,7 @@ Then we can run the main directly
 
 ## Follow up
 
-This project demos the simplest cloud game with NES. Integrating with other emulator like GBA, NDS will also be possible. I will welcome for the contribution.
+This project demos the simplest cloud game with NES. Integrating with other emulator like GBA, NDS will also be possible. I'm welcome for the contribution.
 
 ## Credits
 
