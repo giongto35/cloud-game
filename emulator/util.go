@@ -1,5 +1,5 @@
 // credit to https://github.com/fogleman/nes
-package ui
+package director
 
 import (
 	"crypto/md5"
@@ -16,7 +16,7 @@ import (
 	"os/user"
 	"path"
 
-	"github.com/giongto35/cloud-game/nes"
+	"github.com/giongto35/cloud-game/emulator/nes"
 )
 
 var homeDir string

@@ -1,4 +1,4 @@
-package main
+package cws
 
 import (
 	"encoding/json"
@@ -47,8 +47,8 @@ func NewClient(conn *websocket.Conn) *Client {
 	}
 }
 
-// send sends a packet and trigger callback when the packet comes back
-func (c *Client) send(request WSPacket, callback func(response WSPacket)) {
+// Send sends a packet and trigger callback when the packet comes back
+func (c *Client) Send(request WSPacket, callback func(response WSPacket)) {
 	request.PacketID = uuid.Must(uuid.NewV4()).String()
 	data, err := json.Marshal(request)
 	if err != nil {
@@ -72,8 +72,8 @@ func (c *Client) send(request WSPacket, callback func(response WSPacket)) {
 	c.sendCallbackLock.Unlock()
 }
 
-// receive receive and response back
-func (c *Client) receive(id string, f func(response WSPacket) (request WSPacket)) {
+// Receive receive and response back
+func (c *Client) Receive(id string, f func(response WSPacket) (request WSPacket)) {
 	c.recvCallback[id] = func(response WSPacket) {
 		req := f(response)
 		// Add Meta data
@@ -101,7 +101,7 @@ func (c *Client) syncSend(request WSPacket) (response WSPacket) {
 	f := func(resp WSPacket) {
 		res <- resp
 	}
-	c.send(request, f)
+	c.Send(request, f)
 	return <-res
 }
 
@@ -111,11 +111,11 @@ func (c *Client) heartbeat() {
 	timer := time.Tick(time.Second)
 
 	for range timer {
-		c.send(WSPacket{ID: "heartbeat"}, nil)
+		c.Send(WSPacket{ID: "heartbeat"}, nil)
 	}
 }
 
-func (c *Client) listen() {
+func (c *Client) Listen() {
 	for {
 		//log.Println("Waiting for message ...")
 		_, rawMsg, err := c.conn.ReadMessage()

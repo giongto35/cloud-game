@@ -1,4 +1,4 @@
-package main
+package gamelist
 
 import (
 	"encoding/json"
@@ -9,7 +9,7 @@ import (
 const gamePath = "games"
 
 // getGameList returns list of games stored in games
-func getGameList() []string {
+func GetGameList() []string {
 	var games []string
 	filepath.Walk(gamePath, func(path string, info os.FileInfo, err error) error {
 		if !info.IsDir() {
@@ -24,7 +24,8 @@ func getGameList() []string {
 	return games
 }
 
-func getEncodedGameList() string {
-	encodedList, _ := json.Marshal(getGameList())
+// GetEncodedGameList returns game list in encoded wspacket format
+func GetEncodedGameList() string {
+	encodedList, _ := json.Marshal(GetGameList())
 	return string(encodedList)
 }
