@@ -15,7 +15,6 @@ import (
 	"time"
 
 	"github.com/giongto35/cloud-game/config"
-	"github.com/giongto35/cloud-game/ui"
 	"github.com/giongto35/cloud-game/util"
 	"github.com/giongto35/cloud-game/webrtc"
 	"github.com/gorilla/websocket"
@@ -55,7 +54,7 @@ type Room struct {
 	rtcSessions  []*webrtc.WebRTC
 	sessionsLock *sync.Mutex
 
-	director *ui.Director
+	director *emulator.Director
 }
 
 var rooms = map[string]*Room{}
@@ -134,11 +133,11 @@ func initRoom(roomID, gameName string) string {
 	}
 	log.Println("Init new room", roomID, gameName)
 	imageChannel := make(chan *image.RGBA, 100)
-	audioChannel := make(chan float32, ui.SampleRate)
+	audioChannel := make(chan float32, emulator.SampleRate)
 	inputChannel := make(chan int, 100)
 
 	// create director
-	director := ui.NewDirector(roomID, imageChannel, audioChannel, inputChannel)
+	director := emulator.NewDirector(roomID, imageChannel, audioChannel, inputChannel)
 
 	room := &Room{
 		imageChannel: imageChannel,
@@ -375,9 +374,9 @@ func (r *Room) startVideo() {
 func (r *Room) startAudio() {
 	log.Println("Enter fan audio")
 
-	enc, err := opus.NewEncoder(ui.SampleRate, ui.Channels, opus.AppAudio)
+	enc, err := opus.NewEncoder(emulator.SampleRate, emulator.Channels, opus.AppAudio)
 
-	maxBufferSize := ui.TimeFrame * ui.SampleRate / 1000
+	maxBufferSize := emulator.TimeFrame * emulator.SampleRate / 1000
 	pcm := make([]float32, maxBufferSize) // 640 * 1000 / 16000 == 40 ms
 	idx := 0
 
@@ -460,7 +459,7 @@ func startWebRTCSession(room *Room, webRTC *webrtc.WebRTC, playerIndex int) {
 			// the first 8 bits belong to player 1
 			// the next 8 belongs to player 2 ...
 			// We standardize and put it to inputChannel (16 bits)
-			input = input << ((uint(playerIndex) - 1) * ui.NumKeys)
+			input = input << ((uint(playerIndex) - 1) * emulator.NumKeys)
 			inputChannel <- input
 		}
 	}

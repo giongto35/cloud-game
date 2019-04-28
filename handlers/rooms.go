@@ -3,9 +3,11 @@ package handler
 import (
 	"image"
 	"log"
+	"math/rand"
+	"strconv"
 	"sync"
 
-	"github.com/giongto35/cloud-game/ui"
+	ui "github.com/giongto35/cloud-game/emulator"
 	"github.com/giongto35/cloud-game/webrtc"
 )
 
@@ -25,6 +27,13 @@ type Room struct {
 }
 
 var rooms = map[string]*Room{}
+
+// generateRoomID generate a unique room ID containing 16 digits
+func generateRoomID() string {
+	roomID := strconv.FormatInt(rand.Int63(), 16)
+	//roomID := uuid.Must(uuid.NewV4()).String()
+	return roomID
+}
 
 // init initilizes a room returns roomID
 func initRoom(roomID, gameName string) string {
@@ -73,4 +82,59 @@ func isRoomRunning(roomID string) bool {
 		}
 	}
 	return false
+}
+
+// startWebRTCSession fan-in of the same room to inputChannel
+func startWebRTCSession(room *Room, webRTC *webrtc.WebRTC, playerIndex int) {
+	inputChannel := room.inputChannel
+	log.Println("room, inputChannel", room, inputChannel)
+	for {
+		select {
+		case <-webRTC.Done:
+			removeSession(webRTC, room)
+		default:
+		}
+		// Client stopped
+		if webRTC.IsClosed() {
+			return
+		}
+
+		// encode frame
+		if webRTC.IsConnected() {
+			input := <-webRTC.InputChannel
+			// the first 8 bits belong to player 1
+			// the next 8 belongs to player 2 ...
+			// We standardize and put it to inputChannel (16 bits)
+			input = input << ((uint(playerIndex) - 1) * ui.NumKeys)
+			inputChannel <- input
+		}
+	}
+}
+
+func cleanSession(w *webrtc.WebRTC) {
+	room, ok := rooms[w.RoomID]
+	if !ok {
+		return
+	}
+	removeSession(w, room)
+}
+
+func removeSession(w *webrtc.WebRTC, room *Room) {
+	room.sessionsLock.Lock()
+	defer room.sessionsLock.Unlock()
+	for i, s := range room.rtcSessions {
+		if s == w {
+			room.rtcSessions = append(room.rtcSessions[:i], room.rtcSessions[i+1:]...)
+			break
+		}
+	}
+	// If room has no sessions, close room
+	if len(room.rtcSessions) == 0 {
+		room.Done <- struct{}{}
+	}
+}
+
+func (r *Room) remove() {
+	log.Println("Closing room", r)
+	r.director.Done <- struct{}{}
 }

@@ -1,11 +1,11 @@
-package ui
+package director
 
 import (
 	"image"
 	"log"
 	"time"
 
-	"github.com/giongto35/cloud-game/nes"
+	"github.com/giongto35/cloud-game/emulator/nes"
 	// "github.com/gordonklaus/portaudio"
 )
 
@@ -77,7 +77,7 @@ func (d *Director) Run() {
 	c := time.Tick(time.Second / FPS)
 L:
 	for range c {
-	// for {
+		// for {
 		// quit game
 		// TODO: Anyway not using select because it will slow down
 		select {
