@@ -1,10 +1,10 @@
 // credit to https://github.com/fogleman/nes
-package ui
+package director
 
 import (
 	"image"
 
-	"github.com/giongto35/cloud-game/nes"
+	"github.com/giongto35/cloud-game/emulator/nes"
 )
 
 // List key pressed
@@ -32,10 +32,9 @@ const NumKeys = 8
 // Audio consts
 const (
 	SampleRate = 16000
-	Channels = 1
-	TimeFrame = 60
+	Channels   = 1
+	TimeFrame  = 60
 )
-
 
 type GameView struct {
 	console *nes.Console
@@ -53,7 +52,6 @@ type GameView struct {
 	inputChannel chan int
 }
 
-
 func NewGameView(console *nes.Console, title, hash string, imageChannel chan *image.RGBA, audioChannel chan float32, inputChannel chan int) *GameView {
 	gameview := &GameView{
 		console:      console,
@@ -61,7 +59,7 @@ func NewGameView(console *nes.Console, title, hash string, imageChannel chan *im
 		hash:         hash,
 		keyPressed:   [NumKeys * 2]bool{false},
 		imageChannel: imageChannel,
-		audioChannel:  audioChannel,
+		audioChannel: audioChannel,
 		inputChannel: inputChannel,
 	}
 
