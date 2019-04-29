@@ -171,7 +171,7 @@ function startWebRTC() {
             //conn.send(JSON.stringify({"id": "start", "data": ""}));
         }
         else if (pc.iceConnectionState === "disconnected") {
-            endInput();
+            stopInputTimer();
         }
     }
 
@@ -214,7 +214,7 @@ function startGame() {
     conn.send(JSON.stringify({"id": "start", "data": gamelist[gameIdx].file, "room_id": roomID.value, "player_index": parseInt(playerIndex.value, 10)}));
 
     // clear menu screen
-    endInput();
+    stopInputTimer();
     document.getElementById('div').innerHTML = "";
     if (!DEBUG) {
         $("#menu-screen").fadeOut(400, function() {
@@ -222,5 +222,5 @@ function startGame() {
         });
     }
     // end clear
-    startInput();
+    startInputTimer();
 }
