@@ -229,17 +229,17 @@ function getOS() {
     var OSName = "unknown";
     if (navigator.appVersion.indexOf("Win")!=-1) OSName="win";
     else if (navigator.appVersion.indexOf("Mac")!=-1) OSName="mac";
-    else if (navigator.appVersion.indexOf("Android")!=-1) OSName="android";
+    else if (navigator.userAgent.indexOf("Android")!=-1) OSName="android";
     return OSName;
 }
 
 function getBrowser() {
     var browserName = "unknown";
-    if (navigator.appVersion.indexOf("Firefox")!=-1) browserName="firefox";
-    if (navigator.appVersion.indexOf("Chrome")!=-1) browserName="chrome";
-    if (navigator.appVersion.indexOf("Edge")!=-1) browserName="edge";
-    if (navigator.appVersion.indexOf("Version/")!=-1) browserName="safari";
-    if (navigator.appVersion.indexOf("UCBrowser")!=-1) browserName="uc";
+    if (navigator.userAgent.indexOf("Firefox")!=-1) browserName="firefox";
+    if (navigator.userAgent.indexOf("Chrome")!=-1) browserName="chrome";
+    if (navigator.userAgent.indexOf("Edge")!=-1) browserName="edge";
+    if (navigator.userAgent.indexOf("Version/")!=-1) browserName="safari";
+    if (navigator.userAgent.indexOf("UCBrowser")!=-1) browserName="uc";
     return browserName;
 }
 
@@ -247,8 +247,7 @@ function getBrowser() {
 // only capture the last plugged joystick
 window.addEventListener("gamepadconnected", (e) => {
     gamepad = e.gamepad;
-    console.log(`Gamepad connected at index ${gamepad.index}: ${gamepad.id}. ${gamepad.buttons.length} buttons, ${gamepad.axes.length} axes.`);
-    console.log(gamepad);
+    log(`Gamepad connected at index ${gamepad.index}: ${gamepad.id}. ${gamepad.buttons.length} buttons, ${gamepad.axes.length} axes.`);
 
     padIdx = gamepad.index;
 
@@ -256,6 +255,9 @@ window.addEventListener("gamepadconnected", (e) => {
     // get mapping first (default KeyMap2)
     os = getOS();
     browser = getBrowser();
+
+    console.log(os);
+    console.log(browser);
     
     if (os == "android") {
         // default of android is KeyMap1
@@ -337,7 +339,6 @@ window.addEventListener("gamepadconnected", (e) => {
 
 window.addEventListener("gamepaddisconnected", (event) => {
     clearInterval(gamepadTimer);
-    console.log("A gamepad disconnected:");
-    console.log(event.gamepad);
+    log(`Gamepad disconnected at index ${e.gamepad.index}`);
 });
 
