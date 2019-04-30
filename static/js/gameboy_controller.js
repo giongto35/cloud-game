@@ -370,6 +370,8 @@ function checkDPadAxis(bo, axis) {
         } else {
             $(`.dpad .${axis}`).removeClass("pressed");
         }
+
+        doButton(bo, axis);
     }
 }
 
@@ -380,9 +382,9 @@ function createJoystick(parent) {
     stick.classList.add('joystick');
 
     // TODO: REMOVE MOUSE
-    parent.on('mousedown', handleMouseDown);
-    $(document).on('mousemove', handleMouseMove);
-    $(document).on('mouseup', handleMouseUp);
+    // parent.on('mousedown', handleMouseDown);
+    // $(document).on('mousemove', handleMouseMove);
+    // $(document).on('mouseup', handleMouseUp);
 
     parent.on('touchstart', handleMouseDown);
     parent.on('touchmove', handleMouseMove);
@@ -456,16 +458,18 @@ function createJoystick(parent) {
 
 function handleButtonDown(event) {
     $(this).addClass("pressed");
+    doButtonDown($(this).attr("value"));
 }
 
 function handleButtonUp(event) {
     $(this).removeClass("pressed");
+    doButtonUp($(this).attr("value"));
 }
 
 
 // TODO: REMOVE MOUSE
-$(".abxy .button").on("mousedown", handleButtonDown);
-$(".abxy .button").on("mouseup", handleButtonUp);
+// $(".abxy .button").on("mousedown", handleButtonDown);
+// $(".abxy .button").on("mouseup", handleButtonUp);
 
 $(".abxy .button").on("touchstart", handleButtonDown);
 $(".abxy .button").on("touchend", handleButtonUp);

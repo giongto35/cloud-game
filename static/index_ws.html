@@ -68,10 +68,10 @@
   </div>
 
   <div class="abxy">
-    <span class="button a"></span>
-    <span class="button b"></span>
-    <span class="button x"></span>
-    <span class="button y"></span>
+    <span value="a" class="button a"></span>
+    <span value="b" class="button b"></span>
+    <span value="start" class="button x"></span>
+    <span value="select" class="button y"></span>
   </div>
 
   <script>
@@ -94,130 +94,6 @@
     });
 
     gameIdx = 1;
-
-    // virtual joystick
-    // Ref: https://jsfiddle.net/aa0et7tr/5/
-    createJoystick($('.dpad'));
-    var dpadState = {};
-    var touchIdx = null;
-
-    function resetDPad() {
-      dpadState = {
-        up: false,
-        down: false,
-        left: false,
-        right: false,
-      };
-
-      $(".dpad .face").removeClass("pressed");
-    }
-
-    function checkDPadAxis(bo, axis) {
-      if (bo != dpadState[axis]) {
-        dpadState[axis] = bo;
-        
-        if (dpadState[axis]) {
-          $(`.dpad .${axis}`).addClass("pressed");
-        } else {
-          $(`.dpad .${axis}`).removeClass("pressed");
-        }
-      }
-    }
-
-    function createJoystick(parent) {
-      const maxDiff = 50;
-      
-      stick = document.createElement('div');
-      stick.classList.add('joystick');
-
-      // parent.on('mousedown', handleMouseDown);
-      // $(document).on('mousemove', handleMouseMove);
-      // $(document).on('mouseup', handleMouseUp);
-
-      parent.on('touchstart', handleMouseDown);
-      parent.on('touchmove', handleMouseMove);
-      parent.on('touchend', handleMouseUp);
-
-      let dragStart = null;
-      let currentPos = { x: 0, y: 0 };
-
-      function handleMouseDown(event) {
-        event.preventDefault();
-        stick.style.transition = '0s';
-        if (event.changedTouches) {
-          touchIdx = event.changedTouches[0].identifier;
-          dragStart = {
-            x: event.changedTouches[0].clientX,
-            y: event.changedTouches[0].clientY,
-          };
-          resetDPad();
-          return;
-        }
-        dragStart = {
-          x: event.clientX,
-          y: event.clientY,
-        };
-
-      }
-
-      function handleMouseMove(event) {
-        event.preventDefault();
-        if (dragStart === null) return;
-        if (event.changedTouches) {
-          event.clientX = event.changedTouches[touchIdx].clientX;
-          event.clientY = event.changedTouches[touchIdx].clientY;
-        }
-        const xDiff = event.clientX - dragStart.x;
-        const yDiff = event.clientY - dragStart.y;
-        const angle = Math.atan2(yDiff, xDiff);
-        const distance = Math.min(maxDiff, Math.hypot(xDiff, yDiff));
-        const xNew = distance * Math.cos(angle);
-        const yNew = distance * Math.sin(angle);
-        stick.style.transform = `translate3d(${xNew}px, ${yNew}px, 0px)`;
-        currentPos = { x: xNew, y: yNew };
-
-        const xRatio = xNew / maxDiff;
-        const yRatio = yNew / maxDiff;
-        checkDPadAxis(xRatio <= -0.5, "left");
-        checkDPadAxis(xRatio >= 0.5, "right");
-        checkDPadAxis(yRatio <= -0.5, "up");
-        checkDPadAxis(yRatio >= 0.5, "down");
-      }
-
-      function handleMouseUp(event) {
-        event.preventDefault();
-        if (dragStart === null) return;
-        stick.style.transition = '.2s';
-        stick.style.transform = `translate3d(0px, 0px, 0px)`;
-        dragStart = null;
-        currentPos = { x: 0, y: 0 };
-        resetDPad();
-
-        $(".abxy .button").removeClass("pressed");
-      }
-
-      parent.append(stick);
-      return {
-        getPosition: () => currentPos,
-      };
-
-    }
-
-
-    function handleButtonDown(event) {
-      $(this).addClass("pressed");
-    }
-
-    function handleButtonUp(event) {
-      $(this).removeClass("pressed");
-    }
-
-
-    // $(".abxy .button").on("mousedown", handleButtonDown);
-    // $(".abxy .button").on("mouseup", handleButtonUp);
-    $(".abxy .button").on("touchstart", handleButtonDown);
-    $(".abxy .button").on("touchend", handleButtonUp);
-    
 
   </script>
 
