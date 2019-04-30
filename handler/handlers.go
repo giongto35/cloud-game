@@ -7,14 +7,11 @@ import (
 	"time"
 
 	"github.com/giongto35/cloud-game/config"
-	"github.com/giongto35/cloud-game/cws"
-	"github.com/giongto35/cloud-game/handlers/client"
+	"github.com/giongto35/cloud-game/webrtc"
 	"github.com/gorilla/websocket"
 )
 
 const (
-	width        = 256
-	height       = 240
 	scale        = 3
 	title        = "NES"
 	gameboyIndex = "./static/gameboy.html"
@@ -33,11 +30,30 @@ var upgrader = websocket.Upgrader{}
 
 // ID to peerconnection
 //var peerconnections = map[string]*webrtc.WebRTC{}
-var serverID = ""
-var oclient *cws.Client
+var oclient *OverlordClient
 
-// getWeb returns web frontend
-func getWeb(w http.ResponseWriter, r *http.Request) {
+type Handler struct {
+	oClient  *OverlordClient
+	rooms    map[string]*Room
+	serverID string
+	// ID to peerconnection
+	peerconnections map[string]*webrtc.WebRTC
+}
+
+func NewHandler() (*Handler, error) {
+	conn, err := createOverlordConnection()
+	if err != nil {
+		return nil, err
+	}
+	return &Handler{
+		oClient:         NewOverlordClient(conn),
+		rooms:           map[string]*Room{},
+		peerconnections: map[string]*webrtc.WebRTC{},
+	}, nil
+}
+
+// GetWeb returns web frontend
+func (h *Handler) GetWeb(w http.ResponseWriter, r *http.Request) {
 	bs, err := ioutil.ReadFile(indexFN)
 	if err != nil {
 		log.Fatal(err)
@@ -46,7 +62,7 @@ func getWeb(w http.ResponseWriter, r *http.Request) {
 }
 
 // Handle normal traffic (from browser to host)
-func ws(w http.ResponseWriter, r *http.Request) {
+func (h *Handler) WS(w http.ResponseWriter, r *http.Request) {
 	c, err := upgrader.Upgrade(w, r, nil)
 	if err != nil {
 		log.Print("[!] WS upgrade:", err)
@@ -172,58 +188,8 @@ func ws(w http.ResponseWriter, r *http.Request) {
 	//return req
 	//})
 
-	client := client.NewBrowserClient(c)
-	client.listen()
-}
-
-func getServerIDOfRoom(oc *Client, roomID string) string {
-	log.Println("Request overlord roomID")
-	packet := oc.syncSend(
-		cws.WSPacket{
-			ID:   "getRoom",
-			Data: roomID,
-		},
-	)
-	log.Println("Received roomID from overlord")
-
-	return packet.Data
-}
-
-func bridgeConnection(session *Session, serverID string, gameName string, roomID string, playerIndex int) {
-	log.Println("Bridging connection to other Host ", serverID)
-	client := session.client
-	// Ask client to init
-
-	log.Println("Requesting offer to browser", serverID)
-	resp := client.syncSend(cws.WSPacket{
-		ID:   "requestOffer",
-		Data: "",
-	})
-
-	log.Println("Sending offer to overlord to relay message to target host", resp.TargetHostID)
-	// Ask overlord to relay SDP packet to serverID
-	resp.TargetHostID = serverID
-	remoteTargetSDP := oclient.syncSend(resp)
-	log.Println("Got back remote host SDP, sending to browser")
-	// Send back remote SDP of remote server to browser
-	//client.syncSend(WSPacket{
-	//ID:   "sdp",
-	//Data: remoteTargetSDP.Data,
-	//})
-	client.send(cws.WSPacket{
-		ID:   "sdp",
-		Data: remoteTargetSDP.Data,
-	}, nil)
-	log.Println("Init session done, start game on target host")
-
-	oclient.syncSend(cws.WSPacket{
-		ID:           "start",
-		Data:         gameName,
-		TargetHostID: serverID,
-		RoomID:       roomID,
-		PlayerIndex:  playerIndex,
-	})
-	log.Println("Game is started on remote host")
+	client := NewBrowserClient(c, oclient)
+	client.Listen()
 }
 
 func createOverlordConnection() (*websocket.Conn, error) {

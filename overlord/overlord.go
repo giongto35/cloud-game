@@ -1,4 +1,4 @@
-package main
+package overlord
 
 import (
 	"fmt"
@@ -7,16 +7,17 @@ import (
 	"net/http"
 	"strconv"
 
+	"github.com/giongto35/cloud-game/cws"
 	"github.com/giongto35/cloud-game/webrtc"
 )
 
 var roomToServer = map[string]string{}
 
 // servers are the map serverID to server Client
-var servers = map[string]*Client{}
+var servers = map[string]*cws.Client{}
 
 // If it's overlord, handle overlord connection (from host to overlord)
-func wso(w http.ResponseWriter, r *http.Request) {
+func WSO(w http.ResponseWriter, r *http.Request) {
 	fmt.Println("Connected")
 	c, err := upgrader.Upgrade(w, r, nil)
 	if err != nil {
@@ -119,5 +120,5 @@ func wso(w http.ResponseWriter, r *http.Request) {
 		}
 	})
 
-	client.listen()
+	client.listeồi
 }
