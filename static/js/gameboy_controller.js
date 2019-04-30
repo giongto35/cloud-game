@@ -227,19 +227,19 @@ var padState, gamepadTimer;
 function getOS() {
     // linux? ios?
     var OSName = "unknown";
-    if (navigator.appVersion.indexOf("Win")!=-1) OSName="win";
-    else if (navigator.appVersion.indexOf("Mac")!=-1) OSName="mac";
-    else if (navigator.userAgent.indexOf("Android")!=-1) OSName="android";
+    if (navigator.appVersion.indexOf("Win") != -1) OSName = "win";
+    else if (navigator.appVersion.indexOf("Mac") != -1) OSName = "mac";
+    else if (navigator.userAgent.indexOf("Android") != -1) OSName = "android";
     return OSName;
 }
 
 function getBrowser() {
     var browserName = "unknown";
-    if (navigator.userAgent.indexOf("Firefox")!=-1) browserName="firefox";
-    if (navigator.userAgent.indexOf("Chrome")!=-1) browserName="chrome";
-    if (navigator.userAgent.indexOf("Edge")!=-1) browserName="edge";
-    if (navigator.userAgent.indexOf("Version/")!=-1) browserName="safari";
-    if (navigator.userAgent.indexOf("UCBrowser")!=-1) browserName="uc";
+    if (navigator.userAgent.indexOf("Firefox") != -1) browserName = "firefox";
+    if (navigator.userAgent.indexOf("Chrome") != -1) browserName = "chrome";
+    if (navigator.userAgent.indexOf("Edge") != -1) browserName = "edge";
+    if (navigator.userAgent.indexOf("Version/") != -1) browserName = "safari";
+    if (navigator.userAgent.indexOf("UCBrowser") != -1) browserName = "uc";
     return browserName;
 }
 
@@ -258,29 +258,29 @@ window.addEventListener("gamepadconnected", (e) => {
 
     console.log(os);
     console.log(browser);
-    
+
     if (os == "android") {
         // default of android is KeyMap1
-        padMap =  {2: "a", 0: "b", 3: "start", 4: "select", 10: "load", 11: "save", 8: "full", 9: "quit", 12: "up", 13: "down", 14: "left", 15: "right"};
+        padMap = { 2: "a", 0: "b", 3: "start", 4: "select", 10: "load", 11: "save", 8: "full", 9: "quit", 12: "up", 13: "down", 14: "left", 15: "right" };
     } else {
         // default of other OS is KeyMap2
-        padMap =  {0: "a", 1: "b", 2: "start", 3: "select", 8: "load", 9: "save", 6: "full", 7: "quit", 12: "up", 13: "down", 14: "left", 15: "right"};
+        padMap = { 0: "a", 1: "b", 2: "start", 3: "select", 8: "load", 9: "save", 6: "full", 7: "quit", 12: "up", 13: "down", 14: "left", 15: "right" };
     }
 
     if (os == "android" && (browser == "firefox" || browser == "uc")) { //KeyMap2
-        padMap =  {0: "a", 1: "b", 2: "start", 3: "select", 8: "load", 9: "save", 6: "full", 7: "quit", 12: "up", 13: "down", 14: "left", 15: "right"};
+        padMap = { 0: "a", 1: "b", 2: "start", 3: "select", 8: "load", 9: "save", 6: "full", 7: "quit", 12: "up", 13: "down", 14: "left", 15: "right" };
     }
 
     if (os == "win" && browser == "firefox") { //KeyMap3
-        padMap =  {1: "a", 2: "b", 0: "start", 3: "select", 8: "load", 9: "save", 6: "full", 7: "quit"};
+        padMap = { 1: "a", 2: "b", 0: "start", 3: "select", 8: "load", 9: "save", 6: "full", 7: "quit" };
     }
 
     if (os == "mac" && browser == "safari") { //KeyMap4
-        padMap =  {1: "a", 2: "b", 0: "start", 3: "select", 8: "load", 9: "save", 6: "full", 7: "quit", 14: "up", 15: "down", 16: "left", 17: "right"};
+        padMap = { 1: "a", 2: "b", 0: "start", 3: "select", 8: "load", 9: "save", 6: "full", 7: "quit", 14: "up", 15: "down", 16: "left", 17: "right" };
     }
 
     if (os == "mac" && browser == "firefox") { //KeyMap5
-        padMap =  {1: "a", 2: "b", 0: "start", 3: "select", 8: "load", 9: "save", 6: "full", 7: "quit", 14: "up", 15: "down", 16: "left", 17: "right"};
+        padMap = { 1: "a", 2: "b", 0: "start", 3: "select", 8: "load", 9: "save", 6: "full", 7: "quit", 14: "up", 15: "down", 16: "left", 17: "right" };
     }
 
     // reset state
@@ -307,7 +307,7 @@ window.addEventListener("gamepadconnected", (e) => {
         }
     }
 
-    gamepadTimer = setInterval(function() {
+    gamepadTimer = setInterval(function () {
         gamepad = navigator.getGamepads()[padIdx];
         if (gamepad) {
             // axis pad
@@ -334,7 +334,7 @@ window.addEventListener("gamepadconnected", (e) => {
         }
 
     }, 10); // miliseconds per hit
-    
+
 });
 
 window.addEventListener("gamepaddisconnected", (event) => {
@@ -342,3 +342,130 @@ window.addEventListener("gamepaddisconnected", (event) => {
     log(`Gamepad disconnected at index ${e.gamepad.index}`);
 });
 
+
+
+// VIRTUAL JOYSTICK
+// Ref: https://jsfiddle.net/aa0et7tr/5/
+createJoystick($('.dpad'));
+var dpadState = {};
+var touchIdx = null;
+
+function resetDPad() {
+    dpadState = {
+        up: false,
+        down: false,
+        left: false,
+        right: false,
+    };
+
+    $(".dpad .face").removeClass("pressed");
+}
+
+function checkDPadAxis(bo, axis) {
+    if (bo != dpadState[axis]) {
+        dpadState[axis] = bo;
+
+        if (dpadState[axis]) {
+            $(`.dpad .${axis}`).addClass("pressed");
+        } else {
+            $(`.dpad .${axis}`).removeClass("pressed");
+        }
+    }
+}
+
+function createJoystick(parent) {
+    const maxDiff = 50;
+
+    stick = document.createElement('div');
+    stick.classList.add('joystick');
+
+    // TODO: REMOVE MOUSE
+    parent.on('mousedown', handleMouseDown);
+    $(document).on('mousemove', handleMouseMove);
+    $(document).on('mouseup', handleMouseUp);
+
+    parent.on('touchstart', handleMouseDown);
+    parent.on('touchmove', handleMouseMove);
+    parent.on('touchend', handleMouseUp);
+
+    let dragStart = null;
+    let currentPos = { x: 0, y: 0 };
+
+    function handleMouseDown(event) {
+        event.preventDefault();
+        stick.style.transition = '0s';
+        if (event.changedTouches) {
+            touchIdx = event.changedTouches[0].identifier;
+            dragStart = {
+                x: event.changedTouches[0].clientX,
+                y: event.changedTouches[0].clientY,
+            };
+            resetDPad();
+            return;
+        }
+        dragStart = {
+            x: event.clientX,
+            y: event.clientY,
+        };
+
+    }
+
+    function handleMouseMove(event) {
+        event.preventDefault();
+        if (dragStart === null) return;
+        if (event.changedTouches) {
+            event.clientX = event.changedTouches[touchIdx].clientX;
+            event.clientY = event.changedTouches[touchIdx].clientY;
+        }
+        const xDiff = event.clientX - dragStart.x;
+        const yDiff = event.clientY - dragStart.y;
+        const angle = Math.atan2(yDiff, xDiff);
+        const distance = Math.min(maxDiff, Math.hypot(xDiff, yDiff));
+        const xNew = distance * Math.cos(angle);
+        const yNew = distance * Math.sin(angle);
+        stick.style.transform = `translate3d(${xNew}px, ${yNew}px, 0px)`;
+        currentPos = { x: xNew, y: yNew };
+
+        const xRatio = xNew / maxDiff;
+        const yRatio = yNew / maxDiff;
+        checkDPadAxis(xRatio <= -0.5, "left");
+        checkDPadAxis(xRatio >= 0.5, "right");
+        checkDPadAxis(yRatio <= -0.5, "up");
+        checkDPadAxis(yRatio >= 0.5, "down");
+    }
+
+    function handleMouseUp(event) {
+        event.preventDefault();
+        if (dragStart === null) return;
+        stick.style.transition = '.2s';
+        stick.style.transform = `translate3d(0px, 0px, 0px)`;
+        dragStart = null;
+        currentPos = { x: 0, y: 0 };
+        resetDPad();
+
+        $(".abxy .button").removeClass("pressed");
+    }
+
+    parent.append(stick);
+    return {
+        getPosition: () => currentPos,
+    };
+
+}
+
+
+function handleButtonDown(event) {
+    $(this).addClass("pressed");
+}
+
+function handleButtonUp(event) {
+    $(this).removeClass("pressed");
+}
+
+
+// TODO: REMOVE MOUSE
+$(".abxy .button").on("mousedown", handleButtonDown);
+$(".abxy .button").on("mouseup", handleButtonUp);
+
+$(".abxy .button").on("touchstart", handleButtonDown);
+$(".abxy .button").on("touchend", handleButtonUp);
