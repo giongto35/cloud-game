@@ -7,7 +7,7 @@ import (
 	"strconv"
 	"sync"
 
-	ui "github.com/giongto35/cloud-game/emulator"
+	emulator "github.com/giongto35/cloud-game/emulator"
 	"github.com/giongto35/cloud-game/webrtc"
 )
 
@@ -23,7 +23,7 @@ type Room struct {
 	rtcSessions  []*webrtc.WebRTC
 	sessionsLock *sync.Mutex
 
-	director *ui.Director
+	director *emulator.Director
 }
 
 var rooms = map[string]*Room{}
@@ -43,11 +43,11 @@ func initRoom(roomID, gameName string) string {
 	}
 	log.Println("Init new room", roomID, gameName)
 	imageChannel := make(chan *image.RGBA, 100)
-	audioChannel := make(chan float32, ui.SampleRate)
+	audioChannel := make(chan float32, emulator.SampleRate)
 	inputChannel := make(chan int, 100)
 
 	// create director
-	director := ui.NewDirector(roomID, imageChannel, audioChannel, inputChannel)
+	director := emulator.NewDirector(roomID, imageChannel, audioChannel, inputChannel)
 
 	room := &Room{
 		imageChannel: imageChannel,
@@ -105,7 +105,7 @@ func startWebRTCSession(room *Room, webRTC *webrtc.WebRTC, playerIndex int) {
 			// the first 8 bits belong to player 1
 			// the next 8 belongs to player 2 ...
 			// We standardize and put it to inputChannel (16 bits)
-			input = input << ((uint(playerIndex) - 1) * ui.NumKeys)
+			input = input << ((uint(playerIndex) - 1) * emulator.NumKeys)
 			inputChannel <- input
 		}
 	}

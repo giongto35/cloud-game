@@ -95,8 +95,8 @@ func (c *Client) Receive(id string, f func(response WSPacket) (request WSPacket)
 	}
 }
 
-// syncSend sends a packet and wait for callback till the packet comes back
-func (c *Client) syncSend(request WSPacket) (response WSPacket) {
+// SyncSend sends a packet and wait for callback till the packet comes back
+func (c *Client) SyncSend(request WSPacket) (response WSPacket) {
 	res := make(chan WSPacket)
 	f := func(resp WSPacket) {
 		res <- resp
@@ -105,8 +105,8 @@ func (c *Client) syncSend(request WSPacket) (response WSPacket) {
 	return <-res
 }
 
-// heartbeat maintains connection to server
-func (c *Client) heartbeat() {
+// Heartbeat maintains connection to server
+func (c *Client) Heartbeat() {
 	// send heartbeat every 1s
 	timer := time.Tick(time.Second)
 

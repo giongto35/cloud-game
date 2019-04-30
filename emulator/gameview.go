@@ -1,5 +1,5 @@
 // credit to https://github.com/fogleman/nes
-package director
+package emulator
 
 import (
 	"image"
@@ -34,6 +34,7 @@ const (
 	SampleRate = 16000
 	Channels   = 1
 	TimeFrame  = 60
+	AppAudio   = 1
 )
 
 type GameView struct {
