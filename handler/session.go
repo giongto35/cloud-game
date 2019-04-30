@@ -1,7 +1,6 @@
-package client
+package handler
 
 import (
-	"github.com/giongto35/cloud-game/cws"
 	"github.com/giongto35/cloud-game/webrtc"
 )
 
@@ -9,7 +8,8 @@ import (
 // It involves one connection to browser and one connection to the overlord
 // Peerconnection can be from other server to ensure better latency
 type Session struct {
-	client         *cws.Client
+	BrowserClient  *BrowserClient
+	OverlordClient *OverlordClient
 	peerconnection *webrtc.WebRTC
 	ServerID       string
 }

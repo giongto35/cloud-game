@@ -3,6 +3,7 @@ package handler
 import (
 	"log"
 
+	"github.com/giongto35/cloud-game/emulator"
 	"github.com/giongto35/cloud-game/util"
 	"gopkg.in/hraban/opus.v2"
 )
@@ -10,7 +11,7 @@ import (
 func (r *Room) startAudio() {
 	log.Println("Enter fan audio")
 
-	enc, err := opus.NewEncoder(emulator.SampleRate, emulator.Channels, emulator.AppAudio)
+	enc, err := opus.NewEncoder(emulator.SampleRate, emulator.Channels, opus.AppAudio)
 
 	maxBufferSize := emulator.TimeFrame * emulator.SampleRate / 1000
 	pcm := make([]float32, maxBufferSize) // 640 * 1000 / 16000 == 40 ms
