@@ -28,8 +28,6 @@ type Room struct {
 	director *emulator.Director
 }
 
-var rooms = map[string]*Room{}
-
 // generateRoomID generate a unique room ID containing 16 digits
 func generateRoomID() string {
 	roomID := strconv.FormatInt(rand.Int63(), 16)
@@ -74,12 +72,12 @@ func (h *Handler) initRoom(roomID, gameName string) *Room {
 // TODO: If we remove sessions from room anytime a session is closed, we can check if the sessions list is empty or not.
 func (h *Handler) isRoomRunning(roomID string) bool {
 	// If no roomID is registered
-	if _, ok := rooms[roomID]; !ok {
+	if _, ok := h.rooms[roomID]; !ok {
 		return false
 	}
 
 	// If there is running session
-	for _, s := range rooms[roomID].rtcSessions {
+	for _, s := range h.rooms[roomID].rtcSessions {
 		if !s.IsClosed() {
 			return true
 		}
