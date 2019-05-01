@@ -23,7 +23,8 @@ func NewOverlordClient(oc *websocket.Conn) *OverlordClient {
 	}
 
 	oclient := &OverlordClient{
-		Client: cws.NewClient(oc),
+		Client:          cws.NewClient(oc),
+		peerconnections: map[string]*webrtc.WebRTC{},
 	}
 	return oclient
 }
@@ -126,9 +127,9 @@ func (s *Session) bridgeConnection(serverID string, gameName string, roomID stri
 		Data: "",
 	})
 
-	log.Println("Sending offer to overlord to relay message to target host", resp.TargetHostID)
 	// Ask overlord to relay SDP packet to serverID
 	resp.TargetHostID = serverID
+	log.Println("Sending offer to overlord to relay message to target host", resp.TargetHostID, "with payload", resp)
 	remoteTargetSDP := s.OverlordClient.SyncSend(resp)
 	log.Println("Got back remote host SDP, sending to browser")
 	// Send back remote SDP of remote server to browser

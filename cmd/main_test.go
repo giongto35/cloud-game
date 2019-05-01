@@ -106,6 +106,32 @@ func initClient(t *testing.T, host string) (conn *websocket.Conn, roomID chan st
 		return cws.EmptyPacket
 	})
 
+	// Request Offer routing
+	client.Receive("requestOffer", func(resp cws.WSPacket) cws.WSPacket {
+		log.Println("Frontend received requestOffer")
+		peerConnection, err = webrtc.NewPeerConnection(webrtcconfig)
+		if err != nil {
+			t.Fatalf("%v", err)
+		}
+
+		log.Println("Recreating offer")
+		offer, err := peerConnection.CreateOffer(nil)
+		if err != nil {
+			t.Fatalf("%v", err)
+		}
+
+		log.Println("Set localDesc")
+		err = peerConnection.SetLocalDescription(offer)
+		if err != nil {
+			panic(err)
+		}
+		log.Println("return offer", offer)
+		return cws.WSPacket{
+			ID:   "initwebrtc",
+			Data: gamertc.Encode(offer),
+		}
+	})
+
 	time.Sleep(time.Second * 3)
 	fmt.Println("Sending start...")
 
@@ -250,6 +276,32 @@ func initClient2(t *testing.T, host string, remoteRoomID string) (conn *websocke
 		}
 
 		return cws.EmptyPacket
+	})
+
+	// Request offer browser
+	client.Receive("requestOffer", func(resp cws.WSPacket) cws.WSPacket {
+		log.Println("Frontend received requestOffer")
+		peerConnection, err = webrtc.NewPeerConnection(webrtcconfig)
+		if err != nil {
+			t.Fatalf("%v", err)
+		}
+
+		log.Println("Recreating offer")
+		offer, err := peerConnection.CreateOffer(nil)
+		if err != nil {
+			t.Fatalf("%v", err)
+		}
+
+		log.Println("Set localDesc")
+		err = peerConnection.SetLocalDescription(offer)
+		if err != nil {
+			panic(err)
+		}
+		log.Println("return offer", offer)
+		return cws.WSPacket{
+			ID:   "initwebrtc",
+			Data: gamertc.Encode(offer),
+		}
 	})
 
 	time.Sleep(time.Second * 3)
