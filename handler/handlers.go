@@ -40,6 +40,7 @@ type Handler struct {
 	// isDebug determines the mode handler is running
 	isDebug    bool
 	isOverlord bool
+	gamePath   string
 
 	// ID to peerconnection
 	peerconnections map[string]*webrtc.WebRTC
@@ -48,16 +49,18 @@ type Handler struct {
 }
 
 // NewHandler returns a new server
-func NewHandler(overlordConn *websocket.Conn, isDebug bool) *Handler {
+func NewHandler(overlordConn *websocket.Conn, isDebug bool, gamePath string) *Handler {
 	//conn, err := createOverlordConnection()
 	//if err != nil {
 	//return nil, err
 	//}
 	return &Handler{
-		isDebug:         isDebug,
 		oClient:         NewOverlordClient(overlordConn),
 		rooms:           map[string]*Room{},
 		peerconnections: map[string]*webrtc.WebRTC{},
+
+		isDebug:  isDebug,
+		gamePath: gamePath,
 	}
 }
 
@@ -106,7 +109,7 @@ func (h *Handler) WS(w http.ResponseWriter, r *http.Request) {
 
 	wssession.BrowserClient.Send(cws.WSPacket{
 		ID:   "gamelist",
-		Data: gamelist.GetEncodedGameList(),
+		Data: gamelist.GetEncodedGameList(h.gamePath),
 	}, nil)
 
 	wssession.BrowserClient.Listen()
