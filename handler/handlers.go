@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"fmt"
 	"io/ioutil"
 	"log"
 	"net/http"
@@ -9,6 +10,7 @@ import (
 	"github.com/giongto35/cloud-game/config"
 	"github.com/giongto35/cloud-game/webrtc"
 	"github.com/gorilla/websocket"
+	uuid "github.com/satori/go.uuid"
 )
 
 const (
@@ -18,7 +20,7 @@ const (
 	debugIndex   = "./static/index_ws.html"
 )
 
-var indexFN = gameboyIndex
+var indexFN = debugIndex
 
 // Time allowed to write a message to the peer.
 var readWait = 30 * time.Second
@@ -71,6 +73,27 @@ func (h *Handler) WS(w http.ResponseWriter, r *http.Request) {
 		log.Print("[!] WS upgrade:", err)
 		return
 	}
+
+	client := NewBrowserClient(c)
+	//client := NewClient(c)
+	////sessionID := strconv.Itoa(rand.Int())
+	sessionID := uuid.Must(uuid.NewV4()).String()
+	wssession := &Session{
+		ID:             sessionID,
+		BrowserClient:  client,
+		OverlordClient: h.oClient,
+		peerconnection: webrtc.NewWebRTC(),
+	}
+	wssession.RegisterBrowserClient()
+	fmt.Println("oclient : ", h.oClient)
+
+	if wssession.OverlordClient != nil {
+		wssession.RegisterOverlordClient()
+		go wssession.OverlordClient.Heartbeat()
+		go wssession.OverlordClient.Listen()
+	}
+	wssession.BrowserClient.Listen()
+
 	defer c.Close()
 	//var gameName string
 	//var roomID string
@@ -191,8 +214,7 @@ func (h *Handler) WS(w http.ResponseWriter, r *http.Request) {
 	//return req
 	//})
 
-	client := NewBrowserClient(c, oclient)
-	client.Listen()
+	//client.Listen()
 }
 
 func createOverlordConnection() (*websocket.Conn, error) {

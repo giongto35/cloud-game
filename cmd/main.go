@@ -82,11 +82,13 @@ func main() {
 		log.Println("Running as overlord ")
 		initilizeOverlord()
 		IsOverlord = true
+		initilizeOverlord()
 	} else {
 		if strings.HasPrefix(*config.OverlordHost, "ws") && !strings.HasSuffix(*config.OverlordHost, "wso") {
 			log.Fatal("Overlord connection is invalid. Should have the form `ws://.../wso`")
 		}
 		log.Println("Running as slave ")
 		IsOverlord = false
+		initializeServer()
 	}
 }

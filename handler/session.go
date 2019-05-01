@@ -8,10 +8,15 @@ import (
 // It involves one connection to browser and one connection to the overlord
 // Peerconnection can be from other server to ensure better latency
 type Session struct {
+	ID             string
 	BrowserClient  *BrowserClient
 	OverlordClient *OverlordClient
 	peerconnection *webrtc.WebRTC
-	ServerID       string
+
+	ServerID    string
+	GameName    string
+	RoomID      string
+	PlayerIndex int
 }
 
 // startSession handles one session call

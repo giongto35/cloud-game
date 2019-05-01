@@ -6,20 +6,17 @@ import (
 
 	"github.com/giongto35/cloud-game/config"
 	"github.com/giongto35/cloud-game/cws"
-	"github.com/giongto35/cloud-game/handler/gamelist"
-	"github.com/giongto35/cloud-game/webrtc"
 	"github.com/gorilla/websocket"
 	pionRTC "github.com/pion/webrtc"
-	uuid "github.com/satori/go.uuid"
 )
 
 type BrowserClient struct {
 	*cws.Client
-	session     *Session
-	oclient     *OverlordClient
-	gameName    string
-	roomID      string
-	playerIndex int
+	//session     *Session
+	//oclient     *OverlordClient
+	//gameName    string
+	//roomID      string
+	//playerIndex int
 }
 
 func (s *Session) RegisterBrowserClient() {
@@ -39,7 +36,7 @@ func (s *Session) RegisterBrowserClient() {
 		return cws.WSPacket{
 			ID:        "sdp",
 			Data:      localSession,
-			SessionID: s.SessionID,
+			SessionID: s.ID,
 		}
 	})
 
@@ -80,35 +77,34 @@ func (s *Session) RegisterBrowserClient() {
 	//})
 
 	browserClient.Receive("start", func(resp cws.WSPacket) (req cws.WSPacket) {
-		gameName = resp.Data
-		roomID = resp.RoomID
-		playerIndex = resp.PlayerIndex
+		s.GameName = resp.Data
+		s.RoomID = resp.RoomID
+		s.PlayerIndex = resp.PlayerIndex
 		isNewRoom := false
 
 		log.Println("Starting game")
 		// If we are connecting to overlord, request serverID from roomID
-		if browserClient.oclient != nil {
-			session := browserClient.session
-			roomServerID := getServerIDOfRoom(session.OverlordClient, roomID)
-			log.Println("Server of RoomID ", roomID, " is ", roomServerID)
-			if roomServerID != "" && wssession.ServerID != roomServerID {
+		if s.OverlordClient != nil {
+			roomServerID := getServerIDOfRoom(s.OverlordClient, s.RoomID)
+			log.Println("Server of RoomID ", s.RoomID, " is ", s.RoomID)
+			if roomServerID != "" && s.ServerID != roomServerID {
 				// TODO: Re -register
-				go bridgeConnection(wssession, roomServerID, gameName, roomID, playerIndex)
+				go s.bridgeConnection(roomServerID, s.GameName, s.RoomID, s.PlayerIndex)
 				return
 			}
 		}
 
-		roomID, isNewRoom = startSession(wssession.peerconnection, gameName, roomID, playerIndex)
+		s.RoomID, isNewRoom = startSession(s.peerconnection, s.GameName, s.RoomID, s.PlayerIndex)
 		// Register room to overlord if we are connecting to overlord
-		if isNewRoom && browserClient.session.OverlordClient != nil {
-			browserClient.session.OverlordClient.Send(cws.WSPacket{
+		if isNewRoom && s.OverlordClient != nil {
+			s.OverlordClient.Send(cws.WSPacket{
 				ID:   "registerRoom",
-				Data: roomID,
+				Data: s.RoomID,
 			}, nil)
 		}
 		req.ID = "start"
-		req.RoomID = roomID
-		req.SessionID = sessionID
+		req.RoomID = s.RoomID
+		req.SessionID = s.ID
 
 		return req
 	})
@@ -130,31 +126,27 @@ func (s *Session) RegisterBrowserClient() {
 }
 
 // NewOverlordClient returns a client connecting to browser. This connection exchanges information between clients and server
-func NewBrowserClient(c *websocket.Conn, overlordClient *OverlordClient) *BrowserClient {
-	roomID := ""
-	gameName := ""
-	playerIndex := 0
+func NewBrowserClient(c *websocket.Conn) *BrowserClient {
+	//roomID := ""
+	//gameName := ""
+	//playerIndex := 0
 	// Create connection to overlord
 	browserClient := &BrowserClient{
-		Client:      cws.NewClient(c),
-		gameName:    "",
-		roomID:      "",
-		playerIndex: 0,
+		Client: cws.NewClient(c),
+		//gameName:    "",
+		//roomID:      "",
+		//playerIndex: 0,
 	}
 
 	//sessionID := strconv.Itoa(rand.Int())
-	sessionID := uuid.Must(uuid.NewV4()).String()
+	//sessionID := uuid.Must(uuid.NewV4()).String()
 
-	wssession := &Session{
-		BrowserClient:  browserClient,
-		OverlordClient: overlordClient,
-		peerconnection: webrtc.NewWebRTC(),
-		// The server session is maintaining
-	}
+	//wssession := &Session{
+	//BrowserClient:  browserClient,
+	//OverlordClient: overlordClient,
+	//peerconnection: webrtc.NewWebRTC(),
+	//// The server session is maintaining
+	//}
 
-	browserClient.Send(cws.WSPacket{
-		ID:   "gamelist",
-		Data: gamelist.GetEncodedGameList(),
-	}, nil)
 	return browserClient
 }
