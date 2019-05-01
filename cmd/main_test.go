@@ -336,3 +336,5 @@ func initClient2(t *testing.T, host string, remoteRoomID string) (conn *websocke
 	// If receive roomID, the server is running correctly
 	return ws, roomID
 }
+
+// TODO Add test reconnect room
