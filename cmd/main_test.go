@@ -17,6 +17,9 @@ import (
 )
 
 var host = "http://localhost:8000"
+
+// Test is in cmd, so gamePath is in parent path
+var testGamePath = "../games"
 var webrtcconfig = webrtc.Configuration{ICEServers: []webrtc.ICEServer{{URLs: []string{"stun:stun.l.google.com:19302"}}}}
 
 func initOverlord() *httptest.Server {
@@ -26,7 +29,8 @@ func initOverlord() *httptest.Server {
 }
 
 func initServer(t *testing.T, oconn *websocket.Conn) *httptest.Server {
-	handler := handler.NewHandler(oconn, true)
+	fmt.Println("Spawn new server")
+	handler := handler.NewHandler(oconn, true, testGamePath)
 	server := httptest.NewServer(http.HandlerFunc(handler.WS))
 	return server
 }
@@ -52,6 +56,7 @@ func initClient(t *testing.T, host string) {
 	u := "ws" + strings.TrimPrefix(host, "http")
 
 	// Connect to the server
+	fmt.Println("Connecting to server")
 	ws, _, err := websocket.DefaultDialer.Dial(u, nil)
 	if err != nil {
 		t.Fatalf("%v", err)
@@ -60,6 +65,7 @@ func initClient(t *testing.T, host string) {
 
 	// Simulate peerconnection initialization from client
 
+	fmt.Println("Simulating PeerConnection")
 	peerConnection, err := webrtc.NewPeerConnection(webrtcconfig)
 	if err != nil {
 		t.Fatalf("%v", err)

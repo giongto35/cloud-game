@@ -17,6 +17,7 @@ import (
 const (
 	gameboyIndex = "./static/gameboy.html"
 	debugIndex   = "./static/index_ws.html"
+	gamePath     = "games"
 )
 
 // Time allowed to write a message to the peer.
@@ -53,7 +54,7 @@ func initializeServer() {
 		log.Println("Run as a single server")
 	}
 
-	handler := handler.NewHandler(conn, *config.IsDebug)
+	handler := handler.NewHandler(conn, *config.IsDebug, gamePath)
 
 	// ignore origin
 	upgrader.CheckOrigin = func(r *http.Request) bool { return true }
