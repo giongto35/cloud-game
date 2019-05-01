@@ -83,17 +83,12 @@ func (s *Session) RegisterOverlordClient() {
 			// Request room from Server if roomID is existed on the server
 			room := s.handler.getRoom(s.RoomID)
 			if room == nil {
-				log.Println("Room not found", s.RoomID)
+				log.Println("Room not found ", s.RoomID)
 				return cws.EmptyPacket
 			}
 			room.addConnectionToRoom(peerconnection, s.PlayerIndex)
 			//roomID, isNewRoom := startSession(peerconnection, resp.Data, resp.RoomID, resp.PlayerIndex)
 			log.Println("Done, sending back")
-			// Bridge always access to old room
-			// TODO: log warn
-			if room != nil {
-				log.Fatal("Bridge should not spawn new room")
-			}
 
 			req.ID = "start"
 			req.RoomID = room.ID
