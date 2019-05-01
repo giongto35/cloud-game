@@ -30,7 +30,7 @@ var upgrader = websocket.Upgrader{}
 
 // ID to peerconnection
 //var peerconnections = map[string]*webrtc.WebRTC{}
-var oclient *OverlordClient
+//var oclient *OverlordClient
 
 type Handler struct {
 	oClient  *OverlordClient
@@ -38,18 +38,21 @@ type Handler struct {
 	serverID string
 	// ID to peerconnection
 	peerconnections map[string]*webrtc.WebRTC
+	// Session
+	wssession Session
 }
 
-func NewHandler() (*Handler, error) {
-	conn, err := createOverlordConnection()
-	if err != nil {
-		return nil, err
-	}
+// NewHandler returns a new server
+func NewHandler(overlordConn *websocket.Conn) *Handler {
+	//conn, err := createOverlordConnection()
+	//if err != nil {
+	//return nil, err
+	//}
 	return &Handler{
-		oClient:         NewOverlordClient(conn),
+		oClient:         NewOverlordClient(overlordConn),
 		rooms:           map[string]*Room{},
 		peerconnections: map[string]*webrtc.WebRTC{},
-	}, nil
+	}
 }
 
 // GetWeb returns web frontend
@@ -61,7 +64,7 @@ func (h *Handler) GetWeb(w http.ResponseWriter, r *http.Request) {
 	w.Write(bs)
 }
 
-// Handle normal traffic (from browser to host)
+// WS handles normal traffic (from browser to host)
 func (h *Handler) WS(w http.ResponseWriter, r *http.Request) {
 	c, err := upgrader.Upgrade(w, r, nil)
 	if err != nil {
