@@ -14,6 +14,8 @@ import (
 // Room is a game session. multi webRTC sessions can connect to a same game.
 // A room stores all the channel for interaction between all webRTCs session and emulator
 type Room struct {
+	ID string
+
 	imageChannel chan *image.RGBA
 	audioChannel chan float32
 	inputChannel chan int
@@ -36,7 +38,7 @@ func generateRoomID() string {
 }
 
 // init initilizes a room returns roomID
-func initRoom(roomID, gameName string) string {
+func (h *Handler) initRoom(roomID, gameName string) *Room {
 	// if no roomID is given, generate it
 	if roomID == "" {
 		roomID = generateRoomID()
@@ -50,6 +52,8 @@ func initRoom(roomID, gameName string) string {
 	director := emulator.NewDirector(roomID, imageChannel, audioChannel, inputChannel)
 
 	room := &Room{
+		ID: roomID,
+
 		imageChannel: imageChannel,
 		audioChannel: audioChannel,
 		inputChannel: inputChannel,
@@ -58,18 +62,17 @@ func initRoom(roomID, gameName string) string {
 		director:     director,
 		Done:         make(chan struct{}),
 	}
-	rooms[roomID] = room
 
 	go room.startVideo()
 	go room.startAudio()
-	go director.Start([]string{"games/" + gameName})
+	go director.Start([]string{"../games/" + gameName})
 
-	return roomID
+	return room
 }
 
 // isRoomRunning check if there is any running sessions.
 // TODO: If we remove sessions from room anytime a session is closed, we can check if the sessions list is empty or not.
-func isRoomRunning(roomID string) bool {
+func (h *Handler) isRoomRunning(roomID string) bool {
 	// If no roomID is registered
 	if _, ok := rooms[roomID]; !ok {
 		return false
@@ -84,24 +87,32 @@ func isRoomRunning(roomID string) bool {
 	return false
 }
 
+func (r *Room) addConnectionToRoom(peerconnection *webrtc.WebRTC, playerIndex int) {
+	r.cleanSession(peerconnection)
+	peerconnection.AttachRoomID(r.ID)
+	go r.startWebRTCSession(peerconnection, playerIndex)
+
+	r.rtcSessions = append(r.rtcSessions, peerconnection)
+}
+
 // startWebRTCSession fan-in of the same room to inputChannel
-func startWebRTCSession(room *Room, webRTC *webrtc.WebRTC, playerIndex int) {
-	inputChannel := room.inputChannel
-	log.Println("room, inputChannel", room, inputChannel)
+func (r *Room) startWebRTCSession(peerconnection *webrtc.WebRTC, playerIndex int) {
+	inputChannel := r.inputChannel
+	log.Println("room, inputChannel", r, inputChannel)
 	for {
 		select {
-		case <-webRTC.Done:
-			removeSession(webRTC, room)
+		case <-peerconnection.Done:
+			r.removeSession(peerconnection)
 		default:
 		}
 		// Client stopped
-		if webRTC.IsClosed() {
+		if peerconnection.IsClosed() {
 			return
 		}
 
 		// encode frame
-		if webRTC.IsConnected() {
-			input := <-webRTC.InputChannel
+		if peerconnection.IsConnected() {
+			input := <-peerconnection.InputChannel
 			// the first 8 bits belong to player 1
 			// the next 8 belongs to player 2 ...
 			// We standardize and put it to inputChannel (16 bits)
@@ -111,26 +122,22 @@ func startWebRTCSession(room *Room, webRTC *webrtc.WebRTC, playerIndex int) {
 	}
 }
 
-func cleanSession(w *webrtc.WebRTC) {
-	room, ok := rooms[w.RoomID]
-	if !ok {
-		return
-	}
-	removeSession(w, room)
+func (r *Room) cleanSession(peerconnection *webrtc.WebRTC) {
+	r.removeSession(peerconnection)
 }
 
-func removeSession(w *webrtc.WebRTC, room *Room) {
-	room.sessionsLock.Lock()
-	defer room.sessionsLock.Unlock()
-	for i, s := range room.rtcSessions {
+func (r *Room) removeSession(w *webrtc.WebRTC) {
+	r.sessionsLock.Lock()
+	defer r.sessionsLock.Unlock()
+	for i, s := range r.rtcSessions {
 		if s == w {
-			room.rtcSessions = append(room.rtcSessions[:i], room.rtcSessions[i+1:]...)
+			r.rtcSessions = append(r.rtcSessions[:i], r.rtcSessions[i+1:]...)
 			break
 		}
 	}
 	// If room has no sessions, close room
-	if len(room.rtcSessions) == 0 {
-		room.Done <- struct{}{}
+	if len(r.rtcSessions) == 0 {
+		r.Done <- struct{}{}
 	}
 }
 

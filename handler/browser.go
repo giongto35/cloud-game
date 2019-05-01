@@ -2,6 +2,7 @@ package handler
 
 import (
 	"encoding/json"
+	"fmt"
 	"log"
 
 	"github.com/giongto35/cloud-game/config"
@@ -80,7 +81,6 @@ func (s *Session) RegisterBrowserClient() {
 		s.GameName = resp.Data
 		s.RoomID = resp.RoomID
 		s.PlayerIndex = resp.PlayerIndex
-		isNewRoom := false
 
 		log.Println("Starting game")
 		// If we are connecting to overlord, request serverID from roomID
@@ -94,9 +94,11 @@ func (s *Session) RegisterBrowserClient() {
 			}
 		}
 
-		s.RoomID, isNewRoom = startSession(s.peerconnection, s.GameName, s.RoomID, s.PlayerIndex)
+		room := s.handler.createNewRoom(s.GameName, s.RoomID, s.PlayerIndex)
+		room.addConnectionToRoom(s.peerconnection, s.PlayerIndex)
+		s.RoomID = room.ID
 		// Register room to overlord if we are connecting to overlord
-		if isNewRoom && s.OverlordClient != nil {
+		if room != nil && s.OverlordClient != nil {
 			s.OverlordClient.Send(cws.WSPacket{
 				ID:   "registerRoom",
 				Data: s.RoomID,
@@ -105,6 +107,7 @@ func (s *Session) RegisterBrowserClient() {
 		req.ID = "start"
 		req.RoomID = s.RoomID
 		req.SessionID = s.ID
+		fmt.Println("Response from start", req)
 
 		return req
 	})
