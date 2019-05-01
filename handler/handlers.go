@@ -123,7 +123,7 @@ func (h *Handler) createNewRoom(gameName string, roomID string, playerIndex int)
 	if roomID == "" || !h.isRoomRunning(roomID) {
 		room := NewRoom(roomID, gameName)
 		// TODO: Might have race condition
-		h.rooms[roomID] = room
+		h.rooms[room.ID] = room
 		return room
 	}
 
