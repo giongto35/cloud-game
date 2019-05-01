@@ -13,11 +13,6 @@ import (
 
 type BrowserClient struct {
 	*cws.Client
-	//session     *Session
-	//oclient     *OverlordClient
-	//gameName    string
-	//roomID      string
-	//playerIndex int
 }
 
 func (s *Session) RegisterBrowserClient() {
@@ -130,26 +125,7 @@ func (s *Session) RegisterBrowserClient() {
 
 // NewOverlordClient returns a client connecting to browser. This connection exchanges information between clients and server
 func NewBrowserClient(c *websocket.Conn) *BrowserClient {
-	//roomID := ""
-	//gameName := ""
-	//playerIndex := 0
-	// Create connection to overlord
-	browserClient := &BrowserClient{
+	return &BrowserClient{
 		Client: cws.NewClient(c),
-		//gameName:    "",
-		//roomID:      "",
-		//playerIndex: 0,
 	}
-
-	//sessionID := strconv.Itoa(rand.Int())
-	//sessionID := uuid.Must(uuid.NewV4()).String()
-
-	//wssession := &Session{
-	//BrowserClient:  browserClient,
-	//OverlordClient: overlordClient,
-	//peerconnection: webrtc.NewWebRTC(),
-	//// The server session is maintaining
-	//}
-
-	return browserClient
 }

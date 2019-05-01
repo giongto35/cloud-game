@@ -114,9 +114,9 @@ func getServerIDOfRoom(oc *OverlordClient, roomID string) string {
 	return packet.Data
 }
 
-func (session *Session) bridgeConnection(serverID string, gameName string, roomID string, playerIndex int) {
+func (s *Session) bridgeConnection(serverID string, gameName string, roomID string, playerIndex int) {
 	log.Println("Bridging connection to other Host ", serverID)
-	client := session.BrowserClient
+	client := s.BrowserClient
 	// Ask client to init
 
 	log.Println("Requesting offer to browser", serverID)
@@ -128,20 +128,16 @@ func (session *Session) bridgeConnection(serverID string, gameName string, roomI
 	log.Println("Sending offer to overlord to relay message to target host", resp.TargetHostID)
 	// Ask overlord to relay SDP packet to serverID
 	resp.TargetHostID = serverID
-	remoteTargetSDP := session.OverlordClient.SyncSend(resp)
+	remoteTargetSDP := s.OverlordClient.SyncSend(resp)
 	log.Println("Got back remote host SDP, sending to browser")
 	// Send back remote SDP of remote server to browser
-	//client.syncSend(WSPacket{
-	//ID:   "sdp",
-	//Data: remoteTargetSDP.Data,
-	//})
-	session.BrowserClient.Send(cws.WSPacket{
+	s.BrowserClient.Send(cws.WSPacket{
 		ID:   "sdp",
 		Data: remoteTargetSDP.Data,
 	}, nil)
 	log.Println("Init session done, start game on target host")
 
-	session.OverlordClient.SyncSend(cws.WSPacket{
+	s.OverlordClient.SyncSend(cws.WSPacket{
 		ID:           "start",
 		Data:         gameName,
 		TargetHostID: serverID,
