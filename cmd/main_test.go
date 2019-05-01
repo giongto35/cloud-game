@@ -116,7 +116,6 @@ func initClient(t *testing.T, host string) {
 		RoomID:      "",
 		PlayerIndex: 1,
 	}, func(resp cws.WSPacket) {
-		fmt.Println("Received response")
 		fmt.Println("RoomID:", resp.RoomID)
 		roomID <- resp.RoomID
 	})
