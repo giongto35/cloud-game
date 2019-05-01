@@ -22,33 +22,8 @@ type BrowserClient struct {
 	playerIndex int
 }
 
-// NewOverlordClient returns a client connecting to browser. This connection exchanges information between clients and server
-func NewBrowserClient(c *websocket.Conn, overlordClient *OverlordClient) *BrowserClient {
-	roomID := ""
-	gameName := ""
-	playerIndex := 0
-	// Create connection to overlord
-	browserClient := &BrowserClient{
-		Client:      cws.NewClient(c),
-		gameName:    "",
-		roomID:      "",
-		playerIndex: 0,
-	}
-
-	//sessionID := strconv.Itoa(rand.Int())
-	sessionID := uuid.Must(uuid.NewV4()).String()
-
-	wssession := &Session{
-		BrowserClient:  browserClient,
-		OverlordClient: overlordClient,
-		peerconnection: webrtc.NewWebRTC(),
-		// The server session is maintaining
-	}
-
-	browserClient.Send(cws.WSPacket{
-		ID:   "gamelist",
-		Data: gamelist.GetEncodedGameList(),
-	}, nil)
+func (s *Session) RegisterBrowserClient() {
+	browserClient := s.BrowserClient
 
 	browserClient.Receive("heartbeat", func(resp cws.WSPacket) cws.WSPacket {
 		return resp
@@ -56,7 +31,7 @@ func NewBrowserClient(c *websocket.Conn, overlordClient *OverlordClient) *Browse
 
 	browserClient.Receive("initwebrtc", func(resp cws.WSPacket) cws.WSPacket {
 		log.Println("Received user SDP")
-		localSession, err := wssession.peerconnection.StartClient(resp.Data, config.Width, config.Height)
+		localSession, err := s.peerconnection.StartClient(resp.Data, config.Width, config.Height)
 		if err != nil {
 			log.Fatalln(err)
 		}
@@ -64,7 +39,7 @@ func NewBrowserClient(c *websocket.Conn, overlordClient *OverlordClient) *Browse
 		return cws.WSPacket{
 			ID:        "sdp",
 			Data:      localSession,
-			SessionID: sessionID,
+			SessionID: s.SessionID,
 		}
 	})
 
@@ -152,5 +127,34 @@ func NewBrowserClient(c *websocket.Conn, overlordClient *OverlordClient) *Browse
 		return req
 	})
 
+}
+
+// NewOverlordClient returns a client connecting to browser. This connection exchanges information between clients and server
+func NewBrowserClient(c *websocket.Conn, overlordClient *OverlordClient) *BrowserClient {
+	roomID := ""
+	gameName := ""
+	playerIndex := 0
+	// Create connection to overlord
+	browserClient := &BrowserClient{
+		Client:      cws.NewClient(c),
+		gameName:    "",
+		roomID:      "",
+		playerIndex: 0,
+	}
+
+	//sessionID := strconv.Itoa(rand.Int())
+	sessionID := uuid.Must(uuid.NewV4()).String()
+
+	wssession := &Session{
+		BrowserClient:  browserClient,
+		OverlordClient: overlordClient,
+		peerconnection: webrtc.NewWebRTC(),
+		// The server session is maintaining
+	}
+
+	browserClient.Send(cws.WSPacket{
+		ID:   "gamelist",
+		Data: gamelist.GetEncodedGameList(),
+	}, nil)
 	return browserClient
 }
