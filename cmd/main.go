@@ -6,7 +6,6 @@ import (
 	"net/http"
 	_ "net/http/pprof"
 	"strings"
-	"time"
 
 	"github.com/giongto35/cloud-game/config"
 	"github.com/giongto35/cloud-game/handler"
@@ -21,9 +20,6 @@ const (
 )
 
 // Time allowed to write a message to the peer.
-var readWait = 30 * time.Second
-var writeWait = 30 * time.Second
-
 var upgrader = websocket.Upgrader{}
 
 // initilizeOverlord setup an overlord server
