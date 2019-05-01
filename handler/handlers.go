@@ -5,7 +5,6 @@ import (
 	"io/ioutil"
 	"log"
 	"net/http"
-	"time"
 
 	"github.com/giongto35/cloud-game/cws"
 	"github.com/giongto35/cloud-game/handler/gamelist"
@@ -19,30 +18,28 @@ const (
 	debugIndex   = "./static/index_ws.html"
 )
 
-// Time allowed to write a message to the peer.
-var readWait = 30 * time.Second
-var writeWait = 30 * time.Second
-
 // Flag to determine if the server is overlord or not
 var upgrader = websocket.Upgrader{}
 
 type Handler struct {
-	oClient  *OverlordClient
-	rooms    map[string]*Room
+	// Client that connects to overlord
+	oClient *OverlordClient
+	// Rooms map : RoomID -> Room
+	rooms map[string]*Room
+	// ID of the current server globalwise
 	serverID string
 	// isDebug determines the mode handler is running
-	isDebug    bool
-	isOverlord bool
-	gamePath   string
-
-	// ID to peerconnection
+	isDebug bool
+	// Path to game list
+	gamePath string
+	// All webrtc peerconnections are handled by the server
+	// ID -> peerconnections
 	peerconnections map[string]*webrtc.WebRTC
-	// Session
-	wssession Session
 }
 
 // NewHandler returns a new server
 func NewHandler(overlordConn *websocket.Conn, isDebug bool, gamePath string) *Handler {
+	log.Println("new OverlordClient")
 	return &Handler{
 		oClient:         NewOverlordClient(overlordConn),
 		rooms:           map[string]*Room{},
@@ -90,14 +87,14 @@ func (h *Handler) WS(w http.ResponseWriter, r *http.Request) {
 		peerconnection: webrtc.NewWebRTC(),
 		handler:        h,
 	}
-	wssession.RegisterBrowserClient()
-	fmt.Println("oclient : ", h.oClient)
-
 	if wssession.OverlordClient != nil {
 		wssession.RegisterOverlordClient()
 		go wssession.OverlordClient.Heartbeat()
 		go wssession.OverlordClient.Listen()
 	}
+
+	wssession.RegisterBrowserClient()
+	fmt.Println("oclient : ", h.oClient)
 
 	wssession.BrowserClient.Send(cws.WSPacket{
 		ID:   "gamelist",

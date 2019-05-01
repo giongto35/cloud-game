@@ -31,14 +31,14 @@ func (o *Server) WSO(w http.ResponseWriter, r *http.Request) {
 	fmt.Println("Connected")
 	c, err := upgrader.Upgrade(w, r, nil)
 	if err != nil {
-		log.Print("[!] WS upgrade:", err)
+		log.Print("Overlord: [!] WS upgrade:", err)
 		return
 	}
 	defer c.Close()
 
 	// Register new server
 	serverID := strconv.Itoa(rand.Int())
-	log.Println("A new server connected ", serverID)
+	log.Println("Overlord: A new server connected to Overlord", serverID)
 
 	// Register to servers map the client connection
 	client := cws.NewClient(c)
@@ -62,7 +62,7 @@ func (o *Server) WSO(w http.ResponseWriter, r *http.Request) {
 	// registerRoom event from a server, when server created a new room.
 	// RoomID is global so it is managed by overlord.
 	client.Receive("registerRoom", func(resp cws.WSPacket) cws.WSPacket {
-		log.Println("Received registerRoom ", resp.Data, serverID)
+		log.Println("Overlord: Received registerRoom ", resp.Data, serverID)
 		o.roomToServer[resp.Data] = serverID
 		return cws.WSPacket{
 			ID: "registerRoom",
@@ -71,7 +71,7 @@ func (o *Server) WSO(w http.ResponseWriter, r *http.Request) {
 
 	// getRoom returns the server ID based on requested roomID.
 	client.Receive("getRoom", func(resp cws.WSPacket) cws.WSPacket {
-		log.Println("Received a getroom request")
+		log.Println("Overlord: Received a getroom request")
 		return cws.WSPacket{
 			ID:   "getRoom",
 			Data: o.roomToServer[resp.Data],
@@ -81,10 +81,10 @@ func (o *Server) WSO(w http.ResponseWriter, r *http.Request) {
 	// Relay message from server to other target server
 	// TODO: Generalize
 	client.Receive("initwebrtc", func(resp cws.WSPacket) cws.WSPacket {
-		log.Println("Received a relay sdp request from a host")
+		log.Println("Overlord: Received a relay sdp request from a host")
 		// TODO: Abstract
 		if resp.TargetHostID != serverID {
-			log.Println("sending relay sdp to target host", resp)
+			log.Println("Overlord: Sending relay sdp to target host", resp)
 			// relay SDP to target host and get back sdp
 			// TODO: Async
 			sdp := o.servers[resp.TargetHostID].SyncSend(
@@ -93,7 +93,7 @@ func (o *Server) WSO(w http.ResponseWriter, r *http.Request) {
 
 			return sdp
 		}
-		log.Println("Target host is overlord itself: start peerconnection")
+		log.Println("Overlord: Target host is overlord itself: start peerconnection")
 		// If the target is in master
 		// start by its old
 		//localSession, err := wssession.peerconnection.StartClient(resp.Data, width, height)
@@ -111,7 +111,7 @@ func (o *Server) WSO(w http.ResponseWriter, r *http.Request) {
 	// TODO: use relay ID type
 	// TODO: Merge sdp and start
 	client.Receive("start", func(resp cws.WSPacket) cws.WSPacket {
-		log.Println("Received a relay start request from a host")
+		log.Println("Overlord: Received a relay start request from a host")
 		// TODO: Abstract
 		if resp.TargetHostID != serverID {
 			// relay SDP to target host and get back sdp
@@ -122,7 +122,7 @@ func (o *Server) WSO(w http.ResponseWriter, r *http.Request) {
 
 			return resp
 		}
-		log.Println("Target host is overlord itself: start game")
+		log.Println("Overlord: Target host is overlord itself: start game")
 		//// If the target is in master
 		//// start by its old
 		//roomID, isNewRoom := startSession(wssession.peerconnection, resp.Data, resp.RoomID, resp.PlayerIndex)
