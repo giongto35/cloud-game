@@ -7,7 +7,6 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/giongto35/cloud-game/config"
 	"github.com/giongto35/cloud-game/cws"
 	"github.com/giongto35/cloud-game/handler/gamelist"
 	"github.com/giongto35/cloud-game/webrtc"
@@ -16,8 +15,6 @@ import (
 )
 
 const (
-	scale        = 3
-	title        = "NES"
 	gameboyIndex = "./static/gameboy.html"
 	debugIndex   = "./static/index_ws.html"
 )
@@ -28,10 +25,6 @@ var writeWait = 30 * time.Second
 
 // Flag to determine if the server is overlord or not
 var upgrader = websocket.Upgrader{}
-
-// ID to peerconnection
-//var peerconnections = map[string]*webrtc.WebRTC{}
-//var oclient *OverlordClient
 
 type Handler struct {
 	oClient  *OverlordClient
@@ -50,10 +43,6 @@ type Handler struct {
 
 // NewHandler returns a new server
 func NewHandler(overlordConn *websocket.Conn, isDebug bool, gamePath string) *Handler {
-	//conn, err := createOverlordConnection()
-	//if err != nil {
-	//return nil, err
-	//}
 	return &Handler{
 		oClient:         NewOverlordClient(overlordConn),
 		rooms:           map[string]*Room{},
@@ -83,6 +72,8 @@ func (h *Handler) GetWeb(w http.ResponseWriter, r *http.Request) {
 // WS handles normal traffic (from browser to host)
 func (h *Handler) WS(w http.ResponseWriter, r *http.Request) {
 	c, err := upgrader.Upgrade(w, r, nil)
+	defer c.Close()
+
 	if err != nil {
 		log.Print("[!] WS upgrade:", err)
 		return
@@ -114,135 +105,30 @@ func (h *Handler) WS(w http.ResponseWriter, r *http.Request) {
 	}, nil)
 
 	wssession.BrowserClient.Listen()
-
-	defer c.Close()
-	//var gameName string
-	//var roomID string
-	//var playerIndex int
-
-	//// Create connection to overlord
-	//client := NewClient(c)
-	////sessionID := strconv.Itoa(rand.Int())
-	//sessionID := uuid.Must(uuid.NewV4()).String()
-
-	//wssession := &Session{
-	//client:         client,
-	//peerconnection: webrtc.NewWebRTC(),
-	//// The server session is maintaining
-	//}
-
-	//client.send(WSPacket{
-	//ID:   "gamelist",
-	//Data: getEncodedGameList(),
-	//}, nil)
-
-	//client.receive("heartbeat", func(resp WSPacket) WSPacket {
-	//return resp
-	//})
-
-	//client.receive("initwebrtc", func(resp WSPacket) WSPacket {
-	//log.Println("Received user SDP")
-	//localSession, err := wssession.peerconnection.StartClient(resp.Data, width, height)
-	//if err != nil {
-	//log.Fatalln(err)
-	//}
-
-	//return WSPacket{
-	//ID:        "sdp",
-	//Data:      localSession,
-	//SessionID: sessionID,
-	//}
-	//})
-
-	//client.receive("save", func(resp WSPacket) (req WSPacket) {
-	//log.Println("Saving game state")
-	//req.ID = "save"
-	//req.Data = "ok"
-	//if roomID != "" {
-	//err = rooms[roomID].director.SaveGame()
-	//if err != nil {
-	//log.Println("[!] Cannot save game state: ", err)
-	//req.Data = "error"
-	//}
-	//} else {
-	//req.Data = "error"
-	//}
-
-	//return req
-	//})
-
-	//client.receive("load", func(resp WSPacket) (req WSPacket) {
-	//log.Println("Loading game state")
-	//req.ID = "load"
-	//req.Data = "ok"
-	//if roomID != "" {
-	//err = rooms[roomID].director.LoadGame()
-	//if err != nil {
-	//log.Println("[!] Cannot load game state: ", err)
-	//req.Data = "error"
-	//}
-	//} else {
-	//req.Data = "error"
-	//}
-
-	//return req
-	//})
-
-	//client.receive("start", func(resp WSPacket) (req WSPacket) {
-	//gameName = resp.Data
-	//roomID = resp.RoomID
-	//playerIndex = resp.PlayerIndex
-	//isNewRoom := false
-
-	//log.Println("Starting game")
-	//// If we are connecting to overlord, request serverID from roomID
-	//if oclient != nil {
-	//roomServerID := getServerIDOfRoom(oclient, roomID)
-	//log.Println("Server of RoomID ", roomID, " is ", roomServerID)
-	//if roomServerID != "" && wssession.ServerID != roomServerID {
-	//// TODO: Re -register
-	//go bridgeConnection(wssession, roomServerID, gameName, roomID, playerIndex)
-	//return
-	//}
-	//}
-
-	//roomID, isNewRoom = startSession(wssession.peerconnection, gameName, roomID, playerIndex)
-	//// Register room to overlord if we are connecting to overlord
-	//if isNewRoom && oclient != nil {
-	//oclient.send(WSPacket{
-	//ID:   "registerRoom",
-	//Data: roomID,
-	//}, nil)
-	//}
-	//req.ID = "start"
-	//req.RoomID = roomID
-	//req.SessionID = sessionID
-
-	//return req
-	//})
-
-	//client.receive("candidate", func(resp WSPacket) (req WSPacket) {
-	//// Unuse code
-	//hi := pionRTC.ICECandidateInit{}
-	//err = json.Unmarshal([]byte(resp.Data), &hi)
-	//if err != nil {
-	//log.Println("[!] Cannot parse candidate: ", err)
-	//} else {
-	//// webRTC.AddCandidate(hi)
-	//}
-	//req.ID = "candidate"
-
-	//return req
-	//})
-
-	//client.Listen()
 }
 
-func createOverlordConnection() (*websocket.Conn, error) {
-	c, _, err := websocket.DefaultDialer.Dial(*config.OverlordHost, nil)
-	if err != nil {
-		return nil, err
+// getRoom returns room from roomID
+func (h *Handler) getRoom(roomID string) *Room {
+	room, ok := h.rooms[roomID]
+	if !ok {
+		return nil
 	}
 
-	return c, nil
+	return room
+}
+
+// createNewRoom creates a new room
+// Return nil in case of room is existed
+func (h *Handler) createNewRoom(gameName string, roomID string, playerIndex int) *Room {
+	// If the roomID is empty,
+	// or the roomID doesn't have any running sessions (room was closed)
+	// we spawn a new room
+	if roomID == "" || !h.isRoomRunning(roomID) {
+		room := NewRoom(roomID, gameName)
+		// TODO: Might have race condition
+		h.rooms[roomID] = room
+		return room
+	}
+
+	return nil
 }

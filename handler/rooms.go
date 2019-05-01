@@ -28,15 +28,8 @@ type Room struct {
 	director *emulator.Director
 }
 
-// generateRoomID generate a unique room ID containing 16 digits
-func generateRoomID() string {
-	roomID := strconv.FormatInt(rand.Int63(), 16)
-	//roomID := uuid.Must(uuid.NewV4()).String()
-	return roomID
-}
-
 // init initilizes a room returns roomID
-func (h *Handler) initRoom(roomID, gameName string) *Room {
+func NewRoom(roomID, gameName string) *Room {
 	// if no roomID is given, generate it
 	if roomID == "" {
 		roomID = generateRoomID()
@@ -66,6 +59,13 @@ func (h *Handler) initRoom(roomID, gameName string) *Room {
 	go director.Start([]string{"../games/" + gameName})
 
 	return room
+}
+
+// generateRoomID generate a unique room ID containing 16 digits
+func generateRoomID() string {
+	roomID := strconv.FormatInt(rand.Int63(), 16)
+	//roomID := uuid.Must(uuid.NewV4()).String()
+	return roomID
 }
 
 // isRoomRunning check if there is any running sessions.
