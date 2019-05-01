@@ -8,6 +8,8 @@ import (
 	"time"
 
 	"github.com/giongto35/cloud-game/config"
+	"github.com/giongto35/cloud-game/cws"
+	"github.com/giongto35/cloud-game/handler/gamelist"
 	"github.com/giongto35/cloud-game/webrtc"
 	"github.com/gorilla/websocket"
 	uuid "github.com/satori/go.uuid"
@@ -20,14 +22,11 @@ const (
 	debugIndex   = "./static/index_ws.html"
 )
 
-var indexFN = debugIndex
-
 // Time allowed to write a message to the peer.
 var readWait = 30 * time.Second
 var writeWait = 30 * time.Second
 
 // Flag to determine if the server is overlord or not
-var IsOverlord = false
 var upgrader = websocket.Upgrader{}
 
 // ID to peerconnection
@@ -38,6 +37,10 @@ type Handler struct {
 	oClient  *OverlordClient
 	rooms    map[string]*Room
 	serverID string
+	// isDebug determines the mode handler is running
+	isDebug    bool
+	isOverlord bool
+
 	// ID to peerconnection
 	peerconnections map[string]*webrtc.WebRTC
 	// Session
@@ -45,12 +48,13 @@ type Handler struct {
 }
 
 // NewHandler returns a new server
-func NewHandler(overlordConn *websocket.Conn) *Handler {
+func NewHandler(overlordConn *websocket.Conn, isDebug bool) *Handler {
 	//conn, err := createOverlordConnection()
 	//if err != nil {
 	//return nil, err
 	//}
 	return &Handler{
+		isDebug:         isDebug,
 		oClient:         NewOverlordClient(overlordConn),
 		rooms:           map[string]*Room{},
 		peerconnections: map[string]*webrtc.WebRTC{},
@@ -59,6 +63,13 @@ func NewHandler(overlordConn *websocket.Conn) *Handler {
 
 // GetWeb returns web frontend
 func (h *Handler) GetWeb(w http.ResponseWriter, r *http.Request) {
+	indexFN := ""
+	if h.isDebug {
+		indexFN = debugIndex
+	} else {
+		indexFN = gameboyIndex
+	}
+
 	bs, err := ioutil.ReadFile(indexFN)
 	if err != nil {
 		log.Fatal(err)
@@ -92,6 +103,12 @@ func (h *Handler) WS(w http.ResponseWriter, r *http.Request) {
 		go wssession.OverlordClient.Heartbeat()
 		go wssession.OverlordClient.Listen()
 	}
+
+	wssession.BrowserClient.Send(cws.WSPacket{
+		ID:   "gamelist",
+		Data: gamelist.GetEncodedGameList(),
+	}, nil)
+
 	wssession.BrowserClient.Listen()
 
 	defer c.Close()

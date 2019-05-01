@@ -26,7 +26,7 @@ func initOverlord() *httptest.Server {
 }
 
 func initServer(t *testing.T, oconn *websocket.Conn) *httptest.Server {
-	handler := handler.NewHandler(oconn)
+	handler := handler.NewHandler(oconn, true)
 	server := httptest.NewServer(http.HandlerFunc(handler.WS))
 	return server
 }
