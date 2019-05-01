@@ -79,6 +79,7 @@ func (s *Session) RegisterOverlordClient() {
 			log.Println("start session")
 
 			//room := s.handler.createNewRoom(s.GameName, s.RoomID, s.PlayerIndex)
+			// Request room from Server if roomID is existed on the server
 			room := s.handler.getRoom(s.RoomID)
 			if room == nil {
 				log.Println("Room not found", s.RoomID)
@@ -109,7 +110,7 @@ func getServerIDOfRoom(oc *OverlordClient, roomID string) string {
 			Data: roomID,
 		},
 	)
-	log.Println("Received roomID from overlord")
+	log.Println("Received roomID from overlord ", packet.Data)
 
 	return packet.Data
 }
