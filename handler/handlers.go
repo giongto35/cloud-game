@@ -97,6 +97,7 @@ func (h *Handler) WS(w http.ResponseWriter, r *http.Request) {
 		BrowserClient:  client,
 		OverlordClient: h.oClient,
 		peerconnection: webrtc.NewWebRTC(),
+		handler:        h,
 	}
 	wssession.RegisterBrowserClient()
 	fmt.Println("oclient : ", h.oClient)

@@ -9,6 +9,8 @@ import (
 	"github.com/gorilla/websocket"
 )
 
+// OverlordClient maintans connection to overlord
+// We expect only one OverlordClient for each server
 type OverlordClient struct {
 	*cws.Client
 	peerconnections map[string]*webrtc.WebRTC
@@ -26,6 +28,7 @@ func NewOverlordClient(oc *websocket.Conn) *OverlordClient {
 	return oclient
 }
 
+// RegisterOverlordClient routes overlord Client
 func (s *Session) RegisterOverlordClient() {
 	oclient := s.OverlordClient
 
@@ -64,7 +67,7 @@ func (s *Session) RegisterOverlordClient() {
 		},
 	)
 
-	// Received start from overlord. This is happens when bridging
+	// Received start from overlord. This happens when bridging
 	// TODO: refactor
 	oclient.Receive(
 		"start",
@@ -74,16 +77,24 @@ func (s *Session) RegisterOverlordClient() {
 
 			peerconnection := oclient.peerconnections[resp.SessionID]
 			log.Println("start session")
-			roomID, isNewRoom := startSession(peerconnection, resp.Data, resp.RoomID, resp.PlayerIndex)
+
+			//room := s.handler.createNewRoom(s.GameName, s.RoomID, s.PlayerIndex)
+			room := s.handler.getRoom(s.RoomID)
+			if room == nil {
+				log.Println("Room not found", s.RoomID)
+				return cws.EmptyPacket
+			}
+			room.addConnectionToRoom(peerconnection, s.PlayerIndex)
+			//roomID, isNewRoom := startSession(peerconnection, resp.Data, resp.RoomID, resp.PlayerIndex)
 			log.Println("Done, sending back")
 			// Bridge always access to old room
 			// TODO: log warn
-			if isNewRoom == true {
+			if room != nil {
 				log.Fatal("Bridge should not spawn new room")
 			}
 
 			req.ID = "start"
-			req.RoomID = roomID
+			req.RoomID = room.ID
 			return req
 		},
 	)
