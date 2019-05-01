@@ -19,13 +19,10 @@ const (
 	debugIndex   = "./static/index_ws.html"
 )
 
-var indexFN = gameboyIndex
-
 // Time allowed to write a message to the peer.
 var readWait = 30 * time.Second
 var writeWait = 30 * time.Second
 
-var IsOverlord = false
 var upgrader = websocket.Upgrader{}
 
 // initilizeOverlord setup an overlord server
@@ -56,7 +53,7 @@ func initializeServer() {
 		log.Println("Run as a single server")
 	}
 
-	handler := handler.NewHandler(conn)
+	handler := handler.NewHandler(conn, *config.IsDebug)
 
 	// ignore origin
 	upgrader.CheckOrigin = func(r *http.Request) bool { return true }
@@ -71,24 +68,16 @@ func initializeServer() {
 
 func main() {
 	flag.Parse()
-	log.Println("Usage: ./game [debug]")
-	if *config.IsDebug {
-		// debug
-		indexFN = debugIndex
-		log.Println("Use debug version")
-	}
+	log.Println("Usage: ./game [-debug]")
 
 	if *config.OverlordHost == "overlord" {
 		log.Println("Running as overlord ")
-		initilizeOverlord()
-		IsOverlord = true
 		initilizeOverlord()
 	} else {
 		if strings.HasPrefix(*config.OverlordHost, "ws") && !strings.HasSuffix(*config.OverlordHost, "wso") {
 			log.Fatal("Overlord connection is invalid. Should have the form `ws://.../wso`")
 		}
 		log.Println("Running as slave ")
-		IsOverlord = false
 		initializeServer()
 	}
 }
