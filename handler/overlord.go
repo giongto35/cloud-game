@@ -11,17 +11,23 @@ import (
 
 type OverlordClient struct {
 	*cws.Client
+	peerconnections map[string]*webrtc.WebRTC
 }
 
 // NewOverlordClient returns a client connecting to overlord for coordiation between different server
 func NewOverlordClient(oc *websocket.Conn) *OverlordClient {
+	if oc == nil {
+		return nil
+	}
+
 	oclient := &OverlordClient{
 		Client: cws.NewClient(oc),
 	}
 	return oclient
 }
 
-func (h *Handler) RegisterOverlordClient(oclient *OverlordClient) {
+func (s *Session) RegisterOverlordClient() {
+	oclient := s.OverlordClient
 
 	// Received from overlord the serverID
 	oclient.Receive(
@@ -29,7 +35,7 @@ func (h *Handler) RegisterOverlordClient(oclient *OverlordClient) {
 		func(response cws.WSPacket) (request cws.WSPacket) {
 			// Stick session with serverID got from overlord
 			log.Println("Received serverID ", response.Data)
-			h.serverID = response.Data
+			s.ServerID = response.Data
 
 			return cws.EmptyPacket
 		},
@@ -45,7 +51,7 @@ func (h *Handler) RegisterOverlordClient(oclient *OverlordClient) {
 			peerconnection := webrtc.NewWebRTC()
 			// init new peerconnection from sessionID
 			localSession, err := peerconnection.StartClient(resp.Data, config.Width, config.Height)
-			h.peerconnections[resp.SessionID] = peerconnection
+			oclient.peerconnections[resp.SessionID] = peerconnection
 
 			if err != nil {
 				log.Fatalln(err)
@@ -66,7 +72,7 @@ func (h *Handler) RegisterOverlordClient(oclient *OverlordClient) {
 			log.Println("Received a start request from overlord")
 			log.Println("Add the connection to current room on the host")
 
-			peerconnection := h.peerconnections[resp.SessionID]
+			peerconnection := oclient.peerconnections[resp.SessionID]
 			log.Println("start session")
 			roomID, isNewRoom := startSession(peerconnection, resp.Data, resp.RoomID, resp.PlayerIndex)
 			log.Println("Done, sending back")
@@ -82,9 +88,6 @@ func (h *Handler) RegisterOverlordClient(oclient *OverlordClient) {
 		},
 	)
 	// heartbeat to keep pinging overlord. We not ping from server to browser, so we don't call heartbeat in browserClient
-	go oclient.Heartbeat()
-	go oclient.Listen()
-
 }
 
 func getServerIDOfRoom(oc *OverlordClient, roomID string) string {
@@ -100,7 +103,7 @@ func getServerIDOfRoom(oc *OverlordClient, roomID string) string {
 	return packet.Data
 }
 
-func bridgeConnection(session *Session, serverID string, gameName string, roomID string, playerIndex int) {
+func (session *Session) bridgeConnection(serverID string, gameName string, roomID string, playerIndex int) {
 	log.Println("Bridging connection to other Host ", serverID)
 	client := session.BrowserClient
 	// Ask client to init

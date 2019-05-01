@@ -25,17 +25,13 @@ func initOverlord() *httptest.Server {
 	return overlord
 }
 
-func initServer(t *testing.T, oclient *handler.OverlordClient) *httptest.Server {
-	conn := connectTestOverlordServer()
-	handler, err := handler.NewHandler(oclient)
-	if err != nil {
-		t.Fatalf("%v", err)
-	}
+func initServer(t *testing.T, oconn *websocket.Conn) *httptest.Server {
+	handler := handler.NewHandler(oconn)
 	server := httptest.NewServer(http.HandlerFunc(handler.WS))
 	return server
 }
 
-func connectTestOverlordServer(t *testing.T, overlordURL string) *handler.OverlordClient {
+func connectTestOverlordServer(t *testing.T, overlordURL string) *websocket.Conn {
 	if overlordURL == "" {
 		return nil
 	} else {
@@ -47,7 +43,6 @@ func connectTestOverlordServer(t *testing.T, overlordURL string) *handler.Overlo
 	if err != nil {
 		t.Fatalf("%v", err)
 	}
-	defer oconn.Close()
 
 	return oconn
 }
@@ -142,7 +137,7 @@ func TestSingleServerOneOverlord(t *testing.T) {
 	o := initOverlord()
 	defer o.Close()
 
-	oconn := connectOverlord(t, o.URL)
+	oconn := connectTestOverlordServer(t, o.URL)
 	// Init slave server
 	s := initServer(t, oconn)
 	defer s.Close()
