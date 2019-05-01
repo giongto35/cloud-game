@@ -21,7 +21,7 @@ func NewOverlordClient(oc *websocket.Conn) *OverlordClient {
 	return oclient
 }
 
-func (h *Handler) Register(oclient *OverlordClient) {
+func (h *Handler) RegisterOverlordClient(oclient *OverlordClient) {
 
 	// Received from overlord the serverID
 	oclient.Receive(

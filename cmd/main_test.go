@@ -8,6 +8,9 @@ import (
 	"testing"
 	"time"
 
+	"github.com/giongto35/cloud-game/cws"
+	"github.com/giongto35/cloud-game/handler"
+	"github.com/giongto35/cloud-game/overlord"
 	gamertc "github.com/giongto35/cloud-game/webrtc"
 	"github.com/gorilla/websocket"
 	"github.com/pion/webrtc"
@@ -17,26 +20,36 @@ var host = "http://localhost:8000"
 var webrtcconfig = webrtc.Configuration{ICEServers: []webrtc.ICEServer{{URLs: []string{"stun:stun.l.google.com:19302"}}}}
 
 func initOverlord() *httptest.Server {
-	overlord := httptest.NewServer(http.HandlerFunc(wso))
+	server := overlord.NewServer()
+	overlord := httptest.NewServer(http.HandlerFunc(server.WSO))
 	return overlord
 }
 
-func initServer(t *testing.T, overlordURL string) *httptest.Server {
-	if overlordURL == "" {
-		oclient = nil
-	} else {
-		u := "ws" + strings.TrimPrefix(overlordURL, "http")
-		fmt.Println("connecting to overlord: ", u)
+func initServer(t *testing.T, oclient *handler.OverlordClient) *httptest.Server {
+	conn := connectTestOverlordServer()
+	handler, err := handler.NewHandler(oclient)
+	if err != nil {
+		t.Fatalf("%v", err)
+	}
+	server := httptest.NewServer(http.HandlerFunc(handler.WS))
+	return server
+}
 
-		oconn, _, err := websocket.DefaultDialer.Dial(u, nil)
-		if err != nil {
-			t.Fatalf("%v", err)
-		}
-		oclient = NewOverlordClient(oconn)
+func connectTestOverlordServer(t *testing.T, overlordURL string) *handler.OverlordClient {
+	if overlordURL == "" {
+		return nil
+	} else {
+		overlordURL = "ws" + strings.TrimPrefix(overlordURL, "http")
+		fmt.Println("connecting to overlord: ", overlordURL)
 	}
 
-	server := httptest.NewServer(http.HandlerFunc(ws))
-	return server
+	oconn, _, err := websocket.DefaultDialer.Dial(overlordURL, nil)
+	if err != nil {
+		t.Fatalf("%v", err)
+	}
+	defer oconn.Close()
+
+	return oconn
 }
 
 func initClient(t *testing.T, host string) {
@@ -69,17 +82,17 @@ func initClient(t *testing.T, host string) {
 	}
 
 	// Send offer to server
-	client := NewClient(ws)
-	go client.listen()
+	client := cws.NewClient(ws)
+	go client.Listen()
 
 	fmt.Println("Sending offer...")
-	client.send(WSPacket{
+	client.Send(cws.WSPacket{
 		ID:   "initwebrtc",
 		Data: gamertc.Encode(offer),
 	}, nil)
 	fmt.Println("Waiting sdp...")
 
-	client.receive("sdp", func(resp WSPacket) WSPacket {
+	client.Receive("sdp", func(resp cws.WSPacket) cws.WSPacket {
 		fmt.Println("received", resp.Data)
 		answer := webrtc.SessionDescription{}
 		gamertc.Decode(resp.Data, &answer)
@@ -89,19 +102,19 @@ func initClient(t *testing.T, host string) {
 			panic(err)
 		}
 
-		return EmptyPacket
+		return cws.EmptyPacket
 	})
 
 	time.Sleep(time.Second * 3)
 	fmt.Println("Sending start...")
 
 	roomID := make(chan string)
-	client.send(WSPacket{
+	client.Send(cws.WSPacket{
 		ID:          "start",
 		Data:        "Contra.nes",
 		RoomID:      "",
 		PlayerIndex: 1,
-	}, func(resp WSPacket) {
+	}, func(resp cws.WSPacket) {
 		fmt.Println("Received response")
 		fmt.Println("RoomID:", resp.RoomID)
 		roomID <- resp.RoomID
@@ -119,8 +132,7 @@ func initClient(t *testing.T, host string) {
 
 func TestSingleServerNoOverlord(t *testing.T) {
 	// Init slave server
-	oclient = nil
-	s := initServer(t, "")
+	s := initServer(t, nil)
 	defer s.Close()
 
 	initClient(t, s.URL)
@@ -129,12 +141,13 @@ func TestSingleServerNoOverlord(t *testing.T) {
 func TestSingleServerOneOverlord(t *testing.T) {
 	o := initOverlord()
 	defer o.Close()
+
+	oconn := connectOverlord(t, o.URL)
 	// Init slave server
-	s := initServer(t, o.URL)
+	s := initServer(t, oconn)
 	defer s.Close()
 
 	initClient(t, s.URL)
-	oclient.conn.Close()
 }
 
 //func TestTwoServerOneOverlord(t *testing.T) {
