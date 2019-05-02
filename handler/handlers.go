@@ -8,6 +8,7 @@ import (
 
 	"github.com/giongto35/cloud-game/cws"
 	"github.com/giongto35/cloud-game/handler/gamelist"
+	"github.com/giongto35/cloud-game/handler/room"
 	"github.com/giongto35/cloud-game/webrtc"
 	"github.com/gorilla/websocket"
 	uuid "github.com/satori/go.uuid"
@@ -25,7 +26,7 @@ type Handler struct {
 	// Client that connects to overlord
 	oClient *OverlordClient
 	// Rooms map : RoomID -> Room
-	rooms map[string]*Room
+	rooms map[string]*room.Room
 	// ID of the current server globalwise
 	serverID string
 	// isDebug determines the mode handler is running
@@ -42,7 +43,7 @@ func NewHandler(overlordConn *websocket.Conn, isDebug bool, gamePath string) *Ha
 	log.Println("new OverlordClient")
 	return &Handler{
 		oClient:         NewOverlordClient(overlordConn),
-		rooms:           map[string]*Room{},
+		rooms:           map[string]*room.Room{},
 		peerconnections: map[string]*webrtc.WebRTC{},
 
 		isDebug:  isDebug,
@@ -105,7 +106,7 @@ func (h *Handler) WS(w http.ResponseWriter, r *http.Request) {
 }
 
 // getRoom returns room from roomID
-func (h *Handler) getRoom(roomID string) *Room {
+func (h *Handler) getRoom(roomID string) *room.Room {
 	room, ok := h.rooms[roomID]
 	if !ok {
 		return nil
@@ -116,12 +117,12 @@ func (h *Handler) getRoom(roomID string) *Room {
 
 // createNewRoom creates a new room
 // Return nil in case of room is existed
-func (h *Handler) createNewRoom(gameName string, roomID string, playerIndex int) *Room {
+func (h *Handler) createNewRoom(gameName string, roomID string, playerIndex int) *room.Room {
 	// If the roomID is empty,
 	// or the roomID doesn't have any running sessions (room was closed)
 	// we spawn a new room
 	if roomID == "" || !h.isRoomRunning(roomID) {
-		room := NewRoom(roomID, h.gamePath, gameName)
+		room := room.NewRoom(roomID, h.gamePath, gameName)
 		// TODO: Might have race condition
 		h.rooms[room.ID] = room
 		return room
@@ -134,15 +135,10 @@ func (h *Handler) createNewRoom(gameName string, roomID string, playerIndex int)
 // TODO: If we remove sessions from room anytime a session is closed, we can check if the sessions list is empty or not.
 func (h *Handler) isRoomRunning(roomID string) bool {
 	// If no roomID is registered
-	if _, ok := h.rooms[roomID]; !ok {
+	room, ok := h.rooms[roomID]
+	if !ok {
 		return false
 	}
 
-	// If there is running session
-	for _, s := range h.rooms[roomID].rtcSessions {
-		if !s.IsClosed() {
-			return true
-		}
-	}
-	return false
+	return room.IsRunning()
 }
