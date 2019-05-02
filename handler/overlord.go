@@ -99,7 +99,7 @@ func (s *Session) RegisterOverlordClient() {
 }
 
 func getServerIDOfRoom(oc *OverlordClient, roomID string) string {
-	log.Println("Request overlord roomID")
+	log.Println("Request overlord roomID ", roomID)
 	packet := oc.SyncSend(
 		cws.WSPacket{
 			ID:   "getRoom",
