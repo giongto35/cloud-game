@@ -1,4 +1,4 @@
-package handler
+package room
 
 import (
 	"image"
@@ -68,7 +68,7 @@ func generateRoomID() string {
 	return roomID
 }
 
-func (r *Room) addConnectionToRoom(peerconnection *webrtc.WebRTC, playerIndex int) {
+func (r *Room) AddConnectionToRoom(peerconnection *webrtc.WebRTC, playerIndex int) {
 	r.cleanSession(peerconnection)
 	peerconnection.AttachRoomID(r.ID)
 	go r.startWebRTCSession(peerconnection, playerIndex)
@@ -127,4 +127,23 @@ func (r *Room) removeSession(w *webrtc.WebRTC) {
 func (r *Room) remove() {
 	log.Println("Closing room", r)
 	r.director.Done <- struct{}{}
+}
+
+func (r *Room) SaveGame() error {
+	return r.director.SaveGame()
+}
+
+func (r *Room) LoadGame() error {
+	return r.director.LoadGame()
+}
+
+func (r *Room) IsRunning() bool {
+	// If there is running session
+	for _, s := range r.rtcSessions {
+		if !s.IsClosed() {
+			return true
+		}
+	}
+
+	return false
 }

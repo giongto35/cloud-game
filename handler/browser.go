@@ -42,7 +42,7 @@ func (s *Session) RegisterBrowserClient() {
 		req.Data = "ok"
 		if s.RoomID != "" {
 			room := s.handler.getRoom(s.RoomID)
-			err := room.director.SaveGame()
+			err := room.SaveGame()
 			if err != nil {
 				log.Println("[!] Cannot save game state: ", err)
 				req.Data = "error"
@@ -60,7 +60,7 @@ func (s *Session) RegisterBrowserClient() {
 		req.Data = "ok"
 		if s.RoomID != "" {
 			room := s.handler.getRoom(s.RoomID)
-			err := room.director.LoadGame()
+			err := room.LoadGame()
 			if err != nil {
 				log.Println("[!] Cannot load game state: ", err)
 				req.Data = "error"
@@ -98,7 +98,7 @@ func (s *Session) RegisterBrowserClient() {
 			room = s.handler.createNewRoom(s.GameName, s.RoomID, s.PlayerIndex)
 		}
 		// Attach peerconnection to room
-		room.addConnectionToRoom(s.peerconnection, s.PlayerIndex)
+		room.AddConnectionToRoom(s.peerconnection, s.PlayerIndex)
 		s.RoomID = room.ID
 		// Register room to overlord if we are connecting to overlord
 		log.Println("Try Registering room", room, "Client: ", s.OverlordClient)

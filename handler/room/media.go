@@ -1,4 +1,4 @@
-package handler
+package room
 
 import (
 	"log"
@@ -78,7 +78,6 @@ func (r *Room) startVideo() {
 			r.remove()
 			return
 		case image := <-r.imageChannel:
-			//isRoomRunning := false
 
 			yuv := util.RgbaToYuv(image)
 			r.sessionsLock.Lock()
@@ -94,7 +93,6 @@ func (r *Room) startVideo() {
 					// NOTE: can block here
 					webRTC.ImageChannel <- yuv
 				}
-				//isRoomRunning = true
 			}
 			r.sessionsLock.Unlock()
 		}
