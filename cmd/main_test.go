@@ -7,7 +7,6 @@ import (
 	"net/http/httptest"
 	"strings"
 	"testing"
-	"time"
 
 	"github.com/giongto35/cloud-game/cws"
 	"github.com/giongto35/cloud-game/handler"
@@ -52,7 +51,7 @@ func connectTestOverlordServer(t *testing.T, overlordURL string) *websocket.Conn
 	return oconn
 }
 
-func initClient(t *testing.T, host string) (conn *websocket.Conn, roomID chan string) {
+func initClient(t *testing.T, host string) (client *cws.Client) {
 	// Convert http://127.0.0.1 to ws://127.0.0.
 	u := "ws" + strings.TrimPrefix(host, "http")
 
@@ -83,7 +82,7 @@ func initClient(t *testing.T, host string) (conn *websocket.Conn, roomID chan st
 
 	// Send offer to server
 	log.Println("Browser Client")
-	client := cws.NewClient(ws)
+	client = cws.NewClient(ws)
 	go client.Listen()
 
 	fmt.Println("Sending offer...")
@@ -132,10 +131,19 @@ func initClient(t *testing.T, host string) (conn *websocket.Conn, roomID chan st
 		}
 	})
 
-	time.Sleep(time.Second * 3)
-	fmt.Println("Sending start...")
+	return client
+	// If receive roomID, the server is running correctly
+}
 
-	roomID = make(chan string)
+func TestSingleServerNoOverlord(t *testing.T) {
+	// Init slave server
+	s := initServer(t, nil)
+	defer s.Close()
+
+	client := initClient(t, s.URL)
+	defer client.Close()
+
+	roomID := make(chan string)
 	client.Send(cws.WSPacket{
 		ID:          "start",
 		Data:        "Contra.nes",
@@ -146,25 +154,12 @@ func initClient(t *testing.T, host string) (conn *websocket.Conn, roomID chan st
 		roomID <- resp.RoomID
 	})
 
-	return ws, roomID
-	// If receive roomID, the server is running correctly
-}
-
-func TestSingleServerNoOverlord(t *testing.T) {
-	// Init slave server
-	s := initServer(t, nil)
-	defer s.Close()
-
-	conn, roomID := initClient(t, s.URL)
-	defer conn.Close()
-
 	respRoomID := <-roomID
 	if respRoomID == "" {
 		fmt.Println("RoomID should not be empty")
 		t.Fail()
 	}
 	fmt.Println("Done")
-	conn.Close()
 }
 
 func TestSingleServerOneOverlord(t *testing.T) {
@@ -177,14 +172,27 @@ func TestSingleServerOneOverlord(t *testing.T) {
 	s := initServer(t, oconn)
 	defer s.Close()
 
-	conn, roomID := initClient(t, s.URL)
+	client := initClient(t, s.URL)
+	defer client.Close()
+
+	fmt.Println("Sending start...")
+	roomID := make(chan string)
+	client.Send(cws.WSPacket{
+		ID:          "start",
+		Data:        "Contra.nes",
+		RoomID:      "",
+		PlayerIndex: 1,
+	}, func(resp cws.WSPacket) {
+		fmt.Println("RoomID:", resp.RoomID)
+		roomID <- resp.RoomID
+	})
+
 	respRoomID := <-roomID
 	if respRoomID == "" {
 		fmt.Println("RoomID should not be empty")
 		t.Fail()
 	}
 	fmt.Println("Done")
-	conn.Close()
 }
 
 func TestTwoServerOneOverlord(t *testing.T) {
@@ -201,115 +209,34 @@ func TestTwoServerOneOverlord(t *testing.T) {
 	s2 := initServer(t, oconn2)
 	defer s2.Close()
 
-	conn1, roomID := initClient(t, s1.URL)
-	respRoomID := <-roomID
-	if respRoomID == "" {
+	client1 := initClient(t, s1.URL)
+	defer client1.Close()
+
+	roomID := make(chan string)
+	client1.Send(cws.WSPacket{
+		ID:          "start",
+		Data:        "Contra.nes",
+		RoomID:      "",
+		PlayerIndex: 1,
+	}, func(resp cws.WSPacket) {
+		fmt.Println("RoomID:", resp.RoomID)
+		roomID <- resp.RoomID
+	})
+
+	remoteRoomID := <-roomID
+	if remoteRoomID == "" {
 		fmt.Println("RoomID should not be empty")
 		t.Fail()
 	}
 	fmt.Println("Done create a room in server 1")
 
-	fmt.Println("Request the room from server 2", respRoomID)
-	conn2, roomID := initClient2(t, s2.URL, respRoomID)
-	respRoomID = <-roomID
-	if respRoomID == "" {
-		fmt.Println("RoomID should not be empty")
-		t.Fail()
-	}
-
-	fmt.Println("Done")
-	conn1.Close()
-	conn2.Close()
-}
-
-func initClient2(t *testing.T, host string, remoteRoomID string) (conn *websocket.Conn, roomID chan string) {
-	// Convert http://127.0.0.1 to ws://127.0.0.
-	u := "ws" + strings.TrimPrefix(host, "http")
-
-	// Connect to the server
-	fmt.Println("Connecting to server")
-	ws, _, err := websocket.DefaultDialer.Dial(u, nil)
-	if err != nil {
-		t.Fatalf("%v", err)
-	}
-	//defer ws.Close()
-
-	// Simulate peerconnection initialization from client
-
-	fmt.Println("Simulating PeerConnection")
-	peerConnection, err := webrtc.NewPeerConnection(webrtcconfig)
-	if err != nil {
-		t.Fatalf("%v", err)
-	}
-
-	offer, err := peerConnection.CreateOffer(nil)
-	if err != nil {
-		t.Fatalf("%v", err)
-	}
-
-	// Sets the LocalDescription, and starts our UDP listeners
-	err = peerConnection.SetLocalDescription(offer)
-	if err != nil {
-		panic(err)
-	}
-
-	// Send offer to server
-	log.Println("Browser Client")
-	client := cws.NewClient(ws)
-	go client.Listen()
-
-	fmt.Println("Sending offer...")
-	client.Send(cws.WSPacket{
-		ID:   "initwebrtc",
-		Data: gamertc.Encode(offer),
-	}, nil)
-	fmt.Println("Waiting sdp...")
-
-	client.Receive("sdp", func(resp cws.WSPacket) cws.WSPacket {
-		fmt.Println("received", resp.Data)
-		answer := webrtc.SessionDescription{}
-		gamertc.Decode(resp.Data, &answer)
-		// Apply the answer as the remote description
-		err = peerConnection.SetRemoteDescription(answer)
-		if err != nil {
-			panic(err)
-		}
-
-		return cws.EmptyPacket
-	})
-
-	// Request offer browser
-	client.Receive("requestOffer", func(resp cws.WSPacket) cws.WSPacket {
-		log.Println("Frontend received requestOffer")
-		peerConnection, err = webrtc.NewPeerConnection(webrtcconfig)
-		if err != nil {
-			t.Fatalf("%v", err)
-		}
-
-		log.Println("Recreating offer")
-		offer, err := peerConnection.CreateOffer(nil)
-		if err != nil {
-			t.Fatalf("%v", err)
-		}
-
-		log.Println("Set localDesc")
-		err = peerConnection.SetLocalDescription(offer)
-		if err != nil {
-			panic(err)
-		}
-		log.Println("return offer", offer)
-		return cws.WSPacket{
-			ID:   "initwebrtc",
-			Data: gamertc.Encode(offer),
-		}
-	})
-
-	time.Sleep(time.Second * 3)
-	fmt.Println("Sending start...")
-
+	// ------------------------------------
+	// Client2 trying to create a random room and later join the the room on server1
+	client2 := initClient(t, s2.URL)
+	defer client2.Close()
 	// Doing the same create local room.
 	localRoomID := make(chan string)
-	client.Send(cws.WSPacket{
+	client2.Send(cws.WSPacket{
 		ID:          "start",
 		Data:        "Contra.nes",
 		RoomID:      "",
@@ -321,9 +248,10 @@ func initClient2(t *testing.T, host string, remoteRoomID string) (conn *websocke
 
 	<-localRoomID
 
+	fmt.Println("Request the room from server 1", remoteRoomID)
 	log.Println("Server2 trying to join server1 room")
 	// After trying loging in to one session, login to other with the roomID
-	client.Send(cws.WSPacket{
+	client2.Send(cws.WSPacket{
 		ID:          "start",
 		Data:        "Contra.nes",
 		RoomID:      remoteRoomID,
@@ -334,7 +262,128 @@ func initClient2(t *testing.T, host string, remoteRoomID string) (conn *websocke
 	})
 
 	// If receive roomID, the server is running correctly
-	return ws, roomID
+	fmt.Println("Done")
+}
+
+func TestReconnectRoomNoOverlord(t *testing.T) {
+	// Init slave server
+	s := initServer(t, nil)
+
+	client := initClient(t, s.URL)
+
+	fmt.Println("Sending start...")
+	roomID := make(chan string)
+	client.Send(cws.WSPacket{
+		ID:          "start",
+		Data:        "Contra.nes",
+		RoomID:      "",
+		PlayerIndex: 1,
+	}, func(resp cws.WSPacket) {
+		fmt.Println("RoomID:", resp.RoomID)
+		roomID <- resp.RoomID
+	})
+
+	saveRoomID := <-roomID
+	if saveRoomID == "" {
+		fmt.Println("RoomID should not be empty")
+		t.Fail()
+	}
+
+	log.Println("Closing room and server")
+	client.Close()
+	s.Close()
+	// Close server and reconnect
+
+	// Respawn slave server
+	s = initServer(t, nil)
+	defer s.Close()
+
+	client = initClient(t, s.URL)
+	defer client.Close()
+
+	fmt.Println("Re-access room ", saveRoomID)
+	roomID = make(chan string)
+	client.Send(cws.WSPacket{
+		ID:          "start",
+		Data:        "Contra.nes",
+		RoomID:      saveRoomID,
+		PlayerIndex: 1,
+	}, func(resp cws.WSPacket) {
+		fmt.Println("RoomID:", resp.RoomID)
+		roomID <- resp.RoomID
+	})
+
+	respRoomID := <-roomID
+	if respRoomID == "" || respRoomID != saveRoomID {
+		fmt.Println("The room ID should be equal to the saved room")
+		t.Fail()
+	}
+
+	fmt.Println("Done")
+
 }
 
 // TODO Add test reconnect room
+func TestReconnectRoom(t *testing.T) {
+	o := initOverlord()
+	defer o.Close()
+
+	oconn := connectTestOverlordServer(t, o.URL)
+	defer oconn.Close()
+	// Init slave server
+	s := initServer(t, oconn)
+
+	client := initClient(t, s.URL)
+
+	fmt.Println("Sending start...")
+	roomID := make(chan string)
+	client.Send(cws.WSPacket{
+		ID:          "start",
+		Data:        "Contra.nes",
+		RoomID:      "",
+		PlayerIndex: 1,
+	}, func(resp cws.WSPacket) {
+		fmt.Println("RoomID:", resp.RoomID)
+		roomID <- resp.RoomID
+	})
+
+	saveRoomID := <-roomID
+	if saveRoomID == "" {
+		fmt.Println("RoomID should not be empty")
+		t.Fail()
+	}
+
+	log.Println("Closing room and server")
+	client.Close()
+	s.Close()
+	// Close server and reconnect
+
+	log.Println("Server respawn")
+	// Init slave server
+	s = initServer(t, oconn)
+	defer s.Close()
+
+	client = initClient(t, s.URL)
+	defer client.Close()
+
+	fmt.Println("Re-access room ", saveRoomID)
+	roomID = make(chan string)
+	client.Send(cws.WSPacket{
+		ID:          "start",
+		Data:        "Contra.nes",
+		RoomID:      saveRoomID,
+		PlayerIndex: 1,
+	}, func(resp cws.WSPacket) {
+		fmt.Println("RoomID:", resp.RoomID)
+		roomID <- resp.RoomID
+	})
+
+	respRoomID := <-roomID
+	if respRoomID == "" || respRoomID != saveRoomID {
+		fmt.Println("The room ID should be equal to the saved room")
+		t.Fail()
+	}
+
+	fmt.Println("Done")
+
+}

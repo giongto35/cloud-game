@@ -163,3 +163,7 @@ func (c *Client) Listen() {
 		}
 	}
 }
+
+func (c *Client) Close() {
+	c.conn.Close()
+}

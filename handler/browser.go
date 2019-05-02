@@ -2,7 +2,6 @@ package handler
 
 import (
 	"encoding/json"
-	"fmt"
 	"log"
 
 	"github.com/giongto35/cloud-game/config"
@@ -112,7 +111,6 @@ func (s *Session) RegisterBrowserClient() {
 		req.ID = "start"
 		req.RoomID = s.RoomID
 		req.SessionID = s.ID
-		fmt.Println("Response from start", req)
 
 		return req
 	})
