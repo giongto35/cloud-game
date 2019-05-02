@@ -36,40 +36,41 @@ func (s *Session) RegisterBrowserClient() {
 	})
 
 	// TODO: Add save and load
-	//browserClient.Receive("save", func(resp cws.WSPacket) (req cws.WSPacket) {
-	//log.Println("Saving game state")
-	//req.ID = "save"
-	//req.Data = "ok"
-	//if roomID != "" {
-	////err := rooms[roomID].director.SaveGame()
-	//err := browserClient.room.director.SaveGame()
-	//if err != nil {
-	//log.Println("[!] Cannot save game state: ", err)
-	//req.Data = "error"
-	//}
-	//} else {
-	//req.Data = "error"
-	//}
+	browserClient.Receive("save", func(resp cws.WSPacket) (req cws.WSPacket) {
+		log.Println("Saving game state")
+		req.ID = "save"
+		req.Data = "ok"
+		if s.RoomID != "" {
+			room := s.handler.getRoom(s.RoomID)
+			err := room.director.SaveGame()
+			if err != nil {
+				log.Println("[!] Cannot save game state: ", err)
+				req.Data = "error"
+			}
+		} else {
+			req.Data = "error"
+		}
 
-	//return req
-	//})
+		return req
+	})
 
-	//browserClient.Receive("load", func(resp cws.WSPacket) (req cws.WSPacket) {
-	//log.Println("Loading game state")
-	//req.ID = "load"
-	//req.Data = "ok"
-	//if roomID != "" {
-	//err := rooms[roomID].director.LoadGame()
-	//if err != nil {
-	//log.Println("[!] Cannot load game state: ", err)
-	//req.Data = "error"
-	//}
-	//} else {
-	//req.Data = "error"
-	//}
+	browserClient.Receive("load", func(resp cws.WSPacket) (req cws.WSPacket) {
+		log.Println("Loading game state")
+		req.ID = "load"
+		req.Data = "ok"
+		if s.RoomID != "" {
+			room := s.handler.getRoom(s.RoomID)
+			err := room.director.LoadGame()
+			if err != nil {
+				log.Println("[!] Cannot load game state: ", err)
+				req.Data = "error"
+			}
+		} else {
+			req.Data = "error"
+		}
 
-	//return req
-	//})
+		return req
+	})
 
 	browserClient.Receive("start", func(resp cws.WSPacket) (req cws.WSPacket) {
 		s.GameName = resp.Data
