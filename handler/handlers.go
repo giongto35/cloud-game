@@ -121,11 +121,28 @@ func (h *Handler) createNewRoom(gameName string, roomID string, playerIndex int)
 	// or the roomID doesn't have any running sessions (room was closed)
 	// we spawn a new room
 	if roomID == "" || !h.isRoomRunning(roomID) {
-		room := NewRoom(roomID, gameName)
+		room := NewRoom(roomID, h.gamePath, gameName)
 		// TODO: Might have race condition
 		h.rooms[room.ID] = room
 		return room
 	}
 
 	return nil
+}
+
+// isRoomRunning check if there is any running sessions.
+// TODO: If we remove sessions from room anytime a session is closed, we can check if the sessions list is empty or not.
+func (h *Handler) isRoomRunning(roomID string) bool {
+	// If no roomID is registered
+	if _, ok := h.rooms[roomID]; !ok {
+		return false
+	}
+
+	// If there is running session
+	for _, s := range h.rooms[roomID].rtcSessions {
+		if !s.IsClosed() {
+			return true
+		}
+	}
+	return false
 }

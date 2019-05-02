@@ -29,7 +29,7 @@ type Room struct {
 }
 
 // init initilizes a room returns roomID
-func NewRoom(roomID, gameName string) *Room {
+func NewRoom(roomID, gamepath, gameName string) *Room {
 	// if no roomID is given, generate it
 	if roomID == "" {
 		roomID = generateRoomID()
@@ -56,7 +56,7 @@ func NewRoom(roomID, gameName string) *Room {
 
 	go room.startVideo()
 	go room.startAudio()
-	go director.Start([]string{"../games/" + gameName})
+	go director.Start([]string{gamepath + "/" + gameName})
 
 	return room
 }
@@ -66,23 +66,6 @@ func generateRoomID() string {
 	roomID := strconv.FormatInt(rand.Int63(), 16)
 	//roomID := uuid.Must(uuid.NewV4()).String()
 	return roomID
-}
-
-// isRoomRunning check if there is any running sessions.
-// TODO: If we remove sessions from room anytime a session is closed, we can check if the sessions list is empty or not.
-func (h *Handler) isRoomRunning(roomID string) bool {
-	// If no roomID is registered
-	if _, ok := h.rooms[roomID]; !ok {
-		return false
-	}
-
-	// If there is running session
-	for _, s := range h.rooms[roomID].rtcSessions {
-		if !s.IsClosed() {
-			return true
-		}
-	}
-	return false
 }
 
 func (r *Room) addConnectionToRoom(peerconnection *webrtc.WebRTC, playerIndex int) {
@@ -122,6 +105,7 @@ func (r *Room) startWebRTCSession(peerconnection *webrtc.WebRTC, playerIndex int
 
 func (r *Room) cleanSession(peerconnection *webrtc.WebRTC) {
 	r.removeSession(peerconnection)
+	// TODO: Clean all channels
 }
 
 func (r *Room) removeSession(w *webrtc.WebRTC) {
@@ -130,12 +114,13 @@ func (r *Room) removeSession(w *webrtc.WebRTC) {
 	for i, s := range r.rtcSessions {
 		if s == w {
 			r.rtcSessions = append(r.rtcSessions[:i], r.rtcSessions[i+1:]...)
+
+			// If room has no sessions, close room
+			if len(r.rtcSessions) == 0 {
+				r.Done <- struct{}{}
+			}
 			break
 		}
-	}
-	// If room has no sessions, close room
-	if len(r.rtcSessions) == 0 {
-		r.Done <- struct{}{}
 	}
 }
 
