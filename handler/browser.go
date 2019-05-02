@@ -97,13 +97,13 @@ func (s *Session) RegisterBrowserClient() {
 		if room == nil {
 			room = s.handler.createNewRoom(s.GameName, s.RoomID, s.PlayerIndex)
 		}
+
 		// Attach peerconnection to room
 		room.AddConnectionToRoom(s.peerconnection, s.PlayerIndex)
 		s.RoomID = room.ID
+
 		// Register room to overlord if we are connecting to overlord
-		log.Println("Try Registering room", room, "Client: ", s.OverlordClient)
 		if room != nil && s.OverlordClient != nil {
-			log.Println("Registering room", s.RoomID)
 			s.OverlordClient.Send(cws.WSPacket{
 				ID:   "registerRoom",
 				Data: s.RoomID,
