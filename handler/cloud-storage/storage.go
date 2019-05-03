@@ -2,54 +2,76 @@ package storage
 
 import (
 	"context"
-	"fmt"
 	"io"
+	"io/ioutil"
 	"log"
+	"os"
 
 	"cloud.google.com/go/storage"
 )
 
 type Client struct {
-	bucket  string
-	gclient storage.Client
+	bucket  *storage.BucketHandle
+	gclient *storage.Client
 }
 
-func NewClient() *Client {
+func NewInitClient() *Client {
+	projectID := os.Getenv("GCP_PROJECT")
+	bucketName := "game-save"
+	return NewClient(projectID, bucketName)
+}
+
+// NewClient inits a new Client accessing to GCP
+func NewClient(projectID string, bucketName string) *Client {
 	ctx := context.Background()
 
 	// Sets your Google Cloud Platform project ID.
-	projectID := "YOUR_PROJECT_ID"
 
 	// Creates a client.
-	client, err := storage.NewClient(ctx)
+	gclient, err := storage.NewClient(ctx)
 	if err != nil {
 		log.Fatalf("Failed to create client: %v", err)
 	}
 
-	// Sets the name for the new bucket.
-	bucketName := "my-new-bucket"
-
 	// Creates a Bucket instance.
-	bucket := client.Bucket(bucketName)
+	bucket := gclient.Bucket(bucketName)
 
-	// Creates the new bucket.
-	if err := bucket.Create(ctx, projectID, nil); err != nil {
-		log.Fatalf("Failed to create bucket: %v", err)
+	return &Client{
+		bucket:  bucket,
+		gclient: gclient,
 	}
-
-	fmt.Printf("Bucket %v created.\n", bucketName)
 }
 
-func (c *Client) SaveFile(name string, data string) (err error) {
-	wc := c.gclient.Bucket(c.bucket).Object(name).NewWriter(nil)
-	if _, err = io.Copy(wc, f); err != nil {
+// Savefile save srcFile to GCP
+func (c *Client) SaveFile(name string, srcFile string) (err error) {
+	reader, err := os.Open(srcFile)
+	if err != nil {
+		return err
+	}
+
+	// Copy source file to GCP
+	wc := c.bucket.Object(name).NewWriter(context.Background())
+	if _, err = io.Copy(wc, reader); err != nil {
 		return err
 	}
 	if err := wc.Close(); err != nil {
 		return err
 	}
+
+	return nil
 }
 
-func (h *Helper) LoadFile(name string) []byte {
+// Loadfile load file from GCP
+func (c *Client) LoadFile(name string) (data []byte, err error) {
+	rc, err := c.bucket.Object(name).NewReader(context.Background())
+	if err != nil {
+		return nil, err
+	}
+	defer rc.Close()
 
+	data, err = ioutil.ReadAll(rc)
+	if err != nil {
+		return nil, err
+	}
+	return data, nil
 }
