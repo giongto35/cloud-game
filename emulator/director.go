@@ -19,7 +19,9 @@ type Director struct {
 	Done         chan struct{}
 
 	roomID string
-	hash   string
+	// Hash represents a game state (roomID, gamePath).
+	// It is used for save file name
+	hash string
 }
 
 const FPS = 60
@@ -125,4 +127,14 @@ func (d *Director) LoadGame() error {
 	} else {
 		return nil
 	}
+}
+
+// GetHash return hash
+func (d *Director) GetHash() string {
+	return d.hash
+}
+
+// GetHashPath return the full path to hash file
+func (d *Director) GetHashPath() string {
+	return savePath(d.hash)
 }
