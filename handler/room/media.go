@@ -28,7 +28,7 @@ func (r *Room) startAudio() {
 	for {
 		select {
 		case <-r.Done:
-			r.remove()
+			r.Close()
 			return
 		case sample := <-r.audioChannel:
 			pcm[idx] = sample
@@ -75,7 +75,7 @@ func (r *Room) startVideo() {
 	for {
 		select {
 		case <-r.Done:
-			r.remove()
+			r.Close()
 			return
 		case image := <-r.imageChannel:
 

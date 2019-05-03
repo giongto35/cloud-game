@@ -1,6 +1,7 @@
 package room
 
 import (
+	"fmt"
 	"image"
 	"log"
 	"math/rand"
@@ -28,7 +29,7 @@ type Room struct {
 	director *emulator.Director
 }
 
-// init initilizes a room returns roomID
+// NewRoom creates a new room
 func NewRoom(roomID, gamepath, gameName string) *Room {
 	// if no roomID is given, generate it
 	if roomID == "" {
@@ -64,22 +65,21 @@ func NewRoom(roomID, gamepath, gameName string) *Room {
 // generateRoomID generate a unique room ID containing 16 digits
 func generateRoomID() string {
 	roomID := strconv.FormatInt(rand.Int63(), 16)
+	log.Println("Generate Room ID", roomID)
 	//roomID := uuid.Must(uuid.NewV4()).String()
 	return roomID
 }
 
 func (r *Room) AddConnectionToRoom(peerconnection *webrtc.WebRTC, playerIndex int) {
-	r.cleanSession(peerconnection)
 	peerconnection.AttachRoomID(r.ID)
-	go r.startWebRTCSession(peerconnection, playerIndex)
-
 	r.rtcSessions = append(r.rtcSessions, peerconnection)
+
+	go r.startWebRTCSession(peerconnection, playerIndex)
 }
 
 // startWebRTCSession fan-in of the same room to inputChannel
 func (r *Room) startWebRTCSession(peerconnection *webrtc.WebRTC, playerIndex int) {
 	inputChannel := r.inputChannel
-	log.Println("room, inputChannel", r, inputChannel)
 	for {
 		select {
 		case <-peerconnection.Done:
@@ -103,20 +103,25 @@ func (r *Room) startWebRTCSession(peerconnection *webrtc.WebRTC, playerIndex int
 	}
 }
 
-func (r *Room) cleanSession(peerconnection *webrtc.WebRTC) {
+func (r *Room) CleanSession(peerconnection *webrtc.WebRTC) {
 	r.removeSession(peerconnection)
 	// TODO: Clean all channels
 }
 
 func (r *Room) removeSession(w *webrtc.WebRTC) {
+	fmt.Println("Cleaning session: ", w)
 	r.sessionsLock.Lock()
 	defer r.sessionsLock.Unlock()
+	fmt.Println("Sessions list", r.rtcSessions)
 	for i, s := range r.rtcSessions {
-		if s == w {
+		fmt.Println("found session: ", s, w)
+		if s.ID == w.ID {
 			r.rtcSessions = append(r.rtcSessions[:i], r.rtcSessions[i+1:]...)
+			fmt.Println("found session: ", len(r.rtcSessions))
 
 			// If room has no sessions, close room
 			if len(r.rtcSessions) == 0 {
+				log.Println("No session in room")
 				r.Done <- struct{}{}
 			}
 			break
@@ -124,7 +129,7 @@ func (r *Room) removeSession(w *webrtc.WebRTC) {
 	}
 }
 
-func (r *Room) remove() {
+func (r *Room) Close() {
 	log.Println("Closing room", r)
 	r.director.Done <- struct{}{}
 }
