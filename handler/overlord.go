@@ -86,6 +86,7 @@ func (s *Session) RegisterOverlordClient() {
 				log.Println("Room not found ", s.RoomID)
 				return cws.EmptyPacket
 			}
+			s.handler.detachPeerConn(s.peerconnection)
 			room.AddConnectionToRoom(peerconnection, s.PlayerIndex)
 			//roomID, isNewRoom := startSession(peerconnection, resp.Data, resp.RoomID, resp.PlayerIndex)
 			log.Println("Done, sending back")

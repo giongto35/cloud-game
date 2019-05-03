@@ -94,11 +94,13 @@ func (s *Session) RegisterBrowserClient() {
 		// Create new room
 		// TODO: check if roomID is in the current server
 		room := s.handler.getRoom(s.RoomID)
+		log.Println("Got Room from local ", room, " ID: ", s.RoomID)
 		if room == nil {
 			room = s.handler.createNewRoom(s.GameName, s.RoomID, s.PlayerIndex)
 		}
 
 		// Attach peerconnection to room
+		s.handler.detachPeerConn(s.peerconnection)
 		room.AddConnectionToRoom(s.peerconnection, s.PlayerIndex)
 		s.RoomID = room.ID
 

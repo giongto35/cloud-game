@@ -16,6 +16,7 @@ import (
 	vpxEncoder "github.com/giongto35/cloud-game/vpx-encoder"
 	"github.com/pion/webrtc"
 	"github.com/pion/webrtc/pkg/media"
+	uuid "github.com/satori/go.uuid"
 )
 
 var webrtcconfig = webrtc.Configuration{ICEServers: []webrtc.ICEServer{{URLs: []string{"stun:stun.l.google.com:19302"}}}}
@@ -94,6 +95,8 @@ func Decode(in string, obj interface{}) {
 // NewWebRTC create
 func NewWebRTC() *WebRTC {
 	w := &WebRTC{
+		ID: uuid.Must(uuid.NewV4()).String(),
+
 		ImageChannel: make(chan []byte, 2),
 		AudioChannel: make(chan []byte, 1000),
 		InputChannel: make(chan int, 2),
@@ -108,6 +111,8 @@ type InputDataPair struct {
 
 // WebRTC connection
 type WebRTC struct {
+	ID string
+
 	connection  *webrtc.PeerConnection
 	encoder     *vpxEncoder.VpxEncoder
 	isConnected bool
