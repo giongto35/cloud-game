@@ -94,7 +94,7 @@ func (view *GameView) Enter() {
 	view.console.SetAudioSampleRate(SampleRate)
 	view.console.SetAudioChannel(view.audioChannel)
 
-	// load state
+	// load state if the hash file existed (Join the old room)
 	if err := view.console.LoadState(savePath(view.hash)); err == nil {
 		return
 	} else {

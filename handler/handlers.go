@@ -105,6 +105,16 @@ func (h *Handler) WS(w http.ResponseWriter, r *http.Request) {
 	wssession.BrowserClient.Listen()
 }
 
+// Detach peerconnection detach/remove a peerconnection from current room
+func (h *Handler) detachPeerConn(pc *webrtc.WebRTC) {
+	roomID := pc.RoomID
+	room := h.getRoom(roomID)
+	if room == nil {
+		return
+	}
+	room.CleanSession(pc)
+}
+
 // getRoom returns room from roomID
 func (h *Handler) getRoom(roomID string) *room.Room {
 	room, ok := h.rooms[roomID]

@@ -3,9 +3,11 @@ package main
 import (
 	"flag"
 	"log"
+	"math/rand"
 	"net/http"
 	_ "net/http/pprof"
 	"strings"
+	"time"
 
 	"github.com/giongto35/cloud-game/config"
 	"github.com/giongto35/cloud-game/handler"
@@ -22,6 +24,15 @@ const (
 // Time allowed to write a message to the peer.
 var upgrader = websocket.Upgrader{}
 
+func createOverlordConnection() (*websocket.Conn, error) {
+	c, _, err := websocket.DefaultDialer.Dial(*config.OverlordHost, nil)
+	if err != nil {
+		return nil, err
+	}
+
+	return c, nil
+}
+
 // initilizeOverlord setup an overlord server
 func initilizeOverlord() {
 	overlord := overlord.NewServer()
@@ -31,15 +42,6 @@ func initilizeOverlord() {
 	// Can consider Overlord works as server but it is complicated
 	http.HandleFunc("/wso", overlord.WSO)
 	http.ListenAndServe(":9000", nil)
-}
-
-func createOverlordConnection() (*websocket.Conn, error) {
-	c, _, err := websocket.DefaultDialer.Dial(*config.OverlordHost, nil)
-	if err != nil {
-		return nil, err
-	}
-
-	return c, nil
 }
 
 // initializeServer setup a server
@@ -67,6 +69,11 @@ func main() {
 	flag.Parse()
 	log.Println("Usage: ./game [-debug]")
 
+	rand.Seed(time.Now().UTC().UnixNano())
+
+	// There are two server mode
+	// Overlord is coordinator. If the OvelordHost Param is `overlord`, we spawn a new host as Overlord.
+	// else we spawn new server as normal server connecting to OverlordHost.
 	if *config.OverlordHost == "overlord" {
 		log.Println("Running as overlord ")
 		initilizeOverlord()
