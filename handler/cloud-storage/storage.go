@@ -10,6 +10,7 @@ import (
 	"cloud.google.com/go/storage"
 )
 
+// TODO: Add interface, abstract out Gstorage
 type Client struct {
 	bucket  *storage.BucketHandle
 	gclient *storage.Client

@@ -7,6 +7,7 @@ import (
 	"net/http"
 
 	"github.com/giongto35/cloud-game/cws"
+	storage "github.com/giongto35/cloud-game/handler/cloud-storage"
 	"github.com/giongto35/cloud-game/handler/gamelist"
 	"github.com/giongto35/cloud-game/handler/room"
 	"github.com/giongto35/cloud-game/webrtc"
@@ -36,11 +37,14 @@ type Handler struct {
 	// All webrtc peerconnections are handled by the server
 	// ID -> peerconnections
 	peerconnections map[string]*webrtc.WebRTC
+	// onlineStorage is client accessing to online storage (GCP)
+	onlineStorage *storage.Client
 }
 
 // NewHandler returns a new server
 func NewHandler(overlordConn *websocket.Conn, isDebug bool, gamePath string) *Handler {
 	log.Println("new OverlordClient")
+
 	return &Handler{
 		oClient:         NewOverlordClient(overlordConn),
 		rooms:           map[string]*room.Room{},
@@ -48,6 +52,8 @@ func NewHandler(overlordConn *websocket.Conn, isDebug bool, gamePath string) *Ha
 
 		isDebug:  isDebug,
 		gamePath: gamePath,
+
+		onlineStorage: storage.NewInitClient(),
 	}
 }
 
@@ -132,7 +138,7 @@ func (h *Handler) createNewRoom(gameName string, roomID string, playerIndex int)
 	// or the roomID doesn't have any running sessions (room was closed)
 	// we spawn a new room
 	if roomID == "" || !h.isRoomRunning(roomID) {
-		room := room.NewRoom(roomID, h.gamePath, gameName)
+		room := room.NewRoom(roomID, h.gamePath, gameName, h.onlineStorage)
 		// TODO: Might have race condition
 		h.rooms[room.ID] = room
 		return room
