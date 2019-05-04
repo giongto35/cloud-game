@@ -3,6 +3,7 @@ package emulator
 
 import (
 	"image"
+	"log"
 
 	"github.com/giongto35/cloud-game/emulator/nes"
 )
@@ -45,12 +46,17 @@ type GameView struct {
 	// equivalent to the list key pressed const above
 	keyPressed [NumKeys * 2]bool
 
-	savingPath  string
-	loadingPath string
+	savingJob  *job
+	loadingJob *job
 
 	imageChannel chan *image.RGBA
 	audioChannel chan float32
 	inputChannel chan int
+}
+
+type job struct {
+	path      string
+	extraFunc func() error
 }
 
 func NewGameView(console *nes.Console, title, hash string, imageChannel chan *image.RGBA, audioChannel chan float32, inputChannel chan int) *GameView {
@@ -136,26 +142,37 @@ func (view *GameView) Update(t, dt float64) {
 	view.imageChannel <- console.Buffer()
 }
 
-func (view *GameView) Save(hash string) {
+func (view *GameView) Save(hash string, extraSaveFunc func() error) {
 	// put saving event to queue, process in updateEvent
-	view.savingPath = savePath(view.hash)
+	view.savingJob = &job{
+		path:      savePath(view.hash),
+		extraFunc: extraSaveFunc,
+	}
 }
 
-func (view *GameView) Load(path string) {
+func (view *GameView) Load(path string, extraLoadFunc func() error) {
 	// put saving event to queue, process in updateEvent
-	view.loadingPath = savePath(view.hash)
+	view.loadingJob = &job{
+		path:      savePath(view.hash),
+		extraFunc: extraLoadFunc,
+	}
 }
 
 func (view *GameView) UpdateEvents() {
 	// If there is saving event, save and discard the save event
-	if view.savingPath != "" {
-		view.console.SaveState(view.savingPath)
-		view.savingPath = ""
+	log.Println(view.savingJob)
+	if view.savingJob != nil {
+		view.console.SaveState(view.savingJob.path)
+		// Run extra function (online saving for example)
+		go view.savingJob.extraFunc()
+		view.savingJob = nil
 	}
 	// If there is loading event, save and discard the load event
-	if view.loadingPath != "" {
-		view.console.LoadState(view.loadingPath)
-		view.loadingPath = ""
+	if view.loadingJob != nil {
+		view.console.LoadState(view.loadingJob.path)
+		// Run extra function (online saving for example)
+		go view.loadingJob.extraFunc()
+		view.loadingJob = nil
 	}
 }
 

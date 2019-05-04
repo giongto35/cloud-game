@@ -8,7 +8,6 @@ import (
 	"math/rand"
 	"strconv"
 	"sync"
-	"time"
 
 	emulator "github.com/giongto35/cloud-game/emulator"
 	storage "github.com/giongto35/cloud-game/handler/cloud-storage"
@@ -142,15 +141,18 @@ func (r *Room) Close() {
 }
 
 func (r *Room) SaveGame() error {
-	// TODO: Move to game view
-	if err := r.director.SaveGame(); err != nil {
-		return err
-	}
-	time.Sleep(1000 * time.Millisecond)
+	onlineSaveFunc := func() error {
+		// Try to save the game to gCloud
+		// TODO: Add goroutine
+		if err := r.onlineStorage.SaveFile(r.director.GetHash(), r.director.GetHashPath()); err != nil {
+			return err
+		}
 
-	// Try to save the game to gCloud
-	// TODO: Add goroutine
-	if err := r.onlineStorage.SaveFile(r.director.GetHash(), r.director.GetHashPath()); err != nil {
+		return nil
+	}
+
+	// TODO: Move to game view
+	if err := r.director.SaveGame(onlineSaveFunc); err != nil {
 		return err
 	}
 
@@ -158,9 +160,7 @@ func (r *Room) SaveGame() error {
 }
 
 func (r *Room) LoadGame() error {
-	err := r.director.LoadGame()
-	time.Sleep(1000 * time.Millisecond)
-	if err != nil {
+	onlineLoadFunc := func() error {
 		// TODO: Put in GoRoutine
 		// If the game is not on local server
 		// Try to load from gcloud
@@ -171,11 +171,14 @@ func (r *Room) LoadGame() error {
 		// Save the data fetched from gcloud to local server
 		ioutil.WriteFile(r.director.GetHashPath(), data, 0644)
 		// Reload game again
-		err = r.director.LoadGame()
-		if err != nil {
-			return err
-		}
+		//err = r.director.LoadGame(nil)
+		//if err != nil {
+		//return err
+		//}
+		return nil
 	}
+
+	err := r.director.LoadGame(onlineLoadFunc)
 
 	return err
 }
