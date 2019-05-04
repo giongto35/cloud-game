@@ -16,6 +16,7 @@ import (
 	vpxEncoder "github.com/giongto35/cloud-game/vpx-encoder"
 	"github.com/pion/webrtc"
 	"github.com/pion/webrtc/pkg/media"
+	uuid "github.com/satori/go.uuid"
 )
 
 var webrtcconfig = webrtc.Configuration{ICEServers: []webrtc.ICEServer{{URLs: []string{"stun:stun.l.google.com:19302"}}}}
@@ -94,6 +95,8 @@ func Decode(in string, obj interface{}) {
 // NewWebRTC create
 func NewWebRTC() *WebRTC {
 	w := &WebRTC{
+		ID: uuid.Must(uuid.NewV4()).String(),
+
 		ImageChannel: make(chan []byte, 2),
 		AudioChannel: make(chan []byte, 1000),
 		InputChannel: make(chan int, 2),
@@ -108,6 +111,8 @@ type InputDataPair struct {
 
 // WebRTC connection
 type WebRTC struct {
+	ID string
+
 	connection  *webrtc.PeerConnection
 	encoder     *vpxEncoder.VpxEncoder
 	isConnected bool
@@ -167,20 +172,20 @@ func (w *WebRTC) StartClient(remoteSession string, width, height int) (string, e
 	var d0 uint16 = 0
 	var d1 uint16 = 1
 	audioTrack, err := w.connection.CreateDataChannel("b", &webrtc.DataChannelInit{
-		Ordered: &dfalse,
+		Ordered:        &dfalse,
 		MaxRetransmits: &d0,
-		Negotiated: &dtrue,
-		ID: &d1,
+		Negotiated:     &dtrue,
+		ID:             &d1,
 	})
 	if err != nil {
 		return "", err
 	}
 
 	// input channel
-	inputTrack, err :=  w.connection.CreateDataChannel("a", &webrtc.DataChannelInit{
-		Ordered: &dtrue,
+	inputTrack, err := w.connection.CreateDataChannel("a", &webrtc.DataChannelInit{
+		Ordered:    &dtrue,
 		Negotiated: &dtrue,
-		ID: &d0,
+		ID:         &d0,
 	})
 
 	inputTrack.OnOpen(func() {
@@ -202,7 +207,6 @@ func (w *WebRTC) StartClient(remoteSession string, width, height int) (string, e
 		w.Done <- struct{}{}
 		close(w.Done)
 	})
-	
 
 	// WebRTC state callback
 	w.connection.OnICEConnectionStateChange(func(connectionState webrtc.ICEConnectionState) {
@@ -224,8 +228,6 @@ func (w *WebRTC) StartClient(remoteSession string, width, height int) (string, e
 	w.connection.OnICECandidate(func(iceCandidate *webrtc.ICECandidate) {
 		log.Println(iceCandidate)
 	})
-
-
 
 	offer := webrtc.SessionDescription{}
 

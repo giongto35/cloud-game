@@ -1,11 +1,11 @@
-package ui
+package emulator
 
 import (
 	"image"
 	"log"
 	"time"
 
-	"github.com/giongto35/cloud-game/nes"
+	"github.com/giongto35/cloud-game/emulator/nes"
 	// "github.com/gordonklaus/portaudio"
 )
 
@@ -19,7 +19,9 @@ type Director struct {
 	Done         chan struct{}
 
 	roomID string
-	hash   string
+	// Hash represents a game state (roomID, gamePath).
+	// It is used for save file name
+	hash string
 }
 
 const FPS = 60
@@ -77,7 +79,7 @@ func (d *Director) Run() {
 	c := time.Tick(time.Second / FPS)
 L:
 	for range c {
-	// for {
+		// for {
 		// quit game
 		// TODO: Anyway not using select because it will slow down
 		select {
@@ -109,20 +111,32 @@ func (d *Director) PlayGame(path string) {
 	d.SetView(NewGameView(console, path, hash, d.imageChannel, d.audioChannel, d.inputChannel))
 }
 
-func (d *Director) SaveGame() error {
+// SaveGame creates save events and doing extra step for load
+func (d *Director) SaveGame(saveExtraFunc func() error) error {
 	if d.hash != "" {
-		d.view.Save(d.hash)
+		d.view.Save(d.hash, saveExtraFunc)
 		return nil
 	} else {
 		return nil
 	}
 }
 
-func (d *Director) LoadGame() error {
+// LoadGame creates load events and doing extra step for load
+func (d *Director) LoadGame(loadExtraFunc func() error) error {
 	if d.hash != "" {
-		d.view.Load(d.hash)
+		d.view.Load(d.hash, loadExtraFunc)
 		return nil
 	} else {
 		return nil
 	}
+}
+
+// GetHash return hash
+func (d *Director) GetHash() string {
+	return d.hash
+}
+
+// GetHashPath return the full path to hash file
+func (d *Director) GetHashPath() string {
+	return savePath(d.hash)
 }
