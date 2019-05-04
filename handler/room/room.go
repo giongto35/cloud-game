@@ -143,7 +143,6 @@ func (r *Room) Close() {
 func (r *Room) SaveGame() error {
 	onlineSaveFunc := func() error {
 		// Try to save the game to gCloud
-		// TODO: Add goroutine
 		if err := r.onlineStorage.SaveFile(r.director.GetHash(), r.director.GetHashPath()); err != nil {
 			return err
 		}
@@ -160,8 +159,9 @@ func (r *Room) SaveGame() error {
 }
 
 func (r *Room) LoadGame() error {
+	// TODO: Fix, because load game always come to local, this logic is unnecessary. Move to load game
 	onlineLoadFunc := func() error {
-		// TODO: Put in GoRoutine
+		log.Println("Loading game from cloud storage")
 		// If the game is not on local server
 		// Try to load from gcloud
 		data, err := r.onlineStorage.LoadFile(r.director.GetHash())

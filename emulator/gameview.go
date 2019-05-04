@@ -3,7 +3,6 @@ package emulator
 
 import (
 	"image"
-	"log"
 
 	"github.com/giongto35/cloud-game/emulator/nes"
 )
@@ -160,7 +159,6 @@ func (view *GameView) Load(path string, extraLoadFunc func() error) {
 
 func (view *GameView) UpdateEvents() {
 	// If there is saving event, save and discard the save event
-	log.Println(view.savingJob)
 	if view.savingJob != nil {
 		view.console.SaveState(view.savingJob.path)
 		// Run extra function (online saving for example)
