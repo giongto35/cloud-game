@@ -1,5 +1,5 @@
 // credit to https://github.com/fogleman/nes
-package ui
+package emulator
 
 import (
 	"bytes"

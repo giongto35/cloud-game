@@ -1,4 +1,4 @@
-package main
+package cws
 
 import (
 	"encoding/json"
@@ -11,6 +11,8 @@ import (
 )
 
 type Client struct {
+	id string
+
 	conn *websocket.Conn
 
 	sendLock sync.Mutex
@@ -37,9 +39,12 @@ type WSPacket struct {
 var EmptyPacket = WSPacket{}
 
 func NewClient(conn *websocket.Conn) *Client {
+	id := uuid.Must(uuid.NewV4()).String()
 	sendCallback := map[string]func(WSPacket){}
 	recvCallback := map[string]func(WSPacket){}
+
 	return &Client{
+		id:   id,
 		conn: conn,
 
 		sendCallback: sendCallback,
@@ -47,8 +52,8 @@ func NewClient(conn *websocket.Conn) *Client {
 	}
 }
 
-// send sends a packet and trigger callback when the packet comes back
-func (c *Client) send(request WSPacket, callback func(response WSPacket)) {
+// Send sends a packet and trigger callback when the packet comes back
+func (c *Client) Send(request WSPacket, callback func(response WSPacket)) {
 	request.PacketID = uuid.Must(uuid.NewV4()).String()
 	data, err := json.Marshal(request)
 	if err != nil {
@@ -56,29 +61,33 @@ func (c *Client) send(request WSPacket, callback func(response WSPacket)) {
 	}
 
 	// TODO: Consider using lock free
+	// Wrap callback with sessionID and packetID
+	if callback != nil {
+		wrapperCallback := func(resp WSPacket) {
+			resp.PacketID = request.PacketID
+			resp.SessionID = request.SessionID
+			callback(resp)
+		}
+		c.sendCallbackLock.Lock()
+		c.sendCallback[request.PacketID] = wrapperCallback
+		c.sendCallbackLock.Unlock()
+	}
+	//log.Println("Registered requested callback", "ID :", request.ID, "PacketID: ", request.PacketID)
+	//log.Println("Callback waiting list:", c.id, c.sendCallback)
+
 	c.sendLock.Lock()
 	c.conn.WriteMessage(websocket.TextMessage, data)
 	c.sendLock.Unlock()
-	wrapperCallback := func(resp WSPacket) {
-		resp.PacketID = request.PacketID
-		resp.SessionID = request.SessionID
-		callback(resp)
-	}
-	if callback == nil {
-		return
-	}
-	c.sendCallbackLock.Lock()
-	c.sendCallback[request.PacketID] = wrapperCallback
-	c.sendCallbackLock.Unlock()
 }
 
-// receive receive and response back
-func (c *Client) receive(id string, f func(response WSPacket) (request WSPacket)) {
+// Receive receive and response back
+func (c *Client) Receive(id string, f func(response WSPacket) (request WSPacket)) {
 	c.recvCallback[id] = func(response WSPacket) {
 		req := f(response)
 		// Add Meta data
 		req.PacketID = response.PacketID
 		req.SessionID = response.SessionID
+		//log.Println("Sending back request", req, "PacketID: ", req.PacketID, "SessionID: ", req.SessionID)
 
 		// Skip rqeuest if it is EmptyPacket
 		if req == EmptyPacket {
@@ -95,27 +104,27 @@ func (c *Client) receive(id string, f func(response WSPacket) (request WSPacket)
 	}
 }
 
-// syncSend sends a packet and wait for callback till the packet comes back
-func (c *Client) syncSend(request WSPacket) (response WSPacket) {
+// SyncSend sends a packet and wait for callback till the packet comes back
+func (c *Client) SyncSend(request WSPacket) (response WSPacket) {
 	res := make(chan WSPacket)
 	f := func(resp WSPacket) {
 		res <- resp
 	}
-	c.send(request, f)
+	c.Send(request, f)
 	return <-res
 }
 
-// heartbeat maintains connection to server
-func (c *Client) heartbeat() {
+// Heartbeat maintains connection to server
+func (c *Client) Heartbeat() {
 	// send heartbeat every 1s
 	timer := time.Tick(time.Second)
 
 	for range timer {
-		c.send(WSPacket{ID: "heartbeat"}, nil)
+		c.Send(WSPacket{ID: "heartbeat"}, nil)
 	}
 }
 
-func (c *Client) listen() {
+func (c *Client) Listen() {
 	for {
 		//log.Println("Waiting for message ...")
 		_, rawMsg, err := c.conn.ReadMessage()
@@ -125,6 +134,8 @@ func (c *Client) listen() {
 		}
 		wspacket := WSPacket{}
 		err = json.Unmarshal(rawMsg, &wspacket)
+		//log.Println( "Received: ", wspacket)
+
 		if err != nil {
 			continue
 		}
@@ -132,19 +143,27 @@ func (c *Client) listen() {
 		// Check if some async send is waiting for the response based on packetID
 		// TODO: Change to read lock
 		c.sendCallbackLock.Lock()
+		//log.Println("Listening: Callback waiting list: ", c.id, c.sendCallback)
 		callback, ok := c.sendCallback[wspacket.PacketID]
+		//log.Println("Has callback: ", ok, "ClientID: ", c.id, "PacketID ", wspacket.PacketID)
 		c.sendCallbackLock.Unlock()
 		if ok {
 			go callback(wspacket)
 			c.sendCallbackLock.Lock()
+			//log.Println("Deleteing Packet ", wspacket.PacketID)
 			delete(c.sendCallback, wspacket.PacketID)
 			c.sendCallbackLock.Unlock()
 			// Skip receiveCallback to avoid duplication
 			continue
 		}
+		//log.Println("Listening: Callback waiting list: ", c.id, c.recvCallback)
 		// Check if some receiver with the ID is registered
 		if callback, ok := c.recvCallback[wspacket.ID]; ok {
 			go callback(wspacket)
 		}
 	}
+}
+
+func (c *Client) Close() {
+	c.conn.Close()
 }
