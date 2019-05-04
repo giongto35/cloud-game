@@ -63,25 +63,6 @@ GAME_LIST = [
 
 
 
-// Keyboard stuffs
-KEY_MAP = {
-    37: "left",
-    38: "up",
-    39: "right",
-    40: "down",
-
-    90: "a", // z
-    88: "b", // x
-    67: "start", // c
-    86: "select", // v
-
-    // non-game
-    81: "quit", // q
-    83: "save", // s
-    76: "load", // l
-    70: "full", // f
-}
-
 /*
       const (
         ButtonA = iota

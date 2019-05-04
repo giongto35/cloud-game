@@ -25,11 +25,11 @@ keyState = {
     right: false,
 
     // game meta keys
-    save: false,
-    load: false,
+    // save: false,
+    // load: false,
 
     // unofficial
-    quit: false
+    // quit: false
 }
 
 unchangePacket = INPUT_STATE_PACKET;

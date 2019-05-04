@@ -1,0 +1,137 @@
+
+    .abxy {
+        position: absolute;
+        width: 161px;
+        height: 160px;
+        top: 125px;
+        left: 451px
+      }
+  
+      .abxy .button {
+        position: absolute;
+        width: 54px;
+        height: 54px;
+      }
+  
+      .abxy .button.a {
+        width: 53px;
+        height: 53px;
+      }
+  
+      .abxy .button.y {
+        width: 55px;
+        height: 54px;
+      }
+  
+      .abxy .button.pressed {
+        background-position: 0 -55px;
+        margin-top: 6px;
+        opacity: 1;
+      }
+  
+      .abxy .button.pressed.a {
+        background-position: 0 -54px;
+      }
+  
+      .abxy .button.pressed.y {
+        background-position: 0 -56px;
+      }
+  
+      .abxy .a {
+        background: url(https://gamepadviewer.com/xbox-assets-old/a.png);
+        top: 108px;
+        left: 55px;
+      }
+  
+      .abxy .b {
+        background: url(https://gamepadviewer.com/xbox-assets-old/b.png);
+        top: 54px;
+        right: 0px;
+      }
+  
+      .abxy .x {
+        background: url(https://gamepadviewer.com/xbox-assets-old/x.png);
+        top: 54px;
+      }
+  
+      .abxy .y {
+        background: url(https://gamepadviewer.com/xbox-assets-old/y.png);
+        left: 54px;
+      }
+  
+  
+      .dpad {
+        background: url(https://gamepadviewer.com/xbox-assets-old/bg.png);
+        background-position: -174px -273px;
+        border-radius: 100%;
+        position: absolute;
+        width: 112px;
+        height: 112px;
+        top: 300px;
+        left: 451px;
+      }
+  
+      .dpad .face {
+        position: absolute;
+        font-size: 30px;
+        line-height: 0;
+        color: white;
+        opacity: 0;
+        font-family: 'FontAwesome';
+      }
+  
+      .dpad .face.pressed {
+        opacity: 1;
+      }
+  
+      .dpad .face.up {
+        left: 42px;
+        top: 20px;
+      }
+  
+      .dpad .face.up:after {
+        content: "\f062";
+      }
+  
+      .dpad .face.down {
+        left: 42px;
+        bottom: 20px;
+      }
+  
+      .dpad .face.down:after {
+        content: "\f063";
+      }
+  
+      .dpad .face.left {
+        top: 56px;
+        left: 3px;
+      }
+  
+      .dpad .face.left:after {
+        content: "\f060";
+      }
+  
+      .dpad .face.right {
+        top: 56px;
+        right: 3px;
+      }
+  
+      .dpad .face.right:after {
+        content: "\f061";
+      }
+  
+  
+      .dpad .joystick {
+        background-color: blue;
+        border-radius: 100%;
+        opacity: 0.5;
+        cursor: pointer;
+        height: 50%;
+        user-select: none;
+        width: 50%;
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        margin-top: -28px;
+        margin-left: -28px;
+      }
