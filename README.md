@@ -66,7 +66,8 @@ brew install libvpx pkg-config
   * `go get github.com/gorilla/websocket`  
 
 Then we can run the main directly
-  * `go run main.go`
+  * `go run cmd/main.go -debug` - for debug UI
+  * `go run cmd/main.go` - for gameboy UI
 
 ## Code structure
 
