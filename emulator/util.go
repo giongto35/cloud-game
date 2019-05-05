@@ -33,6 +33,12 @@ func sramPath(hash string) string {
 	return homeDir + "/.nes/sram/" + hash + ".dat"
 }
 
+// Public call to get savePath
+func GetSavePath(path string, roomID string) string {
+	hash, _ := hashFile(path, roomID)
+	return savePath(hash)
+}
+
 func savePath(hash string) string {
 	return homeDir + "/.nes/save/" + hash + ".dat"
 }
