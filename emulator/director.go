@@ -3,7 +3,6 @@ package emulator
 import (
 	"image"
 	"log"
-	"os"
 	"time"
 
 	"github.com/giongto35/cloud-game/emulator/nes"
@@ -110,12 +109,6 @@ func (d *Director) PlayGame(path string) {
 	}
 	// Set GameView as current view
 	d.SetView(NewGameView(console, path, hash, d.imageChannel, d.audioChannel, d.inputChannel))
-}
-
-func (d *Director) IsGameOnLocal(path string, roomID string) bool {
-	hash, _ := hashFile(path, roomID)
-	_, err := os.Open(savePath(hash))
-	return err != nil
 }
 
 // SaveGame creates save events and doing extra step for load
