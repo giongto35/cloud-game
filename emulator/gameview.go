@@ -99,7 +99,7 @@ func (view *GameView) Enter() {
 	view.console.SetAudioSampleRate(SampleRate)
 	view.console.SetAudioChannel(view.audioChannel)
 
-	// load state if the hash file existed (Join the old room)
+	// load state if the hash file existed in the server (Join the old room)
 	if err := view.console.LoadState(savePath(view.hash)); err == nil {
 		return
 	} else {
@@ -149,11 +149,11 @@ func (view *GameView) Save(hash string, extraSaveFunc func() error) {
 	}
 }
 
-func (view *GameView) Load(path string, extraLoadFunc func() error) {
+func (view *GameView) Load(path string) {
 	// put saving event to queue, process in updateEvent
 	view.loadingJob = &job{
 		path:      savePath(view.hash),
-		extraFunc: extraLoadFunc,
+		extraFunc: nil,
 	}
 }
 
@@ -169,7 +169,9 @@ func (view *GameView) UpdateEvents() {
 	if view.loadingJob != nil {
 		view.console.LoadState(view.loadingJob.path)
 		// Run extra function (online saving for example)
-		go view.loadingJob.extraFunc()
+		if view.loadingJob.extraFunc != nil {
+			go view.loadingJob.extraFunc()
+		}
 		view.loadingJob = nil
 	}
 }

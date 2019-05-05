@@ -3,6 +3,7 @@ package emulator
 import (
 	"image"
 	"log"
+	"os"
 	"time"
 
 	"github.com/giongto35/cloud-game/emulator/nes"
@@ -97,7 +98,7 @@ L:
 }
 
 func (d *Director) PlayGame(path string) {
-	// Generate hash that is indentifier of a room (game path + ropomID)
+	// Generate hash that is indentifier of a room (game path + roomID)
 	hash, err := hashFile(path, d.roomID)
 	if err != nil {
 		log.Fatalln(err)
@@ -111,6 +112,12 @@ func (d *Director) PlayGame(path string) {
 	d.SetView(NewGameView(console, path, hash, d.imageChannel, d.audioChannel, d.inputChannel))
 }
 
+func (d *Director) IsGameOnLocal(path string, roomID string) bool {
+	hash, _ := hashFile(path, roomID)
+	_, err := os.Open(savePath(hash))
+	return err != nil
+}
+
 // SaveGame creates save events and doing extra step for load
 func (d *Director) SaveGame(saveExtraFunc func() error) error {
 	if d.hash != "" {
@@ -122,9 +129,9 @@ func (d *Director) SaveGame(saveExtraFunc func() error) error {
 }
 
 // LoadGame creates load events and doing extra step for load
-func (d *Director) LoadGame(loadExtraFunc func() error) error {
+func (d *Director) LoadGame() error {
 	if d.hash != "" {
-		d.view.Load(d.hash, loadExtraFunc)
+		d.view.Load(d.hash)
 		return nil
 	} else {
 		return nil

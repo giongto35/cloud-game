@@ -6,6 +6,7 @@ import (
 	"io/ioutil"
 	"log"
 	"math/rand"
+	"os"
 	"strconv"
 	"sync"
 
@@ -63,7 +64,22 @@ func NewRoom(roomID, gamepath, gameName string, onlineStorage *storage.Client) *
 
 	go room.startVideo()
 	go room.startAudio()
-	go director.Start([]string{gamepath + "/" + gameName})
+
+	path := gamepath + "/" + gameName
+	go func(path, roomID string) {
+		// Check room is on local or fetch from server
+		savepath := emulator.GetSavePath(path, roomID)
+		log.Println("Check ", savepath, " on local : ", room.isGameOnLocal(savepath))
+		if !room.isGameOnLocal(savepath) {
+			// Fetch room from GCP to server
+			log.Println("Load room from online storage", savepath)
+			if err := room.loadRoomOnline(roomID, savepath); err != nil {
+				log.Printf("Warn: Room %s is not in online storage, error %s", roomID, err)
+			}
+		}
+
+		director.Start([]string{path})
+	}(path, roomID)
 
 	return room
 }
@@ -74,6 +90,11 @@ func generateRoomID() string {
 	log.Println("Generate Room ID", roomID)
 	//roomID := uuid.Must(uuid.NewV4()).String()
 	return roomID
+}
+
+func (r *Room) isGameOnLocal(savepath string) bool {
+	_, err := os.Open(savepath)
+	return err == nil
 }
 
 func (r *Room) AddConnectionToRoom(peerconnection *webrtc.WebRTC, playerIndex int) {
@@ -112,6 +133,9 @@ func (r *Room) startWebRTCSession(peerconnection *webrtc.WebRTC, playerIndex int
 func (r *Room) CleanSession(peerconnection *webrtc.WebRTC) {
 	r.removeSession(peerconnection)
 	// TODO: Clean all channels
+	//close(peerconnection.ImageChannel)
+	//close(peerconnection.AudioChannel)
+	//close(peerconnection.InputChannel)
 }
 
 func (r *Room) removeSession(w *webrtc.WebRTC) {
@@ -138,12 +162,15 @@ func (r *Room) removeSession(w *webrtc.WebRTC) {
 func (r *Room) Close() {
 	log.Println("Closing room", r)
 	r.director.Done <- struct{}{}
+	//close(r.inputChannel)
+	//close(r.imageChannel)
+	//close(r.audioChannel)
 }
 
 func (r *Room) SaveGame() error {
 	onlineSaveFunc := func() error {
 		// Try to save the game to gCloud
-		if err := r.onlineStorage.SaveFile(r.director.GetHash(), r.director.GetHashPath()); err != nil {
+		if err := r.onlineStorage.SaveFile(r.ID, r.director.GetHashPath()); err != nil {
 			return err
 		}
 
@@ -158,27 +185,26 @@ func (r *Room) SaveGame() error {
 	return nil
 }
 
-func (r *Room) LoadGame() error {
-	// TODO: Fix, because load game always come to local, this logic is unnecessary. Move to load game
-	onlineLoadFunc := func() error {
-		log.Println("Loading game from cloud storage")
-		// If the game is not on local server
-		// Try to load from gcloud
-		data, err := r.onlineStorage.LoadFile(r.director.GetHash())
-		if err != nil {
-			return err
-		}
-		// Save the data fetched from gcloud to local server
-		ioutil.WriteFile(r.director.GetHashPath(), data, 0644)
-		// Reload game again
-		//err = r.director.LoadGame(nil)
-		//if err != nil {
-		//return err
-		//}
-		return nil
+func (r *Room) loadRoomOnline(roomID string, savepath string) error {
+	log.Println("Loading game from cloud storage")
+	// If the game is not on local server
+	// Try to load from gcloud
+	data, err := r.onlineStorage.LoadFile(roomID)
+	if err != nil {
+		return err
 	}
+	// Save the data fetched from gcloud to local server
+	ioutil.WriteFile(savepath, data, 0644)
+	// Reload game again
+	//err = r.director.LoadGame(nil)
+	//if err != nil {
+	//return err
+	//}
+	return nil
+}
 
-	err := r.director.LoadGame(onlineLoadFunc)
+func (r *Room) LoadGame() error {
+	err := r.director.LoadGame()
 
 	return err
 }
