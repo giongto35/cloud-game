@@ -19,9 +19,6 @@ type Director struct {
 	Done         chan struct{}
 
 	roomID string
-	// Hash represents a game state (roomID, gamePath).
-	// It is used for save file name
-	hash string
 }
 
 const FPS = 60
@@ -33,7 +30,6 @@ func NewDirector(roomID string, imageChannel chan *image.RGBA, audioChannel chan
 	director.imageChannel = imageChannel
 	director.inputChannel = inputChannel
 	director.roomID = roomID
-	director.hash = ""
 	return &director
 }
 
@@ -97,24 +93,18 @@ L:
 }
 
 func (d *Director) PlayGame(path string) {
-	// Generate hash that is indentifier of a room (game path + roomID)
-	hash, err := hashFile(path, d.roomID)
-	if err != nil {
-		log.Fatalln(err)
-	}
-	d.hash = hash
 	console, err := nes.NewConsole(path)
 	if err != nil {
 		log.Fatalln(err)
 	}
 	// Set GameView as current view
-	d.SetView(NewGameView(console, path, hash, d.imageChannel, d.audioChannel, d.inputChannel))
+	d.SetView(NewGameView(console, path, d.roomID, d.imageChannel, d.audioChannel, d.inputChannel))
 }
 
 // SaveGame creates save events and doing extra step for load
 func (d *Director) SaveGame(saveExtraFunc func() error) error {
-	if d.hash != "" {
-		d.view.Save(d.hash, saveExtraFunc)
+	if d.roomID != "" {
+		d.view.Save(d.roomID, saveExtraFunc)
 		return nil
 	} else {
 		return nil
@@ -123,20 +113,15 @@ func (d *Director) SaveGame(saveExtraFunc func() error) error {
 
 // LoadGame creates load events and doing extra step for load
 func (d *Director) LoadGame() error {
-	if d.hash != "" {
-		d.view.Load(d.hash)
+	if d.roomID != "" {
+		d.view.Load(d.roomID)
 		return nil
 	} else {
 		return nil
 	}
 }
 
-// GetHash return hash
-func (d *Director) GetHash() string {
-	return d.hash
-}
-
 // GetHashPath return the full path to hash file
 func (d *Director) GetHashPath() string {
-	return savePath(d.hash)
+	return savePath(d.roomID)
 }
