@@ -58,7 +58,8 @@ func (s *Session) RegisterOverlordClient() {
 			oclient.peerconnections[resp.SessionID] = peerconnection
 
 			if err != nil {
-				log.Fatalln(err)
+				log.Println("Error: Cannot create new webrtc session", err)
+				return cws.EmptyPacket
 			}
 
 			return cws.WSPacket{

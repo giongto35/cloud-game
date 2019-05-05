@@ -25,7 +25,10 @@ func (s *Session) RegisterBrowserClient() {
 		log.Println("Received user SDP")
 		localSession, err := s.peerconnection.StartClient(resp.Data, config.Width, config.Height)
 		if err != nil {
-			log.Fatalln(err)
+			if err != nil {
+				log.Println("Error: Cannot create new webrtc session", err)
+				return cws.EmptyPacket
+			}
 		}
 
 		return cws.WSPacket{
