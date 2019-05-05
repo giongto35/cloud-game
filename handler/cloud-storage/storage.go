@@ -23,7 +23,7 @@ func NewInitClient() *Client {
 
 	client, err := NewClient(projectID, bucketName)
 	if err != nil {
-		log.Printf("Err: Failed to create client: %v", err)
+		log.Printf("Warn: Failed to create client: %v", err)
 	} else {
 		log.Println("Online storage is initialized")
 	}
