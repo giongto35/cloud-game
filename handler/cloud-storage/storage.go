@@ -16,14 +16,23 @@ type Client struct {
 	gclient *storage.Client
 }
 
+// NewInitClient returns nil of client is not initialized
 func NewInitClient() *Client {
 	projectID := os.Getenv("GCP_PROJECT")
 	bucketName := "game-save"
-	return NewClient(projectID, bucketName)
+
+	client, err := NewClient(projectID, bucketName)
+	if err != nil {
+		log.Printf("Err: Failed to create client: %v", err)
+	} else {
+		log.Println("Online storage is initialized")
+	}
+
+	return client
 }
 
 // NewClient inits a new Client accessing to GCP
-func NewClient(projectID string, bucketName string) *Client {
+func NewClient(projectID string, bucketName string) (*Client, error) {
 	ctx := context.Background()
 
 	// Sets your Google Cloud Platform project ID.
@@ -31,7 +40,7 @@ func NewClient(projectID string, bucketName string) *Client {
 	// Creates a client.
 	gclient, err := storage.NewClient(ctx)
 	if err != nil {
-		log.Fatalf("Failed to create client: %v", err)
+		return nil, err
 	}
 
 	// Creates a Bucket instance.
@@ -40,11 +49,16 @@ func NewClient(projectID string, bucketName string) *Client {
 	return &Client{
 		bucket:  bucket,
 		gclient: gclient,
-	}
+	}, nil
 }
 
 // Savefile save srcFile to GCP
 func (c *Client) SaveFile(name string, srcFile string) (err error) {
+	// Bypass if client is nil
+	if c == nil {
+		return nil
+	}
+
 	reader, err := os.Open(srcFile)
 	if err != nil {
 		return err
@@ -64,6 +78,11 @@ func (c *Client) SaveFile(name string, srcFile string) (err error) {
 
 // Loadfile load file from GCP
 func (c *Client) LoadFile(name string) (data []byte, err error) {
+	// Bypass if client is nil
+	if c == nil {
+		return
+	}
+
 	rc, err := c.bucket.Object(name).NewReader(context.Background())
 	if err != nil {
 		return nil, err
