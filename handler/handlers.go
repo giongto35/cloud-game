@@ -43,7 +43,7 @@ type Handler struct {
 
 // NewHandler returns a new server
 func NewHandler(overlordConn *websocket.Conn, isDebug bool, gamePath string) *Handler {
-	log.Println("new OverlordClient")
+	onlineStorage := storage.NewInitClient()
 
 	return &Handler{
 		oClient:         NewOverlordClient(overlordConn),
@@ -53,7 +53,7 @@ func NewHandler(overlordConn *websocket.Conn, isDebug bool, gamePath string) *Ha
 		isDebug:  isDebug,
 		gamePath: gamePath,
 
-		onlineStorage: storage.NewInitClient(),
+		onlineStorage: onlineStorage,
 	}
 }
 
