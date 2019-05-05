@@ -68,7 +68,7 @@ func NewRoom(roomID, gamepath, gameName string, onlineStorage *storage.Client) *
 	path := gamepath + "/" + gameName
 	go func(path, roomID string) {
 		// Check room is on local or fetch from server
-		savepath := emulator.GetSavePath(path, roomID)
+		savepath := emulator.GetSavePath(roomID)
 		log.Println("Check ", savepath, " on local : ", room.isGameOnLocal(savepath))
 		if !room.isGameOnLocal(savepath) {
 			// Fetch room from GCP to server
