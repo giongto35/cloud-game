@@ -64,6 +64,7 @@ func (d *Director) Start(paths []string) {
 	// audio := NewAudio()
 	// audio.Start()
 	// d.audio = audio
+	log.Println("Start game: ", paths)
 
 	if len(paths) == 1 {
 		d.PlayGame(paths[0])
@@ -95,7 +96,7 @@ L:
 func (d *Director) PlayGame(path string) {
 	console, err := nes.NewConsole(path)
 	if err != nil {
-		log.Fatalln(err)
+		log.Println("Err: Cannot load path, Got:", err)
 	}
 	// Set GameView as current view
 	d.SetView(NewGameView(console, path, d.roomID, d.imageChannel, d.audioChannel, d.inputChannel))

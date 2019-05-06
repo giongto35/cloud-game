@@ -270,16 +270,11 @@ func (w *WebRTC) StopClient() {
 		w.connection.Close()
 	}
 	w.connection = nil
-	//w.isClosed = true
 }
 
 // IsConnected comment
 func (w *WebRTC) IsConnected() bool {
 	return w.isConnected
-}
-
-func (w *WebRTC) IsClosed() bool {
-	return w.isClosed
 }
 
 // func (w *WebRTC) startStreaming(vp8Track *webrtc.Track, opusTrack *webrtc.Track) {

@@ -14,7 +14,8 @@ type BrowserClient struct {
 	*cws.Client
 }
 
-func (s *Session) RegisterBrowserClient() {
+// RouteBrowser are all routes server received from browser
+func (s *Session) RouteBrowser() {
 	browserClient := s.BrowserClient
 
 	browserClient.Receive("heartbeat", func(resp cws.WSPacket) cws.WSPacket {
