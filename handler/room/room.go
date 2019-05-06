@@ -65,6 +65,7 @@ func NewRoom(roomID, gamepath, gameName string, onlineStorage *storage.Client) *
 	go room.startVideo()
 	go room.startAudio()
 
+	// Check if room is on local storage, if not, pull from GCS to local storage
 	path := gamepath + "/" + gameName
 	go func(path, roomID string) {
 		// Check room is on local or fetch from server
@@ -109,12 +110,16 @@ func (r *Room) startWebRTCSession(peerconnection *webrtc.WebRTC, playerIndex int
 	inputChannel := r.inputChannel
 	for {
 		select {
+		case <-r.Done:
+			log.Println("Close listening from peerconnection for room", r.ID)
+			return
 		case <-peerconnection.Done:
 			r.removeSession(peerconnection)
 		default:
 		}
 		// Client stopped
-		if peerconnection.IsClosed() {
+		if !peerconnection.IsConnected() {
+			log.Println("peerconnection is closed", peerconnection)
 			return
 		}
 
@@ -150,9 +155,12 @@ func (r *Room) removeSession(w *webrtc.WebRTC) {
 			fmt.Println("found session: ", len(r.rtcSessions))
 
 			// If room has no sessions, close room
+			// Note: this logic cannot be brought outside of forloop because we only close room if room had at least one session
 			if len(r.rtcSessions) == 0 {
 				log.Println("No session in room")
-				r.Done <- struct{}{}
+				r.Close()
+				// can consider sanding close to room and room do clean
+				//close(r.Done)
 			}
 			break
 		}
@@ -162,9 +170,12 @@ func (r *Room) removeSession(w *webrtc.WebRTC) {
 func (r *Room) Close() {
 	log.Println("Closing room", r)
 	r.director.Done <- struct{}{}
+	close(r.Done)
+	// Not close fan input channel here, close in writer
 	//close(r.inputChannel)
-	//close(r.imageChannel)
-	//close(r.audioChannel)
+	// Close fan output channel
+	close(r.imageChannel)
+	close(r.audioChannel)
 }
 
 func (r *Room) SaveGame() error {
@@ -186,7 +197,7 @@ func (r *Room) SaveGame() error {
 }
 
 func (r *Room) loadRoomOnline(roomID string, savepath string) error {
-	log.Println("Loading game from cloud storage")
+	log.Println("Try loading game from cloud storage")
 	// If the game is not on local server
 	// Try to load from gcloud
 	data, err := r.onlineStorage.LoadFile(roomID)
@@ -212,7 +223,7 @@ func (r *Room) LoadGame() error {
 func (r *Room) IsRunning() bool {
 	// If there is running session
 	for _, s := range r.rtcSessions {
-		if !s.IsClosed() {
+		if s.IsConnected() {
 			return true
 		}
 	}

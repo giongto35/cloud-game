@@ -28,9 +28,16 @@ func (r *Room) startAudio() {
 	for {
 		select {
 		case <-r.Done:
-			r.Close()
+			log.Println("Room ", r.ID, " audio channel closed")
 			return
-		case sample := <-r.audioChannel:
+		case sample, ok := <-r.audioChannel:
+			if !ok {
+				// Just for guarding
+				log.Println("Warn: Room ", r.ID, " audio channel closed unexpectedly")
+				return
+			}
+
+			// TODO: Use worker pool for encoding
 			pcm[idx] = sample
 			idx++
 			if idx == len(pcm) {
@@ -45,12 +52,13 @@ func (r *Room) startAudio() {
 				data = data[:n]
 				data = append(data, count)
 
-				r.sessionsLock.Lock()
+				// TODO: r.rtcSessions is rarely updated. Lock will hold down perf
+				//r.sessionsLock.Lock()
 				for _, webRTC := range r.rtcSessions {
 					// Client stopped
-					if webRTC.IsClosed() {
-						continue
-					}
+					//if !webRTC.IsClosed() {
+					//continue
+					//}
 
 					// encode frame
 					// fanout audioChannel
@@ -60,7 +68,7 @@ func (r *Room) startAudio() {
 					}
 					//isRoomRunning = true
 				}
-				r.sessionsLock.Unlock()
+				//r.sessionsLock.Unlock()
 
 				idx = 0
 				count = (count + 1) & 0xff
@@ -75,17 +83,24 @@ func (r *Room) startVideo() {
 	for {
 		select {
 		case <-r.Done:
-			r.Close()
+			log.Println("Room ", r.ID, " video channel closed")
 			return
-		case image := <-r.imageChannel:
+		case image, ok := <-r.imageChannel:
+			if !ok {
+				// Just for guarding, should not reached
+				log.Println("Warn: Room ", r.ID, " video channel closed unexpectedly")
+				return
+			}
 
+			// TODO: Use worker pool for encoding
 			yuv := util.RgbaToYuv(image)
-			r.sessionsLock.Lock()
+			// TODO: r.rtcSessions is rarely updated. Lock will hold down perf
+			//r.sessionsLock.Lock()
 			for _, webRTC := range r.rtcSessions {
 				// Client stopped
-				if webRTC.IsClosed() {
-					continue
-				}
+				//if webRTC.IsClosed() {
+				//continue
+				//}
 
 				// encode frame
 				// fanout imageChannel
@@ -94,7 +109,7 @@ func (r *Room) startVideo() {
 					webRTC.ImageChannel <- yuv
 				}
 			}
-			r.sessionsLock.Unlock()
+			//r.sessionsLock.Unlock()
 		}
 	}
 }

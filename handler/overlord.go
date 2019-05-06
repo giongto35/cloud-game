@@ -29,8 +29,8 @@ func NewOverlordClient(oc *websocket.Conn) *OverlordClient {
 	return oclient
 }
 
-// RegisterOverlordClient routes overlord Client
-func (s *Session) RegisterOverlordClient() {
+// RouteOverlord are all routes server received from overlord
+func (s *Session) RouteOverlord() {
 	oclient := s.OverlordClient
 
 	// Received from overlord the serverID
