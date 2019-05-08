@@ -165,8 +165,8 @@ func (w *WebRTC) StartClient(remoteSession string, width, height int) (string, e
 	})
 
 	inputTrack.OnClose(func() {
-		fmt.Println("Data channel closed")
-		fmt.Println("Closed webrtc")
+		log.Println("Data channel closed")
+		log.Println("Closed webrtc")
 		//close(w.Done)
 		//w.StopClient()
 	})
