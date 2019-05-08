@@ -74,7 +74,7 @@ func NewRoom(roomID, gamepath, gameName string, onlineStorage *storage.Client) *
 		if !room.isGameOnLocal(savepath) {
 			// Fetch room from GCP to server
 			log.Println("Load room from online storage", savepath)
-			if err := room.loadRoomOnline(roomID, savepath); err != nil {
+			if err := room.saveOnlineRoomToLocal(roomID, savepath); err != nil {
 				log.Printf("Warn: Room %s is not in online storage, error %s", roomID, err)
 			}
 		}
@@ -111,7 +111,7 @@ func (r *Room) startWebRTCSession(peerconnection *webrtc.WebRTC, playerIndex int
 	for {
 		select {
 		case <-r.Done:
-			log.Println("Close listening from peerconnection for room", r.ID)
+			log.Println("Detach peerconnection from room", r.ID)
 			return
 		case <-peerconnection.Done:
 			r.removeSession(peerconnection)
@@ -196,7 +196,7 @@ func (r *Room) SaveGame() error {
 	return nil
 }
 
-func (r *Room) loadRoomOnline(roomID string, savepath string) error {
+func (r *Room) saveOnlineRoomToLocal(roomID string, savepath string) error {
 	log.Println("Try loading game from cloud storage")
 	// If the game is not on local server
 	// Try to load from gcloud
@@ -206,11 +206,7 @@ func (r *Room) loadRoomOnline(roomID string, savepath string) error {
 	}
 	// Save the data fetched from gcloud to local server
 	ioutil.WriteFile(savepath, data, 0644)
-	// Reload game again
-	//err = r.director.LoadGame(nil)
-	//if err != nil {
-	//return err
-	//}
+
 	return nil
 }
 

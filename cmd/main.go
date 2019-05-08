@@ -6,6 +6,7 @@ import (
 	"math/rand"
 	"net/http"
 	_ "net/http/pprof"
+	"runtime"
 	"strings"
 	"time"
 
@@ -65,12 +66,22 @@ func initializeServer() {
 	http.ListenAndServe(":"+*config.Port, nil)
 }
 
+func monitor() {
+	c := time.Tick(time.Second)
+	for range c {
+		log.Printf("#goroutines: %d\n", runtime.NumGoroutine())
+	}
+}
+
 func main() {
 	flag.Parse()
 	log.Println("Usage: ./game [-debug]")
 
 	rand.Seed(time.Now().UTC().UnixNano())
 
+	//if *config.IsMonitor {
+	go monitor()
+	//}
 	// There are two server mode
 	// Overlord is coordinator. If the OvelordHost Param is `overlord`, we spawn a new host as Overlord.
 	// else we spawn new server as normal server connecting to OverlordHost.
