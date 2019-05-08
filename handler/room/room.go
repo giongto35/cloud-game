@@ -125,7 +125,11 @@ func (r *Room) startWebRTCSession(peerconnection *webrtc.WebRTC, playerIndex int
 
 		// encode frame
 		if peerconnection.IsConnected() {
-			input := <-peerconnection.InputChannel
+			input, ok := <-peerconnection.InputChannel
+			if !ok {
+				continue
+				// might return here
+			}
 			// the first 8 bits belong to player 1
 			// the next 8 belongs to player 2 ...
 			// We standardize and put it to inputChannel (16 bits)
@@ -169,13 +173,12 @@ func (r *Room) removeSession(w *webrtc.WebRTC) {
 
 func (r *Room) Close() {
 	log.Println("Closing room", r)
-	r.director.Done <- struct{}{}
 	close(r.Done)
-	// Not close fan input channel here, close in writer
-	//close(r.inputChannel)
-	// Close fan output channel
-	close(r.imageChannel)
-	close(r.audioChannel)
+	close(r.director.Done)
+	close(r.inputChannel)
+	// Close here is a bit wrong because this read channel
+	//close(r.imageChannel)
+	//close(r.audioChannel)
 }
 
 func (r *Room) SaveGame() error {
