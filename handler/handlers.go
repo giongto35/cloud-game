@@ -75,12 +75,11 @@ func (h *Handler) GetWeb(w http.ResponseWriter, r *http.Request) {
 // WS handles normal traffic (from browser to host)
 func (h *Handler) WS(w http.ResponseWriter, r *http.Request) {
 	c, err := upgrader.Upgrade(w, r, nil)
-	defer c.Close()
-
 	if err != nil {
 		log.Print("[!] WS upgrade:", err)
 		return
 	}
+	defer c.Close()
 
 	client := NewBrowserClient(c)
 	sessionID := uuid.Must(uuid.NewV4()).String()
@@ -91,6 +90,7 @@ func (h *Handler) WS(w http.ResponseWriter, r *http.Request) {
 		peerconnection: webrtc.NewWebRTC(),
 		handler:        h,
 	}
+	defer wssession.Close()
 
 	if wssession.OverlordClient != nil {
 		wssession.RouteOverlord()

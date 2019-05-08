@@ -78,12 +78,13 @@ L:
 	for range c {
 		// for {
 		// quit game
-		// TODO: Anyway not using select because it will slow down
+		// TODO: How to not using select because it will slow down
 		select {
 		// if there is event from close channel => the game is ended
 		//case input := <-d.inputChannel:
 		//d.UpdateInput(input)
 		case <-d.Done:
+			log.Println("Closed Director")
 			break L
 		default:
 		}
