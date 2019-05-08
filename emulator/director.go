@@ -84,7 +84,7 @@ L:
 		//case input := <-d.inputChannel:
 		//d.UpdateInput(input)
 		case <-d.Done:
-			log.Println("Closed Director")
+			log.Println("Closing Director")
 			break L
 		default:
 		}
@@ -92,6 +92,7 @@ L:
 		d.Step()
 	}
 	d.SetView(nil)
+	log.Println("Closed Director")
 }
 
 func (d *Director) PlayGame(path string) {
