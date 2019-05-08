@@ -21,6 +21,8 @@ type Client struct {
 	sendCallbackLock sync.Mutex
 	// recvCallback is callback when receive based on ID of the packet
 	recvCallback map[string]func(req WSPacket)
+
+	Done chan struct{}
 }
 
 type WSPacket struct {
@@ -49,6 +51,8 @@ func NewClient(conn *websocket.Conn) *Client {
 
 		sendCallback: sendCallback,
 		recvCallback: recvCallback,
+
+		Done: make(chan struct{}),
 	}
 }
 
@@ -120,43 +124,45 @@ func (c *Client) Heartbeat() {
 	timer := time.Tick(time.Second)
 
 	for range timer {
+		select {
+		case <-c.Done:
+			log.Println("Close heartbeat")
+			return
+		default:
+		}
 		c.Send(WSPacket{ID: "heartbeat"}, nil)
 	}
 }
 
 func (c *Client) Listen() {
 	for {
-		//log.Println("Waiting for message ...")
 		_, rawMsg, err := c.conn.ReadMessage()
 		if err != nil {
 			log.Println("[!] read:", err)
+			// TODO: Check explicit disconnect error to break
+			close(c.Done)
 			break
 		}
 		wspacket := WSPacket{}
 		err = json.Unmarshal(rawMsg, &wspacket)
-		//log.Println( "Received: ", wspacket)
 
 		if err != nil {
 			continue
 		}
 
 		// Check if some async send is waiting for the response based on packetID
-		// TODO: Change to read lock
-		c.sendCallbackLock.Lock()
-		//log.Println("Listening: Callback waiting list: ", c.id, c.sendCallback)
+		// TODO: Change to read lock.
+		//c.sendCallbackLock.Lock()
 		callback, ok := c.sendCallback[wspacket.PacketID]
-		//log.Println("Has callback: ", ok, "ClientID: ", c.id, "PacketID ", wspacket.PacketID)
-		c.sendCallbackLock.Unlock()
+		//c.sendCallbackLock.Unlock()
 		if ok {
 			go callback(wspacket)
-			c.sendCallbackLock.Lock()
-			//log.Println("Deleteing Packet ", wspacket.PacketID)
+			//c.sendCallbackLock.Lock()
 			delete(c.sendCallback, wspacket.PacketID)
-			c.sendCallbackLock.Unlock()
+			//c.sendCallbackLock.Unlock()
 			// Skip receiveCallback to avoid duplication
 			continue
 		}
-		//log.Println("Listening: Callback waiting list: ", c.id, c.recvCallback)
 		// Check if some receiver with the ID is registered
 		if callback, ok := c.recvCallback[wspacket.ID]; ok {
 			go callback(wspacket)

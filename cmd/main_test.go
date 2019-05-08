@@ -7,6 +7,7 @@ import (
 	"net/http/httptest"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/giongto35/cloud-game/cws"
 	"github.com/giongto35/cloud-game/handler"
@@ -159,6 +160,7 @@ func TestSingleServerNoOverlord(t *testing.T) {
 		fmt.Println("RoomID should not be empty")
 		t.Fail()
 	}
+	time.Sleep(time.Second)
 	fmt.Println("Done")
 }
 
@@ -192,6 +194,7 @@ func TestSingleServerOneOverlord(t *testing.T) {
 		fmt.Println("RoomID should not be empty")
 		t.Fail()
 	}
+	time.Sleep(time.Second)
 	fmt.Println("Done")
 }
 
@@ -262,6 +265,7 @@ func TestTwoServerOneOverlord(t *testing.T) {
 	})
 
 	// If receive roomID, the server is running correctly
+	time.Sleep(time.Second)
 	fmt.Println("Done")
 }
 
@@ -319,6 +323,7 @@ func TestReconnectRoomNoOverlord(t *testing.T) {
 		t.Fail()
 	}
 
+	time.Sleep(time.Second)
 	fmt.Println("Done")
 
 }
