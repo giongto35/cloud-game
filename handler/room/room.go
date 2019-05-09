@@ -79,7 +79,9 @@ func NewRoom(roomID, gamepath, gameName string, onlineStorage *storage.Client) *
 			}
 		}
 
+		log.Printf("Room %s started", roomID)
 		director.Start([]string{path})
+		log.Printf("Room %s ended", roomID)
 	}(path, roomID)
 
 	return room
@@ -105,9 +107,7 @@ func (r *Room) AddConnectionToRoom(peerconnection *webrtc.WebRTC, playerIndex in
 	go r.startWebRTCSession(peerconnection, playerIndex)
 }
 
-// startWebRTCSession fan-in of the same room to inputChannel
 func (r *Room) startWebRTCSession(peerconnection *webrtc.WebRTC, playerIndex int) {
-	inputChannel := r.inputChannel
 	for {
 		select {
 		case <-r.Done:
@@ -115,27 +115,26 @@ func (r *Room) startWebRTCSession(peerconnection *webrtc.WebRTC, playerIndex int
 			return
 		case <-peerconnection.Done:
 			r.removeSession(peerconnection)
+		case input, ok := <-peerconnection.InputChannel:
+			if !ok {
+				return
+				// might consider continue here
+			}
+
+			if peerconnection.IsConnected() {
+				// the first 8 bits belong to player 1
+				// the next 8 belongs to player 2 ...
+				// We standardize and put it to inputChannel (16 bits)
+				input = input << ((uint(playerIndex) - 1) * emulator.NumKeys)
+				r.inputChannel <- input
+			}
 		default:
+			if !peerconnection.IsConnected() {
+				log.Println("peerconnection is closed", peerconnection)
+				return
+			}
 		}
 		// Client stopped
-		if !peerconnection.IsConnected() {
-			log.Println("peerconnection is closed", peerconnection)
-			return
-		}
-
-		// encode frame
-		if peerconnection.IsConnected() {
-			input, ok := <-peerconnection.InputChannel
-			if !ok {
-				continue
-				// might return here
-			}
-			// the first 8 bits belong to player 1
-			// the next 8 belongs to player 2 ...
-			// We standardize and put it to inputChannel (16 bits)
-			input = input << ((uint(playerIndex) - 1) * emulator.NumKeys)
-			inputChannel <- input
-		}
 	}
 }
 
@@ -172,9 +171,11 @@ func (r *Room) removeSession(w *webrtc.WebRTC) {
 }
 
 func (r *Room) Close() {
-	log.Println("Closing room", r)
+	log.Println("Closing room", r.ID)
 	close(r.Done)
+	log.Println("Closing director of room ", r.ID)
 	close(r.director.Done)
+	log.Println("Closing input of room ", r.ID)
 	close(r.inputChannel)
 	// Close here is a bit wrong because this read channel
 	//close(r.imageChannel)
