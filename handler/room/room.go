@@ -108,6 +108,12 @@ func (r *Room) AddConnectionToRoom(peerconnection *webrtc.WebRTC, playerIndex in
 }
 
 func (r *Room) startWebRTCSession(peerconnection *webrtc.WebRTC, playerIndex int) {
+	defer func() {
+		if r := recover(); r != nil {
+			fmt.Println("Recovered when sent to close inputChannel")
+		}
+	}()
+
 	for {
 		select {
 		case <-r.Done:
@@ -140,10 +146,6 @@ func (r *Room) startWebRTCSession(peerconnection *webrtc.WebRTC, playerIndex int
 
 func (r *Room) CleanSession(peerconnection *webrtc.WebRTC) {
 	r.removeSession(peerconnection)
-	// TODO: Clean all channels
-	//close(peerconnection.ImageChannel)
-	//close(peerconnection.AudioChannel)
-	//close(peerconnection.InputChannel)
 }
 
 func (r *Room) removeSession(w *webrtc.WebRTC) {
