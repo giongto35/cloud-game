@@ -87,7 +87,7 @@ func NewGameView(console *nes.Console, title, saveFile string, imageChannel chan
 func (view *GameView) ListenToInputChannel() {
 	for {
 		// Adding ok here make thing slowdown
-		// TODO: Investigate
+		// TODO: Investigate slow
 		keysInBinary, ok := <-view.inputChannel
 		if !ok {
 			return
