@@ -103,7 +103,6 @@ func (r *Room) isGameOnLocal(savepath string) bool {
 func (r *Room) AddConnectionToRoom(peerconnection *webrtc.WebRTC, playerIndex int) {
 	peerconnection.AttachRoomID(r.ID)
 	r.rtcSessions = append(r.rtcSessions, peerconnection)
-	fmt.Println("Peerconnection ID", peerconnection.ID, " numSessions ", len(r.rtcSessions))
 
 	go r.startWebRTCSession(peerconnection, playerIndex)
 }
@@ -115,19 +114,16 @@ func (r *Room) startWebRTCSession(peerconnection *webrtc.WebRTC, playerIndex int
 		}
 	}()
 
-	for {
-		if r.Done {
-			log.Println("Detach peerconnection from room", r.ID)
-			return
-		}
-		if peerconnection.Done {
-			r.removeSession(peerconnection)
-		}
-		select {
-		case input, ok := <-peerconnection.InputChannel:
+	go func() {
+		for {
+			input, ok := <-peerconnection.InputChannel
 			if !ok {
 				return
 				// might consider continue here
+			}
+
+			if peerconnection.Done || !peerconnection.IsConnected() || r.Done {
+				return
 			}
 
 			if peerconnection.IsConnected() {
@@ -135,16 +131,15 @@ func (r *Room) startWebRTCSession(peerconnection *webrtc.WebRTC, playerIndex int
 				// the next 8 belongs to player 2 ...
 				// We standardize and put it to inputChannel (16 bits)
 				input = input << ((uint(playerIndex) - 1) * emulator.NumKeys)
-				r.inputChannel <- input
-			}
-		default:
-			if !peerconnection.IsConnected() {
-				log.Println("peerconnection is closed", peerconnection)
-				return
+				select {
+				case r.inputChannel <- input:
+				default:
+				}
 			}
 		}
-		// Client stopped
-	}
+	}()
+
+	log.Println("Peerconn done")
 }
 
 func (r *Room) CleanSession(peerconnection *webrtc.WebRTC) {
