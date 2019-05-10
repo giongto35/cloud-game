@@ -84,7 +84,7 @@ type WebRTC struct {
 	AudioChannel chan []byte
 	InputChannel chan int
 
-	Done     chan struct{}
+	Done     bool
 	lastTime time.Time
 	curFPS   int
 
