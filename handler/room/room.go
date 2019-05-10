@@ -24,7 +24,7 @@ type Room struct {
 	audioChannel chan float32
 	inputChannel chan int
 	// Done channel is to fire exit event when there is no webRTC session running
-	Done chan struct{}
+	Done bool
 
 	rtcSessions  []*webrtc.WebRTC
 	sessionsLock *sync.Mutex
@@ -58,7 +58,7 @@ func NewRoom(roomID, gamepath, gameName string, onlineStorage *storage.Client) *
 		rtcSessions:   []*webrtc.WebRTC{},
 		sessionsLock:  &sync.Mutex{},
 		director:      director,
-		Done:          make(chan struct{}),
+		Done:          false,
 		onlineStorage: onlineStorage,
 	}
 
@@ -103,6 +103,7 @@ func (r *Room) isGameOnLocal(savepath string) bool {
 func (r *Room) AddConnectionToRoom(peerconnection *webrtc.WebRTC, playerIndex int) {
 	peerconnection.AttachRoomID(r.ID)
 	r.rtcSessions = append(r.rtcSessions, peerconnection)
+	fmt.Println("Peerconnection ID", peerconnection.ID, " numSessions ", len(r.rtcSessions))
 
 	go r.startWebRTCSession(peerconnection, playerIndex)
 }
@@ -115,12 +116,14 @@ func (r *Room) startWebRTCSession(peerconnection *webrtc.WebRTC, playerIndex int
 	}()
 
 	for {
-		select {
-		case <-r.Done:
+		if r.Done {
 			log.Println("Detach peerconnection from room", r.ID)
 			return
-		case <-peerconnection.Done:
+		}
+		if peerconnection.Done {
 			r.removeSession(peerconnection)
+		}
+		select {
 		case input, ok := <-peerconnection.InputChannel:
 			if !ok {
 				return
@@ -150,8 +153,8 @@ func (r *Room) CleanSession(peerconnection *webrtc.WebRTC) {
 
 func (r *Room) removeSession(w *webrtc.WebRTC) {
 	fmt.Println("Cleaning session: ", w)
-	r.sessionsLock.Lock()
-	defer r.sessionsLock.Unlock()
+	//r.sessionsLock.Lock()
+	//defer r.sessionsLock.Unlock()
 	fmt.Println("Sessions list", r.rtcSessions)
 	for i, s := range r.rtcSessions {
 		fmt.Println("found session: ", s, w)
@@ -174,7 +177,7 @@ func (r *Room) removeSession(w *webrtc.WebRTC) {
 
 func (r *Room) Close() {
 	log.Println("Closing room", r.ID)
-	close(r.Done)
+	r.Done = true
 	log.Println("Closing director of room ", r.ID)
 	close(r.director.Done)
 	log.Println("Closing input of room ", r.ID)
