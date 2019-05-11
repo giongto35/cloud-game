@@ -2,12 +2,9 @@
 package webrtc
 
 import (
-	"bytes"
-	"compress/gzip"
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
 	"log"
 	"math/rand"
 	"time"
@@ -23,41 +20,6 @@ var webrtcconfig = webrtc.Configuration{ICEServers: []webrtc.ICEServer{{URLs: []
 
 // Allows compressing offer/answer to bypass terminal input limits.
 const compress = false
-
-func zip(in []byte) []byte {
-	var b bytes.Buffer
-	gz := gzip.NewWriter(&b)
-	_, err := gz.Write(in)
-	if err != nil {
-		panic(err)
-	}
-	err = gz.Flush()
-	if err != nil {
-		panic(err)
-	}
-	err = gz.Close()
-	if err != nil {
-		panic(err)
-	}
-	return b.Bytes()
-}
-
-func unzip(in []byte) []byte {
-	var b bytes.Buffer
-	_, err := b.Write(in)
-	if err != nil {
-		panic(err)
-	}
-	r, err := gzip.NewReader(&b)
-	if err != nil {
-		panic(err)
-	}
-	res, err := ioutil.ReadAll(r)
-	if err != nil {
-		panic(err)
-	}
-	return res
-}
 
 // Encode encodes the input in base64
 // It can optionally zip the input before encoding
@@ -203,9 +165,10 @@ func (w *WebRTC) StartClient(remoteSession string, width, height int) (string, e
 	})
 
 	inputTrack.OnClose(func() {
-		fmt.Println("closed webrtc")
-		w.Done <- struct{}{}
-		close(w.Done)
+		log.Println("Data channel closed")
+		log.Println("Closed webrtc")
+		//close(w.Done)
+		//w.StopClient()
 	})
 
 	// WebRTC state callback
@@ -261,6 +224,11 @@ func (w *WebRTC) AddCandidate(candidate webrtc.ICECandidateInit) {
 
 // StopClient disconnect
 func (w *WebRTC) StopClient() {
+	// if stopped, bypass
+	if w.isConnected == false {
+		return
+	}
+
 	log.Println("===StopClient===")
 	w.isConnected = false
 	if w.encoder != nil {
@@ -270,7 +238,10 @@ func (w *WebRTC) StopClient() {
 		w.connection.Close()
 	}
 	w.connection = nil
-	//w.isClosed = true
+	close(w.InputChannel)
+	// NOTE: ImageChannel is waiting for input. Close in writer is not correct for this
+	close(w.ImageChannel)
+	close(w.AudioChannel)
 }
 
 // IsConnected comment
@@ -278,17 +249,23 @@ func (w *WebRTC) IsConnected() bool {
 	return w.isConnected
 }
 
-func (w *WebRTC) IsClosed() bool {
-	return w.isClosed
-}
-
 // func (w *WebRTC) startStreaming(vp8Track *webrtc.Track, opusTrack *webrtc.Track) {
 func (w *WebRTC) startStreaming(vp8Track *webrtc.Track, audioTrack *webrtc.DataChannel) {
 	log.Println("Start streaming")
 	// send screenshot
 	go func() {
+		defer func() {
+			if r := recover(); r != nil {
+				fmt.Println("Recovered when sent to close Image Channel")
+			}
+		}()
+
 		for w.isConnected {
-			yuv := <-w.ImageChannel
+			yuv, ok := <-w.ImageChannel
+			if !ok {
+				log.Println("Screenshot from emulator closed")
+				return
+			}
 			if len(w.encoder.Input) < cap(w.encoder.Input) {
 				w.encoder.Input <- yuv
 			}
@@ -297,10 +274,21 @@ func (w *WebRTC) startStreaming(vp8Track *webrtc.Track, audioTrack *webrtc.DataC
 
 	// receive frame buffer
 	go func() {
+		defer func() {
+			if r := recover(); r != nil {
+				fmt.Println("Recovered when sent to closed encoder output channel")
+			}
+		}()
+
 		for w.isConnected {
-			bs := <-w.encoder.Output
+			bs, ok := <-w.encoder.Output
+			if !ok {
+				log.Println("WebRTC Video sending Closed")
+				return
+			}
+
 			if *config.IsMonitor {
-				log.Println("FPS : ", w.calculateFPS())
+				log.Println("Encoding FPS : ", w.calculateFPS())
 			}
 			vp8Track.WriteSample(media.Sample{Data: bs, Samples: 1})
 		}
@@ -308,10 +296,19 @@ func (w *WebRTC) startStreaming(vp8Track *webrtc.Track, audioTrack *webrtc.DataC
 
 	// send audio
 	go func() {
+		defer func() {
+			if r := recover(); r != nil {
+				fmt.Println("Recovered when sent to closed Audio Channel")
+			}
+		}()
+
 		for w.isConnected {
-			data := <-w.AudioChannel
-			// time.Sleep()
-			// time.Sleep(time.Millisecond * time.Duration(rand.Intn(100)))
+			data, ok := <-w.AudioChannel
+			if !ok {
+				log.Println("WebRTC Audio sending Closed")
+				return
+			}
+
 			audioTrack.Send(data)
 		}
 	}()

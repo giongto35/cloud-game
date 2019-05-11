@@ -1,7 +1,6 @@
 package handler
 
 import (
-	"fmt"
 	"io/ioutil"
 	"log"
 	"net/http"
@@ -76,16 +75,13 @@ func (h *Handler) GetWeb(w http.ResponseWriter, r *http.Request) {
 // WS handles normal traffic (from browser to host)
 func (h *Handler) WS(w http.ResponseWriter, r *http.Request) {
 	c, err := upgrader.Upgrade(w, r, nil)
-	defer c.Close()
-
 	if err != nil {
 		log.Print("[!] WS upgrade:", err)
 		return
 	}
+	defer c.Close()
 
 	client := NewBrowserClient(c)
-	//client := NewClient(c)
-	////sessionID := strconv.Itoa(rand.Int())
 	sessionID := uuid.Must(uuid.NewV4()).String()
 	wssession := &Session{
 		ID:             sessionID,
@@ -94,14 +90,16 @@ func (h *Handler) WS(w http.ResponseWriter, r *http.Request) {
 		peerconnection: webrtc.NewWebRTC(),
 		handler:        h,
 	}
+	defer wssession.Close()
+
 	if wssession.OverlordClient != nil {
-		wssession.RegisterOverlordClient()
+		wssession.RouteOverlord()
 		go wssession.OverlordClient.Heartbeat()
 		go wssession.OverlordClient.Listen()
 	}
 
-	wssession.RegisterBrowserClient()
-	fmt.Println("oclient : ", h.oClient)
+	wssession.RouteBrowser()
+	log.Println("oclient : ", h.oClient)
 
 	wssession.BrowserClient.Send(cws.WSPacket{
 		ID:   "gamelist",
