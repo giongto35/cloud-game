@@ -107,10 +107,22 @@ func (h *Handler) WS(w http.ResponseWriter, r *http.Request) {
 	}, nil)
 
 	wssession.BrowserClient.Listen()
+
+	// TODO: Use callback
+	// listen to socket done to close peerconnection
+	go func() {
+		for {
+			<-client.Done
+			h.detachPeerConn(wssession.peerconnection)
+			return
+		}
+	}()
+
 }
 
 // Detach peerconnection detach/remove a peerconnection from current room
 func (h *Handler) detachPeerConn(pc *webrtc.WebRTC) {
+	log.Println("Detach peerconnection")
 	roomID := pc.RoomID
 	room := h.getRoom(roomID)
 	if room == nil {

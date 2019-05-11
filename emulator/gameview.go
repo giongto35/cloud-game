@@ -130,6 +130,10 @@ func (view *GameView) Exit() {
 	if cartridge.Battery != 0 {
 		writeSRAM(sramPath(view.saveFile), cartridge.SRAM)
 	}
+
+	// close producer
+	close(view.imageChannel)
+	close(view.audioChannel)
 }
 
 // Update is called for every period of time, dt is the elapsed time from the last frame

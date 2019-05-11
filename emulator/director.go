@@ -24,6 +24,7 @@ type Director struct {
 const FPS = 60
 
 func NewDirector(roomID string, imageChannel chan *image.RGBA, audioChannel chan float32, inputChannel chan int) *Director {
+	// return image channel from where it write
 	director := Director{}
 	director.Done = make(chan struct{})
 	director.audioChannel = audioChannel
