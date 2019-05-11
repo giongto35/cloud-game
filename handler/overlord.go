@@ -29,8 +29,8 @@ func NewOverlordClient(oc *websocket.Conn) *OverlordClient {
 	return oclient
 }
 
-// RegisterOverlordClient routes overlord Client
-func (s *Session) RegisterOverlordClient() {
+// RouteOverlord are all routes server received from overlord
+func (s *Session) RouteOverlord() {
 	oclient := s.OverlordClient
 
 	// Received from overlord the serverID
@@ -58,7 +58,8 @@ func (s *Session) RegisterOverlordClient() {
 			oclient.peerconnections[resp.SessionID] = peerconnection
 
 			if err != nil {
-				log.Fatalln(err)
+				log.Println("Error: Cannot create new webrtc session", err)
+				return cws.EmptyPacket
 			}
 
 			return cws.WSPacket{

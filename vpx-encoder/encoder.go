@@ -119,7 +119,10 @@ func (v *VpxEncoder) startLooping() {
 		for {
 			beginEncoding := time.Now()
 
-			yuv := <-v.Input
+			yuv, ok := <-v.Input
+			if !ok {
+				return
+			}
 			// Add Image
 			v.vpxCodexIter = nil
 			C.vpx_img_read(&v.vpxImage, unsafe.Pointer(&yuv[0]))
@@ -156,11 +159,11 @@ func (v *VpxEncoder) startLooping() {
 
 // Release release memory and stop loop
 func (v *VpxEncoder) Release() {
-	v.started = false
 	if v.started {
 		close(v.Input)
 		close(v.Output)
 		C.vpx_img_free(&v.vpxImage)
 		C.vpx_codec_destroy(&v.vpxCodexCtx)
 	}
+	v.started = false
 }
