@@ -84,7 +84,7 @@ func (o *Server) WSO(w http.ResponseWriter, r *http.Request) {
 		log.Println("Overlord: Received a relay sdp request from a host")
 		// TODO: Abstract
 		if resp.TargetHostID != serverID {
-			log.Println("Overlord: Sending relay sdp to target host", resp)
+			log.Println("Overlord: Sending relay sdp to target host")
 			// relay SDP to target host and get back sdp
 			// TODO: Async
 			sdp := o.servers[resp.TargetHostID].SyncSend(
@@ -114,7 +114,8 @@ func (o *Server) WSO(w http.ResponseWriter, r *http.Request) {
 		log.Println("Overlord: Received a relay start request from a host")
 		// TODO: Abstract
 		if resp.TargetHostID != serverID {
-			// relay SDP to target host and get back sdp
+			// relay start to target host
+			log.Println("Sending to target host", resp.TargetHostID, " ", resp)
 			// TODO: Async
 			resp := o.servers[resp.TargetHostID].SyncSend(
 				resp,

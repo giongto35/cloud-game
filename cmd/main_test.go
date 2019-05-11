@@ -94,7 +94,7 @@ func initClient(t *testing.T, host string) (client *cws.Client) {
 	fmt.Println("Waiting sdp...")
 
 	client.Receive("sdp", func(resp cws.WSPacket) cws.WSPacket {
-		fmt.Println("received", resp.Data)
+		log.Println("Received SDP", resp.Data, "client: ", client)
 		answer := webrtc.SessionDescription{}
 		gamertc.Decode(resp.Data, &answer)
 		// Apply the answer as the remote description
@@ -254,6 +254,7 @@ func TestTwoServerOneOverlord(t *testing.T) {
 	fmt.Println("Request the room from server 1", remoteRoomID)
 	log.Println("Server2 trying to join server1 room")
 	// After trying loging in to one session, login to other with the roomID
+	bridgeRoom := make(chan string)
 	client2.Send(cws.WSPacket{
 		ID:          "start",
 		Data:        "Contra.nes",
@@ -261,9 +262,14 @@ func TestTwoServerOneOverlord(t *testing.T) {
 		PlayerIndex: 1,
 	}, func(resp cws.WSPacket) {
 		fmt.Println("RoomID:", resp.RoomID)
-		roomID <- resp.RoomID
+		bridgeRoom <- resp.RoomID
 	})
 
+	respRoomID := <-bridgeRoom
+	if respRoomID == "" {
+		fmt.Println("The room ID should be equal to the saved room")
+		t.Fail()
+	}
 	// If receive roomID, the server is running correctly
 	time.Sleep(time.Second)
 	fmt.Println("Done")
