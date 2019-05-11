@@ -6,6 +6,7 @@ import (
 	"io/ioutil"
 	"log"
 	"math/rand"
+	"os"
 	"strconv"
 	"sync"
 
@@ -63,7 +64,25 @@ func NewRoom(roomID, gamepath, gameName string, onlineStorage *storage.Client) *
 
 	go room.startVideo()
 	go room.startAudio()
-	go director.Start([]string{gamepath + "/" + gameName})
+
+	// Check if room is on local storage, if not, pull from GCS to local storage
+	path := gamepath + "/" + gameName
+	go func(path, roomID string) {
+		// Check room is on local or fetch from server
+		savepath := emulator.GetSavePath(roomID)
+		log.Println("Check ", savepath, " on local : ", room.isGameOnLocal(savepath))
+		if !room.isGameOnLocal(savepath) {
+			// Fetch room from GCP to server
+			log.Println("Load room from online storage", savepath)
+			if err := room.saveOnlineRoomToLocal(roomID, savepath); err != nil {
+				log.Printf("Warn: Room %s is not in online storage, error %s", roomID, err)
+			}
+		}
+
+		log.Printf("Room %s started", roomID)
+		director.Start([]string{path})
+		log.Printf("Room %s ended", roomID)
+	}(path, roomID)
 
 	return room
 }
@@ -76,6 +95,11 @@ func generateRoomID() string {
 	return roomID
 }
 
+func (r *Room) isGameOnLocal(savepath string) bool {
+	_, err := os.Open(savepath)
+	return err == nil
+}
+
 func (r *Room) AddConnectionToRoom(peerconnection *webrtc.WebRTC, playerIndex int) {
 	peerconnection.AttachRoomID(r.ID)
 	r.rtcSessions = append(r.rtcSessions, peerconnection)
@@ -83,35 +107,45 @@ func (r *Room) AddConnectionToRoom(peerconnection *webrtc.WebRTC, playerIndex in
 	go r.startWebRTCSession(peerconnection, playerIndex)
 }
 
-// startWebRTCSession fan-in of the same room to inputChannel
 func (r *Room) startWebRTCSession(peerconnection *webrtc.WebRTC, playerIndex int) {
-	inputChannel := r.inputChannel
+	defer func() {
+		if r := recover(); r != nil {
+			fmt.Println("Recovered when sent to close inputChannel")
+		}
+	}()
+
 	for {
 		select {
+		case <-r.Done:
+			log.Println("Detach peerconnection from room", r.ID)
+			return
 		case <-peerconnection.Done:
 			r.removeSession(peerconnection)
+		case input, ok := <-peerconnection.InputChannel:
+			if !ok {
+				return
+				// might consider continue here
+			}
+
+			if peerconnection.IsConnected() {
+				// the first 8 bits belong to player 1
+				// the next 8 belongs to player 2 ...
+				// We standardize and put it to inputChannel (16 bits)
+				input = input << ((uint(playerIndex) - 1) * emulator.NumKeys)
+				r.inputChannel <- input
+			}
 		default:
+			if !peerconnection.IsConnected() {
+				log.Println("peerconnection is closed", peerconnection)
+				return
+			}
 		}
 		// Client stopped
-		if peerconnection.IsClosed() {
-			return
-		}
-
-		// encode frame
-		if peerconnection.IsConnected() {
-			input := <-peerconnection.InputChannel
-			// the first 8 bits belong to player 1
-			// the next 8 belongs to player 2 ...
-			// We standardize and put it to inputChannel (16 bits)
-			input = input << ((uint(playerIndex) - 1) * emulator.NumKeys)
-			inputChannel <- input
-		}
 	}
 }
 
 func (r *Room) CleanSession(peerconnection *webrtc.WebRTC) {
 	r.removeSession(peerconnection)
-	// TODO: Clean all channels
 }
 
 func (r *Room) removeSession(w *webrtc.WebRTC) {
@@ -126,9 +160,12 @@ func (r *Room) removeSession(w *webrtc.WebRTC) {
 			fmt.Println("found session: ", len(r.rtcSessions))
 
 			// If room has no sessions, close room
+			// Note: this logic cannot be brought outside of forloop because we only close room if room had at least one session
 			if len(r.rtcSessions) == 0 {
 				log.Println("No session in room")
-				r.Done <- struct{}{}
+				r.Close()
+				// can consider sanding close to room and room do clean
+				//close(r.Done)
 			}
 			break
 		}
@@ -136,14 +173,21 @@ func (r *Room) removeSession(w *webrtc.WebRTC) {
 }
 
 func (r *Room) Close() {
-	log.Println("Closing room", r)
-	r.director.Done <- struct{}{}
+	log.Println("Closing room", r.ID)
+	close(r.Done)
+	log.Println("Closing director of room ", r.ID)
+	close(r.director.Done)
+	log.Println("Closing input of room ", r.ID)
+	close(r.inputChannel)
+	// Close here is a bit wrong because this read channel
+	//close(r.imageChannel)
+	//close(r.audioChannel)
 }
 
 func (r *Room) SaveGame() error {
 	onlineSaveFunc := func() error {
 		// Try to save the game to gCloud
-		if err := r.onlineStorage.SaveFile(r.director.GetHash(), r.director.GetHashPath()); err != nil {
+		if err := r.onlineStorage.SaveFile(r.ID, r.director.GetHashPath()); err != nil {
 			return err
 		}
 
@@ -158,27 +202,22 @@ func (r *Room) SaveGame() error {
 	return nil
 }
 
-func (r *Room) LoadGame() error {
-	// TODO: Fix, because load game always come to local, this logic is unnecessary. Move to load game
-	onlineLoadFunc := func() error {
-		log.Println("Loading game from cloud storage")
-		// If the game is not on local server
-		// Try to load from gcloud
-		data, err := r.onlineStorage.LoadFile(r.director.GetHash())
-		if err != nil {
-			return err
-		}
-		// Save the data fetched from gcloud to local server
-		ioutil.WriteFile(r.director.GetHashPath(), data, 0644)
-		// Reload game again
-		//err = r.director.LoadGame(nil)
-		//if err != nil {
-		//return err
-		//}
-		return nil
+func (r *Room) saveOnlineRoomToLocal(roomID string, savepath string) error {
+	log.Println("Try loading game from cloud storage")
+	// If the game is not on local server
+	// Try to load from gcloud
+	data, err := r.onlineStorage.LoadFile(roomID)
+	if err != nil {
+		return err
 	}
+	// Save the data fetched from gcloud to local server
+	ioutil.WriteFile(savepath, data, 0644)
 
-	err := r.director.LoadGame(onlineLoadFunc)
+	return nil
+}
+
+func (r *Room) LoadGame() error {
+	err := r.director.LoadGame()
 
 	return err
 }
@@ -186,7 +225,7 @@ func (r *Room) LoadGame() error {
 func (r *Room) IsRunning() bool {
 	// If there is running session
 	for _, s := range r.rtcSessions {
-		if !s.IsClosed() {
+		if s.IsConnected() {
 			return true
 		}
 	}

@@ -2,7 +2,6 @@
 package emulator
 
 import (
-	"crypto/md5"
 	"encoding/binary"
 	"fmt"
 	"image"
@@ -10,7 +9,6 @@ import (
 	"image/draw"
 	"image/gif"
 	"image/png"
-	"io/ioutil"
 	"log"
 	"os"
 	"os/user"
@@ -29,6 +27,11 @@ func init() {
 	homeDir = u.HomeDir
 }
 
+// Public call to get savePath
+func GetSavePath(roomID string) string {
+	return savePath(roomID)
+}
+
 func sramPath(hash string) string {
 	return homeDir + "/.nes/sram/" + hash + ".dat"
 }
@@ -43,15 +46,6 @@ func combineButtons(a, b [8]bool) [8]bool {
 		result[i] = a[i] || b[i]
 	}
 	return result
-}
-
-// hashFile : signature of a room, maybe not need path
-func hashFile(path string, roomID string) (string, error) {
-	data, err := ioutil.ReadFile(path)
-	if err != nil {
-		return "", err
-	}
-	return fmt.Sprintf("%x", md5.Sum(append(data, []byte(roomID)...))), nil
 }
 
 func copyImage(src image.Image) *image.RGBA {
