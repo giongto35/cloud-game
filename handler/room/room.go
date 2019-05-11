@@ -171,12 +171,15 @@ func (r *Room) removeSession(w *webrtc.WebRTC) {
 }
 
 func (r *Room) Close() {
-	log.Println("Closing room", r.ID)
+	if r.Done == false {
+		log.Println("Closing room", r.ID)
+		log.Println("Closing director of room ", r.ID)
+		close(r.director.Done)
+		log.Println("Closing input of room ", r.ID)
+		close(r.inputChannel)
+		r.Done = true
+	}
 	r.Done = true
-	log.Println("Closing director of room ", r.ID)
-	close(r.director.Done)
-	log.Println("Closing input of room ", r.ID)
-	close(r.inputChannel)
 	// Close here is a bit wrong because this read channel
 	//close(r.imageChannel)
 	//close(r.audioChannel)
