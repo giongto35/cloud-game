@@ -127,7 +127,7 @@ func (s *Session) bridgeConnection(serverID string, gameName string, roomID stri
 
 	// Ask overlord to relay SDP packet to serverID
 	resp.TargetHostID = serverID
-	log.Println("Sending offer to overlord to relay message to target host", resp.TargetHostID, "with payload", resp)
+	log.Println("Sending offer to overlord to relay message to target host", resp.TargetHostID, "with payload")
 	remoteTargetSDP := s.OverlordClient.SyncSend(resp)
 	log.Println("Got back remote host SDP, sending to browser")
 	// Send back remote SDP of remote server to browser
