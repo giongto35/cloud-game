@@ -24,7 +24,7 @@ type Room struct {
 	audioChannel chan float32
 	inputChannel chan int
 	// Done channel is to fire exit event when there is no webRTC session running
-	Done chan struct{}
+	Done bool
 
 	rtcSessions  []*webrtc.WebRTC
 	sessionsLock *sync.Mutex
@@ -58,7 +58,7 @@ func NewRoom(roomID, gamepath, gameName string, onlineStorage *storage.Client) *
 		rtcSessions:   []*webrtc.WebRTC{},
 		sessionsLock:  &sync.Mutex{},
 		director:      director,
-		Done:          make(chan struct{}),
+		Done:          false,
 		onlineStorage: onlineStorage,
 	}
 
@@ -114,17 +114,16 @@ func (r *Room) startWebRTCSession(peerconnection *webrtc.WebRTC, playerIndex int
 		}
 	}()
 
-	for {
-		select {
-		case <-r.Done:
-			log.Println("Detach peerconnection from room", r.ID)
-			return
-		case <-peerconnection.Done:
-			r.removeSession(peerconnection)
-		case input, ok := <-peerconnection.InputChannel:
+	go func() {
+		for {
+			input, ok := <-peerconnection.InputChannel
 			if !ok {
 				return
 				// might consider continue here
+			}
+
+			if peerconnection.Done || !peerconnection.IsConnected() || r.Done {
+				return
 			}
 
 			if peerconnection.IsConnected() {
@@ -132,16 +131,15 @@ func (r *Room) startWebRTCSession(peerconnection *webrtc.WebRTC, playerIndex int
 				// the next 8 belongs to player 2 ...
 				// We standardize and put it to inputChannel (16 bits)
 				input = input << ((uint(playerIndex) - 1) * emulator.NumKeys)
-				r.inputChannel <- input
-			}
-		default:
-			if !peerconnection.IsConnected() {
-				log.Println("peerconnection is closed", peerconnection)
-				return
+				select {
+				case r.inputChannel <- input:
+				default:
+				}
 			}
 		}
-		// Client stopped
-	}
+	}()
+
+	log.Println("Peerconn done")
 }
 
 func (r *Room) CleanSession(peerconnection *webrtc.WebRTC) {
@@ -150,9 +148,8 @@ func (r *Room) CleanSession(peerconnection *webrtc.WebRTC) {
 
 func (r *Room) removeSession(w *webrtc.WebRTC) {
 	fmt.Println("Cleaning session: ", w)
-	r.sessionsLock.Lock()
-	defer r.sessionsLock.Unlock()
 	fmt.Println("Sessions list", r.rtcSessions)
+	// TODO: get list of r.rtcSessions in lock
 	for i, s := range r.rtcSessions {
 		fmt.Println("found session: ", s, w)
 		if s.ID == w.ID {
@@ -173,12 +170,16 @@ func (r *Room) removeSession(w *webrtc.WebRTC) {
 }
 
 func (r *Room) Close() {
+	if r.Done {
+		return
+	}
+
 	log.Println("Closing room", r.ID)
-	close(r.Done)
 	log.Println("Closing director of room ", r.ID)
 	close(r.director.Done)
 	log.Println("Closing input of room ", r.ID)
 	close(r.inputChannel)
+	r.Done = true
 	// Close here is a bit wrong because this read channel
 	//close(r.imageChannel)
 	//close(r.audioChannel)
