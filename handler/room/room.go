@@ -148,9 +148,8 @@ func (r *Room) CleanSession(peerconnection *webrtc.WebRTC) {
 
 func (r *Room) removeSession(w *webrtc.WebRTC) {
 	fmt.Println("Cleaning session: ", w)
-	//r.sessionsLock.Lock()
-	//defer r.sessionsLock.Unlock()
 	fmt.Println("Sessions list", r.rtcSessions)
+	// TODO: get list of r.rtcSessions in lock
 	for i, s := range r.rtcSessions {
 		fmt.Println("found session: ", s, w)
 		if s.ID == w.ID {
@@ -171,14 +170,15 @@ func (r *Room) removeSession(w *webrtc.WebRTC) {
 }
 
 func (r *Room) Close() {
-	if r.Done == false {
-		log.Println("Closing room", r.ID)
-		log.Println("Closing director of room ", r.ID)
-		close(r.director.Done)
-		log.Println("Closing input of room ", r.ID)
-		close(r.inputChannel)
-		r.Done = true
+	if r.Done {
+		return
 	}
+
+	log.Println("Closing room", r.ID)
+	log.Println("Closing director of room ", r.ID)
+	close(r.director.Done)
+	log.Println("Closing input of room ", r.ID)
+	close(r.inputChannel)
 	r.Done = true
 	// Close here is a bit wrong because this read channel
 	//close(r.imageChannel)

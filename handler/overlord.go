@@ -75,9 +75,8 @@ func (s *Session) RouteOverlord() {
 		"start",
 		func(resp cws.WSPacket) (req cws.WSPacket) {
 			log.Println("Received a start request from overlord")
-			log.Println("Add the connection to current room on the host")
+			log.Println("Add the connection to current room on the host ", resp.SessionID)
 
-			log.Println("SessionID : ", resp.SessionID)
 			peerconnection := oclient.peerconnections[resp.SessionID]
 			log.Println("start session")
 
