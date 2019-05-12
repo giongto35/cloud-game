@@ -459,7 +459,7 @@ func TestReconnectRoomWithOverlord(t *testing.T) {
 func TestRejoinNoOverlordMultiple(t *testing.T) {
 	/*
 		Case scenario:
-		- A server X is initialized connecting to overlord
+		- A server X without connecting to overlord
 		- Client A keeps creating a new room
 		Expected behavior:
 		- The game should running normally
@@ -467,6 +467,51 @@ func TestRejoinNoOverlordMultiple(t *testing.T) {
 
 	// Init slave server
 	s := initServer(t, nil)
+	defer s.Close()
+
+	fmt.Println("Num goRoutine before start: ", runtime.NumGoroutine())
+	client := initClient(t, s.URL)
+	for i := 0; i < 100; i++ {
+		fmt.Println("Sending start...")
+		// Keep starting game
+		roomID := make(chan string)
+		client.Send(cws.WSPacket{
+			ID:          "start",
+			Data:        "Contra.nes",
+			RoomID:      "",
+			PlayerIndex: 1,
+		}, func(resp cws.WSPacket) {
+			fmt.Println("RoomID:", resp.RoomID)
+			roomID <- resp.RoomID
+		})
+
+		respRoomID := <-roomID
+		if respRoomID == "" {
+			fmt.Println("The room ID should be equal to the saved room")
+			t.Fail()
+		}
+	}
+	fmt.Println("Num goRoutine should be small: ", runtime.NumGoroutine())
+	fmt.Println("Done")
+
+}
+
+func TestRejoinWithOverlordMultiple(t *testing.T) {
+	/*
+		Case scenario:
+		- A server X is initialized connecting to overlord
+		- Client A keeps creating a new room
+		Expected behavior:
+		- The game should running normally
+	*/
+
+	// Init slave server
+	o := initOverlord()
+	defer o.Close()
+
+	oconn := connectTestOverlordServer(t, o.URL)
+	// Init slave server
+	s := initServer(t, oconn)
 	defer s.Close()
 
 	fmt.Println("Num goRoutine before start: ", runtime.NumGoroutine())
