@@ -373,7 +373,6 @@ func TestReconnectRoomWithOverlord(t *testing.T) {
 	s.Close()
 	oconn.Close()
 
-	time.Sleep(time.Second)
 	// Close server and reconnect
 
 	log.Println("Server respawn")

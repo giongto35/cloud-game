@@ -138,7 +138,6 @@ func (c *Client) Listen() {
 	for {
 		_, rawMsg, err := c.conn.ReadMessage()
 		if err != nil {
-			log.Println("FAILED ")
 			log.Println("[!] read:", err)
 			// TODO: Check explicit disconnect error to break
 			close(c.Done)
