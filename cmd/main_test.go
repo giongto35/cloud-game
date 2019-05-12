@@ -491,6 +491,7 @@ func TestRejoinNoOverlordMultiple(t *testing.T) {
 			t.Fail()
 		}
 	}
+	time.Sleep(time.Second)
 	fmt.Println("Num goRoutine should be small: ", runtime.NumGoroutine())
 	fmt.Println("Done")
 
