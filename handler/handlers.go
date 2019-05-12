@@ -109,7 +109,7 @@ func (h *Handler) WS(w http.ResponseWriter, r *http.Request) {
 	wssession.BrowserClient.Listen()
 
 	// TODO: Use callback
-	// listen to socket done to close peerconnection
+	// If peerconnection is done (client.Done is signalled), we close peerconnection
 	go func() {
 		for {
 			<-client.Done
