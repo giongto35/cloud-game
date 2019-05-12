@@ -21,7 +21,9 @@ var upgrader = websocket.Upgrader{}
 
 func NewServer() *Server {
 	return &Server{
-		servers:      map[string]*cws.Client{},
+		// Mapping serverID to client
+		servers: map[string]*cws.Client{},
+		// Mapping roomID to server
 		roomToServer: map[string]string{},
 	}
 }
@@ -34,8 +36,6 @@ func (o *Server) WSO(w http.ResponseWriter, r *http.Request) {
 		log.Print("Overlord: [!] WS upgrade:", err)
 		return
 	}
-	defer c.Close()
-
 	// Register new server
 	serverID := strconv.Itoa(rand.Int())
 	log.Println("Overlord: A new server connected to Overlord", serverID)
@@ -43,12 +43,7 @@ func (o *Server) WSO(w http.ResponseWriter, r *http.Request) {
 	// Register to servers map the client connection
 	client := cws.NewClient(c)
 	o.servers[serverID] = client
-
-	//wssession := &Session{
-	//client:         client,
-	//peerconnection: webrtc.NewWebRTC(),
-	//// The server session is maintaining
-	//}
+	defer o.cleanConnection(client, serverID)
 
 	// Sendback the ID to server
 	client.Send(
@@ -72,6 +67,7 @@ func (o *Server) WSO(w http.ResponseWriter, r *http.Request) {
 	// getRoom returns the server ID based on requested roomID.
 	client.Receive("getRoom", func(resp cws.WSPacket) cws.WSPacket {
 		log.Println("Overlord: Received a getroom request")
+		log.Println("Result: ", o.roomToServer[resp.Data])
 		return cws.WSPacket{
 			ID:   "getRoom",
 			Data: o.roomToServer[resp.Data],
@@ -84,7 +80,7 @@ func (o *Server) WSO(w http.ResponseWriter, r *http.Request) {
 		log.Println("Overlord: Received a relay sdp request from a host")
 		// TODO: Abstract
 		if resp.TargetHostID != serverID {
-			log.Println("Overlord: Sending relay sdp to target host", resp)
+			log.Println("Overlord: Sending relay sdp to target host")
 			// relay SDP to target host and get back sdp
 			// TODO: Async
 			sdp := o.servers[resp.TargetHostID].SyncSend(
@@ -114,7 +110,8 @@ func (o *Server) WSO(w http.ResponseWriter, r *http.Request) {
 		log.Println("Overlord: Received a relay start request from a host")
 		// TODO: Abstract
 		if resp.TargetHostID != serverID {
-			// relay SDP to target host and get back sdp
+			// relay start to target host
+			log.Println("Sending to target host", resp.TargetHostID, " ", resp)
 			// TODO: Async
 			resp := o.servers[resp.TargetHostID].SyncSend(
 				resp,
@@ -140,4 +137,18 @@ func (o *Server) WSO(w http.ResponseWriter, r *http.Request) {
 	})
 
 	client.Listen()
+}
+
+func (o *Server) cleanConnection(client *cws.Client, serverID string) {
+	log.Println("Unregister server from overlord")
+	// Remove serverID from servers
+	delete(o.servers, serverID)
+	// Clean all rooms connecting to that server
+	for roomID, roomServer := range o.roomToServer {
+		if roomServer == serverID {
+			delete(o.roomToServer, roomID)
+		}
+	}
+
+	client.Close()
 }
