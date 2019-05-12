@@ -5,6 +5,7 @@ import (
 	"log"
 	"net/http"
 	"net/http/httptest"
+	"runtime"
 	"strings"
 	"testing"
 	"time"
@@ -141,6 +142,14 @@ func initClient(t *testing.T, host string) (client *cws.Client) {
 }
 
 func TestSingleServerNoOverlord(t *testing.T) {
+	/*
+		Case scenario:
+		- A server X are initilized
+		- Client join room with no coordinator
+		Expected behavior:
+		- Room received not empty
+	*/
+
 	// Init slave server
 	s := initServer(t, nil)
 	defer s.Close()
@@ -169,6 +178,14 @@ func TestSingleServerNoOverlord(t *testing.T) {
 }
 
 func TestSingleServerOneOverlord(t *testing.T) {
+	/*
+		Case scenario:
+		- A server X are initilized
+		- Client join room with coordinator
+		Expected behavior:
+		- Room received not empty.
+	*/
+
 	o := initOverlord()
 	defer o.Close()
 
@@ -203,6 +220,17 @@ func TestSingleServerOneOverlord(t *testing.T) {
 }
 
 func TestTwoServerOneOverlord(t *testing.T) {
+	/*
+		Case scenario:
+		- Two server X, Y are initilized
+		- Client A creates a room on server X
+		- Client B creates a room on server Y
+		- Client B join a room created by A
+		Expected behavior:
+		- Bridge connection will be conducted between server Y and X
+		- Client B can join a room hosted on A
+	*/
+
 	o := initOverlord()
 	defer o.Close()
 
@@ -281,6 +309,17 @@ func TestTwoServerOneOverlord(t *testing.T) {
 }
 
 func TestReconnectRoomNoOverlord(t *testing.T) {
+	/*
+		Case scenario:
+		- A server X is initialized
+		- Client A creates a room K on server X
+		- Server X is turned down, Client is closed
+		- Spawn a new server and a new client connecting to the same room K
+		Expected behavior:
+		- The game should be continue
+		TODO: Current test just make sure the game is running, not check if the game is the same
+	*/
+
 	// Init slave server
 	s := initServer(t, nil)
 
@@ -339,8 +378,18 @@ func TestReconnectRoomNoOverlord(t *testing.T) {
 
 }
 
-// This test currently doesn't work
 func TestReconnectRoomWithOverlord(t *testing.T) {
+	/*
+		Case scenario:
+		- A server X is initialized connecting to overlord
+		- Client A creates a room K on server X
+		- Server X is turned down, Client is closed
+		- Spawn a new server and a new client connecting to the same room K
+		Expected behavior:
+		- The game should be continue
+		TODO: Current test just make sure the game is running, not check if the game is the same
+	*/
+
 	o := initOverlord()
 	defer o.Close()
 
@@ -405,4 +454,44 @@ func TestReconnectRoomWithOverlord(t *testing.T) {
 
 	time.Sleep(time.Second)
 	fmt.Println("Done")
+}
+
+func TestRejoinNoOverlordMultiple(t *testing.T) {
+	/*
+		Case scenario:
+		- A server X is initialized connecting to overlord
+		- Client A keeps creating a new room
+		Expected behavior:
+		- The game should running normally
+	*/
+
+	// Init slave server
+	s := initServer(t, nil)
+	defer s.Close()
+
+	fmt.Println("Num goRoutine before start: ", runtime.NumGoroutine())
+	client := initClient(t, s.URL)
+	for i := 0; i < 100; i++ {
+		fmt.Println("Sending start...")
+		// Keep starting game
+		roomID := make(chan string)
+		client.Send(cws.WSPacket{
+			ID:          "start",
+			Data:        "Contra.nes",
+			RoomID:      "",
+			PlayerIndex: 1,
+		}, func(resp cws.WSPacket) {
+			fmt.Println("RoomID:", resp.RoomID)
+			roomID <- resp.RoomID
+		})
+
+		respRoomID := <-roomID
+		if respRoomID == "" {
+			fmt.Println("The room ID should be equal to the saved room")
+			t.Fail()
+		}
+	}
+	fmt.Println("Num goRoutine should be small: ", runtime.NumGoroutine())
+	fmt.Println("Done")
+
 }
