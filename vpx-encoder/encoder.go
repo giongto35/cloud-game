@@ -176,11 +176,11 @@ func (v *VpxEncoder) Release() {
 		log.Println("Close output", v.Output)
 		C.vpx_img_free(&v.vpxImage)
 		C.vpx_codec_destroy(&v.vpxCodexCtx)
-		// TODO: Check here, after close it will signal
+		// TODO: Bug here, after close it will signal
+		close(v.Output)
 		if v.Input != nil {
 			close(v.Input)
 		}
-		close(v.Output)
 	}
 	v.IsRunning = false
 	// TODO: Can we merge IsRunning and Done together
