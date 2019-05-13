@@ -110,7 +110,7 @@ func (r *Room) AddConnectionToRoom(peerconnection *webrtc.WebRTC, playerIndex in
 func (r *Room) startWebRTCSession(peerconnection *webrtc.WebRTC, playerIndex int) {
 	defer func() {
 		if r := recover(); r != nil {
-			fmt.Println("Recovered when sent to close inputChannel")
+			log.Println("Warn: Recovered when sent to close inputChannel")
 		}
 	}()
 
