@@ -232,13 +232,16 @@ func (w *WebRTC) StopClient() {
 	log.Println("===StopClient===")
 	w.isConnected = false
 	if w.encoder != nil {
-		w.encoder.Release()
+		// NOTE: We signal using bool value instead of channel for better performance
+		w.encoder.Done = true
 	}
 	if w.connection != nil {
 		w.connection.Close()
 	}
 	w.connection = nil
 	close(w.InputChannel)
+	// webrtc is producer, so we close
+	close(w.encoder.Input)
 	// NOTE: ImageChannel is waiting for input. Close in writer is not correct for this
 	close(w.ImageChannel)
 	close(w.AudioChannel)

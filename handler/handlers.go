@@ -74,6 +74,12 @@ func (h *Handler) GetWeb(w http.ResponseWriter, r *http.Request) {
 
 // WS handles normal traffic (from browser to host)
 func (h *Handler) WS(w http.ResponseWriter, r *http.Request) {
+	defer func() {
+		if r := recover(); r != nil {
+			log.Println("Warn: Something wrong. Recovered in f", r)
+		}
+	}()
+
 	c, err := upgrader.Upgrade(w, r, nil)
 	if err != nil {
 		log.Print("[!] WS upgrade:", err)
