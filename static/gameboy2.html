@@ -1,0 +1,470 @@
+<html>
+
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="user-scalable=0">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <link href="//netdna.bootstrapcdn.com/font-awesome/4.5.0/css/font-awesome.css" rel="stylesheet">
+
+
+    <style>
+        #gamebody {
+            display: block;
+            width: 556px;
+            height: 278px;
+            background-color: #edf1f0;
+            -moz-border-radius: 30px;
+            -webkit-border-radius: 30px;
+            border-radius: 30px;
+            top: 50%;
+            left: 50%;
+            position: fixed;
+            transform: translate(-50%, -50%);
+
+            -webkit-box-shadow: inset 0px 0px 2px 2px rgba(219, 222, 222, 1);
+            -moz-box-shadow: inset 0px 0px 2px 2px rgba(219, 222, 222, 1);
+            box-shadow: inset 0px 0px 2px 2px rgba(219, 222, 222, 1);
+        }
+
+
+        #circle-pad-holder {
+            display: block;
+            width: 100px;
+            height: 100px;
+            position: absolute;
+            top: 155px;
+            left: 30px;
+            background-color: #eaebeb;
+            -moz-border-radius: 50%;
+            -webkit-border-radius: 50%;
+            border-radius: 50%;
+            -webkit-box-shadow: inset 0px 0px 2px 2px rgba(219, 222, 222, 1);
+            -moz-box-shadow: inset 0px 0px 2px 2px rgba(219, 222, 222, 1);
+            box-shadow: inset 0px 0px 2px 2px rgba(219, 222, 222, 1);
+        }
+
+
+        #circle-pad {
+            display: block;
+            width: 70px;
+            height: 70px;
+            position: absolute;
+            /* transform: translate(-50%, -50%);
+            -moz-transform: translate(-50%, -50%);
+            -webkit-transform: translate(-50%, -50%); */
+            top: 15px;
+            left: 15px;
+            background-color: #00f;
+            -moz-border-radius: 50%;
+            -webkit-border-radius: 50%;
+            border-radius: 50%;
+            -webkit-box-shadow: 0px 0px 2px 2px rgba(219, 222, 222, 1);
+            -moz-box-shadow: 0px 0px 2px 2px rgba(219, 222, 222, 1);
+            box-shadow: 0px 0px 2px 2px rgba(219, 222, 222, 1);
+
+            opacity: 0.5;
+        }
+
+
+        .dpad {
+            width: 20px;
+            height: 20px;
+            display: block;
+            position: absolute;
+            background-color: #e4e5e5;
+            border: 2px solid rgba(219, 222, 222, 1);
+        }
+
+
+        #dpad-up {
+            top: 18px;
+            left: 50%;
+            border-bottom: 0px;
+            transform: translateX(-50%);
+            -webkit-transform: translateX(-50%);
+            -moz-transform: translateX(-50%);
+        }
+
+        #dpad-down {
+            bottom: 18px;
+            left: 50%;
+            border-top: 0px;
+            transform: translateX(-50%);
+            -webkit-transform: translateX(-50%);
+            -moz-transform: translateX(-50%);
+        }
+
+
+        #dpad-left {
+            left: 18px;
+            top: 50%;
+            border-right: 0px;
+            transform: translateY(-50%);
+            -webkit-transform: translateY(-50%);
+            -moz-transform: translateY(-50%);
+        }
+
+        #dpad-right {
+            right: 18px;
+            top: 50%;
+            border-left: 0px;
+            transform: translateY(-50%);
+            -webkit-transform: translateY(-50%);
+            -moz-transform: translateY(-50%);
+        }
+
+
+        #bottom-screen {
+            display: block;
+            width: 256px;
+            height: 240px;
+            position: absolute;
+            top: 20px;
+            left: 150px;
+            /* background-color: #EAEBEB; */
+            background-color: #333;
+            -moz-border-radius: 5px 5px 5px 5px;
+            -webkit-border-radius: 15px 15px 25px 25px;
+            border-radius: 5px 5px 5px 5px;
+            -webkit-box-shadow: 0px 0px 2px 2px rgba(219, 222, 222, 1);
+            -moz-box-shadow: 0px 0px 2px 2px rgba(219, 222, 222, 1);
+            box-shadow: 0px 0px 2px 2px rgba(219, 222, 222, 1);
+        }
+
+        #color-button-holder {
+            display: block;
+            width: 120px;
+            height: 120px;
+            position: absolute;
+            top: 135px;
+            left: 425px;
+        }
+
+        .btn {
+            display: block;
+            padding-top: 10px;
+            text-align: center;
+            width: 40px;
+            height: 30px;
+            position: absolute;
+            -moz-border-radius: 50%;
+            -webkit-border-radius: 50%;
+            border-radius: 50%;
+            -webkit-box-shadow: 0px 0px 2px 2px rgba(219, 222, 222, 1);
+            -moz-box-shadow: 0px 0px 2px 2px rgba(219, 222, 222, 1);
+            box-shadow: 0px 0px 2px 2px rgba(219, 222, 222, 1);
+        }
+
+
+        .btn-big {
+            display: block;
+            padding-top: 5px;
+            text-align: center;
+            width: 100px;
+            height: 25px;
+            position: absolute;
+            -moz-border-radius: 50px;
+            -webkit-border-radius: 50px;
+            border-radius: 50px;
+            -webkit-box-shadow: 0px 0px 2px 2px rgba(219, 222, 222, 1);
+            -moz-box-shadow: 0px 0px 2px 2px rgba(219, 222, 222, 1);
+            box-shadow: 0px 0px 2px 2px rgba(219, 222, 222, 1);
+        }
+
+        #load-btn {
+            top: 30px;
+            left: 435px;
+            background-color: #f5a54b;
+        }
+
+        #save-btn {
+            top: 70px;
+            left: 435px;
+            background-color: #b844ee;
+        }
+
+        #start-btn {
+            background-color: #52f367;
+            top: 70px;
+            left: 30px;
+        }
+
+
+        #blue-btn {
+            top: 0;
+            left: 50%;
+            transform: translateX(-50%);
+            -webkit-transform: translateX(-50%);
+            -moz-transform: translateX(-50%);
+            background-color: #6fa8eb;
+        }
+
+        #green-btn {
+            top: 50%;
+            left: 0;
+            transform: translateY(-50%);
+            -webkit-transform: translateY(-50%);
+            -moz-transform: translateY(-50%);
+            background-color: #43be85;
+        }
+
+        #red-btn {
+            bottom: 0;
+            left: 50%;
+            transform: translateX(-50%);
+            -webkit-transform: translateX(-50%);
+            -moz-transform: translateX(-50%);
+            background-color: #ea6e4a;
+        }
+
+
+        #yellow-btn {
+            right: 0;
+            top: 50%;
+            transform: translateY(-50%);
+            -webkit-transform: translateY(-50%);
+            -moz-transform: translateY(-50%);
+            background-color: #d4b95e;
+        }
+
+
+        #lights-holder {
+            display: block;
+            width: 45px;
+            height: 10px;
+            position: absolute;
+            top: 0;
+            left: 460px;
+        }
+
+        #light-1 {
+            display: block;
+            width: 5px;
+            height: 10px;
+            background-color: #009BEB;
+            position: absolute;
+            top: 0;
+            left: 0;
+        }
+
+        #light-2 {
+            display: block;
+            width: 5px;
+            height: 10px;
+            background-color: #7a7e7d;
+            position: absolute;
+            top: 0;
+            left: 20px;
+        }
+
+        #light-3 {
+            display: block;
+            width: 5px;
+            height: 10px;
+            background-color: #7a7e7d;
+            position: absolute;
+            top: 0;
+            left: 40px;
+            animation: blink 1.5s cubic-bezier(1.0, 0, 0, 1.0) infinite;
+            -webkit-animation: blink 1.5s cubic-bezier(1.0, 0, 0, 1.0) infinite;
+            -moz-animation: blink 1.5s cubic-bezier(1.0, 0, 0, 1.0) infinite;
+        }
+
+
+        @-webkit-keyframes blink {
+            0% {
+                background: #7a7e7d;
+            }
+
+            100% {
+                background: yellow;
+            }
+        }
+
+        @-moz-keyframes blink {
+            0% {
+                background: #7a7e7d;
+            }
+
+            100% {
+                background: yellow;
+            }
+        }
+
+        @keyframes blink {
+            0% {
+                background: #7a7e7d;
+            }
+
+            100% {
+                background: yellow;
+            }
+        }
+
+
+        *.unselectable {
+            -moz-user-select: -moz-none;
+            -khtml-user-select: none;
+            -webkit-user-select: none;
+            -ms-user-select: none;
+            user-select: none;
+        }
+
+        #room-txt {
+            position: absolute;
+            width: 110px;
+            top: 40px;
+            left: 25px;
+            padding-left: 2px;
+            -moz-border-radius: 8px;
+            -webkit-border-radius: 8px;
+            border-radius: 8px;
+        }
+
+
+        .pressed {
+            background-color: #333 !important;
+        }
+
+    </style>
+
+</head>
+
+<body>
+    <div id="gamebody">
+
+        <div id="circle-pad-holder">
+            <div id="dpad-up" class="dpad"></div>
+            <div id="dpad-down" class="dpad"></div>
+            <div id="dpad-left" class="dpad"></div>
+            <div id="dpad-right" class="dpad"></div>
+            <div id="circle-pad"></div>
+        </div>
+
+        <div id="bottom-screen">
+                <video id="game-screen" autoplay=true width=256 height=240
+                poster="https://orig00.deviantart.net/cdcd/f/2017/276/a/a/october_2nd___gameboy_poltergeist_by_wanyo-dbpdmnd.gif">
+        </div>
+
+        <div id="load-btn" unselectable="on" class="btn-big unselectable">load</div>
+        <div id="save-btn" unselectable="on" class="btn-big unselectable">save</div>
+
+        <div id="start-btn" unselectable="on" class="btn-big unselectable">start</div>
+
+
+        <div id="color-button-holder">
+            <div id="blue-btn" unselectable="on" class="btn unselectable">Y</div>
+            <div id="green-btn" unselectable="on" class="btn unselectable">X</div>
+            <div id="red-btn" unselectable="on" class="btn unselectable">A</div>
+            <div id="yellow-btn" unselectable="on" class="btn unselectable">B</div>
+        </div>
+
+        <div id="lights-holder">
+            <div id="light-1"></div>
+            <div id="light-2"></div>
+            <div id="light-3"></div>
+        </div>
+
+        <input id="room-txt" type="text" placeholder="room id..." unselectable="on" class=" unselectable">
+
+    </div>
+
+
+    <script>
+            DEBUG = true;
+          </script>
+        
+          <!-- https://rawgit.com/Rillke/opus.js-sample/master/index.xhtml -->
+          <script src="/static/js/libopus.js"></script>
+          <script src="/static/js/opus.js"></script>
+        
+          <script src="https://code.jquery.com/jquery-3.3.1.min.js"></script>
+          <script src="/static/js/const.js"></script>
+          <script src="/static/js/global.js"></script>
+          <script src="/static/js/gameboy_controller.js"></script>
+          <script src="/static/js/ws.js"></script>
+        
+          <script>
+            $("#gameOp").on("change", function () {
+              gameIdx = gameOp.selectedIndex;
+            });
+        
+            gameIdx = 1;
+        
+          </script>
+        
+    <script>
+
+
+        //disable gesture
+        xxx = (e) => {
+            e.preventDefault();
+        }
+        window.addEventListener("touchmove", xxx, { passive: false });
+        // window.addEventListener("mousedown", xxx, { passive: false });
+        // window.addEventListener("touchstart", xxx, { passive: false });
+
+
+        function isPortrait() {
+            // ios / mobile app
+            switch (window.orientation) {
+                case 0:
+                case 180:
+                    return true;
+                    break;
+            }
+
+            // desktop
+            orient = screen.msOrientation || screen.mozOrientation || (screen.orientation || {}).type;
+            if (orient == "portrait-primary") {
+                return true;
+            }
+
+            return false;
+        }
+
+
+        function fix() {
+            target = $(window);
+            child = $("#gamebody");
+
+            width = child.width();
+            height = child.height();
+
+            // should have maximum for desktop
+            targetWidth = target.width();
+            targetHeight = target.height();
+
+            screenWidth = targetWidth;
+            screenHeight = targetHeight;
+
+            st = "translate(-50%, -50%) ";
+            // rotate ?
+            if (isPortrait()) {
+                st += `rotate(90deg) `;
+                screenWidth = targetHeight;
+                screenHeight = targetWidth;
+            }
+
+            // zoom in/out ?
+            st += `scale(${Math.min(screenWidth / width, screenHeight / height)}) `;
+
+            child.css("transform", st);
+            child.css("-webkit-transform", st);
+            child.css("-moz-transform", st);
+            child.css("-ms-transform", st);
+        }
+        fix();
+
+        $(window).on("resize", fix);
+        $(window).on("orientationchange", fix);
+
+    </script>
+
+
+
+
+</body>
+
+</html>
