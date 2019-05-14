@@ -174,7 +174,6 @@ func (v *VpxEncoder) Release() {
 	if v.IsRunning {
 		v.IsRunning = false
 		log.Println("Releasing encoder")
-		log.Println("Close output", v.Output)
 		C.vpx_img_free(&v.vpxImage)
 		C.vpx_codec_destroy(&v.vpxCodexCtx)
 		// TODO: Bug here, after close it will signal
