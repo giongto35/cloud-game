@@ -167,7 +167,6 @@ function startWebRTC() {
         log(`iceConnectionState: ${pc.iceConnectionState}`);
 
         if (pc.iceConnectionState === "connected") {
-
             //conn.send(JSON.stringify({"id": "start", "data": ""}));
         }
         else if (pc.iceConnectionState === "disconnected") {
@@ -193,6 +192,9 @@ function startWebRTC() {
             // TODO: Fix curPacketID
             conn.send(JSON.stringify({"id": "initwebrtc", "data": session, "packet_id": curPacketID}));
         } else {
+            //pc.addIceCandidate(event.candidate).catch(e => {
+                //log("Failure during addIceCandidate(): " + e.name);});
+            conn.send(JSON.stringify({"id": "icecandidate", "data": JSON.stringify(event.candidate)}));
             console.log(JSON.stringify(event.candidate));
         }
     }
