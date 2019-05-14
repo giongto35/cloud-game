@@ -1,17 +1,27 @@
+/*
+  GLOBAL CONSTS
+*/
+DEBUG = true;
+
+KEY_BIT = ["a", "b", "select", "start", "up", "down", "left", "right"];
+
+INPUT_FPS = 100;
+PINGPONGPS = 5;
+INPUT_STATE_PACKET = 5;
+
+
+//------------------------------------------------------------------------
 /* 
   GLOBAL VARS
 */
-LOG = true;
-if (!("DEBUG" in window)) {
-    window.DEBUG = false;
-}
 
 // Game state
-screenState = "loader";
-gameIdx = 0;
+var screenState = "loader";
+var gameList = [];
+var gameIdx = 5;
 
 // Input vars
-keyState = {
+var keyState = {
     // controllers
     a: false,
     b: false,
@@ -22,34 +32,14 @@ keyState = {
     up: false,
     down: false,
     left: false,
-    right: false,
-
-    // game meta keys
-    // save: false,
-    // load: false,
-
-    // unofficial
-    // quit: false
+    right: false
 }
 
-unchangePacket = INPUT_STATE_PACKET;
-inputTimer = null;
+var unchangePacket = INPUT_STATE_PACKET;
+var inputTimer = null;
 
 // Connection vars
 var pc, inputChannel;
 var localSessionDescription = "";
 var remoteSessionDescription = "";
 var conn;
-
-
-/* 
-  FUNCTIONS
-*/
-
-// miscs
-function log(msg) {
-    if (LOG) {
-        document.getElementById('div').innerHTML += msg + '<br>'
-        console.log(msg);
-    }
-}
