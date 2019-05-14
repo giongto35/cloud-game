@@ -14,7 +14,8 @@ type BrowserClient struct {
 	*cws.Client
 }
 
-func (s *Session) RegisterBrowserClient() {
+// RouteBrowser are all routes server received from browser
+func (s *Session) RouteBrowser() {
 	browserClient := s.BrowserClient
 
 	browserClient.Receive("heartbeat", func(resp cws.WSPacket) cws.WSPacket {
@@ -25,7 +26,10 @@ func (s *Session) RegisterBrowserClient() {
 		log.Println("Received user SDP")
 		localSession, err := s.peerconnection.StartClient(resp.Data, config.Width, config.Height)
 		if err != nil {
-			log.Fatalln(err)
+			if err != nil {
+				log.Println("Error: Cannot create new webrtc session", err)
+				return cws.EmptyPacket
+			}
 		}
 
 		return cws.WSPacket{
