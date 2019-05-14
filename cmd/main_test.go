@@ -5,8 +5,10 @@ import (
 	"log"
 	"net/http"
 	"net/http/httptest"
+	"runtime"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/giongto35/cloud-game/cws"
 	"github.com/giongto35/cloud-game/handler"
@@ -62,6 +64,7 @@ func initClient(t *testing.T, host string) (client *cws.Client) {
 		t.Fatalf("%v", err)
 	}
 
+	handshakedone := make(chan struct{})
 	// Simulate peerconnection initialization from client
 	fmt.Println("Simulating PeerConnection")
 	peerConnection, err := webrtc.NewPeerConnection(webrtcconfig)
@@ -79,7 +82,6 @@ func initClient(t *testing.T, host string) (client *cws.Client) {
 	if err != nil {
 		panic(err)
 	}
-
 	// Send offer to server
 	log.Println("Browser Client")
 	client = cws.NewClient(ws)
@@ -93,7 +95,7 @@ func initClient(t *testing.T, host string) (client *cws.Client) {
 	fmt.Println("Waiting sdp...")
 
 	client.Receive("sdp", func(resp cws.WSPacket) cws.WSPacket {
-		fmt.Println("received", resp.Data)
+		log.Println("Received SDP", resp.Data, "client: ", client)
 		answer := webrtc.SessionDescription{}
 		gamertc.Decode(resp.Data, &answer)
 		// Apply the answer as the remote description
@@ -101,6 +103,9 @@ func initClient(t *testing.T, host string) (client *cws.Client) {
 		if err != nil {
 			panic(err)
 		}
+
+		// TODO: may block in the second call
+		handshakedone <- struct{}{}
 
 		return cws.EmptyPacket
 	})
@@ -124,18 +129,27 @@ func initClient(t *testing.T, host string) (client *cws.Client) {
 		if err != nil {
 			panic(err)
 		}
-		log.Println("return offer", offer)
+		log.Println("return offer")
 		return cws.WSPacket{
 			ID:   "initwebrtc",
 			Data: gamertc.Encode(offer),
 		}
 	})
 
+	<-handshakedone
 	return client
 	// If receive roomID, the server is running correctly
 }
 
 func TestSingleServerNoOverlord(t *testing.T) {
+	/*
+		Case scenario:
+		- A server X are initilized
+		- Client join room with no coordinator
+		Expected behavior:
+		- Room received not empty
+	*/
+
 	// Init slave server
 	s := initServer(t, nil)
 	defer s.Close()
@@ -159,10 +173,19 @@ func TestSingleServerNoOverlord(t *testing.T) {
 		fmt.Println("RoomID should not be empty")
 		t.Fail()
 	}
+	time.Sleep(3 * time.Second)
 	fmt.Println("Done")
 }
 
 func TestSingleServerOneOverlord(t *testing.T) {
+	/*
+		Case scenario:
+		- A server X are initilized
+		- Client join room with coordinator
+		Expected behavior:
+		- Room received not empty.
+	*/
+
 	o := initOverlord()
 	defer o.Close()
 
@@ -192,10 +215,22 @@ func TestSingleServerOneOverlord(t *testing.T) {
 		fmt.Println("RoomID should not be empty")
 		t.Fail()
 	}
+	time.Sleep(time.Second)
 	fmt.Println("Done")
 }
 
 func TestTwoServerOneOverlord(t *testing.T) {
+	/*
+		Case scenario:
+		- Two server X, Y are initilized
+		- Client A creates a room on server X
+		- Client B creates a room on server Y
+		- Client B join a room created by A
+		Expected behavior:
+		- Bridge connection will be conducted between server Y and X
+		- Client B can join a room hosted on A
+	*/
+
 	o := initOverlord()
 	defer o.Close()
 
@@ -205,7 +240,6 @@ func TestTwoServerOneOverlord(t *testing.T) {
 	defer s1.Close()
 
 	oconn2 := connectTestOverlordServer(t, o.URL)
-	// TODO: two different oconn
 	s2 := initServer(t, oconn2)
 	defer s2.Close()
 
@@ -234,6 +268,7 @@ func TestTwoServerOneOverlord(t *testing.T) {
 	// Client2 trying to create a random room and later join the the room on server1
 	client2 := initClient(t, s2.URL)
 	defer client2.Close()
+	// Wait
 	// Doing the same create local room.
 	localRoomID := make(chan string)
 	client2.Send(cws.WSPacket{
@@ -251,6 +286,7 @@ func TestTwoServerOneOverlord(t *testing.T) {
 	fmt.Println("Request the room from server 1", remoteRoomID)
 	log.Println("Server2 trying to join server1 room")
 	// After trying loging in to one session, login to other with the roomID
+	bridgeRoom := make(chan string)
 	client2.Send(cws.WSPacket{
 		ID:          "start",
 		Data:        "Contra.nes",
@@ -258,14 +294,32 @@ func TestTwoServerOneOverlord(t *testing.T) {
 		PlayerIndex: 1,
 	}, func(resp cws.WSPacket) {
 		fmt.Println("RoomID:", resp.RoomID)
-		roomID <- resp.RoomID
+		bridgeRoom <- resp.RoomID
 	})
 
+	<-bridgeRoom
+	//respRoomID := <-bridgeRoom
+	//if respRoomID == "" {
+	//fmt.Println("The room ID should be equal to the saved room")
+	//t.Fail()
+	//}
 	// If receive roomID, the server is running correctly
+	time.Sleep(time.Second)
 	fmt.Println("Done")
 }
 
 func TestReconnectRoomNoOverlord(t *testing.T) {
+	/*
+		Case scenario:
+		- A server X is initialized
+		- Client A creates a room K on server X
+		- Server X is turned down, Client is closed
+		- Spawn a new server and a new client connecting to the same room K
+		Expected behavior:
+		- The game should be continue
+		TODO: Current test just make sure the game is running, not check if the game is the same
+	*/
+
 	// Init slave server
 	s := initServer(t, nil)
 
@@ -319,71 +373,171 @@ func TestReconnectRoomNoOverlord(t *testing.T) {
 		t.Fail()
 	}
 
+	time.Sleep(time.Second)
 	fmt.Println("Done")
 
 }
 
-// This test currently doesn't work
-//func TestReconnectRoomWithOverlord(t *testing.T) {
-//o := initOverlord()
-//defer o.Close()
+func TestReconnectRoomWithOverlord(t *testing.T) {
+	/*
+		Case scenario:
+		- A server X is initialized connecting to overlord
+		- Client A creates a room K on server X
+		- Server X is turned down, Client is closed
+		- Spawn a new server and a new client connecting to the same room K
+		Expected behavior:
+		- The game should be continue
+		TODO: Current test just make sure the game is running, not check if the game is the same
+	*/
 
-//oconn := connectTestOverlordServer(t, o.URL)
-//defer oconn.Close()
-//// Init slave server
-//s := initServer(t, oconn)
+	o := initOverlord()
+	defer o.Close()
 
-//client := initClient(t, s.URL)
+	oconn := connectTestOverlordServer(t, o.URL)
+	// Init slave server
+	s := initServer(t, oconn)
 
-//fmt.Println("Sending start...")
-//roomID := make(chan string)
-//client.Send(cws.WSPacket{
-//ID:          "start",
-//Data:        "Contra.nes",
-//RoomID:      "",
-//PlayerIndex: 1,
-//}, func(resp cws.WSPacket) {
-//fmt.Println("RoomID:", resp.RoomID)
-//roomID <- resp.RoomID
-//})
+	client := initClient(t, s.URL)
 
-//saveRoomID := <-roomID
-//if saveRoomID == "" {
-//fmt.Println("RoomID should not be empty")
-//t.Fail()
-//}
+	fmt.Println("Sending start...")
+	roomID := make(chan string)
+	client.Send(cws.WSPacket{
+		ID:          "start",
+		Data:        "Contra.nes",
+		RoomID:      "",
+		PlayerIndex: 1,
+	}, func(resp cws.WSPacket) {
+		fmt.Println("RoomID:", resp.RoomID)
+		roomID <- resp.RoomID
+	})
 
-//log.Println("Closing room and server")
-//client.Close()
-//s.Close()
-//// Close server and reconnect
+	saveRoomID := <-roomID
+	if saveRoomID == "" {
+		fmt.Println("RoomID should not be empty")
+		t.Fail()
+	}
 
-//log.Println("Server respawn")
-//// Init slave server
-//s = initServer(t, oconn)
-//defer s.Close()
+	log.Println("Closing room and server")
+	client.Close()
+	s.Close()
+	oconn.Close()
 
-//client = initClient(t, s.URL)
-//defer client.Close()
+	// Close server and reconnect
 
-//fmt.Println("Re-access room ", saveRoomID)
-//roomID = make(chan string)
-//client.Send(cws.WSPacket{
-//ID:          "start",
-//Data:        "Contra.nes",
-//RoomID:      saveRoomID,
-//PlayerIndex: 1,
-//}, func(resp cws.WSPacket) {
-//fmt.Println("RoomID:", resp.RoomID)
-//roomID <- resp.RoomID
-//})
+	log.Println("Server respawn")
+	// Init slave server again
+	oconn = connectTestOverlordServer(t, o.URL)
+	defer oconn.Close()
+	s = initServer(t, oconn)
+	defer s.Close()
 
-//respRoomID := <-roomID
-//if respRoomID == "" || respRoomID != saveRoomID {
-//fmt.Println("The room ID should be equal to the saved room")
-//t.Fail()
-//}
+	client = initClient(t, s.URL)
+	defer client.Close()
 
-//fmt.Println("Done")
+	fmt.Println("Re-access room ", saveRoomID)
+	roomID = make(chan string)
+	client.Send(cws.WSPacket{
+		ID:          "start",
+		Data:        "Contra.nes",
+		RoomID:      saveRoomID,
+		PlayerIndex: 1,
+	}, func(resp cws.WSPacket) {
+		fmt.Println("RoomID:", resp.RoomID)
+		roomID <- resp.RoomID
+	})
 
-//}
+	respRoomID := <-roomID
+	if respRoomID == "" || respRoomID != saveRoomID {
+		fmt.Println("The room ID should be equal to the saved room")
+		t.Fail()
+	}
+
+	time.Sleep(time.Second)
+	fmt.Println("Done")
+}
+
+func TestRejoinNoOverlordMultiple(t *testing.T) {
+	/*
+		Case scenario:
+		- A server X without connecting to overlord
+		- Client A keeps creating a new room
+		Expected behavior:
+		- The game should running normally
+	*/
+
+	// Init slave server
+	s := initServer(t, nil)
+	defer s.Close()
+
+	fmt.Println("Num goRoutine before start: ", runtime.NumGoroutine())
+	client := initClient(t, s.URL)
+	for i := 0; i < 100; i++ {
+		fmt.Println("Sending start...")
+		// Keep starting game
+		roomID := make(chan string)
+		client.Send(cws.WSPacket{
+			ID:          "start",
+			Data:        "Contra.nes",
+			RoomID:      "",
+			PlayerIndex: 1,
+		}, func(resp cws.WSPacket) {
+			fmt.Println("RoomID:", resp.RoomID)
+			roomID <- resp.RoomID
+		})
+
+		respRoomID := <-roomID
+		if respRoomID == "" {
+			fmt.Println("The room ID should be equal to the saved room")
+			t.Fail()
+		}
+	}
+	time.Sleep(time.Second)
+	fmt.Println("Num goRoutine should be small: ", runtime.NumGoroutine())
+	fmt.Println("Done")
+
+}
+
+func TestRejoinWithOverlordMultiple(t *testing.T) {
+	/*
+		Case scenario:
+		- A server X is initialized connecting to overlord
+		- Client A keeps creating a new room
+		Expected behavior:
+		- The game should running normally
+	*/
+
+	// Init slave server
+	o := initOverlord()
+	defer o.Close()
+
+	oconn := connectTestOverlordServer(t, o.URL)
+	// Init slave server
+	s := initServer(t, oconn)
+	defer s.Close()
+
+	fmt.Println("Num goRoutine before start: ", runtime.NumGoroutine())
+	client := initClient(t, s.URL)
+	for i := 0; i < 100; i++ {
+		fmt.Println("Sending start...")
+		// Keep starting game
+		roomID := make(chan string)
+		client.Send(cws.WSPacket{
+			ID:          "start",
+			Data:        "Contra.nes",
+			RoomID:      "",
+			PlayerIndex: 1,
+		}, func(resp cws.WSPacket) {
+			fmt.Println("RoomID:", resp.RoomID)
+			roomID <- resp.RoomID
+		})
+
+		respRoomID := <-roomID
+		if respRoomID == "" {
+			fmt.Println("The room ID should be equal to the saved room")
+			t.Fail()
+		}
+	}
+	fmt.Println("Num goRoutine should be small: ", runtime.NumGoroutine())
+	fmt.Println("Done")
+
+}

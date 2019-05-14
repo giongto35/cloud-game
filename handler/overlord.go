@@ -29,8 +29,8 @@ func NewOverlordClient(oc *websocket.Conn) *OverlordClient {
 	return oclient
 }
 
-// RegisterOverlordClient routes overlord Client
-func (s *Session) RegisterOverlordClient() {
+// RouteOverlord are all routes server received from overlord
+func (s *Session) RouteOverlord() {
 	oclient := s.OverlordClient
 
 	// Received from overlord the serverID
@@ -58,7 +58,8 @@ func (s *Session) RegisterOverlordClient() {
 			oclient.peerconnections[resp.SessionID] = peerconnection
 
 			if err != nil {
-				log.Fatalln(err)
+				log.Println("Error: Cannot create new webrtc session", err)
+				return cws.EmptyPacket
 			}
 
 			return cws.WSPacket{
@@ -74,7 +75,7 @@ func (s *Session) RegisterOverlordClient() {
 		"start",
 		func(resp cws.WSPacket) (req cws.WSPacket) {
 			log.Println("Received a start request from overlord")
-			log.Println("Add the connection to current room on the host")
+			log.Println("Add the connection to current room on the host ", resp.SessionID)
 
 			peerconnection := oclient.peerconnections[resp.SessionID]
 			log.Println("start session")
@@ -125,7 +126,7 @@ func (s *Session) bridgeConnection(serverID string, gameName string, roomID stri
 
 	// Ask overlord to relay SDP packet to serverID
 	resp.TargetHostID = serverID
-	log.Println("Sending offer to overlord to relay message to target host", resp.TargetHostID, "with payload", resp)
+	log.Println("Sending offer to overlord to relay message to target host", resp.TargetHostID, "with payload")
 	remoteTargetSDP := s.OverlordClient.SyncSend(resp)
 	log.Println("Got back remote host SDP, sending to browser")
 	// Send back remote SDP of remote server to browser

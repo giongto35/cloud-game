@@ -26,46 +26,52 @@ func (r *Room) startAudio() {
 
 	// fanout Audio
 	for {
-		select {
-		case <-r.Done:
-			r.Close()
+		sample, ok := <-r.audioChannel
+		if !ok {
+			// Just for guarding
+			log.Println("Warn: Room ", r.ID, " audio channel closed unexpectedly")
 			return
-		case sample := <-r.audioChannel:
-			pcm[idx] = sample
-			idx++
-			if idx == len(pcm) {
-				data := make([]byte, 640)
+		}
+		if r.Done {
+			log.Println("Room ", r.ID, " audio channel closed")
+			return
+		}
 
-				n, err := enc.EncodeFloat32(pcm, data)
+		// TODO: Use worker pool for encoding
+		pcm[idx] = sample
+		idx++
+		if idx == len(pcm) {
+			data := make([]byte, 640)
 
-				if err != nil {
-					log.Println("[!] Failed to decode")
-					continue
-				}
-				data = data[:n]
-				data = append(data, count)
+			n, err := enc.EncodeFloat32(pcm, data)
 
-				r.sessionsLock.Lock()
-				for _, webRTC := range r.rtcSessions {
-					// Client stopped
-					if webRTC.IsClosed() {
-						continue
-					}
-
-					// encode frame
-					// fanout audioChannel
-					if webRTC.IsConnected() {
-						// NOTE: can block here
-						webRTC.AudioChannel <- data
-					}
-					//isRoomRunning = true
-				}
-				r.sessionsLock.Unlock()
-
-				idx = 0
-				count = (count + 1) & 0xff
-
+			if err != nil {
+				log.Println("[!] Failed to decode")
+				continue
 			}
+			data = data[:n]
+			data = append(data, count)
+
+			// TODO: r.rtcSessions is rarely updated. Lock will hold down perf
+			//r.sessionsLock.Lock()
+			for _, webRTC := range r.rtcSessions {
+				// Client stopped
+				//if !webRTC.IsClosed() {
+				//continue
+				//}
+
+				// encode frame
+				// fanout audioChannel
+				if webRTC.IsConnected() {
+					// NOTE: can block here
+					webRTC.AudioChannel <- data
+				}
+				//isRoomRunning = true
+			}
+			//r.sessionsLock.Unlock()
+
+			idx = 0
+			count = (count + 1) & 0xff
 		}
 	}
 }
@@ -73,28 +79,34 @@ func (r *Room) startAudio() {
 func (r *Room) startVideo() {
 	// fanout Screen
 	for {
-		select {
-		case <-r.Done:
-			r.Close()
+		image, ok := <-r.imageChannel
+		if !ok {
+			// Just for guarding, should not reached
+			log.Println("Warn: Room ", r.ID, " video channel closed unexpectedly")
 			return
-		case image := <-r.imageChannel:
-
-			yuv := util.RgbaToYuv(image)
-			r.sessionsLock.Lock()
-			for _, webRTC := range r.rtcSessions {
-				// Client stopped
-				if webRTC.IsClosed() {
-					continue
-				}
-
-				// encode frame
-				// fanout imageChannel
-				if webRTC.IsConnected() {
-					// NOTE: can block here
-					webRTC.ImageChannel <- yuv
-				}
-			}
-			r.sessionsLock.Unlock()
 		}
+		if r.Done {
+			log.Println("Room ", r.ID, " video channel closed")
+			return
+		}
+
+		// TODO: Use worker pool for encoding
+		yuv := util.RgbaToYuv(image)
+		// TODO: r.rtcSessions is rarely updated. Lock will hold down perf
+		//r.sessionsLock.Lock()
+		for _, webRTC := range r.rtcSessions {
+			// Client stopped
+			//if webRTC.IsClosed() {
+			//continue
+			//}
+
+			// encode frame
+			// fanout imageChannel
+			if webRTC.IsConnected() {
+				// NOTE: can block here
+				webRTC.ImageChannel <- yuv
+			}
+		}
+		//r.sessionsLock.Unlock()
 	}
 }

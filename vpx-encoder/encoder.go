@@ -48,6 +48,9 @@ func NewVpxEncoder(w, h, fps, bitrate, keyframe int) (*VpxEncoder, error) {
 	v := &VpxEncoder{
 		Output: make(chan []byte, 5*chanSize),
 		Input:  make(chan []byte, chanSize),
+
+		IsRunning: true,
+		Done:      false,
 		// C
 		width:            C.uint(w),
 		height:           C.uint(h),
@@ -66,9 +69,11 @@ func NewVpxEncoder(w, h, fps, bitrate, keyframe int) (*VpxEncoder, error) {
 
 // VpxEncoder yuvI420 image to vp8 video
 type VpxEncoder struct {
-	started bool
-	Output  chan []byte // frame
-	Input   chan []byte // yuvI420
+	Output chan []byte // frame
+	Input  chan []byte // yuvI420
+
+	IsRunning bool
+	Done      bool
 	// C
 	width            C.uint
 	height           C.uint
@@ -109,58 +114,74 @@ func (v *VpxEncoder) init() error {
 	if C.call_vpx_codec_enc_init(&v.vpxCodexCtx, encoder, &cfg) != 0 {
 		return fmt.Errorf("Failed to initialize encoder")
 	}
-	v.started = true
+	v.IsRunning = true
 	go v.startLooping()
 	return nil
 }
 
 func (v *VpxEncoder) startLooping() {
-	go func() {
-		for {
-			beginEncoding := time.Now()
-
-			yuv := <-v.Input
-			// Add Image
-			v.vpxCodexIter = nil
-			C.vpx_img_read(&v.vpxImage, unsafe.Pointer(&yuv[0]))
-
-			var flags C.int
-			if v.keyFrameInterval > 0 && v.frameCount%v.keyFrameInterval == 0 {
-				flags |= C.VPX_EFLAG_FORCE_KF
-			}
-			if C.vpx_codec_encode(&v.vpxCodexCtx, &v.vpxImage, C.vpx_codec_pts_t(v.frameCount), 1, C.vpx_enc_frame_flags_t(flags), C.VPX_DL_REALTIME) != 0 {
-				fmt.Println("Failed to encode frame")
-			}
-			v.frameCount++
-
-			// Get Frame
-			for {
-				goBytes := C.get_frame_buffer(&v.vpxCodexCtx, &v.vpxCodexIter)
-				if goBytes.bs == nil {
-					break
-				}
-				bs := C.GoBytes(goBytes.bs, goBytes.size)
-				// if buffer is full skip frame
-				if len(v.Output) >= cap(v.Output) {
-					continue
-				}
-				v.Output <- bs
-			}
-
-			if *config.IsMonitor {
-				log.Println("Encoding time: ", time.Now().Sub(beginEncoding))
-			}
+	defer func() {
+		if r := recover(); r != nil {
+			log.Println("Warn: Recovered panic in encoding ", r)
 		}
 	}()
+
+	for {
+		beginEncoding := time.Now()
+
+		yuv, ok := <-v.Input
+		if !ok || v.Done == true {
+			// The first time we see IsRunning set to false, we release and return
+			v.Release()
+			return
+		}
+
+		// Add Image
+		v.vpxCodexIter = nil
+		C.vpx_img_read(&v.vpxImage, unsafe.Pointer(&yuv[0]))
+
+		var flags C.int
+		if v.keyFrameInterval > 0 && v.frameCount%v.keyFrameInterval == 0 {
+			flags |= C.VPX_EFLAG_FORCE_KF
+		}
+		if C.vpx_codec_encode(&v.vpxCodexCtx, &v.vpxImage, C.vpx_codec_pts_t(v.frameCount), 1, C.vpx_enc_frame_flags_t(flags), C.VPX_DL_REALTIME) != 0 {
+			fmt.Println("Failed to encode frame")
+		}
+		v.frameCount++
+
+		// Get Frame
+		for {
+			goBytes := C.get_frame_buffer(&v.vpxCodexCtx, &v.vpxCodexIter)
+			if goBytes.bs == nil {
+				break
+			}
+			bs := C.GoBytes(goBytes.bs, goBytes.size)
+			// if buffer is full skip frame
+			if len(v.Output) >= cap(v.Output) {
+				continue
+			}
+			v.Output <- bs
+		}
+
+		if *config.IsMonitor {
+			log.Println("Encoding time: ", time.Now().Sub(beginEncoding))
+		}
+	}
 }
 
 // Release release memory and stop loop
 func (v *VpxEncoder) Release() {
-	v.started = false
-	if v.started {
-		close(v.Input)
-		close(v.Output)
+	if v.IsRunning {
+		log.Println("Releasing encoder")
+		log.Println("Close output", v.Output)
 		C.vpx_img_free(&v.vpxImage)
 		C.vpx_codec_destroy(&v.vpxCodexCtx)
+		// TODO: Bug here, after close it will signal
+		close(v.Output)
+		if v.Input != nil {
+			close(v.Input)
+		}
 	}
+	v.IsRunning = false
+	// TODO: Can we merge IsRunning and Done together
 }

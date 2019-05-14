@@ -8,7 +8,7 @@ conn = new WebSocket(`ws://${location.host}/ws`);
 conn.onopen = () => {
     log("WebSocket is opened. Send ping");
     log("Send ping pong frequently")
-    // pingpongTimer = setInterval(sendPing, 1000 / PINGPONGPS)
+    pingpongTimer = setInterval(sendPing, 1000 / PINGPONGPS)
 
     startWebRTC();
 }
