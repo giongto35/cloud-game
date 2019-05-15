@@ -62,7 +62,7 @@ conn.onmessage = e => {
         //conn.send(JSON.stringify({"id": "remotestart", "data": GAME_LIST[gameIdx].nes, "room_id": roomID.value, "player_index": parseInt(playerIndex.value, 10)}));inputTimer
         //break;
     case "heartbeat":
-        console.log("Ping: ", Date.now() - d["data"])
+        // console.log("Ping: ", Date.now() - d["data"])
         // TODO: Calc time
         break;
     case "start":
@@ -207,7 +207,7 @@ function startGame() {
     screenState = "game";
 
     // conn.send(JSON.stringify({"id": "start", "data": gameList[gameIdx].file, "room_id": $("#room-txt").val(), "player_index": parseInt(playerIndex.value, 10)}));
-    conn.send(JSON.stringify({"id": "start", "data": gameList[gameIdx].file, "room_id": $("#room-txt").val(), "player_index": 0}));
+    conn.send(JSON.stringify({"id": "start", "data": gameList[gameIdx].file, "room_id": $("#room-txt").val(), "player_index": 1}));
 
     // clear menu screen
     stopInputTimer();
