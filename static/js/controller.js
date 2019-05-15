@@ -85,14 +85,6 @@ function setState(name, bo) {
     }
 }
 
-function doButton(bo, name) {
-    if (bo == true) {
-        doButtonDown(name);
-    } else if (bo == false) {
-        doButtonUp(name);
-    }
-}
-
 function doButtonDown(name) {
     $(`#btn-${name}`).addClass("pressed");
 
