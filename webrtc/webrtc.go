@@ -93,12 +93,12 @@ type WebRTC struct {
 
 // StartClient start webrtc
 func (w *WebRTC) StartClient(remoteSession string, width, height int) (string, error) {
-	defer func() {
-		if err := recover(); err != nil {
-			log.Println(err)
-			w.StopClient()
-		}
-	}()
+	//defer func() {
+	//if err := recover(); err != nil {
+	//log.Println(err)
+	//w.StopClient()
+	//}
+	//}()
 
 	// reset client
 	if w.isConnected {
@@ -156,19 +156,13 @@ func (w *WebRTC) StartClient(remoteSession string, width, height int) (string, e
 
 	// Register text message handling
 	inputTrack.OnMessage(func(msg webrtc.DataChannelMessage) {
-		//layout .:= "2006-01-02T15:04:05.000Z"
-		//if t, err := time.Parse(layout, string(msg.Data[1])); err == nil {
-		//fmt.Println("Delay ", time.Now().Sub(t))
-		//} else {
+		// TODO: Can add recover here
 		w.InputChannel <- int(msg.Data[0])
-		//}
 	})
 
 	inputTrack.OnClose(func() {
 		log.Println("Data channel closed")
 		log.Println("Closed webrtc")
-		//close(w.Done)
-		//w.StopClient()
 	})
 
 	// WebRTC state callback
