@@ -46,6 +46,9 @@ func (s *Session) RouteBrowser() {
 		req.Data = "ok"
 		if s.RoomID != "" {
 			room := s.handler.getRoom(s.RoomID)
+			if room == nil {
+				return
+			}
 			err := room.SaveGame()
 			if err != nil {
 				log.Println("[!] Cannot save game state: ", err)
@@ -95,17 +98,22 @@ func (s *Session) RouteBrowser() {
 			}
 		}
 
-		// Create new room
+		// Get Room in local server
 		// TODO: check if roomID is in the current server
 		room := s.handler.getRoom(s.RoomID)
 		log.Println("Got Room from local ", room, " ID: ", s.RoomID)
+		// If room is not running
 		if room == nil {
+			// Create new room
 			room = s.handler.createNewRoom(s.GameName, s.RoomID, s.PlayerIndex)
 		}
 
-		// Attach peerconnection to room
-		s.handler.detachPeerConn(s.peerconnection)
-		room.AddConnectionToRoom(s.peerconnection, s.PlayerIndex)
+		// Attach peerconnection to room. If PC is already in room, don't detach
+		log.Println("Is PC in room", room.IsPCInRoom(s.peerconnection))
+		if !room.IsPCInRoom(s.peerconnection) {
+			s.handler.detachPeerConn(s.peerconnection)
+			room.AddConnectionToRoom(s.peerconnection, s.PlayerIndex)
+		}
 		s.RoomID = room.ID
 
 		// Register room to overlord if we are connecting to overlord
