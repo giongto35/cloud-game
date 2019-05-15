@@ -1,7 +1,6 @@
 package room
 
 import (
-	"fmt"
 	"image"
 	"io/ioutil"
 	"log"
@@ -147,14 +146,13 @@ func (r *Room) CleanSession(peerconnection *webrtc.WebRTC) {
 }
 
 func (r *Room) removeSession(w *webrtc.WebRTC) {
-	fmt.Println("Cleaning session: ", w)
-	fmt.Println("Sessions list", r.rtcSessions)
+	log.Println("Cleaning session: ", w.ID)
 	// TODO: get list of r.rtcSessions in lock
 	for i, s := range r.rtcSessions {
-		fmt.Println("found session: ", s, w)
+		log.Println("found session: ", w.ID)
 		if s.ID == w.ID {
 			r.rtcSessions = append(r.rtcSessions[:i], r.rtcSessions[i+1:]...)
-			fmt.Println("found session: ", len(r.rtcSessions))
+			log.Println("Removed session ", s.ID, " from room: ", r.ID)
 
 			// If room has no sessions, close room
 			// Note: this logic cannot be brought outside of forloop because we only close room if room had at least one session
@@ -167,6 +165,16 @@ func (r *Room) removeSession(w *webrtc.WebRTC) {
 			break
 		}
 	}
+}
+
+// TODO: Reuse for remove Session
+func (r *Room) IsPCInRoom(w *webrtc.WebRTC) bool {
+	for _, s := range r.rtcSessions {
+		if s.ID == w.ID {
+			return true
+		}
+	}
+	return false
 }
 
 func (r *Room) Close() {
