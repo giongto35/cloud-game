@@ -19,18 +19,22 @@ import (
 type Room struct {
 	ID string
 
+	// imageChannel is image stream from director
 	imageChannel chan *image.RGBA
+	// audioChannel is audio stream from director
 	audioChannel chan float32
+	// inputChannel is input stream from websocket to room
 	inputChannel chan int
-	IsRunning    bool
-	// Done channel is to fire exit event when there is no webRTC session running
+	// State of room
+	IsRunning bool
+	// Done channel is to fire exit event when room is closed
 	Done chan struct{}
-
-	rtcSessions  []*webrtc.WebRTC
+	// List of peerconnections in the room
+	rtcSessions []*webrtc.WebRTC
+	// NOTE: Not in use, lock rtcSessions
 	sessionsLock *sync.Mutex
-
+	// Director is emulator
 	director *emulator.Director
-
 	// Cloud storage to store room state online
 	onlineStorage *storage.Client
 }
