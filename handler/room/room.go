@@ -185,13 +185,13 @@ func (r *Room) Close() {
 		return
 	}
 
+	r.IsRunning = false
 	log.Println("Closing room", r.ID)
 	log.Println("Closing director of room ", r.ID)
 	close(r.director.Done)
 	log.Println("Closing input of room ", r.ID)
 	close(r.inputChannel)
 	close(r.Done)
-	r.IsRunning = true
 	// Close here is a bit wrong because this read channel
 	//close(r.imageChannel)
 	//close(r.audioChannel)
