@@ -1,3 +1,8 @@
+body {
+    background-image: url('https://t3.ftcdn.net/jpg/02/41/14/36/500_F_241143639_RW6VdHbqYRM0yfNpDxDlWpj0uXWglAC2.jpg');
+    background-repeat: repeat;
+}
+
 #gamebody {
     display: block;
     width: 556px;
