@@ -77,54 +77,6 @@
     <script src="/static/js/gesture_joystick.js"></script>
     <script src="/static/js/ws.js"></script>
     
-    <script>
-        function fixScreen() {
-            target = $(document);
-            child = $("#gamebody");
-
-            width = child.width();
-            height = child.height();
-
-            // should have maximum for desktop
-            if (["win", "mac", "linux"].indexOf(getOS()) != -1) {
-                targetWidth = Math.min(800, target.width());
-                targetHeight = Math.min(600, target.height());
-            } else {
-                targetWidth = target.width();
-                targetHeight = target.height();
-            }
-            console.log(targetHeight);
-            console.log(targetWidth);
-
-            screenWidth = targetWidth;
-            screenHeight = targetHeight;
-
-            st = "translate(-50%, -50%) ";
-            // rotate ?
-            if (isPortrait()) {
-                st += `rotate(90deg) `;
-                screenWidth = targetHeight;
-                screenHeight = targetWidth;
-            }
-
-            // zoom in/out ?
-            st += `scale(${Math.min(screenWidth / width, screenHeight / height)}) `;
-
-            child.css("transform", st);
-            child.css("-webkit-transform", st);
-            child.css("-moz-transform", st);
-            child.css("-ms-transform", st);
-        }
-        // fixScreen();
-
-        // $(window).on("resize", fixScreen);
-        // $(window).on("orientationchange", fixScreen);
-
-    </script>
-
-
-
-
 </body>
 
 </html>
