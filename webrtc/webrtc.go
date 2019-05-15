@@ -93,12 +93,12 @@ type WebRTC struct {
 
 // StartClient start webrtc
 func (w *WebRTC) StartClient(remoteSession string, width, height int) (string, error) {
-	defer func() {
-		if err := recover(); err != nil {
-			log.Println(err)
-			w.StopClient()
-		}
-	}()
+	//defer func() {
+	//if err := recover(); err != nil {
+	//log.Println(err)
+	//w.StopClient()
+	//}
+	//}()
 
 	// reset client
 	if w.isConnected {

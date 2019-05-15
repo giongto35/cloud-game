@@ -112,18 +112,14 @@ func (h *Handler) WS(w http.ResponseWriter, r *http.Request) {
 		Data: gamelist.GetEncodedGameList(h.gamePath),
 	}, nil)
 
-	wssession.BrowserClient.Listen()
-
-	// TODO: Use callback
 	// If peerconnection is done (client.Done is signalled), we close peerconnection
 	go func() {
-		for {
-			<-client.Done
-			h.detachPeerConn(wssession.peerconnection)
-			return
-		}
+		<-client.Done
+		log.Println("Socket terminated, detach connection")
+		h.detachPeerConn(wssession.peerconnection)
 	}()
 
+	wssession.BrowserClient.Listen()
 }
 
 // Detach peerconnection detach/remove a peerconnection from current room
