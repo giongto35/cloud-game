@@ -14,19 +14,19 @@
     <div id="gamebody">
 
         <div id="circle-pad-holder">
-            <div id="btn-up" class="dpad"></div>
-            <div id="btn-down" class="dpad"></div>
-            <div id="btn-left" class="dpad"></div>
-            <div id="btn-right" class="dpad"></div>
+            <div id="btn-up" class="dpad" value="up"></div>
+            <div id="btn-down" class="dpad" value="down"></div>
+            <div id="btn-left" class="dpad" value="left"></div>
+            <div id="btn-right" class="dpad" value="right"></div>
             <div id="circle-pad"></div>
         </div>
 
         <div id="bottom-screen">
             <video id="game-screen" autoplay=true poster="https://orig00.deviantart.net/cdcd/f/2017/276/a/a/october_2nd___gameboy_poltergeist_by_wanyo-dbpdmnd.gif"></video>
-      
+
             <div id="menu-screen">
               <img id="box-art" src="/static/img/404.jpg" onerror="this.src='/static/img/404.jpg'">
-              <div id="title">
+              <div id="title" unselectable="on" class="unselectable" >
                 <p>What the game ?!?</p>
               </div>
       
@@ -35,17 +35,17 @@
             </div>
         </div>
 
-        <div id="btn-load" unselectable="on" class="btn-big unselectable">load</div>
-        <div id="btn-save" unselectable="on" class="btn-big unselectable">save</div>
-        <div id="btn-join" unselectable="on" class="btn-big unselectable">join</div>
-        <div id="btn-quit" unselectable="on" class="btn-big unselectable">quit</div>
+        <div id="btn-load" unselectable="on" class="btn-big unselectable" value="load">load</div>
+        <div id="btn-save" unselectable="on" class="btn-big unselectable" value="save">save</div>
+        <div id="btn-join" unselectable="on" class="btn-big unselectable" value="join">join</div>
+        <div id="btn-quit" unselectable="on" class="btn-big unselectable" value="quit">quit</div>
 
 
         <div id="color-button-holder">
-            <div id="btn-select" unselectable="on" class="btn unselectable">Y</div>
-            <div id="btn-start" unselectable="on" class="btn unselectable">X</div>
-            <div id="btn-a" unselectable="on" class="btn unselectable">A</div>
-            <div id="btn-b" unselectable="on" class="btn unselectable">B</div>
+            <div id="btn-select" unselectable="on" class="btn unselectable" value="select">Y</div>
+            <div id="btn-start" unselectable="on" class="btn unselectable" value="start">X</div>
+            <div id="btn-a" unselectable="on" class="btn unselectable" value="a">A</div>
+            <div id="btn-b" unselectable="on" class="btn unselectable" value="b">B</div>
         </div>
 
         <div id="lights-holder">
@@ -79,7 +79,7 @@
     
     <script>
         function fixScreen() {
-            target = $(window);
+            target = $(document);
             child = $("#gamebody");
 
             width = child.width();
@@ -115,10 +115,10 @@
             child.css("-moz-transform", st);
             child.css("-ms-transform", st);
         }
-        fixScreen();
+        // fixScreen();
 
-        $(window).on("resize", fixScreen);
-        $(window).on("orientationchange", fixScreen);
+        // $(window).on("resize", fixScreen);
+        // $(window).on("orientationchange", fixScreen);
 
     </script>
 
