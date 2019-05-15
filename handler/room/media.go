@@ -33,7 +33,7 @@ func (r *Room) startAudio() {
 			log.Println("Warn: Room ", r.ID, " audio channel closed unexpectedly")
 			return
 		}
-		if r.Done {
+		if !r.IsRunning {
 			log.Println("Room ", r.ID, " audio channel closed")
 			return
 		}
@@ -88,7 +88,7 @@ func (r *Room) startVideo() {
 			log.Println("Warn: Room ", r.ID, " video channel closed unexpectedly")
 			return
 		}
-		if r.Done {
+		if !r.IsRunning {
 			log.Println("Room ", r.ID, " video channel closed")
 			return
 		}

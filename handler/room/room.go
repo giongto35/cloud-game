@@ -1,7 +1,6 @@
 package room
 
 import (
-	"fmt"
 	"image"
 	"io/ioutil"
 	"log"
@@ -20,17 +19,22 @@ import (
 type Room struct {
 	ID string
 
+	// imageChannel is image stream from director
 	imageChannel chan *image.RGBA
+	// audioChannel is audio stream from director
 	audioChannel chan float32
+	// inputChannel is input stream from websocket to room
 	inputChannel chan int
-	// Done channel is to fire exit event when there is no webRTC session running
-	Done bool
-
-	rtcSessions  []*webrtc.WebRTC
+	// State of room
+	IsRunning bool
+	// Done channel is to fire exit event when room is closed
+	Done chan struct{}
+	// List of peerconnections in the room
+	rtcSessions []*webrtc.WebRTC
+	// NOTE: Not in use, lock rtcSessions
 	sessionsLock *sync.Mutex
-
+	// Director is emulator
 	director *emulator.Director
-
 	// Cloud storage to store room state online
 	onlineStorage *storage.Client
 }
@@ -58,8 +62,10 @@ func NewRoom(roomID, gamepath, gameName string, onlineStorage *storage.Client) *
 		rtcSessions:   []*webrtc.WebRTC{},
 		sessionsLock:  &sync.Mutex{},
 		director:      director,
-		Done:          false,
+		IsRunning:     true,
 		onlineStorage: onlineStorage,
+
+		Done: make(chan struct{}),
 	}
 
 	go room.startVideo()
@@ -122,7 +128,7 @@ func (r *Room) startWebRTCSession(peerconnection *webrtc.WebRTC, playerIndex int
 				// might consider continue here
 			}
 
-			if peerconnection.Done || !peerconnection.IsConnected() || r.Done {
+			if peerconnection.Done || !peerconnection.IsConnected() || !r.IsRunning {
 				return
 			}
 
@@ -147,14 +153,13 @@ func (r *Room) CleanSession(peerconnection *webrtc.WebRTC) {
 }
 
 func (r *Room) removeSession(w *webrtc.WebRTC) {
-	fmt.Println("Cleaning session: ", w)
-	fmt.Println("Sessions list", r.rtcSessions)
+	log.Println("Cleaning session: ", w.ID)
 	// TODO: get list of r.rtcSessions in lock
 	for i, s := range r.rtcSessions {
-		fmt.Println("found session: ", s, w)
+		log.Println("found session: ", w.ID)
 		if s.ID == w.ID {
 			r.rtcSessions = append(r.rtcSessions[:i], r.rtcSessions[i+1:]...)
-			fmt.Println("found session: ", len(r.rtcSessions))
+			log.Println("Removed session ", s.ID, " from room: ", r.ID)
 
 			// If room has no sessions, close room
 			// Note: this logic cannot be brought outside of forloop because we only close room if room had at least one session
@@ -169,17 +174,28 @@ func (r *Room) removeSession(w *webrtc.WebRTC) {
 	}
 }
 
+// TODO: Reuse for remove Session
+func (r *Room) IsPCInRoom(w *webrtc.WebRTC) bool {
+	for _, s := range r.rtcSessions {
+		if s.ID == w.ID {
+			return true
+		}
+	}
+	return false
+}
+
 func (r *Room) Close() {
-	if r.Done {
+	if !r.IsRunning {
 		return
 	}
 
+	r.IsRunning = false
 	log.Println("Closing room", r.ID)
 	log.Println("Closing director of room ", r.ID)
 	close(r.director.Done)
 	log.Println("Closing input of room ", r.ID)
 	close(r.inputChannel)
-	r.Done = true
+	close(r.Done)
 	// Close here is a bit wrong because this read channel
 	//close(r.imageChannel)
 	//close(r.audioChannel)
@@ -223,7 +239,7 @@ func (r *Room) LoadGame() error {
 	return err
 }
 
-func (r *Room) IsRunning() bool {
+func (r *Room) IsRunningSessions() bool {
 	// If there is running session
 	for _, s := range r.rtcSessions {
 		if s.IsConnected() {
