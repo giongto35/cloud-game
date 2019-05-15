@@ -106,6 +106,11 @@ func (s *Session) RouteBrowser() {
 		if room == nil {
 			// Create new room
 			room = s.handler.createNewRoom(s.GameName, s.RoomID, s.PlayerIndex)
+			// Wait for done signal from room
+			go func() {
+				<-room.Done
+				s.handler.detachRoom(room.ID)
+			}()
 		}
 
 		// Attach peerconnection to room. If PC is already in room, don't detach
