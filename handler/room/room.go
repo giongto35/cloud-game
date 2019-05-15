@@ -22,8 +22,9 @@ type Room struct {
 	imageChannel chan *image.RGBA
 	audioChannel chan float32
 	inputChannel chan int
+	IsRunning    bool
 	// Done channel is to fire exit event when there is no webRTC session running
-	Done bool
+	Done chan struct{}
 
 	rtcSessions  []*webrtc.WebRTC
 	sessionsLock *sync.Mutex
@@ -57,8 +58,10 @@ func NewRoom(roomID, gamepath, gameName string, onlineStorage *storage.Client) *
 		rtcSessions:   []*webrtc.WebRTC{},
 		sessionsLock:  &sync.Mutex{},
 		director:      director,
-		Done:          false,
+		IsRunning:     true,
 		onlineStorage: onlineStorage,
+
+		Done: make(chan struct{}),
 	}
 
 	go room.startVideo()
@@ -121,7 +124,7 @@ func (r *Room) startWebRTCSession(peerconnection *webrtc.WebRTC, playerIndex int
 				// might consider continue here
 			}
 
-			if peerconnection.Done || !peerconnection.IsConnected() || r.Done {
+			if peerconnection.Done || !peerconnection.IsConnected() || !r.IsRunning {
 				return
 			}
 
@@ -178,7 +181,7 @@ func (r *Room) IsPCInRoom(w *webrtc.WebRTC) bool {
 }
 
 func (r *Room) Close() {
-	if r.Done {
+	if !r.IsRunning {
 		return
 	}
 
@@ -187,7 +190,8 @@ func (r *Room) Close() {
 	close(r.director.Done)
 	log.Println("Closing input of room ", r.ID)
 	close(r.inputChannel)
-	r.Done = true
+	close(r.Done)
+	r.IsRunning = true
 	// Close here is a bit wrong because this read channel
 	//close(r.imageChannel)
 	//close(r.audioChannel)
@@ -231,7 +235,7 @@ func (r *Room) LoadGame() error {
 	return err
 }
 
-func (r *Room) IsRunning() bool {
+func (r *Room) IsRunningSessions() bool {
 	// If there is running session
 	for _, s := range r.rtcSessions {
 		if s.IsConnected() {

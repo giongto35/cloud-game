@@ -143,6 +143,11 @@ func (h *Handler) getRoom(roomID string) *room.Room {
 	return room
 }
 
+// detachRoom detach room from Handler
+func (h *Handler) detachRoom(roomID string) {
+	delete(h.rooms, roomID)
+}
+
 // createNewRoom creates a new room
 // Return nil in case of room is existed
 func (h *Handler) createNewRoom(gameName string, roomID string, playerIndex int) *room.Room {
@@ -168,5 +173,5 @@ func (h *Handler) isRoomRunning(roomID string) bool {
 		return false
 	}
 
-	return room.IsRunning()
+	return room.IsRunningSessions()
 }
