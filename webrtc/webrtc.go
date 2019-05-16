@@ -92,13 +92,13 @@ type WebRTC struct {
 }
 
 // StartClient start webrtc
-func (w *WebRTC) StartClient(remoteSession string, width, height int) (string, error) {
-	//defer func() {
-	//if err := recover(); err != nil {
-	//log.Println(err)
-	//w.StopClient()
-	//}
-	//}()
+func (w *WebRTC) StartClient(remoteSession string, iceCandidates [][]byte, width, height int) (string, error) {
+	defer func() {
+		if err := recover(); err != nil {
+			log.Println(err)
+			w.StopClient()
+		}
+	}()
 
 	// reset client
 	if w.isConnected {
@@ -195,11 +195,27 @@ func (w *WebRTC) StartClient(remoteSession string, width, height int) (string, e
 		return "", err
 	}
 
+	// Parse candidates list
+	for _, bcandidate := range iceCandidates {
+		iceCandidate := webrtc.ICECandidateInit{}
+		if err := json.Unmarshal(bcandidate, &iceCandidate); err != nil {
+			log.Println("Cannot parse ", bcandidate)
+			continue
+		}
+		w.connection.AddICECandidate(iceCandidate)
+	}
+
 	answer, err := w.connection.CreateAnswer(nil)
 	if err != nil {
 		return "", err
 	}
 
+	err = w.connection.SetLocalDescription(answer)
+	if err != nil {
+		return "", err
+	}
+
+	// Sendback answer from server
 	localSession := Encode(answer)
 	return localSession, nil
 }

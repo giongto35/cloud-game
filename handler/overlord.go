@@ -54,7 +54,7 @@ func (s *Session) RouteOverlord() {
 			log.Println("Start peerconnection from the sdp")
 			peerconnection := webrtc.NewWebRTC()
 			// init new peerconnection from sessionID
-			localSession, err := peerconnection.StartClient(resp.Data, config.Width, config.Height)
+			localSession, err := peerconnection.StartClient(resp.Data, nil, config.Width, config.Height)
 			oclient.peerconnections[resp.SessionID] = peerconnection
 
 			if err != nil {
