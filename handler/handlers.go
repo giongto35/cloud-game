@@ -15,8 +15,8 @@ import (
 )
 
 const (
-	gameboyIndex = "./static/gameboy.html"
-	debugIndex   = "./static/index_ws.html"
+	gameboyIndex = "./static/gameboy2.html"
+	debugIndex   = "./static/gameboy2.html"
 )
 
 // Flag to determine if the server is overlord or not
