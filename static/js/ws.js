@@ -1,7 +1,5 @@
-var pc;
 var curPacketID = "";
 var curSessionID = "";
-var gamelist = [];
 // web socket
 
 conn = new WebSocket(`ws://${location.host}/ws`);
@@ -28,30 +26,28 @@ conn.onmessage = e => {
     switch (d["id"]) {
 
     case "gamelist":
-        files = JSON.parse(d["data"])
+        files = JSON.parse(d["data"]);
         // parse files list to gamelist
-        gamelist = []
+
+        gameList = [];
         files.forEach(file => {
             var file = file
             var name = file.substr(0, file.indexOf('.'));
-            // var image = name + '.png'
-            gamelist.push({file: file, name: name})
-        })
-
-        // Update Game Options 
-        gamelist.forEach(game => {
-          ee = document.createElement("option");
-          ee.value = game.file;
-          ee.innerHTML = game.name;
-          gameOp.append(ee);
+            gameList.push({file: file, name: name});
         });
-        log("Received game list", gamelist)
+        log("Received game list");
+
+        // change screen to menu
+        showMenuScreen();
+
         break;
+
     case "sdp":
         log("Got remote sdp");
         pc.setRemoteDescription(new RTCSessionDescription(JSON.parse(atob(d["data"]))));
         //conn.send(JSON.stringify({"id": "sdpdon", "packet_id": d["packet_id"]}));
         break;
+
     case "requestOffer":
         curPacketID = d["packet_id"];
         log("Received request offer ", curPacketID)
@@ -66,13 +62,12 @@ conn.onmessage = e => {
         //conn.send(JSON.stringify({"id": "remotestart", "data": GAME_LIST[gameIdx].nes, "room_id": roomID.value, "player_index": parseInt(playerIndex.value, 10)}));inputTimer
         //break;
     case "heartbeat":
-        console.log("Ping: ", Date.now() - d["data"])
+        // console.log("Ping: ", Date.now() - d["data"])
         // TODO: Calc time
         break;
     case "start":
         log("Got start");
-        roomID.value = ""
-        currentRoomID.innerText = d["room_id"]
+        $("#room-txt").val(d["room_id"]);
         break;
     case "save":
         log(`Got save response: ${d["data"]}`);
@@ -211,16 +206,14 @@ function startGame() {
     log("Starting game screen");
     screenState = "game";
 
-    conn.send(JSON.stringify({"id": "start", "data": gamelist[gameIdx].file, "room_id": roomID.value, "player_index": parseInt(playerIndex.value, 10)}));
+    // conn.send(JSON.stringify({"id": "start", "data": gameList[gameIdx].file, "room_id": $("#room-txt").val(), "player_index": parseInt(playerIndex.value, 10)}));
+    conn.send(JSON.stringify({"id": "start", "data": gameList[gameIdx].file, "room_id": $("#room-txt").val(), "player_index": 1}));
 
     // clear menu screen
     stopInputTimer();
-    document.getElementById('div').innerHTML = "";
-    if (!DEBUG) {
-        $("#menu-screen").fadeOut(400, function() {
-            $("#game-screen").show();
-        });
-    }
+    $("#menu-screen").fadeOut(DEBUG?0:400, function() {
+        $("#game-screen").show();
+    });
     // end clear
     startInputTimer();
 }
