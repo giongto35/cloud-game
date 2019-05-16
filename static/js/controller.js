@@ -140,6 +140,9 @@ function doButtonUp(name) {
     if (name === "quit") {
         stopInputTimer();
         showMenuScreen();
+        // TODO: Stop game
+        screen = document.getElementById("game-screen");
+        $("#room-txt").val("");
     }
 }
 
