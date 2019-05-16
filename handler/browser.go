@@ -1,13 +1,11 @@
 package handler
 
 import (
-	"encoding/json"
 	"log"
 
 	"github.com/giongto35/cloud-game/config"
 	"github.com/giongto35/cloud-game/cws"
 	"github.com/gorilla/websocket"
-	pionRTC "github.com/pion/webrtc"
 )
 
 type BrowserClient struct {
@@ -16,15 +14,23 @@ type BrowserClient struct {
 
 // RouteBrowser are all routes server received from browser
 func (s *Session) RouteBrowser() {
+	iceCandidates := [][]byte{}
+
 	browserClient := s.BrowserClient
 
 	browserClient.Receive("heartbeat", func(resp cws.WSPacket) cws.WSPacket {
 		return resp
 	})
 
+	browserClient.Receive("icecandidate", func(resp cws.WSPacket) cws.WSPacket {
+		log.Println("Received candidates ", resp.Data)
+		iceCandidates = append(iceCandidates, []byte(resp.Data))
+		return cws.EmptyPacket
+	})
+
 	browserClient.Receive("initwebrtc", func(resp cws.WSPacket) cws.WSPacket {
 		log.Println("Received user SDP")
-		localSession, err := s.peerconnection.StartClient(resp.Data, config.Width, config.Height)
+		localSession, err := s.peerconnection.StartClient(resp.Data, iceCandidates, config.Width, config.Height)
 		if err != nil {
 			if err != nil {
 				log.Println("Error: Cannot create new webrtc session", err)
@@ -134,21 +140,6 @@ func (s *Session) RouteBrowser() {
 
 		return req
 	})
-
-	browserClient.Receive("candidate", func(resp cws.WSPacket) (req cws.WSPacket) {
-		// Unuse code
-		hi := pionRTC.ICECandidateInit{}
-		err := json.Unmarshal([]byte(resp.Data), &hi)
-		if err != nil {
-			log.Println("[!] Cannot parse candidate: ", err)
-		} else {
-			// webRTC.AddCandidate(hi)
-		}
-		req.ID = "candidate"
-
-		return req
-	})
-
 }
 
 // NewOverlordClient returns a client connecting to browser. This connection exchanges information between clients and server
