@@ -18,10 +18,9 @@ type Client struct {
 
 // NewInitClient returns nil of client is not initialized
 func NewInitClient() *Client {
-	projectID := os.Getenv("GCP_PROJECT")
 	bucketName := "game-save"
 
-	client, err := NewClient(projectID, bucketName)
+	client, err := NewClient(bucketName)
 	if err != nil {
 		log.Printf("Warn: Failed to create client: %v", err)
 	} else {
@@ -32,7 +31,7 @@ func NewInitClient() *Client {
 }
 
 // NewClient inits a new Client accessing to GCP
-func NewClient(projectID string, bucketName string) (*Client, error) {
+func NewClient(bucketName string) (*Client, error) {
 	ctx := context.Background()
 
 	// Sets your Google Cloud Platform project ID.
