@@ -3,6 +3,7 @@ package room
 import (
 	"log"
 
+	"github.com/giongto35/cloud-game/config"
 	"github.com/giongto35/cloud-game/emulator"
 	"github.com/giongto35/cloud-game/util"
 	"gopkg.in/hraban/opus.v2"
@@ -32,7 +33,7 @@ func (r *Room) startAudio() {
 			log.Println("Warn: Room ", r.ID, " audio channel closed unexpectedly")
 			return
 		}
-		if r.Done {
+		if !r.IsRunning {
 			log.Println("Room ", r.ID, " audio channel closed")
 			return
 		}
@@ -77,6 +78,8 @@ func (r *Room) startAudio() {
 }
 
 func (r *Room) startVideo() {
+	size := int(float32(config.Width*config.Height) * 1.5)
+	yuv := make([]byte, size, size)
 	// fanout Screen
 	for {
 		image, ok := <-r.imageChannel
@@ -85,13 +88,13 @@ func (r *Room) startVideo() {
 			log.Println("Warn: Room ", r.ID, " video channel closed unexpectedly")
 			return
 		}
-		if r.Done {
+		if !r.IsRunning {
 			log.Println("Room ", r.ID, " video channel closed")
 			return
 		}
 
 		// TODO: Use worker pool for encoding
-		yuv := util.RgbaToYuv(image)
+		util.RgbaToYuvInplace(image, yuv)
 		// TODO: r.rtcSessions is rarely updated. Lock will hold down perf
 		//r.sessionsLock.Lock()
 		for _, webRTC := range r.rtcSessions {
