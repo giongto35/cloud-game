@@ -15,8 +15,8 @@ import (
 )
 
 const (
-	gameboyIndex = "./static/gameboy.html"
-	debugIndex   = "./static/index_ws.html"
+	gameboyIndex = "./static/gameboy2.html"
+	debugIndex   = "./static/gameboy2.html"
 )
 
 // Flag to determine if the server is overlord or not
@@ -112,18 +112,14 @@ func (h *Handler) WS(w http.ResponseWriter, r *http.Request) {
 		Data: gamelist.GetEncodedGameList(h.gamePath),
 	}, nil)
 
-	wssession.BrowserClient.Listen()
-
-	// TODO: Use callback
 	// If peerconnection is done (client.Done is signalled), we close peerconnection
 	go func() {
-		for {
-			<-client.Done
-			h.detachPeerConn(wssession.peerconnection)
-			return
-		}
+		<-client.Done
+		log.Println("Socket terminated, detach connection")
+		h.detachPeerConn(wssession.peerconnection)
 	}()
 
+	wssession.BrowserClient.Listen()
 }
 
 // Detach peerconnection detach/remove a peerconnection from current room
@@ -145,6 +141,11 @@ func (h *Handler) getRoom(roomID string) *room.Room {
 	}
 
 	return room
+}
+
+// detachRoom detach room from Handler
+func (h *Handler) detachRoom(roomID string) {
+	delete(h.rooms, roomID)
 }
 
 // createNewRoom creates a new room
@@ -172,5 +173,5 @@ func (h *Handler) isRoomRunning(roomID string) bool {
 		return false
 	}
 
-	return room.IsRunning()
+	return room.IsRunningSessions()
 }
