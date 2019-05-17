@@ -8,14 +8,9 @@ function fixScreen() {
     width = child.width();
     height = child.height();
 
-    // Should have maximum box for desktop
-    if (["win", "mac", "linux"].indexOf(getOS()) != -1) {
-        targetWidth = Math.min(800, target.width());
-        targetHeight = Math.min(600, target.height());
-    } else {
-        targetWidth = target.width();
-        targetHeight = target.height();
-    }
+    // Should have maximum box for desktop?
+    targetWidth = target.width();
+    targetHeight = target.height();
 
     screenWidth = targetWidth;
     screenHeight = targetHeight;
@@ -43,8 +38,6 @@ fixScreen();
 
 $(window).on("resize", fixScreen);
 $(window).on("orientationchange", fixScreen);
-
-
 
 
 // Virtual Joystick
