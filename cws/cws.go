@@ -68,6 +68,12 @@ func (c *Client) Send(request WSPacket, callback func(response WSPacket)) {
 	// Wrap callback with sessionID and packetID
 	if callback != nil {
 		wrapperCallback := func(resp WSPacket) {
+			defer func() {
+				if err := recover(); err != nil {
+					log.Println("Recovered from err", err)
+				}
+			}()
+
 			resp.PacketID = request.PacketID
 			resp.SessionID = request.SessionID
 			callback(resp)
@@ -76,8 +82,6 @@ func (c *Client) Send(request WSPacket, callback func(response WSPacket)) {
 		c.sendCallback[request.PacketID] = wrapperCallback
 		c.sendCallbackLock.Unlock()
 	}
-	//log.Println("Registered requested callback", "ID :", request.ID, "PacketID: ", request.PacketID)
-	//log.Println("Callback waiting list:", c.id, c.sendCallback)
 
 	c.sendLock.Lock()
 	c.conn.WriteMessage(websocket.TextMessage, data)
@@ -87,11 +91,16 @@ func (c *Client) Send(request WSPacket, callback func(response WSPacket)) {
 // Receive receive and response back
 func (c *Client) Receive(id string, f func(response WSPacket) (request WSPacket)) {
 	c.recvCallback[id] = func(response WSPacket) {
+		defer func() {
+			if err := recover(); err != nil {
+				log.Println("Recovered from err", err)
+			}
+		}()
+
 		req := f(response)
 		// Add Meta data
 		req.PacketID = response.PacketID
 		req.SessionID = response.SessionID
-		//log.Println("Sending back request", req, "PacketID: ", req.PacketID, "SessionID: ", req.SessionID)
 
 		// Skip rqeuest if it is EmptyPacket
 		if req == EmptyPacket {

@@ -156,8 +156,6 @@ function startWebRTC() {
     }
 
 
-    // 
-
     pc.oniceconnectionstatechange = e => {
         log(`iceConnectionState: ${pc.iceConnectionState}`);
 

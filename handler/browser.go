@@ -85,6 +85,20 @@ func (s *Session) RouteBrowser() {
 		return req
 	})
 
+	browserClient.Receive("quit", func(resp cws.WSPacket) (req cws.WSPacket) {
+		log.Println("Received quit", req)
+		s.GameName = resp.Data
+		s.RoomID = resp.RoomID
+		s.PlayerIndex = resp.PlayerIndex
+
+		room := s.handler.getRoom(s.RoomID)
+		if room.IsPCInRoom(s.peerconnection) {
+			s.handler.detachPeerConn(s.peerconnection)
+		}
+
+		return cws.EmptyPacket
+	})
+
 	browserClient.Receive("start", func(resp cws.WSPacket) (req cws.WSPacket) {
 		s.GameName = resp.Data
 		s.RoomID = resp.RoomID
