@@ -176,6 +176,9 @@ func (r *Room) removeSession(w *webrtc.WebRTC) {
 
 // TODO: Reuse for remove Session
 func (r *Room) IsPCInRoom(w *webrtc.WebRTC) bool {
+	if r == nil {
+		return false
+	}
 	for _, s := range r.rtcSessions {
 		if s.ID == w.ID {
 			return true

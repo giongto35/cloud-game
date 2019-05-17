@@ -142,6 +142,8 @@ function doButtonUp(name) {
         showMenuScreen();
         // TODO: Stop game
         screen = document.getElementById("game-screen");
+        room_id = $("#room-txt").val()
+        conn.send(JSON.stringify({ "id": "quit", "data": "", "room_id": room_id}));
         $("#room-txt").val("");
     }
 }
