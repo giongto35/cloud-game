@@ -1,13 +1,11 @@
-package handler
+package worker
 
 import (
-	"io/ioutil"
 	"log"
-	"net/http"
 
-	storage "github.com/giongto35/cloud-game/handler/cloud-storage"
-	"github.com/giongto35/cloud-game/handler/room"
 	"github.com/giongto35/cloud-game/webrtc"
+	storage "github.com/giongto35/cloud-game/worker/cloud-storage"
+	"github.com/giongto35/cloud-game/worker/room"
 	"github.com/gorilla/websocket"
 )
 
@@ -26,13 +24,8 @@ type Handler struct {
 	rooms map[string]*room.Room
 	// ID of the current server globalwise
 	serverID string
-	// isDebug determines the mode handler is running
-	//isDebug bool
 	// Path to game list
 	gamePath string
-	// All webrtc peerconnections are handled by the server
-	// ID -> peerconnections
-	peerconnections map[string]*webrtc.WebRTC
 	// onlineStorage is client accessing to online storage (GCP)
 	onlineStorage *storage.Client
 	// sessions handles all sessions server is handler (key is sessionID)
@@ -42,21 +35,18 @@ type Handler struct {
 // NewHandler returns a new server
 func NewHandler(overlordConn *websocket.Conn, isDebug bool, gamePath string) *Handler {
 	onlineStorage := storage.NewInitClient()
-
 	oClient := NewOverlordClient(overlordConn)
+
 	return &Handler{
-		oClient:         oClient,
-		rooms:           map[string]*room.Room{},
-		peerconnections: map[string]*webrtc.WebRTC{},
-
-		sessions: map[string]*Session{},
-		//isDebug:  isDebug,
-		gamePath: gamePath,
-
+		oClient:       oClient,
+		rooms:         map[string]*room.Room{},
+		sessions:      map[string]*Session{},
+		gamePath:      gamePath,
 		onlineStorage: onlineStorage,
 	}
 }
 
+// Run starts a Handler running logic
 func (h *Handler) Run() {
 	go h.oClient.Heartbeat()
 
@@ -64,23 +54,7 @@ func (h *Handler) Run() {
 	h.oClient.Listen()
 }
 
-// GetWeb returns web frontend
-func (h *Handler) GetWeb(w http.ResponseWriter, r *http.Request) {
-	indexFN := ""
-	//if h.isDebug {
-	//indexFN = debugIndex
-	//} else {
-	indexFN = gameboyIndex
-	//}
-
-	bs, err := ioutil.ReadFile(indexFN)
-	if err != nil {
-		log.Fatal(err)
-	}
-	w.Write(bs)
-}
-
-// Detach peerconnection detach/remove a peerconnection from current room
+// detachPeerConn detach/remove a peerconnection from current room
 func (h *Handler) detachPeerConn(pc *webrtc.WebRTC) {
 	log.Println("Detach peerconnection")
 	roomID := pc.RoomID

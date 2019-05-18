@@ -11,8 +11,8 @@ import (
 	"time"
 
 	"github.com/giongto35/cloud-game/config"
-	"github.com/giongto35/cloud-game/handler"
 	"github.com/giongto35/cloud-game/overlord"
+	"github.com/giongto35/cloud-game/worker"
 	"github.com/gorilla/websocket"
 )
 
@@ -60,7 +60,7 @@ func initializeWorker() {
 		log.Println("Run as a single server")
 	}
 
-	handler := handler.NewHandler(conn, *config.IsDebug, gamePath)
+	handler := worker.NewHandler(conn, *config.IsDebug, gamePath)
 
 	handler.Run()
 

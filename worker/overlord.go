@@ -1,12 +1,12 @@
-package handler
+package worker
 
 import (
 	"log"
 
 	"github.com/giongto35/cloud-game/config"
 	"github.com/giongto35/cloud-game/cws"
-	"github.com/giongto35/cloud-game/handler/room"
 	"github.com/giongto35/cloud-game/webrtc"
+	"github.com/giongto35/cloud-game/worker/room"
 	"github.com/gorilla/websocket"
 )
 

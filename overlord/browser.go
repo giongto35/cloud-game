@@ -11,7 +11,7 @@ type BrowserClient struct {
 	*cws.Client
 }
 
-// RouteBrowser are all routes server received from browser
+// RouteBrowser are all routes server accepts for browser
 func (s *Session) RouteBrowser() {
 	iceCandidates := [][]byte{}
 
@@ -23,6 +23,7 @@ func (s *Session) RouteBrowser() {
 
 	browserClient.Receive("icecandidate", func(resp cws.WSPacket) cws.WSPacket {
 		log.Println("Received candidates ", resp.Data)
+
 		iceCandidates = append(iceCandidates, []byte(resp.Data))
 		return cws.EmptyPacket
 	})
@@ -30,6 +31,7 @@ func (s *Session) RouteBrowser() {
 	browserClient.Receive("initwebrtc", func(resp cws.WSPacket) cws.WSPacket {
 		log.Println("Overlord: Received a sdp request from a browser")
 		log.Println("Overlord: Relay sdp request from a browser to worker")
+
 		// relay SDP to target worker and get back SDP of the worker
 		// TODO: Async
 		log.Println("Overlord: serverID: ", s.ServerID)
@@ -42,16 +44,9 @@ func (s *Session) RouteBrowser() {
 
 	browserClient.Receive("quit", func(resp cws.WSPacket) (req cws.WSPacket) {
 		log.Println("Overlord: Received a relay quit request from a browser")
-		//s.GameName = resp.Data
-		//s.RoomID = resp.RoomID
-		//s.PlayerIndex = resp.PlayerIndex
+		log.Println("Overlord: Relay quit request from a browser to worker")
 
-		//room := s.handler.getRoom(s.RoomID)
-		//if room.IsPCInRoom(s.peerconnection) {
-		//s.handler.detachPeerConn(s.peerconnection)
-		//}
-		log.Println("Sending to target host", s.ServerID, " ", resp)
-
+		// TODO: Async
 		resp = s.handler.servers[s.ServerID].SyncSend(
 			resp,
 		)
@@ -61,10 +56,7 @@ func (s *Session) RouteBrowser() {
 
 	browserClient.Receive("start", func(resp cws.WSPacket) cws.WSPacket {
 		log.Println("Overlord: Received a relay start request from a browser")
-		// TODO: Abstract
-		// TODO: if resp.TargetHostID != ""c:w {
-		// relay start to target host
-		log.Println("Sending to target host", s.ServerID, " ", resp)
+		log.Println("Overlord: Relay start request from a browser to worker")
 		// TODO: Async
 		resp = s.handler.servers[s.ServerID].SyncSend(
 			resp,
@@ -72,23 +64,6 @@ func (s *Session) RouteBrowser() {
 
 		return resp
 	})
-
-	//browserClient.Receive("initwebrtc", func(resp cws.WSPacket) cws.WSPacket {
-	//log.Println("Received user SDP")
-	//localSession, err := s.peerconnection.StartClient(resp.Data, iceCandidates, config.Width, config.Height)
-	//if err != nil {
-	//if err != nil {
-	//log.Println("Error: Cannot create new webrtc session", err)
-	//return cws.EmptyPacket
-	//}
-	//}
-
-	//return cws.WSPacket{
-	//ID:        "sdp",
-	//Data:      localSession,
-	//SessionID: s.ID,
-	//}
-	//})
 
 	// TODO: Add save and load
 	//browserClient.Receive("save", func(resp cws.WSPacket) (req cws.WSPacket) {

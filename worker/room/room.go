@@ -10,8 +10,8 @@ import (
 	"sync"
 
 	emulator "github.com/giongto35/cloud-game/emulator"
-	storage "github.com/giongto35/cloud-game/handler/cloud-storage"
 	"github.com/giongto35/cloud-game/webrtc"
+	storage "github.com/giongto35/cloud-game/worker/cloud-storage"
 )
 
 // Room is a game session. multi webRTC sessions can connect to a same game.
