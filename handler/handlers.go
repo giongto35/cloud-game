@@ -35,6 +35,8 @@ type Handler struct {
 	peerconnections map[string]*webrtc.WebRTC
 	// onlineStorage is client accessing to online storage (GCP)
 	onlineStorage *storage.Client
+	// sessions handles all sessions server is handler (key is sessionID)
+	sessions map[string]*Session
 }
 
 // NewHandler returns a new server
@@ -47,6 +49,7 @@ func NewHandler(overlordConn *websocket.Conn, isDebug bool, gamePath string) *Ha
 		rooms:           map[string]*room.Room{},
 		peerconnections: map[string]*webrtc.WebRTC{},
 
+		sessions: map[string]*Session{},
 		//isDebug:  isDebug,
 		gamePath: gamePath,
 

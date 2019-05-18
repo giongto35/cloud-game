@@ -41,18 +41,18 @@ func (s *Session) RouteBrowser() {
 	})
 
 	browserClient.Receive("quit", func(resp cws.WSPacket) (req cws.WSPacket) {
-		log.Println("Received quit", req)
-		s.GameName = resp.Data
-		s.RoomID = resp.RoomID
-		s.PlayerIndex = resp.PlayerIndex
+		log.Println("Overlord: Received a relay quit request from a browser")
+		//s.GameName = resp.Data
+		//s.RoomID = resp.RoomID
+		//s.PlayerIndex = resp.PlayerIndex
 
-		// TODO:
 		//room := s.handler.getRoom(s.RoomID)
 		//if room.IsPCInRoom(s.peerconnection) {
 		//s.handler.detachPeerConn(s.peerconnection)
 		//}
-		log.Println("Sending to target host", resp.TargetHostID, " ", resp)
-		resp = s.handler.servers[resp.TargetHostID].SyncSend(
+		log.Println("Sending to target host", s.ServerID, " ", resp)
+
+		resp = s.handler.servers[s.ServerID].SyncSend(
 			resp,
 		)
 
@@ -60,11 +60,11 @@ func (s *Session) RouteBrowser() {
 	})
 
 	browserClient.Receive("start", func(resp cws.WSPacket) cws.WSPacket {
-		log.Println("Overlord: Received a relay start request from a host")
+		log.Println("Overlord: Received a relay start request from a browser")
 		// TODO: Abstract
 		// TODO: if resp.TargetHostID != ""c:w {
 		// relay start to target host
-		log.Println("Sending to target host", resp.TargetHostID, " ", resp)
+		log.Println("Sending to target host", s.ServerID, " ", resp)
 		// TODO: Async
 		resp = s.handler.servers[s.ServerID].SyncSend(
 			resp,
