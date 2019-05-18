@@ -35,40 +35,24 @@ func (s *Session) RouteWorker() {
 		return cws.EmptyPacket
 	})
 
-	workerClient.Receive("quit", func(resp cws.WSPacket) (req cws.WSPacket) {
-		log.Println("Received quit", req)
-		s.GameName = resp.Data
-		s.RoomID = resp.RoomID
-		s.PlayerIndex = resp.PlayerIndex
+	//workerClient.Receive("quit", func(resp cws.WSPacket) (req cws.WSPacket) {
+	//log.Println("Overlord: Received quit request from a worker")
+	//log.Println("Overlord: Sending back sdp to browser")
+	//s.GameName = resp.Data
+	//s.RoomID = resp.RoomID
+	//s.PlayerIndex = resp.PlayerIndex
 
-		// TODO:
-		//room := s.handler.getRoom(s.RoomID)
-		//if room.IsPCInRoom(s.peerconnection) {
-		//s.handler.detachPeerConn(s.peerconnection)
-		//}
-		log.Println("Sending to target host", resp.TargetHostID, " ", resp)
-		resp = s.handler.servers[resp.TargetHostID].SyncSend(
-			resp,
-		)
+	//// TODO:
+	////room := s.handler.getRoom(s.RoomID)
+	////if room.IsPCInRoom(s.peerconnection) {
+	////s.handler.detachPeerConn(s.peerconnection)
+	////}
+	//log.Println("Sending to target host", resp.TargetHostID, " ", resp)
+	//resp = s.handler.servers[resp.TargetHostID].SyncSend(
+	//resp,
+	//)
 
-		return cws.EmptyPacket
-	})
-
-	//browserClient.Receive("initwebrtc", func(resp cws.WSPacket) cws.WSPacket {
-	//log.Println("Received user SDP")
-	//localSession, err := s.peerconnection.StartClient(resp.Data, iceCandidates, config.Width, config.Height)
-	//if err != nil {
-	//if err != nil {
-	//log.Println("Error: Cannot create new webrtc session", err)
 	//return cws.EmptyPacket
-	//}
-	//}
-
-	//return cws.WSPacket{
-	//ID:        "sdp",
-	//Data:      localSession,
-	//SessionID: s.ID,
-	//}
 	//})
 
 	// TODO: Add save and load

@@ -1,4 +1,4 @@
-package handler
+package worker
 
 import "github.com/giongto35/cloud-game/webrtc"
 
@@ -7,16 +7,9 @@ import "github.com/giongto35/cloud-game/webrtc"
 // connection to browser is 1-1. connection to overlord is n - 1
 // Peerconnection can be from other server to ensure better latency
 type Session struct {
-	ID string
-	//BrowserClient *BrowserClient
-	//OverlordClient *OverlordClient
+	ID             string
 	peerconnection *webrtc.WebRTC
 
-	// TODO: Decouple this
-	//handler *Handler
-
-	//ServerID    string
-	//GameName    string
+	// Should I make direct reference
 	RoomID string
-	//PlayerIndex int
 }
