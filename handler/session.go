@@ -9,14 +9,14 @@ import "github.com/giongto35/cloud-game/webrtc"
 type Session struct {
 	ID string
 	//BrowserClient *BrowserClient
-	OverlordClient *OverlordClient
+	//OverlordClient *OverlordClient
 	peerconnection *webrtc.WebRTC
 
 	// TODO: Decouple this
-	handler *Handler
+	//handler *Handler
 
-	ServerID    string
-	GameName    string
-	RoomID      string
-	PlayerIndex int
+	//ServerID    string
+	//GameName    string
+	RoomID string
+	//PlayerIndex int
 }
