@@ -16,11 +16,7 @@ import (
 	"github.com/gorilla/websocket"
 )
 
-const (
-	gameboyIndex = "./static/gameboy2.html"
-	debugIndex   = "./static/gameboy2.html"
-	gamePath     = "games"
-)
+const gamePath = "games"
 
 // Time allowed to write a message to the peer.
 var upgrader = websocket.Upgrader{}
@@ -40,13 +36,24 @@ func initilizeOverlord() {
 
 	log.Println("http://localhost:9000")
 
-	// Can consider Overlord works as server but it is complicated
+	http.HandleFunc("/", overlord.GetWeb)
+	http.Handle("/static/", http.StripPrefix("/static/", http.FileServer(http.Dir("./static"))))
+
+	// browser facing port
+	go func() {
+		http.HandleFunc("/ws", overlord.WS)
+		http.ListenAndServe(":8000", nil)
+	}()
+
+	// worker facing port
 	http.HandleFunc("/wso", overlord.WSO)
 	http.ListenAndServe(":9000", nil)
+
+	log.Println("http://localhost:" + *config.Port)
 }
 
-// initializeServer setup a server
-func initializeServer() {
+// initializeWorker setup a worker
+func initializeWorker() {
 	conn, err := createOverlordConnection()
 	if err != nil {
 		log.Println("Cannot connect to overlord")
@@ -55,15 +62,13 @@ func initializeServer() {
 
 	handler := handler.NewHandler(conn, *config.IsDebug, gamePath)
 
+	handler.Run()
+
 	// ignore origin
-	upgrader.CheckOrigin = func(r *http.Request) bool { return true }
+	//upgrader.CheckOrigin = func(r *http.Request) bool { return true }
 
-	http.HandleFunc("/", handler.GetWeb)
-	http.Handle("/static/", http.StripPrefix("/static/", http.FileServer(http.Dir("./static"))))
-	http.HandleFunc("/ws", handler.WS)
-
-	log.Println("http://localhost:" + *config.Port)
-	http.ListenAndServe(":"+*config.Port, nil)
+	//http.ListenAndServe(":"+*config.Port, nil)
+	//log.Println("http://localhost:" + *config.Port)
 }
 
 func monitor() {
@@ -75,7 +80,6 @@ func monitor() {
 
 func main() {
 	flag.Parse()
-	log.Println("Usage: ./game [-debug]")
 
 	rand.Seed(time.Now().UTC().UnixNano())
 
@@ -92,7 +96,7 @@ func main() {
 		if strings.HasPrefix(*config.OverlordHost, "ws") && !strings.HasSuffix(*config.OverlordHost, "wso") {
 			log.Fatal("Overlord connection is invalid. Should have the form `ws://.../wso`")
 		}
-		log.Println("Running as slave ")
-		initializeServer()
+		log.Println("Running as worker ")
+		initializeWorker()
 	}
 }
