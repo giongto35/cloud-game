@@ -68,11 +68,11 @@ func (c *Client) Send(request WSPacket, callback func(response WSPacket)) {
 	// Wrap callback with sessionID and packetID
 	if callback != nil {
 		wrapperCallback := func(resp WSPacket) {
-			defer func() {
-				if err := recover(); err != nil {
-					log.Println("Recovered from err", err)
-				}
-			}()
+			//defer func() {
+			//if err := recover(); err != nil {
+			//log.Println("Recovered from err", err)
+			//}
+			//}()
 
 			resp.PacketID = request.PacketID
 			resp.SessionID = request.SessionID
@@ -91,11 +91,11 @@ func (c *Client) Send(request WSPacket, callback func(response WSPacket)) {
 // Receive receive and response back
 func (c *Client) Receive(id string, f func(response WSPacket) (request WSPacket)) {
 	c.recvCallback[id] = func(response WSPacket) {
-		defer func() {
-			if err := recover(); err != nil {
-				log.Println("Recovered from err", err)
-			}
-		}()
+		//defer func() {
+		//if err := recover(); err != nil {
+		//log.Println("Recovered from err", err)
+		//}
+		//}()
 
 		req := f(response)
 		// Add Meta data

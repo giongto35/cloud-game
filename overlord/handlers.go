@@ -1,14 +1,24 @@
 package overlord
 
 import (
+	"errors"
 	"fmt"
+	"io/ioutil"
 	"log"
 	"math/rand"
 	"net/http"
 	"strconv"
 
 	"github.com/giongto35/cloud-game/cws"
+	"github.com/giongto35/cloud-game/overlord/gamelist"
 	"github.com/gorilla/websocket"
+	uuid "github.com/satori/go.uuid"
+)
+
+const (
+	gameboyIndex = "./static/gameboy2.html"
+	debugIndex   = "./static/gameboy2.html"
+	gamePath     = "games"
 )
 
 type Server struct {
@@ -18,6 +28,7 @@ type Server struct {
 }
 
 var upgrader = websocket.Upgrader{}
+var errNotFound = errors.New("Not found")
 
 func NewServer() *Server {
 	return &Server{
@@ -26,6 +37,22 @@ func NewServer() *Server {
 		// Mapping roomID to server
 		roomToServer: map[string]string{},
 	}
+}
+
+// GetWeb returns web frontend
+func (o *Server) GetWeb(w http.ResponseWriter, r *http.Request) {
+	indexFN := ""
+	//if h.isDebug {
+	//indexFN = debugIndex
+	//} else {
+	indexFN = gameboyIndex
+	//}
+
+	bs, err := ioutil.ReadFile(indexFN)
+	if err != nil {
+		log.Fatal(err)
+	}
+	w.Write(bs)
 }
 
 // If it's overlord, handle overlord connection (from host to overlord)
@@ -73,70 +100,66 @@ func (o *Server) WSO(w http.ResponseWriter, r *http.Request) {
 			Data: o.roomToServer[resp.Data],
 		}
 	})
-
-	// Relay message from server to other target server
-	// TODO: Generalize
-	client.Receive("initwebrtc", func(resp cws.WSPacket) cws.WSPacket {
-		log.Println("Overlord: Received a relay sdp request from a host")
-		// TODO: Abstract
-		if resp.TargetHostID != serverID {
-			log.Println("Overlord: Sending relay sdp to target host")
-			// relay SDP to target host and get back sdp
-			// TODO: Async
-			sdp := o.servers[resp.TargetHostID].SyncSend(
-				resp,
-			)
-
-			return sdp
-		}
-		log.Println("Overlord: Target host is overlord itself: start peerconnection")
-		// If the target is in master
-		// start by its old
-		//localSession, err := wssession.peerconnection.StartClient(resp.Data, width, height)
-		//if err != nil {
-		//log.Fatalln(err)
-		//}
-
-		//return cws.WSPacket{
-		//ID:   "sdp",
-		//Data: localSession,
-		//}
-		return cws.EmptyPacket
-	})
-
-	// TODO: use relay ID type
-	// TODO: Merge sdp and start
-	client.Receive("start", func(resp cws.WSPacket) cws.WSPacket {
-		log.Println("Overlord: Received a relay start request from a host")
-		// TODO: Abstract
-		if resp.TargetHostID != serverID {
-			// relay start to target host
-			log.Println("Sending to target host", resp.TargetHostID, " ", resp)
-			// TODO: Async
-			resp := o.servers[resp.TargetHostID].SyncSend(
-				resp,
-			)
-
-			return resp
-		}
-		log.Println("Overlord: Target host is overlord itself: start game")
-		//// If the target is in master
-		//// start by its old
-		//roomID, isNewRoom := startSession(wssession.peerconnection, resp.Data, resp.RoomID, resp.PlayerIndex)
-		//// Bridge always access to old room
-		//// TODO: log warn
-		//if isNewRoom == true {
-		//log.Fatal("Bridge should not spawn new room")
-		//}
-
-		//return cws.WSPacket{
-		//ID:     "start",
-		//RoomID: roomID,
-		//}
-		return cws.EmptyPacket
-	})
-
 	client.Listen()
+}
+
+func (o *Server) WS(w http.ResponseWriter, r *http.Request) {
+	log.Println("Browser connected to overlord")
+	//TODO: Add it back
+	//defer func() {
+	//if r := recover(); r != nil {
+	//log.Println("Warn: Something wrong. Recovered in ", r)
+	//}
+	//}()
+
+	c, err := upgrader.Upgrade(w, r, nil)
+	if err != nil {
+		log.Print("[!] WS upgrade:", err)
+		return
+	}
+	defer c.Close()
+
+	client := NewBrowserClient(c)
+	sessionID := uuid.Must(uuid.NewV4()).String()
+	serverID, err := o.findBestServer()
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	wssession := &Session{
+		ID:            sessionID,
+		BrowserClient: client,
+		handler:       o,
+		ServerID:      serverID,
+	}
+	//defer wssession.Close()
+	log.Println("New client will conect to server", wssession.ServerID)
+
+	wssession.RouteBrowser()
+
+	wssession.BrowserClient.Send(cws.WSPacket{
+		ID:   "gamelist",
+		Data: gamelist.GetEncodedGameList(gamePath),
+	}, nil)
+
+	wssession.BrowserClient.Listen()
+}
+
+func (o *Server) findBestServer() (string, error) {
+	// TODO: Find best Server by latency, currently return by ping
+	if len(o.servers) == 0 {
+		return "", errors.New("No server found")
+	}
+
+	r := rand.Intn(len(o.servers))
+	for k, _ := range o.servers {
+		if r == 0 {
+			return k, nil
+		}
+		r--
+	}
+
+	return "", errors.New("No server found")
 }
 
 func (o *Server) cleanConnection(client *cws.Client, serverID string) {

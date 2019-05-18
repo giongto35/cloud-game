@@ -5,13 +5,10 @@ import (
 	"log"
 	"net/http"
 
-	"github.com/giongto35/cloud-game/cws"
 	storage "github.com/giongto35/cloud-game/handler/cloud-storage"
-	"github.com/giongto35/cloud-game/handler/gamelist"
 	"github.com/giongto35/cloud-game/handler/room"
 	"github.com/giongto35/cloud-game/webrtc"
 	"github.com/gorilla/websocket"
-	uuid "github.com/satori/go.uuid"
 )
 
 const (
@@ -30,7 +27,7 @@ type Handler struct {
 	// ID of the current server globalwise
 	serverID string
 	// isDebug determines the mode handler is running
-	isDebug bool
+	//isDebug bool
 	// Path to game list
 	gamePath string
 	// All webrtc peerconnections are handled by the server
@@ -44,82 +41,40 @@ type Handler struct {
 func NewHandler(overlordConn *websocket.Conn, isDebug bool, gamePath string) *Handler {
 	onlineStorage := storage.NewInitClient()
 
+	oClient := NewOverlordClient(overlordConn)
 	return &Handler{
-		oClient:         NewOverlordClient(overlordConn),
+		oClient:         oClient,
 		rooms:           map[string]*room.Room{},
 		peerconnections: map[string]*webrtc.WebRTC{},
 
-		isDebug:  isDebug,
+		//isDebug:  isDebug,
 		gamePath: gamePath,
 
 		onlineStorage: onlineStorage,
 	}
 }
 
+func (h *Handler) Run() {
+	go h.oClient.Heartbeat()
+
+	h.RouteOverlord()
+	h.oClient.Listen()
+}
+
 // GetWeb returns web frontend
 func (h *Handler) GetWeb(w http.ResponseWriter, r *http.Request) {
 	indexFN := ""
-	if h.isDebug {
-		indexFN = debugIndex
-	} else {
-		indexFN = gameboyIndex
-	}
+	//if h.isDebug {
+	//indexFN = debugIndex
+	//} else {
+	indexFN = gameboyIndex
+	//}
 
 	bs, err := ioutil.ReadFile(indexFN)
 	if err != nil {
 		log.Fatal(err)
 	}
 	w.Write(bs)
-}
-
-// WS handles normal traffic (from browser to host)
-func (h *Handler) WS(w http.ResponseWriter, r *http.Request) {
-	defer func() {
-		if r := recover(); r != nil {
-			log.Println("Warn: Something wrong. Recovered in f", r)
-		}
-	}()
-
-	c, err := upgrader.Upgrade(w, r, nil)
-	if err != nil {
-		log.Print("[!] WS upgrade:", err)
-		return
-	}
-	defer c.Close()
-
-	client := NewBrowserClient(c)
-	sessionID := uuid.Must(uuid.NewV4()).String()
-	wssession := &Session{
-		ID:             sessionID,
-		BrowserClient:  client,
-		OverlordClient: h.oClient,
-		peerconnection: webrtc.NewWebRTC(),
-		handler:        h,
-	}
-	defer wssession.Close()
-
-	if wssession.OverlordClient != nil {
-		wssession.RouteOverlord()
-		go wssession.OverlordClient.Heartbeat()
-		go wssession.OverlordClient.Listen()
-	}
-
-	wssession.RouteBrowser()
-	log.Println("oclient : ", h.oClient)
-
-	wssession.BrowserClient.Send(cws.WSPacket{
-		ID:   "gamelist",
-		Data: gamelist.GetEncodedGameList(h.gamePath),
-	}, nil)
-
-	// If peerconnection is done (client.Done is signalled), we close peerconnection
-	go func() {
-		<-client.Done
-		log.Println("Socket terminated, detach connection")
-		h.detachPeerConn(wssession.peerconnection)
-	}()
-
-	wssession.BrowserClient.Listen()
 }
 
 // Detach peerconnection detach/remove a peerconnection from current room
