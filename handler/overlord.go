@@ -5,6 +5,7 @@ import (
 
 	"github.com/giongto35/cloud-game/config"
 	"github.com/giongto35/cloud-game/cws"
+	"github.com/giongto35/cloud-game/handler/room"
 	"github.com/giongto35/cloud-game/webrtc"
 	"github.com/gorilla/websocket"
 )
@@ -50,14 +51,18 @@ func (h *Handler) RouteOverlord() {
 			log.Println("Received relay SDP of a browser from overlord")
 			peerconnection := webrtc.NewWebRTC()
 			localSession, err := peerconnection.StartClient(resp.Data, iceCandidates, config.Width, config.Height)
-			h.peerconnections[resp.SessionID] = peerconnection
+			//h.peerconnections[resp.SessionID] = peerconnection
+
+			// Create new sessions when we have new peerconnection initialized
+			session := &Session{
+				peerconnection: peerconnection,
+			}
+			h.sessions[resp.SessionID] = session
 
 			log.Println("Start peerconnection")
 			if err != nil {
-				if err != nil {
-					log.Println("Error: Cannot create new webrtc session", err)
-					return cws.EmptyPacket
-				}
+				log.Println("Error: Cannot create new webrtc session", err)
+				return cws.EmptyPacket
 			}
 
 			return cws.WSPacket{
@@ -68,48 +73,41 @@ func (h *Handler) RouteOverlord() {
 		},
 	)
 
-	// Received start from overlord. This happens when bridging
-	// TODO: refactor
-	//oclient.Receive(
-	//"start",
-	//func(resp cws.WSPacket) (req cws.WSPacket) {
-	//log.Println("Received a start request from overlord")
-	//log.Println("Add the connection to current room on the host ", resp.SessionID)
-
-	//peerconnection := oclient.peerconnections[resp.SessionID]
-	//log.Println("start session")
-
-	////room := s.handler.createNewRoom(s.GameName, s.RoomID, s.PlayerIndex)
-	//// Request room from Server if roomID is existed on the server
-	//room := s.handler.getRoom(s.RoomID)
-	//if room == nil {
-	//log.Println("Room not found ", s.RoomID)
-	//return cws.EmptyPacket
-	//}
-	//s.handler.detachPeerConn(s.peerconnection)
-	//room.AddConnectionToRoom(peerconnection, s.PlayerIndex)
-	////roomID, isNewRoom := startSession(peerconnection, resp.Data, resp.RoomID, resp.PlayerIndex)
-	//log.Println("Done, sending back")
-
-	//req.ID = "start"
-	//req.RoomID = room.ID
-	//return req
-	//},
-	//)
-
 	oclient.Receive(
 		"start",
 		func(resp cws.WSPacket) (req cws.WSPacket) {
 			log.Println("Received a start request from overlord")
-			log.Println("Add the connection to current room on the host ", resp.SessionID)
-			peerconnection := h.peerconnections[resp.SessionID]
-			roomID := h.startGameHandler(resp.Data, resp.RoomID, resp.PlayerIndex, peerconnection)
+			session := h.sessions[resp.SessionID]
+
+			peerconnection := session.peerconnection
+			room := h.startGameHandler(resp.Data, resp.RoomID, resp.PlayerIndex, peerconnection)
+			session.RoomID = room.ID
+			// TODO: can data race
+			h.rooms[room.ID] = room
+
 			return cws.WSPacket{
 				ID:     "start",
-				RoomID: roomID,
+				RoomID: room.ID,
 			}
 		},
 	)
+
+	oclient.Receive(
+		"quit",
+		func(resp cws.WSPacket) (req cws.WSPacket) {
+			log.Println("Received a quit request from overlord")
+			session := h.sessions[resp.SessionID]
+
+			room := h.getRoom(session.RoomID)
+			// Defensive coding, check if the peerconnection is in room
+			if room.IsPCInRoom(session.peerconnection) {
+				h.detachPeerConn(session.peerconnection)
+			}
+
+			return cws.EmptyPacket
+		},
+	)
+
 	// heartbeat to keep pinging overlord. We not ping from server to browser, so we don't call heartbeat in browserClient
 }
 
@@ -126,11 +124,7 @@ func getServerIDOfRoom(oc *OverlordClient, roomID string) string {
 	return packet.Data
 }
 
-func (h *Handler) startGameHandler(gameName, roomID string, playerIndex int, peerconnection *webrtc.WebRTC) string {
-	//s.GameName = gameName
-	//s.RoomID = roomID
-	//s.PlayerIndex = playerIndex
-
+func (h *Handler) startGameHandler(gameName, roomID string, playerIndex int, peerconnection *webrtc.WebRTC) *room.Room {
 	log.Println("Starting game")
 	// If we are connecting to overlord, request corresponding serverID based on roomID
 	// TODO: check if roomID is in the current server
@@ -162,38 +156,5 @@ func (h *Handler) startGameHandler(gameName, roomID string, playerIndex int, pee
 		}, nil)
 	}
 
-	return room.ID
+	return room
 }
-
-//func (s *Session) bridgeConnection(serverID string, gameName string, roomID string, playerIndex int) {
-//log.Println("Bridging connection to other Host ", serverID)
-//client := s.BrowserClient
-//// Ask client to init
-
-//log.Println("Requesting offer to browser", serverID)
-//resp := client.SyncSend(cws.WSPacket{
-//ID:   "requestOffer",
-//Data: "",
-//})
-
-//// Ask overlord to relay SDP packet to serverID
-//resp.TargetHostID = serverID
-//log.Println("Sending offer to overlord to relay message to target host", resp.TargetHostID, "with payload")
-//remoteTargetSDP := s.OverlordClient.SyncSend(resp)
-//log.Println("Got back remote host SDP, sending to browser")
-//// Send back remote SDP of remote server to browser
-//s.BrowserClient.Send(cws.WSPacket{
-//ID:   "sdp",
-//Data: remoteTargetSDP.Data,
-//}, nil)
-//log.Println("Init session done, start game on target host")
-
-//s.OverlordClient.SyncSend(cws.WSPacket{
-//ID:           "start",
-//Data:         gameName,
-//TargetHostID: serverID,
-//RoomID:       roomID,
-//PlayerIndex:  playerIndex,
-//})
-//log.Println("Game is started on remote host")
-//}
