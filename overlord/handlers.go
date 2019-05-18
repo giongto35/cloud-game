@@ -7,7 +7,6 @@ import (
 	"log"
 	"math/rand"
 	"net/http"
-	"strconv"
 
 	"github.com/giongto35/cloud-game/cws"
 	"github.com/giongto35/cloud-game/overlord/gamelist"
@@ -41,12 +40,7 @@ func NewServer() *Server {
 
 // GetWeb returns web frontend
 func (o *Server) GetWeb(w http.ResponseWriter, r *http.Request) {
-	indexFN := ""
-	//if h.isDebug {
-	//indexFN = debugIndex
-	//} else {
-	indexFN = gameboyIndex
-	//}
+	indexFN := gameboyIndex
 
 	bs, err := ioutil.ReadFile(indexFN)
 	if err != nil {
@@ -55,7 +49,7 @@ func (o *Server) GetWeb(w http.ResponseWriter, r *http.Request) {
 	w.Write(bs)
 }
 
-// If it's overlord, handle overlord connection (from host to overlord)
+// WSO handles all connections from a new worker to overlord
 func (o *Server) WSO(w http.ResponseWriter, r *http.Request) {
 	fmt.Println("Connected")
 	c, err := upgrader.Upgrade(w, r, nil)
@@ -64,7 +58,7 @@ func (o *Server) WSO(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	// Register new server
-	serverID := strconv.Itoa(rand.Int())
+	serverID := uuid.Must(uuid.NewV4()).String()
 	log.Println("Overlord: A new server connected to Overlord", serverID)
 
 	// Register to servers map the client connection
@@ -100,9 +94,11 @@ func (o *Server) WSO(w http.ResponseWriter, r *http.Request) {
 			Data: o.roomToServer[resp.Data],
 		}
 	})
+
 	client.Listen()
 }
 
+// WSO handles all connections from frontend to overlord
 func (o *Server) WS(w http.ResponseWriter, r *http.Request) {
 	log.Println("Browser connected to overlord")
 	//TODO: Add it back
@@ -145,6 +141,7 @@ func (o *Server) WS(w http.ResponseWriter, r *http.Request) {
 	wssession.BrowserClient.Listen()
 }
 
+// findBestServer returns the best server for a session
 func (o *Server) findBestServer() (string, error) {
 	// TODO: Find best Server by latency, currently return by ping
 	if len(o.servers) == 0 {
