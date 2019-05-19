@@ -166,8 +166,6 @@ func (r *Room) removeSession(w *webrtc.WebRTC) {
 			if len(r.rtcSessions) == 0 {
 				log.Println("No session in room")
 				r.Close()
-				// can consider sanding close to room and room do clean
-				//close(r.Done)
 			}
 			break
 		}
@@ -222,6 +220,7 @@ func (r *Room) SaveGame() error {
 	return nil
 }
 
+// saveOnlineRoomToLocal save online room to local
 func (r *Room) saveOnlineRoomToLocal(roomID string, savepath string) error {
 	log.Println("Try loading game from cloud storage")
 	// If the game is not on local server
