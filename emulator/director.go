@@ -9,21 +9,23 @@ import (
 	// "github.com/gordonklaus/portaudio"
 )
 
+// Director is the nes emulator
 type Director struct {
 	// audio        *Audio
 	view         *GameView
 	timestamp    float64
-	imageChannel chan *image.RGBA
-	audioChannel chan float32
-	inputChannel chan int
+	imageChannel chan<- *image.RGBA
+	audioChannel chan<- float32
+	inputChannel <-chan int
 	Done         chan struct{}
 
 	roomID string
 }
 
-const FPS = 60
+const fps = 60
 
-func NewDirector(roomID string, imageChannel chan *image.RGBA, audioChannel chan float32, inputChannel chan int) *Director {
+// NewDirector returns a new director
+func NewDirector(roomID string, imageChannel chan<- *image.RGBA, audioChannel chan<- float32, inputChannel <-chan int) *Director {
 	// TODO: return image channel from where it write
 	director := Director{}
 	director.Done = make(chan struct{})
@@ -34,6 +36,7 @@ func NewDirector(roomID string, imageChannel chan *image.RGBA, audioChannel chan
 	return &director
 }
 
+// SetView ...
 func (d *Director) SetView(view *GameView) {
 	if d.view != nil {
 		d.view.Exit()
@@ -49,6 +52,7 @@ func (d *Director) SetView(view *GameView) {
 //d.view.UpdateInput(input)
 //}
 
+// Step ...
 func (d *Director) Step() {
 	timestamp := float64(time.Now().Nanosecond()) / float64(time.Second)
 	dt := timestamp - d.timestamp
@@ -58,6 +62,7 @@ func (d *Director) Step() {
 	}
 }
 
+// Start ...
 func (d *Director) Start(paths []string) {
 	// portaudio.Initialize()
 	// defer portaudio.Terminate()
@@ -73,8 +78,9 @@ func (d *Director) Start(paths []string) {
 	d.Run()
 }
 
+// Run ...
 func (d *Director) Run() {
-	c := time.Tick(time.Second / FPS)
+	c := time.Tick(time.Second / fps)
 L:
 	for range c {
 		// for {
@@ -96,6 +102,7 @@ L:
 	log.Println("Closed Director")
 }
 
+// PalyGame starts a game given a rom path
 func (d *Director) PlayGame(path string) {
 	console, err := nes.NewConsole(path)
 	if err != nil {
