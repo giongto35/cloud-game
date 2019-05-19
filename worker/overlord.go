@@ -59,7 +59,7 @@ func (h *Handler) RouteOverlord() {
 			}
 			h.sessions[resp.SessionID] = session
 
-			log.Println("Start peerconnection")
+			log.Println("Start peerconnection", resp.SessionID)
 			if err != nil {
 				log.Println("Error: Cannot create new webrtc session", err)
 				return cws.EmptyPacket
@@ -77,7 +77,8 @@ func (h *Handler) RouteOverlord() {
 		"start",
 		func(resp cws.WSPacket) (req cws.WSPacket) {
 			log.Println("Received a start request from overlord")
-			session := h.sessions[resp.SessionID]
+			session, ok := h.sessions[resp.SessionID]
+			log.Println("Find ", resp.SessionID, session, ok)
 
 			peerconnection := session.peerconnection
 			room := h.startGameHandler(resp.Data, resp.RoomID, resp.PlayerIndex, peerconnection)
@@ -96,12 +97,29 @@ func (h *Handler) RouteOverlord() {
 		"quit",
 		func(resp cws.WSPacket) (req cws.WSPacket) {
 			log.Println("Received a quit request from overlord")
-			session := h.sessions[resp.SessionID]
+			session, ok := h.sessions[resp.SessionID]
+			log.Println("Find ", resp.SessionID, session, ok)
 
 			room := h.getRoom(session.RoomID)
 			// Defensive coding, check if the peerconnection is in room
 			if room.IsPCInRoom(session.peerconnection) {
 				h.detachPeerConn(session.peerconnection)
+			}
+			//session.Close()
+
+			return cws.EmptyPacket
+		},
+	)
+
+	oclient.Receive(
+		"terminateSession",
+		func(resp cws.WSPacket) (req cws.WSPacket) {
+			log.Println("Received a terminate session ", resp.SessionID)
+			session, ok := h.sessions[resp.SessionID]
+			log.Println("Find ", session, ok)
+			if ok {
+				session.Close()
+				delete(h.sessions, resp.SessionID)
 			}
 
 			return cws.EmptyPacket
