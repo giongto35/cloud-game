@@ -19,12 +19,12 @@ import (
 type Room struct {
 	ID string
 
-	// imageChannel is image stream from director
-	imageChannel chan *image.RGBA
-	// audioChannel is audio stream from director
-	audioChannel chan float32
-	// inputChannel is input stream from websocket to room
-	inputChannel chan int
+	// imageChannel is image stream received from director
+	imageChannel <-chan *image.RGBA
+	// audioChannel is audio stream received from director
+	audioChannel <-chan float32
+	// inputChannel is input stream from websocket send to room
+	inputChannel chan<- int
 	// State of room
 	IsRunning bool
 	// Done channel is to fire exit event when room is closed
