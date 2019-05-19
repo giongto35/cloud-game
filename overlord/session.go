@@ -14,8 +14,5 @@ type Session struct {
 	// TODO: Decouple this
 	handler *Server
 
-	ServerID    string
-	GameName    string
-	RoomID      string
-	PlayerIndex int
+	ServerID string
 }

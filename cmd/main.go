@@ -67,12 +67,6 @@ func initializeWorker() {
 		worker.Close()
 	}()
 	worker.Run()
-
-	// ignore origin
-	//upgrader.CheckOrigin = func(r *http.Request) bool { return true }
-
-	//http.ListenAndServe(":"+*config.Port, nil)
-	//log.Println("http://localhost:" + *config.Port)
 }
 
 func monitor() {

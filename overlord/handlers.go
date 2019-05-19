@@ -22,8 +22,8 @@ const (
 
 type Server struct {
 	roomToServer map[string]string
-	// servers are the map serverID to server Client
-	servers map[string]*cws.Client
+	// workerClients are the map serverID to worker Client
+	workerClients map[string]*WorkerClient
 }
 
 var upgrader = websocket.Upgrader{}
@@ -32,7 +32,7 @@ var errNotFound = errors.New("Not found")
 func NewServer() *Server {
 	return &Server{
 		// Mapping serverID to client
-		servers: map[string]*cws.Client{},
+		workerClients: map[string]*WorkerClient{},
 		// Mapping roomID to server
 		roomToServer: map[string]string{},
 	}
@@ -61,9 +61,9 @@ func (o *Server) WSO(w http.ResponseWriter, r *http.Request) {
 	serverID := uuid.Must(uuid.NewV4()).String()
 	log.Println("Overlord: A new server connected to Overlord", serverID)
 
-	// Register to servers map the client connection
-	client := cws.NewClient(c)
-	o.servers[serverID] = client
+	// Register to workersClients map the client connection
+	client := NewWorkerClient(c)
+	o.workerClients[serverID] = client
 	defer o.cleanConnection(client, serverID)
 
 	// Sendback the ID to server
@@ -102,11 +102,11 @@ func (o *Server) WSO(w http.ResponseWriter, r *http.Request) {
 func (o *Server) WS(w http.ResponseWriter, r *http.Request) {
 	log.Println("Browser connected to overlord")
 	//TODO: Add it back
-	//defer func() {
-	//if r := recover(); r != nil {
-	//log.Println("Warn: Something wrong. Recovered in ", r)
-	//}
-	//}()
+	defer func() {
+		if r := recover(); r != nil {
+			log.Println("Warn: Something wrong. Recovered in ", r)
+		}
+	}()
 
 	c, err := upgrader.Upgrade(w, r, nil)
 	if err != nil {
@@ -115,19 +115,25 @@ func (o *Server) WS(w http.ResponseWriter, r *http.Request) {
 	}
 	defer c.Close()
 
-	client := NewBrowserClient(c)
+	// Set up server
+	// SessionID will be the unique per frontend connection
 	sessionID := uuid.Must(uuid.NewV4()).String()
 	serverID, err := o.findBestServer()
 	if err != nil {
 		log.Fatal(err)
 	}
 
+	client := NewBrowserClient(c)
+
+	// Setup session
 	wssession := &Session{
 		ID:            sessionID,
-		BrowserClient: client,
 		handler:       o,
+		BrowserClient: client,
+		WorkerClient:  o.workerClients[serverID],
 		ServerID:      serverID,
 	}
+	// TODO:?
 	//defer wssession.Close()
 	log.Println("New client will conect to server", wssession.ServerID)
 
@@ -138,18 +144,34 @@ func (o *Server) WS(w http.ResponseWriter, r *http.Request) {
 		Data: gamelist.GetEncodedGameList(gamePath),
 	}, nil)
 
+	// If peerconnection is done (client.Done is signalled), we close peerconnection
+	go func() {
+		<-client.Done
+		// Notify worker to clean session
+		wssession.WorkerClient.Send(
+			cws.WSPacket{
+				ID:        "terminateSession",
+				SessionID: sessionID,
+			},
+			nil,
+		)
+
+		//log.Println("Socket terminated, detach connection")
+		//h.detachPeerConn(wssession.peerconnection)
+	}()
+
 	wssession.BrowserClient.Listen()
 }
 
 // findBestServer returns the best server for a session
 func (o *Server) findBestServer() (string, error) {
 	// TODO: Find best Server by latency, currently return by ping
-	if len(o.servers) == 0 {
+	if len(o.workerClients) == 0 {
 		return "", errors.New("No server found")
 	}
 
-	r := rand.Intn(len(o.servers))
-	for k, _ := range o.servers {
+	r := rand.Intn(len(o.workerClients))
+	for k, _ := range o.workerClients {
 		if r == 0 {
 			return k, nil
 		}
@@ -159,10 +181,10 @@ func (o *Server) findBestServer() (string, error) {
 	return "", errors.New("No server found")
 }
 
-func (o *Server) cleanConnection(client *cws.Client, serverID string) {
+func (o *Server) cleanConnection(client *WorkerClient, serverID string) {
 	log.Println("Unregister server from overlord")
 	// Remove serverID from servers
-	delete(o.servers, serverID)
+	delete(o.workerClients, serverID)
 	// Clean all rooms connecting to that server
 	for roomID, roomServer := range o.roomToServer {
 		if roomServer == serverID {
