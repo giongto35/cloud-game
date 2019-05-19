@@ -364,9 +364,11 @@ func TestReconnectRoomNoLocal(t *testing.T) {
 	   - A server X is initialized connecting to overlord
 	   - Client A creates a room K on server X
 	   - Server X is turned down, Client is closed
+	   - room on local is deleted
 	   - Spawn a new server and a new client connecting to the same room K
 	   Expected behavior:
-	   - The game should be continue
+	   - room on local storage is refetched from cloud storage
+	   - The game should be continue where it is closed
 	   TODO: Current test just make sure the game is running, not check if the game is the same
 	*/
 	// This test only run if GCP storage is set
