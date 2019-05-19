@@ -45,7 +45,7 @@ func init() {
 
 type APU struct {
 	console     *Console
-	channel     chan float32
+	channel     chan<- float32
 	sampleRate  float64
 	pulse1      Pulse
 	pulse2      Pulse
