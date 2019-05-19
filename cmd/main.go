@@ -60,9 +60,13 @@ func initializeWorker() {
 		log.Println("Run as a single server")
 	}
 
-	handler := worker.NewHandler(conn, *config.IsDebug, gamePath)
+	worker := worker.NewHandler(conn, *config.IsDebug, gamePath)
 
-	handler.Run()
+	defer func() {
+		log.Println("Close worker")
+		worker.Close()
+	}()
+	worker.Run()
 
 	// ignore origin
 	//upgrader.CheckOrigin = func(r *http.Request) bool { return true }
