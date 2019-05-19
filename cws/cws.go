@@ -68,11 +68,11 @@ func (c *Client) Send(request WSPacket, callback func(response WSPacket)) {
 	// Wrap callback with sessionID and packetID
 	if callback != nil {
 		wrapperCallback := func(resp WSPacket) {
-			//defer func() {
-			//if err := recover(); err != nil {
-			//log.Println("Recovered from err", err)
-			//}
-			//}()
+			defer func() {
+				if err := recover(); err != nil {
+					log.Println("Recovered from err in client callback ", err)
+				}
+			}()
 
 			resp.PacketID = request.PacketID
 			resp.SessionID = request.SessionID
