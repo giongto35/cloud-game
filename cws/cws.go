@@ -180,5 +180,8 @@ func (c *Client) Listen() {
 }
 
 func (c *Client) Close() {
+	if c == nil || c.conn == nil {
+		return
+	}
 	c.conn.Close()
 }

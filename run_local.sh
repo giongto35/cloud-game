@@ -1,5 +1,7 @@
 #!/bin/bash
-docker build . -t cloud-game-local
-docker stop cloud-game-local
-docker rm cloud-game-local
-docker run --privileged -d --name cloud-game-local -p 8000:8000 cloud-game-local cmd -debug
+# Run coordinator first
+go run cmd/main.go -overlordhost overlord &
+# Wait till overlord finish initialized
+# Run a worker connecting to overlord
+sleep 3s
+go run cmd/main.go -overlordhost ws://localhost:8000/wso
