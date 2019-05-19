@@ -22,19 +22,19 @@ func NewOverlordClient(oc *websocket.Conn) *OverlordClient {
 		return nil
 	}
 
-	oclient := &OverlordClient{
+	oClient := &OverlordClient{
 		Client: cws.NewClient(oc),
 	}
-	return oclient
+	return oClient
 }
 
 // RouteOverlord are all routes server received from overlord
 func (h *Handler) RouteOverlord() {
 	iceCandidates := [][]byte{}
-	oclient := h.oClient
+	oClient := h.oClient
 
 	// Received from overlord the serverID
-	oclient.Receive(
+	oClient.Receive(
 		"serverID",
 		func(response cws.WSPacket) (request cws.WSPacket) {
 			// Stick session with serverID got from overlord
@@ -45,7 +45,7 @@ func (h *Handler) RouteOverlord() {
 		},
 	)
 
-	oclient.Receive(
+	oClient.Receive(
 		"initwebrtc",
 		func(resp cws.WSPacket) (req cws.WSPacket) {
 			log.Println("Received relay SDP of a browser from overlord")
@@ -73,7 +73,7 @@ func (h *Handler) RouteOverlord() {
 		},
 	)
 
-	oclient.Receive(
+	oClient.Receive(
 		"start",
 		func(resp cws.WSPacket) (req cws.WSPacket) {
 			log.Println("Received a start request from overlord")
@@ -93,7 +93,7 @@ func (h *Handler) RouteOverlord() {
 		},
 	)
 
-	oclient.Receive(
+	oClient.Receive(
 		"quit",
 		func(resp cws.WSPacket) (req cws.WSPacket) {
 			log.Println("Received a quit request from overlord")
@@ -111,7 +111,52 @@ func (h *Handler) RouteOverlord() {
 		},
 	)
 
-	oclient.Receive(
+	oClient.Receive(
+		"save",
+		func(resp cws.WSPacket) (req cws.WSPacket) {
+			log.Println("Received a save game from overlord")
+			log.Println("RoomID:", resp.RoomID)
+			req.ID = "save"
+			req.Data = "ok"
+			if resp.RoomID != "" {
+				room := h.getRoom(resp.RoomID)
+				if room == nil {
+					return
+				}
+				err := room.SaveGame()
+				if err != nil {
+					log.Println("[!] Cannot save game state: ", err)
+					req.Data = "error"
+				}
+			} else {
+				req.Data = "error"
+			}
+
+			return req
+		})
+
+	oClient.Receive(
+		"load",
+		func(resp cws.WSPacket) (req cws.WSPacket) {
+			log.Println("Received a load game from overlord")
+			log.Println("Loading game state")
+			req.ID = "load"
+			req.Data = "ok"
+			if resp.RoomID != "" {
+				room := h.getRoom(resp.RoomID)
+				err := room.LoadGame()
+				if err != nil {
+					log.Println("[!] Cannot load game state: ", err)
+					req.Data = "error"
+				}
+			} else {
+				req.Data = "error"
+			}
+
+			return req
+		})
+
+	oClient.Receive(
 		"terminateSession",
 		func(resp cws.WSPacket) (req cws.WSPacket) {
 			log.Println("Received a terminate session ", resp.SessionID)

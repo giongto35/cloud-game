@@ -15,4 +15,5 @@ type Session struct {
 	handler *Server
 
 	ServerID string
+	RoomID   string
 }
