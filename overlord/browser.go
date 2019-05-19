@@ -34,8 +34,9 @@ func (s *Session) RouteBrowser() {
 
 		// relay SDP to target worker and get back SDP of the worker
 		// TODO: Async
-		log.Println("Overlord: serverID: ", s.ServerID)
-		sdp := s.handler.servers[s.ServerID].SyncSend(
+		log.Println("Overlord: serverID: ", s.ServerID, resp.SessionID)
+		resp.SessionID = s.ID
+		sdp := s.handler.workerClients[s.ServerID].SyncSend(
 			resp,
 		)
 
@@ -47,7 +48,8 @@ func (s *Session) RouteBrowser() {
 		log.Println("Overlord: Relay quit request from a browser to worker")
 
 		// TODO: Async
-		resp = s.handler.servers[s.ServerID].SyncSend(
+		resp.SessionID = s.ID
+		resp = s.handler.workerClients[s.ServerID].SyncSend(
 			resp,
 		)
 
@@ -58,7 +60,8 @@ func (s *Session) RouteBrowser() {
 		log.Println("Overlord: Received a relay start request from a browser")
 		log.Println("Overlord: Relay start request from a browser to worker")
 		// TODO: Async
-		resp = s.handler.servers[s.ServerID].SyncSend(
+		resp.SessionID = s.ID
+		resp = s.handler.workerClients[s.ServerID].SyncSend(
 			resp,
 		)
 

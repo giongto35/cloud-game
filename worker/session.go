@@ -16,5 +16,6 @@ type Session struct {
 
 // Close close a session
 func (s *Session) Close() {
+	// TODO: Use event base
 	s.peerconnection.StopClient()
 }
