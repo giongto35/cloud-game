@@ -13,3 +13,8 @@ type Session struct {
 	// Should I make direct reference
 	RoomID string
 }
+
+// Close close a session
+func (s *Session) Close() {
+	s.peerconnection.StopClient()
+}
