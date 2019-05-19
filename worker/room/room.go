@@ -222,7 +222,7 @@ func (r *Room) SaveGame() error {
 
 // saveOnlineRoomToLocal save online room to local
 func (r *Room) saveOnlineRoomToLocal(roomID string, savepath string) error {
-	log.Println("Try loading game from cloud storage")
+	log.Println("Check if game is on cloud storage")
 	// If the game is not on local server
 	// Try to load from gcloud
 	data, err := r.onlineStorage.LoadFile(roomID)
