@@ -274,10 +274,8 @@ func (w *WebRTC) startStreaming(vp8Track *webrtc.Track, audioTrack *webrtc.DataC
 		}()
 
 		// TODO: Use same yuv
-		for w.isConnected {
-			yuv, ok := <-w.ImageChannel
-			if !ok {
-				log.Println("Screenshot from emulator closed")
+		for yuv := range w.ImageChannel {
+			if !w.isConnected {
 				return
 			}
 			if len(w.encoder.Input) < cap(w.encoder.Input) {
@@ -294,13 +292,7 @@ func (w *WebRTC) startStreaming(vp8Track *webrtc.Track, audioTrack *webrtc.DataC
 			}
 		}()
 
-		for w.isConnected {
-			bs, ok := <-w.encoder.Output
-			if !ok {
-				log.Println("WebRTC Video sending Closed")
-				return
-			}
-
+		for bs := range w.encoder.Output {
 			if *config.IsMonitor {
 				log.Println("Encoding FPS : ", w.calculateFPS())
 			}
@@ -316,13 +308,10 @@ func (w *WebRTC) startStreaming(vp8Track *webrtc.Track, audioTrack *webrtc.DataC
 			}
 		}()
 
-		for w.isConnected {
-			data, ok := <-w.AudioChannel
-			if !ok {
-				log.Println("WebRTC Audio sending Closed")
+		for data := range w.AudioChannel {
+			if !w.isConnected {
 				return
 			}
-
 			audioTrack.Send(data)
 		}
 	}()
