@@ -85,13 +85,7 @@ func NewGameView(console *nes.Console, title, saveFile string, imageChannel chan
 
 // ListenToInputChannel listen from input channel streamm, which is exposed to WebRTC session
 func (view *GameView) ListenToInputChannel() {
-	for {
-		// Adding ok here make thing slowdown
-		// TODO: Investigate slow
-		keysInBinary, ok := <-view.inputChannel
-		if !ok {
-			return
-		}
+	for keysInBinary := range view.inputChannel {
 		for i := 0; i < NumKeys*2; i++ {
 			b := ((keysInBinary & 1) == 1)
 			view.keyPressed[i] = (view.keyPressed[i] && b) || b

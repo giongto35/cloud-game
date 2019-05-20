@@ -26,13 +26,7 @@ func (r *Room) startAudio() {
 	var count byte = 0
 
 	// fanout Audio
-	for {
-		sample, ok := <-r.audioChannel
-		if !ok {
-			// Just for guarding
-			log.Println("Warn: Room ", r.ID, " audio channel closed unexpectedly")
-			return
-		}
+	for sample := range r.audioChannel {
 		if !r.IsRunning {
 			log.Println("Room ", r.ID, " audio channel closed")
 			return
@@ -81,13 +75,7 @@ func (r *Room) startVideo() {
 	size := int(float32(config.Width*config.Height) * 1.5)
 	yuv := make([]byte, size, size)
 	// fanout Screen
-	for {
-		image, ok := <-r.imageChannel
-		if !ok {
-			// Just for guarding, should not reached
-			log.Println("Warn: Room ", r.ID, " video channel closed unexpectedly")
-			return
-		}
+	for image := range r.imageChannel {
 		if !r.IsRunning {
 			log.Println("Room ", r.ID, " video channel closed")
 			return
