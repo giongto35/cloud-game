@@ -28,7 +28,7 @@ const fps = 60
 func NewDirector(roomID string, imageChannel chan<- *image.RGBA, audioChannel chan<- float32, inputChannel <-chan int) *Director {
 	// TODO: return image channel from where it write
 	director := Director{}
-	director.Done = make(chan struct{})
+	director.Done = make(chan struct{}, 1)
 	director.audioChannel = audioChannel
 	director.imageChannel = imageChannel
 	director.inputChannel = inputChannel
