@@ -109,7 +109,9 @@ func (h *Handler) isRoomRunning(roomID string) bool {
 }
 
 func (h *Handler) Close() {
-	h.oClient.Close()
+	if h.oClient != nil {
+		h.oClient.Close()
+	}
 	// Close all room
 	for _, room := range h.rooms {
 		room.Close()

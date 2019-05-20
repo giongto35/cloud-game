@@ -59,9 +59,9 @@ func NewWebRTC() *WebRTC {
 	w := &WebRTC{
 		ID: uuid.Must(uuid.NewV4()).String(),
 
-		ImageChannel: make(chan []byte, 2),
+		ImageChannel: make(chan []byte, 100),
 		AudioChannel: make(chan []byte, 1000),
-		InputChannel: make(chan int, 2),
+		InputChannel: make(chan int, 10),
 	}
 	return w
 }
@@ -273,6 +273,7 @@ func (w *WebRTC) startStreaming(vp8Track *webrtc.Track, audioTrack *webrtc.DataC
 			}
 		}()
 
+		// TODO: Use same yuv
 		for w.isConnected {
 			yuv, ok := <-w.ImageChannel
 			if !ok {
