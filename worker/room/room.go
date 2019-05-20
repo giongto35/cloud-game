@@ -65,7 +65,7 @@ func NewRoom(roomID, gamepath, gameName string, onlineStorage *storage.Client) *
 		IsRunning:     true,
 		onlineStorage: onlineStorage,
 
-		Done: make(chan struct{}),
+		Done: make(chan struct{}, 1),
 	}
 
 	go room.startVideo()
