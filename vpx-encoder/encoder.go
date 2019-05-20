@@ -126,15 +126,13 @@ func (v *VpxEncoder) startLooping() {
 		}
 	}()
 
-	for {
-		beginEncoding := time.Now()
-
-		yuv, ok := <-v.Input
-		if !ok || v.Done == true {
+	for yuv := range v.Input {
+		if v.Done == true {
 			// The first time we see IsRunning set to false, we release and return
 			v.Release()
 			return
 		}
+		beginEncoding := time.Now()
 
 		// Add Image
 		v.vpxCodexIter = nil

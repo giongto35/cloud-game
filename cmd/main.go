@@ -34,8 +34,6 @@ func createOverlordConnection() (*websocket.Conn, error) {
 func initilizeOverlord() {
 	overlord := overlord.NewServer()
 
-	log.Println("http://localhost:8000")
-
 	http.HandleFunc("/", overlord.GetWeb)
 	http.Handle("/static/", http.StripPrefix("/static/", http.FileServer(http.Dir("./static"))))
 
@@ -47,8 +45,6 @@ func initilizeOverlord() {
 	// worker facing port
 	http.HandleFunc("/wso", overlord.WSO)
 	http.ListenAndServe(":8000", nil)
-
-	log.Println("http://localhost:" + *config.Port)
 }
 
 // initializeWorker setup a worker
@@ -65,7 +61,9 @@ func initializeWorker() {
 		log.Println("Close worker")
 		worker.Close()
 	}()
-	worker.Run()
+
+	go worker.Run()
+	http.ListenAndServe(":8001", nil)
 }
 
 func monitor() {

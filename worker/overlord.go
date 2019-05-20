@@ -165,6 +165,7 @@ func (h *Handler) RouteOverlord() {
 			if ok {
 				session.Close()
 				delete(h.sessions, resp.SessionID)
+				h.detachPeerConn(session.peerconnection)
 			}
 
 			return cws.EmptyPacket
