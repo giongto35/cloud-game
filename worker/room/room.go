@@ -121,13 +121,7 @@ func (r *Room) startWebRTCSession(peerconnection *webrtc.WebRTC, playerIndex int
 	}()
 
 	go func() {
-		for {
-			input, ok := <-peerconnection.InputChannel
-			if !ok {
-				return
-				// might consider continue here
-			}
-
+		for input := range peerconnection.InputChannel {
 			if peerconnection.Done || !peerconnection.IsConnected() || !r.IsRunning {
 				return
 			}
@@ -198,6 +192,7 @@ func (r *Room) Close() {
 	close(r.inputChannel)
 	close(r.Done)
 	// Close here is a bit wrong because this read channel
+	// Just dont close it, let it be gc
 	//close(r.imageChannel)
 	//close(r.audioChannel)
 }
