@@ -165,6 +165,11 @@ func (v *VpxEncoder) startLooping() {
 			log.Println("Encoding time: ", time.Now().Sub(beginEncoding))
 		}
 	}
+	if v.Done == true {
+		// The first time we see IsRunning set to false, we release and return
+		v.Release()
+		return
+	}
 }
 
 // Release release memory and stop loop
