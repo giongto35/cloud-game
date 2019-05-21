@@ -7,6 +7,7 @@ import (
 	"net/http"
 	_ "net/http/pprof"
 	"runtime"
+	"strconv"
 	"strings"
 	"time"
 
@@ -63,7 +64,9 @@ func initializeWorker() {
 	}()
 
 	go worker.Run()
-	http.ListenAndServe(":8001", nil)
+	port := rand.Int()%100 + 8000
+	log.Println("Listening at port: localhost:", port)
+	http.ListenAndServe(":"+strconv.Itoa(port), nil)
 }
 
 func monitor() {
