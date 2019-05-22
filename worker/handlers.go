@@ -2,7 +2,9 @@ package worker
 
 import (
 	"log"
+	"time"
 
+	"github.com/giongto35/cloud-game/config"
 	"github.com/giongto35/cloud-game/webrtc"
 	storage "github.com/giongto35/cloud-game/worker/cloud-storage"
 	"github.com/giongto35/cloud-game/worker/room"
@@ -33,12 +35,10 @@ type Handler struct {
 }
 
 // NewHandler returns a new server
-func NewHandler(overlordConn *websocket.Conn, isDebug bool, gamePath string) *Handler {
+func NewHandler(isDebug bool, gamePath string) *Handler {
 	onlineStorage := storage.NewInitClient()
-	oClient := NewOverlordClient(overlordConn)
 
 	return &Handler{
-		oClient:       oClient,
 		rooms:         map[string]*room.Room{},
 		sessions:      map[string]*Session{},
 		gamePath:      gamePath,
@@ -48,10 +48,31 @@ func NewHandler(overlordConn *websocket.Conn, isDebug bool, gamePath string) *Ha
 
 // Run starts a Handler running logic
 func (h *Handler) Run() {
-	go h.oClient.Heartbeat()
+	for {
+		conn, err := createOverlordConnection()
+		if err != nil {
+			log.Println("Cannot connect to overlord")
+			log.Println("Run as a single server")
+			time.Sleep(time.Second)
+			continue
+		}
 
-	h.RouteOverlord()
-	h.oClient.Listen()
+		h.oClient = NewOverlordClient(conn)
+
+		go h.oClient.Heartbeat()
+		h.RouteOverlord()
+		h.oClient.Listen()
+		// If cannot listen, reconnect to overlord
+	}
+}
+
+func createOverlordConnection() (*websocket.Conn, error) {
+	c, _, err := websocket.DefaultDialer.Dial(*config.OverlordHost, nil)
+	if err != nil {
+		return nil, err
+	}
+
+	return c, nil
 }
 
 // detachPeerConn detach/remove a peerconnection from current room
