@@ -139,6 +139,7 @@ func (c *Client) Heartbeat() {
 			return
 		default:
 		}
+		log.Println("send heartbeat")
 		c.Send(WSPacket{ID: "heartbeat"}, nil)
 	}
 }
