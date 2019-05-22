@@ -1,35 +1,17 @@
 # Web-based Cloud Gaming Service
 SEA: [http://cloud.webgame2d.com](http://cloud.webgame2d.com) | US West: [http://us.cloud.webgame2d.com](http://us.cloud.webgame2d.com) | US East: [http://use.nes.webgame2d.com](http://use.nes.webgame2d.com) | Europe: [http://eu.nes.playcloud.games](http://eu.nes.playcloud.games) 
+For the best gaming experience, please select the closest region to you. 
 
 Web-based Cloud Gaming Service is an open source Cloud Gaming Service building on [WebRTC](https://github.com/pion) using browser as the main platform.  
   
 .. aims to bring the most convenient gaming experience to gamer. You can play any games on your browser directly, which is fully compatible on multi-platform like Desktop, Android, IOS. This flexibility enables modern online gaming experience to retro games starting with NES in this current release.
 
+Note: The current state of cloud gaming service lite are not optimized for production. The service will still experience lag in the case of heavy traffic. You can try hosting your own service following the instruction in the next session.
+
 ![screenshot](document/img/landing-page.png)
 
 ## Demo
 https://www.youtube.com/watch?v=qkjV2VIwVIo
-
-## Try the game
-
-For the best gaming experience, please select the closest region to you. 
-Note: The current state of cloud gaming service lite are not optimized for production. The service will still experience lag in the case of heavy traffic. You can try hosting your own service following the instruction in the next session.
-
-Southeast Asia:  
-* [http://nes.webgame2d.com](http://nes.webgame2d.com)
-* [http://nes.playcloud.games](http://nes.playcloud.games)
-
-US West (Los Angeles):  
-* [http://us.nes.webgame2d.com](http://us.nes.webgame2d.com)
-* [http://us.nes.playcloud.games](http://us.nes.playcloud.games)
-
-US East: (Haven't hosted)  
-* [http://use.nes.webgame2d.com](http://use.nes.webgame2d.com)
-* [http://use.nes.playcloud.games](http://use.nes.playcloud.games)
-
-Europe: (Haven't hosted)  
-* [http://eu.nes.webgame2d.com](http://eu.nes.webgame2d.com)
-* [http://eu.nes.playcloud.games](http://eu.nes.playcloud.games)  
 
 ## Feature
 1. Cloud gaming: Game logic is handled in server and streamed to user.
@@ -73,31 +55,9 @@ And run
 ## Collaborative hosting
   * `go run cmd/main.go -overlordhost ...` - start game workers (in charge of peerconnection) connecting to cloud-game network
 
-## Design Doc
+## Documentation
 ![Design Doc](document/)
-
-## Code structure
-
-```
-.
-├── cmd
-│   ├── main.go
-│   └── main_test.go
-├── emulator: emulator internal
-│   ├── director.go: coordinator of views
-│   └── gameview.go: in game logic
-├── overlord: coordinator of workers
-├── games: roms list, no code logic
-├── static: static file for front end
-│   ├── js
-│   │   └── ws.js: client logic
-│   ├── gameboy.html: frontend with gameboy ui
-│   └── index_ws.html: raw frontend without ui
-├── cws
-│   └── cws.go: socket multiplexer library, used for signalling
-├── webrtc
-└── worker: integration between emulator + webrtc (communication) 
-```
+![Implentation](document/implementation/)
 
 ## Follow up
 
