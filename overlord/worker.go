@@ -13,14 +13,12 @@ type WorkerClient struct {
 }
 
 // RouteWorker are all routes server received from worker
-func (o *Server) RouteWorker(workerClient WorkerClient) {
-	iceCandidates := [][]byte{}
-
+func (o *Server) RouteWorker(workerClient *WorkerClient) {
 	// registerRoom event from a server, when server created a new room.
 	// RoomID is global so it is managed by overlord.
 	workerClient.Receive("registerRoom", func(resp cws.WSPacket) cws.WSPacket {
-		log.Println("Overlord: Received registerRoom ", resp.Data, serverID)
-		o.roomToServer[resp.Data] = serverID
+		log.Println("Overlord: Received registerRoom ", resp.Data, workerClient.ServerID)
+		o.roomToServer[resp.Data] = workerClient.ServerID
 		return cws.WSPacket{
 			ID: "registerRoom",
 		}
@@ -37,22 +35,7 @@ func (o *Server) RouteWorker(workerClient WorkerClient) {
 	})
 
 	workerClient.Receive("heartbeat", func(resp cws.WSPacket) cws.WSPacket {
-		log.Println("received heartbeat")
 		return resp
-	})
-
-	workerClient.Receive("icecandidate", func(resp cws.WSPacket) cws.WSPacket {
-		log.Println("Received candidates ", resp.Data)
-		iceCandidates = append(iceCandidates, []byte(resp.Data))
-		return cws.EmptyPacket
-	})
-
-	workerClient.Receive("sdp", func(resp cws.WSPacket) cws.WSPacket {
-		log.Println("Overlord: Received sdp request from a worker")
-		log.Println("Overlord: Sending back sdp to browser")
-		s.BrowserClient.Send(resp, nil)
-
-		return cws.EmptyPacket
 	})
 }
 

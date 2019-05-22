@@ -40,6 +40,9 @@ func (s *Session) RouteBrowser() {
 			resp,
 		)
 
+		log.Println("Overlord: Received sdp request from a worker")
+		log.Println("Overlord: Sending back sdp to browser")
+
 		return sdp
 	})
 
