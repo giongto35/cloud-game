@@ -1,4 +1,4 @@
-# Web-based Cloud Gaming Service Design Doc
+# Web-based Cloud Gaming Service Design Document
 
 Web-based Cloud Gaming Service contains multiple workers for gaming streaming and a coordinator (Overlord) for distributing traffic and setup connection.
 
