@@ -5,9 +5,9 @@ function showMenuScreen() {
     $("#game-screen").hide();
     $("#menu-screen").hide();
     // show
-    $("#game-screen").show().delay(DEBUG?0:1000).fadeOut(400, () => {
+    $("#game-screen").show().delay(DEBUG?0:0).fadeOut(0, () => {
         log("Loading menu screen");
-        $("#menu-screen").fadeIn(400, () => {
+        $("#menu-screen").fadeIn(0, () => {
             chooseGame(gameIdx, true);
             screenState = "menu";
         });
@@ -19,9 +19,9 @@ function showMenuScreen() {
 function chooseGame(idx, force = false) {
     if (idx < 0 || (idx == gameIdx && !force) || idx >= gameList.length) return false;
 
-    $("#menu-screen #box-art").fadeOut(DEBUG?0:400, function () {
+    $("#menu-screen #box-art").fadeOut(DEBUG?0:0, function () {
         $(this).attr("src", `/static/img/boxarts/${gameList[idx].name}.png`);
-        $(this).fadeIn(400, function () {
+        $(this).fadeIn(0, function () {
             $("#menu-screen #title p").html(gameList[idx].name);
         });
     });
