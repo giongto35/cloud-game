@@ -2,6 +2,7 @@ package worker
 
 import (
 	"log"
+	"time"
 
 	"github.com/giongto35/cloud-game/webrtc"
 	storage "github.com/giongto35/cloud-game/worker/cloud-storage"
@@ -20,6 +21,8 @@ var upgrader = websocket.Upgrader{}
 type Handler struct {
 	// Client that connects to overlord
 	oClient *OverlordClient
+	// Raw address of overlord
+	overlordHost string
 	// Rooms map : RoomID -> Room
 	rooms map[string]*room.Room
 	// ID of the current server globalwise
@@ -33,14 +36,13 @@ type Handler struct {
 }
 
 // NewHandler returns a new server
-func NewHandler(overlordConn *websocket.Conn, isDebug bool, gamePath string) *Handler {
+func NewHandler(overlordHost string, gamePath string) *Handler {
 	onlineStorage := storage.NewInitClient()
-	oClient := NewOverlordClient(overlordConn)
 
 	return &Handler{
-		oClient:       oClient,
 		rooms:         map[string]*room.Room{},
 		sessions:      map[string]*Session{},
+		overlordHost:  overlordHost,
 		gamePath:      gamePath,
 		onlineStorage: onlineStorage,
 	}
@@ -48,10 +50,42 @@ func NewHandler(overlordConn *websocket.Conn, isDebug bool, gamePath string) *Ha
 
 // Run starts a Handler running logic
 func (h *Handler) Run() {
-	go h.oClient.Heartbeat()
+	for {
+		oClient, err := setupOverlordConnection(h.overlordHost)
+		if err != nil {
+			log.Println("Cannot connect to overlord. Retrying...")
+			time.Sleep(time.Second)
+			continue
+		}
 
-	h.RouteOverlord()
-	h.oClient.Listen()
+		h.oClient = oClient
+		log.Println("Connected to overlord successfully.")
+		go h.oClient.Heartbeat()
+		h.RouteOverlord()
+		h.oClient.Listen()
+		// If cannot listen, reconnect to overlord
+	}
+}
+
+func setupOverlordConnection(ohost string) (*OverlordClient, error) {
+	conn, err := createOverlordConnection(ohost)
+	if err != nil {
+		return nil, err
+	}
+	return NewOverlordClient(conn), nil
+}
+
+func createOverlordConnection(ohost string) (*websocket.Conn, error) {
+	c, _, err := websocket.DefaultDialer.Dial(ohost, nil)
+	if err != nil {
+		return nil, err
+	}
+
+	return c, nil
+}
+
+func (h *Handler) GetOverlordClient() *OverlordClient {
+	return h.oClient
 }
 
 // detachPeerConn detach/remove a peerconnection from current room

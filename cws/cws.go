@@ -6,6 +6,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/giongto35/cloud-game/config"
 	"github.com/gorilla/websocket"
 	uuid "github.com/satori/go.uuid"
 )
@@ -84,6 +85,7 @@ func (c *Client) Send(request WSPacket, callback func(response WSPacket)) {
 	}
 
 	c.sendLock.Lock()
+	c.conn.SetWriteDeadline(time.Now().Add(config.WSWait))
 	c.conn.WriteMessage(websocket.TextMessage, data)
 	c.sendLock.Unlock()
 }
@@ -110,8 +112,8 @@ func (c *Client) Receive(id string, f func(response WSPacket) (request WSPacket)
 		if err != nil {
 			log.Println("[!] json marshal error:", err)
 		}
-		//c.conn.SetWriteDeadline(time.Now().Add(writeWait))
 		c.sendLock.Lock()
+		c.conn.SetWriteDeadline(time.Now().Add(config.WSWait))
 		c.conn.WriteMessage(websocket.TextMessage, resp)
 		c.sendLock.Unlock()
 	}
@@ -145,6 +147,7 @@ func (c *Client) Heartbeat() {
 
 func (c *Client) Listen() {
 	for {
+		c.conn.SetReadDeadline(time.Now().Add(config.WSWait))
 		_, rawMsg, err := c.conn.ReadMessage()
 		if err != nil {
 			log.Println("[!] read:", err)
