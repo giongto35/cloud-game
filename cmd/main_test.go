@@ -148,8 +148,6 @@ func TestSingleServerOneOverlord(t *testing.T) {
 	defer obrowser.Close()
 	defer oworker.Close()
 
-	//oconn := connectTestOverlordServer(t, oworker.URL)
-	//defer oconn.Close()
 	// Init worker
 	worker := initWorker(t, oworker.URL)
 	defer worker.Close()
@@ -194,13 +192,9 @@ func TestTwoServerOneOverlord(t *testing.T) {
 	defer obrowser.Close()
 	defer oworker.Close()
 
-	//oconn1 := connectTestOverlordServer(t, oworker.URL)
-	//defer oconn1.Close()
 	worker1 := initWorker(t, oworker.URL)
 	defer worker1.Close()
 
-	//oconn2 := connectTestOverlordServer(t, oworker.URL)
-	//defer oconn2.Close()
 	worker2 := initWorker(t, oworker.URL)
 	defer worker2.Close()
 
@@ -286,8 +280,6 @@ func TestReconnectRoom(t *testing.T) {
 	defer oworker.Close()
 
 	// Init worker
-	//oconn := connectTestOverlordServer(t, oworker.URL)
-	//defer oconn.Close()
 	worker := initWorker(t, oworker.URL)
 
 	client := initClient(t, obrowser.URL)
@@ -319,8 +311,6 @@ func TestReconnectRoom(t *testing.T) {
 
 	log.Println("Server respawn")
 	// Init slave server again
-	//oconn = connectTestOverlordServer(t, oworker.URL)
-	//defer oconn.Close()
 	worker = initWorker(t, oworker.URL)
 	defer worker.Close()
 
@@ -374,8 +364,6 @@ func TestReconnectRoomNoLocal(t *testing.T) {
 		return
 	}
 
-	//oconn := connectTestOverlordServer(t, oworker.URL)
-	//defer oconn.Close()
 	worker := initWorker(t, oworker.URL)
 
 	client := initClient(t, obrowser.URL)
@@ -411,8 +399,6 @@ func TestReconnectRoomNoLocal(t *testing.T) {
 
 	log.Println("Server respawn")
 	// Init slave server again
-	//oconn = connectTestOverlordServer(t, oworker.URL)
-	//defer oconn.Close()
 	worker = initWorker(t, oworker.URL)
 	defer worker.Close()
 

@@ -58,7 +58,7 @@ func (h *Handler) Run() {
 			continue
 		}
 
-		h.SetOverlordClient(oClient)
+		h.oClient = oClient
 		log.Println("Connected to overlord successfully.")
 		go h.oClient.Heartbeat()
 		h.RouteOverlord()
@@ -128,10 +128,6 @@ func (h *Handler) createNewRoom(gameName string, roomID string, playerIndex int)
 	}
 
 	return nil
-}
-
-func (h *Handler) SetOverlordClient(oClient *OverlordClient) {
-	h.oClient = oClient
 }
 
 // isRoomRunning check if there is any running sessions.
