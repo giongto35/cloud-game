@@ -82,7 +82,6 @@ func (o *Server) WSO(w http.ResponseWriter, r *http.Request) {
 // WSO handles all connections from frontend to overlord
 func (o *Server) WS(w http.ResponseWriter, r *http.Request) {
 	log.Println("Browser connected to overlord")
-	//TODO: Add it back
 	defer func() {
 		if r := recover(); r != nil {
 			log.Println("Warn: Something wrong. Recovered in ", r)
@@ -101,7 +100,8 @@ func (o *Server) WS(w http.ResponseWriter, r *http.Request) {
 	sessionID := uuid.Must(uuid.NewV4()).String()
 	serverID, err := o.findBestServer()
 	if err != nil {
-		log.Fatal(err)
+		log.Println(err)
+		return
 	}
 
 	client := NewBrowserClient(c)
