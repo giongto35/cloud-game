@@ -4,7 +4,6 @@ import (
 	"log"
 	"time"
 
-	"github.com/giongto35/cloud-game/config"
 	"github.com/giongto35/cloud-game/webrtc"
 	storage "github.com/giongto35/cloud-game/worker/cloud-storage"
 	"github.com/giongto35/cloud-game/worker/room"
@@ -22,6 +21,8 @@ var upgrader = websocket.Upgrader{}
 type Handler struct {
 	// Client that connects to overlord
 	oClient *OverlordClient
+	// Raw address of overlord
+	overlordHost string
 	// Rooms map : RoomID -> Room
 	rooms map[string]*room.Room
 	// ID of the current server globalwise
@@ -35,12 +36,13 @@ type Handler struct {
 }
 
 // NewHandler returns a new server
-func NewHandler(isDebug bool, gamePath string) *Handler {
+func NewHandler(overlordHost string, gamePath string) *Handler {
 	onlineStorage := storage.NewInitClient()
 
 	return &Handler{
 		rooms:         map[string]*room.Room{},
 		sessions:      map[string]*Session{},
+		overlordHost:  overlordHost,
 		gamePath:      gamePath,
 		onlineStorage: onlineStorage,
 	}
@@ -49,15 +51,15 @@ func NewHandler(isDebug bool, gamePath string) *Handler {
 // Run starts a Handler running logic
 func (h *Handler) Run() {
 	for {
-		oClient, err := SetupOverlordConnection()
+		oClient, err := setupOverlordConnection(h.overlordHost)
 		if err != nil {
-			log.Println("Cannot connect to overlord")
-			log.Println("Run as a single server")
+			log.Println("Cannot connect to overlord. Retrying...")
 			time.Sleep(time.Second)
 			continue
 		}
 
-		h.oClient = oClient
+		h.SetOverlordClient(oClient)
+		log.Println("Connected to overlord successfully.")
 		go h.oClient.Heartbeat()
 		h.RouteOverlord()
 		h.oClient.Listen()
@@ -65,21 +67,25 @@ func (h *Handler) Run() {
 	}
 }
 
-var SetupOverlordConnection = func() (*OverlordClient, error) {
-	conn, err := createOverlordConnection()
+func setupOverlordConnection(ohost string) (*OverlordClient, error) {
+	conn, err := createOverlordConnection(ohost)
 	if err != nil {
 		return nil, err
 	}
 	return NewOverlordClient(conn), nil
 }
 
-func createOverlordConnection() (*websocket.Conn, error) {
-	c, _, err := websocket.DefaultDialer.Dial(*config.OverlordHost, nil)
+func createOverlordConnection(ohost string) (*websocket.Conn, error) {
+	c, _, err := websocket.DefaultDialer.Dial(ohost, nil)
 	if err != nil {
 		return nil, err
 	}
 
 	return c, nil
+}
+
+func (h *Handler) GetOverlordClient() *OverlordClient {
+	return h.oClient
 }
 
 // detachPeerConn detach/remove a peerconnection from current room
@@ -124,8 +130,7 @@ func (h *Handler) createNewRoom(gameName string, roomID string, playerIndex int)
 	return nil
 }
 
-func (h *Handler) SetOverlordConn(oconn *websocket.Conn) {
-	oClient := NewOverlordClient(oconn)
+func (h *Handler) SetOverlordClient(oClient *OverlordClient) {
 	h.oClient = oClient
 }
 

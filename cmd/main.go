@@ -41,7 +41,7 @@ func initilizeOverlord() {
 
 // initializeWorker setup a worker
 func initializeWorker() {
-	worker := worker.NewHandler(*config.IsDebug, gamePath)
+	worker := worker.NewHandler(*config.OverlordHost, gamePath)
 
 	defer func() {
 		log.Println("Close worker")

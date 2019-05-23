@@ -32,20 +32,8 @@ func initOverlord() (*httptest.Server, *httptest.Server) {
 	return overlordWorker, overlordBrowser
 }
 
-func initWorker(t *testing.T, oconn *websocket.Conn) *worker.Handler {
+func initWorker(t *testing.T, overlordURL string) *worker.Handler {
 	fmt.Println("Spawn new worker")
-
-	handler := worker.NewHandler(true, testGamePath)
-	worker.SetupOverlordConnection = func() (*worker.OverlordClient, error) {
-		return worker.NewOverlordClient(oconn), nil
-	}
-
-	go handler.Run()
-	//server := httptest.NewServer(http.HandlerFunc(handler.WS))
-	return handler
-}
-
-func connectTestOverlordServer(t *testing.T, overlordURL string) *websocket.Conn {
 	if overlordURL == "" {
 		return nil
 	} else {
@@ -53,20 +41,18 @@ func connectTestOverlordServer(t *testing.T, overlordURL string) *websocket.Conn
 		fmt.Println("connecting to overlord: ", overlordURL)
 	}
 
-	oconn, _, err := websocket.DefaultDialer.Dial(overlordURL, nil)
-	if err != nil {
-		t.Fatalf("%v", err)
-	}
+	handler := worker.NewHandler(overlordURL, testGamePath)
 
-	return oconn
+	go handler.Run()
+	time.Sleep(time.Second)
+	return handler
 }
 
 func initClient(t *testing.T, host string) (client *cws.Client) {
 	// Convert http://127.0.0.1 to ws://127.0.0.
 	u := "ws" + strings.TrimPrefix(host, "http")
 
-	// Connect to the overlord
-	fmt.Println("Connecting to ", u)
+	fmt.Println("Connecting to", u)
 	ws, _, err := websocket.DefaultDialer.Dial(u, nil)
 	if err != nil {
 		t.Fatalf("%v", err)
@@ -81,7 +67,6 @@ func initClient(t *testing.T, host string) (client *cws.Client) {
 	}
 
 	offer, err := peerConnection.CreateOffer(nil)
-	//time.Sleep(time.Second * 10)
 	if err != nil {
 		t.Fatalf("%v", err)
 	}
@@ -163,10 +148,10 @@ func TestSingleServerOneOverlord(t *testing.T) {
 	defer obrowser.Close()
 	defer oworker.Close()
 
-	oconn := connectTestOverlordServer(t, oworker.URL)
-	defer oconn.Close()
+	//oconn := connectTestOverlordServer(t, oworker.URL)
+	//defer oconn.Close()
 	// Init worker
-	worker := initWorker(t, oconn)
+	worker := initWorker(t, oworker.URL)
 	defer worker.Close()
 
 	// connect overlord
@@ -209,14 +194,14 @@ func TestTwoServerOneOverlord(t *testing.T) {
 	defer obrowser.Close()
 	defer oworker.Close()
 
-	oconn1 := connectTestOverlordServer(t, oworker.URL)
-	defer oconn1.Close()
-	worker1 := initWorker(t, oconn1)
+	//oconn1 := connectTestOverlordServer(t, oworker.URL)
+	//defer oconn1.Close()
+	worker1 := initWorker(t, oworker.URL)
 	defer worker1.Close()
 
-	oconn2 := connectTestOverlordServer(t, oworker.URL)
-	defer oconn2.Close()
-	worker2 := initWorker(t, oconn2)
+	//oconn2 := connectTestOverlordServer(t, oworker.URL)
+	//defer oconn2.Close()
+	worker2 := initWorker(t, oworker.URL)
 	defer worker2.Close()
 
 	client1 := initClient(t, obrowser.URL)
@@ -301,9 +286,9 @@ func TestReconnectRoom(t *testing.T) {
 	defer oworker.Close()
 
 	// Init worker
-	oconn := connectTestOverlordServer(t, oworker.URL)
-	defer oconn.Close()
-	worker := initWorker(t, oconn)
+	//oconn := connectTestOverlordServer(t, oworker.URL)
+	//defer oconn.Close()
+	worker := initWorker(t, oworker.URL)
 
 	client := initClient(t, obrowser.URL)
 
@@ -327,16 +312,16 @@ func TestReconnectRoom(t *testing.T) {
 
 	log.Println("Closing room and server")
 	client.Close()
-	oconn.Close()
+	worker.GetOverlordClient().Close()
 	worker.Close()
 
 	// Close server and reconnect
 
 	log.Println("Server respawn")
 	// Init slave server again
-	oconn = connectTestOverlordServer(t, oworker.URL)
-	defer oconn.Close()
-	worker = initWorker(t, oconn)
+	//oconn = connectTestOverlordServer(t, oworker.URL)
+	//defer oconn.Close()
+	worker = initWorker(t, oworker.URL)
 	defer worker.Close()
 
 	client = initClient(t, obrowser.URL)
@@ -389,9 +374,9 @@ func TestReconnectRoomNoLocal(t *testing.T) {
 		return
 	}
 
-	oconn := connectTestOverlordServer(t, oworker.URL)
-	defer oconn.Close()
-	worker := initWorker(t, oconn)
+	//oconn := connectTestOverlordServer(t, oworker.URL)
+	//defer oconn.Close()
+	worker := initWorker(t, oworker.URL)
 
 	client := initClient(t, obrowser.URL)
 
@@ -415,7 +400,7 @@ func TestReconnectRoomNoLocal(t *testing.T) {
 
 	log.Println("Closing room and server")
 	client.Close()
-	oconn.Close()
+	worker.GetOverlordClient().Close()
 	worker.Close()
 	// Remove room on local
 	path := emulator.GetSavePath(saveRoomID)
@@ -426,9 +411,9 @@ func TestReconnectRoomNoLocal(t *testing.T) {
 
 	log.Println("Server respawn")
 	// Init slave server again
-	oconn = connectTestOverlordServer(t, oworker.URL)
-	defer oconn.Close()
-	worker = initWorker(t, oconn)
+	//oconn = connectTestOverlordServer(t, oworker.URL)
+	//defer oconn.Close()
+	worker = initWorker(t, oworker.URL)
 	defer worker.Close()
 
 	client = initClient(t, obrowser.URL)
