@@ -145,8 +145,8 @@ func (w *WebRTC) StartClient(remoteSession string, iceCandidates [][]byte, width
 
 	// input channel
 	inputTrack, err := w.connection.CreateDataChannel("a", &webrtc.DataChannelInit{
-		Ordered:    &dtrue,
-		Negotiated: &dtrue,
+		Ordered:    &dfalse,
+		Negotiated: &dfalse,
 		ID:         &d0,
 	})
 
