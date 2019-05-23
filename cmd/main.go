@@ -22,15 +22,6 @@ const gamePath = "games"
 // Time allowed to write a message to the peer.
 var upgrader = websocket.Upgrader{}
 
-func createOverlordConnection() (*websocket.Conn, error) {
-	c, _, err := websocket.DefaultDialer.Dial(*config.OverlordHost, nil)
-	if err != nil {
-		return nil, err
-	}
-
-	return c, nil
-}
-
 // initilizeOverlord setup an overlord server
 func initilizeOverlord() {
 	overlord := overlord.NewServer()
@@ -50,13 +41,7 @@ func initilizeOverlord() {
 
 // initializeWorker setup a worker
 func initializeWorker() {
-	conn, err := createOverlordConnection()
-	if err != nil {
-		log.Println("Cannot connect to overlord")
-		log.Println("Run as a single server")
-	}
-
-	worker := worker.NewHandler(conn, *config.IsDebug, gamePath)
+	worker := worker.NewHandler(*config.OverlordHost, gamePath)
 
 	defer func() {
 		log.Println("Close worker")
