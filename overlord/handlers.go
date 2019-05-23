@@ -136,9 +136,6 @@ func (o *Server) WS(w http.ResponseWriter, r *http.Request) {
 			},
 			nil,
 		)
-
-		//log.Println("Socket terminated, detach connection")
-		//h.detachPeerConn(wssession.peerconnection)
 	}()
 
 	wssession.BrowserClient.Listen()

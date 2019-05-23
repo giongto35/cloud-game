@@ -36,7 +36,11 @@ func (s *Session) RouteBrowser() {
 		// TODO: Async
 		log.Println("Overlord: serverID: ", s.ServerID, resp.SessionID)
 		resp.SessionID = s.ID
-		sdp := s.handler.workerClients[s.ServerID].SyncSend(
+		wc, ok := s.handler.workerClients[s.ServerID]
+		if !ok {
+			return cws.EmptyPacket
+		}
+		sdp := wc.SyncSend(
 			resp,
 		)
 
@@ -52,7 +56,11 @@ func (s *Session) RouteBrowser() {
 
 		// TODO: Async
 		resp.SessionID = s.ID
-		resp = s.handler.workerClients[s.ServerID].SyncSend(
+		wc, ok := s.handler.workerClients[s.ServerID]
+		if !ok {
+			return cws.EmptyPacket
+		}
+		resp = wc.SyncSend(
 			resp,
 		)
 
@@ -64,7 +72,11 @@ func (s *Session) RouteBrowser() {
 		log.Println("Overlord: Relay start request from a browser to worker")
 		// TODO: Async
 		resp.SessionID = s.ID
-		workerResp := s.handler.workerClients[s.ServerID].SyncSend(
+		wc, ok := s.handler.workerClients[s.ServerID]
+		if !ok {
+			return cws.EmptyPacket
+		}
+		workerResp := wc.SyncSend(
 			resp,
 		)
 		// Response from worker contains initialized roomID. Set roomID to the session
@@ -80,7 +92,11 @@ func (s *Session) RouteBrowser() {
 		// TODO: Async
 		resp.SessionID = s.ID
 		resp.RoomID = s.RoomID
-		resp = s.handler.workerClients[s.ServerID].SyncSend(
+		wc, ok := s.handler.workerClients[s.ServerID]
+		if !ok {
+			return cws.EmptyPacket
+		}
+		resp = wc.SyncSend(
 			resp,
 		)
 
@@ -93,7 +109,11 @@ func (s *Session) RouteBrowser() {
 		// TODO: Async
 		resp.SessionID = s.ID
 		resp.RoomID = s.RoomID
-		resp = s.handler.workerClients[s.ServerID].SyncSend(
+		wc, ok := s.handler.workerClients[s.ServerID]
+		if !ok {
+			return cws.EmptyPacket
+		}
+		resp = wc.SyncSend(
 			resp,
 		)
 
