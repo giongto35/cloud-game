@@ -109,8 +109,13 @@ function doButtonUp(name) {
                 break;
 
             case "join":
+            case "a":
+            case "b":
+            case "start":
+            case "select":
                 startGame();
                 // log("select game");
+                break;
         }
     } else if (screenState === "game") {
         setState(name, false);
