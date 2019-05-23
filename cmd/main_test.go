@@ -34,7 +34,12 @@ func initOverlord() (*httptest.Server, *httptest.Server) {
 
 func initWorker(t *testing.T, oconn *websocket.Conn) *worker.Handler {
 	fmt.Println("Spawn new worker")
-	handler := worker.NewHandler(oconn, true, testGamePath)
+
+	handler := worker.NewHandler(true, testGamePath)
+	worker.SetupOverlordConnection = func() (*worker.OverlordClient, error) {
+		return worker.NewOverlordClient(oconn), nil
+	}
+
 	go handler.Run()
 	//server := httptest.NewServer(http.HandlerFunc(handler.WS))
 	return handler
@@ -76,6 +81,7 @@ func initClient(t *testing.T, host string) (client *cws.Client) {
 	}
 
 	offer, err := peerConnection.CreateOffer(nil)
+	//time.Sleep(time.Second * 10)
 	if err != nil {
 		t.Fatalf("%v", err)
 	}

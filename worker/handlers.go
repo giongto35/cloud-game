@@ -49,7 +49,7 @@ func NewHandler(isDebug bool, gamePath string) *Handler {
 // Run starts a Handler running logic
 func (h *Handler) Run() {
 	for {
-		conn, err := createOverlordConnection()
+		oClient, err := SetupOverlordConnection()
 		if err != nil {
 			log.Println("Cannot connect to overlord")
 			log.Println("Run as a single server")
@@ -57,13 +57,20 @@ func (h *Handler) Run() {
 			continue
 		}
 
-		h.oClient = NewOverlordClient(conn)
-
+		h.oClient = oClient
 		go h.oClient.Heartbeat()
 		h.RouteOverlord()
 		h.oClient.Listen()
 		// If cannot listen, reconnect to overlord
 	}
+}
+
+var SetupOverlordConnection = func() (*OverlordClient, error) {
+	conn, err := createOverlordConnection()
+	if err != nil {
+		return nil, err
+	}
+	return NewOverlordClient(conn), nil
 }
 
 func createOverlordConnection() (*websocket.Conn, error) {
@@ -115,6 +122,11 @@ func (h *Handler) createNewRoom(gameName string, roomID string, playerIndex int)
 	}
 
 	return nil
+}
+
+func (h *Handler) SetOverlordConn(oconn *websocket.Conn) {
+	oClient := NewOverlordClient(oconn)
+	h.oClient = oClient
 }
 
 // isRoomRunning check if there is any running sessions.
