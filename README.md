@@ -1,14 +1,14 @@
-# Web-based Cloud Gaming Service
-SEA: [http://cloud.webgame2d.com](http://cloud.webgame2d.com) | US West: [http://us.cloud.webgame2d.com](http://us.cloud.webgame2d.com) | US East: [http://use.nes.webgame2d.com](http://use.nes.webgame2d.com) | Europe: [http://eu.nes.playcloud.games](http://eu.nes.playcloud.games) 
+# POGO, Web-based Cloud Gaming Service
+SEA: [http://cloud.webgame2d.com](http://cloud.webgame2d.com) | US West: [http://us.cloud.webgame2d.com](http://us.cloud.webgame2d.com) (not hosted)| US East: [http://use.nes.webgame2d.com](http://use.nes.webgame2d.com) (not hosted)| Europe: [http://eu.nes.playcloud.games](http://eu.nes.playcloud.games) (not hosted) 
 For the best gaming experience, please select the closest region to you. 
 
-Web-based Cloud Gaming Service is an open source Cloud Gaming Service building on [WebRTC](https://github.com/pion) using browser as the main platform.  
+POGO is an open source Cloud Gaming Service building on [WebRTC](https://github.com/pion) using browser as the main platform.  
   
-.. aims to bring the most convenient gaming experience to gamer. You can play any games on your browser directly, which is fully compatible on multi-platform like Desktop, Android, IOS. This flexibility enables modern online gaming experience to retro games starting with NES in this current release.
+POGO stands for "POcket Gaming Online" aims to bring the most convenient gaming experience to gamer. You can play any games on your browser directly, which is fully compatible on multi-platform like Desktop, Android, IOS. This flexibility enables modern online gaming experience to retro games starting with NES in this current release.
 
 Note: The current state of cloud gaming service lite are not optimized for production. The service will still experience lag in the case of heavy traffic. You can try hosting your own service following the instruction in the next session.
 
-![screenshot](document/img/landing-page.png)
+![screenshot](document/img/landing-page.gif)
 
 ## Demo
 https://www.youtube.com/watch?v=qkjV2VIwVIo
@@ -53,7 +53,7 @@ And run
   * `./run_local.sh`
 
 ## Collaborative hosting
-  * `go run cmd/main.go -overlordhost ...` - start game workers (in charge of peerconnection) connecting to cloud-game network
+  * `go run cmd/main.go -overlordhost cloud.webgame2d.com` - start game workers (in charge of peerconnection) connecting to cloud-game network.
 
 ## Documentation
 ![Design Doc](document/)
