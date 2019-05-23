@@ -62,7 +62,7 @@ func (o *Server) WSO(w http.ResponseWriter, r *http.Request) {
 	log.Println("Overlord: A new server connected to Overlord", serverID)
 
 	// Register to workersClients map the client connection
-	client := NewWorkerClient(c)
+	client := NewWorkerClient(c, serverID)
 	o.workerClients[serverID] = client
 	defer o.cleanConnection(client, serverID)
 
@@ -74,26 +74,7 @@ func (o *Server) WSO(w http.ResponseWriter, r *http.Request) {
 		},
 		nil,
 	)
-
-	// registerRoom event from a server, when server created a new room.
-	// RoomID is global so it is managed by overlord.
-	client.Receive("registerRoom", func(resp cws.WSPacket) cws.WSPacket {
-		log.Println("Overlord: Received registerRoom ", resp.Data, serverID)
-		o.roomToServer[resp.Data] = serverID
-		return cws.WSPacket{
-			ID: "registerRoom",
-		}
-	})
-
-	// getRoom returns the server ID based on requested roomID.
-	client.Receive("getRoom", func(resp cws.WSPacket) cws.WSPacket {
-		log.Println("Overlord: Received a getroom request")
-		log.Println("Result: ", o.roomToServer[resp.Data])
-		return cws.WSPacket{
-			ID:   "getRoom",
-			Data: o.roomToServer[resp.Data],
-		}
-	})
+	o.RouteWorker(client)
 
 	client.Listen()
 }
@@ -101,7 +82,6 @@ func (o *Server) WSO(w http.ResponseWriter, r *http.Request) {
 // WSO handles all connections from frontend to overlord
 func (o *Server) WS(w http.ResponseWriter, r *http.Request) {
 	log.Println("Browser connected to overlord")
-	//TODO: Add it back
 	defer func() {
 		if r := recover(); r != nil {
 			log.Println("Warn: Something wrong. Recovered in ", r)
@@ -120,7 +100,8 @@ func (o *Server) WS(w http.ResponseWriter, r *http.Request) {
 	sessionID := uuid.Must(uuid.NewV4()).String()
 	serverID, err := o.findBestServer()
 	if err != nil {
-		log.Fatal(err)
+		log.Println(err)
+		return
 	}
 
 	client := NewBrowserClient(c)

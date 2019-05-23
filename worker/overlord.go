@@ -171,8 +171,6 @@ func (h *Handler) RouteOverlord() {
 			return cws.EmptyPacket
 		},
 	)
-
-	// heartbeat to keep pinging overlord. We not ping from server to browser, so we don't call heartbeat in browserClient
 }
 
 func getServerIDOfRoom(oc *OverlordClient, roomID string) string {
