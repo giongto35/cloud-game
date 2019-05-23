@@ -1,6 +1,9 @@
 package config
 
-import "flag"
+import (
+	"flag"
+	"time"
+)
 
 const defaultoverlord = "ws://localhost:9000/wso"
 
@@ -10,3 +13,4 @@ var Port = flag.String("port", "8000", "Port of the game")
 var IsMonitor = flag.Bool("monitor", false, "Turn on monitor")
 var Width = 256
 var Height = 240
+var WSWait = 20 * time.Second
