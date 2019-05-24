@@ -1,5 +1,5 @@
 body {
-    background-image: url('https://t3.ftcdn.net/jpg/02/41/14/36/500_F_241143639_RW6VdHbqYRM0yfNpDxDlWpj0uXWglAC2.jpg');
+    background-image: url('/static/img/500_F_241143639_RW6VdHbqYRM0yfNpDxDlWpj0uXWglAC2.jpg');
     background-repeat: repeat;
 }
 
@@ -350,7 +350,10 @@ body {
     overflow: hidden;
     width: 256px;
     height: 240px;
-    background-color: gray;
+    
+    /* background-color: gray; */
+    background-image: url('/static/img/pixel_waterfall_bg__by_isohei-d4xntof.gif');
+    background-size: cover;
 }
 
 #menu-item-choice {
