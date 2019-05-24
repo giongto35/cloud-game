@@ -11,8 +11,8 @@ import (
 
 	"github.com/giongto35/cloud-game/config"
 	vpxEncoder "github.com/giongto35/cloud-game/vpx-encoder"
-	"github.com/pion/webrtc"
-	"github.com/pion/webrtc/pkg/media"
+	"github.com/pion/webrtc/v2"
+	"github.com/pion/webrtc/v2/pkg/media"
 	uuid "github.com/satori/go.uuid"
 )
 
