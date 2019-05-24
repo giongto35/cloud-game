@@ -7,7 +7,7 @@ function log(msg) {
 
 function popup(msg) {
     $("#noti-box").html(msg);
-    $("#noti-box").fadeIn().delay(DEBUG ? 0 : 1000).fadeOut();
+    $("#noti-box").fadeIn().delay(DEBUG ? 0 : 0).fadeOut();
 }
 
 

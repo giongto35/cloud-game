@@ -25,9 +25,9 @@ function showMenuScreen() {
     $("#btn-join").html("play");
 
     // show menu scene
-    $("#game-screen").show().delay(DEBUG ? 0 : 2000).fadeOut(DEBUG ? 0 : 400, function () {
+    $("#game-screen").show().delay(DEBUG ? 0 : 0).fadeOut(DEBUG ? 0 : 0, function () {
         log("Loading menu screen");
-        $("#menu-screen").fadeIn(DEBUG ? 0 : 400, function () {
+        $("#menu-screen").fadeIn(DEBUG ? 0 : 0, function () {
             pickGame(gameIdx);
             screenState = "menu";
         });
@@ -158,6 +158,9 @@ function doButtonUp(name) {
 
         switch (name) {
             case "join":
+            case "a":
+            case "start":
+            case "select":
                 copyToClipboard(window.location.href.split('?')[0] + `?id=${roomID}`)
                 popup("Copy link to clipboard!")
                 break;

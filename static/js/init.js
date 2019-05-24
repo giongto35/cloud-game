@@ -30,7 +30,8 @@ $(document).ready(function () {
 
 
     // localStorage first
-    roomID = loadRoomID();
+    //roomID = loadRoomID();
+    roomID = "";
 
     // Shared URL second
     var rid = parseURLForRoom();
