@@ -10,8 +10,8 @@ import (
 
 	"github.com/giongto35/cloud-game/cws"
 	"github.com/giongto35/cloud-game/overlord/gamelist"
+	"github.com/gofrs/uuid"
 	"github.com/gorilla/websocket"
-	uuid "github.com/satori/go.uuid"
 )
 
 const (

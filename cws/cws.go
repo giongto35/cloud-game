@@ -7,8 +7,8 @@ import (
 	"time"
 
 	"github.com/giongto35/cloud-game/config"
+	"github.com/gofrs/uuid"
 	"github.com/gorilla/websocket"
-	uuid "github.com/satori/go.uuid"
 )
 
 type Client struct {

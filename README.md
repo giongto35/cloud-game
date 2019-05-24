@@ -46,7 +46,7 @@ And golang dependencies
   * `go get github.com/pion/webrtc/`  
   * `go get github.com/gorilla/websocket`  
   * `go get gopkg.in/hraban/opus.v2`
-  * `go get github.com/satori/go.uuid`
+  * `go get github.com/gofrs/uuid`
   * `go get cloud.google.com/go/storage`
   
 And run 

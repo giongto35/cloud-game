@@ -11,9 +11,9 @@ import (
 
 	"github.com/giongto35/cloud-game/config"
 	vpxEncoder "github.com/giongto35/cloud-game/vpx-encoder"
+	"github.com/gofrs/uuid"
 	"github.com/pion/webrtc/v2"
 	"github.com/pion/webrtc/v2/pkg/media"
-	uuid "github.com/satori/go.uuid"
 )
 
 var webrtcconfig = webrtc.Configuration{ICEServers: []webrtc.ICEServer{{URLs: []string{"stun:159.65.141.209:3478", "stun:stun.l.google.com:19302", "stun:stun1.l.google.com:19302"}}}}
