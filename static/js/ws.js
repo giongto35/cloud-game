@@ -209,7 +209,7 @@ function startGame() {
 
     // clear menu screen
     stopInputTimer();
-    $("#menu-screen").fadeOut(DEBUG?0:400, function() {
+    $("#menu-screen").fadeOut(DEBUG?0:0, function() {
         $("#game-screen").show();
     });
     // end clear
