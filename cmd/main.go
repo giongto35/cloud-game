@@ -74,6 +74,7 @@ func main() {
 	// else we spawn new server as normal server connecting to OverlordHost.
 	if *config.OverlordHost == "overlord" {
 		log.Println("Running as overlord ")
+		log.Println("Waiting for workers...")
 		initilizeOverlord()
 	} else {
 		if strings.HasPrefix(*config.OverlordHost, "ws") && !strings.HasSuffix(*config.OverlordHost, "wso") {
