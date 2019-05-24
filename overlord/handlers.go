@@ -15,8 +15,8 @@ import (
 )
 
 const (
-	gameboyIndex = "./static/gameboy2.html"
-	debugIndex   = "./static/gameboy2.html"
+	gameboyIndex = "./static/gameboy.html"
+	debugIndex   = "./static/gameboy.html"
 	gamePath     = "games"
 )
 

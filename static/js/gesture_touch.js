@@ -2,11 +2,16 @@
     Touch gesture
 */
 
-// Virtual Gamepad/Joystick
+// Virtual Gamepad / Joystick
 // Ref: https://jsfiddle.net/aa0et7tr/5/
 
-const MAX_DIFF = 20; // pixel
 
+/*
+    Left panel - Dpad
+*/
+const MAX_DIFF = 20; // radius of circle boundary
+
+// vpad state, use for mouse button down
 let vpadState = {
     up: false,
     down: false,
@@ -125,15 +130,16 @@ function handleVpadJoystickMove(event) {
 
 
 
-// touch/mouse events for dpad
+// touch/mouse events for dpad. mouseup events is binded to window.
 vpadHolder.on('mousedown', handleVpadJoystickDown);
 vpadHolder.on('touchstart', handleVpadJoystickDown);
 vpadHolder.on('touchend', handleVpadJoystickUp);
 
 
 
-////////
-
+/*
+    Right side - Control buttons
+*/
 
 function handleButtonDown(event) {
     checkVpadState($(this).attr("value"), true);
@@ -145,15 +151,16 @@ function handleButtonUp(event) {
 }
 
 
-// touch/mouse events for control buttons
+// touch/mouse events for control buttons. mouseup events is binded to window.
 $(".btn").on("mousedown", handleButtonDown);
 $(".btn").on("touchstart", handleButtonDown);
 $(".btn").on("touchend", handleButtonUp);
 
 
-////////
 
-
+/*
+    Touch menu
+*/
 
 let menuTouchIdx = null;
 let menuTouchDrag = null;
@@ -191,8 +198,15 @@ function handleMenuMove(event) {
     }
 
     var listbox = $("#menu-container");
-    listbox.css("transition", ``);
-    listbox.css("transform", `translateY(${menuTranslateY - (menuTouchDrag.y - event.clientY)}px)`);
+    listbox.css("transition", "");
+    listbox.css("-moz-transition", "");
+    listbox.css("-webkit-transition", "");
+    if (isLayoutSwitched) {
+        listbox.css("top", `${menuTop - (-menuTouchDrag.x + event.clientX)}px`);
+    } else {
+        listbox.css("top", `${menuTop - (menuTouchDrag.y - event.clientY)}px`);
+    }
+    
 }
 
 function handleMenuUp(event) {
@@ -204,51 +218,57 @@ function handleMenuUp(event) {
         event.clientY = event.changedTouches[0].clientY;
     }
 
-    var interval = Date.now() - dragTime; // 100ms?
-    var newY = 0;
+    var interval = Date.now() - menuTouchTime; // 100ms?
+    if (isLayoutSwitched) {
+        newY = -menuTouchDrag.x + event.clientX;
+    } else {
+        newY = menuTouchDrag.y - event.clientY;
+    }
+    
     if (interval < 200) {
         // calc velo
-        newY = (menuTouchDrag.y - event.clientY) / interval * 300;
-    } else {
-        newY = (menuTouchDrag.y - event.clientY);
+        newY =  newY/ interval * 250;
     }
     // current item?
-    menuTranslateY -= newY;
-    idx = Math.round(menuTranslateY / -36);
+    menuTop -= newY;
+    idx = Math.round((menuTop - MENU_TOP_POSITION) / -36);
     pickGame(idx);
 
     menuTouchDrag = null;
 }
 
 
+// Bind events for menu
 $("#menu-screen").on("mousedown", handleMenuDown);
 $("#menu-screen").on("touchstart", handleMenuDown);
 $("#menu-screen").on("touchend", handleMenuUp);
 
 
-////////
 
-
-
-// wtf
+/*
+    Common events
+*/
 
 function handleWindowMove(event) {
     event.preventDefault();
     handleVpadJoystickMove(event);
     handleMenuMove(event);
     
-    // // moving touch
-    // if (event.changedTouches) {
-    //     for (var i = 0; i < event.changedTouches.length; i++) {
-    //         if (event.changedTouches[i].identifier !== menuTouchIdx && event.changedTouches[i].identifier !== vpadTouchIdx) {
-    //             // check class
-    //             var elem = document.elementFromPoint(event.changedTouches[i].clientX, event.changedTouches[i].clientY);
-    //             if (elem.classList.contains("btn")) {
-    //                 $(elem).
-    //             }
-    //         }
-    //     }
-    // }
+    // moving touch
+    if (event.changedTouches) {
+        for (var i = 0; i < event.changedTouches.length; i++) {
+            if (event.changedTouches[i].identifier !== menuTouchIdx && event.changedTouches[i].identifier !== vpadTouchIdx) {
+                // check class
+                
+                var elem = document.elementFromPoint(event.changedTouches[i].clientX, event.changedTouches[i].clientY);
+                if (elem.classList.contains("btn")) {
+                    $(elem).trigger("touchstart");
+                } else {
+                    $(".btn").trigger("touchend");
+                }
+            }
+        }
+    }
 }
 
 function handleWindowUp(event) {
@@ -259,7 +279,7 @@ function handleWindowUp(event) {
 
 
 
+// Bind events for window
 $(window).on("mousemove", handleWindowMove);
 window.addEventListener("touchmove", handleWindowMove, {passive: false});
-
 $(window).on("mouseup", handleWindowUp);

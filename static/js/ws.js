@@ -67,14 +67,24 @@ conn.onmessage = e => {
         // TODO: Calc time
         break;
     case "start":
-        log("Got start");
+        roomID = d["room_id"];    
+        log(`Got start with room id: ${roomID}`);
+        popup("Started! You can share you game!")
+        saveRoomID(roomID);
+
+        $("#btn-join").html("share");
+
+        // TODO: remove
         $("#room-txt").val(d["room_id"]);
+
         break;
     case "save":
         log(`Got save response: ${d["data"]}`);
+        popup("Saved");
         break;
     case "load":
         log(`Got load response: ${d["data"]}`);
+        popup("Loaded");
         break;
     }
 }
@@ -206,13 +216,14 @@ function startGame() {
     screenState = "game";
 
     // conn.send(JSON.stringify({"id": "start", "data": gameList[gameIdx].file, "room_id": $("#room-txt").val(), "player_index": parseInt(playerIndex.value, 10)}));
-    conn.send(JSON.stringify({"id": "start", "data": gameList[gameIdx].file, "room_id": $("#room-txt").val(), "player_index": 1}));
+    conn.send(JSON.stringify({"id": "start", "data": gameList[gameIdx].file, "room_id": roomID != null ? roomID : '', "player_index": 1}));
 
     // clear menu screen
     stopGameInputTimer();
-    $("#menu-screen").fadeOut(DEBUG?0:400, function() {
+    $("#menu-screen").fadeOut(DEBUG ? 0 : 400, function() {
         $("#game-screen").show();
     });
     // end clear
     startGameInputTimer();
+
 }

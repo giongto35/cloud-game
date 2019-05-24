@@ -22,12 +22,13 @@ function showMenuScreen() {
     // clear scenes
     $("#game-screen").hide();
     $("#menu-screen").hide();
+    $("#btn-join").html("play");
 
     // show menu scene
-    $("#game-screen").show().delay(DEBUG ? 0 : 1000).fadeOut(400, () => {
+    $("#game-screen").show().delay(DEBUG ? 0 : 2000).fadeOut(DEBUG ? 0 : 400, function () {
         log("Loading menu screen");
-        $("#menu-screen").fadeIn(400, () => {
-            pickGame(gameIdx, true);
+        $("#menu-screen").fadeIn(DEBUG ? 0 : 400, function () {
+            pickGame(gameIdx);
             screenState = "menu";
         });
     });
@@ -40,9 +41,14 @@ function pickGame(idx) {
     if (idx >= gameList.length) idx = gameList.length - 1;
 
     // transition menu box
-    menuTranslateY = -idx * 36;
-    $("#menu-container").css("transition", `transform 0.5s`);
-    $("#menu-container").css("transform", `translateY(${menuTranslateY}px)`);
+    
+    var listbox = $("#menu-container");
+    listbox.css("transition", "top 0.5s");
+    listbox.css("-moz-transition", "top 0.5s");
+    listbox.css("-webkit-transition", "top 0.5s");
+
+    menuTop = MENU_TOP_POSITION - idx * 36;
+    listbox.css("top", `${menuTop}px`);
 
     // overflow marquee
     $(".menu-item .pick").removeClass("pick");
@@ -151,12 +157,19 @@ function doButtonUp(name) {
         setKeyState(name, false);
 
         switch (name) {
+            case "join":
+                copyToClipboard(window.location.href.split('?')[0] + `?id=${roomID}`)
+                popup("Copy link to clipboard!")
+                break;
+
             case "save":
                 conn.send(JSON.stringify({ "id": "save", "data": "" }));
                 break;
+
             case "load":
                 conn.send(JSON.stringify({ "id": "load", "data": "" }));
                 break;
+                
             case "full":
                 // Fullscreen
                 screen = document.getElementById("game-screen");
@@ -168,19 +181,16 @@ function doButtonUp(name) {
                     openFullscreen(screen);
                 }
                 break;
-        }
-    }
+            case "quit":
+                stopGameInputTimer();
+                showMenuScreen();
+                
+                // TODO: Stop game
+                conn.send(JSON.stringify({ "id": "quit", "data": "", "room_id": roomID }));
 
-    // global reset
-    if (name === "quit") {
-        stopGameInputTimer();
-        showMenuScreen();
-        
-        // TODO: Stop game
-        screen = document.getElementById("game-screen");
-        room_id = $("#room-txt").val()
-        conn.send(JSON.stringify({ "id": "quit", "data": "", "room_id": room_id }));
-        $("#room-txt").val("");
+                popup("Quit!");
+                break;
+        }
     }
 }
 

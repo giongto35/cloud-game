@@ -5,6 +5,11 @@ function log(msg) {
     console.log(msg);
 }
 
+function popup(msg) {
+    $("#noti-box").html(msg);
+    $("#noti-box").fadeIn().delay(DEBUG ? 0 : 1000).fadeOut();
+}
+
 
 function openFullscreen(elem) {
     if (elem.requestFullscreen) {
@@ -72,7 +77,6 @@ function isPortrait() {
 }
 
 
-
 function fixElementLayout(elem, targetWidth, targetHeight) {
     var width = elem.width();
     var height = elem.height();
@@ -97,3 +101,23 @@ function fixElementLayout(elem, targetWidth, targetHeight) {
     elem.css("-webkit-transform", st);
     elem.css("-moz-transform", st);
 }
+
+
+function loadRoomID() {
+    return localStorage.getItem("roomID");
+}
+
+
+function saveRoomID(roomIdx) {
+    localStorage.setItem("roomID", roomIdx);
+}
+
+
+function copyToClipboard(str) {
+    const el = document.createElement('textarea');
+    el.value = str;
+    document.body.appendChild(el);
+    el.select();
+    document.execCommand('copy');
+    document.body.removeChild(el);
+};

@@ -1,15 +1,14 @@
 /*
     Global Constants
 */
-DEBUG = true;
+const DEBUG = false;
 
-KEY_BIT = ["a", "b", "select", "start", "up", "down", "left", "right"];
+const KEY_BIT = ["a", "b", "select", "start", "up", "down", "left", "right"];
+const INPUT_FPS = 100;
+const INPUT_STATE_PACKET = 1;
+const PINGPONGPS = 5;
 
-INPUT_FPS = 100;
-INPUT_STATE_PACKET = 1;
-
-PINGPONGPS = 5;
-
+const MENU_TOP_POSITION = 102;
 
 /* 
     Global variables
@@ -19,8 +18,9 @@ PINGPONGPS = 5;
 // Game state
 let screenState = "loader";
 let gameList = [];
-let gameIdx = 5;
+let gameIdx = 0;
 let gamePickerTimer = null;
+let roomID = null;
 
 
 // Game controller state
@@ -51,7 +51,7 @@ let conn;
 
 // Touch menu state
 let menuDrag = null;
-let menuTranslateY;
+let menuTop = MENU_TOP_POSITION;
 
 
 // Screen state

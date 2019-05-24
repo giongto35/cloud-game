@@ -66,9 +66,9 @@ func main() {
 
 	rand.Seed(time.Now().UTC().UnixNano())
 
-	//if *config.IsMonitor {
-	//go monitor()
-	//}
+	if *config.IsMonitor {
+		go monitor()
+	}
 	// There are two server mode
 	// Overlord is coordinator. If the OvelordHost Param is `overlord`, we spawn a new host as Overlord.
 	// else we spawn new server as normal server connecting to OverlordHost.

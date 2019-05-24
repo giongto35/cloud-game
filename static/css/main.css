@@ -335,6 +335,7 @@ body {
 
 
 #game-screen {
+    overflow: hidden;
     width: 100%; 
     height: 100%; 
     display: none;
@@ -358,8 +359,8 @@ body {
 
     width: 100%;
     height: 36px;
-    background-color: green;
-    opacity: 0.5;
+    background-color: lightgreen;
+    opacity: 0.75;
 
     top: 50%;
     left: 0;
@@ -370,11 +371,11 @@ body {
 #menu-container {
     display: block;
     position: absolute;
-    background-color: red;
-    
-    width: 100%; /* dynamic height? */
+    /* background-color: red; */
 
-    /* same position as choice box */
+    
+    width: 100%;
+
     top: 102px; /* 240px - 36 / 2 */
     left: 0;
 }
@@ -387,17 +388,15 @@ body {
 }
 
 .menu-item {
-    overflow: hidden; 
     display: block;
     position: relative;
 
     width: 100%;
-    height: 35px; /* 35 + 1 border = 36px */
+    height: 36px; /* 35 + 1 border = 36px */
 
     font-family: 'YourFontName';
     font-size: 19px;
-
-    border-top: 1px dashed blue;
+    /* border-top: 1px dashed blue; */
 }
 
 .menu-item div {
@@ -410,7 +409,7 @@ body {
     width: 226px;
     height: 25px;
 
-    background-color: yellow;
+    /* background-color: yellow; */
 }
 
 .menu-item div span {
@@ -431,16 +430,43 @@ body {
 }
 
 
-/* Move it (define the animation) */
 @-moz-keyframes horizontally {
-    0%   { -moz-transform: translateX(50%); }
-    100% { -moz-transform: translateX(-50%); }
+    0%   { transform: translateX(0%); }
+    25% { transform: translateX(-20%); }
+    50% { transform: translateX(0%); }
+    75% { transform: translateX(20%); }
+    100% { transform: translateX(0%); }
 }
 @-webkit-keyframes horizontally {
-    0%   { -webkit-transform: translateX(50%); }
-    100% { -webkit-transform: translateX(-50%); }
+    0%   { transform: translateX(0%); }
+    25% { transform: translateX(-20%); }
+    50% { transform: translateX(0%); }
+    75% { transform: translateX(20%); }
+    100% { transform: translateX(0%); }
 }
 @keyframes horizontally {
-    0%   { transform: translateX(50%); }
-    100% { transform: translateX(-50%); }
+    0%   { transform: translateX(0%); }
+    25% { transform: translateX(-20%); }
+    50% { transform: translateX(0%); }
+    75% { transform: translateX(20%); }
+    100% { transform: translateX(0%); }
+}
+
+
+#noti-box {
+    display: none;
+    padding: 5px 10px 0 10px;
+    height: 20px;
+    background-color: #ddd;
+    opacity: 0.8;
+    position: absolute;
+
+    border: 5px #000;
+    border-radius: 30px;
+    
+    left: 50%;
+    transform: translateX(-50%);
+    bottom: 35px;
+
+    font-size: 12px;
 }
