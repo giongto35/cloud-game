@@ -16,7 +16,7 @@ import (
 	uuid "github.com/satori/go.uuid"
 )
 
-var webrtcconfig = webrtc.Configuration{ICEServers: []webrtc.ICEServer{{URLs: []string{"stun:stun.l.google.com:19302"}}}}
+var webrtcconfig = webrtc.Configuration{ICEServers: []webrtc.ICEServer{{URLs: []string{"stun:159.65.141.209:3478", "stun:stun.l.google.com:19302", "stun:stun1.l.google.com:19302"}}}}
 
 // Allows compressing offer/answer to bypass terminal input limits.
 const compress = false
