@@ -26,18 +26,19 @@ conn.onmessage = e => {
     switch (d["id"]) {
 
     case "gamelist":
-        files = JSON.parse(d["data"]);
         // parse files list to gamelist
-
+        files = JSON.parse(d["data"]);
         gameList = [];
         files.forEach(file => {
             var file = file
             var name = file.substr(0, file.indexOf('.'));
             gameList.push({file: file, name: name});
         });
+
         log("Received game list");
 
         // change screen to menu
+        reloadGameMenu();
         showMenuScreen();
 
         break;
@@ -208,10 +209,10 @@ function startGame() {
     conn.send(JSON.stringify({"id": "start", "data": gameList[gameIdx].file, "room_id": $("#room-txt").val(), "player_index": 1}));
 
     // clear menu screen
-    stopInputTimer();
+    stopGameInputTimer();
     $("#menu-screen").fadeOut(DEBUG?0:400, function() {
         $("#game-screen").show();
     });
     // end clear
-    startInputTimer();
+    startGameInputTimer();
 }

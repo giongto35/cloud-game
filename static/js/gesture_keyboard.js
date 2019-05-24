@@ -1,6 +1,8 @@
-// KEYBOARD
+/*
+    Keyboard gesture
+*/
 
-KEYBOARD_MAP = {
+const KEYBOARD_MAP = {
     37: "left",
     38: "up",
     39: "right",
@@ -19,15 +21,15 @@ KEYBOARD_MAP = {
     70: "full", // f
 }
 
-document.body.onkeyup = function (e) {
-    if (e.keyCode in KEYBOARD_MAP) {
-        doButtonUp(KEYBOARD_MAP[e.keyCode]);
+$("body").on("keyup", function (event) {
+    if (event.keyCode in KEYBOARD_MAP) {
+        doButtonUp(KEYBOARD_MAP[event.keyCode]);
     }
-}
+});
 
-document.body.onkeydown = function (e) {
-    if (e.keyCode in KEYBOARD_MAP) {
-        doButtonDown(KEYBOARD_MAP[e.keyCode]);
+$("body").on("keydown", function (event) {
+    if (event.keyCode in KEYBOARD_MAP) {
+        doButtonDown(KEYBOARD_MAP[event.keyCode]);
     }
-};
+});
 

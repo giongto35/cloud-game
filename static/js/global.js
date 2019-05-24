@@ -1,45 +1,59 @@
 /*
-  GLOBAL CONSTS
+    Global Constants
 */
 DEBUG = true;
 
 KEY_BIT = ["a", "b", "select", "start", "up", "down", "left", "right"];
 
 INPUT_FPS = 100;
+INPUT_STATE_PACKET = 1;
+
 PINGPONGPS = 5;
-INPUT_STATE_PACKET = 5;
 
 
-//------------------------------------------------------------------------
 /* 
-  GLOBAL VARS
+    Global variables
 */
 
-// Game state
-var screenState = "loader";
-var gameList = [];
-var gameIdx = 5;
 
-// Input vars
-var keyState = {
-    // controllers
+// Game state
+let screenState = "loader";
+let gameList = [];
+let gameIdx = 5;
+let gamePickerTimer = null;
+
+
+// Game controller state
+let keyState = {
+    // control
     a: false,
     b: false,
     start: false,
     select: false,
 
-    // navigators
+    // dpad
     up: false,
     down: false,
     left: false,
     right: false
 }
 
-var unchangePacket = INPUT_STATE_PACKET;
-var inputTimer = null;
+let unchangePacket = INPUT_STATE_PACKET;
+let gameInputTimer = null;
 
-// Connection vars
-var pc, inputChannel;
-var localSessionDescription = "";
-var remoteSessionDescription = "";
-var conn;
+
+// Network state
+let pc, inputChannel;
+let localSessionDescription = "";
+let remoteSessionDescription = "";
+let conn;
+
+
+// Touch menu state
+let menuDrag = null;
+let menuTranslateY;
+
+
+// Screen state
+let isLayoutSwitched = false;
+
