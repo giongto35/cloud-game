@@ -2,7 +2,7 @@
 **SEA**: [http://cloud.webgame2d.com](http://cloud.webgame2d.com) | **US West**: (not hosted)| **US East**: (not hosted)| **Europe**: (not hosted)  
 For the best gaming experience, please select the closest region to you.  
 
-**Video demo**: https://www.youtube.com/watch?v=qkjV2VIwVIo
+**Video demo**: https://www.youtube.com/watch?v=koqWB1VKflo
 
 ---
 
