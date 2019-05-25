@@ -1,7 +1,8 @@
 # POGO, Web-based Cloud Gaming Service
 **SEA**: [http://cloud.webgame2d.com](http://cloud.webgame2d.com) | **US West**: (not hosted)| **US East**: (not hosted)| **Europe**: (not hosted)  
 For the best gaming experience, please select the closest region to you.  
-**Demo**: https://www.youtube.com/watch?v=qkjV2VIwVIo
+
+**Video demo**: https://www.youtube.com/watch?v=qkjV2VIwVIo
 
 ---
 
@@ -49,7 +50,7 @@ And run
 
 ## Documentation
 [Design Doc](document/)  
-[Implentation](document/implementation/)  
+[Implentation Doc](document/implementation/)  
 
 ## Follow up
 
