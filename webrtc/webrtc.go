@@ -16,7 +16,7 @@ import (
 	"github.com/pion/webrtc/v2/pkg/media"
 )
 
-var webrtcconfig = webrtc.Configuration{ICEServers: []webrtc.ICEServer{{URLs: []string{"stun:159.65.141.209:3478", "stun:stun.l.google.com:19302", "stun:stun1.l.google.com:19302"}}}}
+var webrtcconfig = webrtc.Configuration{ICEServers: []webrtc.ICEServer{{URLs: []string{"stun:stun.l.google.com:19302"}}}}
 
 // Allows compressing offer/answer to bypass terminal input limits.
 const compress = false
@@ -196,14 +196,15 @@ func (w *WebRTC) StartClient(remoteSession string, iceCandidates [][]byte, width
 	}
 
 	// Parse candidates list
-	for _, bcandidate := range iceCandidates {
-		iceCandidate := webrtc.ICECandidateInit{}
-		if err := json.Unmarshal(bcandidate, &iceCandidate); err != nil {
-			log.Println("Cannot parse ", bcandidate)
-			continue
-		}
-		w.connection.AddICECandidate(iceCandidate)
-	}
+	// This logic is wrong
+	//for _, bcandidate := range iceCandidates {
+	//iceCandidate := webrtc.ICECandidateInit{}
+	//if err := json.Unmarshal(bcandidate, &iceCandidate); err != nil {
+	//log.Println("Cannot parse ", bcandidate)
+	//continue
+	//}
+	//w.connection.AddICECandidate(iceCandidate)
+	//}
 
 	answer, err := w.connection.CreateAnswer(nil)
 	if err != nil {
