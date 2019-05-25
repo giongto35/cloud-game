@@ -57,3 +57,5 @@ let menuTop = MENU_TOP_POSITION;
 // Screen state
 let isLayoutSwitched = false;
 
+var gameReady = false;
+var iceSuccess = true;
