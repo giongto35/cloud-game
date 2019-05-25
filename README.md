@@ -1,5 +1,5 @@
 # POGO, Web-based Cloud Gaming Service
-**SEA**: [http://cloud.webgame2d.com](http://cloud.webgame2d.com) | **US West**: [http://us.cloud.webgame2d.com](http://us.cloud.webgame2d.com) (not hosted)| **US East**: [http://use.nes.webgame2d.com](http://use.nes.webgame2d.com) (not hosted)| **Europe**: [http://eu.nes.playcloud.games](http://eu.nes.playcloud.games) (not hosted)  
+**SEA**: [http://cloud.webgame2d.com](http://cloud.webgame2d.com) | **US West**: (not hosted)| **US East**: (not hosted)| **Europe**: (not hosted)  
 For the best gaming experience, please select the closest region to you.  
 **Demo**: https://www.youtube.com/watch?v=qkjV2VIwVIo
 
@@ -58,7 +58,7 @@ This project demos the simplest cloud game with NES. Integrating with other emul
 ## Credits
 
 * *Pion* Webrtc team for the incredible Golang Webrtc library and their supports https://github.com/pion/webrtc/.  
-* *fogleman* for the awesome nes emulator https://github.com/fogleman/nes.  
+* *fogleman* for the awesome NES emulator https://github.com/fogleman/nes.  
 * *poi5305* for the video encoding https://github.com/poi5305/go-yuv2webRTC.  
 * And last but not least, my longtime friend Tri as the co-author. 
 
