@@ -5,8 +5,16 @@
     <meta name="viewport" content="user-scalable=0">
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-capable" content="yes">
-    
-    <link href="//netdna.bootstrapcdn.com/font-awesome/4.5.0/css/font-awesome.css" rel="stylesheet">
+
+    <meta property="og:type" content="cloud-game" />
+    <meta property="og:title" content="Cloud Gaming - NES Emulator" />
+    <meta property="og:description" content="Play and share cloud gaming experience with your friends" />
+    <meta property="og:image" content="" />
+    <meta property="og:url" content="" />
+    <meta property="og:site_name" content="" />
+    <meta property="og:author" content="giongto35 trichimtrich" />
+
+    <link href="/static/css/font-awesome.css" rel="stylesheet">
     <link href="/static/css/main.css" rel="stylesheet">
 </head>
 
@@ -22,23 +30,22 @@
         </div>
 
         <div id="bottom-screen">
-            <video id="game-screen" autoplay=true poster="https://orig00.deviantart.net/cdcd/f/2017/276/a/a/october_2nd___gameboy_poltergeist_by_wanyo-dbpdmnd.gif"></video>
+            <video id="game-screen" autoplay=true
+                poster="/static/img/october_2nd___gameboy_poltergeist_by_wanyo-dbpdmnd.gif"></video>
 
             <div id="menu-screen">
-              <img id="box-art" src="/static/img/404.jpg" onerror="this.src='/static/img/404.jpg'">
-              <div id="title" unselectable="on" class="unselectable" >
-                <p>What the game ?!?</p>
-              </div>
-      
-              <img class="arrow left" src="/static/img/arrow2_e.gif">
-              <img class="arrow right" src="/static/img/arrow2_e.gif">
+                <div id="menu-container">
+                </div>
+                <div id="menu-item-choice"></div>
             </div>
+
+
         </div>
 
-        <div id="btn-load" unselectable="on" class="btn-big unselectable" value="load">load</div>
-        <div id="btn-save" unselectable="on" class="btn-big unselectable" value="save">save</div>
-        <div id="btn-join" unselectable="on" class="btn-big unselectable" value="join">start</div>
-        <div id="btn-quit" unselectable="on" class="btn-big unselectable" value="quit">quit</div>
+        <div id="btn-load" unselectable="on" class="btn big unselectable" value="load">load</div>
+        <div id="btn-save" unselectable="on" class="btn big unselectable" value="save">save</div>
+        <div id="btn-join" unselectable="on" class="btn big unselectable" value="join">play</div>
+        <div id="btn-quit" unselectable="on" class="btn big unselectable" value="quit">quit</div>
 
 
         <div id="color-button-holder">
@@ -54,7 +61,10 @@
             <div id="light-3"></div>
         </div>
 
-        <input id="room-txt" type="text" placeholder="room id..." unselectable="on" class=" unselectable">
+        <!-- TODO: remove -->
+        <input id="room-txt" type="text" placeholder="room id..." unselectable="on" class=" unselectable" disabled>
+
+        <div id="noti-box" unselectable="on" class="unselectable">Oh my god</div>
 
     </div>
 
@@ -63,7 +73,7 @@
         DEBUG = true;
     </script>
 
-    <script src="https://code.jquery.com/jquery-3.3.1.min.js"></script>
+    <script src="/static/js/jquery-3.3.1.min.js"></script>
     <script src="/static/js/utils.js"></script>
 
     <!-- https://rawgit.com/Rillke/opus.js-sample/master/index.xhtml -->
@@ -77,6 +87,8 @@
     <script src="/static/js/gesture_joystick.js"></script>
     <script src="/static/js/ws.js"></script>
     
+    <script src="/static/js/init.js"></script>
+
 </body>
 
 </html>
