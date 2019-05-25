@@ -1,5 +1,7 @@
 # POGO, Web-based Cloud Gaming Service
 SEA: [http://cloud.webgame2d.com](http://cloud.webgame2d.com) | US West: [http://us.cloud.webgame2d.com](http://us.cloud.webgame2d.com) (not hosted)| US East: [http://use.nes.webgame2d.com](http://use.nes.webgame2d.com) (not hosted)| Europe: [http://eu.nes.playcloud.games](http://eu.nes.playcloud.games) (not hosted) 
+---
+
 For the best gaming experience, please select the closest region to you. 
 
 POGO is an open source Cloud Gaming Service building on [WebRTC](https://github.com/pion) using browser as the main platform.  
