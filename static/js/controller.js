@@ -27,7 +27,7 @@ function showMenuScreen() {
     $("#btn-join").html("play");
 
     // show menu scene
-    $("#game-screen").show().delay(DEBUG ? 0 : 200).fadeOut(DEBUG ? 0 : 0, function () {
+    $("#game-screen").show().delay(DEBUG ? 0 : 500).fadeOut(DEBUG ? 0 : 0, function () {
         log("Loading menu screen");
         $("#menu-screen").fadeIn(DEBUG ? 0 : 0, function () {
             pickGame(gameIdx);
@@ -152,7 +152,7 @@ function doButtonUp(name) {
     if (screenState === "menu") {
         if (name === "up" || name === "down") {
             stopGamePickerTimer();
-        } else if (name === "join") {
+        } else if (name === "join" || name === "a" || name === "b" || name === "start" || name === "select") {
             startGame();
             //log("select game");
         }
@@ -191,6 +191,7 @@ function doButtonUp(name) {
                 // TODO: Stop game
                 conn.send(JSON.stringify({ "id": "quit", "data": "", "room_id": roomID }));
 
+                $("#room-txt").val("");
                 popup("Quit!");
                 break;
         }

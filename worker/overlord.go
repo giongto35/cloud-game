@@ -2,6 +2,8 @@ package worker
 
 import (
 	"log"
+	"runtime"
+	"time"
 
 	"github.com/giongto35/cloud-game/config"
 	"github.com/giongto35/cloud-game/cws"
@@ -105,7 +107,9 @@ func (h *Handler) RouteOverlord() {
 			if room.IsPCInRoom(session.peerconnection) {
 				h.detachPeerConn(session.peerconnection)
 			}
-			//session.Close()
+			start := time.Now()
+			runtime.GC()
+			log.Printf("GC takes %s\n", time.Since(start))
 
 			return cws.EmptyPacket
 		},

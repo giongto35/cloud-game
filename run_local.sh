@@ -1,7 +1,8 @@
 #!/bin/bash
+go build -o pogo ./cmd
 # Run coordinator first
-go run cmd/main.go -overlordhost overlord &
+./pogo -overlordhost overlord &
 # Wait till overlord finish initialized
 # Run a worker connecting to overlord
-sleep 3s
-go run cmd/main.go -overlordhost ws://localhost:8000/wso
+./pogo -overlordhost ws://localhost:8000/wso
+# NOTE: Overlord and worker should be run separately. Local is for demo purpose
