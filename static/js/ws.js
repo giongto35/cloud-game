@@ -96,7 +96,7 @@ function sendPing() {
 
 function startWebRTC() {
     // webrtc
-    pc = new RTCPeerConnection({iceServers: [{urls: ['stun:159.65.141.209:3478', 'stun:stun.l.google.com:19302', 'stun:stun1.l.google.com:19302']}]})
+    pc = new RTCPeerConnection({iceServers: [{urls: ['stun:stun.l.google.com:19302']}]})
 
     // input channel, ordered + reliable, id 0
     inputChannel = pc.createDataChannel('a', {
