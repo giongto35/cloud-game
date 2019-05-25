@@ -27,7 +27,7 @@ function showMenuScreen() {
     $("#btn-join").html("play");
 
     // show menu scene
-    $("#game-screen").show().delay(DEBUG ? 0 : 500).fadeOut(DEBUG ? 0 : 0, function () {
+    $("#game-screen").show().delay(DEBUG ? 0 : 0).fadeOut(DEBUG ? 0 : 0, function () {
         log("Loading menu screen");
         $("#menu-screen").fadeIn(DEBUG ? 0 : 0, function () {
             pickGame(gameIdx);

@@ -171,7 +171,13 @@ function startWebRTC() {
         log(`iceConnectionState: ${pc.iceConnectionState}`);
 
         if (pc.iceConnectionState === "connected") {
+            gameReady = true
+            iceSuccess = true
             //conn.send(JSON.stringify({"id": "start", "data": ""}));
+        }
+        else if (pc.iceConnectionState === "failed") {
+            gameReady = false
+            iceSuccess = false
         }
         else if (pc.iceConnectionState === "disconnected") {
             stopInputTimer();
@@ -182,7 +188,7 @@ function startWebRTC() {
     // video channel
     pc.ontrack = function (event) {
         document.getElementById("game-screen").srcObject = event.streams[0];
-        $("#game-screen").show();
+        //$("#game-screen").show();
     }
 
 
@@ -212,6 +218,13 @@ function startWebRTC() {
 }
 
 function startGame() {
+    if (!iceSuccess) {
+        popup("Game cannot load. Please refresh")
+    }
+    // TODO: Add while loop
+    if (!gameReady) {
+        popup("Game is not ready yet. Please wait")
+    }
     log("Starting game screen");
     screenState = "game";
 
