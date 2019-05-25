@@ -1,45 +1,59 @@
 /*
-  GLOBAL CONSTS
+    Global Constants
 */
-DEBUG = true;
+const DEBUG = false;
 
-KEY_BIT = ["a", "b", "select", "start", "up", "down", "left", "right"];
+const KEY_BIT = ["a", "b", "select", "start", "up", "down", "left", "right"];
+const INPUT_FPS = 100;
+const INPUT_STATE_PACKET = 1;
+const PINGPONGPS = 5;
 
-INPUT_FPS = 100;
-PINGPONGPS = 5;
-INPUT_STATE_PACKET = 5;
+const MENU_TOP_POSITION = 102;
 
-
-//------------------------------------------------------------------------
 /* 
-  GLOBAL VARS
+    Global variables
 */
+
 
 // Game state
-var screenState = "loader";
-var gameList = [];
-var gameIdx = 5;
+let screenState = "loader";
+let gameList = [];
+let gameIdx = 5; // contra
+let gamePickerTimer = null;
+let roomID = null;
 
-// Input vars
-var keyState = {
-    // controllers
+
+// Game controller state
+let keyState = {
+    // control
     a: false,
     b: false,
     start: false,
     select: false,
 
-    // navigators
+    // dpad
     up: false,
     down: false,
     left: false,
     right: false
 }
 
-var unchangePacket = INPUT_STATE_PACKET;
-var inputTimer = null;
+let unchangePacket = INPUT_STATE_PACKET;
+let gameInputTimer = null;
 
-// Connection vars
-var pc, inputChannel;
-var localSessionDescription = "";
-var remoteSessionDescription = "";
-var conn;
+
+// Network state
+let pc, inputChannel;
+let localSessionDescription = "";
+let remoteSessionDescription = "";
+let conn;
+
+
+// Touch menu state
+let menuDrag = null;
+let menuTop = MENU_TOP_POSITION;
+
+
+// Screen state
+let isLayoutSwitched = false;
+

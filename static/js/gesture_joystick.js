@@ -1,5 +1,6 @@
-
-// JOYSTICK
+/*
+    Joystick gesture
+*/
 
 /*
     cross == a      <--> a
@@ -13,104 +14,122 @@
     dpad            <--> up down left right
     axis 0, 1       <--> second dpad
 */
-var padState, gamepadTimer;
+
+let joystickMap;
+let joystickState;
+let joystickIdx;
+let joystickTimer = null;
 
 
-// only capture the last plugged joystick
-window.addEventListener("gamepadconnected", (e) => {
-    gamepad = e.gamepad;
+// check state for each axis -> dpad
+function checkJoystickAxisState(name, state) {
+    if (joystickState[name] !== state) {
+        joystickState[name] = state;
+        if (state === true) {
+            doButtonDown(name);
+        } else {
+            doButtonUp(button);
+        }
+    }
+}
+
+
+// loop timer for checking joystick state
+function checkJoystickState() {
+    var gamepad = navigator.getGamepads()[joystickIdx];
+    if (gamepad) {
+        // axis -> dpad
+        var corX = gamepad.axes[0]; // -1 -> 1, left -> right
+        var corY = gamepad.axes[1]; // -1 -> 1, up -> down
+        checkJoystickAxisState("left", corX <= -0.5);
+        checkJoystickAxisState("right", corX >= 0.5);
+        checkJoystickAxisState("up", corY <= -0.5);
+        checkJoystickAxisState("down", corY >= 0.5);
+
+        // normal button map
+        Object.keys(joystickMap).forEach(function (btnIdx) {
+            var isPressed = false;
+
+            if (navigator.webkitGetGamepads) {
+                isPressed = (gamepad.buttons[btnIdx] === 1);
+            } else {
+                isPressed = (gamepad.buttons[btnIdx].value > 0 || gamepad.buttons[btnIdx].pressed === true);
+            }
+
+            if (joystickState[btnIdx] !== isPressed) {
+                joystickState[btnIdx] = isPressed;
+                if (isPressed === true) {
+                    doButtonDown(joystickMap[btnIdx]);
+                } else {
+                    doButtonUp(joystickMap[btnIdx]);
+                }
+            }
+        });
+    }
+}
+
+
+// we only capture the last plugged joystick
+$(window).on("gamepadconnected", function (event) {
+    var gamepad = event.gamepad;
     log(`Gamepad connected at index ${gamepad.index}: ${gamepad.id}. ${gamepad.buttons.length} buttons, ${gamepad.axes.length} axes.`);
 
-    padIdx = gamepad.index;
+    joystickIdx = gamepad.index;
 
     // Ref: https://github.com/giongto35/cloud-game/issues/14
     // get mapping first (default KeyMap2)
-    os = getOS();
-    browser = getBrowser();
+    var os = getOS();
+    var browser = getBrowser();
 
-    console.log(os);
-    console.log(browser);
-
-    if (os == "android") {
+    if (os === "android") {
         // default of android is KeyMap1
-        padMap = { 2: "a", 0: "b", 3: "start", 4: "select", 10: "load", 11: "save", 8: "full", 9: "quit", 12: "up", 13: "down", 14: "left", 15: "right" };
+        joystickMap = { 2: "a", 0: "b", 3: "start", 4: "select", 10: "load", 11: "save", 8: "full", 9: "quit", 12: "up", 13: "down", 14: "left", 15: "right" };
     } else {
         // default of other OS is KeyMap2
-        padMap = { 0: "a", 1: "b", 2: "start", 3: "select", 8: "load", 9: "save", 6: "full", 7: "quit", 12: "up", 13: "down", 14: "left", 15: "right" };
+        joystickMap = { 0: "a", 1: "b", 2: "start", 3: "select", 8: "load", 9: "save", 6: "full", 7: "quit", 12: "up", 13: "down", 14: "left", 15: "right" };
     }
 
-    if (os == "android" && (browser == "firefox" || browser == "uc")) { //KeyMap2
-        padMap = { 0: "a", 1: "b", 2: "start", 3: "select", 8: "load", 9: "save", 6: "full", 7: "quit", 12: "up", 13: "down", 14: "left", 15: "right" };
+    if (os === "android" && (browser === "firefox" || browser === "uc")) { //KeyMap2
+        joystickMap = { 0: "a", 1: "b", 2: "start", 3: "select", 8: "load", 9: "save", 6: "full", 7: "quit", 12: "up", 13: "down", 14: "left", 15: "right" };
     }
 
-    if (os == "win" && browser == "firefox") { //KeyMap3
-        padMap = { 1: "a", 2: "b", 0: "start", 3: "select", 8: "load", 9: "save", 6: "full", 7: "quit" };
+    if (os === "win" && browser === "firefox") { //KeyMap3
+        joystickMap = { 1: "a", 2: "b", 0: "start", 3: "select", 8: "load", 9: "save", 6: "full", 7: "quit" };
     }
 
-    if (os == "mac" && browser == "safari") { //KeyMap4
-        padMap = { 1: "a", 2: "b", 0: "start", 3: "select", 8: "load", 9: "save", 6: "full", 7: "quit", 14: "up", 15: "down", 16: "left", 17: "right" };
+    if (os === "mac" && browser === "safari") { //KeyMap4
+        joystickMap = { 1: "a", 2: "b", 0: "start", 3: "select", 8: "load", 9: "save", 6: "full", 7: "quit", 14: "up", 15: "down", 16: "left", 17: "right" };
     }
 
-    if (os == "mac" && browser == "firefox") { //KeyMap5
-        padMap = { 1: "a", 2: "b", 0: "start", 3: "select", 8: "load", 9: "save", 6: "full", 7: "quit", 14: "up", 15: "down", 16: "left", 17: "right" };
+    if (os === "mac" && browser === "firefox") { //KeyMap5
+        joystickMap = { 1: "a", 2: "b", 0: "start", 3: "select", 8: "load", 9: "save", 6: "full", 7: "quit", 14: "up", 15: "down", 16: "left", 17: "right" };
     }
 
     // reset state
-    padState = {
+    joystickState = {
         left: false,
         right: false,
         up: false,
         down: false,
     };
-    Object.keys(padMap).forEach(k => {
-        padState[k] = false;
+    Object.keys(joystickMap).forEach(function (btnIdx) {
+        joystickState[btnIdx] = false;
     });
 
 
     // looper, too intense?
-    if (gamepadTimer) {
-        clearInterval(gamepadTimer);
+    if (joystickTimer !== null) {
+        clearInterval(joystickTimer);
     }
 
-    function checkAxis(bo, axis) {
-        if (bo != padState[axis]) {
-            padState[axis] = bo;
-            doButton(bo, axis);
-        }
-    }
-
-    gamepadTimer = setInterval(function () {
-        gamepad = navigator.getGamepads()[padIdx];
-        if (gamepad) {
-            // axis pad
-            corX = gamepad.axes[0]; // -1 -> 1, left -> right
-            corY = gamepad.axes[1]; // -1 -> 1, up -> down
-            checkAxis(corX <= -0.5, "left");
-            checkAxis(corX >= 0.5, "right");
-            checkAxis(corY <= -0.5, "up");
-            checkAxis(corY >= 0.5, "down");
-
-            // normal button
-            Object.keys(padMap).forEach(k => {
-                if (navigator.webkitGetGamepads) {
-                    curPressed = (gamepad.buttons[k] == 1);
-                } else {
-                    curPressed = (gamepad.buttons[k].value > 0 || gamepad.buttons[k].pressed == true);
-                }
-
-                if (padState[k] != curPressed) {
-                    padState[k] = curPressed;
-                    doButton(curPressed, padMap[k]);
-                }
-            });
-        }
-
-    }, 10); // miliseconds per hit
+    joystickTimer = setInterval(checkJoystickState, 10); // miliseconds per hit
 
 });
 
-window.addEventListener("gamepaddisconnected", (event) => {
-    clearInterval(gamepadTimer);
+
+// disconnected event is triggered
+$(window).on("gamepaddisconnected", (event) => {
+    clearInterval(joystickTimer);
     log(`Gamepad disconnected at index ${e.gamepad.index}`);
 });
 

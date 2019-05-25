@@ -1,63 +1,106 @@
-// menu screen
-function showMenuScreen() {
-    log("Clean up connection / frame");
+/*
+    Menu Controller
+*/
 
+function reloadGameMenu() {
+    log("Load game menu");
+
+    // sort gameList first
+    gameList.sort(function (a, b) {
+        return a.name > b.name ? 1 : -1;
+    });
+
+    // generate html
+    var listbox = $("#menu-container");
+    listbox.html('');
+    gameList.forEach(function (game) {
+        listbox.append(`<div class="menu-item unselectable" unselectable="on"><div><span>${game.name}</span></div></div>`);
+    });
+}
+
+function showMenuScreen() {
+    // clear scenes
     $("#game-screen").hide();
     $("#menu-screen").hide();
-    // show
-    $("#game-screen").show().delay(DEBUG?0:0).fadeOut(0, () => {
+    $("#btn-save").hide();
+    $("#btn-load").hide();
+    $("#btn-join").html("play");
+
+    // show menu scene
+    $("#game-screen").show().delay(DEBUG ? 0 : 500).fadeOut(DEBUG ? 0 : 0, function () {
         log("Loading menu screen");
-        $("#menu-screen").fadeIn(0, () => {
-            chooseGame(gameIdx, true);
+        $("#menu-screen").fadeIn(DEBUG ? 0 : 0, function () {
+            pickGame(gameIdx);
             screenState = "menu";
         });
     });
 }
 
 
-// game menu
-function chooseGame(idx, force = false) {
-    if (idx < 0 || (idx == gameIdx && !force) || idx >= gameList.length) return false;
+function pickGame(idx) {
+    // check boundaries
+    // cycle
+    if (idx < 0) idx = gameList.length - 1;
+    if (idx >= gameList.length) idx = 0;
 
-    $("#menu-screen #box-art").fadeOut(DEBUG?0:0, function () {
-        $(this).attr("src", `/static/img/boxarts/${gameList[idx].name}.png`);
-        $(this).fadeIn(0, function () {
-            $("#menu-screen #title p").html(gameList[idx].name);
-        });
-    });
+    // transition menu box
 
-    if (idx == 0) {
-        $("#menu-screen .left").hide();
-    } else {
-        $("#menu-screen .left").show();
-    }
+    var listbox = $("#menu-container");
+    listbox.css("transition", "top 0.2s");
+    listbox.css("-moz-transition", "top 0.2s");
+    listbox.css("-webkit-transition", "top 0.2s");
 
-    if (idx == gameList.length - 1) {
-        $("#menu-screen .right").hide();
-    } else {
-        $("#menu-screen .right").show();
-    }
+    menuTop = MENU_TOP_POSITION - idx * 36;
+    listbox.css("top", `${menuTop}px`);
+
+    // overflow marquee
+    $(".menu-item .pick").removeClass("pick");
+    $(`.menu-item:eq(${idx}) span`).addClass("pick");
 
     gameIdx = idx;
     log(`> [Pick] game ${gameIdx + 1}/${gameList.length} - ${gameList[gameIdx].name}`);
 }
 
 
-// global func
+function startGamePickerTimer(direction) {
+    if (gamePickerTimer === null) {
+        pickGame(gameIdx + (direction === "up" ? -1 : 1));
+
+        log("Start game picker timer");
+        // velocity?
+        gamePickerTimer = setInterval(function () {
+            pickGame(gameIdx + (direction === "up" ? -1 : 1));
+        }, 200);
+    }
+}
+
+function stopGamePickerTimer() {
+    if (gamePickerTimer !== null) {
+        log("Stop game picker timer");
+        clearInterval(gamePickerTimer);
+        gamePickerTimer = null;
+    }
+}
 
 
-function sendInputData() {
-    // prepare key
+/*
+    Game controller
+*/
+
+function sendKeyState() {
+    // check if state is changed
     if (unchangePacket > 0) {
-        bits = "";
+        // pack keystate
+        var bits = "";
         KEY_BIT.slice().reverse().forEach(elem => {
             bits += keyState[elem] ? 1 : 0;
         });
-        data = parseInt(bits, 2);
+        var data = parseInt(bits, 2);
+
         console.log(`Key state string: ${bits} ==> ${data}`);
 
-        // send
-        arrBuf = new Uint8Array(1);
+        // send packed keystate
+        var arrBuf = new Uint8Array(1);
         arrBuf[0] = data;
         inputChannel.send(arrBuf);
 
@@ -66,21 +109,26 @@ function sendInputData() {
 }
 
 
-function startInputTimer() {
-    if (inputTimer == null) {
-        inputTimer = setInterval(sendInputData, 1000 / INPUT_FPS)
+function startGameInputTimer() {
+    if (gameInputTimer === null) {
+        log("Start game input timer");
+        gameInputTimer = setInterval(sendKeyState, 1000 / INPUT_FPS)
     }
 }
 
-function stopInputTimer() {
-    clearInterval(inputTimer);
-    inputTimer = null;
+
+function stopGameInputTimer() {
+    if (gameInputTimer !== null) {
+        log("Stop game input timer");
+        clearInterval(gameInputTimer);
+        gameInputTimer = null;
+    }
 }
 
 
-function setState(name, bo) {
+function setKeyState(name, state) {
     if (name in keyState) {
-        keyState[name] = bo;
+        keyState[name] = state;
         unchangePacket = INPUT_STATE_PACKET;
     }
 }
@@ -88,9 +136,12 @@ function setState(name, bo) {
 function doButtonDown(name) {
     $(`#btn-${name}`).addClass("pressed");
 
-    if (screenState === "game") {
-        // game keys
-        setState(name, true);
+    if (screenState === "menu") {
+        if (name === "up" || name === "down") {
+            startGamePickerTimer(name);
+        }
+    } else if (screenState === "game") {
+        setKeyState(name, true);
     }
 }
 
@@ -99,34 +150,29 @@ function doButtonUp(name) {
     $(`#btn-${name}`).removeClass("pressed");
 
     if (screenState === "menu") {
-        switch (name) {
-            case "left":
-                chooseGame(gameIdx - 1);
-                break;
-
-            case "right":
-                chooseGame(gameIdx + 1);
-                break;
-
-            case "join":
-            case "a":
-            case "b":
-            case "start":
-            case "select":
-                startGame();
-                // log("select game");
-                break;
+        if (name === "up" || name === "down") {
+            stopGamePickerTimer();
+        } else if (name === "join" || name === "a" || name === "b" || name === "start" || name === "select") {
+            startGame();
+            //log("select game");
         }
     } else if (screenState === "game") {
-        setState(name, false);
+        setKeyState(name, false);
 
         switch (name) {
+            case "join":
+                copyToClipboard(window.location.href.split('?')[0] + `?id=${roomID}`)
+                popup("Copy link to clipboard!")
+                break;
+
             case "save":
                 conn.send(JSON.stringify({ "id": "save", "data": "" }));
                 break;
+
             case "load":
                 conn.send(JSON.stringify({ "id": "load", "data": "" }));
                 break;
+                
             case "full":
                 // Fullscreen
                 screen = document.getElementById("game-screen");
@@ -138,18 +184,17 @@ function doButtonUp(name) {
                     openFullscreen(screen);
                 }
                 break;
-        }
-    }
+            case "quit":
+                stopGameInputTimer();
+                showMenuScreen();
+                
+                // TODO: Stop game
+                conn.send(JSON.stringify({ "id": "quit", "data": "", "room_id": roomID }));
 
-    // global reset
-    if (name === "quit") {
-        stopInputTimer();
-        showMenuScreen();
-        // TODO: Stop game
-        screen = document.getElementById("game-screen");
-        room_id = $("#room-txt").val()
-        conn.send(JSON.stringify({ "id": "quit", "data": "", "room_id": room_id}));
-        $("#room-txt").val("");
+                $("#room-txt").val("");
+                popup("Quit!");
+                break;
+        }
     }
 }
 

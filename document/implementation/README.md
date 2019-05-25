@@ -13,7 +13,7 @@
 ├── static: static file for front end
 │   ├── js
 │   │   └── ws.js: client logic
-│   ├── gameboy.html: frontend with gameboy ui
+│   ├── game.html: frontend with gameboy ui
 │   └── index_ws.html: raw frontend without ui
 ├── cws
 │   └── cws.go: socket multiplexer library, used for signalling
