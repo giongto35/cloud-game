@@ -223,6 +223,8 @@ function startGame() {
     $("#menu-screen").fadeOut(DEBUG ? 0 : 0, function() {
         $("#game-screen").show();
     });
+    $("#btn-save").show();
+    $("#btn-load").show();
     // end clear
     startGameInputTimer();
 

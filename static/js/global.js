@@ -18,7 +18,7 @@ const MENU_TOP_POSITION = 102;
 // Game state
 let screenState = "loader";
 let gameList = [];
-let gameIdx = 0;
+let gameIdx = 5; // contra
 let gamePickerTimer = null;
 let roomID = null;
 

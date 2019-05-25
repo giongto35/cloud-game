@@ -22,10 +22,12 @@ function showMenuScreen() {
     // clear scenes
     $("#game-screen").hide();
     $("#menu-screen").hide();
+    $("#btn-save").hide();
+    $("#btn-load").hide();
     $("#btn-join").html("play");
 
     // show menu scene
-    $("#game-screen").show().delay(DEBUG ? 0 : 0).fadeOut(DEBUG ? 0 : 0, function () {
+    $("#game-screen").show().delay(DEBUG ? 0 : 200).fadeOut(DEBUG ? 0 : 0, function () {
         log("Loading menu screen");
         $("#menu-screen").fadeIn(DEBUG ? 0 : 0, function () {
             pickGame(gameIdx);
@@ -37,15 +39,16 @@ function showMenuScreen() {
 
 function pickGame(idx) {
     // check boundaries
-    if (idx < 0) idx = 0;
-    if (idx >= gameList.length) idx = gameList.length - 1;
+    // cycle
+    if (idx < 0) idx = gameList.length - 1;
+    if (idx >= gameList.length) idx = 0;
 
     // transition menu box
-    
+
     var listbox = $("#menu-container");
-    listbox.css("transition", "top 0.5s");
-    listbox.css("-moz-transition", "top 0.5s");
-    listbox.css("-webkit-transition", "top 0.5s");
+    listbox.css("transition", "top 0.2s");
+    listbox.css("-moz-transition", "top 0.2s");
+    listbox.css("-webkit-transition", "top 0.2s");
 
     menuTop = MENU_TOP_POSITION - idx * 36;
     listbox.css("top", `${menuTop}px`);
@@ -158,9 +161,6 @@ function doButtonUp(name) {
 
         switch (name) {
             case "join":
-            case "a":
-            case "start":
-            case "select":
                 copyToClipboard(window.location.href.split('?')[0] + `?id=${roomID}`)
                 popup("Copy link to clipboard!")
                 break;
