@@ -36,7 +36,12 @@ func initilizeOverlord() {
 
 	// worker facing port
 	http.HandleFunc("/wso", overlord.WSO)
-	http.ListenAndServe(":8000", nil)
+	log.Println("Listening at port: localhost:8000")
+	err := http.ListenAndServe(":8000", nil)
+	// Print err if overlord cannot launch
+	if err != nil {
+		log.Fatal(err)
+	}
 }
 
 // initializeWorker setup a worker
@@ -74,6 +79,7 @@ func main() {
 	// else we spawn new server as normal server connecting to OverlordHost.
 	if *config.OverlordHost == "overlord" {
 		log.Println("Running as overlord ")
+		log.Println("Waiting for workers...")
 		initilizeOverlord()
 	} else {
 		if strings.HasPrefix(*config.OverlordHost, "ws") && !strings.HasSuffix(*config.OverlordHost, "wso") {
