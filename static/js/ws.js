@@ -176,7 +176,8 @@ function startWebRTC() {
             //conn.send(JSON.stringify({"id": "start", "data": ""}));
         }
         else if (pc.iceConnectionState === "failed") {
-            iceSuccess = true
+            gameReady = false
+            iceSuccess = false
         }
         else if (pc.iceConnectionState === "disconnected") {
             stopInputTimer();
