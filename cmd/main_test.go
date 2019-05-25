@@ -16,7 +16,7 @@ import (
 	gamertc "github.com/giongto35/cloud-game/webrtc"
 	"github.com/giongto35/cloud-game/worker"
 	"github.com/gorilla/websocket"
-	"github.com/pion/webrtc"
+	"github.com/pion/webrtc/v2"
 )
 
 var host = "http://localhost:8000"
