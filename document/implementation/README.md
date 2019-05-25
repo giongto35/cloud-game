@@ -1,6 +1,7 @@
 # Web-based Cloud Gaming Service Implementation Document
 
 ## Code structure
+```
 .
 ├── cmd
 │   ├── main.go
@@ -17,6 +18,6 @@
 │   └── index_ws.html: raw frontend without ui
 ├── cws
 │   └── cws.go: socket multiplexer library, used for signalling
-├── webrtc
+├── webrtc: webrtc streaming logic
 └── worker: integration between emulator + webrtc (communication) 
-
+```
