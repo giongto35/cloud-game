@@ -23,7 +23,9 @@ var host = "http://localhost:8000"
 
 // Test is in cmd, so gamePath is in parent path
 var testGamePath = "../games"
-var webrtcconfig = webrtc.Configuration{ICEServers: []webrtc.ICEServer{{URLs: []string{"stun:stun.l.google.com:19302"}}}}
+var webrtcconfig = webrtc.Configuration{ICEServers: []webrtc.ICEServer{{
+	URLs: []string{"stun:stun.l.google.com:19302"},
+}}}
 
 func initOverlord() (*httptest.Server, *httptest.Server) {
 	server := overlord.NewServer()

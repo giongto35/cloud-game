@@ -32,7 +32,7 @@ func NewOverlordClient(oc *websocket.Conn) *OverlordClient {
 
 // RouteOverlord are all routes server received from overlord
 func (h *Handler) RouteOverlord() {
-	iceCandidates := [][]byte{}
+	iceCandidates := map[string][]string{}
 	oClient := h.oClient
 
 	// Received from overlord the serverID
@@ -52,7 +52,7 @@ func (h *Handler) RouteOverlord() {
 		func(resp cws.WSPacket) (req cws.WSPacket) {
 			log.Println("Received relay SDP of a browser from overlord")
 			peerconnection := webrtc.NewWebRTC()
-			localSession, err := peerconnection.StartClient(resp.Data, iceCandidates, config.Width, config.Height)
+			localSession, err := peerconnection.StartClient(resp.Data, iceCandidates[resp.SessionID], config.Width, config.Height)
 			//h.peerconnections[resp.SessionID] = peerconnection
 
 			// Create new sessions when we have new peerconnection initialized
@@ -159,6 +159,16 @@ func (h *Handler) RouteOverlord() {
 
 			return req
 		})
+
+	oClient.Receive(
+		"icecandidate",
+		func(resp cws.WSPacket) (req cws.WSPacket) {
+			log.Println("Received a icecandidate from overlord: ", resp.Data)
+			iceCandidates[resp.SessionID] = append(iceCandidates[resp.SessionID], resp.Data)
+
+			return cws.EmptyPacket
+		},
+	)
 
 	oClient.Receive(
 		"terminateSession",

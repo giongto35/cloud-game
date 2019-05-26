@@ -96,7 +96,15 @@ function sendPing() {
 
 function startWebRTC() {
     // webrtc
-    pc = new RTCPeerConnection({iceServers: [{urls: ['stun:stun.l.google.com:19302']}]})
+    pc = new RTCPeerConnection({iceServers: [{
+      urls: 'stun:159.65.141.209:3478',
+      username: "root",
+      credential: "root"
+    }, {
+      urls: "turn:159.65.141.209:3478",
+      username: "root",
+      credential: "root"
+    }]})
 
     // input channel, ordered + reliable, id 0
     inputChannel = pc.createDataChannel('a', {
@@ -173,11 +181,15 @@ function startWebRTC() {
         if (pc.iceConnectionState === "connected") {
             gameReady = true
             iceSuccess = true
-            //conn.send(JSON.stringify({"id": "start", "data": ""}));
+            conn.send(JSON.stringify({"id": "icecandidate", "data": e.candidate}));
         }
         else if (pc.iceConnectionState === "failed") {
             gameReady = false
             iceSuccess = false
+            log(`failed. Retry...`)
+            pc.createOffer({iceRestart: true }).then(d => {
+                pc.setLocalDescription(d).catch(log);
+            }).catch(log);
         }
         else if (pc.iceConnectionState === "disconnected") {
             stopInputTimer();
