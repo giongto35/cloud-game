@@ -13,8 +13,6 @@ type BrowserClient struct {
 
 // RouteBrowser are all routes server accepts for browser
 func (s *Session) RouteBrowser() {
-	iceCandidates := [][]byte{}
-
 	browserClient := s.BrowserClient
 
 	browserClient.Receive("heartbeat", func(resp cws.WSPacket) cws.WSPacket {
@@ -22,9 +20,15 @@ func (s *Session) RouteBrowser() {
 	})
 
 	browserClient.Receive("icecandidate", func(resp cws.WSPacket) cws.WSPacket {
-		log.Println("Received candidates ", resp.Data)
+		log.Println("Overlord: Received icecandidate from a browser", resp.Data)
+		log.Println("Overlord: Relay icecandidate from a browser to worker")
 
-		iceCandidates = append(iceCandidates, []byte(resp.Data))
+		wc, ok := s.handler.workerClients[s.ServerID]
+		if !ok {
+			return cws.EmptyPacket
+		}
+		wc.Send(resp, nil)
+
 		return cws.EmptyPacket
 	})
 

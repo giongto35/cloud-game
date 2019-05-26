@@ -173,11 +173,15 @@ function startWebRTC() {
         if (pc.iceConnectionState === "connected") {
             gameReady = true
             iceSuccess = true
-            //conn.send(JSON.stringify({"id": "start", "data": ""}));
+            conn.send(JSON.stringify({"id": "icecandidate", "data": e.candidate}));
         }
         else if (pc.iceConnectionState === "failed") {
             gameReady = false
             iceSuccess = false
+            log(`failed. Retry...`)
+            pc.createOffer({iceRestart: true }).then(d => {
+                pc.setLocalDescription(d).catch(log);
+            }).catch(log);
         }
         else if (pc.iceConnectionState === "disconnected") {
             stopInputTimer();
