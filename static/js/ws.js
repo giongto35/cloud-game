@@ -109,7 +109,7 @@ function startWebRTC() {
     // input channel, ordered + reliable, id 0
     inputChannel = pc.createDataChannel('a', {
         ordered: true,
-        negotiated: false,
+        negotiated: true,
         id: 0,
     });
     inputChannel.onopen = () => log('inputChannel has opened');
@@ -153,7 +153,7 @@ function startWebRTC() {
 
     audioChannel = pc.createDataChannel('b', {
         ordered: false,
-        negotiated: false,
+        negotiated: true,
         id: 1,
         maxRetransmits: 0
     })
