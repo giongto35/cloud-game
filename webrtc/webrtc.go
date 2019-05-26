@@ -16,7 +16,7 @@ import (
 	"github.com/pion/webrtc/v2/pkg/media"
 )
 
-var webrtcconfig = webrtc.Configuration{ICEServers: []webrtc.ICEServer{{URLs: []string{"stun:stun.l.google.com:19302"}}}}
+var webrtcconfig = webrtc.Configuration{ICEServers: []webrtc.ICEServer{{URLs: []string{"stun:159.65.141.209:3478"}}}}
 
 // Allows compressing offer/answer to bypass terminal input limits.
 const compress = false

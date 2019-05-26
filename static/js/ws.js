@@ -96,12 +96,12 @@ function sendPing() {
 
 function startWebRTC() {
     // webrtc
-    pc = new RTCPeerConnection({iceServers: [{urls: ['stun:stun.l.google.com:19302']}]})
+    pc = new RTCPeerConnection({iceServers: [{urls: ['stun:159.65.141.209:3478']}]})
 
     // input channel, ordered + reliable, id 0
     inputChannel = pc.createDataChannel('a', {
         ordered: true,
-        negotiated: true,
+        negotiated: false,
         id: 0,
     });
     inputChannel.onopen = () => log('inputChannel has opened');
@@ -145,7 +145,7 @@ function startWebRTC() {
 
     audioChannel = pc.createDataChannel('b', {
         ordered: false,
-        negotiated: true,
+        negotiated: false,
         id: 1,
         maxRetransmits: 0
     })
