@@ -181,7 +181,6 @@ function startWebRTC() {
         if (pc.iceConnectionState === "connected") {
             gameReady = true
             iceSuccess = true
-            conn.send(JSON.stringify({"id": "icecandidate", "data": e.candidate}));
         }
         else if (pc.iceConnectionState === "failed") {
             gameReady = false
