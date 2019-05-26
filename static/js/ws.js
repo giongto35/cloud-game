@@ -231,11 +231,13 @@ function startWebRTC() {
 
 function startGame() {
     if (!iceSuccess) {
-        popup("Game cannot load. Please refresh")
+        popup("Game cannot load. Please refresh");
+        return;
     }
     // TODO: Add while loop
     if (!gameReady) {
-        popup("Game is not ready yet. Please wait")
+        popup("Game is not ready yet. Please wait");
+        return;
     }
     log("Starting game screen");
     screenState = "game";

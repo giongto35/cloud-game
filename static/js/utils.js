@@ -42,6 +42,7 @@ function getOS() {
     var OSName = "unknown";
     if (navigator.appVersion.indexOf("Win") !== -1) OSName = "win";
     else if (navigator.appVersion.indexOf("Mac") !== -1) OSName = "mac";
+    else if (navigator.userAgent.indexOf("Linux") !== -1) OSName = "linux";
     else if (navigator.userAgent.indexOf("Android") !== -1) OSName = "android";
     return OSName;
 }
