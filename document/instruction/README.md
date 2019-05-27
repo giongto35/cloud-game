@@ -16,7 +16,7 @@ S -> Save (Save state)
 A -> Load (Load previous saved state)  
 W -> Share your running game to other or you can keep it to continue playing the next time. Multiple people can access the same game for multiplayer or observation.  
 F -> Full screen  
-Q -> Quit  
+Q -> Quit the current game and go to menu screen.**NOTE**: we are facing some issue with quit, so it's better to refresh the page.
 
 ## Mobile play
 You can play the game on Android device. Make sure your Android has the version that support WebRTC. IOS doesn't support WebRTC streaming now.  
