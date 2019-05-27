@@ -97,10 +97,12 @@ function sendPing() {
 function startWebRTC() {
     // webrtc
     pc = new RTCPeerConnection({iceServers: [{
-      urls: 'stun:stun-turn.webgame2d.com:3478',
-      username: "root",
-      credential: "root"
-    }, {
+      urls: 'stun:stun-turn.webgame2d.com:3478'
+    },
+    {
+      urls: 'stun:159.65.141.209:3478'
+    },
+    {
       urls: "turn:stun-turn.webgame2d.com:3478",
       username: "root",
       credential: "root"
