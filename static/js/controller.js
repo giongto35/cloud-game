@@ -2,6 +2,36 @@
     Menu Controller
 */
 
+function showHelpScreen() {
+    // show btn-save, btn-load
+    if (screenState === "menu") {
+        $("#btn-save").show();
+        $("#btn-load").show();
+
+        $("#menu-screen").hide();
+    } else {
+        $("#game-screen").hide();
+    }
+
+    // show help overlay
+    $("#help-overlay").show();
+}
+
+function hideHelpScreen() {
+    //
+    if (screenState === "menu") {
+        $("#btn-save").hide();
+        $("#btn-load").hide();
+
+        $("#menu-screen").show();
+    } else {
+        $("#game-screen").show();
+    }
+
+    // show help overlay
+    $("#help-overlay").hide();
+}
+
 function reloadGameMenu() {
     log("Load game menu");
 
@@ -143,6 +173,10 @@ function doButtonDown(name) {
     } else if (screenState === "game") {
         setKeyState(name, true);
     }
+
+    if (name === "help") {
+        showHelpScreen();
+    }
 }
 
 
@@ -150,11 +184,32 @@ function doButtonUp(name) {
     $(`#btn-${name}`).removeClass("pressed");
 
     if (screenState === "menu") {
-        if (name === "up" || name === "down") {
-            stopGamePickerTimer();
-        } else if (name === "join" || name === "a" || name === "b" || name === "start" || name === "select") {
-            startGame();
-            //log("select game");
+        switch (name) {
+            case "up":
+            case "down":
+                stopGamePickerTimer();
+                break;
+            
+            case "join":
+            case "a":
+            case "b":
+            case "start":
+            case "select":
+                startGame();
+                break;
+            
+            case "quit":
+                popup("You are already in menu screen!");
+                break;
+            
+            case "load":
+                popup("Lets play to load game!");
+                break;
+            
+            case "save":
+                popup("Lets play to save game!");
+                break;
+            
         }
     } else if (screenState === "game") {
         setKeyState(name, false);
@@ -184,6 +239,7 @@ function doButtonUp(name) {
                     openFullscreen(screen);
                 }
                 break;
+
             case "quit":
                 stopGameInputTimer();
                 showMenuScreen();
@@ -195,6 +251,10 @@ function doButtonUp(name) {
                 popup("Quit!");
                 break;
         }
+    }
+
+    if (name === "help") {
+        hideHelpScreen();
     }
 }
 

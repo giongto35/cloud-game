@@ -15,6 +15,10 @@
     axis 0, 1       <--> second dpad
 */
 
+/*
+    change full to help (temporary)
+*/
+
 let joystickMap;
 let joystickState;
 let joystickIdx;
@@ -28,7 +32,7 @@ function checkJoystickAxisState(name, state) {
         if (state === true) {
             doButtonDown(name);
         } else {
-            doButtonUp(button);
+            doButtonUp(name);
         }
     }
 }
@@ -70,7 +74,7 @@ function checkJoystickState() {
 
 
 // we only capture the last plugged joystick
-$(window).on("gamepadconnected", function (event) {
+window.addEventListener("gamepadconnected", function (event) {
     var gamepad = event.gamepad;
     log(`Gamepad connected at index ${gamepad.index}: ${gamepad.id}. ${gamepad.buttons.length} buttons, ${gamepad.axes.length} axes.`);
 
@@ -83,27 +87,28 @@ $(window).on("gamepadconnected", function (event) {
 
     if (os === "android") {
         // default of android is KeyMap1
-        joystickMap = { 2: "a", 0: "b", 3: "start", 4: "select", 10: "load", 11: "save", 8: "full", 9: "quit", 12: "up", 13: "down", 14: "left", 15: "right" };
+        joystickMap = { 2: "a", 0: "b", 3: "start", 4: "select", 10: "load", 11: "save", 8: "help", 9: "quit", 12: "up", 13: "down", 14: "left", 15: "right" };
     } else {
         // default of other OS is KeyMap2
-        joystickMap = { 0: "a", 1: "b", 2: "start", 3: "select", 8: "load", 9: "save", 6: "full", 7: "quit", 12: "up", 13: "down", 14: "left", 15: "right" };
+        joystickMap = { 0: "a", 1: "b", 2: "start", 3: "select", 8: "load", 9: "save", 6: "help", 7: "quit", 12: "up", 13: "down", 14: "left", 15: "right" };
     }
 
     if (os === "android" && (browser === "firefox" || browser === "uc")) { //KeyMap2
-        joystickMap = { 0: "a", 1: "b", 2: "start", 3: "select", 8: "load", 9: "save", 6: "full", 7: "quit", 12: "up", 13: "down", 14: "left", 15: "right" };
+        joystickMap = { 0: "a", 1: "b", 2: "start", 3: "select", 8: "load", 9: "save", 6: "help", 7: "quit", 12: "up", 13: "down", 14: "left", 15: "right" };
     }
 
     if (os === "win" && browser === "firefox") { //KeyMap3
-        joystickMap = { 1: "a", 2: "b", 0: "start", 3: "select", 8: "load", 9: "save", 6: "full", 7: "quit" };
+        joystickMap = { 1: "a", 2: "b", 0: "start", 3: "select", 8: "load", 9: "save", 6: "help", 7: "quit" };
     }
 
     if (os === "mac" && browser === "safari") { //KeyMap4
-        joystickMap = { 1: "a", 2: "b", 0: "start", 3: "select", 8: "load", 9: "save", 6: "full", 7: "quit", 14: "up", 15: "down", 16: "left", 17: "right" };
+        joystickMap = { 1: "a", 2: "b", 0: "start", 3: "select", 8: "load", 9: "save", 6: "help", 7: "quit", 14: "up", 15: "down", 16: "left", 17: "right" };
     }
 
     if (os === "mac" && browser === "firefox") { //KeyMap5
-        joystickMap = { 1: "a", 2: "b", 0: "start", 3: "select", 8: "load", 9: "save", 6: "full", 7: "quit", 14: "up", 15: "down", 16: "left", 17: "right" };
+        joystickMap = { 1: "a", 2: "b", 0: "start", 3: "select", 8: "load", 9: "save", 6: "help", 7: "quit", 14: "up", 15: "down", 16: "left", 17: "right" };
     }
+
 
     // reset state
     joystickState = {
@@ -128,7 +133,7 @@ $(window).on("gamepadconnected", function (event) {
 
 
 // disconnected event is triggered
-$(window).on("gamepaddisconnected", (event) => {
+window.addEventListener("gamepaddisconnected", (event) => {
     clearInterval(joystickTimer);
     log(`Gamepad disconnected at index ${e.gamepad.index}`);
 });

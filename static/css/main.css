@@ -1,9 +1,10 @@
 body {
-    background-image: url('/static/img/500_F_241143639_RW6VdHbqYRM0yfNpDxDlWpj0uXWglAC2.jpg');
+    background-image: url('/static/img/background.jpg');
     background-repeat: repeat;
 }
 
 #gamebody {
+    overflow: hidden;
     display: block;
     width: 556px;
     height: 278px;
@@ -19,6 +20,33 @@ body {
     -webkit-box-shadow: inset 0px 0px 2px 2px rgba(219, 222, 222, 1);
     -moz-box-shadow: inset 0px 0px 2px 2px rgba(219, 222, 222, 1);
     box-shadow: inset 0px 0px 2px 2px rgba(219, 222, 222, 1);
+}
+
+#help-overlay {
+    width: 100%;
+    height: 100%;
+    display: none;
+    position: absolute;
+}
+
+#help-overlay-background {
+    width: 100%;
+    height: 100%;
+    position: absolute;
+
+    background-color: gray;
+    opacity: 0.4;
+}
+
+#help-overlay-detail {
+    width: 100%;
+    height: 100%;
+    display: block;
+    position: absolute;
+
+    background-image: url('/static/img/help_overlay.png');
+    background-repeat: no-repeat;
+    background-size: 100% 100%;
 }
 
 
@@ -166,6 +194,18 @@ body {
     -webkit-box-shadow: 0px 0px 2px 2px rgba(219, 222, 222, 1);
     -moz-box-shadow: 0px 0px 2px 2px rgba(219, 222, 222, 1);
     box-shadow: 0px 0px 2px 2px rgba(219, 222, 222, 1);
+}
+
+#btn-help {
+    padding-top: 5px;
+    width: 20px;
+    height: 15px;
+    font-size: 10px;
+
+    top: 10px;
+    left: 15px;
+
+    background-color: lightskyblue;
 }
 
 #btn-load {
@@ -352,7 +392,7 @@ body {
     height: 240px;
     
     /* background-color: gray; */
-    background-image: url('/static/img/pixel_waterfall_bg__by_isohei-d4xntof.gif');
+    background-image: url('/static/img/screen_background1.gif');
     background-size: cover;
 }
 
