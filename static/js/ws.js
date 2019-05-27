@@ -97,11 +97,11 @@ function sendPing() {
 function startWebRTC() {
     // webrtc
     pc = new RTCPeerConnection({iceServers: [{
-      urls: 'stun:159.65.141.209:3478',
+      urls: 'stun:stun-turn.webgame2d.com:3478',
       username: "root",
       credential: "root"
     }, {
-      urls: "turn:159.65.141.209:3478",
+      urls: "turn:stun-turn.webgame2d.com:3478",
       username: "root",
       credential: "root"
     }]})
@@ -181,7 +181,6 @@ function startWebRTC() {
         if (pc.iceConnectionState === "connected") {
             gameReady = true
             iceSuccess = true
-            conn.send(JSON.stringify({"id": "icecandidate", "data": e.candidate}));
         }
         else if (pc.iceConnectionState === "failed") {
             gameReady = false
@@ -231,11 +230,13 @@ function startWebRTC() {
 
 function startGame() {
     if (!iceSuccess) {
-        popup("Game cannot load. Please refresh")
+        popup("Game cannot load. Please refresh");
+        return;
     }
     // TODO: Add while loop
     if (!gameReady) {
-        popup("Game is not ready yet. Please wait")
+        popup("Game is not ready yet. Please wait");
+        return;
     }
     log("Starting game screen");
     screenState = "game";

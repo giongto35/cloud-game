@@ -19,6 +19,7 @@ const KEYBOARD_MAP = {
     87: "join", // w
     65: "load", // a
     70: "full", // f
+    72: "help", // h
 }
 
 $("body").on("keyup", function (event) {
