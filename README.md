@@ -1,5 +1,5 @@
 # POGO, Web-based Cloud Gaming Service
-**SEA**: [http://cloud.webgame2d.com](http://cloud.webgame2d.com) | **US West**: [http://cloud.webgame2d.com](http://usw.cloud.webgame2d.com) | **US East**: [http://cloud.webgame2d.com](http://use.cloud.webgame2d.com) | **Europe**: [http://cloud.webgame2d.com](http://eu.cloud.webgame2d.com) | **Instruction**: [instruction](document/instruction/)  
+**SEA**: [http://cloud.webgame2d.com](http://cloud.webgame2d.com) | **US West**: [http://usw.cloud.webgame2d.com](http://usw.cloud.webgame2d.com) | **US East**: [http://use.cloud.webgame2d.com](http://use.cloud.webgame2d.com) | **Europe**: [http://eu.cloud.webgame2d.com](http://eu.cloud.webgame2d.com) | **Instruction**: [Instruction](document/instruction/)  
 For the best gaming experience, please select the closest region to you.  
 
 **Video demo**: https://www.youtube.com/watch?v=koqWB1VKflo
