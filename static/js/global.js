@@ -9,6 +9,7 @@ const INPUT_STATE_PACKET = 1;
 const PINGPONGPS = 5;
 
 const MENU_TOP_POSITION = 102;
+const ICE_TIMEOUT = 2000;
 
 /* 
     Global variables
@@ -59,3 +60,4 @@ let isLayoutSwitched = false;
 
 var gameReady = false;
 var iceSuccess = true;
+var iceSent = false; // TODO: set to false in some init event
