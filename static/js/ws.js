@@ -209,14 +209,25 @@ function startWebRTC() {
     pc.onicecandidate = event => {
         if (event.candidate === null) {
             // send to ws
-            session = btoa(JSON.stringify(pc.localDescription));
-            localSessionDescription = session;
-            log("Send SDP to remote peer");
-            // TODO: Fix curPacketID
-            conn.send(JSON.stringify({"id": "initwebrtc", "data": session, "packet_id": curPacketID}));
+            if (!iceSent) {
+                session = btoa(JSON.stringify(pc.localDescription));
+                log("Send SDP to remote peer");
+                // TODO: Fix curPacketID
+                conn.send(JSON.stringify({"id": "initwebrtc", "data": session, "packet_id": curPacketID}));
+                iceSent = true
+            }
         } else {
-            conn.send(JSON.stringify({"id": "icecandidate", "data": JSON.stringify(event.candidate)}));
             console.log(JSON.stringify(event.candidate));
+            // TODO: tidy up, setTimeout multiple time now
+            // timeout
+            setTimeout(() => {
+                log("Ice gathering timeout, send anyway")
+                if (!iceSent) {
+                    session = btoa(JSON.stringify(pc.localDescription));
+                    conn.send(JSON.stringify({"id": "initwebrtc", "data": session, "packet_id": curPacketID}));
+                    iceSent = true;
+                }
+            }, ICE_TIMEOUT)
         }
     }
 
