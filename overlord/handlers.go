@@ -44,10 +44,13 @@ type RenderData struct {
 
 // GetWeb returns web frontend
 func (o *Server) GetWeb(w http.ResponseWriter, r *http.Request) {
-	data := RenderData{
-		STUNTURN: *config.FrontendSTUNTURN,
+	stunturn := *config.FrontendSTUNTURN
+	if stunturn == "" {
+		stunturn = config.DefaultSTUNTURN
 	}
-	log.Println(data)
+	data := RenderData{
+		STUNTURN: stunturn,
+	}
 
 	tmpl, err := template.ParseFiles(gameboyIndex)
 	if err != nil {
