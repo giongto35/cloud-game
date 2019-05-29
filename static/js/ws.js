@@ -96,17 +96,13 @@ function sendPing() {
 
 function startWebRTC() {
     // webrtc
-    pc = new RTCPeerConnection({iceServers: [{
-      urls: 'stun:stun-turn.webgame2d.com:3478'
-    },
-    {
-      urls: 'stun:159.65.141.209:3478'
-    },
-    {
-      urls: "turn:stun-turn.webgame2d.com:3478",
-      username: "root",
-      credential: "root"
-    }]})
+    var iceservers = [];
+    if (STUNTURN == "") {
+        iceservers = defaultICE
+    } else {
+        iceservers = JSON.parse(STUNTURN);
+    }
+    pc = new RTCPeerConnection({iceServers: iceservers });
 
     // input channel, ordered + reliable, id 0
     inputChannel = pc.createDataChannel('a', {

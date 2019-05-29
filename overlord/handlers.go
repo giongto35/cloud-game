@@ -3,11 +3,12 @@ package overlord
 import (
 	"errors"
 	"fmt"
-	"io/ioutil"
+	"html/template"
 	"log"
 	"math/rand"
 	"net/http"
 
+	"github.com/giongto35/cloud-game/config"
 	"github.com/giongto35/cloud-game/cws"
 	"github.com/giongto35/cloud-game/overlord/gamelist"
 	"github.com/gofrs/uuid"
@@ -16,7 +17,6 @@ import (
 
 const (
 	gameboyIndex = "./static/game.html"
-	debugIndex   = "./static/game.html"
 	gamePath     = "games"
 )
 
@@ -38,15 +38,28 @@ func NewServer() *Server {
 	}
 }
 
+type RenderData struct {
+	STUNTURN string
+}
+
 // GetWeb returns web frontend
 func (o *Server) GetWeb(w http.ResponseWriter, r *http.Request) {
-	indexFN := gameboyIndex
+	data := RenderData{
+		STUNTURN: *config.FrontendSTUNTURN,
+	}
+	log.Println(data)
 
-	bs, err := ioutil.ReadFile(indexFN)
+	tmpl, err := template.ParseFiles(gameboyIndex)
 	if err != nil {
 		log.Fatal(err)
 	}
-	w.Write(bs)
+
+	//bs, err := ioutil.ReadFile(indexFN)
+	//if err != nil {
+	//log.Fatal(err)
+	//}
+	//w.Write(bs)
+	tmpl.Execute(w, data)
 }
 
 // WSO handles all connections from a new worker to overlord
