@@ -61,3 +61,4 @@ let isLayoutSwitched = false;
 var gameReady = false;
 var iceSuccess = true;
 var iceSent = false; // TODO: set to false in some init event
+var defaultICE = [{urls: "stun:stun.l.google.com:19302"}]
