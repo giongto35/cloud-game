@@ -12,7 +12,7 @@ Klog is an open source Cloud Gaming Service building on [WebRTC](https://github.
   
 Klog aims to bring the most convenient gaming experience to gamer. You can play any games on your browser directly, which is fully compatible on multi-platform like Desktop, Android, IOS. This flexibility enables modern online gaming experience to retro games starting with NES in this current release.  
 
-Note: The current state of POGO are not optimized for production. The service will still experience lag under heavy traffic. You can try hosting your own service following the instruction in the next session.  
+Note: The current state of Klog are not optimized for production. The service will still experience lag under heavy traffic. You can try hosting your own service following the instruction in the next session.  
 
 ![screenshot](document/img/landing-page.gif)
 
