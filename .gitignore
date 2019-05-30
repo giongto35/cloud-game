@@ -48,4 +48,5 @@ Temporary Items
 ### Production
 DockerfileProd
 key.json
+run_prod_docker.sh
 prod/
