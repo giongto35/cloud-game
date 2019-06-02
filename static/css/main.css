@@ -513,3 +513,7 @@ body {
 
     font-size: 12px;
 }
+
+* {
+      touch-action: manipulation;
+  }
