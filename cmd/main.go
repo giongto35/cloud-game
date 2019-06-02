@@ -54,9 +54,19 @@ func initializeWorker() {
 	}()
 
 	go worker.Run()
-	port := rand.Int()%100 + 8000
-	log.Println("Listening at port: localhost:", port)
-	http.ListenAndServe(":"+strconv.Itoa(port), nil)
+	port := 9000
+	// It's recommend to run one worker on one instance. This logic is to make sure more than 1 workers still work
+	for {
+		log.Println("Listening at port: localhost:", port)
+		err := http.ListenAndServe(":"+strconv.Itoa(port), nil)
+		if err != nil {
+			port++
+		}
+		if port == 9100 {
+			// Cannot find port
+			return
+		}
+	}
 }
 
 func monitor() {
