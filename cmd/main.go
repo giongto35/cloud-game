@@ -4,6 +4,7 @@ import (
 	"flag"
 	"log"
 	"math/rand"
+	"net"
 	"net/http"
 	_ "net/http/pprof"
 	"runtime"
@@ -15,6 +16,7 @@ import (
 	"github.com/giongto35/cloud-game/overlord"
 	"github.com/giongto35/cloud-game/worker"
 	"github.com/gorilla/websocket"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 )
 
 const gamePath = "games"
@@ -58,14 +60,20 @@ func initializeWorker() {
 	// It's recommend to run one worker on one instance. This logic is to make sure more than 1 workers still work
 	for {
 		log.Println("Listening at port: localhost:", port)
-		err := http.ListenAndServe(":"+strconv.Itoa(port), nil)
+		//err := http.ListenAndServe(":"+strconv.Itoa(port), nil)
+		l, err := net.Listen("tcp", ":"+strconv.Itoa(port))
 		if err != nil {
 			port++
+			continue
 		}
 		if port == 9100 {
 			// Cannot find port
 			return
 		}
+
+		l.Close()
+		http.Handle("/metrics", promhttp.Handler())
+		http.ListenAndServe(":"+strconv.Itoa(port), nil)
 	}
 }
 
