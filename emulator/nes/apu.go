@@ -1,6 +1,8 @@
 package nes
 
-import "encoding/gob"
+import (
+	"encoding/gob"
+)
 
 const frameCounterRate = CPUFrequency / 240.0
 

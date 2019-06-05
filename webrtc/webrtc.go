@@ -59,9 +59,9 @@ func NewWebRTC() *WebRTC {
 	w := &WebRTC{
 		ID: uuid.Must(uuid.NewV4()).String(),
 
-		ImageChannel: make(chan []byte, 100),
-		AudioChannel: make(chan []byte, 1000),
-		InputChannel: make(chan int, 10),
+		ImageChannel: make(chan []byte, 30),
+		AudioChannel: make(chan []byte, 30),
+		InputChannel: make(chan int, 100),
 	}
 	return w
 }
@@ -113,8 +113,12 @@ func (w *WebRTC) StartClient(remoteSession string, iceCandidates []string, width
 	w.encoder = encoder
 
 	log.Println("=== StartClient ===")
+	m := webrtc.MediaEngine{}
+	m.RegisterCodec(webrtc.NewRTPOpusCodec(webrtc.DefaultPayloadTypeOpus, 48000))
+	m.RegisterCodec(webrtc.NewRTPVP8Codec(webrtc.DefaultPayloadTypeVP8, 90000))
+	api := webrtc.NewAPI(webrtc.WithMediaEngine(m))
 
-	w.connection, err = webrtc.NewPeerConnection(webrtcconfig)
+	w.connection, err = api.NewPeerConnection(webrtcconfig)
 	if err != nil {
 		return "", err
 	}
