@@ -96,7 +96,18 @@ func (h *Handler) detachPeerConn(pc *webrtc.WebRTC) {
 	if room == nil {
 		return
 	}
-	room.CleanSession(pc)
+
+	// If room has no sessions, close room
+	if !room.EmptySessions() {
+		room.RemoveSession(pc)
+		if room.EmptySessions() {
+			log.Println("No session in room")
+			room.Close()
+			// Signal end of input Channel
+			log.Println("Signal input chan")
+			pc.InputChannel <- -1
+		}
+	}
 }
 
 // getRoom returns room from roomID
