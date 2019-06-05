@@ -148,18 +148,16 @@ func (v *VpxEncoder) startLooping() {
 		v.frameCount++
 
 		// Get Frame
-		for {
-			goBytes := C.get_frame_buffer(&v.vpxCodexCtx, &v.vpxCodexIter)
-			if goBytes.bs == nil {
-				break
-			}
-			bs := C.GoBytes(goBytes.bs, goBytes.size)
-			// if buffer is full skip frame
-			if len(v.Output) >= cap(v.Output) {
-				continue
-			}
-			v.Output <- bs
+		goBytes := C.get_frame_buffer(&v.vpxCodexCtx, &v.vpxCodexIter)
+		if goBytes.bs == nil {
+			continue
 		}
+		bs := C.GoBytes(goBytes.bs, goBytes.size)
+		// if buffer is full skip frame
+		if len(v.Output) >= cap(v.Output) {
+			continue
+		}
+		v.Output <- bs
 
 		if *config.IsMonitor {
 			log.Println("Encoding time: ", time.Now().Sub(beginEncoding))

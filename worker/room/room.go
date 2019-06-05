@@ -6,8 +6,10 @@ import (
 	"log"
 	"math/rand"
 	"os"
+	"runtime"
 	"strconv"
 	"sync"
+	"time"
 
 	emulator "github.com/giongto35/cloud-game/emulator"
 	"github.com/giongto35/cloud-game/webrtc"
@@ -46,8 +48,8 @@ func NewRoom(roomID, gamepath, gameName string, onlineStorage *storage.Client) *
 		roomID = generateRoomID()
 	}
 	log.Println("Init new room", roomID, gameName)
-	imageChannel := make(chan *image.RGBA, 100)
-	audioChannel := make(chan float32, emulator.SampleRate)
+	imageChannel := make(chan *image.RGBA, 30)
+	audioChannel := make(chan float32, 30)
 	inputChannel := make(chan int, 100)
 
 	// create director
@@ -88,6 +90,10 @@ func NewRoom(roomID, gamepath, gameName string, onlineStorage *storage.Client) *
 		log.Printf("Room %s started", roomID)
 		director.Start([]string{path})
 		log.Printf("Room %s ended", roomID)
+
+		start := time.Now()
+		runtime.GC()
+		log.Printf("GC takes %s\n", time.Since(start))
 	}(path, roomID)
 
 	return room
