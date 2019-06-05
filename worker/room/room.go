@@ -120,33 +120,29 @@ func (r *Room) startWebRTCSession(peerconnection *webrtc.WebRTC, playerIndex int
 		}
 	}()
 
-	go func() {
-		for input := range peerconnection.InputChannel {
-			if peerconnection.Done || !peerconnection.IsConnected() || !r.IsRunning {
-				return
-			}
+	for input := range peerconnection.InputChannel {
+		// NOTE: when room is no longer running. InputChannel needs to have extra event to go inside the loop
+		if peerconnection.Done || !peerconnection.IsConnected() || !r.IsRunning {
+			break
+		}
 
-			if peerconnection.IsConnected() {
-				// the first 8 bits belong to player 1
-				// the next 8 belongs to player 2 ...
-				// We standardize and put it to inputChannel (16 bits)
-				input = input << ((uint(playerIndex) - 1) * emulator.NumKeys)
-				select {
-				case r.inputChannel <- input:
-				default:
-				}
+		if peerconnection.IsConnected() {
+			// the first 8 bits belong to player 1
+			// the next 8 belongs to player 2 ...
+			// We standardize and put it to inputChannel (16 bits)
+			input = input << ((uint(playerIndex) - 1) * emulator.NumKeys)
+			select {
+			case r.inputChannel <- input:
+			default:
 			}
 		}
-	}()
+	}
 
 	log.Println("Peerconn done")
 }
 
-func (r *Room) CleanSession(peerconnection *webrtc.WebRTC) {
-	r.removeSession(peerconnection)
-}
-
-func (r *Room) removeSession(w *webrtc.WebRTC) {
+// RemoveSession removes a peerconnection from room and return true if there is no more room
+func (r *Room) RemoveSession(w *webrtc.WebRTC) {
 	log.Println("Cleaning session: ", w.ID)
 	// TODO: get list of r.rtcSessions in lock
 	for i, s := range r.rtcSessions {
@@ -154,13 +150,6 @@ func (r *Room) removeSession(w *webrtc.WebRTC) {
 		if s.ID == w.ID {
 			r.rtcSessions = append(r.rtcSessions[:i], r.rtcSessions[i+1:]...)
 			log.Println("Removed session ", s.ID, " from room: ", r.ID)
-
-			// If room has no sessions, close room
-			// Note: this logic cannot be brought outside of forloop because we only close room if room had at least one session
-			if len(r.rtcSessions) == 0 {
-				log.Println("No session in room")
-				r.Close()
-			}
 			break
 		}
 	}
@@ -234,6 +223,10 @@ func (r *Room) LoadGame() error {
 	err := r.director.LoadGame()
 
 	return err
+}
+
+func (r *Room) EmptySessions() bool {
+	return len(r.rtcSessions) == 0
 }
 
 func (r *Room) IsRunningSessions() bool {
