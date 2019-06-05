@@ -15,7 +15,7 @@ type Director struct {
 	view         *GameView
 	timestamp    float64
 	imageChannel chan<- *image.RGBA
-	audioChannel chan<- float32
+	audioChannel chan []float32
 	inputChannel <-chan int
 	Done         chan struct{}
 
@@ -25,7 +25,7 @@ type Director struct {
 const fps = 60
 
 // NewDirector returns a new director
-func NewDirector(roomID string, imageChannel chan<- *image.RGBA, audioChannel chan<- float32, inputChannel <-chan int) *Director {
+func NewDirector(roomID string, imageChannel chan<- *image.RGBA, audioChannel chan []float32, inputChannel <-chan int) *Director {
 	// TODO: return image channel from where it write
 	director := Director{}
 	director.Done = make(chan struct{}, 1)

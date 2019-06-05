@@ -9,14 +9,17 @@ import (
 )
 
 type Console struct {
-	CPU         *CPU
-	APU         *APU
-	PPU         *PPU
-	Cartridge   *Cartridge
-	Controller1 *Controller
-	Controller2 *Controller
-	Mapper      Mapper
-	RAM         []byte
+	CPU          *CPU
+	APU          *APU
+	PPU          *PPU
+	Cartridge    *Cartridge
+	Controller1  *Controller
+	Controller2  *Controller
+	Mapper       Mapper
+	RAM          []byte
+	pcm          []float32
+	AudioChannel chan []float32
+	idx          int
 }
 
 func NewConsole(path string) (*Console, error) {
@@ -28,7 +31,7 @@ func NewConsole(path string) (*Console, error) {
 	controller1 := NewController()
 	controller2 := NewController()
 	console := Console{
-		nil, nil, nil, cartridge, controller1, controller2, nil, ram}
+		nil, nil, nil, cartridge, controller1, controller2, nil, ram, nil, nil, 0}
 	mapper, err := NewMapper(&console)
 	if err != nil {
 		return nil, err
@@ -37,6 +40,9 @@ func NewConsole(path string) (*Console, error) {
 	console.CPU = NewCPU(&console)
 	console.APU = NewAPU(&console)
 	console.PPU = NewPPU(&console)
+	maxBufferSize := 60 * 16000 / 1000
+	console.pcm = make([]float32, maxBufferSize) // 640 * 1000 / 16000 == 40 ms
+	console.idx = 0
 	return &console, nil
 }
 
@@ -52,7 +58,17 @@ func (console *Console) Step() int {
 		console.Mapper.Step()
 	}
 	for i := 0; i < cpuCycles; i++ {
-		console.APU.Step()
+		sample := console.APU.Step()
+		if sample == -1 {
+			continue
+		}
+		console.pcm[console.idx] = sample
+		console.idx++
+		if console.idx == len(console.pcm) {
+			//console.APU.channel <- pcm
+			console.AudioChannel <- console.pcm
+			console.idx = 0
+		}
 	}
 	return cpuCycles
 }
@@ -89,8 +105,9 @@ func (console *Console) SetButtons2(buttons [8]bool) {
 	console.Controller2.SetButtons(buttons)
 }
 
-func (console *Console) SetAudioChannel(channel chan<- float32) {
-	console.APU.channel = channel
+func (console *Console) SetAudioChannel(channel chan []float32) {
+	//console.APU.channel = channel
+	console.AudioChannel = channel
 }
 
 func (console *Console) SetAudioSampleRate(sampleRate float64) {

@@ -50,7 +50,7 @@ type GameView struct {
 	loadingJob *job
 
 	imageChannel chan<- *image.RGBA
-	audioChannel chan<- float32
+	audioChannel chan []float32
 	inputChannel <-chan int
 }
 
@@ -59,7 +59,7 @@ type job struct {
 	extraFunc func() error
 }
 
-func NewGameView(console *nes.Console, title, saveFile string, imageChannel chan<- *image.RGBA, audioChannel chan<- float32, inputChannel <-chan int) *GameView {
+func NewGameView(console *nes.Console, title, saveFile string, imageChannel chan<- *image.RGBA, audioChannel chan []float32, inputChannel <-chan int) *GameView {
 	gameview := &GameView{
 		console:      console,
 		title:        title,

@@ -97,7 +97,7 @@ func (apu *APU) Load(decoder *gob.Decoder) error {
 	return nil
 }
 
-func (apu *APU) Step() {
+func (apu *APU) Step() float32 {
 	cycle1 := apu.cycle
 	apu.cycle++
 	cycle2 := apu.cycle
@@ -110,16 +110,18 @@ func (apu *APU) Step() {
 	s1 := int(float64(cycle1) / apu.sampleRate)
 	s2 := int(float64(cycle2) / apu.sampleRate)
 	if s1 != s2 {
-		apu.sendSample()
+		return apu.sendSample()
 	}
+	return -1
 }
 
-func (apu *APU) sendSample() {
+func (apu *APU) sendSample() float32 {
 	output := apu.filterChain.Step(apu.output())
-	select {
-	case apu.channel <- output:
-	default:
-	}
+	return output
+	//select {
+	//case apu.channel <- output:
+	//default:
+	//}
 }
 
 func (apu *APU) output() float32 {
