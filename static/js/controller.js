@@ -247,7 +247,8 @@ function doButtonUp(name) {
                 // TODO: Stop game
                 conn.send(JSON.stringify({ "id": "quit", "data": "", "room_id": roomID }));
 
-                $("#room-txt").val("");
+                roomID = ""
+                $("#room-txt").val(roomID);
                 popup("Quit!");
                 break;
         }
