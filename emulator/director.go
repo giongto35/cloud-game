@@ -22,7 +22,7 @@ type Director struct {
 	roomID string
 }
 
-const fps = 60
+const fps = 100
 
 // NewDirector returns a new director
 func NewDirector(roomID string, imageChannel chan<- *image.RGBA, audioChannel chan<- float32, inputChannel <-chan int) *Director {
