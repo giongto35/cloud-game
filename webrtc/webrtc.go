@@ -113,12 +113,7 @@ func (w *WebRTC) StartClient(remoteSession string, iceCandidates []string, width
 	w.encoder = encoder
 
 	log.Println("=== StartClient ===")
-	m := webrtc.MediaEngine{}
-	m.RegisterCodec(webrtc.NewRTPOpusCodec(webrtc.DefaultPayloadTypeOpus, 48000))
-	m.RegisterCodec(webrtc.NewRTPVP8Codec(webrtc.DefaultPayloadTypeVP8, 90000))
-	api := webrtc.NewAPI(webrtc.WithMediaEngine(m))
-
-	w.connection, err = api.NewPeerConnection(webrtcconfig)
+	w.connection, err = webrtc.NewPeerConnection(webrtcconfig)
 	if err != nil {
 		return "", err
 	}
