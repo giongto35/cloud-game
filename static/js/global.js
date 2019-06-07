@@ -59,6 +59,8 @@ let menuTop = MENU_TOP_POSITION;
 let isLayoutSwitched = false;
 
 var gameReady = false;
+var inputReady = false;
+var audioReady = false;
 var iceSuccess = true;
 var iceSent = false; // TODO: set to false in some init event
 var defaultICE = [{urls: "stun:stun.l.google.com:19302"}]

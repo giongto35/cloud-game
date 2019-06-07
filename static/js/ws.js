@@ -110,7 +110,10 @@ function startWebRTC() {
         negotiated: true,
         id: 0,
     });
-    inputChannel.onopen = () => log('inputChannel has opened');
+    inputChannel.onopen = () => {
+        log('inputChannel has opened');
+        inputReady = true;
+    }
     inputChannel.onclose = () => log('inputChannel has closed');
 
 
@@ -155,7 +158,10 @@ function startWebRTC() {
         id: 1,
         maxRetransmits: 0
     })
-    audioChannel.onopen = () => log('audioChannel has opened');
+    audioChannel.onopen = () => {
+        log('audioChannel has opened');
+        audioReady = true;
+    }
     audioChannel.onclose = () => log('audioChannel has closed');
     
     audioChannel.onmessage = (e) => {
@@ -243,7 +249,7 @@ function startGame() {
         return;
     }
     // TODO: Add while loop
-    if (!gameReady) {
+    if (!gameReady || !inputReady || !audioReady) {
         popup("Game is not ready yet. Please wait");
         return;
     }
