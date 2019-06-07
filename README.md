@@ -17,7 +17,7 @@ Note: The current state of Klog are not optimized for production. The service wi
 ![screenshot](document/img/landing-page.gif)
 
 ## Feature
-1. Cloud gaming: Game logic is handled in server and streamed to user.
+1. Cloud gaming: Game logic is hosted on a remote server. User doesn't have to install or setup anything. Images and audio are streamed to user in the most optimal way.
 2. Cross-platform compatibility: The game is run on webbrowser, the most universal builtin app. No console, plugin, external app or devices are needed. The device must support webRTC to perform streaming. Joystick is also supported.
 3. Vertically scaled: Services are distributed. The closest server with highest free resource will be assigned to user. (In development)
 4. Cloud storage: Game state is storing on online storage, so you can come back to continue playing in a game.
