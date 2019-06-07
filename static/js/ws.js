@@ -179,6 +179,8 @@ function startWebRTC() {
         if (pc.iceConnectionState === "connected") {
             gameReady = true
             iceSuccess = true
+            console.log("iceDone")
+            startGame()
         }
         else if (pc.iceConnectionState === "failed") {
             gameReady = false
@@ -196,8 +198,9 @@ function startWebRTC() {
 
     // video channel
     pc.ontrack = function (event) {
+        console.log("ontrack")
         document.getElementById("game-screen").srcObject = event.streams[0];
-        //$("#game-screen").show();
+        console.log("ontrack2")
     }
 
 
