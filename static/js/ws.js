@@ -213,9 +213,19 @@ function startWebRTC() {
 
     // video channel
     pc.ontrack = function (event) {
-        console.log("ontrack")
         document.getElementById("game-screen").srcObject = event.streams[0];
-        console.log("ontrack2")
+        var promise = document.getElementById("game-screen").play();
+        if (promise !== undefined) {
+            promise.then(_ => {
+                console.log("Media can autoplay")
+            }).catch(error => {
+                // Usually error happens when we autoplay unmuted video, browser requires manual play.
+                // We already muted video and use separate audio encoding so it's fine now
+                console.log("Media Failed to autoplay")
+                console.log(error)
+                // TODO: Consider workaround
+            });
+        }
     }
 
 
