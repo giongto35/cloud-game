@@ -276,7 +276,7 @@ function startGame() {
         return false;
     }
     if (screenState != "menu") {
-        return
+        return false;
     }
     log("Starting game screen");
     screenState = "game";
