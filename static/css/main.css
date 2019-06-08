@@ -197,10 +197,10 @@ body {
 }
 
 #btn-help {
-    padding-top: 5px;
-    width: 20px;
-    height: 15px;
-    font-size: 10px;
+    padding-top: 0px;
+    width: 40px;
+    height: 20px;
+    font-size: 15px;
 
     top: 10px;
     left: 15px;
