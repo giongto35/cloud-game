@@ -297,7 +297,10 @@ func (w *WebRTC) startStreaming(vp8Track *webrtc.Track, audioTrack *webrtc.DataC
 			if *config.IsMonitor {
 				log.Println("Encoding FPS : ", w.calculateFPS())
 			}
-			vp8Track.WriteSample(media.Sample{Data: bs, Samples: 1})
+			err := vp8Track.WriteSample(media.Sample{Data: bs, Samples: 1})
+			if err != nil {
+				log.Println("Warn: Err write sample: ", err)
+			}
 		}
 	}()
 
