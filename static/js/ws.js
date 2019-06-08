@@ -113,6 +113,10 @@ function startWebRTC() {
     inputChannel.onopen = () => {
         log('inputChannel has opened');
         inputReady = true;
+        // TODO: Event based
+        if (roomID != "") {
+            startGame()
+        }
     }
     inputChannel.onclose = () => log('inputChannel has closed');
 
@@ -161,9 +165,13 @@ function startWebRTC() {
     audioChannel.onopen = () => {
         log('audioChannel has opened');
         audioReady = true;
+        // TODO: Event based
+        if (roomID != "") {
+            startGame()
+        }
     }
     audioChannel.onclose = () => log('audioChannel has closed');
-    
+
     audioChannel.onmessage = (e) => {
         arr = new Uint8Array(e.data);
         idx = arr[arr.length - 1];
@@ -185,8 +193,9 @@ function startWebRTC() {
         if (pc.iceConnectionState === "connected") {
             gameReady = true
             iceSuccess = true
-            console.log("iceDone")
-            startGame()
+            if (roomID != "") {
+                startGame()
+            }
         }
         else if (pc.iceConnectionState === "failed") {
             gameReady = false
@@ -249,12 +258,15 @@ function startWebRTC() {
 function startGame() {
     if (!iceSuccess) {
         popup("Game cannot load. Please refresh");
-        return;
+        return false;
     }
     // TODO: Add while loop
     if (!gameReady || !inputReady || !audioReady) {
         popup("Game is not ready yet. Please wait");
-        return;
+        return false;
+    }
+    if (screenState != "menu") {
+        return
     }
     log("Starting game screen");
     screenState = "game";
@@ -274,4 +286,5 @@ function startGame() {
     // end clear
     startGameInputTimer();
 
+    return true
 }
