@@ -241,6 +241,7 @@ function doButtonUp(name) {
                 break;
 
             case "quit":
+                location.reload()
                 stopGameInputTimer();
                 showMenuScreen();
                 
