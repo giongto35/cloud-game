@@ -1,6 +1,6 @@
 # Klog, Web-based Cloud Gaming Service
 - **SEA**: [http://cloud.webgame2d.com](http://cloud.webgame2d.com) - **US West**: [http://usw.cloud.webgame2d.com](http://usw.cloud.webgame2d.com)
-- **US East**: [http://use.cloud.webgame2d.com](http://use.cloud.webgame2d.com) - **Europe**: [http://eu.cloud.webgame2d.com](http://eu.cloud.webgame2d.com)
+- **US East**: [http://use.cloud.webgame2d.com](http://use.cloud.webgame2d.com) - **Europe London**: [http://eu.cloud.webgame2d.com](http://eu.cloud.webgame2d.com)
 - [**Game Instruction**](document/instruction/)
 For the best gaming experience, please select the closest region to you.   
 
@@ -52,9 +52,17 @@ And run
 - ✏ [Design Doc](document/designdoc/)  
 - 💿 [Implementation Doc](document/implementation/)  
 
-## Follow up
+## FAQ
 
-This project demos the simplest cloud game with NES. Integrating with other emulator like GBA, NDS will also be possible. I'm welcome for the contribution.
+### How the project start?
+
+The project is inspired from Google Stadia. The most important question come to everyone mind is how good is the latency? Will the game experience is affected? I did some researches on that topic and WebRTC seems to be the most suitable protocol for that purpose. I limited the project scope and made a POC of Cloud-gaming. The result looks very promising.  
+
+### Why NES not some high graphic game?
+
+For the purpose of latency demostration and fast iteration, I picked NES but intergrating with other emulator like GBA, NDS and even Playstation is also possible. For High-end games, there will be problems with hardware and infrastructure. Google has a lot of resource and its distributed GPU will enhance this cloud-gaming usecase.
+
+### How good is the result
 
 ## Credits
 
