@@ -63,18 +63,16 @@ func (d *Director) Step() {
 }
 
 // Start ...
-func (d *Director) Start(paths []string) {
+func (d *Director) Start(path string) {
 	// portaudio.Initialize()
 	// defer portaudio.Terminate()
 
 	// audio := NewAudio()
 	// audio.Start()
 	// d.audio = audio
-	log.Println("Start game: ", paths)
+	log.Println("Start game: ", path)
 
-	if len(paths) == 1 {
-		d.PlayGame(paths[0])
-	}
+	d.PlayGame(path)
 	d.Run()
 }
 
@@ -115,7 +113,7 @@ func (d *Director) PlayGame(path string) {
 // SaveGame creates save events and doing extra step for load
 func (d *Director) SaveGame(saveExtraFunc func() error) error {
 	if d.roomID != "" {
-		d.view.Save(d.roomID, saveExtraFunc)
+		d.view.Save(saveExtraFunc)
 		return nil
 	} else {
 		return nil
@@ -125,7 +123,7 @@ func (d *Director) SaveGame(saveExtraFunc func() error) error {
 // LoadGame creates load events and doing extra step for load
 func (d *Director) LoadGame() error {
 	if d.roomID != "" {
-		d.view.Load(d.roomID)
+		d.view.Load()
 		return nil
 	} else {
 		return nil
