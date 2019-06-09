@@ -144,7 +144,7 @@ func (view *GameView) Update(t, dt float64) {
 	view.imageChannel <- console.Buffer()
 }
 
-func (view *GameView) Save(hash string, extraSaveFunc func() error) {
+func (view *GameView) Save(extraSaveFunc func() error) {
 	// put saving event to queue, process in updateEvent
 	view.savingJob = &job{
 		path:      savePath(view.saveFile),
@@ -152,7 +152,7 @@ func (view *GameView) Save(hash string, extraSaveFunc func() error) {
 	}
 }
 
-func (view *GameView) Load(path string) {
+func (view *GameView) Load() {
 	// put saving event to queue, process in updateEvent
 	view.loadingJob = &job{
 		path:      savePath(view.saveFile),
