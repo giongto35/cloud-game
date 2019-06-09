@@ -8,6 +8,7 @@ import (
 	"os"
 	"runtime"
 	"strconv"
+	"strings"
 	"sync"
 	"time"
 
@@ -39,13 +40,15 @@ type Room struct {
 	director *emulator.Director
 	// Cloud storage to store room state online
 	onlineStorage *storage.Client
+	// GameName
+	gameName string
 }
 
 // NewRoom creates a new room
-func NewRoom(roomID, gamepath, gameName string, onlineStorage *storage.Client) *Room {
+func NewRoom(roomID, gamePath, gameName string, onlineStorage *storage.Client) *Room {
 	// if no roomID is given, generate it
 	if roomID == "" {
-		roomID = generateRoomID()
+		roomID = generateRoomID(gameName)
 	}
 	log.Println("Init new room", roomID, gameName)
 	imageChannel := make(chan *image.RGBA, 30)
@@ -74,8 +77,7 @@ func NewRoom(roomID, gamepath, gameName string, onlineStorage *storage.Client) *
 	go room.startAudio()
 
 	// Check if room is on local storage, if not, pull from GCS to local storage
-	path := gamepath + "/" + gameName
-	go func(path, roomID string) {
+	go func(gamePath, gameName, roomID string) {
 		// Check room is on local or fetch from server
 		savepath := emulator.GetSavePath(roomID)
 		log.Println("Check ", savepath, " on local : ", room.isGameOnLocal(savepath))
@@ -87,21 +89,33 @@ func NewRoom(roomID, gamepath, gameName string, onlineStorage *storage.Client) *
 			}
 		}
 
-		log.Printf("Room %s started", roomID)
-		director.Start([]string{path})
+		if roomID != "" {
+			gameName = getGameNameFromRoomID(roomID)
+		}
+		log.Printf("Room %s started. GameName: %s", roomID, gameName)
+		path := gamePath + "/" + gameName
+		director.Start(path)
 		log.Printf("Room %s ended", roomID)
 
 		start := time.Now()
 		runtime.GC()
 		log.Printf("GC takes %s\n", time.Since(start))
-	}(path, roomID)
+	}(gamePath, gameName, roomID)
 
 	return room
 }
 
+func getGameNameFromRoomID(roomID string) string {
+	parts := strings.Split(roomID, "-")
+	if len(parts) <= 1 {
+		return ""
+	}
+	return parts[1]
+}
+
 // generateRoomID generate a unique room ID containing 16 digits
-func generateRoomID() string {
-	roomID := strconv.FormatInt(rand.Int63(), 16)
+func generateRoomID(gameName string) string {
+	roomID := strconv.FormatInt(rand.Int63(), 16) + "-" + gameName
 	log.Println("Generate Room ID", roomID)
 	//roomID := uuid.Must(uuid.NewV4()).String()
 	return roomID
