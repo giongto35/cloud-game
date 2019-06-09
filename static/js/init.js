@@ -27,7 +27,7 @@ function parseURLForRoom() {
         queryDict[item.split("=")[0]] = item.split("=")[1]
     });
     if (typeof queryDict["id"] === "string") {
-        return queryDict["id"];
+        return decodeURI(queryDict["id"]);
     }
     return null;
 }
