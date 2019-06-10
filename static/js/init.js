@@ -15,6 +15,20 @@ function fixScreenLayout() {
     // targetWidth = 800; targetHeight = 600; // test on desktop
 
     fixElementLayout($("#gamebody"), targetWidth, targetHeight);
+
+    var elem = $("#ribbon");
+    var st = "";
+    if (isLayoutSwitched) {
+        var st = "rotate(90deg)";
+        elem.css("bottom", 0);
+        elem.css("top", "");
+    } else {
+        elem.css("bottom", "");
+        elem.css("top", 0);
+    }
+    elem.css("transform", st);
+    elem.css("-webkit-transform", st);
+    elem.css("-moz-transform", st);
 }
 
 $(window).on("resize", fixScreenLayout);
