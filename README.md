@@ -40,7 +40,7 @@ Install dependencies
 apt-get install -y pkg-config libvpx-dev libopus-dev libopusfile-dev
 
 # MacOS
-brew install libvpx pkg-config libopus libopusfile
+brew install libvpx pkg-config opus opusfile
 
 # Windows
 ... not tested yet ...
