@@ -5,8 +5,11 @@ import (
 	"fmt"
 	"html/template"
 	"log"
+	"math"
 	"math/rand"
 	"net/http"
+	"strconv"
+	"strings"
 
 	"github.com/giongto35/cloud-game/config"
 	"github.com/giongto35/cloud-game/cws"
@@ -78,7 +81,7 @@ func (o *Server) WSO(w http.ResponseWriter, r *http.Request) {
 	log.Println("Overlord: A new server connected to Overlord", serverID)
 
 	// Register to workersClients map the client connection
-	client := NewWorkerClient(c, serverID)
+	client := NewWorkerClient(c, serverID, getRemoteAddress(c))
 	o.workerClients[serverID] = client
 	defer o.cleanConnection(client, serverID)
 
@@ -111,16 +114,24 @@ func (o *Server) WS(w http.ResponseWriter, r *http.Request) {
 	}
 	defer c.Close()
 
+	client := NewBrowserClient(c)
+	go client.Listen()
+
 	// Set up server
 	// SessionID will be the unique per frontend connection
 	sessionID := uuid.Must(uuid.NewV4()).String()
-	serverID, err := o.findBestServer()
+	var serverID string
+	if config.MatchWorkerRandom {
+		serverID, err = o.findBestServerRandom()
+	} else {
+		//serverID, err = o.findBestServer(frontendAddr)
+		serverID, err = o.findBestServerFromBrowser(client)
+	}
+
 	if err != nil {
 		log.Println(err)
 		return
 	}
-
-	client := NewBrowserClient(c)
 
 	// Setup session
 	wssession := &Session{
@@ -142,23 +153,19 @@ func (o *Server) WS(w http.ResponseWriter, r *http.Request) {
 	}, nil)
 
 	// If peerconnection is done (client.Done is signalled), we close peerconnection
-	go func() {
-		<-client.Done
-		// Notify worker to clean session
-		wssession.WorkerClient.Send(
-			cws.WSPacket{
-				ID:        "terminateSession",
-				SessionID: sessionID,
-			},
-			nil,
-		)
-	}()
-
-	wssession.BrowserClient.Listen()
+	<-client.Done
+	// Notify worker to clean session
+	wssession.WorkerClient.Send(
+		cws.WSPacket{
+			ID:        "terminateSession",
+			SessionID: sessionID,
+		},
+		nil,
+	)
 }
 
 // findBestServer returns the best server for a session
-func (o *Server) findBestServer() (string, error) {
+func (o *Server) findBestServerRandom() (string, error) {
 	// TODO: Find best Server by latency, currently return by ping
 	if len(o.workerClients) == 0 {
 		return "", errors.New("No server found")
@@ -175,6 +182,62 @@ func (o *Server) findBestServer() (string, error) {
 	return "", errors.New("No server found")
 }
 
+// findBestServerFromBrowser returns the best server for a session
+// All workers addresses are sent to user and user will ping
+func (o *Server) findBestServerFromBrowser(client *BrowserClient) (string, error) {
+	// TODO: Find best Server by latency, currently return by ping
+	if len(o.workerClients) == 0 {
+		return "", errors.New("No server found")
+	}
+
+	// TODO: Add timeout
+	log.Println("Ping worker to get latency for ", client)
+	latencies := o.getLatencyMapFromBrowser(client)
+
+	if len(latencies) == 0 {
+		return "", errors.New("No server found")
+	}
+
+	var bestWorker *WorkerClient
+	var minLatency int64 = math.MaxInt64
+
+	for wc, l := range latencies {
+		if l < minLatency {
+			bestWorker = wc
+			minLatency = l
+		}
+	}
+
+	return bestWorker.ServerID, nil
+}
+
+func (o *Server) getLatencyMapFromBrowser(client *BrowserClient) map[*WorkerClient]int64 {
+	workersList := []*WorkerClient{}
+
+	latencyMap := map[*WorkerClient]int64{}
+
+	addressList := []string{}
+	for _, workerClient := range o.workerClients {
+		workersList = append(workersList, workerClient)
+		addressList = append(addressList, workerClient.Address)
+	}
+
+	log.Println("Send sync", addressList, strings.Join(addressList, ","))
+	data := client.SyncSend(cws.WSPacket{
+		ID:   "checkLatency",
+		Data: strings.Join(addressList, ","),
+	})
+	log.Println("Received latency list:", data.Data)
+	latencies := strings.Split(data.Data, ",")
+	log.Println("Received latency list:", latencies)
+
+	for i, workerClient := range workersList {
+		il, _ := strconv.Atoi(latencies[i])
+		latencyMap[workerClient] = int64(il)
+	}
+	return latencyMap
+}
+
 func (o *Server) cleanConnection(client *WorkerClient, serverID string) {
 	log.Println("Unregister server from overlord")
 	// Remove serverID from servers
@@ -187,4 +250,32 @@ func (o *Server) cleanConnection(client *WorkerClient, serverID string) {
 	}
 
 	client.Close()
+}
+
+func readUserIP(r *http.Request) string {
+	IPAddress := r.Header.Get("X-Real-Ip")
+	if IPAddress == "" {
+		IPAddress = r.Header.Get("X-Forwarded-For")
+	}
+	if IPAddress == "" {
+		IPAddress = r.RemoteAddr
+	}
+	// TODO: For debug, should remove it
+	if IPAddress == "" {
+		return "localhost"
+	}
+	return IPAddress
+}
+
+func getRemoteAddress(conn *websocket.Conn) string {
+	var remoteAddr string
+	log.Println(conn.RemoteAddr().String())
+	if parts := strings.Split(conn.RemoteAddr().String(), ":"); len(parts) == 2 {
+		remoteAddr = parts[0]
+	}
+	if remoteAddr == "" {
+		return "localhost"
+	}
+
+	return remoteAddr
 }
