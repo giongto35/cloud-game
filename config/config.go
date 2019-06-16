@@ -17,3 +17,4 @@ var FrontendSTUNTURN = flag.String("stunturn", DefaultSTUNTURN, "Frontend STUN T
 var Width = 256
 var Height = 240
 var WSWait = 20 * time.Second
+var MatchWorkerRandom = false
