@@ -86,6 +86,28 @@ conn.onmessage = e => {
         log(`Got load response: ${d["data"]}`);
         popup("Loaded");
         break;
+    case "checkLatency":
+        var s = d["data"];
+        var latencyList = [];
+        curPacketID = d["packet_id"];
+        log(s);
+        log(`Received latency ${s}`)
+        addrs = s.split(",")
+        for (const addr of addrs) {
+            beforeTime = Date.now();
+
+            var xmlHttp = new XMLHttpRequest();
+            xmlHttp.open( "GET", addr+"/echo", false ); // false for synchronous request
+            xmlHttp.send( null );
+
+            resp = xmlHttp.responseText
+            afterTime = Date.now();
+            latencyList.push(afterTime - beforeTime)
+            log(`Return resp ${resp}`)
+        }
+        log(`Send latency list ${latencyList.join()}`)
+        log(curPacketID)
+        conn.send(JSON.stringify({"id": "checkLatency", "data": latencyList.join(), "packet_id": curPacketID}));
     }
 }
 
