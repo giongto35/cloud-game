@@ -193,6 +193,7 @@ func (o *Server) findBestServerFromBrowser(client *BrowserClient) (string, error
 	// TODO: Add timeout
 	log.Println("Ping worker to get latency for ", client)
 	latencies := o.getLatencyMapFromBrowser(client)
+	log.Println("Latency map", latencies)
 
 	if len(latencies) == 0 {
 		return "", errors.New("No server found")
