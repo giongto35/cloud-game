@@ -253,21 +253,6 @@ func (o *Server) cleanConnection(client *WorkerClient, serverID string) {
 	client.Close()
 }
 
-func readUserIP(r *http.Request) string {
-	IPAddress := r.Header.Get("X-Real-Ip")
-	if IPAddress == "" {
-		IPAddress = r.Header.Get("X-Forwarded-For")
-	}
-	if IPAddress == "" {
-		IPAddress = r.RemoteAddr
-	}
-	// TODO: For debug, should remove it
-	if IPAddress == "" {
-		return "localhost"
-	}
-	return IPAddress
-}
-
 func getRemoteAddress(conn *websocket.Conn) string {
 	var remoteAddr string
 	log.Println(conn.RemoteAddr().String())
