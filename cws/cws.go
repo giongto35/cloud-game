@@ -2,7 +2,6 @@ package cws
 
 import (
 	"encoding/json"
-	"fmt"
 	"log"
 	"sync"
 	"time"
@@ -158,10 +157,6 @@ func (c *Client) Listen() {
 		}
 		wspacket := WSPacket{}
 		err = json.Unmarshal(rawMsg, &wspacket)
-		fmt.Println(wspacket)
-		if wspacket.ID == "checkLatency" {
-			fmt.Println("!!!!!!")
-		}
 
 		if err != nil {
 			continue
