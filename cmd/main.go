@@ -72,7 +72,11 @@ func initializeWorker() {
 		}
 
 		l.Close()
-		http.Handle("/metrics", promhttp.Handler())
+		if port == 9000 {
+			// only turn on metric for the first worker to avoid overlap
+			http.Handle("/metrics", promhttp.Handler())
+		}
+
 		http.ListenAndServe(":"+strconv.Itoa(port), nil)
 	}
 }
