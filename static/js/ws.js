@@ -92,15 +92,19 @@ conn.onmessage = e => {
         curPacketID = d["packet_id"];
         addrs = s.split(",")
         for (const addr of addrs) {
-            beforeTime = Date.now();
+            var sumLatency = 0
+            for (var i = 0; i <= 2; i++) {
+                beforeTime = Date.now();
 
-            var xmlHttp = new XMLHttpRequest();
-            xmlHttp.open( "GET", addr+"/echo", false ); // false for synchronous request
-            xmlHttp.send( null );
+                var xmlHttp = new XMLHttpRequest();
+                xmlHttp.open( "GET", "http://"+addr+":9000/echo?_=" + beforeTime, false ); // false for synchronous request, add date to not calling cache
+                xmlHttp.send( null );
 
-            resp = xmlHttp.responseText
-            afterTime = Date.now();
-            latencyList.push(afterTime - beforeTime)
+                resp = xmlHttp.responseText
+                afterTime = Date.now();
+                sumLatency += afterTime - beforeTime
+            }
+            latencyList.push(sumLatency)
         }
         log(`Send latency list ${latencyList.join()}`)
         log(curPacketID)

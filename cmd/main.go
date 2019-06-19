@@ -2,6 +2,7 @@ package main
 
 import (
 	"flag"
+	"fmt"
 	"log"
 	"math/rand"
 	"net"
@@ -76,6 +77,13 @@ func initializeWorker() {
 			// only turn on metric for the first worker to avoid overlap
 			http.Handle("/metrics", promhttp.Handler())
 		}
+
+		http.HandleFunc("/echo", func(w http.ResponseWriter, r *http.Request) {
+			w.Header().Set("Access-Control-Allow-Origin", "*")
+			//w.Header().Set("Access-Control-Allow-Methods", "POST, GET, OPTIONS, PUT, DELETE")
+			//w.Header().Set("Access-Control-Allow-Headers", "Accept, Content-Type, Content-Length, Accept-Encoding, X-CSRF-Token, Authorization")
+			fmt.Fprintf(w, "")
+		})
 
 		http.ListenAndServe(":"+strconv.Itoa(port), nil)
 	}
