@@ -90,8 +90,6 @@ conn.onmessage = e => {
         var s = d["data"];
         var latencyList = [];
         curPacketID = d["packet_id"];
-        log(s);
-        log(`Received latency ${s}`)
         addrs = s.split(",")
         for (const addr of addrs) {
             beforeTime = Date.now();
@@ -103,7 +101,6 @@ conn.onmessage = e => {
             resp = xmlHttp.responseText
             afterTime = Date.now();
             latencyList.push(afterTime - beforeTime)
-            log(`Return resp ${resp}`)
         }
         log(`Send latency list ${latencyList.join()}`)
         log(curPacketID)
