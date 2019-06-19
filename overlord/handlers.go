@@ -202,6 +202,7 @@ func (o *Server) findBestServerFromBrowser(client *BrowserClient) (string, error
 	var bestWorker *WorkerClient
 	var minLatency int64 = math.MaxInt64
 
+	// get the worker with lowest latency to user
 	for wc, l := range latencies {
 		if l < minLatency {
 			bestWorker = wc
@@ -212,17 +213,20 @@ func (o *Server) findBestServerFromBrowser(client *BrowserClient) (string, error
 	return bestWorker.ServerID, nil
 }
 
+// getLatencyMapFromBrowser get all latencies from worker to user
 func (o *Server) getLatencyMapFromBrowser(client *BrowserClient) map[*WorkerClient]int64 {
 	workersList := []*WorkerClient{}
 
 	latencyMap := map[*WorkerClient]int64{}
 
+	// addressList is the list of worker addresses
 	addressList := []string{}
 	for _, workerClient := range o.workerClients {
 		workersList = append(workersList, workerClient)
 		addressList = append(addressList, workerClient.Address)
 	}
 
+	// send this address to user and get back latency
 	log.Println("Send sync", addressList, strings.Join(addressList, ","))
 	data := client.SyncSend(cws.WSPacket{
 		ID:   "checkLatency",
@@ -253,6 +257,7 @@ func (o *Server) cleanConnection(client *WorkerClient, serverID string) {
 	client.Close()
 }
 
+// getRemoteAddress returns public address of websocket connection
 func getRemoteAddress(conn *websocket.Conn) string {
 	var remoteAddr string
 	log.Println(conn.RemoteAddr().String())
