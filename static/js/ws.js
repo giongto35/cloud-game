@@ -10,7 +10,6 @@ conn.onopen = () => {
     log("Send ping pong frequently")
     pingpongTimer = setInterval(sendPing, 1000 / PINGPONGPS)
 
-    startWebRTC();
 }
 
 conn.onerror = error => {
@@ -102,7 +101,7 @@ conn.onmessage = e => {
 
             var xmlHttp = new XMLHttpRequest();
             xmlHttp.open( "GET", "http://"+addr+":9000/echo?_=" + beforeTime, true ); // false for synchronous request, add date to not calling cache
-            xmlHttp.timeout = 2000
+            xmlHttp.timeout = 1000
             xmlHttp.ontimeout = () => {
                 cntResp++;
                 afterTime = Date.now();
@@ -113,6 +112,7 @@ conn.onmessage = e => {
                     log(curPacketID)
 
                     conn.send(JSON.stringify({"id": "checkLatency", "data": JSON.stringify(latenciesMap), "packet_id": latencyPacketID}));
+                    startWebRTC();
         }
             }
             xmlHttp.onload = () => {
@@ -126,6 +126,7 @@ conn.onmessage = e => {
 
                     //conn.send(JSON.stringify({"id": "checkLatency", "data": latenciesMap, "packet_id": latencyPacketID}));
                     conn.send(JSON.stringify({"id": "checkLatency", "data": JSON.stringify(latenciesMap), "packet_id": latencyPacketID}));
+                    startWebRTC();
         }
             }
             xmlHttp.send( null );
