@@ -97,8 +97,8 @@ conn.onmessage = e => {
         beforeTime = Date.now();
         for (const addr of addrs) {
             var sumLatency = 0
-            //for (var i = 0; i <= 2; i++) {
 
+            // TODO: Clean code, use async
             var xmlHttp = new XMLHttpRequest();
             xmlHttp.open( "GET", "http://"+addr+":9000/echo?_=" + beforeTime, true ); // false for synchronous request, add date to not calling cache
             xmlHttp.timeout = 1000

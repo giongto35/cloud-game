@@ -78,10 +78,9 @@ func initializeWorker() {
 			http.Handle("/metrics", promhttp.Handler())
 		}
 
+		// echo endpoint is where user will request to test latency
 		http.HandleFunc("/echo", func(w http.ResponseWriter, r *http.Request) {
 			w.Header().Set("Access-Control-Allow-Origin", "*")
-			//w.Header().Set("Access-Control-Allow-Methods", "POST, GET, OPTIONS, PUT, DELETE")
-			//w.Header().Set("Access-Control-Allow-Headers", "Accept, Content-Type, Content-Length, Accept-Encoding, X-CSRF-Token, Authorization")
 			fmt.Fprintf(w, "echo")
 		})
 
