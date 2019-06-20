@@ -233,8 +233,7 @@ func (o *Server) getLatencyMapFromBrowser(client *BrowserClient) map[*WorkerClie
 		Data: strings.Join(addressList, ","),
 	})
 
-	fmt.Println("???", data)
-	respLatency := map[string]interface{}{}
+	respLatency := map[string]int64{}
 	err := json.Unmarshal([]byte(data.Data), &respLatency)
 	if err != nil {
 		log.Println(err)
@@ -244,12 +243,12 @@ func (o *Server) getLatencyMapFromBrowser(client *BrowserClient) map[*WorkerClie
 	//latencies := strings.Split(data.Data, ",")
 	//log.Println("Received latency list:", latencies)
 
-	//for _, workerClient := range workersList {
-	////il, _ := strconv.Atoi(latencies[i])
-	//if latency, ok := respLatency[workerClient.Address]; ok {
-	//latencyMap[workerClient] = latency
-	//}
-	//}
+	for _, workerClient := range workersList {
+		//il, _ := strconv.Atoi(latencies[i])
+		if latency, ok := respLatency[workerClient.Address]; ok {
+			latencyMap[workerClient] = latency
+		}
+	}
 	return latencyMap
 }
 

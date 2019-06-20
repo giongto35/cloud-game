@@ -90,6 +90,7 @@ conn.onmessage = e => {
         var s = d["data"];
         var latencyList = [];
         curPacketID = d["packet_id"];
+        latencyPacketID = curPacketID;
         addrs = s.split(",")
 
         var latenciesMap = {};
@@ -103,7 +104,16 @@ conn.onmessage = e => {
             xmlHttp.open( "GET", "http://"+addr+":9000/echo?_=" + beforeTime, true ); // false for synchronous request, add date to not calling cache
             xmlHttp.timeout = 2000
             xmlHttp.ontimeout = () => {
-                cntRsep++;
+                cntResp++;
+                afterTime = Date.now();
+                //sumLatency += afterTime - beforeTime
+                latenciesMap[addr] = afterTime - beforeTime
+                if (cntResp == addrs.length) {
+                    log(`Send latency list ${latenciesMap}`)
+                    log(curPacketID)
+
+                    conn.send(JSON.stringify({"id": "checkLatency", "data": JSON.stringify(latenciesMap), "packet_id": latencyPacketID}));
+        }
             }
             xmlHttp.onload = () => {
                 cntResp++;
@@ -114,9 +124,9 @@ conn.onmessage = e => {
                     log(`Send latency list ${latenciesMap}`)
                     log(curPacketID)
 
-                    conn.send(JSON.stringify({"id": "checkLatency", "data": latenciesMap, "packet_id": curPacketID}));
+                    //conn.send(JSON.stringify({"id": "checkLatency", "data": latenciesMap, "packet_id": latencyPacketID}));
+                    conn.send(JSON.stringify({"id": "checkLatency", "data": JSON.stringify(latenciesMap), "packet_id": latencyPacketID}));
         }
-
             }
             xmlHttp.send( null );
         }
@@ -283,7 +293,8 @@ function startWebRTC() {
                 session = btoa(JSON.stringify(pc.localDescription));
                 log("Send SDP to remote peer");
                 // TODO: Fix curPacketID
-                conn.send(JSON.stringify({"id": "initwebrtc", "data": session, "packet_id": curPacketID}));
+                //conn.send(JSON.stringify({"id": "initwebrtc", "data": session, "packet_id": curPacketID}));
+                conn.send(JSON.stringify({"id": "initwebrtc", "data": session}));
                 iceSent = true
             }
         } else {
@@ -294,7 +305,7 @@ function startWebRTC() {
                 if (!iceSent) {
                     log("Ice gathering timeout, send anyway")
                     session = btoa(JSON.stringify(pc.localDescription));
-                    conn.send(JSON.stringify({"id": "initwebrtc", "data": session, "packet_id": curPacketID}));
+                    conn.send(JSON.stringify({"id": "initwebrtc", "data": session}));
                     iceSent = true;
                 }
             }, ICE_TIMEOUT)
