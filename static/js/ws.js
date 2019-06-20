@@ -10,7 +10,6 @@ conn.onopen = () => {
     log("Send ping pong frequently")
     pingpongTimer = setInterval(sendPing, 1000 / PINGPONGPS)
 
-    startWebRTC();
 }
 
 conn.onerror = error => {
@@ -90,22 +89,61 @@ conn.onmessage = e => {
         var s = d["data"];
         var latencyList = [];
         curPacketID = d["packet_id"];
+        latencyPacketID = curPacketID;
         addrs = s.split(",")
+
+        var latenciesMap = {};
+        var cntResp = 0;
+        beforeTime = Date.now();
         for (const addr of addrs) {
-            beforeTime = Date.now();
+            var sumLatency = 0
 
+            // TODO: Clean code, use async
             var xmlHttp = new XMLHttpRequest();
-            xmlHttp.open( "GET", addr+"/echo", false ); // false for synchronous request
-            xmlHttp.send( null );
+            xmlHttp.open( "GET", "http://"+addr+":9000/echo?_=" + beforeTime, true ); // false for synchronous request, add date to not calling cache
+            xmlHttp.timeout = 1000
+            xmlHttp.ontimeout = () => {
+                cntResp++;
+                afterTime = Date.now();
+                //sumLatency += afterTime - beforeTime
+                latenciesMap[addr] = afterTime - beforeTime
+                if (cntResp == addrs.length) {
+                    log(`Send latency list ${latenciesMap}`)
+                    log(curPacketID)
 
-            resp = xmlHttp.responseText
-            afterTime = Date.now();
-            latencyList.push(afterTime - beforeTime)
+                    conn.send(JSON.stringify({"id": "checkLatency", "data": JSON.stringify(latenciesMap), "packet_id": latencyPacketID}));
+                    startWebRTC();
         }
-        log(`Send latency list ${latencyList.join()}`)
-        log(curPacketID)
-        conn.send(JSON.stringify({"id": "checkLatency", "data": latencyList.join(), "packet_id": curPacketID}));
+            }
+            xmlHttp.onload = () => {
+                cntResp++;
+                afterTime = Date.now();
+                //sumLatency += afterTime - beforeTime
+                latenciesMap[addr] = afterTime - beforeTime
+                if (cntResp == addrs.length) {
+                    log(`Send latency list ${latenciesMap}`)
+                    log(curPacketID)
+
+                    //conn.send(JSON.stringify({"id": "checkLatency", "data": latenciesMap, "packet_id": latencyPacketID}));
+                    conn.send(JSON.stringify({"id": "checkLatency", "data": JSON.stringify(latenciesMap), "packet_id": latencyPacketID}));
+                    startWebRTC();
+        }
+            }
+            xmlHttp.send( null );
+        }
     }
+}
+
+function updateLatencies(beforeTime, addr, latenciesMap, cntResp, curPacketID) {
+        afterTime = Date.now();
+        //sumLatency += afterTime - beforeTime
+        latenciesMap[addr] = afterTime - beforeTime
+        if (cntResp == addrs.length) {
+            log(`Send latency list ${latenciesMap}`)
+            log(curPacketID)
+
+            conn.send(JSON.stringify({"id": "checkLatency", "data": latenciesMap, "packet_id": curPacketID}));
+        }
 }
 
 function sendPing() {
@@ -256,7 +294,8 @@ function startWebRTC() {
                 session = btoa(JSON.stringify(pc.localDescription));
                 log("Send SDP to remote peer");
                 // TODO: Fix curPacketID
-                conn.send(JSON.stringify({"id": "initwebrtc", "data": session, "packet_id": curPacketID}));
+                //conn.send(JSON.stringify({"id": "initwebrtc", "data": session, "packet_id": curPacketID}));
+                conn.send(JSON.stringify({"id": "initwebrtc", "data": session}));
                 iceSent = true
             }
         } else {
@@ -267,7 +306,7 @@ function startWebRTC() {
                 if (!iceSent) {
                     log("Ice gathering timeout, send anyway")
                     session = btoa(JSON.stringify(pc.localDescription));
-                    conn.send(JSON.stringify({"id": "initwebrtc", "data": session, "packet_id": curPacketID}));
+                    conn.send(JSON.stringify({"id": "initwebrtc", "data": session}));
                     iceSent = true;
                 }
             }, ICE_TIMEOUT)
