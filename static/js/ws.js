@@ -91,25 +91,48 @@ conn.onmessage = e => {
         var latencyList = [];
         curPacketID = d["packet_id"];
         addrs = s.split(",")
+
+        var latenciesMap = {};
+        var cntResp = 0;
+        beforeTime = Date.now();
         for (const addr of addrs) {
             var sumLatency = 0
-            for (var i = 0; i <= 2; i++) {
-                beforeTime = Date.now();
+            //for (var i = 0; i <= 2; i++) {
 
-                var xmlHttp = new XMLHttpRequest();
-                xmlHttp.open( "GET", "http://"+addr+":9000/echo?_=" + beforeTime, false ); // false for synchronous request, add date to not calling cache
-                xmlHttp.send( null );
-
-                resp = xmlHttp.responseText
-                afterTime = Date.now();
-                sumLatency += afterTime - beforeTime
+            var xmlHttp = new XMLHttpRequest();
+            xmlHttp.open( "GET", "http://"+addr+":9000/echo?_=" + beforeTime, true ); // false for synchronous request, add date to not calling cache
+            xmlHttp.timeout = 2000
+            xmlHttp.ontimeout = () => {
+                cntRsep++;
             }
-            latencyList.push(sumLatency)
+            xmlHttp.onload = () => {
+                cntResp++;
+                afterTime = Date.now();
+                //sumLatency += afterTime - beforeTime
+                latenciesMap[addr] = afterTime - beforeTime
+                if (cntResp == addrs.length) {
+                    log(`Send latency list ${latenciesMap}`)
+                    log(curPacketID)
+
+                    conn.send(JSON.stringify({"id": "checkLatency", "data": latenciesMap, "packet_id": curPacketID}));
         }
-        log(`Send latency list ${latencyList.join()}`)
-        log(curPacketID)
-        conn.send(JSON.stringify({"id": "checkLatency", "data": latencyList.join(), "packet_id": curPacketID}));
+
+            }
+            xmlHttp.send( null );
+        }
     }
+}
+
+function updateLatencies(beforeTime, addr, latenciesMap, cntResp, curPacketID) {
+        afterTime = Date.now();
+        //sumLatency += afterTime - beforeTime
+        latenciesMap[addr] = afterTime - beforeTime
+        if (cntResp == addrs.length) {
+            log(`Send latency list ${latenciesMap}`)
+            log(curPacketID)
+
+            conn.send(JSON.stringify({"id": "checkLatency", "data": latenciesMap, "packet_id": curPacketID}));
+        }
 }
 
 function sendPing() {

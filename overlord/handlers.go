@@ -1,6 +1,7 @@
 package overlord
 
 import (
+	"encoding/json"
 	"errors"
 	"fmt"
 	"html/template"
@@ -8,7 +9,6 @@ import (
 	"math"
 	"math/rand"
 	"net/http"
-	"strconv"
 	"strings"
 
 	"github.com/giongto35/cloud-game/config"
@@ -232,14 +232,24 @@ func (o *Server) getLatencyMapFromBrowser(client *BrowserClient) map[*WorkerClie
 		ID:   "checkLatency",
 		Data: strings.Join(addressList, ","),
 	})
-	log.Println("Received latency list:", data.Data)
-	latencies := strings.Split(data.Data, ",")
-	log.Println("Received latency list:", latencies)
 
-	for i, workerClient := range workersList {
-		il, _ := strconv.Atoi(latencies[i])
-		latencyMap[workerClient] = int64(il)
+	fmt.Println("???", data)
+	respLatency := map[string]interface{}{}
+	err := json.Unmarshal([]byte(data.Data), &respLatency)
+	if err != nil {
+		log.Println(err)
+		return latencyMap
 	}
+	//log.Println("Received latency map:", data.Data)
+	//latencies := strings.Split(data.Data, ",")
+	//log.Println("Received latency list:", latencies)
+
+	//for _, workerClient := range workersList {
+	////il, _ := strconv.Atoi(latencies[i])
+	//if latency, ok := respLatency[workerClient.Address]; ok {
+	//latencyMap[workerClient] = latency
+	//}
+	//}
 	return latencyMap
 }
 
