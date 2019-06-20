@@ -159,6 +159,7 @@ func (c *Client) Listen() {
 		err = json.Unmarshal(rawMsg, &wspacket)
 
 		if err != nil {
+			log.Println("Warn: error decoding", rawMsg)
 			continue
 		}
 
