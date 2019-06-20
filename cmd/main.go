@@ -2,6 +2,7 @@ package main
 
 import (
 	"flag"
+	"fmt"
 	"log"
 	"math/rand"
 	"net"
@@ -76,6 +77,12 @@ func initializeWorker() {
 			// only turn on metric for the first worker to avoid overlap
 			http.Handle("/metrics", promhttp.Handler())
 		}
+
+		// echo endpoint is where user will request to test latency
+		http.HandleFunc("/echo", func(w http.ResponseWriter, r *http.Request) {
+			w.Header().Set("Access-Control-Allow-Origin", "*")
+			fmt.Fprintf(w, "echo")
+		})
 
 		http.ListenAndServe(":"+strconv.Itoa(port), nil)
 	}

@@ -1,6 +1,6 @@
 # Klog, Web-based Cloud Gaming Service
 - **US West (San Francisco)**: [http://usw.cloud.webgame2d.com](http://usw.cloud.webgame2d.com) - **US East(New York)**: [http://use.cloud.webgame2d.com](http://use.cloud.webgame2d.com)  
-- **Singapore**: [http://sg.cloud.webgame2d.com](http://sg.cloud.webgame2d.com) - **Europe (London)**: [http://eu.cloud.webgame2d.com](http://eu.cloud.webgame2d.com)
+- **Singapore**: [http://cloud.webgame2d.com](http://sg.cloud.webgame2d.com) - **Europe (London)**: [http://eu.cloud.webgame2d.com](http://eu.cloud.webgame2d.com)
 
 - [**Game Instruction**](document/instruction/)
 For the best gaming experience, please select the closest region to you.   
