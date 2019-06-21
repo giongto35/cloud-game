@@ -124,7 +124,6 @@ func (o *Server) WS(w http.ResponseWriter, r *http.Request) {
 	if config.MatchWorkerRandom {
 		serverID, err = o.findBestServerRandom()
 	} else {
-		//serverID, err = o.findBestServer(frontendAddr)
 		serverID, err = o.findBestServerFromBrowser(client)
 	}
 
@@ -183,15 +182,13 @@ func (o *Server) findBestServerRandom() (string, error) {
 }
 
 // findBestServerFromBrowser returns the best server for a session
-// All workers addresses are sent to user and user will ping
+// All workers addresses are sent to user and user will ping to get latency
 func (o *Server) findBestServerFromBrowser(client *BrowserClient) (string, error) {
 	// TODO: Find best Server by latency, currently return by ping
 	if len(o.workerClients) == 0 {
 		return "", errors.New("No server found")
 	}
 
-	// TODO: Add timeout
-	log.Println("Ping worker to get latency for ", client)
 	latencies := o.getLatencyMapFromBrowser(client)
 	log.Println("Latency map", latencies)
 
@@ -265,7 +262,7 @@ func (o *Server) cleanConnection(client *WorkerClient, serverID string) {
 // getRemoteAddress returns public address of websocket connection
 func getRemoteAddress(conn *websocket.Conn) string {
 	var remoteAddr string
-	log.Println(conn.RemoteAddr().String())
+	log.Println("Address :", conn.RemoteAddr().String())
 	if parts := strings.Split(conn.RemoteAddr().String(), ":"); len(parts) == 2 {
 		remoteAddr = parts[0]
 	}
