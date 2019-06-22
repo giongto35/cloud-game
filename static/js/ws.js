@@ -108,8 +108,8 @@ conn.onmessage = e => {
                 //sumLatency += afterTime - beforeTime
                 latenciesMap[addr] = afterTime - beforeTime
                 if (cntResp == addrs.length) {
-                    log(`Send latency list ${latenciesMap}`)
-                    log(curPacketID)
+                    log(`Send latency list`)
+                    console.log(latenciesMap)
 
                     conn.send(JSON.stringify({"id": "checkLatency", "data": JSON.stringify(latenciesMap), "packet_id": latencyPacketID}));
                     startWebRTC();
@@ -122,7 +122,7 @@ conn.onmessage = e => {
                 latenciesMap[addr] = afterTime - beforeTime
                 if (cntResp == addrs.length) {
                     log(`Send latency list ${latenciesMap}`)
-                    log(curPacketID)
+                    console.log(latenciesMap)
 
                     //conn.send(JSON.stringify({"id": "checkLatency", "data": latenciesMap, "packet_id": latencyPacketID}));
                     conn.send(JSON.stringify({"id": "checkLatency", "data": JSON.stringify(latenciesMap), "packet_id": latencyPacketID}));

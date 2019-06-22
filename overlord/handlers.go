@@ -14,6 +14,7 @@ import (
 	"github.com/giongto35/cloud-game/config"
 	"github.com/giongto35/cloud-game/cws"
 	"github.com/giongto35/cloud-game/overlord/gamelist"
+	"github.com/giongto35/cloud-game/util"
 	"github.com/gofrs/uuid"
 	"github.com/gorilla/websocket"
 )
@@ -81,7 +82,21 @@ func (o *Server) WSO(w http.ResponseWriter, r *http.Request) {
 	log.Println("Overlord: A new server connected to Overlord", serverID)
 
 	// Register to workersClients map the client connection
-	client := NewWorkerClient(c, serverID, getRemoteAddress(c))
+	address := util.GetRemoteAddress(c)
+	fmt.Println("Is public", util.IsPublicIP(address))
+	fmt.Println("Mode: ", *config.Mode, config.ProdEnv)
+	if !util.IsPublicIP(address) && *config.Mode == config.ProdEnv {
+		// Don't accept private IP for worker's address in prod mode
+		// However, if the worker in the same host with overlord, we can get public IP of worker
+		log.Printf("Error: address %s is invalid", address)
+		address = util.GetHostPublicIP()
+		log.Println("Find public address:", address)
+		if address == "" || !util.IsPublicIP(address) {
+			// Skip this worker because we cannot find public IP
+			return
+		}
+	}
+	client := NewWorkerClient(c, serverID, address)
 	o.workerClients[serverID] = client
 	defer o.cleanConnection(client, serverID)
 
@@ -124,7 +139,6 @@ func (o *Server) WS(w http.ResponseWriter, r *http.Request) {
 	if config.MatchWorkerRandom {
 		serverID, err = o.findBestServerRandom()
 	} else {
-		//serverID, err = o.findBestServer(frontendAddr)
 		serverID, err = o.findBestServerFromBrowser(client)
 	}
 
@@ -183,15 +197,13 @@ func (o *Server) findBestServerRandom() (string, error) {
 }
 
 // findBestServerFromBrowser returns the best server for a session
-// All workers addresses are sent to user and user will ping
+// All workers addresses are sent to user and user will ping to get latency
 func (o *Server) findBestServerFromBrowser(client *BrowserClient) (string, error) {
 	// TODO: Find best Server by latency, currently return by ping
 	if len(o.workerClients) == 0 {
 		return "", errors.New("No server found")
 	}
 
-	// TODO: Add timeout
-	log.Println("Ping worker to get latency for ", client)
 	latencies := o.getLatencyMapFromBrowser(client)
 	log.Println("Latency map", latencies)
 
@@ -260,18 +272,4 @@ func (o *Server) cleanConnection(client *WorkerClient, serverID string) {
 	}
 
 	client.Close()
-}
-
-// getRemoteAddress returns public address of websocket connection
-func getRemoteAddress(conn *websocket.Conn) string {
-	var remoteAddr string
-	log.Println(conn.RemoteAddr().String())
-	if parts := strings.Split(conn.RemoteAddr().String(), ":"); len(parts) == 2 {
-		remoteAddr = parts[0]
-	}
-	if remoteAddr == "" {
-		return "localhost"
-	}
-
-	return remoteAddr
 }
