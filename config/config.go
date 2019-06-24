@@ -15,8 +15,10 @@ var IsMonitor = flag.Bool("monitor", false, "Turn on monitor")
 var FrontendSTUNTURN = flag.String("stunturn", DefaultSTUNTURN, "Frontend STUN TURN servers")
 var Mode = flag.String("mode", "dev", "Environment")
 
-var Width = 256
-var Height = 240
+//var Width = 256
+//var Height = 240
+var Width = 256  // GBA
+var Height = 240 // GBA
 var WSWait = 20 * time.Second
 var MatchWorkerRandom = false
 var ProdEnv = "prod"

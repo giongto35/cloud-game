@@ -25,7 +25,7 @@ type Director struct {
 const fps = 300
 
 // NewDirector returns a new director
-func NewDirector(roomID string, imageChannel chan<- *image.RGBA, audioChannel chan<- float32, inputChannel <-chan int) *Director {
+func NewDirector(roomID string, imageChannel chan<- *image.RGBA, audioChannel chan<- float32, inputChannel <-chan int) CloudEmulator {
 	// TODO: return image channel from where it write
 	director := Director{}
 	director.Done = make(chan struct{}, 1)
@@ -52,16 +52,6 @@ func (d *Director) SetView(view *GameView) {
 //d.view.UpdateInput(input)
 //}
 
-// Step ...
-func (d *Director) Step() {
-	timestamp := float64(time.Now().Nanosecond()) / float64(time.Second)
-	dt := timestamp - d.timestamp
-	d.timestamp = timestamp
-	if d.view != nil {
-		d.view.Update(timestamp, dt)
-	}
-}
-
 // Start ...
 func (d *Director) Start(path string) {
 	// portaudio.Initialize()
@@ -72,12 +62,22 @@ func (d *Director) Start(path string) {
 	// d.audio = audio
 	log.Println("Start game: ", path)
 
-	d.PlayGame(path)
-	d.Run()
+	d.playGame(path)
+	d.run()
 }
 
-// Run ...
-func (d *Director) Run() {
+// step ...
+func (d *Director) step() {
+	timestamp := float64(time.Now().Nanosecond()) / float64(time.Second)
+	dt := timestamp - d.timestamp
+	d.timestamp = timestamp
+	if d.view != nil {
+		d.view.Update(timestamp, dt)
+	}
+}
+
+// run ...
+func (d *Director) run() {
 	c := time.Tick(time.Second / fps)
 L:
 	for range c {
@@ -94,14 +94,14 @@ L:
 		default:
 		}
 
-		d.Step()
+		d.step()
 	}
 	d.SetView(nil)
 	log.Println("Closed Director")
 }
 
 // PalyGame starts a game given a rom path
-func (d *Director) PlayGame(path string) {
+func (d *Director) playGame(path string) {
 	console, err := nes.NewConsole(path)
 	if err != nil {
 		log.Println("Err: Cannot load path, Got:", err)
@@ -133,4 +133,9 @@ func (d *Director) LoadGame() error {
 // GetHashPath return the full path to hash file
 func (d *Director) GetHashPath() string {
 	return savePath(d.roomID)
+}
+
+// Close
+func (d *Director) Close() {
+	close(d.Done)
 }

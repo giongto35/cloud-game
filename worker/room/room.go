@@ -13,6 +13,7 @@ import (
 	"time"
 
 	emulator "github.com/giongto35/cloud-game/emulator"
+	"github.com/giongto35/cloud-game/libretro/nanoarch"
 	"github.com/giongto35/cloud-game/webrtc"
 	storage "github.com/giongto35/cloud-game/worker/cloud-storage"
 )
@@ -37,7 +38,7 @@ type Room struct {
 	// NOTE: Not in use, lock rtcSessions
 	sessionsLock *sync.Mutex
 	// Director is emulator
-	director *emulator.Director
+	director emulator.CloudEmulator
 	// Cloud storage to store room state online
 	onlineStorage *storage.Client
 	// GameName
@@ -56,7 +57,9 @@ func NewRoom(roomID, gamePath, gameName string, onlineStorage *storage.Client) *
 	inputChannel := make(chan int, 100)
 
 	// create director
-	director := emulator.NewDirector(roomID, imageChannel, audioChannel, inputChannel)
+	//director := emulator.NewDirector(roomID, imageChannel, audioChannel, inputChannel)
+	nanoarch.Init(imageChannel)
+	director := nanoarch.NAEmulator
 
 	room := &Room{
 		ID: roomID,
@@ -74,7 +77,7 @@ func NewRoom(roomID, gamePath, gameName string, onlineStorage *storage.Client) *
 	}
 
 	go room.startVideo()
-	go room.startAudio()
+	//go room.startAudio()
 
 	// Check if room is on local storage, if not, pull from GCS to local storage
 	go func(gamePath, gameName, roomID string) {
@@ -93,8 +96,9 @@ func NewRoom(roomID, gamePath, gameName string, onlineStorage *storage.Client) *
 			gameName = getGameNameFromRoomID(roomID)
 		}
 		log.Printf("Room %s started. GameName: %s", roomID, gameName)
-		path := gamePath + "/" + gameName
-		director.Start(path)
+		//path := gamePath + "/" + gameName
+		//director.Start(path)
+		director.Start("games/Pokemon - Emerald Version (U).gba")
 		log.Printf("Room %s ended", roomID)
 
 		start := time.Now()
@@ -196,7 +200,8 @@ func (r *Room) Close() {
 	r.IsRunning = false
 	log.Println("Closing room", r.ID)
 	log.Println("Closing director of room ", r.ID)
-	close(r.director.Done)
+	r.director.Close()
+	//close(r.director.Done)
 	log.Println("Closing input of room ", r.ID)
 	close(r.inputChannel)
 	close(r.Done)
