@@ -98,7 +98,7 @@ func NewRoom(roomID, gamePath, gameName string, onlineStorage *storage.Client) *
 		log.Printf("Room %s started. GameName: %s", roomID, gameName)
 		//path := gamePath + "/" + gameName
 		//director.Start(path)
-		director.Start("games/Pokemon - Emerald Version (U).gba")
+		director.Start("games/Harvest Moon - Back to Nature (USA).bin")
 		log.Printf("Room %s ended", roomID)
 
 		start := time.Now()
