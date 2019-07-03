@@ -6,6 +6,7 @@ import (
 	"image"
 	"image/color"
 	"log"
+	"math"
 	"os"
 	"os/user"
 	"strings"
@@ -259,15 +260,14 @@ func coreVideoRefresh(data unsafe.Pointer, width C.unsigned, height C.unsigned, 
 	}
 
 	if data != nil {
-		fmt.Println(pitch, width, height)
 		NAEmulator.imageChannel <- toImageRGBA(data)
 		gl.TexSubImage2D(gl.TEXTURE_2D, 0, 0, 0, int32(width), int32(height), video.pixType, video.pixFmt, data)
 	}
 }
 
 func toImageRGBA(data unsafe.Pointer) *image.RGBA {
-	bytes := *(*[320 * 240 * 2]byte)(data)
-	//rgbabytes := make([]byte, 240*160*4)
+	//bytes := *(*[320 * 240 * 2]byte)(data)
+	bytes := *(*[256 * 240 * 2]byte)(data)
 	seek := 0
 
 	image := image.NewRGBA(image.Rect(0, 0, config.Width, config.Height))
@@ -297,14 +297,51 @@ func toImageRGBA(data unsafe.Pointer) *image.RGBA {
 
 //export coreInputPoll
 func coreInputPoll() {
-	for k, v := range binds {
-		joy[v] = (window.GetKey(k) == glfw.Press)
+	for i := range joy {
+		joy[i] = false
 	}
 
-	// Close the window when the user hits the Escape key.
-	if window.GetKey(glfw.KeyEscape) == glfw.Press {
-		window.SetShouldClose(true)
+	////for inp := range NAEmulator.inputChannel {
+	////joy[inp] = true
+	////}
+	select {
+	case inp := <-NAEmulator.inputChannel:
+		idx := int(math.Log(float64(inp)) / math.Log(2))
+		var j = 0
+		switch idx {
+		case 0:
+			j = C.RETRO_DEVICE_ID_JOYPAD_A
+		case 1:
+			j = C.RETRO_DEVICE_ID_JOYPAD_B
+		case 2:
+			j = C.RETRO_DEVICE_ID_JOYPAD_SELECT
+		case 3:
+			j = C.RETRO_DEVICE_ID_JOYPAD_START
+		case 4:
+			j = C.RETRO_DEVICE_ID_JOYPAD_UP
+		case 5:
+			j = C.RETRO_DEVICE_ID_JOYPAD_DOWN
+		case 6:
+			j = C.RETRO_DEVICE_ID_JOYPAD_LEFT
+		case 7:
+			j = C.RETRO_DEVICE_ID_JOYPAD_RIGHT
+		}
+		if j >= 0 && j < len(joy) {
+			fmt.Println(int(math.Log(float64(inp))/math.Log(2)), j)
+			joy[j] = true
+		}
+		//joy[int(math.Log(float64(inp)) / math.Log(2))] = true
+	default:
 	}
+
+	//for k, v := range binds {
+	//joy[v] = (window.GetKey(k) == glfw.Press)
+	//}
+
+	//// Close the window when the user hits the Escape key.
+	//if window.GetKey(glfw.KeyEscape) == glfw.Press {
+	//window.SetShouldClose(true)
+	//}
 }
 
 //export coreInputState

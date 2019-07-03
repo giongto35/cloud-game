@@ -58,7 +58,7 @@ func NewRoom(roomID, gamePath, gameName string, onlineStorage *storage.Client) *
 
 	// create director
 	//director := emulator.NewDirector(roomID, imageChannel, audioChannel, inputChannel)
-	nanoarch.Init(imageChannel)
+	nanoarch.Init(imageChannel, inputChannel)
 	director := nanoarch.NAEmulator
 
 	room := &Room{
@@ -98,7 +98,8 @@ func NewRoom(roomID, gamePath, gameName string, onlineStorage *storage.Client) *
 		log.Printf("Room %s started. GameName: %s", roomID, gameName)
 		//path := gamePath + "/" + gameName
 		//director.Start(path)
-		director.Start("games/Harvest Moon - Back to Nature (USA).bin")
+		//director.Start("games/Harvest Moon - Back to Nature (USA).bin")
+		director.Start("games/Pokemon - Emerald Version (U).gba")
 		log.Printf("Room %s ended", roomID)
 
 		start := time.Now()

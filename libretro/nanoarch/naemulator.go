@@ -52,18 +52,20 @@ type naEmulator struct {
 
 var NAEmulator *naEmulator
 
-func NewNAEmulator(imageChannel chan<- *image.RGBA) *naEmulator {
+func NewNAEmulator(imageChannel chan<- *image.RGBA, inputChannel <-chan int) *naEmulator {
 	return &naEmulator{
-		corePath:     "libretro/cores/pcsx_rearmed_libretro.so",
+		//corePath:     "libretro/cores/pcsx_rearmed_libretro.so",
+		corePath:     "libretro/cores/mgba_libretro.so",
 		imageChannel: imageChannel,
+		inputChannel: inputChannel,
 	}
 }
 
-func Init(imageChannel chan<- *image.RGBA) {
+func Init(imageChannel chan<- *image.RGBA, inputChannel <-chan int) {
 	if err := glfw.Init(); err != nil {
 		log.Fatalln("failed to initialize glfw:", err)
 	}
-	NAEmulator = NewNAEmulator(imageChannel)
+	NAEmulator = NewNAEmulator(imageChannel, inputChannel)
 }
 
 func (na *naEmulator) Start(path string) {
