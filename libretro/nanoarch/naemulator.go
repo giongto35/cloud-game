@@ -2,9 +2,6 @@ package nanoarch
 
 import (
 	"image"
-	"log"
-
-	"github.com/go-gl/glfw/v3.2/glfw"
 )
 
 /*
@@ -75,9 +72,6 @@ func NewNAEmulator(imageChannel chan<- *image.RGBA, inputChannel <-chan int) *na
 }
 
 func Init(imageChannel chan<- *image.RGBA, inputChannel <-chan int) {
-	if err := glfw.Init(); err != nil {
-		log.Fatalln("failed to initialize glfw:", err)
-	}
 	NAEmulator = NewNAEmulator(imageChannel, inputChannel)
 	go NAEmulator.listenInput()
 }
@@ -100,16 +94,8 @@ func (na *naEmulator) Start(path string) {
 	coreLoad(na.corePath)
 	na.playGame(path)
 
-	for !window.ShouldClose() {
-		glfw.PollEvents()
-
+	for {
 		C.bridge_retro_run(retroRun)
-
-		//gl.Clear(gl.COLOR_BUFFER_BIT)
-
-		videoRender()
-
-		window.SwapBuffers()
 	}
 }
 
@@ -138,5 +124,4 @@ func (na *naEmulator) Close() {
 	// Unload and deinit in the core.
 	C.bridge_retro_unload_game(retroUnloadGame)
 	C.bridge_retro_deinit(retroDeinit)
-	glfw.Terminate()
 }
