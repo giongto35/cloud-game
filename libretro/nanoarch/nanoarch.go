@@ -6,7 +6,6 @@ import (
 	"image"
 	"image/color"
 	"log"
-	"math"
 	"os"
 	"os/user"
 	"strings"
@@ -297,51 +296,17 @@ func toImageRGBA(data unsafe.Pointer) *image.RGBA {
 
 //export coreInputPoll
 func coreInputPoll() {
-	for i := range joy {
-		joy[i] = false
+	for i := range NAEmulator.keys {
+		joy[i] = NAEmulator.keys[i]
 	}
-
-	////for inp := range NAEmulator.inputChannel {
-	////joy[inp] = true
-	////}
-	select {
-	case inp := <-NAEmulator.inputChannel:
-		idx := int(math.Log(float64(inp)) / math.Log(2))
-		var j = 0
-		switch idx {
-		case 0:
-			j = C.RETRO_DEVICE_ID_JOYPAD_A
-		case 1:
-			j = C.RETRO_DEVICE_ID_JOYPAD_B
-		case 2:
-			j = C.RETRO_DEVICE_ID_JOYPAD_SELECT
-		case 3:
-			j = C.RETRO_DEVICE_ID_JOYPAD_START
-		case 4:
-			j = C.RETRO_DEVICE_ID_JOYPAD_UP
-		case 5:
-			j = C.RETRO_DEVICE_ID_JOYPAD_DOWN
-		case 6:
-			j = C.RETRO_DEVICE_ID_JOYPAD_LEFT
-		case 7:
-			j = C.RETRO_DEVICE_ID_JOYPAD_RIGHT
-		}
-		if j >= 0 && j < len(joy) {
-			fmt.Println(int(math.Log(float64(inp))/math.Log(2)), j)
-			joy[j] = true
-		}
-		//joy[int(math.Log(float64(inp)) / math.Log(2))] = true
-	default:
-	}
-
-	//for k, v := range binds {
-	//joy[v] = (window.GetKey(k) == glfw.Press)
-	//}
 
 	//// Close the window when the user hits the Escape key.
 	//if window.GetKey(glfw.KeyEscape) == glfw.Press {
 	//window.SetShouldClose(true)
 	//}
+	for i := range NAEmulator.keys {
+		NAEmulator.keys[i] = false
+	}
 }
 
 //export coreInputState

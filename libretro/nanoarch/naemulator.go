@@ -48,9 +48,21 @@ type naEmulator struct {
 	corePath     string
 	gamePath     string
 	roomID       string
+
+	keys []bool
 }
 
 var NAEmulator *naEmulator
+var bindRetroKeys = map[int]int{
+	0: C.RETRO_DEVICE_ID_JOYPAD_A,
+	1: C.RETRO_DEVICE_ID_JOYPAD_B,
+	2: C.RETRO_DEVICE_ID_JOYPAD_SELECT,
+	3: C.RETRO_DEVICE_ID_JOYPAD_START,
+	4: C.RETRO_DEVICE_ID_JOYPAD_UP,
+	5: C.RETRO_DEVICE_ID_JOYPAD_DOWN,
+	6: C.RETRO_DEVICE_ID_JOYPAD_LEFT,
+	7: C.RETRO_DEVICE_ID_JOYPAD_RIGHT,
+}
 
 func NewNAEmulator(imageChannel chan<- *image.RGBA, inputChannel <-chan int) *naEmulator {
 	return &naEmulator{
@@ -58,6 +70,7 @@ func NewNAEmulator(imageChannel chan<- *image.RGBA, inputChannel <-chan int) *na
 		corePath:     "libretro/cores/mgba_libretro.so",
 		imageChannel: imageChannel,
 		inputChannel: inputChannel,
+		keys:         make([]bool, C.RETRO_DEVICE_ID_JOYPAD_R3+1),
 	}
 }
 
@@ -66,6 +79,21 @@ func Init(imageChannel chan<- *image.RGBA, inputChannel <-chan int) {
 		log.Fatalln("failed to initialize glfw:", err)
 	}
 	NAEmulator = NewNAEmulator(imageChannel, inputChannel)
+	go NAEmulator.listenInput()
+}
+
+func (na *naEmulator) listenInput() {
+	// input from javascript follows bitmap. Ex: 00110101
+	// we decode the bitmap and send to channel
+	for inpBitmap := range NAEmulator.inputChannel {
+		for k := 0; k < len(na.keys); k++ {
+			if (inpBitmap & 1) == 1 {
+				key := bindRetroKeys[k]
+				na.keys[key] = true
+			}
+			inpBitmap >>= 1
+		}
+	}
 }
 
 func (na *naEmulator) Start(path string) {
