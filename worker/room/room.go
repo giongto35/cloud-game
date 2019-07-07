@@ -56,11 +56,6 @@ func NewRoom(roomID, gamePath, gameName string, onlineStorage *storage.Client) *
 	audioChannel := make(chan float32, 30)
 	inputChannel := make(chan int, 100)
 
-	// create director
-	//director := emulator.NewDirector(roomID, imageChannel, audioChannel, inputChannel)
-	nanoarch.Init(imageChannel, inputChannel)
-	director := nanoarch.NAEmulator
-
 	room := &Room{
 		ID: roomID,
 
@@ -69,7 +64,6 @@ func NewRoom(roomID, gamePath, gameName string, onlineStorage *storage.Client) *
 		inputChannel:  inputChannel,
 		rtcSessions:   []*webrtc.WebRTC{},
 		sessionsLock:  &sync.Mutex{},
-		director:      director,
 		IsRunning:     true,
 		onlineStorage: onlineStorage,
 
@@ -95,11 +89,11 @@ func NewRoom(roomID, gamePath, gameName string, onlineStorage *storage.Client) *
 		if roomID != "" {
 			gameName = getGameNameFromRoomID(roomID)
 		}
-		log.Printf("Room %s started. GameName: %s", roomID, gameName)
-		//path := gamePath + "/" + gameName
-		//director.Start(path)
-		//director.Start("games/Harvest Moon - Back to Nature (USA).bin")
-		director.Start("games/Pokemon - Emerald Version (U).gba")
+		log.Printf("Room %s started. GamePath: %s, GameName: %s", roomID, gamePath, gameName)
+
+		room.director = getEmulator(gameName, roomID, imageChannel, audioChannel, inputChannel)
+		path := gamePath + "/" + gameName
+		room.director.Start(path)
 		log.Printf("Room %s ended", roomID)
 
 		start := time.Now()
@@ -110,17 +104,42 @@ func NewRoom(roomID, gamePath, gameName string, onlineStorage *storage.Client) *
 	return room
 }
 
+// create director
+func getEmulator(gameName string, roomID string, imageChannel chan<- *image.RGBA, audioChannel chan<- float32, inputChannel <-chan int) emulator.CloudEmulator {
+	gameType := getGameType(gameName)
+
+	switch gameType {
+	case "nes":
+		return emulator.NewDirector(roomID, imageChannel, audioChannel, inputChannel)
+
+	case "gba":
+		nanoarch.Init(imageChannel, inputChannel)
+		return nanoarch.NAEmulator
+	}
+
+	return nil
+}
+
+// getGameNameFromRoomID parse roomID to get roomID and gameName
 func getGameNameFromRoomID(roomID string) string {
-	parts := strings.Split(roomID, "-")
+	parts := strings.Split(roomID, "|")
 	if len(parts) <= 1 {
 		return ""
 	}
 	return parts[1]
 }
 
+func getGameType(gameName string) string {
+	parts := strings.Split(gameName, ".")
+	if len(parts) <= 1 {
+		return ""
+	}
+	return parts[len(parts)-1]
+}
+
 // generateRoomID generate a unique room ID containing 16 digits
 func generateRoomID(gameName string) string {
-	roomID := strconv.FormatInt(rand.Int63(), 16) + "-" + gameName
+	roomID := strconv.FormatInt(rand.Int63(), 16) + "|" + gameName
 	log.Println("Generate Room ID", roomID)
 	//roomID := uuid.Must(uuid.NewV4()).String()
 	return roomID

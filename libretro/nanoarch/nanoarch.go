@@ -173,7 +173,6 @@ func coreVideoRefresh(data unsafe.Pointer, width C.unsigned, height C.unsigned, 
 		//gl.PixelStorei(gl.UNPACK_ROW_LENGTH, int32(video.pitch/video.bpp))
 	}
 
-	fmt.Println(data)
 	if data != nil {
 		NAEmulator.imageChannel <- toImageRGBA(data)
 		//gl.TexSubImage2D(gl.TEXTURE_2D, 0, 0, 0, int32(width), int32(height), video.pixType, video.pixFmt, data)
@@ -347,7 +346,6 @@ func coreLog(level C.enum_retro_log_level, msg *C.char) {
 
 //export coreEnvironment
 func coreEnvironment(cmd C.unsigned, data unsafe.Pointer) C.bool {
-	fmt.Println("COREENV", cmd, data)
 	switch cmd {
 	case C.RETRO_ENVIRONMENT_GET_USERNAME:
 		username := (**C.char)(data)
