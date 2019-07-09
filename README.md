@@ -1,4 +1,4 @@
-# Klog, Web-based Cloud Gaming Service
+# Web-based Cloud Gaming Service
 - [http://cloud.webgame2d.com](http://cloud.webgame2d.com)
 
 - [**Game Instruction**](document/instruction/)
@@ -8,11 +8,12 @@ For the best gaming experience, please select the closest region to you.
 
 ---
 
-Klog is an open source Cloud Gaming Service building on [WebRTC](https://github.com/pion) using browser as the main platform.  
+Open source Cloud Gaming Service building on [WebRTC](https://github.com/pion) using browser as the main platform.  
   
-Klog aims to bring the most convenient gaming experience to gamer. You can play any games on your browser directly, which is fully compatible on multi-platform like Desktop, Android, IOS. This flexibility enables modern online gaming experience to retro games starting with NES in this current release.  
+This project aims to bring the most convenient gaming experience to gamer. You can play any games on your browser directly, which is fully compatible on multi-platform like Desktop, Android, IOS. This flexibility enables modern online gaming experience to retro games starting with NES in this current release.  
 
-Note: The current state of Klog are not optimized for production. The service will still experience lag under heavy traffic. You can try hosting your own service following the instruction in the next session.  
+Note:** Due to the high cost of hosting, I will Hibernate the servers for a while. I'm working on a big change and will turn on hosting again. Sorry for that :( **
+You can try hosting your own service following the instruction in the next session.  
 
 ![screenshot](document/img/landing-page.gif)
 
