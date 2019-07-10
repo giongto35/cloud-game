@@ -2,6 +2,9 @@ package nanoarch
 
 import (
 	"image"
+	"log"
+
+	"github.com/giongto35/cloud-game/util"
 )
 
 /*
@@ -26,6 +29,11 @@ void bridge_retro_set_audio_sample_batch(void *f, void *callback);
 bool bridge_retro_load_game(void *f, struct retro_game_info *gi);
 void bridge_retro_unload_game(void *f);
 void bridge_retro_run(void *f);
+size_t bridge_retro_get_memory_size(void *f, unsigned id);
+void* bridge_retro_get_memory_data(void *f, unsigned id);
+bool bridge_retro_serialize(void *f, void *data, size_t size);
+bool bridge_retro_unserialize(void *f, void *data, size_t size);
+size_t bridge_retro_serialize_size(void *f);
 
 bool coreEnvironment_cgo(unsigned cmd, void *data);
 void coreVideoRefresh_cgo(void *data, unsigned width, unsigned height, size_t pitch);
@@ -45,6 +53,9 @@ type naEmulator struct {
 	corePath     string
 	gamePath     string
 	roomID       string
+
+	gameName        string
+	isSavingLoading bool
 
 	keys []bool
 }
@@ -95,7 +106,9 @@ func (na *naEmulator) Start(path string) {
 	na.playGame(path)
 
 	for {
+		na.GetLock()
 		C.bridge_retro_run(retroRun)
+		na.ReleaseLock()
 	}
 }
 
@@ -104,20 +117,23 @@ func (na *naEmulator) playGame(path string) {
 }
 
 func (na *naEmulator) SaveGame(saveExtraFunc func() error) error {
-	return nil
+	err := na.Save()
+	if err != nil {
+		log.Println("Error: Cannot save", err)
+	}
+	return err
 }
 
 func (na *naEmulator) LoadGame() error {
-	return nil
+	err := na.Load()
+	if err != nil {
+		log.Println("Error: Cannot load", err)
+	}
+	return err
 }
 
 func (na *naEmulator) GetHashPath() string {
-	return savePath(na.roomID)
-}
-
-func savePath(hash string) string {
-	//return homeDir + "/.nes/save/" + hash + ".dat"
-	return ""
+	return util.GetSavePath(na.roomID)
 }
 
 func (na *naEmulator) Close() {

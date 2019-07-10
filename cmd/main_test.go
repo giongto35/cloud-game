@@ -11,7 +11,6 @@ import (
 	"time"
 
 	"github.com/giongto35/cloud-game/cws"
-	"github.com/giongto35/cloud-game/emulator"
 	"github.com/giongto35/cloud-game/overlord"
 	gamertc "github.com/giongto35/cloud-game/webrtc"
 	"github.com/giongto35/cloud-game/worker"
@@ -393,7 +392,7 @@ func TestReconnectRoomNoLocal(t *testing.T) {
 	worker.GetOverlordClient().Close()
 	worker.Close()
 	// Remove room on local
-	path := emulator.GetSavePath(saveRoomID)
+	path := util.GetSavePath(saveRoomID)
 	os.Remove(path)
 	// Expect Google cloud call
 

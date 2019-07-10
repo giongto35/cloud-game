@@ -10,10 +10,10 @@ import (
 	"strconv"
 	"strings"
 	"sync"
-	"time"
 
 	emulator "github.com/giongto35/cloud-game/emulator"
 	"github.com/giongto35/cloud-game/libretro/nanoarch"
+	"github.com/giongto35/cloud-game/util"
 	"github.com/giongto35/cloud-game/webrtc"
 	storage "github.com/giongto35/cloud-game/worker/cloud-storage"
 )
@@ -71,12 +71,13 @@ func NewRoom(roomID, gamePath, gameName string, onlineStorage *storage.Client) *
 	}
 
 	go room.startVideo()
+	// TODO: StartAudio nano arch
 	//go room.startAudio()
 
 	// Check if room is on local storage, if not, pull from GCS to local storage
 	go func(gamePath, gameName, roomID string) {
 		// Check room is on local or fetch from server
-		savepath := emulator.GetSavePath(roomID)
+		savepath := util.GetSavePath(roomID)
 		log.Println("Check ", savepath, " on local : ", room.isGameOnLocal(savepath))
 		if !room.isGameOnLocal(savepath) {
 			// Fetch room from GCP to server
@@ -91,14 +92,14 @@ func NewRoom(roomID, gamePath, gameName string, onlineStorage *storage.Client) *
 		}
 		log.Printf("Room %s started. GamePath: %s, GameName: %s", roomID, gamePath, gameName)
 
+		// Spawn new emulator based on gameName and plug-in all channels
 		room.director = getEmulator(gameName, roomID, imageChannel, audioChannel, inputChannel)
 		path := gamePath + "/" + gameName
 		room.director.Start(path)
 		log.Printf("Room %s ended", roomID)
 
-		start := time.Now()
+		// TODO: do we need GC, we can remove it
 		runtime.GC()
-		log.Printf("GC takes %s\n", time.Since(start))
 	}(gamePath, gameName, roomID)
 
 	return room

@@ -62,6 +62,26 @@ void bridge_retro_run(void *f) {
 	return ((void (*)(void))f)();
 }
 
+size_t bridge_retro_get_memory_size(void *f, unsigned id) {
+	return ((size_t (*)(unsigned))f)(id);
+}
+
+void* bridge_retro_get_memory_data(void *f, unsigned id) {
+	return ((void* (*)(unsigned))f)(id);
+}
+
+size_t bridge_retro_serialize_size(void *f) {
+  return ((size_t (*)(void))f)();
+}
+
+bool bridge_retro_serialize(void *f, void *data, size_t size) {
+  return ((bool (*)(void*, size_t))f)(data, size);
+}
+
+bool bridge_retro_unserialize(void *f, void *data, size_t size) {
+  return ((bool (*)(void*, size_t))f)(data, size);
+}
+
 bool coreEnvironment_cgo(unsigned cmd, void *data) {
 	bool coreEnvironment(unsigned, void*);
 	return coreEnvironment(cmd, data);

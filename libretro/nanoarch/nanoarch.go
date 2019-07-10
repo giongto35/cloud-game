@@ -2,6 +2,7 @@ package nanoarch
 
 import (
 	"bufio"
+	"errors"
 	"fmt"
 	"image"
 	"image/color"
@@ -40,6 +41,11 @@ void bridge_retro_set_audio_sample_batch(void *f, void *callback);
 bool bridge_retro_load_game(void *f, struct retro_game_info *gi);
 void bridge_retro_unload_game(void *f);
 void bridge_retro_run(void *f);
+size_t bridge_retro_get_memory_size(void *f, unsigned id);
+void* bridge_retro_get_memory_data(void *f, unsigned id);
+bool bridge_retro_serialize(void *f, void *data, size_t size);
+bool bridge_retro_unserialize(void *f, void *data, size_t size);
+size_t bridge_retro_serialize_size(void *f);
 
 bool coreEnvironment_cgo(unsigned cmd, void *data);
 void coreVideoRefresh_cgo(void *data, unsigned width, unsigned height, size_t pitch);
@@ -406,6 +412,11 @@ var retroSetAudioSampleBatch unsafe.Pointer
 var retroRun unsafe.Pointer
 var retroLoadGame unsafe.Pointer
 var retroUnloadGame unsafe.Pointer
+var retroGetMemorySize unsafe.Pointer
+var retroGetMemoryData unsafe.Pointer
+var retroSerializeSize unsafe.Pointer
+var retroSerialize unsafe.Pointer
+var retroUnserialize unsafe.Pointer
 
 func coreLoad(sofile string) {
 
@@ -429,6 +440,10 @@ func coreLoad(sofile string) {
 	retroRun = C.dlsym(h, C.CString("retro_run"))
 	retroLoadGame = C.dlsym(h, C.CString("retro_load_game"))
 	retroUnloadGame = C.dlsym(h, C.CString("retro_unload_game"))
+	retroSerializeSize = C.dlsym(h, C.CString("retro_serialize_size"))
+	retroSerialize = C.dlsym(h, C.CString("retro_serialize"))
+	retroUnserialize = C.dlsym(h, C.CString("retro_unserialize"))
+
 	mu.Unlock()
 
 	C.bridge_retro_set_environment(retroSetEnvironment, C.coreEnvironment_cgo)
@@ -514,105 +529,31 @@ func coreLoadGame(filename string) {
 	audioInit(avi.timing.sample_rate)
 }
 
-//func videoRender() {
-//gl.BindVertexArray(video.vao)
+// serializeSize returns the amount of data the implementation requires to serialize
+// internal state (save states).
+// Between calls to retro_load_game() and retro_unload_game(), the
+// returned size is never allowed to be larger than a previous returned
+// value, to ensure that the frontend can allocate a save state buffer once.
+func serializeSize() uint {
+	return uint(C.bridge_retro_serialize_size(retroSerializeSize))
+}
 
-//gl.ActiveTexture(gl.TEXTURE0)
-//gl.BindTexture(gl.TEXTURE_2D, video.texID)
+// serialize serializes internal state and returns the state as a byte slice.
+func serialize(size uint) ([]byte, error) {
+	data := C.malloc(C.size_t(size))
+	ok := bool(C.bridge_retro_serialize(retroSerialize, data, C.size_t(size)))
+	if !ok {
+		return nil, errors.New("retro_serialize failed")
+	}
+	bytes := C.GoBytes(data, C.int(size))
+	return bytes, nil
+}
 
-//gl.DrawArrays(gl.TRIANGLE_STRIP, 0, 4)
-//}
-
-//func newProgram(vertexShaderSource, fragmentShaderSource string) (uint32, error) {
-//vertexShader, err := compileShader(vertexShaderSource, gl.VERTEX_SHADER)
-//if err != nil {
-//return 0, err
-//}
-
-//fragmentShader, err := compileShader(fragmentShaderSource, gl.FRAGMENT_SHADER)
-//if err != nil {
-//return 0, err
-//}
-
-//program := gl.CreateProgram()
-
-//gl.AttachShader(program, vertexShader)
-//gl.AttachShader(program, fragmentShader)
-//gl.LinkProgram(program)
-
-//var status int32
-//gl.GetProgramiv(program, gl.LINK_STATUS, &status)
-//if status == gl.FALSE {
-//var logLength int32
-//gl.GetProgramiv(program, gl.INFO_LOG_LENGTH, &logLength)
-
-//log := strings.Repeat("\x00", int(logLength+1))
-//gl.GetProgramInfoLog(program, logLength, nil, gl.Str(log))
-
-//return 0, fmt.Errorf("failed to link program: %v", log)
-//}
-
-//gl.DeleteShader(vertexShader)
-//gl.DeleteShader(fragmentShader)
-
-//return program, nil
-//}
-
-//func compileShader(source string, shaderType uint32) (uint32, error) {
-//shader := gl.CreateShader(shaderType)
-
-//csources, free := gl.Strs(source)
-//gl.ShaderSource(shader, 1, csources, nil)
-//free()
-//gl.CompileShader(shader)
-
-//var status int32
-//gl.GetShaderiv(shader, gl.COMPILE_STATUS, &status)
-//if status == gl.FALSE {
-//var logLength int32
-//gl.GetShaderiv(shader, gl.INFO_LOG_LENGTH, &logLength)
-
-//log := strings.Repeat("\x00", int(logLength+1))
-//gl.GetShaderInfoLog(shader, logLength, nil, gl.Str(log))
-
-//return 0, fmt.Errorf("failed to compile %v: %v", source, log)
-//}
-
-//return shader, nil
-//}
-
-//var vertexShader = `
-//#version 330
-
-//in vec2 vert;
-//in vec2 vertTexCoord;
-
-//out vec2 fragTexCoord;
-
-//void main() {
-//fragTexCoord = vertTexCoord;
-//gl_Position = vec4(vert, 0, 1);
-//}
-//` + "\x00"
-
-//var fragmentShader = `
-//#version 330
-
-//uniform sampler2D tex;
-
-//in vec2 fragTexCoord;
-
-//out vec4 outputColor;
-
-//void main() {
-//outputColor = texture(tex, fragTexCoord);
-//}
-//` + "\x00"
-
-//var vertices = []float32{
-////  X, Y, U, V
-//-1.0, -1.0, 0.0, 1.0, // left-bottom
-//-1.0, 1.0, 0.0, 0.0, // left-top
-//1.0, -1.0, 1.0, 1.0, // right-bottom
-//1.0, 1.0, 1.0, 0.0, // right-top
-//}
+// unserialize unserializes internal state from a byte slice.
+func unserialize(bytes []byte, size uint) error {
+	ok := bool(C.bridge_retro_unserialize(retroUnserialize, unsafe.Pointer(&bytes[0]), C.size_t(size)))
+	if !ok {
+		return errors.New("retro_unserialize failed")
+	}
+	return nil
+}

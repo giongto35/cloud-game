@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/giongto35/cloud-game/emulator/nes"
+	"github.com/giongto35/cloud-game/util"
 	// "github.com/gordonklaus/portaudio"
 )
 
@@ -132,7 +133,7 @@ func (d *Director) LoadGame() error {
 
 // GetHashPath return the full path to hash file
 func (d *Director) GetHashPath() string {
-	return savePath(d.roomID)
+	return util.GetSavePath(d.roomID)
 }
 
 // Close
