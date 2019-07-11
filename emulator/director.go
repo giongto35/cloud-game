@@ -116,9 +116,9 @@ func (d *Director) SaveGame(saveExtraFunc func() error) error {
 	if d.roomID != "" {
 		d.view.Save(saveExtraFunc)
 		return nil
-	} else {
-		return nil
 	}
+
+	return nil
 }
 
 // LoadGame creates load events and doing extra step for load
@@ -126,9 +126,9 @@ func (d *Director) LoadGame() error {
 	if d.roomID != "" {
 		d.view.Load()
 		return nil
-	} else {
-		return nil
 	}
+
+	return nil
 }
 
 // GetHashPath return the full path to hash file

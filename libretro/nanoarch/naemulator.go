@@ -72,18 +72,19 @@ var bindRetroKeys = map[int]int{
 	7: C.RETRO_DEVICE_ID_JOYPAD_RIGHT,
 }
 
-func NewNAEmulator(imageChannel chan<- *image.RGBA, inputChannel <-chan int) *naEmulator {
+func NewNAEmulator(roomID string, imageChannel chan<- *image.RGBA, inputChannel <-chan int) *naEmulator {
 	return &naEmulator{
 		//corePath:     "libretro/cores/pcsx_rearmed_libretro.so",
 		corePath:     "libretro/cores/mgba_libretro.so",
 		imageChannel: imageChannel,
 		inputChannel: inputChannel,
 		keys:         make([]bool, C.RETRO_DEVICE_ID_JOYPAD_R3+1),
+		roomID:       roomID,
 	}
 }
 
-func Init(imageChannel chan<- *image.RGBA, inputChannel <-chan int) {
-	NAEmulator = NewNAEmulator(imageChannel, inputChannel)
+func Init(roomID string, imageChannel chan<- *image.RGBA, inputChannel <-chan int) {
+	NAEmulator = NewNAEmulator(roomID, imageChannel, inputChannel)
 	go NAEmulator.listenInput()
 }
 
@@ -114,22 +115,35 @@ func (na *naEmulator) Start(path string) {
 
 func (na *naEmulator) playGame(path string) {
 	coreLoadGame(path)
+	// When start game, we also try loading if there was a saved state
+	na.LoadGame()
 }
 
 func (na *naEmulator) SaveGame(saveExtraFunc func() error) error {
-	err := na.Save()
-	if err != nil {
-		log.Println("Error: Cannot save", err)
+	if na.roomID != "" {
+		err := na.Save()
+		if err != nil {
+			return err
+		}
+		err = saveExtraFunc()
+		if err != nil {
+			return err
+		}
 	}
-	return err
+
+	return nil
 }
 
 func (na *naEmulator) LoadGame() error {
-	err := na.Load()
-	if err != nil {
-		log.Println("Error: Cannot load", err)
+	if na.roomID != "" {
+		err := na.Load()
+		if err != nil {
+			log.Println("Error: Cannot load", err)
+			return err
+		}
 	}
-	return err
+
+	return nil
 }
 
 func (na *naEmulator) GetHashPath() string {
