@@ -145,43 +145,25 @@ func videoConfigure(geom *C.struct_retro_game_geometry) {
 	nwidth = nwidth * scale
 	nheight = nheight * scale
 
-	//if window == nil {
-	//createWindow(int(nwidth), int(nheight))
-	//}
-
 	if video.pixFmt == 0 {
 		video.pixFmt = gl.UNSIGNED_SHORT_5_5_5_1
 	}
 
-	//gl.GenTextures(1, &video.texID)
-
-	//gl.ActiveTexture(gl.TEXTURE0)
 	if video.texID == 0 {
 		fmt.Println("Failed to create the video texture")
 	}
 
 	video.pitch = uint32(geom.base_width) * video.bpp
-
-	//gl.BindTexture(gl.TEXTURE_2D, video.texID)
-
-	//gl.TexParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST)
-	//gl.TexParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST)
 }
 
 //export coreVideoRefresh
 func coreVideoRefresh(data unsafe.Pointer, width C.unsigned, height C.unsigned, pitch C.size_t) {
-	//gl.TexImage2D(gl.TEXTURE_2D, 0, gl.RGBA8, int32(width), int32(height), 0, video.pixType, video.pixFmt, nil)
-
-	//gl.BindTexture(gl.TEXTURE_2D, video.texID)
-
 	if uint32(pitch) != video.pitch {
 		video.pitch = uint32(pitch)
-		//gl.PixelStorei(gl.UNPACK_ROW_LENGTH, int32(video.pitch/video.bpp))
 	}
 
 	if data != nil {
 		NAEmulator.imageChannel <- toImageRGBA(data)
-		//gl.TexSubImage2D(gl.TEXTURE_2D, 0, 0, 0, int32(width), int32(height), video.pixType, video.pixFmt, data)
 	}
 }
 
@@ -203,10 +185,6 @@ func toImageRGBA(data unsafe.Pointer) *image.RGBA {
 			g8 := (g6*255 + 31) / 63
 			r8 := (r5*255 + 15) / 31
 
-			//rgbabytes[nseek+3] = (byte)(r8)
-			//rgbabytes[nseek+2] = (byte)(g8)
-			//rgbabytes[nseek+1] = (byte)(b8)
-			//rgbabytes[nseek] = (byte)(255)
 			seek += 2
 			image.Set(x, y, color.RGBA{byte(r8), byte(g8), byte(b8), 255})
 		}
