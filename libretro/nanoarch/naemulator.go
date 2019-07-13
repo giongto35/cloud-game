@@ -58,6 +58,7 @@ type naEmulator struct {
 	isSavingLoading bool
 
 	keys []bool
+	done chan struct{}
 }
 
 var NAEmulator *naEmulator
@@ -80,6 +81,7 @@ func NewNAEmulator(roomID string, imageChannel chan<- *image.RGBA, inputChannel 
 		inputChannel: inputChannel,
 		keys:         make([]bool, C.RETRO_DEVICE_ID_JOYPAD_R3+1),
 		roomID:       roomID,
+		done:         make(chan struct{}, 1),
 	}
 }
 
@@ -107,6 +109,15 @@ func (na *naEmulator) Start(path string) {
 	na.playGame(path)
 
 	for {
+		select {
+		case <-na.done:
+			C.bridge_retro_unload_game(retroUnloadGame)
+			C.bridge_retro_deinit(retroDeinit)
+			log.Println("Closed Director")
+			return
+		default:
+		}
+
 		na.GetLock()
 		C.bridge_retro_run(retroRun)
 		na.ReleaseLock()
@@ -152,6 +163,6 @@ func (na *naEmulator) GetHashPath() string {
 
 func (na *naEmulator) Close() {
 	// Unload and deinit in the core.
-	C.bridge_retro_unload_game(retroUnloadGame)
-	C.bridge_retro_deinit(retroDeinit)
+	close(na.done)
+
 }
