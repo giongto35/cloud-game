@@ -158,6 +158,7 @@ func (o *Server) WS(w http.ResponseWriter, r *http.Request) {
 	// TODO:?
 	//defer wssession.Close()
 	log.Println("New client will conect to server", wssession.ServerID)
+	wssession.WorkerClient.IsAvailable = false
 
 	wssession.RouteBrowser()
 
@@ -176,6 +177,8 @@ func (o *Server) WS(w http.ResponseWriter, r *http.Request) {
 		},
 		nil,
 	)
+	// WorkerClient become available again
+	wssession.WorkerClient.IsAvailable = true
 }
 
 // findBestServer returns the best server for a session
