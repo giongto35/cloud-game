@@ -73,10 +73,15 @@ var bindRetroKeys = map[int]int{
 	7: C.RETRO_DEVICE_ID_JOYPAD_RIGHT,
 }
 
-func NewNAEmulator(roomID string, imageChannel chan<- *image.RGBA, inputChannel <-chan int) *naEmulator {
+// TODO: Load from config
+var emulatorCorePath = map[string]string{
+	"gba":  "libretro/cores/mgba_libretro.so",
+	"pcsx": "libretro/cores/pcsx_rearmed_libretro.so",
+}
+
+func NewNAEmulator(etype string, roomID string, imageChannel chan<- *image.RGBA, inputChannel <-chan int) *naEmulator {
 	return &naEmulator{
-		//corePath:     "libretro/cores/pcsx_rearmed_libretro.so",
-		corePath:     "libretro/cores/mgba_libretro.so",
+		corePath:     emulatorCorePath[etype],
 		imageChannel: imageChannel,
 		inputChannel: inputChannel,
 		keys:         make([]bool, C.RETRO_DEVICE_ID_JOYPAD_R3+1),
@@ -85,8 +90,8 @@ func NewNAEmulator(roomID string, imageChannel chan<- *image.RGBA, inputChannel 
 	}
 }
 
-func Init(roomID string, imageChannel chan<- *image.RGBA, inputChannel <-chan int) {
-	NAEmulator = NewNAEmulator(roomID, imageChannel, inputChannel)
+func Init(etype string, roomID string, imageChannel chan<- *image.RGBA, inputChannel <-chan int) {
+	NAEmulator = NewNAEmulator(etype, roomID, imageChannel, inputChannel)
 	go NAEmulator.listenInput()
 }
 
