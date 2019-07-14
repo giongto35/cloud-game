@@ -5,5 +5,6 @@ type CloudEmulator interface {
 	SaveGame(saveExtraFunc func() error) error
 	LoadGame() error
 	GetHashPath() string
+	GetSampleRate() uint
 	Close()
 }

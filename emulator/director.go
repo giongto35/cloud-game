@@ -136,6 +136,10 @@ func (d *Director) GetHashPath() string {
 	return util.GetSavePath(d.roomID)
 }
 
+func (d *Director) GetSampleRate() uint {
+	return SampleRate
+}
+
 // Close
 func (d *Director) Close() {
 	close(d.Done)

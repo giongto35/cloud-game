@@ -96,6 +96,8 @@ func NewRoom(roomID, gamePath, gameName string, onlineStorage *storage.Client) *
 		room.director = getEmulator(gameName, roomID, imageChannel, audioChannel, inputChannel)
 		path := gamePath + "/" + gameName
 		room.director.Start(path)
+		go room.startAudio()
+
 		log.Printf("Room %s ended", roomID)
 
 		// TODO: do we need GC, we can remove it
@@ -114,11 +116,11 @@ func getEmulator(gameName string, roomID string, imageChannel chan<- *image.RGBA
 		return emulator.NewDirector(roomID, imageChannel, audioChannel, inputChannel)
 
 	case "gba":
-		nanoarch.Init("gba", roomID, imageChannel, inputChannel)
+		nanoarch.Init("gba", roomID, imageChannel, audioChannel, inputChannel)
 		return nanoarch.NAEmulator
 
 	case "bin":
-		nanoarch.Init("pcsx", roomID, imageChannel, inputChannel)
+		nanoarch.Init("pcsx", roomID, imageChannel, audioChannel, inputChannel)
 		return nanoarch.NAEmulator
 	}
 

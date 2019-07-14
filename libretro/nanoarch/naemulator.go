@@ -57,11 +57,19 @@ type naEmulator struct {
 	gameName        string
 	isSavingLoading bool
 
-	keys []bool
-	done chan struct{}
+	sampleRate uint
+	keys       []bool
+	done       chan struct{}
 }
 
 var NAEmulator *naEmulator
+
+// TODO: Load from config
+var emulatorCorePath = map[string]string{
+	"gba":  "libretro/cores/mgba_libretro.so",
+	"pcsx": "libretro/cores/pcsx_rearmed_libretro.so",
+}
+
 var bindRetroKeys = map[int]int{
 	0: C.RETRO_DEVICE_ID_JOYPAD_A,
 	1: C.RETRO_DEVICE_ID_JOYPAD_B,
@@ -73,16 +81,11 @@ var bindRetroKeys = map[int]int{
 	7: C.RETRO_DEVICE_ID_JOYPAD_RIGHT,
 }
 
-// TODO: Load from config
-var emulatorCorePath = map[string]string{
-	"gba":  "libretro/cores/mgba_libretro.so",
-	"pcsx": "libretro/cores/pcsx_rearmed_libretro.so",
-}
-
-func NewNAEmulator(etype string, roomID string, imageChannel chan<- *image.RGBA, inputChannel <-chan int) *naEmulator {
+func NewNAEmulator(etype string, roomID string, imageChannel chan<- *image.RGBA, audioChannel chan<- float32, inputChannel <-chan int) *naEmulator {
 	return &naEmulator{
 		corePath:     emulatorCorePath[etype],
 		imageChannel: imageChannel,
+		audioChannel: audioChannel,
 		inputChannel: inputChannel,
 		keys:         make([]bool, C.RETRO_DEVICE_ID_JOYPAD_R3+1),
 		roomID:       roomID,
@@ -90,8 +93,8 @@ func NewNAEmulator(etype string, roomID string, imageChannel chan<- *image.RGBA,
 	}
 }
 
-func Init(etype string, roomID string, imageChannel chan<- *image.RGBA, inputChannel <-chan int) {
-	NAEmulator = NewNAEmulator(etype, roomID, imageChannel, inputChannel)
+func Init(etype string, roomID string, imageChannel chan<- *image.RGBA, audioChannel chan<- float32, inputChannel <-chan int) {
+	NAEmulator = NewNAEmulator(etype, roomID, imageChannel, audioChannel, inputChannel)
 	go NAEmulator.listenInput()
 }
 
@@ -170,4 +173,8 @@ func (na *naEmulator) Close() {
 	// Unload and deinit in the core.
 	close(na.done)
 
+}
+
+func (na *naEmulator) GetSampleRate() uint {
+	return na.sampleRate
 }

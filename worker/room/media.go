@@ -1,6 +1,7 @@
 package room
 
 import (
+	"fmt"
 	"log"
 
 	"github.com/giongto35/cloud-game/config"
@@ -14,7 +15,8 @@ func (r *Room) startAudio() {
 
 	enc, err := opus.NewEncoder(emulator.SampleRate, emulator.Channels, opus.AppAudio)
 
-	maxBufferSize := emulator.TimeFrame * emulator.SampleRate / 1000
+	fmt.Println("Sample rate", r.director.GetSampleRate())
+	maxBufferSize := emulator.TimeFrame * r.director.GetSampleRate() / 1000
 	pcm := make([]float32, maxBufferSize) // 640 * 1000 / 16000 == 40 ms
 	idx := 0
 
@@ -26,7 +28,9 @@ func (r *Room) startAudio() {
 	var count byte = 0
 
 	// fanout Audio
+	fmt.Println("listening audiochanel", r.IsRunning)
 	for sample := range r.audioChannel {
+		fmt.Println("Received sample", sample)
 		if !r.IsRunning {
 			log.Println("Room ", r.ID, " audio channel closed")
 			return
