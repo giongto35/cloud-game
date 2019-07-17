@@ -72,7 +72,7 @@ func NewRoom(roomID, gamePath, gameName string, onlineStorage *storage.Client) *
 
 	go room.startVideo()
 	// TODO: StartAudio nano arch
-	//go room.startAudio()
+	go room.startAudio()
 
 	// Check if room is on local storage, if not, pull from GCS to local storage
 	go func(gamePath, gameName, roomID string) {
@@ -96,7 +96,6 @@ func NewRoom(roomID, gamePath, gameName string, onlineStorage *storage.Client) *
 		room.director = getEmulator(gameName, roomID, imageChannel, audioChannel, inputChannel)
 		path := gamePath + "/" + gameName
 		room.director.Start(path)
-		go room.startAudio()
 
 		log.Printf("Room %s ended", roomID)
 

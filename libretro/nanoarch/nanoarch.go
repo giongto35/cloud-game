@@ -270,6 +270,7 @@ func alGetBuffer() (al.Buffer, error) {
 	return audio.buffers[audio.resPtr], nil
 }
 
+// fill tmpBufPtr from buffer
 func fillInternalBuf(buf unsafe.Pointer, size C.size_t) C.size_t {
 	readSize := min(bufSize-audio.tmpBufPtr, size)
 	//memcpy(audio.tmpBuf+audio.tmpBufPtr, buf, readSize)
@@ -278,12 +279,36 @@ func fillInternalBuf(buf unsafe.Pointer, size C.size_t) C.size_t {
 	return readSize
 }
 
+func audioWrite2(buf unsafe.Pointer, frames C.size_t) C.size_t {
+	//var pcm []byte
+	numFrames := int(frames) * 2
+	//pcm = make([]byte, numFrames)
+	pcm := (*[1 << 30]int16)(unsafe.Pointer(buf))[:numFrames:numFrames]
+
+	//fmt.Println(bufSize, frames, numFrames)
+	//copy(pcm, C.GoBytes(buf, bufSize)[:])
+	fmt.Println("sending pcm", len(pcm))
+	fmt.Println("len pcm", len(pcm))
+	fmt.Println(pcm)
+
+	for i := 0; i < numFrames; i += 2 {
+		s := float32(pcm[i])
+		//s := float32(pcm[i])
+		NAEmulator.audioChannel <- s
+	}
+
+	return bufSize
+}
+
 func audioWrite(buf unsafe.Pointer, size C.size_t) C.size_t {
 	written := C.size_t(0)
 
+	//fmt.Println("begin loop")
 	for size > 0 {
 
 		rc := fillInternalBuf(buf, size)
+		fmt.Println("Size written audio.bufPtr tmpBufPtr rc")
+		fmt.Println(size, written, audio.bufPtr, audio.tmpBufPtr, rc)
 
 		written += rc
 		audio.bufPtr += rc
@@ -298,9 +323,12 @@ func audioWrite(buf unsafe.Pointer, size C.size_t) C.size_t {
 			break
 		}
 
+		fmt.Println("buffering data", len(audio.tmpBuf), audio.rate)
 		buffer.BufferData(al.FormatStereo16, audio.tmpBuf[:], audio.rate)
 		audio.tmpBufPtr = 0
 		audio.source.QueueBuffers(buffer)
+		fmt.Println("after")
+		fmt.Println(size, written, audio.bufPtr, audio.tmpBufPtr, rc)
 
 		if audio.source.State() != al.Playing {
 			al.PlaySources(audio.source)
@@ -308,6 +336,8 @@ func audioWrite(buf unsafe.Pointer, size C.size_t) C.size_t {
 	}
 
 	audio.bufPtr = 0
+	fmt.Println("end loop")
+	fmt.Println("")
 
 	return written
 }
@@ -320,7 +350,8 @@ func coreAudioSample(left C.int16_t, right C.int16_t) {
 
 //export coreAudioSampleBatch
 func coreAudioSampleBatch(data unsafe.Pointer, frames C.size_t) C.size_t {
-	return audioWrite(data, frames*4)
+	return audioWrite2(data, frames)
+	//return audioWrite(data, frames*4)
 }
 
 //export coreLog
@@ -504,6 +535,7 @@ func coreLoadGame(filename string) {
 
 	videoConfigure(&avi.geometry)
 	// Append the library name to the window title.
+	NAEmulator.sampleRate = uint(float32(avi.timing.sample_rate))
 	audioInit(avi.timing.sample_rate)
 }
 

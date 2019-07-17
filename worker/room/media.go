@@ -15,13 +15,14 @@ func (r *Room) startAudio() {
 
 	enc, err := opus.NewEncoder(emulator.SampleRate, emulator.Channels, opus.AppAudio)
 
-	fmt.Println("Sample rate", r.director.GetSampleRate())
-	maxBufferSize := emulator.TimeFrame * r.director.GetSampleRate() / 1000
+	//maxBufferSize := emulator.TimeFrame * r.director.GetSampleRate() / 1000
+	maxBufferSize := 40 * emulator.SampleRate / 1000
 	pcm := make([]float32, maxBufferSize) // 640 * 1000 / 16000 == 40 ms
+	//timeFrame := int(40 * 32000 / 1000)
 	idx := 0
 
 	if err != nil {
-		log.Println("[!] Cannot create audio encoder")
+		log.Println("[!] Cannot create audio encoder", err)
 		return
 	}
 
@@ -30,7 +31,6 @@ func (r *Room) startAudio() {
 	// fanout Audio
 	fmt.Println("listening audiochanel", r.IsRunning)
 	for sample := range r.audioChannel {
-		fmt.Println("Received sample", sample)
 		if !r.IsRunning {
 			log.Println("Room ", r.ID, " audio channel closed")
 			return
@@ -40,12 +40,15 @@ func (r *Room) startAudio() {
 		pcm[idx] = sample
 		idx++
 		if idx == len(pcm) {
-			data := make([]byte, 640)
+			data := make([]byte, maxBufferSize)
 
 			n, err := enc.EncodeFloat32(pcm, data)
 
 			if err != nil {
-				log.Println("[!] Failed to decode")
+				log.Println("[!] Failed to decode", err)
+
+				idx = 0
+				count = (count + 1) & 0xff
 				continue
 			}
 			data = data[:n]

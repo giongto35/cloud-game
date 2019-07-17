@@ -201,7 +201,9 @@ function startWebRTC() {
         };
     }
 
-    sampleRate = 16000;
+    //sampleRate = 16000;
+    sampleRate = 48000;
+    //sampleRate = 32768;
     channels = 1;
     bitDepth = 16;
     decoder = new OpusDecoder(sampleRate, channels);
