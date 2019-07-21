@@ -287,9 +287,6 @@ func audioWrite2(buf unsafe.Pointer, frames C.size_t) C.size_t {
 
 	//fmt.Println(bufSize, frames, numFrames)
 	//copy(pcm, C.GoBytes(buf, bufSize)[:])
-	fmt.Println("sending pcm", len(pcm))
-	fmt.Println("len pcm", len(pcm))
-	fmt.Println(pcm)
 
 	for i := 0; i < numFrames; i += 2 {
 		s := float32(pcm[i])
@@ -297,7 +294,7 @@ func audioWrite2(buf unsafe.Pointer, frames C.size_t) C.size_t {
 		NAEmulator.audioChannel <- s
 	}
 
-	return bufSize
+	return 512
 }
 
 func audioWrite(buf unsafe.Pointer, size C.size_t) C.size_t {
@@ -337,7 +334,7 @@ func audioWrite(buf unsafe.Pointer, size C.size_t) C.size_t {
 
 	audio.bufPtr = 0
 	fmt.Println("end loop")
-	fmt.Println("")
+	fmt.Println("written", written)
 
 	return written
 }

@@ -33,7 +33,8 @@ const NumKeys = 8
 // Audio consts
 const (
 	//SampleRate = 16000
-	SampleRate = 48000
+	//SampleRate = 48000
+	SampleRate = 32768
 	Channels   = 1
 	TimeFrame  = 40
 	AppAudio   = 1

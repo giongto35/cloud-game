@@ -194,7 +194,7 @@ function startWebRTC() {
 
             // tracking linear time
             if (nextTime == 0)
-                nextTime = audioCtx.currentTime + 0.1;  /// add 100ms latency to work well across systems - tune this if you like
+                nextTime = audioCtx.currentTime + 0.0;  /// add 100ms latency to work well across systems - tune this if you like
             source.start(nextTime);
             nextTime+=source.buffer.duration; // Make the next buffer wait the length of the last buffer before being played
 
@@ -202,15 +202,16 @@ function startWebRTC() {
     }
 
     //sampleRate = 16000;
-    sampleRate = 48000;
-    //sampleRate = 32768;
+    //sampleRate = 48000;
+    rawSampleRate = 32768;
     channels = 1;
     bitDepth = 16;
-    decoder = new OpusDecoder(sampleRate, channels);
+    decoder = new OpusDecoder(rawSampleRate, channels);
     function decodeChunk(opusChunk) {
         pcmChunk = decoder.decode_float(opusChunk);
-        myBuffer = audioCtx.createBuffer(channels, pcmChunk.length, sampleRate);
-        nowBuffering = myBuffer.getChannelData(0, bitDepth, sampleRate);
+        myBuffer = audioCtx.createBuffer(channels, pcmChunk.length, rawSampleRate);
+        //nowBuffering = myBuffer.getChannelData(0, bitDepth, pcmChunk.length);
+        nowBuffering = myBuffer.getChannelData(0);
         nowBuffering.set(pcmChunk);
         return myBuffer;
     }
@@ -238,6 +239,7 @@ function startWebRTC() {
         if (idx < packetIdx && packetIdx - idx < 251) // 256 - 5
             return;
         packetIdx = idx;
+        console.log("Data", e.data)
         audioStack.push(decodeChunk(e.data));
         if (isInit || (audioStack.length > 10)) { // make sure we put at least 10 chunks in the buffer before starting
             isInit = true;
