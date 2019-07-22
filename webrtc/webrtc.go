@@ -128,19 +128,28 @@ func (w *WebRTC) StartClient(remoteSession string, iceCandidates []string, width
 	}
 
 	// audio track
-	dfalse := false
-	dtrue := true
-	var d0 uint16 = 0
-	var d1 uint16 = 1
-	audioTrack, err := w.connection.CreateDataChannel("b", &webrtc.DataChannelInit{
-		Ordered:        &dfalse,
-		MaxRetransmits: &d0,
-		Negotiated:     &dtrue,
-		ID:             &d1,
-	})
+	opusTrack, err := w.connection.NewTrack(webrtc.DefaultPayloadTypeOpus, rand.Uint32(), "audio", "pion2b")
 	if err != nil {
 		return "", err
 	}
+	_, err = w.connection.AddTrack(opusTrack)
+	if err != nil {
+		return "", err
+	}
+
+	dfalse := false
+	dtrue := true
+	var d0 uint16 = 0
+	//var d1 uint16 = 1
+	//audioTrack, err := w.connection.CreateDataChannel("b", &webrtc.DataChannelInit{
+	//Ordered:        &dfalse,
+	//MaxRetransmits: &d0,
+	//Negotiated:     &dtrue,
+	//ID:             &d1,
+	//})
+	//if err != nil {
+	//return "", err
+	//}
 
 	// input channel
 	inputTrack, err := w.connection.CreateDataChannel("a", &webrtc.DataChannelInit{
@@ -171,7 +180,8 @@ func (w *WebRTC) StartClient(remoteSession string, iceCandidates []string, width
 			go func() {
 				w.isConnected = true
 				log.Println("ConnectionStateConnected")
-				w.startStreaming(vp8Track, audioTrack)
+				//w.startStreaming(vp8Track, audioTrack)
+				w.startStreaming(vp8Track, opusTrack)
 			}()
 
 		}
@@ -264,7 +274,7 @@ func (w *WebRTC) IsConnected() bool {
 }
 
 // func (w *WebRTC) startStreaming(vp8Track *webrtc.Track, opusTrack *webrtc.Track) {
-func (w *WebRTC) startStreaming(vp8Track *webrtc.Track, audioTrack *webrtc.DataChannel) {
+func (w *WebRTC) startStreaming(vp8Track *webrtc.Track, opusTrack *webrtc.Track) {
 	log.Println("Start streaming")
 	// send screenshot
 	go func() {
@@ -316,7 +326,12 @@ func (w *WebRTC) startStreaming(vp8Track *webrtc.Track, audioTrack *webrtc.DataC
 			if !w.isConnected {
 				return
 			}
-			audioTrack.Send(data)
+			//opusTrack.Send(data)
+			fmt.Println("sending data", data)
+			err := opusTrack.WriteSample(media.Sample{Data: data, Samples: uint32(len(data))})
+			if err != nil {
+				log.Println("Warn: Err write sample: ", err)
+			}
 		}
 	}()
 
