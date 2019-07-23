@@ -280,75 +280,26 @@ func fillInternalBuf(buf unsafe.Pointer, size C.size_t) C.size_t {
 }
 
 func audioWrite2(buf unsafe.Pointer, frames C.size_t) C.size_t {
-	//var pcm []byte
 	numFrames := int(frames) * 2
-	//pcm = make([]byte, numFrames)
 	pcm := (*[1 << 30]int16)(unsafe.Pointer(buf))[:numFrames:numFrames]
-
-	//fmt.Println(bufSize, frames, numFrames)
-	//copy(pcm, C.GoBytes(buf, bufSize)[:])
 
 	for i := 0; i < numFrames; i += 1 {
 		s := float32(pcm[i])
-		//s := float32(pcm[i])
 		NAEmulator.audioChannel <- s
 	}
 
-	return 512
-}
-
-func audioWrite(buf unsafe.Pointer, size C.size_t) C.size_t {
-	written := C.size_t(0)
-
-	//fmt.Println("begin loop")
-	for size > 0 {
-
-		rc := fillInternalBuf(buf, size)
-		fmt.Println("Size written audio.bufPtr tmpBufPtr rc")
-		fmt.Println(size, written, audio.bufPtr, audio.tmpBufPtr, rc)
-
-		written += rc
-		audio.bufPtr += rc
-		size -= rc
-
-		if audio.tmpBufPtr != bufSize {
-			break
-		}
-
-		buffer, err := alGetBuffer()
-		if err != nil {
-			break
-		}
-
-		fmt.Println("buffering data", len(audio.tmpBuf), audio.rate)
-		buffer.BufferData(al.FormatStereo16, audio.tmpBuf[:], audio.rate)
-		audio.tmpBufPtr = 0
-		audio.source.QueueBuffers(buffer)
-		fmt.Println("after")
-		fmt.Println(size, written, audio.bufPtr, audio.tmpBufPtr, rc)
-
-		if audio.source.State() != al.Playing {
-			al.PlaySources(audio.source)
-		}
-	}
-
-	audio.bufPtr = 0
-	fmt.Println("end loop")
-	fmt.Println("written", written)
-
-	return written
+	return 2 * frames
 }
 
 //export coreAudioSample
 func coreAudioSample(left C.int16_t, right C.int16_t) {
 	buf := []C.int16_t{left, right}
-	audioWrite(unsafe.Pointer(&buf), 4)
+	audioWrite2(unsafe.Pointer(&buf), 1)
 }
 
 //export coreAudioSampleBatch
 func coreAudioSampleBatch(data unsafe.Pointer, frames C.size_t) C.size_t {
 	return audioWrite2(data, frames)
-	//return audioWrite(data, frames*4)
 }
 
 //export coreLog

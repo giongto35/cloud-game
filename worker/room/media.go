@@ -18,11 +18,8 @@ func (r *Room) startAudio() {
 	enc.SetBitrateToAuto()
 	enc.SetComplexity(10)
 
-	//maxBufferSize := emulator.TimeFrame * r.director.GetSampleRate() / 1000
-	//maxBufferSize := 40 * 2 * 48000 / 1000
 	maxBufferSize := 240
 	pcm := make([]float32, maxBufferSize) // 640 * 1000 / 16000 == 40 ms
-	//timeFrame := int(40 * 32000 / 1000)
 	idx := 0
 
 	if err != nil {
