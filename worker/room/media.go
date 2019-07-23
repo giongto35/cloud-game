@@ -9,17 +9,29 @@ import (
 	"gopkg.in/hraban/opus.v2"
 )
 
+func resample(pcm []float32, targetSize int, srcSampleRate int, dstSampleRate int) []float32 {
+	newPCM := make([]float32, targetSize)
+	for i := 0; i < len(pcm); i++ {
+		newPCM[i*dstSampleRate/srcSampleRate] = pcm[i]
+	}
+
+	return newPCM
+}
+
 func (r *Room) startAudio() {
 	log.Println("Enter fan audio")
+	srcSampleRate := 32768
+	dstSampleRate := 48000
 
-	enc, err := opus.NewEncoder(48000, 2, opus.AppVoIP)
+	enc, err := opus.NewEncoder(dstSampleRate, 2, opus.AppVoIP)
 
 	enc.SetMaxBandwidth(opus.Fullband)
 	enc.SetBitrateToAuto()
 	enc.SetComplexity(10)
 
-	maxBufferSize := 240
-	pcm := make([]float32, maxBufferSize) // 640 * 1000 / 16000 == 40 ms
+	dstBufferSize := 240
+	srcBufferSize := dstBufferSize * srcSampleRate / dstSampleRate
+	pcm := make([]float32, srcBufferSize) // 640 * 1000 / 16000 == 40 ms
 	idx := 0
 
 	if err != nil {
@@ -39,9 +51,9 @@ func (r *Room) startAudio() {
 		pcm[idx] = sample
 		idx++
 		if idx == len(pcm) {
-			data := make([]byte, maxBufferSize)
-
-			n, err := enc.EncodeFloat32(pcm, data)
+			data := make([]byte, dstBufferSize)
+			dstpcm := resample(pcm, dstBufferSize, srcSampleRate, dstSampleRate)
+			n, err := enc.EncodeFloat32(dstpcm, data)
 
 			if err != nil {
 				log.Println("[!] Failed to decode", err)
