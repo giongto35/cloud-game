@@ -326,6 +326,7 @@ function startWebRTC() {
 
     // create SDP
     pc.createOffer({offerToReceiveVideo: true, offerToReceiveAudio: true}).then(d => {
+        log(d.sdp)
         pc.setLocalDescription(d).catch(log);
     })
 

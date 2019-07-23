@@ -288,7 +288,7 @@ func audioWrite2(buf unsafe.Pointer, frames C.size_t) C.size_t {
 	//fmt.Println(bufSize, frames, numFrames)
 	//copy(pcm, C.GoBytes(buf, bufSize)[:])
 
-	for i := 0; i < numFrames; i += 2 {
+	for i := 0; i < numFrames; i += 1 {
 		s := float32(pcm[i])
 		//s := float32(pcm[i])
 		NAEmulator.audioChannel <- s

@@ -116,6 +116,11 @@ func (apu *APU) Step() {
 
 func (apu *APU) sendSample() {
 	output := apu.filterChain.Step(apu.output())
+	//stereo
+	select {
+	case apu.channel <- output:
+	default:
+	}
 	select {
 	case apu.channel <- output:
 	default:
