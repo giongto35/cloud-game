@@ -3,6 +3,7 @@ package nanoarch
 import (
 	"image"
 	"log"
+	"time"
 
 	"github.com/giongto35/cloud-game/util"
 )
@@ -116,7 +117,8 @@ func (na *naEmulator) Start(path string) {
 	coreLoad(na.corePath)
 	na.playGame(path)
 
-	for {
+	ticker := time.NewTicker(time.Second / 60)
+	for range ticker.C {
 		select {
 		case <-na.done:
 			C.bridge_retro_unload_game(retroUnloadGame)
