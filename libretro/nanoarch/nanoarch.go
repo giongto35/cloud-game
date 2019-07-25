@@ -138,7 +138,7 @@ func resizeToAspect(ratio float64, sw float64, sh float64) (dw float64, dh float
 	return
 }
 
-func videoConfigure(geom *C.struct_retro_game_geometry) {
+func videoConfigure(geom *C.struct_retro_game_geometry) (int, int) {
 
 	nwidth, nheight := resizeToAspect(float64(geom.aspect_ratio), float64(geom.base_width), float64(geom.base_height))
 
@@ -154,6 +154,7 @@ func videoConfigure(geom *C.struct_retro_game_geometry) {
 	}
 
 	video.pitch = uint32(geom.base_width) * video.bpp
+	return int(geom.base_width), int(geom.base_height)
 }
 
 //export coreVideoRefresh
@@ -481,9 +482,13 @@ func coreLoadGame(filename string) {
 
 	C.bridge_retro_get_system_av_info(retroGetSystemAVInfo, &avi)
 
-	videoConfigure(&avi.geometry)
+	width, height := videoConfigure(&avi.geometry)
 	// Append the library name to the window title.
-	NAEmulator.sampleRate = uint(float32(avi.timing.sample_rate))
+	NAEmulator.meta.AudioSampleRate = int(avi.timing.sample_rate)
+	NAEmulator.meta.Fps = int(avi.timing.fps)
+	NAEmulator.meta.Width = width
+	NAEmulator.meta.Height = height
+
 	audioInit(avi.timing.sample_rate)
 }
 

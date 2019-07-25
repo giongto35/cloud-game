@@ -1,10 +1,18 @@
 package emulator
 
 type CloudEmulator interface {
-	Start(path string)
+	LoadMeta(path string) Meta
+	Start()
 	SaveGame(saveExtraFunc func() error) error
 	LoadGame() error
 	GetHashPath() string
-	GetSampleRate() uint
+	//GetSampleRate() uint
 	Close()
+}
+
+type Meta struct {
+	AudioSampleRate int
+	Fps             int
+	Width           int
+	Height          int
 }

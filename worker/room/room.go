@@ -70,10 +70,6 @@ func NewRoom(roomID, gamePath, gameName string, onlineStorage *storage.Client) *
 		Done: make(chan struct{}, 1),
 	}
 
-	go room.startVideo()
-	// TODO: StartAudio nano arch
-	go room.startAudio()
-
 	// Check if room is on local storage, if not, pull from GCS to local storage
 	go func(gamePath, gameName, roomID string) {
 		// Check room is on local or fetch from server
@@ -95,7 +91,11 @@ func NewRoom(roomID, gamePath, gameName string, onlineStorage *storage.Client) *
 		// Spawn new emulator based on gameName and plug-in all channels
 		room.director = getEmulator(gameName, roomID, imageChannel, audioChannel, inputChannel)
 		path := gamePath + "/" + gameName
-		room.director.Start(path)
+		meta := room.director.LoadMeta(path)
+		log.Printf("Load with Meta %+v", meta)
+		go room.startVideo(meta.Width, meta.Height)
+		go room.startAudio(meta.AudioSampleRate)
+		room.director.Start()
 
 		log.Printf("Room %s ended", roomID)
 

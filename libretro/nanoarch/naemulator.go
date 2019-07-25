@@ -5,6 +5,7 @@ import (
 	"log"
 	"time"
 
+	emulator "github.com/giongto35/cloud-game/emulator"
 	"github.com/giongto35/cloud-game/util"
 )
 
@@ -58,9 +59,9 @@ type naEmulator struct {
 	gameName        string
 	isSavingLoading bool
 
-	sampleRate uint
-	keys       []bool
-	done       chan struct{}
+	keys []bool
+	done chan struct{}
+	meta emulator.Meta
 }
 
 var NAEmulator *naEmulator
@@ -113,9 +114,16 @@ func (na *naEmulator) listenInput() {
 	}
 }
 
-func (na *naEmulator) Start(path string) {
+func (na *naEmulator) LoadMeta(path string) emulator.Meta {
 	coreLoad(na.corePath)
-	na.playGame(path)
+	coreLoadGame(path)
+	na.gamePath = path
+
+	return na.meta
+}
+
+func (na *naEmulator) Start() {
+	na.playGame(na.gamePath)
 
 	ticker := time.NewTicker(time.Second / 60)
 	for range ticker.C {
@@ -135,7 +143,6 @@ func (na *naEmulator) Start(path string) {
 }
 
 func (na *naEmulator) playGame(path string) {
-	coreLoadGame(path)
 	// When start game, we also try loading if there was a saved state
 	na.LoadGame()
 }
@@ -177,6 +184,6 @@ func (na *naEmulator) Close() {
 
 }
 
-func (na *naEmulator) GetSampleRate() uint {
-	return na.sampleRate
-}
+//func (na *naEmulator) GetSampleRate() uint {
+//return na.sampleRate
+//}

@@ -20,7 +20,8 @@ type Director struct {
 	inputChannel <-chan int
 	Done         chan struct{}
 
-	roomID string
+	gamePath string
+	roomID   string
 }
 
 const fps = 300
@@ -53,8 +54,7 @@ func (d *Director) SetView(view *GameView) {
 //d.view.UpdateInput(input)
 //}
 
-// Start ...
-func (d *Director) Start(path string) {
+func (d *Director) LoadMeta(path string) Meta {
 	// portaudio.Initialize()
 	// defer portaudio.Terminate()
 
@@ -63,7 +63,26 @@ func (d *Director) Start(path string) {
 	// d.audio = audio
 	log.Println("Start game: ", path)
 
-	d.playGame(path)
+	d.gamePath = path
+	return Meta{
+		AudioSampleRate: 48000,
+		Fps:             300,
+		Width:           256,
+		Height:          240,
+	}
+}
+
+// Start ...
+func (d *Director) Start() {
+	// portaudio.Initialize()
+	// defer portaudio.Terminate()
+
+	// audio := NewAudio()
+	// audio.Start()
+	// d.audio = audio
+	log.Println("Start game: ", d.gamePath)
+
+	d.playGame(d.gamePath)
 	d.run()
 }
 
