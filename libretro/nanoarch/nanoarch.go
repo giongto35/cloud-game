@@ -7,8 +7,10 @@ import (
 	"image"
 	"image/color"
 	"log"
+	"math"
 	"os"
 	"os/user"
+	"reflect"
 	"sync"
 	"time"
 	"unsafe"
@@ -85,6 +87,7 @@ var audio struct {
 }
 
 var joy [C.RETRO_DEVICE_ID_JOYPAD_R3 + 1]bool
+var ewidth, eheight int
 
 type CloudEmulator interface {
 	SetView(view *emulator.GameView)
@@ -142,8 +145,12 @@ func videoConfigure(geom *C.struct_retro_game_geometry) (int, int) {
 
 	nwidth, nheight := resizeToAspect(float64(geom.aspect_ratio), float64(geom.base_width), float64(geom.base_height))
 
+	fmt.Println("media config", nwidth, nheight, geom.base_width, geom.base_height, geom.aspect_ratio, video.bpp, scale)
+
 	nwidth = nwidth * scale
 	nheight = nheight * scale
+	nwidth = 256
+	nheight = 240
 
 	if video.pixFmt == 0 {
 		video.pixFmt = gl.UNSIGNED_SHORT_5_5_5_1
@@ -154,7 +161,7 @@ func videoConfigure(geom *C.struct_retro_game_geometry) (int, int) {
 	}
 
 	video.pitch = uint32(geom.base_width) * video.bpp
-	return int(geom.base_width), int(geom.base_height)
+	return int(math.Round(nwidth)), int(math.Round(nheight))
 }
 
 //export coreVideoRefresh
@@ -163,16 +170,24 @@ func coreVideoRefresh(data unsafe.Pointer, width C.unsigned, height C.unsigned, 
 		video.pitch = uint32(pitch)
 	}
 
+	fmt.Println("width height", width, height, pitch)
 	if data != nil {
 		NAEmulator.imageChannel <- toImageRGBA(data)
 	}
 }
 
 func toImageRGBA(data unsafe.Pointer) *image.RGBA {
-	//bytes := *(*[320 * 240 * 2]byte)(data)
-	bytes := *(*[256 * 240 * 2]byte)(data)
+	// Convert unsafe Pointer to bytes array
+	var bytes []byte
+	sh := (*reflect.SliceHeader)(unsafe.Pointer(&bytes))
+	sh.Data = uintptr(data)
+	sh.Len = ewidth * eheight * 2
+	sh.Cap = ewidth * eheight * 2
+
 	seek := 0
 
+	// Convert bytes array to image
+	// TODO: Reduce overhead of copying to bytes array by accessing unsafe.Pointer directly
 	image := image.NewRGBA(image.Rect(0, 0, config.Width, config.Height))
 	for y := 0; y < config.Height; y++ {
 		for x := 0; x < config.Width; x++ {
@@ -482,12 +497,12 @@ func coreLoadGame(filename string) {
 
 	C.bridge_retro_get_system_av_info(retroGetSystemAVInfo, &avi)
 
-	width, height := videoConfigure(&avi.geometry)
+	ewidth, eheight = videoConfigure(&avi.geometry)
 	// Append the library name to the window title.
 	NAEmulator.meta.AudioSampleRate = int(avi.timing.sample_rate)
 	NAEmulator.meta.Fps = int(avi.timing.fps)
-	NAEmulator.meta.Width = width
-	NAEmulator.meta.Height = height
+	NAEmulator.meta.Width = ewidth
+	NAEmulator.meta.Height = eheight
 
 	audioInit(avi.timing.sample_rate)
 }
