@@ -15,7 +15,6 @@ import (
 	"time"
 	"unsafe"
 
-	"github.com/giongto35/cloud-game/config"
 	"github.com/giongto35/cloud-game/emulator"
 	"github.com/go-gl/gl/v2.1/gl"
 	"golang.org/x/mobile/exp/audio/al"
@@ -170,7 +169,6 @@ func coreVideoRefresh(data unsafe.Pointer, width C.unsigned, height C.unsigned, 
 		video.pitch = uint32(pitch)
 	}
 
-	fmt.Println("width height", width, height, pitch)
 	if data != nil {
 		NAEmulator.imageChannel <- toImageRGBA(data)
 	}
@@ -186,11 +184,12 @@ func toImageRGBA(data unsafe.Pointer) *image.RGBA {
 
 	seek := 0
 
+	fmt.Println("Width, height", ewidth, eheight)
 	// Convert bytes array to image
 	// TODO: Reduce overhead of copying to bytes array by accessing unsafe.Pointer directly
-	image := image.NewRGBA(image.Rect(0, 0, config.Width, config.Height))
-	for y := 0; y < config.Height; y++ {
-		for x := 0; x < config.Width; x++ {
+	image := image.NewRGBA(image.Rect(0, 0, ewidth, eheight))
+	for y := 0; y < eheight; y++ {
+		for x := 0; x < ewidth; x++ {
 			var bi int
 			bi = (int)(bytes[seek]) + ((int)(bytes[seek+1]) << 8)
 			b5 := bi & 0x1F
