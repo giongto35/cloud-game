@@ -11,7 +11,7 @@ import (
 	"strings"
 	"sync"
 
-	emulator "github.com/giongto35/cloud-game/emulator"
+	"github.com/giongto35/cloud-game/emulator"
 	"github.com/giongto35/cloud-game/libretro/nanoarch"
 	"github.com/giongto35/cloud-game/util"
 	"github.com/giongto35/cloud-game/webrtc"
@@ -43,6 +43,8 @@ type Room struct {
 	onlineStorage *storage.Client
 	// GameName
 	gameName string
+	// Meta of game
+	//meta emulator.Meta
 }
 
 // NewRoom creates a new room

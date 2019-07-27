@@ -99,18 +99,13 @@ func (w *WebRTC) StartClient(remoteSession string, iceCandidates []string, width
 			w.StopClient()
 		}
 	}()
+	var err error
 
 	// reset client
 	if w.isConnected {
 		w.StopClient()
 		time.Sleep(2 * time.Second)
 	}
-
-	encoder, err := vpxEncoder.NewVpxEncoder(width, height, 20, 1200, 5)
-	if err != nil {
-		return "", err
-	}
-	w.encoder = encoder
 
 	log.Println("=== StartClient ===")
 	w.connection, err = webrtc.NewPeerConnection(webrtcconfig)
@@ -276,25 +271,6 @@ func (w *WebRTC) IsConnected() bool {
 // func (w *WebRTC) startStreaming(vp8Track *webrtc.Track, opusTrack *webrtc.Track) {
 func (w *WebRTC) startStreaming(vp8Track *webrtc.Track, opusTrack *webrtc.Track) {
 	log.Println("Start streaming")
-	// send screenshot
-	go func() {
-		defer func() {
-			if r := recover(); r != nil {
-				fmt.Println("Recovered when sent to close Image Channel")
-			}
-		}()
-
-		// TODO: Use same yuv
-		for yuv := range w.ImageChannel {
-			if !w.isConnected {
-				return
-			}
-			if len(w.encoder.Input) < cap(w.encoder.Input) {
-				w.encoder.Input <- yuv
-			}
-		}
-	}()
-
 	// receive frame buffer
 	go func() {
 		defer func() {
@@ -303,11 +279,11 @@ func (w *WebRTC) startStreaming(vp8Track *webrtc.Track, opusTrack *webrtc.Track)
 			}
 		}()
 
-		for bs := range w.encoder.Output {
+		for data := range w.ImageChannel {
 			if *config.IsMonitor {
 				log.Println("Encoding FPS : ", w.calculateFPS())
 			}
-			err := vp8Track.WriteSample(media.Sample{Data: bs, Samples: 1})
+			err := vp8Track.WriteSample(media.Sample{Data: data, Samples: 1})
 			if err != nil {
 				log.Println("Warn: Err write sample: ", err)
 			}

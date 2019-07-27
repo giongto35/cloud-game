@@ -5,6 +5,7 @@ import (
 	"log"
 
 	"github.com/giongto35/cloud-game/util"
+	vpxEncoder "github.com/giongto35/cloud-game/vpx-encoder"
 	"gopkg.in/hraban/opus.v2"
 )
 
@@ -98,30 +99,42 @@ func (r *Room) startAudio(sampleRate int) {
 func (r *Room) startVideo(width, height int) {
 	size := int(float32(width*height) * 1.5)
 	yuv := make([]byte, size, size)
-	// fanout Screen
-	for image := range r.imageChannel {
-		if !r.IsRunning {
-			log.Println("Room ", r.ID, " video channel closed")
-			return
+
+	encoder, err := vpxEncoder.NewVpxEncoder(width, height, 20, 1200, 5)
+	if err != nil {
+		return
+	}
+
+	// send screenshot
+	go func() {
+		defer func() {
+			if r := recover(); r != nil {
+				fmt.Println("Recovered when sent to close Image Channel")
+			}
+		}()
+
+		for image := range r.imageChannel {
+			if !r.IsRunning {
+				log.Println("Room ", r.ID, " video channel closed")
+				return
+			}
+			if len(encoder.Input) < cap(encoder.Input) {
+				util.RgbaToYuvInplace(image, yuv)
+				encoder.Input <- yuv
+			}
 		}
+	}()
 
-		// TODO: Use worker pool for encoding
-		util.RgbaToYuvInplace(image, yuv)
+	// fanout Screen
+	for data := range encoder.Output {
 		// TODO: r.rtcSessions is rarely updated. Lock will hold down perf
-		//r.sessionsLock.Lock()
 		for _, webRTC := range r.rtcSessions {
-			// Client stopped
-			//if webRTC.IsClosed() {
-			//continue
-			//}
-
 			// encode frame
 			// fanout imageChannel
 			if webRTC.IsConnected() {
 				// NOTE: can block here
-				webRTC.ImageChannel <- yuv
+				webRTC.ImageChannel <- data
 			}
 		}
-		//r.sessionsLock.Unlock()
 	}
 }
