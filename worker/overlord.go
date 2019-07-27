@@ -3,7 +3,6 @@ package worker
 import (
 	"log"
 
-	"github.com/giongto35/cloud-game/config"
 	"github.com/giongto35/cloud-game/cws"
 	"github.com/giongto35/cloud-game/webrtc"
 	"github.com/giongto35/cloud-game/worker/room"
@@ -50,7 +49,7 @@ func (h *Handler) RouteOverlord() {
 		func(resp cws.WSPacket) (req cws.WSPacket) {
 			log.Println("Received relay SDP of a browser from overlord")
 			peerconnection := webrtc.NewWebRTC()
-			localSession, err := peerconnection.StartClient(resp.Data, iceCandidates[resp.SessionID], config.Width, config.Height)
+			localSession, err := peerconnection.StartClient(resp.Data, iceCandidates[resp.SessionID])
 			//h.peerconnections[resp.SessionID] = peerconnection
 
 			// Create new sessions when we have new peerconnection initialized

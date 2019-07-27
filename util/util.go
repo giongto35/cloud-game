@@ -6,8 +6,6 @@ import (
 	"log"
 	"os/user"
 	"unsafe"
-
-	"github.com/giongto35/cloud-game/config"
 )
 
 // https://stackoverflow.com/questions/9465815/rgb-to-yuv420-algorithm-efficiency
@@ -57,9 +55,9 @@ func RgbaToYuv(rgba *image.RGBA) []byte {
 }
 
 // RgbaToYuvInplace convert to yuv from rgba inplace to yuv. Avoid reallocation
-func RgbaToYuvInplace(rgba *image.RGBA, yuv []byte) {
-	stride := rgba.Stride - config.Width*4
-	C.rgba2yuv(unsafe.Pointer(&yuv[0]), unsafe.Pointer(&rgba.Pix[0]), C.int(config.Width), C.int(config.Height), C.int(stride))
+func RgbaToYuvInplace(rgba *image.RGBA, yuv []byte, width, height int) {
+	stride := rgba.Stride - width*4
+	C.rgba2yuv(unsafe.Pointer(&yuv[0]), unsafe.Pointer(&rgba.Pix[0]), C.int(width), C.int(height), C.int(stride))
 }
 
 var homeDir string

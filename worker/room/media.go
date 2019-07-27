@@ -119,7 +119,7 @@ func (r *Room) startVideo(width, height int) {
 				return
 			}
 			if len(encoder.Input) < cap(encoder.Input) {
-				util.RgbaToYuvInplace(image, yuv)
+				util.RgbaToYuvInplace(image, yuv, width, height)
 				encoder.Input <- yuv
 			}
 		}

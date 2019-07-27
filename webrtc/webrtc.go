@@ -92,7 +92,7 @@ type WebRTC struct {
 }
 
 // StartClient start webrtc
-func (w *WebRTC) StartClient(remoteSession string, iceCandidates []string, width, height int) (string, error) {
+func (w *WebRTC) StartClient(remoteSession string, iceCandidates []string) (string, error) {
 	defer func() {
 		if err := recover(); err != nil {
 			log.Println(err)

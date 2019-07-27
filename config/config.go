@@ -16,9 +16,6 @@ var FrontendSTUNTURN = flag.String("stunturn", DefaultSTUNTURN, "Frontend STUN T
 var Mode = flag.String("mode", "dev", "Environment")
 var IsRetro = flag.Bool("isretro", true, "Is retro")
 
-var Width = 256 // GBA
-//var Width = 320  // PS
-var Height = 240 // GBA
 var WSWait = 20 * time.Second
 var MatchWorkerRandom = false
 var ProdEnv = "prod"

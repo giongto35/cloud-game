@@ -146,10 +146,10 @@ func videoConfigure(geom *C.struct_retro_game_geometry) (int, int) {
 
 	fmt.Println("media config", nwidth, nheight, geom.base_width, geom.base_height, geom.aspect_ratio, video.bpp, scale)
 
-	nwidth = nwidth * scale
-	nheight = nheight * scale
-	nwidth = 256
-	nheight = 240
+	//nwidth = nwidth * scale
+	//nheight = nheight * scale
+	//nwidth = 256
+	//nheight = 240
 
 	if video.pixFmt == 0 {
 		video.pixFmt = gl.UNSIGNED_SHORT_5_5_5_1
