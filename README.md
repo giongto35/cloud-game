@@ -1,4 +1,4 @@
-# Klog, Web-based Cloud Gaming Service
+# Web-based Cloud Gaming Service
 - [http://cloud.webgame2d.com](http://cloud.webgame2d.com)
 
 - [**Game Instruction**](document/instruction/)
@@ -8,18 +8,19 @@ For the best gaming experience, please select the closest region to you.
 
 ---
 
-Klog is an open source Cloud Gaming Service building on [WebRTC](https://github.com/pion) using browser as the main platform.  
+Open source Cloud Gaming Service building on [WebRTC](https://github.com/pion) using browser as the main platform.  
   
-Klog aims to bring the most convenient gaming experience to gamer. You can play any games on your browser directly, which is fully compatible on multi-platform like Desktop, Android, IOS. This flexibility enables modern online gaming experience to retro games starting with NES in this current release.  
+This project aims to bring the most convenient gaming experience to gamer. You can play any games on your browser directly, which is fully compatible on multi-platform like Desktop, Android, IOS. This flexibility enables modern online gaming experience to retro games starting with NES in this current release.  
 
-Note: The current state of Klog are not optimized for production. The service will still experience lag under heavy traffic. You can try hosting your own service following the instruction in the next session.  
+Note: **Due to the high cost of hosting, I will Hibernate the servers for a while. I'm working on a big change and will turn on hosting again. Sorry for that :(**
+You can try hosting your own service following the instruction in the next session.  
 
 ![screenshot](document/img/landing-page.gif)
 
 ## Feature
 1. Cloud gaming: Game logic is hosted on a remote server. User doesn't have to install or setup anything. Images and audio are streamed to user in the most optimal way.
 2. Cross-platform compatibility: The game is run on webbrowser, the most universal built-in app. No console, plugin, external app or devices are needed. The device must support webRTC to perform streaming. Joystick is also supported.
-3. Vertically scaled: We can add more machines to handle more traffic. The closest server with highest free resource will be assigned to user (In development).
+3. Vertically scaled + Load balancing: We can add more machines to handle more traffic. The closest server with highest free resource will be assigned to user.
 4. Cloud storage: Game state is storing on online storage, so you can come back to continue playing in a game.
 
 ## Run on local by Docker
