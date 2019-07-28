@@ -146,11 +146,6 @@ func videoConfigure(geom *C.struct_retro_game_geometry) (int, int) {
 
 	fmt.Println("media config", nwidth, nheight, geom.base_width, geom.base_height, geom.aspect_ratio, video.bpp, scale)
 
-	//nwidth = nwidth * scale
-	//nheight = nheight * scale
-	//nwidth = 256
-	//nheight = 240
-
 	if video.pixFmt == 0 {
 		video.pixFmt = gl.UNSIGNED_SHORT_5_5_5_1
 	}
@@ -174,34 +169,46 @@ func coreVideoRefresh(data unsafe.Pointer, width C.unsigned, height C.unsigned, 
 	}
 }
 
+// toImageRGBA convert nanoarch 2d array to image.RGBA
 func toImageRGBA(data unsafe.Pointer) *image.RGBA {
 	// Convert unsafe Pointer to bytes array
 	var bytes []byte
+	// TODO: Investigate this
+	// seems like there is a padding of slice.
+	// If the resolution is 240 * 160. I have to convert to 256 * 160 slice.
+	// If the resolution is 320 * 240. I can keep it to 320 * 240.
+	// I'm making assumption that the slice is packed and it has padding to fill 64
+	var w = 0
+	for w < ewidth {
+		w += 64
+	}
+
 	sh := (*reflect.SliceHeader)(unsafe.Pointer(&bytes))
 	sh.Data = uintptr(data)
-	sh.Len = ewidth * eheight * 2
-	sh.Cap = ewidth * eheight * 2
+	sh.Len = w * eheight * 2
+	sh.Cap = w * eheight * 2
 
 	seek := 0
 
-	fmt.Println("Width, height", ewidth, eheight)
 	// Convert bytes array to image
 	// TODO: Reduce overhead of copying to bytes array by accessing unsafe.Pointer directly
 	image := image.NewRGBA(image.Rect(0, 0, ewidth, eheight))
 	for y := 0; y < eheight; y++ {
-		for x := 0; x < ewidth; x++ {
-			var bi int
-			bi = (int)(bytes[seek]) + ((int)(bytes[seek+1]) << 8)
-			b5 := bi & 0x1F
-			g6 := (bi >> 5) & 0x3F
-			r5 := (bi >> 11)
+		for x := 0; x < w; x++ {
+			if x < ewidth {
+				var bi int
+				bi = (int)(bytes[seek]) + ((int)(bytes[seek+1]) << 8)
+				b5 := bi & 0x1F
+				g6 := (bi >> 5) & 0x3F
+				r5 := (bi >> 11)
 
-			b8 := (b5*255 + 15) / 31
-			g8 := (g6*255 + 31) / 63
-			r8 := (r5*255 + 15) / 31
+				b8 := (b5*255 + 15) / 31
+				g8 := (g6*255 + 31) / 63
+				r8 := (r5*255 + 15) / 31
 
+				image.Set(x, y, color.RGBA{byte(r8), byte(g8), byte(b8), 255})
+			}
 			seek += 2
-			image.Set(x, y, color.RGBA{byte(r8), byte(g8), byte(b8), 255})
 		}
 	}
 

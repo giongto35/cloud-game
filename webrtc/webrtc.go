@@ -302,8 +302,6 @@ func (w *WebRTC) startStreaming(vp8Track *webrtc.Track, opusTrack *webrtc.Track)
 			if !w.isConnected {
 				return
 			}
-			//opusTrack.Send(data)
-			fmt.Println("sending data", data)
 			err := opusTrack.WriteSample(media.Sample{Data: data, Samples: uint32(len(data))})
 			if err != nil {
 				log.Println("Warn: Err write sample: ", err)
