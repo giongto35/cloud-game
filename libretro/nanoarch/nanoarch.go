@@ -12,11 +12,9 @@ import (
 	"os/user"
 	"reflect"
 	"sync"
-	"time"
 	"unsafe"
 
 	"github.com/giongto35/cloud-game/emulator"
-	"golang.org/x/mobile/exp/audio/al"
 )
 
 /*
@@ -72,17 +70,6 @@ var video struct {
 var scale = 3.0
 
 const bufSize = 1024 * 4
-
-var audio struct {
-	source     al.Source
-	buffers    []al.Buffer
-	rate       int32
-	numBuffers int32
-	tmpBuf     [bufSize]byte
-	tmpBufPtr  C.size_t
-	bufPtr     C.size_t
-	resPtr     int32
-}
 
 var joy [C.RETRO_DEVICE_ID_JOYPAD_R3 + 1]bool
 var ewidth, eheight int
@@ -205,67 +192,11 @@ func coreInputState(port C.unsigned, device C.unsigned, index C.unsigned, id C.u
 	return 0
 }
 
-func audioInit(rate C.double) {
-	err := al.OpenDevice()
-	if err != nil {
-		fmt.Println(err)
-	}
-
-	audio.rate = int32(rate)
-	audio.numBuffers = 4
-
-	fmt.Printf("[OpenAL]: Using %v buffers of %v bytes.\n", audio.numBuffers, bufSize)
-
-	audio.source = al.GenSources(1)[0]
-	audio.buffers = al.GenBuffers(int(audio.numBuffers))
-	audio.resPtr = audio.numBuffers
-}
-
 func min(a, b C.size_t) C.size_t {
 	if a < b {
 		return a
 	}
 	return b
-}
-
-func alUnqueueBuffers() bool {
-	val := audio.source.BuffersProcessed()
-
-	if val <= 0 {
-		return false
-	}
-
-	audio.source.UnqueueBuffers(audio.buffers[audio.resPtr:val]...)
-	audio.resPtr += val
-	return true
-}
-
-func alGetBuffer() (al.Buffer, error) {
-	if audio.resPtr == 0 {
-		for {
-			if alUnqueueBuffers() {
-				break
-			}
-
-			// if audio.nonblock
-			//   return nil, true
-
-			/* Must sleep as there is no proper blocking method. */
-			time.Sleep(time.Millisecond)
-		}
-	}
-
-	audio.resPtr--
-	return audio.buffers[audio.resPtr], nil
-}
-
-// fill tmpBufPtr from buffer
-func fillInternalBuf(buf unsafe.Pointer, size C.size_t) C.size_t {
-	readSize := min(bufSize-audio.tmpBufPtr, size)
-	//memcpy(audio.tmpBuf+audio.tmpBufPtr, buf, readSize)
-	copy(audio.tmpBuf[audio.tmpBufPtr:], C.GoBytes(buf, bufSize)[audio.bufPtr:audio.bufPtr+readSize])
-	audio.tmpBufPtr += readSize
-	return readSize
 }
 
 func audioWrite2(buf unsafe.Pointer, frames C.size_t) C.size_t {
@@ -476,8 +407,6 @@ func coreLoadGame(filename string) {
 	NAEmulator.meta.Fps = int(avi.timing.fps)
 	NAEmulator.meta.Width = ewidth
 	NAEmulator.meta.Height = eheight
-
-	audioInit(avi.timing.sample_rate)
 }
 
 // serializeSize returns the amount of data the implementation requires to serialize
