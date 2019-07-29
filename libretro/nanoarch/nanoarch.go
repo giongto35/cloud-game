@@ -16,7 +16,6 @@ import (
 	"unsafe"
 
 	"github.com/giongto35/cloud-game/emulator"
-	"github.com/go-gl/gl/v2.1/gl"
 	"golang.org/x/mobile/exp/audio/al"
 )
 
@@ -97,34 +96,6 @@ type CloudEmulator interface {
 	Close()
 }
 
-func videoSetPixelFormat(format uint32) C.bool {
-	if video.texID != 0 {
-		log.Fatal("Tried to change pixel format after initialization.")
-	}
-
-	switch format {
-	case C.RETRO_PIXEL_FORMAT_0RGB1555:
-		video.pixFmt = gl.UNSIGNED_SHORT_5_5_5_1
-		video.pixType = gl.BGRA
-		video.bpp = 2
-		break
-	case C.RETRO_PIXEL_FORMAT_XRGB8888:
-		video.pixFmt = gl.UNSIGNED_INT_8_8_8_8_REV
-		video.pixType = gl.BGRA
-		video.bpp = 4
-		break
-	case C.RETRO_PIXEL_FORMAT_RGB565:
-		video.pixFmt = gl.UNSIGNED_SHORT_5_6_5
-		video.pixType = gl.RGB
-		video.bpp = 2
-		break
-	default:
-		log.Fatalf("Unknown pixel type %v", format)
-	}
-
-	return true
-}
-
 func resizeToAspect(ratio float64, sw float64, sh float64) (dw float64, dh float64) {
 	if ratio <= 0 {
 		ratio = sw / sh
@@ -145,10 +116,6 @@ func videoConfigure(geom *C.struct_retro_game_geometry) (int, int) {
 	nwidth, nheight := resizeToAspect(float64(geom.aspect_ratio), float64(geom.base_width), float64(geom.base_height))
 
 	fmt.Println("media config", nwidth, nheight, geom.base_width, geom.base_height, geom.aspect_ratio, video.bpp, scale)
-
-	if video.pixFmt == 0 {
-		video.pixFmt = gl.UNSIGNED_SHORT_5_5_5_1
-	}
 
 	if video.texID == 0 {
 		fmt.Println("Failed to create the video texture")
@@ -354,7 +321,7 @@ func coreEnvironment(cmd C.unsigned, data unsafe.Pointer) C.bool {
 		if *format > C.RETRO_PIXEL_FORMAT_RGB565 {
 			return false
 		}
-		return videoSetPixelFormat(*format)
+		return true
 	case C.RETRO_ENVIRONMENT_GET_SYSTEM_DIRECTORY:
 	case C.RETRO_ENVIRONMENT_GET_SAVE_DIRECTORY:
 		path := (**C.char)(data)
