@@ -17,7 +17,6 @@ import (
 #include <dlfcn.h>
 #include <string.h>
 
-void bridge_retro_init(void *f);
 void bridge_retro_deinit(void *f);
 unsigned bridge_retro_api_version(void *f);
 void bridge_retro_get_system_info(void *f, struct retro_system_info *si);
@@ -29,7 +28,6 @@ void bridge_retro_set_input_state(void *f, void *callback);
 void bridge_retro_set_audio_sample(void *f, void *callback);
 void bridge_retro_set_audio_sample_batch(void *f, void *callback);
 bool bridge_retro_load_game(void *f, struct retro_game_info *gi);
-void bridge_retro_unload_game(void *f);
 void bridge_retro_run(void *f);
 size_t bridge_retro_get_memory_size(void *f, unsigned id);
 void* bridge_retro_get_memory_data(void *f, unsigned id);
@@ -72,29 +70,20 @@ var emulatorCorePath = map[string]string{
 	"pcsx": "libretro/cores/pcsx_rearmed_libretro.so",
 }
 
-var bindRetroKeys = map[int]int{
-	0: C.RETRO_DEVICE_ID_JOYPAD_A,
-	1: C.RETRO_DEVICE_ID_JOYPAD_B,
-	2: C.RETRO_DEVICE_ID_JOYPAD_SELECT,
-	3: C.RETRO_DEVICE_ID_JOYPAD_START,
-	4: C.RETRO_DEVICE_ID_JOYPAD_UP,
-	5: C.RETRO_DEVICE_ID_JOYPAD_DOWN,
-	6: C.RETRO_DEVICE_ID_JOYPAD_LEFT,
-	7: C.RETRO_DEVICE_ID_JOYPAD_RIGHT,
-}
-
+// NAEmulator implements CloudEmulator interface based on NanoArch(golang RetroArch)
 func NewNAEmulator(etype string, roomID string, imageChannel chan<- *image.RGBA, audioChannel chan<- float32, inputChannel <-chan int) *naEmulator {
 	return &naEmulator{
 		corePath:     emulatorCorePath[etype],
 		imageChannel: imageChannel,
 		audioChannel: audioChannel,
 		inputChannel: inputChannel,
-		keys:         make([]bool, C.RETRO_DEVICE_ID_JOYPAD_R3+1),
+		keys:         make([]bool, joypadNumKeys),
 		roomID:       roomID,
 		done:         make(chan struct{}, 1),
 	}
 }
 
+// Init initialize new RetroArch cloud emulator
 func Init(etype string, roomID string, imageChannel chan<- *image.RGBA, audioChannel chan<- float32, inputChannel <-chan int) {
 	NAEmulator = NewNAEmulator(etype, roomID, imageChannel, audioChannel, inputChannel)
 	go NAEmulator.listenInput()
@@ -129,15 +118,14 @@ func (na *naEmulator) Start() {
 	for range ticker.C {
 		select {
 		case <-na.done:
-			C.bridge_retro_unload_game(retroUnloadGame)
-			C.bridge_retro_deinit(retroDeinit)
+			nanoarchShutdown()
 			log.Println("Closed Director")
 			return
 		default:
 		}
 
 		na.GetLock()
-		C.bridge_retro_run(retroRun)
+		nanoarchRun()
 		na.ReleaseLock()
 	}
 }
@@ -181,9 +169,4 @@ func (na *naEmulator) GetHashPath() string {
 func (na *naEmulator) Close() {
 	// Unload and deinit in the core.
 	close(na.done)
-
 }
-
-//func (na *naEmulator) GetSampleRate() uint {
-//return na.sampleRate
-//}

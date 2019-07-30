@@ -71,8 +71,21 @@ var scale = 3.0
 
 const bufSize = 1024 * 4
 
-var joy [C.RETRO_DEVICE_ID_JOYPAD_R3 + 1]bool
+const joypadNumKeys = C.RETRO_DEVICE_ID_JOYPAD_R3
+
+var joy [joypadNumKeys + 1]bool
 var ewidth, eheight int
+
+var bindRetroKeys = map[int]int{
+	0: C.RETRO_DEVICE_ID_JOYPAD_A,
+	1: C.RETRO_DEVICE_ID_JOYPAD_B,
+	2: C.RETRO_DEVICE_ID_JOYPAD_SELECT,
+	3: C.RETRO_DEVICE_ID_JOYPAD_START,
+	4: C.RETRO_DEVICE_ID_JOYPAD_UP,
+	5: C.RETRO_DEVICE_ID_JOYPAD_DOWN,
+	6: C.RETRO_DEVICE_ID_JOYPAD_LEFT,
+	7: C.RETRO_DEVICE_ID_JOYPAD_RIGHT,
+}
 
 type CloudEmulator interface {
 	SetView(view *emulator.GameView)
@@ -436,4 +449,13 @@ func unserialize(bytes []byte, size uint) error {
 		return errors.New("retro_unserialize failed")
 	}
 	return nil
+}
+
+func nanoarchShutdown() {
+	C.bridge_retro_unload_game(retroUnloadGame)
+	C.bridge_retro_deinit(retroDeinit)
+}
+
+func nanoarchRun() {
+	C.bridge_retro_run(retroRun)
 }
