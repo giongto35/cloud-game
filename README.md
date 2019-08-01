@@ -10,9 +10,9 @@ For the best gaming experience, please select the closest region to you.
 
 CloudRetro, Open source Web-based Cloud Gaming Service building on [WebRTC](https://github.com/pion) and [LibRetro](https://retroarch.com/).  
   
-This project aims to bring the most modern and convenient gaming experience to user. You can play any retro games on your browser directly, which is fully compatible on multi-platform like Desktop, Android, IOS. This flexibility also enables online gaming experience to retro games.
+This project aims to bring the most modern and convenient gaming experience to user. You can play any retro games on your browser directly, which is fully compatible on multi-platform like Desktop, Android, IOS. This flexibility also enables online gaming experience to retro games.  
 
-Note: **Due to the high cost of hosting, I will Hibernate the servers for a while. I'm working on a big change and will turn on hosting again. Sorry for that :(**
+Note: **Due to the high cost of hosting, I will Hibernate the servers for a while. I'm working on a big change and will turn on hosting again. Sorry for that :(**  
 You can try hosting your own service following the instruction in the next session.  
 
 ![screenshot](document/img/landing-page.gif)
