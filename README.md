@@ -8,7 +8,7 @@ For the best gaming experience, please select the closest region to you.
 
 ---
 
-CloudRetro, Open source Cloud Gaming Service building on [WebRTC](https://github.com/pion) using browser as the main platform.  
+CloudRetro, Open source Web-based Cloud Gaming Service building on [WebRTC](https://github.com/pion) and [LibRetro](https://retroarch.com/).  
   
 This project aims to bring the most modern and convenient gaming experience to user. You can play any retro games on your browser directly, which is fully compatible on multi-platform like Desktop, Android, IOS. This flexibility also enables online gaming experience to retro games.
 
@@ -20,7 +20,7 @@ You can try hosting your own service following the instruction in the next sessi
 ## Feature
 1. Cloud gaming: Game logic is hosted on a remote server. User doesn't have to install or setup anything. Images and audio are streamed to user in the most optimal way.
 2. Cross-platform compatibility: The game is run on webbrowser, the most universal built-in app. No console, plugin, external app or devices are needed. The device must support webRTC to perform streaming. Joystick is also supported.
-4. Emulator agnostic: The game can be play directly without emulator selection and initialization as long as the cores are supported by RetroArch.
+4. Emulator agnostic: The game can be play directly without emulator selection and initialization as long as the its cores are supported by RetroArch.
 3. Vertically scaled + Load balancing: We can add more machines to handle more traffic. The closest server with highest free resource will be assigned to user.
 5. Cloud storage: Game state is storing on online storage, so you can come back to continue playing in a game.
 
@@ -60,6 +60,10 @@ And run
 
 - The project is inspired by Google Stadia. The most important question comes to everyone mind is how good is the latency? Will gaming experience is affected by the network? I did some researches on that topic and WebRTC seems to be the most suitable protocol for that purpose. I limited the project scope and made a POC of Cloud-gaming. The result indeed looks very promising.  
 
+### Why retroArch?
+
+- I first started the experiment with NES emulator. After seeing some positive result, I take a step further to integrate with RetroArch to challenge the system with high-end games like Playstation. In my opinion, combining RetroArch and Cloud will bring the best of both world together. The versality of RetroArch and the utility of streaming can deliver the most portable gaming experience to users.  
+
 ### Why is the game lag for some people?
 
 - Cloud-gaming is very network-sensitive. It requires the server is close to the user, so please pick the nearest server to you. If there is not, you can try hosting the platform on your own machine followed above instruction and test.  
@@ -68,7 +72,7 @@ And run
 
 ### If RetroArch is already multi-platform, why do we need to make it cloud?
 
-- RetroArch still faces the issue of performance when running on low end mobile device or web frontend. As the logic is completely handled remotely, there will be no performance issue on the game. Even Playstation can be played smoothly on the service.
+- RetroArch is universal emulator but it still faces the issue of performance when running on low end mobile device or web frontend. As the logic is completely handled remotely, there will be no performance issue on the game. Even Playstation can be played smoothly on the service.
 - RetroArch requires loading cores and games but these steps are no longer necessary in Cloud-Gaming service. Games information and cores are stored in cloud storage.
 - However, High-end games requires a lot of computing power and it will involves an upgrade on hardware and infrastructure. Google has a lot of resource and its distributed GPU will enhance this cloud-gaming use case. My resource is not as abundant, so I prefer picking light retro games.
 
@@ -79,7 +83,7 @@ And run
 ## Credits
 
 * *Pion* Webrtc team for the incredible Golang Webrtc library and their supports https://github.com/pion/webrtc/.  
-* *Nanoarch* Golang RetroArch https://github.com/libretro/go-nanoarch.  
+* *Nanoarch* Golang RetroArch https://github.com/libretro/go-nanoarch and https://retroarch.com.  
 * *fogleman* for the awesome NES emulator https://github.com/fogleman/nes.  
 * *poi5305* for the video encoding https://github.com/poi5305/go-yuv2webRTC.  
 * And last but not least, my longtime friend Tri as the co-author. 
