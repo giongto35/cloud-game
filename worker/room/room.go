@@ -10,9 +10,10 @@ import (
 	"strconv"
 	"strings"
 	"sync"
-	"time"
 
-	emulator "github.com/giongto35/cloud-game/emulator"
+	"github.com/giongto35/cloud-game/emulator"
+	"github.com/giongto35/cloud-game/libretro/nanoarch"
+	"github.com/giongto35/cloud-game/util"
 	"github.com/giongto35/cloud-game/webrtc"
 	storage "github.com/giongto35/cloud-game/worker/cloud-storage"
 )
@@ -37,11 +38,13 @@ type Room struct {
 	// NOTE: Not in use, lock rtcSessions
 	sessionsLock *sync.Mutex
 	// Director is emulator
-	director *emulator.Director
+	director emulator.CloudEmulator
 	// Cloud storage to store room state online
 	onlineStorage *storage.Client
 	// GameName
 	gameName string
+	// Meta of game
+	//meta emulator.Meta
 }
 
 // NewRoom creates a new room
@@ -55,9 +58,6 @@ func NewRoom(roomID, gamePath, gameName string, onlineStorage *storage.Client) *
 	audioChannel := make(chan float32, 30)
 	inputChannel := make(chan int, 100)
 
-	// create director
-	director := emulator.NewDirector(roomID, imageChannel, audioChannel, inputChannel)
-
 	room := &Room{
 		ID: roomID,
 
@@ -66,20 +66,16 @@ func NewRoom(roomID, gamePath, gameName string, onlineStorage *storage.Client) *
 		inputChannel:  inputChannel,
 		rtcSessions:   []*webrtc.WebRTC{},
 		sessionsLock:  &sync.Mutex{},
-		director:      director,
 		IsRunning:     true,
 		onlineStorage: onlineStorage,
 
 		Done: make(chan struct{}, 1),
 	}
 
-	go room.startVideo()
-	go room.startAudio()
-
 	// Check if room is on local storage, if not, pull from GCS to local storage
 	go func(gamePath, gameName, roomID string) {
 		// Check room is on local or fetch from server
-		savepath := emulator.GetSavePath(roomID)
+		savepath := util.GetSavePath(roomID)
 		log.Println("Check ", savepath, " on local : ", room.isGameOnLocal(savepath))
 		if !room.isGameOnLocal(savepath) {
 			// Fetch room from GCP to server
@@ -92,30 +88,66 @@ func NewRoom(roomID, gamePath, gameName string, onlineStorage *storage.Client) *
 		if roomID != "" {
 			gameName = getGameNameFromRoomID(roomID)
 		}
-		log.Printf("Room %s started. GameName: %s", roomID, gameName)
+		log.Printf("Room %s started. GamePath: %s, GameName: %s", roomID, gamePath, gameName)
+
+		// Spawn new emulator based on gameName and plug-in all channels
+		room.director = getEmulator(gameName, roomID, imageChannel, audioChannel, inputChannel)
 		path := gamePath + "/" + gameName
-		director.Start(path)
+		meta := room.director.LoadMeta(path)
+		log.Printf("Load with Meta %+v", meta)
+		go room.startVideo(meta.Width, meta.Height)
+		go room.startAudio(meta.AudioSampleRate)
+		room.director.Start()
+
 		log.Printf("Room %s ended", roomID)
 
-		start := time.Now()
+		// TODO: do we need GC, we can remove it
 		runtime.GC()
-		log.Printf("GC takes %s\n", time.Since(start))
 	}(gamePath, gameName, roomID)
 
 	return room
 }
 
+// create director
+func getEmulator(gameName string, roomID string, imageChannel chan<- *image.RGBA, audioChannel chan<- float32, inputChannel <-chan int) emulator.CloudEmulator {
+	gameType := getGameType(gameName)
+
+	switch gameType {
+	case "nes":
+		return emulator.NewDirector(roomID, imageChannel, audioChannel, inputChannel)
+
+	case "gba":
+		nanoarch.Init("gba", roomID, imageChannel, audioChannel, inputChannel)
+		return nanoarch.NAEmulator
+
+	case "bin":
+		nanoarch.Init("pcsx", roomID, imageChannel, audioChannel, inputChannel)
+		return nanoarch.NAEmulator
+	}
+
+	return nil
+}
+
+// getGameNameFromRoomID parse roomID to get roomID and gameName
 func getGameNameFromRoomID(roomID string) string {
-	parts := strings.Split(roomID, "-")
+	parts := strings.Split(roomID, "|")
 	if len(parts) <= 1 {
 		return ""
 	}
 	return parts[1]
 }
 
+func getGameType(gameName string) string {
+	parts := strings.Split(gameName, ".")
+	if len(parts) <= 1 {
+		return ""
+	}
+	return parts[len(parts)-1]
+}
+
 // generateRoomID generate a unique room ID containing 16 digits
 func generateRoomID(gameName string) string {
-	roomID := strconv.FormatInt(rand.Int63(), 16) + "-" + gameName
+	roomID := strconv.FormatInt(rand.Int63(), 16) + "|" + gameName
 	log.Println("Generate Room ID", roomID)
 	//roomID := uuid.Must(uuid.NewV4()).String()
 	return roomID
@@ -196,7 +228,8 @@ func (r *Room) Close() {
 	r.IsRunning = false
 	log.Println("Closing room", r.ID)
 	log.Println("Closing director of room ", r.ID)
-	close(r.director.Done)
+	r.director.Close()
+	//close(r.director.Done)
 	log.Println("Closing input of room ", r.ID)
 	close(r.inputChannel)
 	close(r.Done)

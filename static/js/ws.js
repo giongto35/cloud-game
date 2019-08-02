@@ -45,24 +45,14 @@ conn.onmessage = e => {
     case "sdp":
         log("Got remote sdp");
         pc.setRemoteDescription(new RTCSessionDescription(JSON.parse(atob(d["data"]))));
-        //conn.send(JSON.stringify({"id": "sdpdon", "packet_id": d["packet_id"]}));
         break;
 
     case "requestOffer":
         curPacketID = d["packet_id"];
         log("Received request offer ", curPacketID)
         startWebRTC();
-        //pc.createOffer({offerToReceiveVideo: true, offerToReceiveAudio: false}).then(d => {
-            //pc.setLocalDescription(d).catch(log);
-        //})
 
-    //case "sdpremote":
-        //log("Got remote sdp");
-        //pc.setRemoteDescription(new RTCSessionDescription(JSON.parse(atob(d["data"]))));
-        //conn.send(JSON.stringify({"id": "remotestart", "data": GAME_LIST[gameIdx].nes, "room_id": roomID.value, "player_index": parseInt(playerIndex.value, 10)}));inputTimer
-        //break;
     case "heartbeat":
-        // console.log("Ping: ", Date.now() - d["data"])
         // TODO: Calc time
         break;
     case "start":
@@ -177,73 +167,6 @@ function startWebRTC() {
     }
     inputChannel.onclose = () => log('inputChannel has closed');
 
-
-    // audio channel, unordered + unreliable, id 1
-    var audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-    var isInit = false;
-    var audioStack = [];
-    var nextTime = 0;
-    var packetIdx = 0;
-
-    function scheduleBuffers() {
-        while (audioStack.length) {
-            var buffer = audioStack.shift();
-            var source = audioCtx.createBufferSource();
-            source.buffer = buffer;
-            source.connect(audioCtx.destination);
-
-            // tracking linear time
-            if (nextTime == 0)
-                nextTime = audioCtx.currentTime + 0.1;  /// add 100ms latency to work well across systems - tune this if you like
-            source.start(nextTime);
-            nextTime+=source.buffer.duration; // Make the next buffer wait the length of the last buffer before being played
-
-        };
-    }
-
-    sampleRate = 16000;
-    channels = 1;
-    bitDepth = 16;
-    decoder = new OpusDecoder(sampleRate, channels);
-    function decodeChunk(opusChunk) {
-        pcmChunk = decoder.decode_float(opusChunk);
-        myBuffer = audioCtx.createBuffer(channels, pcmChunk.length, sampleRate);
-        nowBuffering = myBuffer.getChannelData(0, bitDepth, sampleRate);
-        nowBuffering.set(pcmChunk);
-        return myBuffer;
-    }
-
-    audioChannel = pc.createDataChannel('b', {
-        ordered: false,
-        negotiated: true,
-        id: 1,
-        maxRetransmits: 0
-    })
-    audioChannel.onopen = () => {
-        log('audioChannel has opened');
-        audioReady = true;
-        // TODO: Event based
-        if (roomID != "") {
-            startGame()
-        }
-    }
-    audioChannel.onclose = () => log('audioChannel has closed');
-
-    audioChannel.onmessage = (e) => {
-        arr = new Uint8Array(e.data);
-        idx = arr[arr.length - 1];
-        // only accept missing 5 packets
-        if (idx < packetIdx && packetIdx - idx < 251) // 256 - 5
-            return;
-        packetIdx = idx;
-        audioStack.push(decodeChunk(e.data));
-        if (isInit || (audioStack.length > 10)) { // make sure we put at least 10 chunks in the buffer before starting
-            isInit = true;
-            scheduleBuffers();
-        }
-    }
-
-
     pc.oniceconnectionstatechange = e => {
         log(`iceConnectionState: ${pc.iceConnectionState}`);
 
@@ -268,9 +191,12 @@ function startWebRTC() {
     }
 
 
+    var stream = new MediaStream();
+    document.getElementById("game-screen").srcObject = stream;
+
     // video channel
     pc.ontrack = function (event) {
-        document.getElementById("game-screen").srcObject = event.streams[0];
+        stream.addTrack(event.track);
         var promise = document.getElementById("game-screen").play();
         if (promise !== undefined) {
             promise.then(_ => {
@@ -315,9 +241,11 @@ function startWebRTC() {
 
     // receiver only tracks
     pc.addTransceiver('video', {'direction': 'recvonly'});
+    pc.addTransceiver('audio', {'direction': 'recvonly'});
 
     // create SDP
-    pc.createOffer({offerToReceiveVideo: true, offerToReceiveAudio: false}).then(d => {
+    pc.createOffer({offerToReceiveVideo: true, offerToReceiveAudio: true}).then(d => {
+        log(d.sdp)
         pc.setLocalDescription(d).catch(log);
     })
 
@@ -329,7 +257,7 @@ function startGame() {
         return false;
     }
     // TODO: Add while loop
-    if (!gameReady || !inputReady || !audioReady) {
+    if (!gameReady || !inputReady) {
         popup("Game is not ready yet. Please wait");
         return false;
     }
@@ -344,9 +272,6 @@ function startGame() {
 
     // clear menu screen
     stopGameInputTimer();
-    //$("#menu-screen").fadeOut(DEBUG ? 0 : 400, function() {
-        //$("#game-screen").show();
-    //});
     $("#menu-screen").hide()
     $("#game-screen").show();
     $("#btn-save").show();

@@ -9,36 +9,11 @@ import (
 	"image/draw"
 	"image/gif"
 	"image/png"
-	"log"
 	"os"
-	"os/user"
 	"path"
 
 	"github.com/giongto35/cloud-game/emulator/nes"
 )
-
-var homeDir string
-
-func init() {
-	u, err := user.Current()
-	if err != nil {
-		log.Fatalln(err)
-	}
-	homeDir = u.HomeDir
-}
-
-// Public call to get savePath
-func GetSavePath(roomID string) string {
-	return savePath(roomID)
-}
-
-func sramPath(hash string) string {
-	return homeDir + "/.nes/sram/" + hash + ".dat"
-}
-
-func savePath(hash string) string {
-	return homeDir + "/.nes/save/" + hash + ".dat"
-}
 
 func combineButtons(a, b [8]bool) [8]bool {
 	var result [8]bool
