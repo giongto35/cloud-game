@@ -92,25 +92,20 @@ type WebRTC struct {
 }
 
 // StartClient start webrtc
-func (w *WebRTC) StartClient(remoteSession string, iceCandidates []string, width, height int) (string, error) {
+func (w *WebRTC) StartClient(remoteSession string, iceCandidates []string) (string, error) {
 	defer func() {
 		if err := recover(); err != nil {
 			log.Println(err)
 			w.StopClient()
 		}
 	}()
+	var err error
 
 	// reset client
 	if w.isConnected {
 		w.StopClient()
 		time.Sleep(2 * time.Second)
 	}
-
-	encoder, err := vpxEncoder.NewVpxEncoder(width, height, 20, 1200, 5)
-	if err != nil {
-		return "", err
-	}
-	w.encoder = encoder
 
 	log.Println("=== StartClient ===")
 	w.connection, err = webrtc.NewPeerConnection(webrtcconfig)
@@ -128,19 +123,28 @@ func (w *WebRTC) StartClient(remoteSession string, iceCandidates []string, width
 	}
 
 	// audio track
-	dfalse := false
-	dtrue := true
-	var d0 uint16 = 0
-	var d1 uint16 = 1
-	audioTrack, err := w.connection.CreateDataChannel("b", &webrtc.DataChannelInit{
-		Ordered:        &dfalse,
-		MaxRetransmits: &d0,
-		Negotiated:     &dtrue,
-		ID:             &d1,
-	})
+	opusTrack, err := w.connection.NewTrack(webrtc.DefaultPayloadTypeOpus, rand.Uint32(), "audio", "pion2b")
 	if err != nil {
 		return "", err
 	}
+	_, err = w.connection.AddTrack(opusTrack)
+	if err != nil {
+		return "", err
+	}
+
+	dfalse := false
+	dtrue := true
+	var d0 uint16 = 0
+	//var d1 uint16 = 1
+	//audioTrack, err := w.connection.CreateDataChannel("b", &webrtc.DataChannelInit{
+	//Ordered:        &dfalse,
+	//MaxRetransmits: &d0,
+	//Negotiated:     &dtrue,
+	//ID:             &d1,
+	//})
+	//if err != nil {
+	//return "", err
+	//}
 
 	// input channel
 	inputTrack, err := w.connection.CreateDataChannel("a", &webrtc.DataChannelInit{
@@ -171,7 +175,8 @@ func (w *WebRTC) StartClient(remoteSession string, iceCandidates []string, width
 			go func() {
 				w.isConnected = true
 				log.Println("ConnectionStateConnected")
-				w.startStreaming(vp8Track, audioTrack)
+				//w.startStreaming(vp8Track, audioTrack)
+				w.startStreaming(vp8Track, opusTrack)
 			}()
 
 		}
@@ -264,27 +269,8 @@ func (w *WebRTC) IsConnected() bool {
 }
 
 // func (w *WebRTC) startStreaming(vp8Track *webrtc.Track, opusTrack *webrtc.Track) {
-func (w *WebRTC) startStreaming(vp8Track *webrtc.Track, audioTrack *webrtc.DataChannel) {
+func (w *WebRTC) startStreaming(vp8Track *webrtc.Track, opusTrack *webrtc.Track) {
 	log.Println("Start streaming")
-	// send screenshot
-	go func() {
-		defer func() {
-			if r := recover(); r != nil {
-				fmt.Println("Recovered when sent to close Image Channel")
-			}
-		}()
-
-		// TODO: Use same yuv
-		for yuv := range w.ImageChannel {
-			if !w.isConnected {
-				return
-			}
-			if len(w.encoder.Input) < cap(w.encoder.Input) {
-				w.encoder.Input <- yuv
-			}
-		}
-	}()
-
 	// receive frame buffer
 	go func() {
 		defer func() {
@@ -293,11 +279,11 @@ func (w *WebRTC) startStreaming(vp8Track *webrtc.Track, audioTrack *webrtc.DataC
 			}
 		}()
 
-		for bs := range w.encoder.Output {
+		for data := range w.ImageChannel {
 			if *config.IsMonitor {
 				log.Println("Encoding FPS : ", w.calculateFPS())
 			}
-			err := vp8Track.WriteSample(media.Sample{Data: bs, Samples: 1})
+			err := vp8Track.WriteSample(media.Sample{Data: data, Samples: 1})
 			if err != nil {
 				log.Println("Warn: Err write sample: ", err)
 			}
@@ -316,7 +302,10 @@ func (w *WebRTC) startStreaming(vp8Track *webrtc.Track, audioTrack *webrtc.DataC
 			if !w.isConnected {
 				return
 			}
-			audioTrack.Send(data)
+			err := opusTrack.WriteSample(media.Sample{Data: data, Samples: uint32(len(data))})
+			if err != nil {
+				log.Println("Warn: Err write sample: ", err)
+			}
 		}
 	}()
 

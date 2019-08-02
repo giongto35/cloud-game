@@ -5,6 +5,7 @@ import (
 	"image"
 
 	"github.com/giongto35/cloud-game/emulator/nes"
+	"github.com/giongto35/cloud-game/util"
 )
 
 // List key pressed
@@ -31,10 +32,12 @@ const NumKeys = 8
 
 // Audio consts
 const (
-	SampleRate = 16000
-	Channels   = 1
-	TimeFrame  = 60
-	AppAudio   = 1
+	//SampleRate = 16000
+	SampleRate = 48000
+	//SampleRate = 32768
+	Channels  = 2
+	TimeFrame = 40
+	AppAudio  = 1
 )
 
 type GameView struct {
@@ -100,7 +103,7 @@ func (view *GameView) Enter() {
 	view.console.SetAudioChannel(view.audioChannel)
 
 	// load state if the saveFile file existed in the server (Join the old room)
-	if err := view.console.LoadState(savePath(view.saveFile)); err == nil {
+	if err := view.console.LoadState(util.GetSavePath(view.saveFile)); err == nil {
 		return
 	} else {
 		view.console.Reset()
@@ -109,7 +112,7 @@ func (view *GameView) Enter() {
 	// load sram
 	cartridge := view.console.Cartridge
 	if cartridge.Battery != 0 {
-		if sram, err := readSRAM(sramPath(view.saveFile)); err == nil {
+		if sram, err := readSRAM(util.GetSRAMPath(view.saveFile)); err == nil {
 			cartridge.SRAM = sram
 		}
 	}
@@ -122,7 +125,7 @@ func (view *GameView) Exit() {
 	// save sram
 	cartridge := view.console.Cartridge
 	if cartridge.Battery != 0 {
-		writeSRAM(sramPath(view.saveFile), cartridge.SRAM)
+		writeSRAM(util.GetSRAMPath(view.saveFile), cartridge.SRAM)
 	}
 
 	// close producer
@@ -147,7 +150,7 @@ func (view *GameView) Update(t, dt float64) {
 func (view *GameView) Save(extraSaveFunc func() error) {
 	// put saving event to queue, process in updateEvent
 	view.savingJob = &job{
-		path:      savePath(view.saveFile),
+		path:      util.GetSavePath(view.saveFile),
 		extraFunc: extraSaveFunc,
 	}
 }
@@ -155,7 +158,7 @@ func (view *GameView) Save(extraSaveFunc func() error) {
 func (view *GameView) Load() {
 	// put saving event to queue, process in updateEvent
 	view.loadingJob = &job{
-		path:      savePath(view.saveFile),
+		path:      util.GetSavePath(view.saveFile),
 		extraFunc: nil,
 	}
 }

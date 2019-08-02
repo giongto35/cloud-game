@@ -133,13 +133,15 @@ func (o *Server) WS(w http.ResponseWriter, r *http.Request) {
 	go client.Listen()
 
 	// Set up server
+
+	workerClients := o.getAvailableWorkers()
 	// SessionID will be the unique per frontend connection
 	sessionID := uuid.Must(uuid.NewV4()).String()
 	var serverID string
 	if config.MatchWorkerRandom {
-		serverID, err = o.findBestServerRandom()
+		serverID, err = findBestServerRandom(workerClients)
 	} else {
-		serverID, err = o.findBestServerFromBrowser(client)
+		serverID, err = findBestServerFromBrowser(workerClients, client)
 	}
 
 	if err != nil {
@@ -158,6 +160,7 @@ func (o *Server) WS(w http.ResponseWriter, r *http.Request) {
 	// TODO:?
 	//defer wssession.Close()
 	log.Println("New client will conect to server", wssession.ServerID)
+	wssession.WorkerClient.IsAvailable = false
 
 	wssession.RouteBrowser()
 
@@ -176,17 +179,31 @@ func (o *Server) WS(w http.ResponseWriter, r *http.Request) {
 		},
 		nil,
 	)
+	// WorkerClient become available again
+	wssession.WorkerClient.IsAvailable = true
+}
+
+// getAvailableWorkers returns the list of available worker
+func (o *Server) getAvailableWorkers() map[string]*WorkerClient {
+	workerClients := map[string]*WorkerClient{}
+	for k, w := range o.workerClients {
+		if w.IsAvailable {
+			workerClients[k] = w
+		}
+	}
+
+	return workerClients
 }
 
 // findBestServer returns the best server for a session
-func (o *Server) findBestServerRandom() (string, error) {
+func findBestServerRandom(workerClients map[string]*WorkerClient) (string, error) {
 	// TODO: Find best Server by latency, currently return by ping
-	if len(o.workerClients) == 0 {
+	if len(workerClients) == 0 {
 		return "", errors.New("No server found")
 	}
 
-	r := rand.Intn(len(o.workerClients))
-	for k, _ := range o.workerClients {
+	r := rand.Intn(len(workerClients))
+	for k, _ := range workerClients {
 		if r == 0 {
 			return k, nil
 		}
@@ -198,13 +215,13 @@ func (o *Server) findBestServerRandom() (string, error) {
 
 // findBestServerFromBrowser returns the best server for a session
 // All workers addresses are sent to user and user will ping to get latency
-func (o *Server) findBestServerFromBrowser(client *BrowserClient) (string, error) {
+func findBestServerFromBrowser(workerClients map[string]*WorkerClient, client *BrowserClient) (string, error) {
 	// TODO: Find best Server by latency, currently return by ping
-	if len(o.workerClients) == 0 {
+	if len(workerClients) == 0 {
 		return "", errors.New("No server found")
 	}
 
-	latencies := o.getLatencyMapFromBrowser(client)
+	latencies := getLatencyMapFromBrowser(workerClients, client)
 	log.Println("Latency map", latencies)
 
 	if len(latencies) == 0 {
@@ -226,14 +243,14 @@ func (o *Server) findBestServerFromBrowser(client *BrowserClient) (string, error
 }
 
 // getLatencyMapFromBrowser get all latencies from worker to user
-func (o *Server) getLatencyMapFromBrowser(client *BrowserClient) map[*WorkerClient]int64 {
+func getLatencyMapFromBrowser(workerClients map[string]*WorkerClient, client *BrowserClient) map[*WorkerClient]int64 {
 	workersList := []*WorkerClient{}
 
 	latencyMap := map[*WorkerClient]int64{}
 
 	// addressList is the list of worker addresses
 	addressList := []string{}
-	for _, workerClient := range o.workerClients {
+	for _, workerClient := range workerClients {
 		workersList = append(workersList, workerClient)
 		addressList = append(addressList, workerClient.Address)
 	}
