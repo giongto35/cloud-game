@@ -5,6 +5,7 @@ RUN apt-get update
 RUN apt-get install pkg-config libvpx-dev libopus-dev libopusfile-dev -y
 
 RUN mkdir -p /cloud-game
+VOLUME /home/thanh/Desktop/Code/cloud-game/games:/cloud-game/games
 COPY . /cloud-game/
 WORKDIR /cloud-game
 

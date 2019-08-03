@@ -66,8 +66,12 @@ var NAEmulator *naEmulator
 
 // TODO: Load from config
 var emulatorCorePath = map[string]string{
-	"gba":  "libretro/cores/mgba_libretro.so",
-	"pcsx": "libretro/cores/pcsx_rearmed_libretro.so",
+	"gba": "libretro/cores/mgba_libretro.so",
+	//"pcsx": "libretro/cores/mednafen_psx_libretro.so",
+	//"pcsx": "libretro/cores/mednafen_psx_hw_libretro.so",
+	"pcsx":   "libretro/cores/pcsx_rearmed_libretro.so",
+	"arcade": "libretro/cores/fbalpha2012_neogeo_libretro.so",
+	"mame":   "libretro/cores/mame2016_libretro.so",
 }
 
 // NAEmulator implements CloudEmulator interface based on NanoArch(golang RetroArch)
@@ -94,9 +98,11 @@ func (na *naEmulator) listenInput() {
 	// we decode the bitmap and send to channel
 	for inpBitmap := range NAEmulator.inputChannel {
 		for k := 0; k < len(na.keys); k++ {
+			key := bindRetroKeys[k]
 			if (inpBitmap & 1) == 1 {
-				key := bindRetroKeys[k]
 				na.keys[key] = true
+			} else {
+				na.keys[key] = false
 			}
 			inpBitmap >>= 1
 		}

@@ -187,10 +187,6 @@ func coreInputPoll() {
 	for i := range NAEmulator.keys {
 		joy[i] = NAEmulator.keys[i]
 	}
-
-	for i := range NAEmulator.keys {
-		NAEmulator.keys[i] = false
-	}
 }
 
 //export coreInputState
