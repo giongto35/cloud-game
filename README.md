@@ -1,5 +1,5 @@
 # Web-based Cloud Gaming Service
-- [http://cloud.webgame2d.com](http://cloud.webgame2d.com)
+- [http://cloudretro.io](http://cloudretro.io)
 
 - [**Game Instruction**](document/instruction/)
 For the best gaming experience, please select the closest region to you.   

@@ -123,6 +123,9 @@ func getEmulator(gameName string, roomID string, imageChannel chan<- *image.RGBA
 	case "bin":
 		nanoarch.Init("pcsx", roomID, imageChannel, audioChannel, inputChannel)
 		return nanoarch.NAEmulator
+	case "zip":
+		nanoarch.Init("mame", roomID, imageChannel, audioChannel, inputChannel)
+		return nanoarch.NAEmulator
 	}
 
 	return nil

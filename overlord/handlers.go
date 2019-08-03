@@ -61,11 +61,6 @@ func (o *Server) GetWeb(w http.ResponseWriter, r *http.Request) {
 		log.Fatal(err)
 	}
 
-	//bs, err := ioutil.ReadFile(indexFN)
-	//if err != nil {
-	//log.Fatal(err)
-	//}
-	//w.Write(bs)
 	tmpl.Execute(w, data)
 }
 
