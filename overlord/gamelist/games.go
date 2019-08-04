@@ -1,8 +1,6 @@
 package gamelist
 
 import (
-	"encoding/json"
-	"fmt"
 	"os"
 	"path/filepath"
 )
@@ -22,11 +20,4 @@ func GetGameList(gamePath string) []string {
 	})
 
 	return games
-}
-
-// GetEncodedGameList returns game list in encoded wspacket format
-func GetEncodedGameList(gamePath string) string {
-	encodedList, _ := json.Marshal(GetGameList(gamePath))
-	fmt.Println(encodedList)
-	return string(encodedList)
 }
