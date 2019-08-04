@@ -91,7 +91,7 @@ func (o *Server) WSO(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 	}
-	client := NewWorkerClient(c, serverID, address, config.DefaultSTUNTURN)
+	client := NewWorkerClient(c, serverID, address, fmt.Sprintf(config.StunTurnTemplate, address, address))
 	o.workerClients[serverID] = client
 	defer o.cleanConnection(client, serverID)
 

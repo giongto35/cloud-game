@@ -35,7 +35,7 @@ conn.onmessage = e => {
         data.shift()
         gameList = [];
 
-        files.forEach(file => {
+        data.forEach(file => {
             var file = file
             var name = file.substr(0, file.indexOf('.'));
             gameList.push({file: file, name: name});
@@ -149,13 +149,13 @@ function sendPing() {
 }
 
 function startWebRTC(iceservers) {
-    log("received stunturn from worker ${iceservers}")
+    log(`received stunturn from worker ${iceservers}`)
     // webrtc
     //var iceservers = [];
     //if (STUNTURN == "") {
         //iceservers = defaultICE
     //} else {
-    iceservers = JSON.parse(STUNTURN);
+    iceservers = JSON.parse(iceservers);
     //}
     pc = new RTCPeerConnection({iceServers: iceservers });
 

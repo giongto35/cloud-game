@@ -15,6 +15,7 @@ var IsMonitor = flag.Bool("monitor", false, "Turn on monitor")
 var FrontendSTUNTURN = flag.String("stunturn", DefaultSTUNTURN, "Frontend STUN TURN servers")
 var Mode = flag.String("mode", "dev", "Environment")
 var IsRetro = flag.Bool("isretro", true, "Is retro")
+var StunTurnTemplate = `[{"urls":"stun:%s:3478"},{"urls":"turn:%s:3478","username":"root","credential":"root"}]`
 
 var WSWait = 20 * time.Second
 var MatchWorkerRandom = false
