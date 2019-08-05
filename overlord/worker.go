@@ -1,7 +1,6 @@
 package overlord
 
 import (
-	"fmt"
 	"log"
 
 	"github.com/giongto35/cloud-game/cws"
@@ -45,7 +44,6 @@ func (o *Server) RouteWorker(workerClient *WorkerClient) {
 
 // NewWorkerClient returns a client connecting to worker. This connection exchanges information between workers and server
 func NewWorkerClient(c *websocket.Conn, serverID string, address string, stunturn string) *WorkerClient {
-	fmt.Println("STUN TURN WORKER", stunturn)
 	return &WorkerClient{
 		Client:         cws.NewClient(c),
 		ServerID:       serverID,

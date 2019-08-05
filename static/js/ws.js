@@ -151,12 +151,7 @@ function sendPing() {
 function startWebRTC(iceservers) {
     log(`received stunturn from worker ${iceservers}`)
     // webrtc
-    //var iceservers = [];
-    //if (STUNTURN == "") {
-        //iceservers = defaultICE
-    //} else {
     iceservers = JSON.parse(iceservers);
-    //}
     pc = new RTCPeerConnection({iceServers: iceservers });
 
     // input channel, ordered + reliable, id 0
