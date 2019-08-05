@@ -91,7 +91,7 @@ func (o *Server) WSO(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 	}
-	client := NewWorkerClient(c, serverID, address)
+	client := NewWorkerClient(c, serverID, address, fmt.Sprintf(config.StunTurnTemplate, address, address))
 	o.workerClients[serverID] = client
 	defer o.cleanConnection(client, serverID)
 
@@ -160,8 +160,8 @@ func (o *Server) WS(w http.ResponseWriter, r *http.Request) {
 	wssession.RouteBrowser()
 
 	wssession.BrowserClient.Send(cws.WSPacket{
-		ID:   "gamelist",
-		Data: gamelist.GetEncodedGameList(gamePath),
+		ID:   "init",
+		Data: createInitPackage(o.workerClients[serverID].StunTurnServer, gamePath),
 	}, nil)
 
 	// If peerconnection is done (client.Done is signalled), we close peerconnection
@@ -272,6 +272,8 @@ func getLatencyMapFromBrowser(workerClients map[string]*WorkerClient, client *Br
 	return latencyMap
 }
 
+// cleanConnection is called when a worker is disconnected
+// connection from worker (client) to server is also closed
 func (o *Server) cleanConnection(client *WorkerClient, serverID string) {
 	log.Println("Unregister server from overlord")
 	// Remove serverID from servers
@@ -284,4 +286,13 @@ func (o *Server) cleanConnection(client *WorkerClient, serverID string) {
 	}
 
 	client.Close()
+}
+
+// createInitPackage returns serverhost + game list in encoded wspacket format
+// This package will be sent to initialize
+func createInitPackage(stunturn, gamePath string) string {
+	gameList := gamelist.GetGameList(gamePath)
+	initPackage := append([]string{stunturn}, gameList...)
+	encodedList, _ := json.Marshal(initPackage)
+	return string(encodedList)
 }
