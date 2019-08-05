@@ -24,11 +24,18 @@ conn.onmessage = e => {
     d = JSON.parse(e.data);
     switch (d["id"]) {
 
-    case "gamelist":
-        // parse files list to gamelist
-        files = JSON.parse(d["data"]);
+    case "init":
+        // TODO: Read from struct
+        // init package has 2 part [stunturn, gamelist]
+        // The first element is stunturn address
+        // The rest are list of game
+        data = JSON.parse(d["data"]);
+        stunturn = data[0]
+        startWebRTC(stunturn);
+        data.shift()
         gameList = [];
-        files.forEach(file => {
+
+        data.forEach(file => {
             var file = file
             var name = file.substr(0, file.indexOf('.'));
             gameList.push({file: file, name: name});
@@ -102,8 +109,8 @@ conn.onmessage = e => {
                     console.log(latenciesMap)
 
                     conn.send(JSON.stringify({"id": "checkLatency", "data": JSON.stringify(latenciesMap), "packet_id": latencyPacketID}));
-                    startWebRTC();
-        }
+                    //startWebRTC();
+                }
             }
             xmlHttp.onload = () => {
                 cntResp++;
@@ -116,8 +123,8 @@ conn.onmessage = e => {
 
                     //conn.send(JSON.stringify({"id": "checkLatency", "data": latenciesMap, "packet_id": latencyPacketID}));
                     conn.send(JSON.stringify({"id": "checkLatency", "data": JSON.stringify(latenciesMap), "packet_id": latencyPacketID}));
-                    startWebRTC();
-        }
+                    //startWebRTC();
+                }
             }
             xmlHttp.send( null );
         }
@@ -141,14 +148,10 @@ function sendPing() {
     conn.send(JSON.stringify({"id": "heartbeat", "data": Date.now().toString()}));
 }
 
-function startWebRTC() {
+function startWebRTC(iceservers) {
+    log(`received stunturn from worker ${iceservers}`)
     // webrtc
-    var iceservers = [];
-    if (STUNTURN == "") {
-        iceservers = defaultICE
-    } else {
-        iceservers = JSON.parse(STUNTURN);
-    }
+    iceservers = JSON.parse(iceservers);
     pc = new RTCPeerConnection({iceServers: iceservers });
 
     // input channel, ordered + reliable, id 0
