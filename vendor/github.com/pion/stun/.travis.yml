@@ -1,0 +1,31 @@
+language: go
+
+sudo: false
+
+os:
+  - linux
+  - osx
+
+env:
+  - GO111MODULE=on
+
+go:
+  - 1.11.x
+  - 1.12.x
+
+install: true
+
+before_script:
+  # Add an IPv6 config - see the corresponding Travis issue
+  # https://github.com/travis-ci/travis-ci/issues/8361
+  - if [ "${TRAVIS_OS_NAME}" == "linux" ]; then
+    sudo sh -c 'echo 0 > /proc/sys/net/ipv6/conf/all/disable_ipv6';
+    fi
+  - curl -sfL https://install.goreleaser.com/github.com/golangci/golangci-lint.sh | bash -s -- -b $GOPATH/bin v1.12.5
+  - make assert
+
+script:
+  - make test
+
+after_success:
+  - bash <(curl -s https://codecov.io/bash)

@@ -1,0 +1,21 @@
+version: "{build}"
+
+platform: x64
+
+branches:
+  only:
+    - master
+
+skip_tags: true
+
+clone_folder: c:\src\gortc\turn
+
+environment:
+  GOPATH: c:\gopath
+  GOVERSION: 1.12
+
+install:
+  - go version
+
+build_script:
+  - go test -v .
