@@ -51,3 +51,9 @@ key.json
 run_prod_docker.sh
 prod/
 turnserver.conf
+
+### Ignore Goland files
+.idea/
+
+### Ignore build artifact directory
+./build
