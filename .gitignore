@@ -56,4 +56,7 @@ turnserver.conf
 .idea/
 
 ### Ignore build artifact directory
-./build
+build/
+bin/
+.coverage.out
+_output/

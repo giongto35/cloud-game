@@ -12,6 +12,8 @@ github.com/beorn7/perks/quantile
 github.com/cheekybits/genny/generic
 # github.com/gofrs/uuid v3.2.0+incompatible
 github.com/gofrs/uuid
+# github.com/golang/glog v0.0.0-20160126235308-23def4e6c14b
+github.com/golang/glog
 # github.com/golang/protobuf v1.3.1
 github.com/golang/protobuf/proto
 github.com/golang/protobuf/ptypes
@@ -94,6 +96,8 @@ github.com/prometheus/common/internal/bitbucket.org/ww/goautoneg
 # github.com/prometheus/procfs v0.0.0-20190507164030-5867b95ac084
 github.com/prometheus/procfs
 github.com/prometheus/procfs/internal/fs
+# github.com/spf13/pflag v1.0.3
+github.com/spf13/pflag
 # go.opencensus.io v0.21.0
 go.opencensus.io/trace
 go.opencensus.io/plugin/ochttp
