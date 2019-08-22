@@ -4,7 +4,10 @@ import (
 	"fmt"
 	"log"
 
+	"github.com/giongto35/cloud-game/config"
+	"github.com/giongto35/cloud-game/encoder"
 	"github.com/giongto35/cloud-game/h264encoder"
+	"github.com/giongto35/cloud-game/vpx-encoder"
 	"gopkg.in/hraban/opus.v2"
 )
 
@@ -96,11 +99,15 @@ func (r *Room) startAudio(sampleRate int) {
 }
 
 func (r *Room) startVideo(width, height int) {
-	//size := int(float32(width*height) * 1.5)
-	//yuv := make([]byte, size, size)
+	var encoder encoder.Encoder
+	var err error
 
-	//encoder, err := vpxEncoder.NewVpxEncoder(width, height, 20)
-	encoder, err := h264encoder.NewH264Encoder(width, height, 20)
+	if config.Codec == config.CODEC_H264 {
+		encoder, err = h264encoder.NewH264Encoder(width, height, 20)
+	} else {
+		encoder, err = vpxencoder.NewVpxEncoder(width, height, 20, 1200, 5)
+	}
+
 	if err != nil {
 		fmt.Println("error create new encoder", err)
 		return
@@ -122,8 +129,6 @@ func (r *Room) startVideo(width, height int) {
 				return
 			}
 			if len(einput) < cap(einput) {
-				//util.RgbaToYuvInplace(image, yuv, width, height)
-				//encoder.Input <- yuv
 				einput <- image
 			}
 		}

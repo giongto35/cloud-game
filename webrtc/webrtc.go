@@ -101,6 +101,7 @@ func (w *WebRTC) StartClient(remoteSession string, iceCandidates []string) (stri
 		}
 	}()
 	var err error
+	var videoTrack *webrtc.Track
 
 	// reset client
 	if w.isConnected {
@@ -114,11 +115,15 @@ func (w *WebRTC) StartClient(remoteSession string, iceCandidates []string) (stri
 		return "", err
 	}
 
-	vp8Track, err := w.connection.NewTrack(webrtc.DefaultPayloadTypeH264, rand.Uint32(), "video", "pion2")
+	if config.Codec == config.CODEC_H264 {
+		videoTrack, err = w.connection.NewTrack(webrtc.DefaultPayloadTypeH264, rand.Uint32(), "video", "pion2")
+	} else {
+		videoTrack, err = w.connection.NewTrack(webrtc.DefaultPayloadTypeVP8, rand.Uint32(), "video", "pion2")
+	}
 	if err != nil {
 		return "", err
 	}
-	_, err = w.connection.AddTrack(vp8Track)
+	_, err = w.connection.AddTrack(videoTrack)
 	if err != nil {
 		return "", err
 	}
@@ -136,16 +141,6 @@ func (w *WebRTC) StartClient(remoteSession string, iceCandidates []string) (stri
 	dfalse := false
 	dtrue := true
 	var d0 uint16 = 0
-	//var d1 uint16 = 1
-	//audioTrack, err := w.connection.CreateDataChannel("b", &webrtc.DataChannelInit{
-	//Ordered:        &dfalse,
-	//MaxRetransmits: &d0,
-	//Negotiated:     &dtrue,
-	//ID:             &d1,
-	//})
-	//if err != nil {
-	//return "", err
-	//}
 
 	// input channel
 	inputTrack, err := w.connection.CreateDataChannel("a", &webrtc.DataChannelInit{
@@ -176,8 +171,7 @@ func (w *WebRTC) StartClient(remoteSession string, iceCandidates []string) (stri
 			go func() {
 				w.isConnected = true
 				log.Println("ConnectionStateConnected")
-				//w.startStreaming(vp8Track, audioTrack)
-				w.startStreaming(vp8Track, opusTrack)
+				w.startStreaming(videoTrack, opusTrack)
 			}()
 
 		}
