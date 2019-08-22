@@ -2,11 +2,12 @@ package vpxencoder
 
 import (
 	"fmt"
+	"image"
 	"log"
-	"time"
 	"unsafe"
 
-	"github.com/giongto35/cloud-game/config"
+	"github.com/giongto35/cloud-game/encoder"
+	"github.com/giongto35/cloud-game/util"
 )
 
 // https://chromium.googlesource.com/webm/libvpx/+/master/examples/simple_encoder.c
@@ -43,17 +44,37 @@ import "C"
 
 const chanSize = 2
 
+// VpxEncoder yuvI420 image to vp8 video
+type VpxEncoder struct {
+	Output chan []byte      // frame
+	Input  chan *image.RGBA // yuvI420
+
+	IsRunning bool
+	Done      bool
+
+	width  int
+	height int
+	// C
+	fps              C.int
+	bitrate          C.uint
+	keyFrameInterval C.int
+	frameCount       C.int
+	vpxCodexCtx      C.vpx_codec_ctx_t
+	vpxImage         C.vpx_image_t
+	vpxCodexIter     C.vpx_codec_iter_t
+}
+
 // NewVpxEncoder create vp8 encoder
-func NewVpxEncoder(w, h, fps, bitrate, keyframe int) (*VpxEncoder, error) {
+func NewVpxEncoder(w, h, fps, bitrate, keyframe int) (encoder.Encoder, error) {
 	v := &VpxEncoder{
 		Output: make(chan []byte, 5*chanSize),
-		Input:  make(chan []byte, chanSize),
+		Input:  make(chan *image.RGBA, chanSize),
 
 		IsRunning: true,
 		Done:      false,
 		// C
-		width:            C.uint(w),
-		height:           C.uint(h),
+		width:            w,
+		height:           h,
 		fps:              C.int(fps),
 		bitrate:          C.uint(bitrate),
 		keyFrameInterval: C.int(keyframe),
@@ -67,25 +88,6 @@ func NewVpxEncoder(w, h, fps, bitrate, keyframe int) (*VpxEncoder, error) {
 	return v, nil
 }
 
-// VpxEncoder yuvI420 image to vp8 video
-type VpxEncoder struct {
-	Output chan []byte // frame
-	Input  chan []byte // yuvI420
-
-	IsRunning bool
-	Done      bool
-	// C
-	width            C.uint
-	height           C.uint
-	fps              C.int
-	bitrate          C.uint
-	keyFrameInterval C.int
-	frameCount       C.int
-	vpxCodexCtx      C.vpx_codec_ctx_t
-	vpxImage         C.vpx_image_t
-	vpxCodexIter     C.vpx_codec_iter_t
-}
-
 func (v *VpxEncoder) init() error {
 	v.frameCount = 0
 
@@ -96,7 +98,7 @@ func (v *VpxEncoder) init() error {
 	if encoder == nil {
 		return fmt.Errorf("get_vpx_encoder_by_name failed")
 	}
-	if C.vpx_img_alloc(&v.vpxImage, C.VPX_IMG_FMT_I420, v.width, v.height, 0) == nil {
+	if C.vpx_img_alloc(&v.vpxImage, C.VPX_IMG_FMT_I420, C.uint(v.width), C.uint(v.height), 0) == nil {
 		return fmt.Errorf("vpx_img_alloc failed")
 	}
 
@@ -104,8 +106,8 @@ func (v *VpxEncoder) init() error {
 	if C.call_vpx_codec_enc_config_default(encoder, &cfg) != 0 {
 		return fmt.Errorf("Failed to get default codec config")
 	}
-	cfg.g_w = v.width
-	cfg.g_h = v.height
+	cfg.g_w = C.uint(v.width)
+	cfg.g_h = C.uint(v.height)
 	cfg.g_timebase.num = 1
 	cfg.g_timebase.den = v.fps
 	cfg.rc_target_bitrate = v.bitrate
@@ -126,13 +128,17 @@ func (v *VpxEncoder) startLooping() {
 		}
 	}()
 
-	for yuv := range v.Input {
+	size := int(float32(v.width*v.height) * 1.5)
+	yuv := make([]byte, size, size)
+
+	for img := range v.Input {
 		if v.Done == true {
 			// The first time we see IsRunning set to false, we release and return
-			v.Release()
+			v.release()
 			return
 		}
-		beginEncoding := time.Now()
+
+		util.RgbaToYuvInplace(img, yuv, v.width, v.height)
 
 		// Add Image
 		v.vpxCodexIter = nil
@@ -158,20 +164,16 @@ func (v *VpxEncoder) startLooping() {
 			continue
 		}
 		v.Output <- bs
-
-		if *config.IsMonitor {
-			log.Println("Encoding time: ", time.Now().Sub(beginEncoding))
-		}
 	}
 	if v.Done == true {
 		// The first time we see IsRunning set to false, we release and return
-		v.Release()
+		v.release()
 		return
 	}
 }
 
 // Release release memory and stop loop
-func (v *VpxEncoder) Release() {
+func (v *VpxEncoder) release() {
 	if v.IsRunning {
 		v.IsRunning = false
 		log.Println("Releasing encoder")
@@ -184,4 +186,19 @@ func (v *VpxEncoder) Release() {
 		}
 	}
 	// TODO: Can we merge IsRunning and Done together
+}
+
+// GetInputChan returns input channel
+func (v *VpxEncoder) GetInputChan() chan *image.RGBA {
+	return v.Input
+}
+
+// GetInputChan returns output channel
+func (v *VpxEncoder) GetOutputChan() chan []byte {
+	return v.Output
+}
+
+// GetDoneChan returns done channel
+func (v *VpxEncoder) Stop() {
+	v.Done = true
 }

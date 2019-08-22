@@ -33,8 +33,8 @@
                 There is still audio because current audio flow is not from media but it is manually encoded (technical webRTC challenge). Later, when we can integrate audio to media, we can face the issue with mute again .
                 https://developers.google.com/web/updates/2017/09/autoplay-policy-changes
             -->
-            <!--<video id="game-screen" autoplay=true muted poster="/static/img/screen_loading.gif"></video>-->
-            <video id="game-screen" autoplay=true poster="/static/img/screen_loading.gif"></video>
+            <video id="game-screen" muted playinfullscreen="false" playsinline poster="/static/img/screen_loading.gif"></video>
+            <!--<video id="game-screen" autoplay=true poster="/static/img/screen_loading.gif"></video>-->
 
             <div id="menu-screen">
                 <div id="menu-container">
@@ -95,7 +95,7 @@
     <script src="/static/js/gesture_keyboard.js?1"></script>
     <script src="/static/js/gesture_touch.js?1"></script>
     <script src="/static/js/gesture_joystick.js?1"></script>
-    <script src="/static/js/ws.js?4"></script>
+    <script src="/static/js/ws.js?5"></script>
 
     <script src="/static/js/init.js?1"></script>
     <!-- Global site tag (gtag.js) - Google Analytics -->
