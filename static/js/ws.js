@@ -200,18 +200,6 @@ function startWebRTC(iceservers) {
     // video channel
     pc.ontrack = function (event) {
         stream.addTrack(event.track);
-        var promise = document.getElementById("game-screen").play();
-        if (promise !== undefined) {
-            promise.then(_ => {
-                console.log("Media can autoplay")
-            }).catch(error => {
-                // Usually error happens when we autoplay unmuted video, browser requires manual play.
-                // We already muted video and use separate audio encoding so it's fine now
-                console.log("Media Failed to autoplay")
-                console.log(error)
-                // TODO: Consider workaround
-            });
-        }
     }
 
 
@@ -264,6 +252,20 @@ function startGame() {
         popup("Game is not ready yet. Please wait");
         return false;
     }
+
+    var promise = document.getElementById("game-screen").play();
+    if (promise !== undefined) {
+        promise.then(_ => {
+            console.log("Media can autoplay")
+        }).catch(error => {
+            // Usually error happens when we autoplay unmuted video, browser requires manual play.
+            // We already muted video and use separate audio encoding so it's fine now
+            console.log("Media Failed to autoplay")
+            console.log(error)
+            // TODO: Consider workaround
+        });
+    }
+
     if (screenState != "menu") {
         return false;
     }

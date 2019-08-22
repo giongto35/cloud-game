@@ -2,11 +2,13 @@ package vpxencoder
 
 import (
 	"fmt"
+	"image"
 	"log"
 	"time"
 	"unsafe"
 
 	"github.com/giongto35/cloud-game/config"
+	"github.com/giongto35/cloud-game/encoder"
 )
 
 // https://chromium.googlesource.com/webm/libvpx/+/master/examples/simple_encoder.c
@@ -43,8 +45,27 @@ import "C"
 
 const chanSize = 2
 
+// VpxEncoder yuvI420 image to vp8 video
+type VpxEncoder struct {
+	Output chan []byte // frame
+	Input  chan []byte // yuvI420
+
+	IsRunning bool
+	Done      bool
+	// C
+	width            C.uint
+	height           C.uint
+	fps              C.int
+	bitrate          C.uint
+	keyFrameInterval C.int
+	frameCount       C.int
+	vpxCodexCtx      C.vpx_codec_ctx_t
+	vpxImage         C.vpx_image_t
+	vpxCodexIter     C.vpx_codec_iter_t
+}
+
 // NewVpxEncoder create vp8 encoder
-func NewVpxEncoder(w, h, fps, bitrate, keyframe int) (*VpxEncoder, error) {
+func NewVpxEncoder(w, h, fps, bitrate, keyframe int) (encoder.Encoder, error) {
 	v := &VpxEncoder{
 		Output: make(chan []byte, 5*chanSize),
 		Input:  make(chan []byte, chanSize),
@@ -65,25 +86,6 @@ func NewVpxEncoder(w, h, fps, bitrate, keyframe int) (*VpxEncoder, error) {
 	}
 
 	return v, nil
-}
-
-// VpxEncoder yuvI420 image to vp8 video
-type VpxEncoder struct {
-	Output chan []byte // frame
-	Input  chan []byte // yuvI420
-
-	IsRunning bool
-	Done      bool
-	// C
-	width            C.uint
-	height           C.uint
-	fps              C.int
-	bitrate          C.uint
-	keyFrameInterval C.int
-	frameCount       C.int
-	vpxCodexCtx      C.vpx_codec_ctx_t
-	vpxImage         C.vpx_image_t
-	vpxCodexIter     C.vpx_codec_iter_t
 }
 
 func (v *VpxEncoder) init() error {
@@ -115,11 +117,10 @@ func (v *VpxEncoder) init() error {
 		return fmt.Errorf("Failed to initialize encoder")
 	}
 	v.IsRunning = true
-	go v.startLooping()
 	return nil
 }
 
-func (v *VpxEncoder) startLooping() {
+func (v *VpxEncoder) StartLooping() {
 	defer func() {
 		if r := recover(); r != nil {
 			log.Println("Warn: Recovered panic in encoding ", r)
@@ -129,7 +130,7 @@ func (v *VpxEncoder) startLooping() {
 	for yuv := range v.Input {
 		if v.Done == true {
 			// The first time we see IsRunning set to false, we release and return
-			v.Release()
+			v.release()
 			return
 		}
 		beginEncoding := time.Now()
@@ -165,13 +166,13 @@ func (v *VpxEncoder) startLooping() {
 	}
 	if v.Done == true {
 		// The first time we see IsRunning set to false, we release and return
-		v.Release()
+		v.release()
 		return
 	}
 }
 
 // Release release memory and stop loop
-func (v *VpxEncoder) Release() {
+func (v *VpxEncoder) release() {
 	if v.IsRunning {
 		v.IsRunning = false
 		log.Println("Releasing encoder")
@@ -184,4 +185,19 @@ func (v *VpxEncoder) Release() {
 		}
 	}
 	// TODO: Can we merge IsRunning and Done together
+}
+
+// GetInputChan returns input channel
+func (v *VpxEncoder) GetInputChan() chan *image.RGBA {
+	//return v.Input
+}
+
+// GetInputChan returns output channel
+func (v *VpxEncoder) GetOutputChan() chan []byte {
+	return v.Output
+}
+
+// GetDoneChan returns done channel
+func (v *VpxEncoder) Stop() {
+	v.Done = true
 }

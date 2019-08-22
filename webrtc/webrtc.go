@@ -10,7 +10,7 @@ import (
 	"time"
 
 	"github.com/giongto35/cloud-game/config"
-	vpxEncoder "github.com/giongto35/cloud-game/vpx-encoder"
+	"github.com/giongto35/cloud-game/encoder"
 	"github.com/gofrs/uuid"
 	"github.com/pion/webrtc/v2"
 	"github.com/pion/webrtc/v2/pkg/media"
@@ -75,8 +75,9 @@ type InputDataPair struct {
 type WebRTC struct {
 	ID string
 
-	connection  *webrtc.PeerConnection
-	encoder     *vpxEncoder.VpxEncoder
+	connection *webrtc.PeerConnection
+	//encoder     *vpxEncoder.VpxEncoder
+	encoder     encoder.Encoder
 	isConnected bool
 	isClosed    bool
 	// for yuvI420 image
@@ -113,7 +114,7 @@ func (w *WebRTC) StartClient(remoteSession string, iceCandidates []string) (stri
 		return "", err
 	}
 
-	vp8Track, err := w.connection.NewTrack(webrtc.DefaultPayloadTypeVP8, rand.Uint32(), "video", "pion2")
+	vp8Track, err := w.connection.NewTrack(webrtc.DefaultPayloadTypeH264, rand.Uint32(), "video", "pion2")
 	if err != nil {
 		return "", err
 	}
@@ -249,7 +250,7 @@ func (w *WebRTC) StopClient() {
 	w.isConnected = false
 	if w.encoder != nil {
 		// NOTE: We signal using bool value instead of channel for better performance
-		w.encoder.Done = true
+		w.encoder.Stop()
 	}
 	if w.connection != nil {
 		w.connection.Close()
@@ -257,7 +258,7 @@ func (w *WebRTC) StopClient() {
 	w.connection = nil
 	close(w.InputChannel)
 	// webrtc is producer, so we close
-	close(w.encoder.Input)
+	close(w.encoder.GetInputChan())
 	// NOTE: ImageChannel is waiting for input. Close in writer is not correct for this
 	close(w.ImageChannel)
 	close(w.AudioChannel)
