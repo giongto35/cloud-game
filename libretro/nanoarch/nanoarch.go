@@ -15,6 +15,7 @@ import (
 	"unsafe"
 
 	"github.com/giongto35/cloud-game/emulator"
+	"github.com/go-gl/gl/v2.1/gl"
 )
 
 /*
@@ -138,8 +139,21 @@ func coreVideoRefresh(data unsafe.Pointer, width C.unsigned, height C.unsigned, 
 
 // toImageRGBA convert nanoarch 2d array to image.RGBA
 func toImageRGBA(data unsafe.Pointer) *image.RGBA {
+	//ewidth := 1024
+	//eheight := ewidth * 3 / 4
+	//fmt.Println("width , height :", ewidth, eheight)
+	if video.pixFmt == gl.UNSIGNED_SHORT_5_6_5 {
+		return to565Image(data)
+	} else if video.pixFmt == gl.UNSIGNED_INT_8_8_8_8_REV {
+		return to8888Image(data)
+	}
+	return nil
+}
+
+func to8888Image(data unsafe.Pointer) *image.RGBA {
 	// Convert unsafe Pointer to bytes array
 	var bytes []byte
+
 	// TODO: Investigate this
 	// seems like there is a padding of slice.
 	// If the resolution is 240 * 160. I have to convert to 256 * 160 slice.
@@ -149,7 +163,48 @@ func toImageRGBA(data unsafe.Pointer) *image.RGBA {
 	for w < ewidth {
 		w += 64
 	}
+	w = 700
+	eheight = 700 * 3 / 4
+	sh := (*reflect.SliceHeader)(unsafe.Pointer(&bytes))
+	sh.Data = uintptr(data)
+	sh.Len = w * eheight * 4
+	sh.Cap = w * eheight * 4
 
+	seek := 0
+
+	// Convert bytes array to image
+	// TODO: Reduce overhead of copying to bytes array by accessing unsafe.Pointer directly
+	image := image.NewRGBA(image.Rect(0, 0, ewidth, eheight))
+	for y := 0; y < eheight; y++ {
+		for x := 0; x < w; x++ {
+			if x < ewidth {
+				b8 := bytes[seek]
+				g8 := bytes[seek+1]
+				r8 := bytes[seek+2]
+				a8 := bytes[seek+3]
+
+				image.Set(x, y, color.RGBA{byte(r8), byte(g8), byte(b8), byte(a8)})
+			}
+			seek += 4
+		}
+	}
+
+	return image
+}
+
+func to565Image(data unsafe.Pointer) *image.RGBA {
+	// Convert unsafe Pointer to bytes array
+	var bytes []byte
+
+	// TODO: Investigate this
+	// seems like there is a padding of slice.
+	// If the resolution is 240 * 160. I have to convert to 256 * 160 slice.
+	// If the resolution is 320 * 240. I can keep it to 320 * 240.
+	// I'm making assumption that the slice is packed and it has padding to fill 64
+	var w = 0
+	for w < ewidth {
+		w += 64
+	}
 	sh := (*reflect.SliceHeader)(unsafe.Pointer(&bytes))
 	sh.Data = uintptr(data)
 	sh.Len = w * eheight * 2
@@ -261,8 +316,11 @@ func coreEnvironment(cmd C.unsigned, data unsafe.Pointer) C.bool {
 		if *format > C.RETRO_PIXEL_FORMAT_RGB565 {
 			return false
 		}
-		return true
+		return videoSetPixelFormat(*format)
 	case C.RETRO_ENVIRONMENT_GET_SYSTEM_DIRECTORY:
+		path := (**C.char)(data)
+		*path = C.CString("./libretro/system")
+		return true
 	case C.RETRO_ENVIRONMENT_GET_SAVE_DIRECTORY:
 		path := (**C.char)(data)
 		*path = C.CString(".")
@@ -454,4 +512,33 @@ func nanoarchShutdown() {
 
 func nanoarchRun() {
 	C.bridge_retro_run(retroRun)
+}
+
+func videoSetPixelFormat(format uint32) C.bool {
+	if video.texID != 0 {
+		log.Fatal("Tried to change pixel format after initialization.")
+	}
+
+	switch format {
+	case C.RETRO_PIXEL_FORMAT_0RGB1555:
+		video.pixFmt = gl.UNSIGNED_SHORT_5_5_5_1
+		video.pixType = gl.BGRA
+		video.bpp = 2
+		break
+	case C.RETRO_PIXEL_FORMAT_XRGB8888:
+		video.pixFmt = gl.UNSIGNED_INT_8_8_8_8_REV
+		video.pixType = gl.BGRA
+		video.bpp = 4
+		break
+	case C.RETRO_PIXEL_FORMAT_RGB565:
+		video.pixFmt = gl.UNSIGNED_SHORT_5_6_5
+		video.pixType = gl.RGB
+		video.bpp = 2
+		break
+	default:
+		log.Fatalf("Unknown pixel type %v", format)
+	}
+
+	fmt.Printf("Video pixel: %v %v %v %v %v", video, format, C.RETRO_PIXEL_FORMAT_0RGB1555, C.RETRO_PIXEL_FORMAT_XRGB8888, C.RETRO_PIXEL_FORMAT_RGB565)
+	return true
 }
