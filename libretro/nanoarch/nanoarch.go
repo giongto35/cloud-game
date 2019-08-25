@@ -207,9 +207,9 @@ func to565Image(data unsafe.Pointer, bytes []byte, bytesPerRow int) *image.RGBA 
 
 //export coreInputPoll
 func coreInputPoll() {
-	for i := range NAEmulator.keys {
-		joy[i] = NAEmulator.keys[i]
-	}
+	//for i := range NAEmulator.keys {
+	//joy[i] = NAEmulator.keys[i]
+	//}
 }
 
 //export coreInputState
@@ -218,7 +218,7 @@ func coreInputState(port C.unsigned, device C.unsigned, index C.unsigned, id C.u
 		return 0
 	}
 
-	if id < 255 && joy[id] {
+	if id < 255 && NAEmulator.keys[id] {
 		return 1
 	}
 	return 0
