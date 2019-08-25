@@ -28,4 +28,5 @@ var FileTypeToEmulator = map[string]string{
 	"gba": "gba",
 	"cue": "pcsx",
 	"zip": "mame",
+	"nes": "nes",
 }
