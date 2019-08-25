@@ -80,12 +80,14 @@ var ewidth, eheight int
 var bindRetroKeys = map[int]int{
 	0: C.RETRO_DEVICE_ID_JOYPAD_A,
 	1: C.RETRO_DEVICE_ID_JOYPAD_B,
-	2: C.RETRO_DEVICE_ID_JOYPAD_SELECT,
-	3: C.RETRO_DEVICE_ID_JOYPAD_START,
-	4: C.RETRO_DEVICE_ID_JOYPAD_UP,
-	5: C.RETRO_DEVICE_ID_JOYPAD_DOWN,
-	6: C.RETRO_DEVICE_ID_JOYPAD_LEFT,
-	7: C.RETRO_DEVICE_ID_JOYPAD_RIGHT,
+	2: C.RETRO_DEVICE_ID_JOYPAD_X,
+	3: C.RETRO_DEVICE_ID_JOYPAD_Y,
+	4: C.RETRO_DEVICE_ID_JOYPAD_SELECT,
+	5: C.RETRO_DEVICE_ID_JOYPAD_START,
+	6: C.RETRO_DEVICE_ID_JOYPAD_UP,
+	7: C.RETRO_DEVICE_ID_JOYPAD_DOWN,
+	8: C.RETRO_DEVICE_ID_JOYPAD_LEFT,
+	9: C.RETRO_DEVICE_ID_JOYPAD_RIGHT,
 }
 
 type CloudEmulator interface {
@@ -122,61 +124,44 @@ func videoConfigure(geom *C.struct_retro_game_geometry) (int, int) {
 		fmt.Println("Failed to create the video texture")
 	}
 
-	video.pitch = uint32(geom.base_width) * video.bpp
 	return int(math.Round(nwidth)), int(math.Round(nheight))
 }
 
 //export coreVideoRefresh
 func coreVideoRefresh(data unsafe.Pointer, width C.unsigned, height C.unsigned, pitch C.size_t) {
-	if uint32(pitch) != video.pitch {
-		video.pitch = uint32(pitch)
-	}
+	bytesPerRow := int(uint32(pitch) / video.bpp)
 
 	if data != nil {
-		NAEmulator.imageChannel <- toImageRGBA(data)
+		NAEmulator.imageChannel <- toImageRGBA(data, bytesPerRow)
 	}
 }
 
 // toImageRGBA convert nanoarch 2d array to image.RGBA
-func toImageRGBA(data unsafe.Pointer) *image.RGBA {
-	//ewidth := 1024
-	//eheight := ewidth * 3 / 4
-	//fmt.Println("width , height :", ewidth, eheight)
+func toImageRGBA(data unsafe.Pointer, bytesPerRow int) *image.RGBA {
+	// Convert unsafe Pointer to bytes array
+	var bytes []byte
+
+	sh := (*reflect.SliceHeader)(unsafe.Pointer(&bytes))
+	sh.Data = uintptr(data)
+	sh.Len = bytesPerRow * eheight * 4
+	sh.Cap = bytesPerRow * eheight * 4
+
 	if video.pixFmt == gl.UNSIGNED_SHORT_5_6_5 {
-		return to565Image(data)
+		return to565Image(data, bytes, bytesPerRow)
 	} else if video.pixFmt == gl.UNSIGNED_INT_8_8_8_8_REV {
-		return to8888Image(data)
+		return to8888Image(data, bytes, bytesPerRow)
 	}
 	return nil
 }
 
-func to8888Image(data unsafe.Pointer) *image.RGBA {
-	// Convert unsafe Pointer to bytes array
-	var bytes []byte
-
-	// TODO: Investigate this
-	// seems like there is a padding of slice.
-	// If the resolution is 240 * 160. I have to convert to 256 * 160 slice.
-	// If the resolution is 320 * 240. I can keep it to 320 * 240.
-	// I'm making assumption that the slice is packed and it has padding to fill 64
-	var w = 0
-	for w < ewidth {
-		w += 64
-	}
-	w = 700
-	eheight = 700 * 3 / 4
-	sh := (*reflect.SliceHeader)(unsafe.Pointer(&bytes))
-	sh.Data = uintptr(data)
-	sh.Len = w * eheight * 4
-	sh.Cap = w * eheight * 4
-
+func to8888Image(data unsafe.Pointer, bytes []byte, bytesPerRow int) *image.RGBA {
 	seek := 0
 
 	// Convert bytes array to image
 	// TODO: Reduce overhead of copying to bytes array by accessing unsafe.Pointer directly
 	image := image.NewRGBA(image.Rect(0, 0, ewidth, eheight))
 	for y := 0; y < eheight; y++ {
-		for x := 0; x < w; x++ {
+		for x := 0; x < bytesPerRow; x++ {
 			if x < ewidth {
 				b8 := bytes[seek]
 				g8 := bytes[seek+1]
@@ -192,31 +177,14 @@ func to8888Image(data unsafe.Pointer) *image.RGBA {
 	return image
 }
 
-func to565Image(data unsafe.Pointer) *image.RGBA {
-	// Convert unsafe Pointer to bytes array
-	var bytes []byte
-
-	// TODO: Investigate this
-	// seems like there is a padding of slice.
-	// If the resolution is 240 * 160. I have to convert to 256 * 160 slice.
-	// If the resolution is 320 * 240. I can keep it to 320 * 240.
-	// I'm making assumption that the slice is packed and it has padding to fill 64
-	var w = 0
-	for w < ewidth {
-		w += 64
-	}
-	sh := (*reflect.SliceHeader)(unsafe.Pointer(&bytes))
-	sh.Data = uintptr(data)
-	sh.Len = w * eheight * 2
-	sh.Cap = w * eheight * 2
-
+func to565Image(data unsafe.Pointer, bytes []byte, bytesPerRow int) *image.RGBA {
 	seek := 0
 
 	// Convert bytes array to image
 	// TODO: Reduce overhead of copying to bytes array by accessing unsafe.Pointer directly
 	image := image.NewRGBA(image.Rect(0, 0, ewidth, eheight))
 	for y := 0; y < eheight; y++ {
-		for x := 0; x < w; x++ {
+		for x := 0; x < bytesPerRow; x++ {
 			if x < ewidth {
 				var bi int
 				bi = (int)(bytes[seek]) + ((int)(bytes[seek+1]) << 8)

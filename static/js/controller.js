@@ -193,6 +193,8 @@ function doButtonUp(name) {
             case "join":
             case "a":
             case "b":
+            case "x":
+            case "y":
             case "start":
             case "select":
                 startGame();
