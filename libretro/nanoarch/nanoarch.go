@@ -72,9 +72,9 @@ var scale = 3.0
 
 const bufSize = 1024 * 4
 
-const joypadNumKeys = C.RETRO_DEVICE_ID_JOYPAD_R3
+const joypadNumKeys = C.RETRO_DEVICE_ID_JOYPAD_R3 + 1
 
-var joy [joypadNumKeys + 1]bool
+var joy [joypadNumKeys]bool
 var ewidth, eheight int
 
 var bindRetroKeys = map[int]int{

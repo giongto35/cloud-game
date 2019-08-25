@@ -95,6 +95,7 @@ func NewRoom(roomID, gamePath, gameName string, onlineStorage *storage.Client) *
 		path := gamePath + "/" + gameName
 		meta := room.director.LoadMeta(path)
 		log.Printf("Load with Meta %+v", meta)
+
 		go room.startVideo(meta.Width, meta.Height)
 		go room.startAudio(meta.AudioSampleRate)
 		room.director.Start()

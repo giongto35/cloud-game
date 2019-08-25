@@ -155,8 +155,8 @@ func (w *WebRTC) StartClient(remoteSession string, iceCandidates []string) (stri
 
 	// Register text message handling
 	inputTrack.OnMessage(func(msg webrtc.DataChannelMessage) {
-		// TODO: Can add recover here
-		w.InputChannel <- int(msg.Data[0])
+		// TODO: Can add recover here + generalize
+		w.InputChannel <- int(msg.Data[1])<<8 + int(msg.Data[0])
 	})
 
 	inputTrack.OnClose(func() {
