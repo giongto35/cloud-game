@@ -37,7 +37,7 @@ conn.onmessage = e => {
 
         data.forEach(file => {
             var file = file
-            var name = file.substr(0, file.indexOf('.'));
+            var name = file.substr(file.lastIndexOf('/')+1, file.indexOf('.'));
             gameList.push({file: file, name: name});
         });
 
@@ -272,7 +272,6 @@ function startGame() {
     log("Starting game screen");
     screenState = "game";
 
-    // conn.send(JSON.stringify({"id": "start", "data": gameList[gameIdx].file, "room_id": $("#room-txt").val(), "player_index": parseInt(playerIndex.value, 10)}));
     conn.send(JSON.stringify({"id": "start", "data": gameList[gameIdx].file, "room_id": roomID != null ? roomID : '', "player_index": 1}));
 
     // clear menu screen

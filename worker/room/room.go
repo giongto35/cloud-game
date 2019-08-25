@@ -11,6 +11,7 @@ import (
 	"strings"
 	"sync"
 
+	"github.com/giongto35/cloud-game/config"
 	"github.com/giongto35/cloud-game/emulator"
 	"github.com/giongto35/cloud-game/libretro/nanoarch"
 	"github.com/giongto35/cloud-game/util"
@@ -112,23 +113,17 @@ func NewRoom(roomID, gamePath, gameName string, onlineStorage *storage.Client) *
 func getEmulator(gameName string, roomID string, imageChannel chan<- *image.RGBA, audioChannel chan<- float32, inputChannel <-chan int) emulator.CloudEmulator {
 	gameType := getGameType(gameName)
 
-	switch gameType {
-	case "nes":
+	if gameType == "nes" {
 		return emulator.NewDirector(roomID, imageChannel, audioChannel, inputChannel)
-
-	case "gba":
-		nanoarch.Init("gba", roomID, imageChannel, audioChannel, inputChannel)
-		return nanoarch.NAEmulator
-
-	case "bin":
-		nanoarch.Init("pcsx", roomID, imageChannel, audioChannel, inputChannel)
-		return nanoarch.NAEmulator
-	case "zip":
-		nanoarch.Init("mame", roomID, imageChannel, audioChannel, inputChannel)
-		return nanoarch.NAEmulator
 	}
 
-	return nil
+	ename, ok := config.FileTypeToEmulator[gameType]
+	if !ok {
+		return nil
+	}
+
+	nanoarch.Init(ename, roomID, imageChannel, audioChannel, inputChannel)
+	return nanoarch.NAEmulator
 }
 
 // getGameNameFromRoomID parse roomID to get roomID and gameName
@@ -150,9 +145,9 @@ func getGameType(gameName string) string {
 
 // generateRoomID generate a unique room ID containing 16 digits
 func generateRoomID(gameName string) string {
+	// RoomID contains random number + gameName
+	// Next time when we only get roomID, we can launch game based on gameName
 	roomID := strconv.FormatInt(rand.Int63(), 16) + "|" + gameName
-	log.Println("Generate Room ID", roomID)
-	//roomID := uuid.Must(uuid.NewV4()).String()
 	return roomID
 }
 
