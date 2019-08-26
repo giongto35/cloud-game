@@ -13,8 +13,8 @@ import (
 
 	"github.com/giongto35/cloud-game/config"
 	"github.com/giongto35/cloud-game/cws"
-	"github.com/giongto35/cloud-game/overlord/gamelist"
 	"github.com/giongto35/cloud-game/util"
+	"github.com/giongto35/cloud-game/util/gamelist"
 	"github.com/gofrs/uuid"
 	"github.com/gorilla/websocket"
 )
@@ -25,6 +25,7 @@ const (
 )
 
 type Server struct {
+	// roomToServer map roomID to workerID
 	roomToServer map[string]string
 	// workerClients are the map serverID to worker Client
 	workerClients map[string]*WorkerClient
@@ -161,7 +162,7 @@ func (o *Server) WS(w http.ResponseWriter, r *http.Request) {
 
 	wssession.BrowserClient.Send(cws.WSPacket{
 		ID:   "init",
-		Data: createInitPackage(o.workerClients[serverID].StunTurnServer, gamePath),
+		Data: createInitPackage(o.workerClients[serverID].StunTurnServer),
 	}, nil)
 
 	// If peerconnection is done (client.Done is signalled), we close peerconnection
@@ -290,9 +291,13 @@ func (o *Server) cleanConnection(client *WorkerClient, serverID string) {
 
 // createInitPackage returns serverhost + game list in encoded wspacket format
 // This package will be sent to initialize
-func createInitPackage(stunturn, gamePath string) string {
-	gameList := gamelist.GetGameList(gamePath)
-	initPackage := append([]string{stunturn}, gameList...)
+func createInitPackage(stunturn string) string {
+	var gameName []string
+	for _, game := range gamelist.GameList {
+		gameName = append(gameName, game.Name)
+	}
+
+	initPackage := append([]string{stunturn}, gameName...)
 	encodedList, _ := json.Marshal(initPackage)
 	return string(encodedList)
 }
