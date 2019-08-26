@@ -1,7 +1,6 @@
 package gamelist
 
 import (
-	"log"
 	"os"
 	"path/filepath"
 	"strings"
@@ -21,7 +20,6 @@ var GameList []GameInfo
 
 func init() {
 	GameList = getAllGames(gamePath)
-	log.Println("gamelsit ", GameList)
 }
 
 // GetGameInfoFromName returns game info from a gameName
