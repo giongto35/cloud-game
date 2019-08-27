@@ -14,7 +14,7 @@ This project aims to bring the most modern and convenient gaming experience to u
 Note: **Due to the high cost of hosting, I will Hibernate the servers for a while. I'm working on a big change and will turn on hosting again. Sorry for that :(**  
 You can try hosting your own service following the instruction in the next session.  
 
-             |  
+Screenshot | Screenshot
 :-------------------------:|:-------------------------:
 ![screenshot](document/img/landing-page.gif)|![screenshot](document/img/landing-page-gb.png)
 ![screenshot](document/img/landing-page-ps-hm.png)|![screenshot](document/img/landing-page-ps-x4.png)
