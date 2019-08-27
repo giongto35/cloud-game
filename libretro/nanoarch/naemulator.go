@@ -97,8 +97,12 @@ func (na *naEmulator) listenInput() {
 	// input from javascript follows bitmap. Ex: 00110101
 	// we decode the bitmap and send to channel
 	for inpBitmap := range NAEmulator.inputChannel {
-		for k := 0; k < len(na.keys); k++ {
-			key := bindRetroKeys[k]
+		for k := 0; k < len(bindRetroKeys); k++ {
+			key, ok := bindRetroKeys[k]
+			if ok == false {
+				continue
+			}
+
 			if (inpBitmap & 1) == 1 {
 				na.keys[key] = true
 			} else {
