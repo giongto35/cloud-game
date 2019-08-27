@@ -13,7 +13,7 @@ const KEYBOARD_MAP = {
     67: "x", // c
     86: "y", // v
     13: "start", // start
-    17: "select", // select
+    16: "select", // select
 
     // non-game
     81: "quit", // q

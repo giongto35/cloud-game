@@ -24,5 +24,10 @@ var MatchWorkerRandom = false
 var ProdEnv = "prod"
 
 //var Codec = CODEC_H264
-
 var Codec = CODEC_VP8
+var FileTypeToEmulator = map[string]string{
+	"gba": "gba",
+	"cue": "pcsx",
+	"zip": "mame",
+	"nes": "nes",
+}
