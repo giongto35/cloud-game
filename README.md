@@ -14,9 +14,7 @@ This project aims to bring the most modern and convenient gaming experience to u
 Note: **Due to the high cost of hosting, I will Hibernate the servers for a while. I'm working on a big change and will turn on hosting again. Sorry for that :(**  
 You can try hosting your own service following the instruction in the next session.  
 
-             |  
-:-------------------------:|:-------------------------:
-![screenshot](document/img/landing-page.gif)  |  ![screenshot](document/img/landing-page-gb.png)
+[screenshot](document/img/landing-page.gif) ![screenshot](document/img/landing-page-gb.png)
 
 ## Feature
 1. Cloud gaming: Game logic is hosted on a remote server. User doesn't have to install or setup anything. Images and audio are streamed to user in the most optimal way.
