@@ -3,7 +3,7 @@
 */
 const DEBUG = false;
 
-const KEY_BIT = ["a", "b", "select", "start", "up", "down", "left", "right"];
+const KEY_BIT = ["a", "b", "x", "y", "select", "start", "up", "down", "left", "right"];
 const INPUT_FPS = 100;
 const INPUT_STATE_PACKET = 1;
 const PINGPONGPS = 5;
@@ -29,6 +29,8 @@ let keyState = {
     // control
     a: false,
     b: false,
+    x: false,
+    y: false,
     start: false,
     select: false,
 

@@ -57,6 +57,7 @@ func NewRoom(roomID string, gameName string, onlineStorage *storage.Client) *Roo
 		roomID = generateRoomID(gameName)
 	} else {
 		gameName = getGameNameFromRoomID(roomID)
+		log.Println("Get Gamename from RoomID", gameName)
 	}
 	gameInfo := gamelist.GetGameInfoFromName(gameName)
 
@@ -168,9 +169,9 @@ func (r *Room) startWebRTCSession(peerconnection *webrtc.WebRTC, playerIndex int
 		}
 
 		if peerconnection.IsConnected() {
-			// the first 8 bits belong to player 1
-			// the next 8 belongs to player 2 ...
-			// We standardize and put it to inputChannel (16 bits)
+			// the first 10 bits belong to player 1
+			// the next 10 belongs to player 2 ...
+			// We standardize and put it to inputChannel (20 bits)
 			input = input << ((uint(playerIndex) - 1) * emulator.NumKeys)
 			select {
 			case r.inputChannel <- input:
