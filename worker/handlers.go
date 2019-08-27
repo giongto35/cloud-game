@@ -88,15 +88,14 @@ func (h *Handler) GetOverlordClient() *OverlordClient {
 // detachPeerConn detach/remove a peerconnection from current room
 func (h *Handler) detachPeerConn(pc *webrtc.WebRTC) {
 	log.Println("Detach peerconnection")
-	roomID := pc.RoomID
-	room := h.getRoom(roomID)
+	room := h.getRoom(pc.RoomID)
 	if room == nil {
 		return
 	}
 
-	// If room has no sessions, close room
 	if !room.EmptySessions() {
 		room.RemoveSession(pc)
+		// If no more session in that room, we close that room
 		if room.EmptySessions() {
 			log.Println("No session in room")
 			room.Close()

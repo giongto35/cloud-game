@@ -28,7 +28,7 @@ const (
 	left2
 	right2
 )
-const NumKeys = 8
+const NumKeys = 10
 
 // Audio consts
 const (

@@ -10,8 +10,10 @@ const KEYBOARD_MAP = {
 
     90: "a", // z
     88: "b", // x
-    67: "start", // c
-    86: "select", // v
+    67: "x", // c
+    86: "y", // v
+    13: "start", // start
+    16: "select", // select
 
     // non-game
     81: "quit", // q

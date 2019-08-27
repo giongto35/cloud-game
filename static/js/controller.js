@@ -129,9 +129,9 @@ function sendKeyState() {
 
         console.log(`Key state string: ${bits} ==> ${data}`);
 
-        // send packed keystate
-        var arrBuf = new Uint8Array(1);
-        arrBuf[0] = data;
+        var arrBuf = new Uint8Array(2);
+        arrBuf[0] = data & ((1 << 8) - 1);
+        arrBuf[1] = data >> 8;
         inputChannel.send(arrBuf);
 
         unchangePacket--;
@@ -193,6 +193,8 @@ function doButtonUp(name) {
             case "join":
             case "a":
             case "b":
+            case "x":
+            case "y":
             case "start":
             case "select":
                 startGame();
