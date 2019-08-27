@@ -15,6 +15,7 @@ import (
 	"unsafe"
 
 	"github.com/giongto35/cloud-game/emulator"
+	"github.com/go-gl/gl/v2.1/gl"
 )
 
 /*
@@ -71,20 +72,22 @@ var scale = 3.0
 
 const bufSize = 1024 * 4
 
-const joypadNumKeys = C.RETRO_DEVICE_ID_JOYPAD_R3
+const joypadNumKeys = C.RETRO_DEVICE_ID_JOYPAD_R3 + 1
 
-var joy [joypadNumKeys + 1]bool
+var joy [joypadNumKeys]bool
 var ewidth, eheight int
 
 var bindRetroKeys = map[int]int{
 	0: C.RETRO_DEVICE_ID_JOYPAD_A,
 	1: C.RETRO_DEVICE_ID_JOYPAD_B,
-	2: C.RETRO_DEVICE_ID_JOYPAD_SELECT,
-	3: C.RETRO_DEVICE_ID_JOYPAD_START,
-	4: C.RETRO_DEVICE_ID_JOYPAD_UP,
-	5: C.RETRO_DEVICE_ID_JOYPAD_DOWN,
-	6: C.RETRO_DEVICE_ID_JOYPAD_LEFT,
-	7: C.RETRO_DEVICE_ID_JOYPAD_RIGHT,
+	2: C.RETRO_DEVICE_ID_JOYPAD_X,
+	3: C.RETRO_DEVICE_ID_JOYPAD_Y,
+	4: C.RETRO_DEVICE_ID_JOYPAD_SELECT,
+	5: C.RETRO_DEVICE_ID_JOYPAD_START,
+	6: C.RETRO_DEVICE_ID_JOYPAD_UP,
+	7: C.RETRO_DEVICE_ID_JOYPAD_DOWN,
+	8: C.RETRO_DEVICE_ID_JOYPAD_LEFT,
+	9: C.RETRO_DEVICE_ID_JOYPAD_RIGHT,
 }
 
 type CloudEmulator interface {
@@ -121,47 +124,68 @@ func videoConfigure(geom *C.struct_retro_game_geometry) (int, int) {
 		fmt.Println("Failed to create the video texture")
 	}
 
-	video.pitch = uint32(geom.base_width) * video.bpp
 	return int(math.Round(nwidth)), int(math.Round(nheight))
 }
 
 //export coreVideoRefresh
 func coreVideoRefresh(data unsafe.Pointer, width C.unsigned, height C.unsigned, pitch C.size_t) {
-	if uint32(pitch) != video.pitch {
-		video.pitch = uint32(pitch)
-	}
+	bytesPerRow := int(uint32(pitch) / video.bpp)
 
 	if data != nil {
-		NAEmulator.imageChannel <- toImageRGBA(data)
+		NAEmulator.imageChannel <- toImageRGBA(data, bytesPerRow)
 	}
 }
 
 // toImageRGBA convert nanoarch 2d array to image.RGBA
-func toImageRGBA(data unsafe.Pointer) *image.RGBA {
+func toImageRGBA(data unsafe.Pointer, bytesPerRow int) *image.RGBA {
 	// Convert unsafe Pointer to bytes array
 	var bytes []byte
-	// TODO: Investigate this
-	// seems like there is a padding of slice.
-	// If the resolution is 240 * 160. I have to convert to 256 * 160 slice.
-	// If the resolution is 320 * 240. I can keep it to 320 * 240.
-	// I'm making assumption that the slice is packed and it has padding to fill 64
-	var w = 0
-	for w < ewidth {
-		w += 64
-	}
 
 	sh := (*reflect.SliceHeader)(unsafe.Pointer(&bytes))
 	sh.Data = uintptr(data)
-	sh.Len = w * eheight * 2
-	sh.Cap = w * eheight * 2
+	sh.Len = bytesPerRow * eheight * 4
+	sh.Cap = bytesPerRow * eheight * 4
 
+	if video.pixFmt == gl.UNSIGNED_SHORT_5_6_5 {
+		return to565Image(data, bytes, bytesPerRow)
+	} else if video.pixFmt == gl.UNSIGNED_INT_8_8_8_8_REV {
+		return to8888Image(data, bytes, bytesPerRow)
+	}
+	return nil
+}
+
+func to8888Image(data unsafe.Pointer, bytes []byte, bytesPerRow int) *image.RGBA {
 	seek := 0
 
 	// Convert bytes array to image
 	// TODO: Reduce overhead of copying to bytes array by accessing unsafe.Pointer directly
 	image := image.NewRGBA(image.Rect(0, 0, ewidth, eheight))
 	for y := 0; y < eheight; y++ {
-		for x := 0; x < w; x++ {
+		for x := 0; x < bytesPerRow; x++ {
+			if x < ewidth {
+				b8 := bytes[seek]
+				g8 := bytes[seek+1]
+				r8 := bytes[seek+2]
+				a8 := bytes[seek+3]
+
+				image.Set(x, y, color.RGBA{byte(r8), byte(g8), byte(b8), byte(a8)})
+			}
+			seek += 4
+		}
+	}
+
+	// TODO: Resize Image
+	return image
+}
+
+func to565Image(data unsafe.Pointer, bytes []byte, bytesPerRow int) *image.RGBA {
+	seek := 0
+
+	// Convert bytes array to image
+	// TODO: Reduce overhead of copying to bytes array by accessing unsafe.Pointer directly
+	image := image.NewRGBA(image.Rect(0, 0, ewidth, eheight))
+	for y := 0; y < eheight; y++ {
+		for x := 0; x < bytesPerRow; x++ {
 			if x < ewidth {
 				var bi int
 				bi = (int)(bytes[seek]) + ((int)(bytes[seek+1]) << 8)
@@ -179,14 +203,15 @@ func toImageRGBA(data unsafe.Pointer) *image.RGBA {
 		}
 	}
 
+	// TODO: Resize Image
 	return image
 }
 
 //export coreInputPoll
 func coreInputPoll() {
-	for i := range NAEmulator.keys {
-		joy[i] = NAEmulator.keys[i]
-	}
+	//for i := range NAEmulator.keys {
+	//joy[i] = NAEmulator.keys[i]
+	//}
 }
 
 //export coreInputState
@@ -195,7 +220,7 @@ func coreInputState(port C.unsigned, device C.unsigned, index C.unsigned, id C.u
 		return 0
 	}
 
-	if id < 255 && joy[id] {
+	if id < 255 && NAEmulator.keys[id] {
 		return 1
 	}
 	return 0
@@ -261,8 +286,11 @@ func coreEnvironment(cmd C.unsigned, data unsafe.Pointer) C.bool {
 		if *format > C.RETRO_PIXEL_FORMAT_RGB565 {
 			return false
 		}
-		return true
+		return videoSetPixelFormat(*format)
 	case C.RETRO_ENVIRONMENT_GET_SYSTEM_DIRECTORY:
+		path := (**C.char)(data)
+		*path = C.CString("./libretro/system")
+		return true
 	case C.RETRO_ENVIRONMENT_GET_SAVE_DIRECTORY:
 		path := (**C.char)(data)
 		*path = C.CString(".")
@@ -454,4 +482,33 @@ func nanoarchShutdown() {
 
 func nanoarchRun() {
 	C.bridge_retro_run(retroRun)
+}
+
+func videoSetPixelFormat(format uint32) C.bool {
+	if video.texID != 0 {
+		log.Fatal("Tried to change pixel format after initialization.")
+	}
+
+	switch format {
+	case C.RETRO_PIXEL_FORMAT_0RGB1555:
+		video.pixFmt = gl.UNSIGNED_SHORT_5_5_5_1
+		video.pixType = gl.BGRA
+		video.bpp = 2
+		break
+	case C.RETRO_PIXEL_FORMAT_XRGB8888:
+		video.pixFmt = gl.UNSIGNED_INT_8_8_8_8_REV
+		video.pixType = gl.BGRA
+		video.bpp = 4
+		break
+	case C.RETRO_PIXEL_FORMAT_RGB565:
+		video.pixFmt = gl.UNSIGNED_SHORT_5_6_5
+		video.pixType = gl.RGB
+		video.bpp = 2
+		break
+	default:
+		log.Fatalf("Unknown pixel type %v", format)
+	}
+
+	fmt.Printf("Video pixel: %v %v %v %v %v", video, format, C.RETRO_PIXEL_FORMAT_0RGB1555, C.RETRO_PIXEL_FORMAT_XRGB8888, C.RETRO_PIXEL_FORMAT_RGB565)
+	return true
 }
