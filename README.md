@@ -16,8 +16,8 @@ You can try hosting your own service following the instruction in the next sessi
 
 Screenshot | Screenshot
 :-------------------------:|:-------------------------:
-![screenshot](document/img/landing-page.gif)|![screenshot](document/img/landing-page-gb.png)
 ![screenshot](document/img/landing-page-ps-hm.png)|![screenshot](document/img/landing-page-ps-x4.png)
+![screenshot](document/img/landing-page-gb.png)|![screenshot](document/img/landing-page.gif)
 
 ## Feature
 1. Cloud gaming: Game logic is hosted on a remote server. User doesn't have to install or setup anything. Images and audio are streamed to user in the most optimal way.
