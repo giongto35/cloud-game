@@ -174,6 +174,7 @@ func to8888Image(data unsafe.Pointer, bytes []byte, bytesPerRow int) *image.RGBA
 		}
 	}
 
+	// TODO: Resize Image
 	return image
 }
 
@@ -202,6 +203,7 @@ func to565Image(data unsafe.Pointer, bytes []byte, bytesPerRow int) *image.RGBA 
 		}
 	}
 
+	// TODO: Resize Image
 	return image
 }
 

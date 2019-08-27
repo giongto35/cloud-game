@@ -69,7 +69,6 @@ var emulatorCorePath = map[string]string{
 	"gba":  "libretro/cores/mgba_libretro.so",
 	"pcsx": "libretro/cores/mednafen_psx_libretro.so",
 	//"pcsx": "libretro/cores/mednafen_psx_hw_libretro.so",
-	//"pcsx":   "libretro/cores/pcsx_rearmed_libretro.so",
 	"arcade": "libretro/cores/fbalpha2012_neogeo_libretro.so",
 	"mame":   "libretro/cores/mame2016_libretro.so",
 }
