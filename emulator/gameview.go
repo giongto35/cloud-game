@@ -40,6 +40,19 @@ const (
 	AppAudio  = 1
 )
 
+var bindNESKeys = map[int]int{
+	0: nes.ButtonA,
+	1: nes.ButtonB,
+	2: -1,
+	3: -1,
+	4: nes.ButtonSelect,
+	5: nes.ButtonStart,
+	6: nes.ButtonUp,
+	7: nes.ButtonDown,
+	8: nes.ButtonLeft,
+	9: nes.ButtonRight,
+}
+
 type GameView struct {
 	console *nes.Console
 	title   string
@@ -78,21 +91,18 @@ func NewGameView(console *nes.Console, title, saveFile string, imageChannel chan
 }
 
 // ListenToInputChannel listen from input channel streamm, which is exposed to WebRTC session
-//func (view *GameView) UpdateInput(keysInBinary int) {
-//for i := 0; i < NumKeys*2; i++ {
-//b := ((keysInBinary & 1) == 1)
-//view.keyPressed[i] = (view.keyPressed[i] && b) || b
-//keysInBinary = keysInBinary >> 1
-//}
-//}
-
-// ListenToInputChannel listen from input channel streamm, which is exposed to WebRTC session
 func (view *GameView) ListenToInputChannel() {
 	for keysInBinary := range view.inputChannel {
-		for i := 0; i < NumKeys*2; i++ {
-			b := ((keysInBinary & 1) == 1)
-			view.keyPressed[i] = (view.keyPressed[i] && b) || b
+		for i := 0; i < NumKeys; i++ {
+
+			key, ok := bindNESKeys[i]
+			isPressed := ((keysInBinary & 1) == 1)
 			keysInBinary = keysInBinary >> 1
+			if !ok || key == -1 {
+				continue
+			}
+			view.keyPressed[key] = (view.keyPressed[key] && isPressed) || isPressed
+
 		}
 	}
 }
