@@ -30,4 +30,9 @@ var FileTypeToEmulator = map[string]string{
 	"cue": "pcsx",
 	"zip": "mame",
 	"nes": "nes",
+	"smc": "snes",
+	"sfc": "snes",
+	"swc": "snes",
+	"fig": "snes",
+	"bs":  "snes",
 }
