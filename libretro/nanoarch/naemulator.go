@@ -66,10 +66,10 @@ var NAEmulator *naEmulator
 
 // TODO: Load from config
 var emulatorCorePath = map[string]string{
-	"gba":  "libretro/cores/mgba_libretro.so",
-	"pcsx": "libretro/cores/mednafen_psx_libretro.so",
-	//"pcsx": "libretro/cores/mednafen_psx_hw_libretro.so",
+	"gba":    "libretro/cores/mgba_libretro.so",
+	"pcsx":   "libretro/cores/mednafen_psx_libretro.so",
 	"arcade": "libretro/cores/fbalpha2012_neogeo_libretro.so",
+	"snes":   "libretro/cores/mednafen_snes_libretro.so",
 	"mame":   "libretro/cores/mame2016_libretro.so",
 }
 
