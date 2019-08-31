@@ -4,14 +4,14 @@ dep:
 	go mod tidy
 
 build: dep
-	go build -o build/klog ./cmd
+	go build -o build/cloudretro ./cmd
 
 run: build
 	# Run coordinator first
-	./build/klog -overlordhost overlord &
+	./build/cloudretro -overlordhost overlord &
 	# Wait till overlord finish initialized
 	# Run a worker connecting to overload
-	./build/klog -overlordhost ws://localhost:8000/wso
+	./build/cloudretro -overlordhost ws://localhost:8000/wso
 
 run-docker:
 	docker build . -t cloud-game-local
