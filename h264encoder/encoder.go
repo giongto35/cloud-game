@@ -105,9 +105,6 @@ func (v *H264Encoder) release() {
 		log.Println("Releasing encoder")
 		// TODO: Bug here, after close it will signal
 		close(v.Output)
-		if v.Input != nil {
-			close(v.Input)
-		}
 		err := v.enc.Close()
 		if err != nil {
 			log.Println("Failed to close H264 encoder")
@@ -129,4 +126,5 @@ func (v *H264Encoder) GetOutputChan() chan []byte {
 // GetDoneChan returns done channel
 func (v *H264Encoder) Stop() {
 	v.Done = true
+	close(v.Input)
 }
