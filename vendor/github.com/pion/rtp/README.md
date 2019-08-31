@@ -11,13 +11,11 @@
   <br>
   <a href="https://travis-ci.org/pion/rtp"><img src="https://travis-ci.org/pion/rtp.svg?branch=master" alt="Build Status"></a>
   <a href="https://godoc.org/github.com/pion/rtp"><img src="https://godoc.org/github.com/pion/rtp?status.svg" alt="GoDoc"></a>
-  <a href="https://coveralls.io/github/pion/rtp"><img src="https://coveralls.io/repos/github/pion/rtp/badge.svg" alt="Coverage Status"></a>
+  <a href="https://codecov.io/gh/pion/rtp"><img src="https://codecov.io/gh/pion/rtp/branch/master/graph/badge.svg" alt="Coverage Status"></a>
   <a href="https://goreportcard.com/report/github.com/pion/rtp"><img src="https://goreportcard.com/badge/github.com/pion/rtp" alt="Go Report Card"></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/License-MIT-yellow.svg" alt="License: MIT"></a>
 </p>
 <br>
-
-See [DESIGN.md](DESIGN.md) for an overview of features and future goals.
 
 ### Roadmap
 The library is used as a part of our WebRTC implementation. Please refer to that [roadmap](https://github.com/pion/webrtc/issues/9) to track our major milestones.
@@ -39,6 +37,7 @@ Check out the **[contributing wiki](https://github.com/pion/webrtc/wiki/Contribu
 * [Luke Curley](https://github.com/kixelated) *Performance*
 * [Antoine Baché](https://github.com/Antonito) *Fixed crashes*
 * [Hugo Arregui](https://github.com/hugoArregui)
+* [Raphael Derosso Pereira](https://github.com/raphaelpereira)
 
 ### License
 MIT License - see [LICENSE](LICENSE) for full text

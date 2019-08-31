@@ -22,9 +22,14 @@ type Conn struct {
 
 	queryInterval time.Duration
 	localNames    []string
-	queries       map[string]chan queryResult
+	queries       []query
 
 	closed chan interface{}
+}
+
+type query struct {
+	nameWithSuffix  string
+	queryResultChan chan queryResult
 }
 
 type queryResult struct {
@@ -78,7 +83,7 @@ func Server(conn *ipv4.PacketConn, config *Config) (*Conn, error) {
 
 	c := &Conn{
 		queryInterval: defaultQueryInterval,
-		queries:       map[string]chan queryResult{},
+		queries:       []query{},
 		socket:        conn,
 		dstAddr:       dstAddr,
 		localNames:    localNames,
@@ -122,7 +127,7 @@ func (c *Conn) Query(ctx context.Context, name string) (dnsmessage.ResourceHeade
 
 	queryChan := make(chan queryResult, 1)
 	c.mu.Lock()
-	c.queries[nameWithSuffix] = queryChan
+	c.queries = append(c.queries, query{nameWithSuffix, queryChan})
 	ticker := time.NewTicker(c.queryInterval)
 	c.mu.Unlock()
 
@@ -297,11 +302,12 @@ func (c *Conn) start() {
 					continue
 				}
 
-				if resChan, ok := c.queries[a.Name.String()]; ok {
-					resChan <- queryResult{a, src}
-					delete(c.queries, a.Name.String())
+				for i := len(c.queries) - 1; i >= 0; i-- {
+					if c.queries[i].nameWithSuffix == a.Name.String() {
+						c.queries[i].queryResultChan <- queryResult{a, src}
+						c.queries = append(c.queries[:i], c.queries[i+1:]...)
+					}
 				}
-
 			}
 		}()
 	}

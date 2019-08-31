@@ -117,6 +117,6 @@ func (a *Attribute) IsICECandidate() bool {
 // ToICECandidate parses the attribute as an ICE Candidate.
 func (a *Attribute) ToICECandidate() (ICECandidate, error) {
 	var parsed ICECandidate
-	err := parsed.unmarshalString(a.Value)
+	err := parsed.Unmarshal(a.Value)
 	return parsed, err
 }

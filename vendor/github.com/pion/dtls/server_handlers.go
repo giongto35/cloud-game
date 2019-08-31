@@ -73,17 +73,29 @@ func serverHandshakeHandler(c *Conn) error {
 				handshakeCachePullRule{handshakeTypeClientKeyExchange, true},
 			)
 
-			if err := verifyCertificateVerify(plainText, h.hashAlgorithm, h.signature, c.state.remoteCertificate); err != nil {
-				return err
+			verified := false
+			if !c.insecureSkipVerify && c.clientAuth >= RequireAnyClientCert {
+				if err := verifyCertificateVerify(plainText, h.hashAlgorithm, h.signature, c.state.remoteCertificate); err != nil {
+					return err
+				}
+				if c.clientAuth >= VerifyClientCertIfGiven {
+					if err := verifyClientCert(c.state.remoteCertificate, c.rootCAs); err != nil {
+						return err
+					}
+					verified = true
+				}
 			}
-			c.remoteCertificateVerified = true
+			if c.verifyPeerCertificate != nil {
+				if err := c.verifyPeerCertificate(c.state.remoteCertificate, verified); err != nil {
+					return err
+				}
+			}
+			c.remoteCertificateVerified = verified
 
 		case *handshakeMessageCertificate:
 			c.state.remoteCertificate = h.certificate
 
 		case *handshakeMessageClientKeyExchange:
-			c.remoteKeypair = &namedCurveKeypair{c.namedCurve, h.publicKey, nil}
-
 			serverRandom, err := c.state.localRandom.Marshal()
 			if err != nil {
 				return err
@@ -93,9 +105,19 @@ func serverHandshakeHandler(c *Conn) error {
 				return err
 			}
 
-			preMasterSecret, err := prfPreMasterSecret(c.remoteKeypair.publicKey, c.localKeypair.privateKey, c.localKeypair.curve)
-			if err != nil {
-				return err
+			var preMasterSecret []byte
+			if c.localPSKCallback != nil {
+				var psk []byte
+				if psk, err = c.localPSKCallback(h.identityHint); err != nil {
+					return err
+				}
+
+				preMasterSecret = prfPSKPreMasterSecret(psk)
+			} else {
+				preMasterSecret, err = prfPreMasterSecret(h.publicKey, c.localKeypair.privateKey, c.localKeypair.curve)
+				if err != nil {
+					return err
+				}
 			}
 
 			c.state.masterSecret, err = prfMasterSecret(preMasterSecret, clientRandom, serverRandom, c.state.cipherSuite.hashFunc())
@@ -106,7 +128,6 @@ func serverHandshakeHandler(c *Conn) error {
 			if err := c.state.cipherSuite.init(c.state.masterSecret, clientRandom, serverRandom /* isClient */, false); err != nil {
 				return err
 			}
-
 		case *handshakeMessageFinished:
 			plainText := c.handshakeCache.pullAndMerge(
 				handshakeCachePullRule{handshakeTypeClientHello, true},
@@ -193,15 +214,32 @@ func serverHandshakeHandler(c *Conn) error {
 			return err
 		}
 
-		if c.clientAuth == RequireAnyClientCert && c.state.remoteCertificate == nil {
-			return errClientCertificateRequired
-		} else if c.state.remoteCertificate != nil && !c.remoteCertificateVerified {
-			return errClientCertificateNotVerified
+		switch c.clientAuth {
+		case RequireAnyClientCert:
+			if c.state.remoteCertificate == nil {
+				return errClientCertificateRequired
+			}
+		case VerifyClientCertIfGiven:
+			if c.state.remoteCertificate != nil && !c.remoteCertificateVerified {
+				return errClientCertificateNotVerified
+			}
+		case RequireAndVerifyClientCert:
+			if c.state.remoteCertificate == nil {
+				return errClientCertificateRequired
+			}
+			if !c.remoteCertificateVerified {
+				return errClientCertificateNotVerified
+			}
 		}
 
-		if c.clientAuth > NoClientCert {
+		switch {
+		case c.localPSKIdentityHint != nil:
+			c.state.localSequenceNumber = 4
+		case c.localPSKCallback != nil:
+			c.state.localSequenceNumber = 3
+		case c.clientAuth > NoClientCert:
 			c.state.localSequenceNumber = 6
-		} else {
+		default:
 			c.state.localSequenceNumber = 5
 		}
 		c.setLocalEpoch(1)
@@ -239,18 +277,21 @@ func serverFlightHandler(c *Conn) (bool, error) {
 		}, false)
 
 	case flight4:
-		extensions := []extension{
-			&extensionSupportedEllipticCurves{
-				ellipticCurves: []namedCurve{namedCurveX25519, namedCurveP256},
-			},
-			&extensionSupportedPointFormats{
-				pointFormats: []ellipticCurvePointFormat{ellipticCurvePointFormatUncompressed},
-			},
-		}
+		extensions := []extension{}
 		if c.state.srtpProtectionProfile != 0 {
 			extensions = append(extensions, &extensionUseSRTP{
 				protectionProfiles: []SRTPProtectionProfile{c.state.srtpProtectionProfile},
 			})
+		}
+		if c.localPSKCallback == nil {
+			extensions = append(extensions, []extension{
+				&extensionSupportedEllipticCurves{
+					ellipticCurves: []namedCurve{namedCurveX25519, namedCurveP256},
+				},
+				&extensionSupportedPointFormats{
+					pointFormats: []ellipticCurvePointFormat{ellipticCurvePointFormatUncompressed},
+				},
+			}...)
 		}
 
 		sequenceNumber := c.state.localSequenceNumber
@@ -274,61 +315,7 @@ func serverFlightHandler(c *Conn) (bool, error) {
 		}, false)
 		sequenceNumber++
 
-		c.internalSend(&recordLayer{
-			recordLayerHeader: recordLayerHeader{
-				sequenceNumber:  sequenceNumber,
-				protocolVersion: protocolVersion1_2,
-			},
-			content: &handshake{
-				// sequenceNumber and messageSequence line up, may need to be re-evaluated
-				handshakeHeader: handshakeHeader{
-					messageSequence: uint16(sequenceNumber),
-				},
-				handshakeMessage: &handshakeMessageCertificate{
-					certificate: c.localCertificate,
-				}},
-		}, false)
-		sequenceNumber++
-
-		if len(c.localKeySignature) == 0 {
-			serverRandom, err := c.state.localRandom.Marshal()
-			if err != nil {
-				return false, err
-			}
-			clientRandom, err := c.state.remoteRandom.Marshal()
-			if err != nil {
-				return false, err
-			}
-
-			signature, err := generateKeySignature(clientRandom, serverRandom, c.localKeypair.publicKey, c.namedCurve, c.localPrivateKey, HashAlgorithmSHA256)
-			if err != nil {
-				return false, err
-			}
-			c.localKeySignature = signature
-		}
-
-		c.internalSend(&recordLayer{
-			recordLayerHeader: recordLayerHeader{
-				sequenceNumber:  sequenceNumber,
-				protocolVersion: protocolVersion1_2,
-			},
-			content: &handshake{
-				// sequenceNumber and messageSequence line up, may need to be re-evaluated
-				handshakeHeader: handshakeHeader{
-					messageSequence: uint16(sequenceNumber),
-				},
-				handshakeMessage: &handshakeMessageServerKeyExchange{
-					ellipticCurveType:  ellipticCurveTypeNamedCurve,
-					namedCurve:         c.namedCurve,
-					publicKey:          c.localKeypair.publicKey,
-					hashAlgorithm:      HashAlgorithmSHA256,
-					signatureAlgorithm: signatureAlgorithmECDSA,
-					signature:          c.localKeySignature,
-				}},
-		}, false)
-		sequenceNumber++
-
-		if c.clientAuth > NoClientCert {
+		if c.localPSKCallback == nil {
 			c.internalSend(&recordLayer{
 				recordLayerHeader: recordLayerHeader{
 					sequenceNumber:  sequenceNumber,
@@ -339,18 +326,96 @@ func serverFlightHandler(c *Conn) (bool, error) {
 					handshakeHeader: handshakeHeader{
 						messageSequence: uint16(sequenceNumber),
 					},
-					handshakeMessage: &handshakeMessageCertificateRequest{
-						certificateTypes: []clientCertificateType{clientCertificateTypeRSASign, clientCertificateTypeECDSASign},
-						signatureHashAlgorithms: []signatureHashAlgorithm{
-							{HashAlgorithmSHA256, signatureAlgorithmRSA},
-							{HashAlgorithmSHA384, signatureAlgorithmRSA},
-							{HashAlgorithmSHA512, signatureAlgorithmRSA},
-							{HashAlgorithmSHA256, signatureAlgorithmECDSA},
-							{HashAlgorithmSHA384, signatureAlgorithmECDSA},
-							{HashAlgorithmSHA512, signatureAlgorithmECDSA},
+					handshakeMessage: &handshakeMessageCertificate{
+						certificate: c.localCertificate,
+					}},
+			}, false)
+			sequenceNumber++
+
+			if len(c.localKeySignature) == 0 {
+				serverRandom, err := c.state.localRandom.Marshal()
+				if err != nil {
+					return false, err
+				}
+				clientRandom, err := c.state.remoteRandom.Marshal()
+				if err != nil {
+					return false, err
+				}
+
+				signature, err := generateKeySignature(clientRandom, serverRandom, c.localKeypair.publicKey, c.namedCurve, c.localPrivateKey, HashAlgorithmSHA256)
+				if err != nil {
+					return false, err
+				}
+				c.localKeySignature = signature
+			}
+
+			c.internalSend(&recordLayer{
+				recordLayerHeader: recordLayerHeader{
+					sequenceNumber:  sequenceNumber,
+					protocolVersion: protocolVersion1_2,
+				},
+				content: &handshake{
+					// sequenceNumber and messageSequence line up, may need to be re-evaluated
+					handshakeHeader: handshakeHeader{
+						messageSequence: uint16(sequenceNumber),
+					},
+					handshakeMessage: &handshakeMessageServerKeyExchange{
+						ellipticCurveType:  ellipticCurveTypeNamedCurve,
+						namedCurve:         c.namedCurve,
+						publicKey:          c.localKeypair.publicKey,
+						hashAlgorithm:      HashAlgorithmSHA256,
+						signatureAlgorithm: signatureAlgorithmECDSA,
+						signature:          c.localKeySignature,
+					}},
+			}, false)
+			sequenceNumber++
+
+			if c.clientAuth > NoClientCert {
+				c.internalSend(&recordLayer{
+					recordLayerHeader: recordLayerHeader{
+						sequenceNumber:  sequenceNumber,
+						protocolVersion: protocolVersion1_2,
+					},
+					content: &handshake{
+						// sequenceNumber and messageSequence line up, may need to be re-evaluated
+						handshakeHeader: handshakeHeader{
+							messageSequence: uint16(sequenceNumber),
+						},
+						handshakeMessage: &handshakeMessageCertificateRequest{
+							certificateTypes: []clientCertificateType{clientCertificateTypeRSASign, clientCertificateTypeECDSASign},
+							signatureHashAlgorithms: []signatureHashAlgorithm{
+								{HashAlgorithmSHA256, signatureAlgorithmRSA},
+								{HashAlgorithmSHA384, signatureAlgorithmRSA},
+								{HashAlgorithmSHA512, signatureAlgorithmRSA},
+								{HashAlgorithmSHA256, signatureAlgorithmECDSA},
+								{HashAlgorithmSHA384, signatureAlgorithmECDSA},
+								{HashAlgorithmSHA512, signatureAlgorithmECDSA},
+							},
 						},
 					},
+				}, false)
+				sequenceNumber++
+			}
+		} else if c.localPSKIdentityHint != nil {
+			/* To help the client in selecting which identity to use, the server
+			*  can provide a "PSK identity hint" in the ServerKeyExchange message.
+			*  If no hint is provided, the ServerKeyExchange message is omitted.
+			*
+			*  https://tools.ietf.org/html/rfc4279#section-2
+			 */
+			c.internalSend(&recordLayer{
+				recordLayerHeader: recordLayerHeader{
+					sequenceNumber:  sequenceNumber,
+					protocolVersion: protocolVersion1_2,
 				},
+				content: &handshake{
+					// sequenceNumber and messageSequence line up, may need to be re-evaluated
+					handshakeHeader: handshakeHeader{
+						messageSequence: uint16(sequenceNumber),
+					},
+					handshakeMessage: &handshakeMessageServerKeyExchange{
+						identityHint: c.localPSKIdentityHint,
+					}},
 			}, false)
 			sequenceNumber++
 		}

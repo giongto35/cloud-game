@@ -2,6 +2,7 @@ package sctp
 
 import (
 	"fmt"
+	"io"
 	"math"
 	"sync"
 
@@ -94,6 +95,8 @@ func (s *Stream) ReadSCTP(p []byte) (int, PayloadProtocolIdentifier, error) {
 		n, ppi, err := s.reassemblyQueue.read(p)
 		if err == nil {
 			return n, ppi, nil
+		} else if err == io.ErrShortBuffer {
+			return 0, PayloadProtocolIdentifier(0), err
 		}
 
 		err = s.readErr

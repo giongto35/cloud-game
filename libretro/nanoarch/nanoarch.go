@@ -15,7 +15,6 @@ import (
 	"unsafe"
 
 	"github.com/giongto35/cloud-game/emulator"
-	"github.com/go-gl/gl/v2.1/gl"
 )
 
 /*
@@ -89,6 +88,15 @@ var bindRetroKeys = map[int]int{
 	9: C.RETRO_DEVICE_ID_JOYPAD_RIGHT,
 }
 
+const (
+	// BIT_FORMAT_SHORT_5_5_5_1 has 5 bits R, 5 bits G, 5 bits B, 1 bit alpha
+	BIT_FORMAT_SHORT_5_5_5_1 = iota
+	// BIT_FORMAT_INT_8_8_8_8_REV has 8 bits R, 8 bits G, 8 bits B, 8 bit alpha
+	BIT_FORMAT_INT_8_8_8_8_REV
+	// BIT_FORMAT_SHORT_5_6_5 has 5 bits R, 6 bits G, 5 bits
+	BIT_FORMAT_SHORT_5_6_5
+)
+
 type CloudEmulator interface {
 	SetView(view *emulator.GameView)
 	Start(path string)
@@ -141,9 +149,9 @@ func toImageRGBA(data unsafe.Pointer, bytesPerRow int) *image.RGBA {
 	sh.Len = bytesPerRow * eheight * 4
 	sh.Cap = bytesPerRow * eheight * 4
 
-	if video.pixFmt == gl.UNSIGNED_SHORT_5_6_5 {
+	if video.pixFmt == BIT_FORMAT_SHORT_5_6_5 {
 		return to565Image(data, bytes, bytesPerRow)
-	} else if video.pixFmt == gl.UNSIGNED_INT_8_8_8_8_REV {
+	} else if video.pixFmt == BIT_FORMAT_INT_8_8_8_8_REV {
 		return to8888Image(data, bytes, bytesPerRow)
 	}
 	return nil
@@ -485,18 +493,15 @@ func nanoarchRun() {
 func videoSetPixelFormat(format uint32) C.bool {
 	switch format {
 	case C.RETRO_PIXEL_FORMAT_0RGB1555:
-		video.pixFmt = gl.UNSIGNED_SHORT_5_5_5_1
-		video.pixType = gl.BGRA
+		video.pixFmt = BIT_FORMAT_SHORT_5_5_5_1
 		video.bpp = 2
 		break
 	case C.RETRO_PIXEL_FORMAT_XRGB8888:
-		video.pixFmt = gl.UNSIGNED_INT_8_8_8_8_REV
-		video.pixType = gl.BGRA
+		video.pixFmt = BIT_FORMAT_INT_8_8_8_8_REV
 		video.bpp = 4
 		break
 	case C.RETRO_PIXEL_FORMAT_RGB565:
-		video.pixFmt = gl.UNSIGNED_SHORT_5_6_5
-		video.pixType = gl.RGB
+		video.pixFmt = BIT_FORMAT_SHORT_5_6_5
 		video.bpp = 2
 		break
 	default:

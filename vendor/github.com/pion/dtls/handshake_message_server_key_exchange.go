@@ -4,8 +4,10 @@ import (
 	"encoding/binary"
 )
 
-// Structure only supports ECDH
+// Structure supports ECDH and PSK
 type handshakeMessageServerKeyExchange struct {
+	identityHint []byte
+
 	ellipticCurveType  ellipticCurveType
 	namedCurve         namedCurve
 	publicKey          []byte
@@ -19,6 +21,12 @@ func (h handshakeMessageServerKeyExchange) handshakeType() handshakeType {
 }
 
 func (h *handshakeMessageServerKeyExchange) Marshal() ([]byte, error) {
+	if h.identityHint != nil {
+		out := append([]byte{0x00, 0x00}, h.identityHint...)
+		binary.BigEndian.PutUint16(out, uint16(len(out)-2))
+		return out, nil
+	}
+
 	out := []byte{byte(h.ellipticCurveType), 0x00, 0x00}
 	binary.BigEndian.PutUint16(out[1:], uint16(h.namedCurve))
 
@@ -34,9 +42,16 @@ func (h *handshakeMessageServerKeyExchange) Marshal() ([]byte, error) {
 }
 
 func (h *handshakeMessageServerKeyExchange) Unmarshal(data []byte) error {
-	if len(data) < 1 {
+	if len(data) < 2 {
 		return errBufferTooSmall
 	}
+
+	// If parsed as PSK return early and only populate PSK Identity Hint
+	if pskLength := binary.BigEndian.Uint16(data); len(data) == int(pskLength+2) {
+		h.identityHint = append([]byte{}, data[2:]...)
+		return nil
+	}
+
 	if _, ok := ellipticCurveTypes[ellipticCurveType(data[0])]; ok {
 		h.ellipticCurveType = ellipticCurveType(data[0])
 	} else {
@@ -53,25 +68,34 @@ func (h *handshakeMessageServerKeyExchange) Unmarshal(data []byte) error {
 
 	publicKeyLength := int(data[3])
 	offset := 4 + publicKeyLength
-	if len(data) <= publicKeyLength {
+	if len(data) < offset {
 		return errBufferTooSmall
 	}
 	h.publicKey = append([]byte{}, data[4:offset]...)
-
+	if len(data) <= offset {
+		return errBufferTooSmall
+	}
 	h.hashAlgorithm = HashAlgorithm(data[offset])
 	if _, ok := hashAlgorithms[h.hashAlgorithm]; !ok {
 		return errInvalidHashAlgorithm
 	}
 	offset++
-
+	if len(data) <= offset {
+		return errBufferTooSmall
+	}
 	h.signatureAlgorithm = signatureAlgorithm(data[offset])
 	if _, ok := signatureAlgorithms[h.signatureAlgorithm]; !ok {
 		return errInvalidSignatureAlgorithm
 	}
 	offset++
-
+	if len(data) < offset+2 {
+		return errBufferTooSmall
+	}
 	signatureLength := int(binary.BigEndian.Uint16(data[offset:]))
 	offset += 2
+	if len(data) < offset+signatureLength {
+		return errBufferTooSmall
+	}
 	h.signature = append([]byte{}, data[offset:offset+signatureLength]...)
 	return nil
 }
