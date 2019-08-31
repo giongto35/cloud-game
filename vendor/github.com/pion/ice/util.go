@@ -1,6 +1,7 @@
 package ice
 
 import (
+	"fmt"
 	"math/rand"
 	"net"
 	"sync/atomic"
@@ -72,4 +73,19 @@ func addrEqual(a, b net.Addr) bool {
 	}
 
 	return aType == bType && aIP.Equal(bIP) && aPort == bPort
+}
+
+func generateCandidateID() (string, error) {
+	return generateRandString("candidate:", "")
+}
+
+func generateRandString(prefix, sufix string) (string, error) {
+	b := make([]byte, 16)
+	_, err := rand.Read(b) //nolint
+
+	if err != nil {
+		return "", err
+	}
+
+	return fmt.Sprintf("%s%X-%X-%X-%X-%X%s", prefix, b[0:4], b[4:6], b[6:8], b[8:10], b[10:], sufix), nil
 }

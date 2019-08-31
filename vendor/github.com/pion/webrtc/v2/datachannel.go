@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"math"
 	"sync"
 
 	"github.com/pion/datachannel"
@@ -13,7 +14,7 @@ import (
 	"github.com/pion/webrtc/v2/pkg/rtcerr"
 )
 
-const dataChannelBufferSize = 16384 // Lowest common denominator among browsers
+const dataChannelBufferSize = math.MaxUint16 //message size limit for Chromium
 var errSCTPNotEstablished = errors.New("SCTP not establisched")
 
 // DataChannel represents a WebRTC DataChannel
@@ -41,14 +42,13 @@ type DataChannel struct {
 	// "blob". This attribute controls how binary data is exposed to scripts.
 	// binaryType                 string
 
-	// OnError             func()
-
 	onMessageHandler    func(DataChannelMessage)
 	onceMutex           sync.Mutex
 	openHandlerOnce     sync.Once
 	onOpenHandler       func()
 	onCloseHandler      func()
 	onBufferedAmountLow func()
+	onErrorHandler      func(error)
 
 	sctpTransport *SCTPTransport
 	dataChannel   *datachannel.DataChannel
@@ -139,7 +139,7 @@ func (d *DataChannel) open(sctpTransport *SCTPTransport) error {
 
 	cfg := &datachannel.Config{
 		ChannelType:          channelType,
-		Priority:             datachannel.ChannelPriorityNormal, // TODO: Wiring
+		Priority:             datachannel.ChannelPriorityNormal,
 		ReliabilityParameter: reliabilityParameteer,
 		Label:                d.label,
 		LoggerFactory:        d.api.settingEngine.LoggerFactory,
@@ -285,21 +285,43 @@ func (d *DataChannel) handleOpen(dc *datachannel.DataChannel) {
 	}
 }
 
+// OnError sets an event handler which is invoked when
+// the underlying data transport cannot be read.
+func (d *DataChannel) OnError(f func(err error)) {
+	d.mu.Lock()
+	defer d.mu.Unlock()
+	d.onErrorHandler = f
+}
+
+func (d *DataChannel) onError(err error) (done chan struct{}) {
+	d.mu.RLock()
+	hdlr := d.onErrorHandler
+	d.mu.RUnlock()
+
+	done = make(chan struct{})
+	if hdlr == nil {
+		close(done)
+		return
+	}
+
+	go func() {
+		hdlr(err)
+		close(done)
+	}()
+
+	return
+}
+
 func (d *DataChannel) readLoop() {
 	for {
 		buffer := make([]byte, dataChannelBufferSize)
 		n, isString, err := d.dataChannel.ReadDataChannel(buffer)
-		if err == io.ErrShortBuffer {
-			d.log.Warnf("Failed to read from data channel: The message is larger than %d bytes.\n", dataChannelBufferSize)
-			continue
-		}
 		if err != nil {
 			d.mu.Lock()
 			d.readyState = DataChannelStateClosed
 			d.mu.Unlock()
 			if err != io.EOF {
-				// TODO: Throw OnError
-				d.log.Errorf("Failed to read from data channel %v", err)
+				d.onError(err)
 			}
 			d.onClose()
 			return
@@ -533,4 +555,38 @@ func (d *DataChannel) OnBufferedAmountLow(f func()) {
 	if d.dataChannel != nil {
 		d.dataChannel.OnBufferedAmountLow(f)
 	}
+}
+
+func (d *DataChannel) getStatsID() string {
+	d.mu.Lock()
+	defer d.mu.Unlock()
+	return fmt.Sprintf("DataChannel-%d", *d.id)
+}
+
+func (d *DataChannel) collectStats(collector *statsReportCollector) {
+	collector.Collecting()
+	statsID := d.getStatsID()
+
+	d.mu.Lock()
+	defer d.mu.Unlock()
+
+	stats := DataChannelStats{
+		Timestamp:             statsTimestampNow(),
+		Type:                  StatsTypeDataChannel,
+		ID:                    statsID,
+		Label:                 d.label,
+		Protocol:              d.protocol,
+		DataChannelIdentifier: int32(*d.id),
+		// TransportID string `json:"transportId"`
+		State: d.readyState,
+	}
+
+	if d.dataChannel != nil {
+		stats.MessagesSent = d.dataChannel.MessagesSent()
+		stats.BytesSent = d.dataChannel.BytesSent()
+		stats.MessagesReceived = d.dataChannel.MessagesReceived()
+		stats.BytesReceived = d.dataChannel.BytesReceived()
+	}
+
+	collector.Collect(stats.ID, stats)
 }

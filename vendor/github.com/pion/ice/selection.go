@@ -82,6 +82,7 @@ func (s *controllingSelector) ContactCandidates() {
 		p := s.agent.getBestValidCandidatePair()
 		if p != nil && s.isNominatable(p.local) && s.isNominatable(p.remote) {
 			s.log.Tracef("Nominatable pair found, nominating (%s, %s)", p.local.String(), p.remote.String())
+			p.nominated = true
 			s.nominatedPair = p
 			s.nominatePair(p)
 			return
@@ -126,7 +127,7 @@ func (s *controllingSelector) HandleBindingRequest(m *stun.Message, local, remot
 		return
 	}
 
-	if p.state == candidatePairStateValid && s.nominatedPair == nil && s.agent.selectedPair == nil {
+	if p.state == CandidatePairStateSucceeded && s.nominatedPair == nil && s.agent.selectedPair == nil {
 		bestPair := s.agent.getBestAvailableCandidatePair()
 		if bestPair == nil {
 			s.log.Tracef("No best pair available\n")
@@ -164,7 +165,7 @@ func (s *controllingSelector) HandleSucessResponse(m *stun.Message, local, remot
 		return
 	}
 
-	p.state = candidatePairStateValid
+	p.state = CandidatePairStateSucceeded
 	s.log.Tracef("Found valid candidate pair: %s", p)
 	if pendingRequest.isUseCandidate && s.agent.selectedPair == nil {
 		s.agent.setSelectedPair(p)
@@ -256,7 +257,7 @@ func (s *controlledSelector) HandleSucessResponse(m *stun.Message, local, remote
 		return
 	}
 
-	p.state = candidatePairStateValid
+	p.state = CandidatePairStateSucceeded
 	s.log.Tracef("Found valid candidate pair: %s", p)
 }
 
@@ -272,7 +273,7 @@ func (s *controlledSelector) HandleBindingRequest(m *stun.Message, local, remote
 	if useCandidate {
 		// https://tools.ietf.org/html/rfc8445#section-7.3.1.5
 
-		if p.state == candidatePairStateValid {
+		if p.state == CandidatePairStateSucceeded {
 			// If the state of this pair is Succeeded, it means that the check
 			// previously sent by this pair produced a successful response and
 			// generated a valid pair (Section 7.2.5.3.2).  The agent sets the

@@ -37,6 +37,8 @@ For more full featured examples that use 3rd party libraries see our **[example-
 
 The Pion WebRTC API closely matches the JavaScript **[WebRTC API](https://w3c.github.io/webrtc-pc/)**. Most existing documentation is therefore also usefull when working with Pion. Furthermore, our **[GoDoc](https://godoc.org/github.com/pion/webrtc)** is actively maintained.
 
+We maintain a [FAQ](https://pion.ly/knowledge-base/pion-basics/faq/) with answers to common questions. If you have a question not covered please submit a PR, we would be happy to answer it!
+
 Now go forth and build some awesome apps! Here are some **ideas** to get your creative juices flowing:
 * Send a video file to multiple browser in real time for perfectly synchronized movie watching.
 * Send a webcam on an embedded device to your browser with no additional server required!
@@ -119,6 +121,12 @@ Check out the **[contributing wiki](https://github.com/pion/webrtc/wiki/Contribu
 * [Alex Harford](https://github.com/alexjh)
 * [Aleksandr Razumov](https://github.com/ernado)
 * [mchlrhw](https://github.com/mchlrhw)
+* [AlexWoo(武杰)](https://github.com/AlexWoo) *Fix RemoteDescription parsing for certificate fingerprint*
+* [Cecylia Bocovich](https://github.com/cohosh)
+* [Slugalisk](https://github.com/slugalisk)
+* [Agugua Kenechukwu](https://github.com/spaceCh1mp)
+* [Ato Araki](https://github.com/atotto)
+* [Rafael Viscarra](https://github.com/rviscarra)
 
 ### License
 MIT License - see [LICENSE](LICENSE) for full text

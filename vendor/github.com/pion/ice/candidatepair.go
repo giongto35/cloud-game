@@ -6,32 +6,12 @@ import (
 	"github.com/pion/stun"
 )
 
-type candidatePairState int
-
-const (
-	candidatePairStateChecking candidatePairState = iota + 1
-	candidatePairStateFailed
-	candidatePairStateValid
-)
-
-func (c candidatePairState) String() string {
-	switch c {
-	case candidatePairStateChecking:
-		return "checking"
-	case candidatePairStateFailed:
-		return "failed"
-	case candidatePairStateValid:
-		return "valid"
-	}
-	return "Unknown candidate pair state"
-}
-
 func newCandidatePair(local, remote Candidate, controlling bool) *candidatePair {
 	return &candidatePair{
 		iceRoleControlling: controlling,
 		remote:             remote,
 		local:              local,
-		state:              candidatePairStateChecking,
+		state:              CandidatePairStateWaiting,
 	}
 }
 
@@ -41,7 +21,8 @@ type candidatePair struct {
 	remote              Candidate
 	local               Candidate
 	bindingRequestCount uint16
-	state               candidatePairState
+	state               CandidatePairState
+	nominated           bool
 }
 
 func (p *candidatePair) String() string {

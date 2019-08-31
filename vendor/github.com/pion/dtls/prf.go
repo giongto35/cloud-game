@@ -50,6 +50,21 @@ func (e *encryptionKeys) String() string {
 		e.serverWriteIV)
 }
 
+// The premaster secret is formed as follows: if the PSK is N octets
+// long, concatenate a uint16 with the value N, N zero octets, a second
+// uint16 with the value N, and the PSK itself.
+//
+// https://tools.ietf.org/html/rfc4279#section-2
+func prfPSKPreMasterSecret(psk []byte) []byte {
+	pskLen := uint16(len(psk))
+
+	out := append(make([]byte, 2+pskLen+2), psk...)
+	binary.BigEndian.PutUint16(out, pskLen)
+	binary.BigEndian.PutUint16(out[2+pskLen:], pskLen)
+
+	return out
+}
+
 func prfPreMasterSecret(publicKey, privateKey []byte, curve namedCurve) ([]byte, error) {
 	switch curve {
 	case namedCurveX25519:

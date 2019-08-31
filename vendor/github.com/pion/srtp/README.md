@@ -11,7 +11,7 @@
   <br>
   <a href="https://travis-ci.org/pion/srtp"><img src="https://travis-ci.org/pion/srtp.svg?branch=master" alt="Build Status"></a>
   <a href="https://godoc.org/github.com/pion/srtp"><img src="https://godoc.org/github.com/pion/srtp?status.svg" alt="GoDoc"></a>
-  <a href="https://coveralls.io/github/pion/srtp"><img src="https://coveralls.io/repos/github/pion/srtp/badge.svg" alt="Coverage Status"></a>
+  <a href="https://codecov.io/gh/pion/srtp"><img src="https://codecov.io/gh/pion/srtp/branch/master/graph/badge.svg" alt="Coverage Status"></a>
   <a href="https://goreportcard.com/report/github.com/pion/srtp"><img src="https://goreportcard.com/badge/github.com/pion/srtp" alt="Go Report Card"></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/License-MIT-yellow.svg" alt="License: MIT"></a>
 </p>
