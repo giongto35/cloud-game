@@ -10,7 +10,6 @@ import (
 	"time"
 
 	"github.com/giongto35/cloud-game/config"
-	"github.com/giongto35/cloud-game/encoder"
 	"github.com/gofrs/uuid"
 	"github.com/pion/webrtc/v2"
 	"github.com/pion/webrtc/v2/pkg/media"
@@ -76,8 +75,7 @@ type WebRTC struct {
 	ID string
 
 	connection *webrtc.PeerConnection
-	//encoder     *vpxEncoder.VpxEncoder
-	encoder     encoder.Encoder
+
 	isConnected bool
 	isClosed    bool
 	// for yuvI420 image
@@ -242,17 +240,12 @@ func (w *WebRTC) StopClient() {
 
 	log.Println("===StopClient===")
 	w.isConnected = false
-	if w.encoder != nil {
-		// NOTE: We signal using bool value instead of channel for better performance
-		w.encoder.Stop()
-	}
 	if w.connection != nil {
 		w.connection.Close()
 	}
 	w.connection = nil
-	close(w.InputChannel)
+	//close(w.InputChannel)
 	// webrtc is producer, so we close
-	close(w.encoder.GetInputChan())
 	// NOTE: ImageChannel is waiting for input. Close in writer is not correct for this
 	close(w.ImageChannel)
 	close(w.AudioChannel)
@@ -270,7 +263,7 @@ func (w *WebRTC) startStreaming(vp8Track *webrtc.Track, opusTrack *webrtc.Track)
 	go func() {
 		defer func() {
 			if r := recover(); r != nil {
-				fmt.Println("Recovered when sent to closed encoder output channel")
+				fmt.Println("Recovered from err", r)
 			}
 		}()
 
@@ -289,7 +282,7 @@ func (w *WebRTC) startStreaming(vp8Track *webrtc.Track, opusTrack *webrtc.Track)
 	go func() {
 		defer func() {
 			if r := recover(); r != nil {
-				fmt.Println("Recovered when sent to closed Audio Channel")
+				fmt.Println("Recovered from err", r)
 			}
 		}()
 

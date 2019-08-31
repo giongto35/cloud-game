@@ -77,6 +77,12 @@ func (v *H264Encoder) startLooping() {
 		if r := recover(); r != nil {
 			log.Println("Warn: Recovered panic in encoding ", r)
 		}
+
+		if v.Done == true {
+			// The first time we see IsRunning set to false, we release and return
+			v.release()
+			return
+		}
 	}()
 
 	for img := range v.Input {
@@ -90,12 +96,6 @@ func (v *H264Encoder) startLooping() {
 		v.Output <- v.buf.Bytes()
 		v.buf.Reset()
 	}
-
-	if v.Done == true {
-		// The first time we see IsRunning set to false, we release and return
-		v.release()
-		return
-	}
 }
 
 // Release release memory and stop loop
@@ -105,9 +105,6 @@ func (v *H264Encoder) release() {
 		log.Println("Releasing encoder")
 		// TODO: Bug here, after close it will signal
 		close(v.Output)
-		if v.Input != nil {
-			close(v.Input)
-		}
 		err := v.enc.Close()
 		if err != nil {
 			log.Println("Failed to close H264 encoder")
@@ -129,4 +126,5 @@ func (v *H264Encoder) GetOutputChan() chan []byte {
 // GetDoneChan returns done channel
 func (v *H264Encoder) Stop() {
 	v.Done = true
+	close(v.Input)
 }

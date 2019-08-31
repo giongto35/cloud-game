@@ -108,6 +108,10 @@ func (r *Room) startVideo(width, height int) {
 		encoder, err = vpxencoder.NewVpxEncoder(width, height, 20, 1200, 5)
 	}
 
+	defer func() {
+		encoder.Stop()
+	}()
+
 	if err != nil {
 		fmt.Println("error create new encoder", err)
 		return
@@ -123,27 +127,27 @@ func (r *Room) startVideo(width, height int) {
 			}
 		}()
 
-		for image := range r.imageChannel {
-			if !r.IsRunning {
-				log.Println("Room ", r.ID, " video channel closed")
-				return
-			}
-			if len(einput) < cap(einput) {
-				einput <- image
+		// fanout Screen
+		for data := range eoutput {
+			// TODO: r.rtcSessions is rarely updated. Lock will hold down perf
+			for _, webRTC := range r.rtcSessions {
+				// encode frame
+				// fanout imageChannel
+				if webRTC.IsConnected() {
+					// NOTE: can block here
+					webRTC.ImageChannel <- data
+				}
 			}
 		}
 	}()
 
-	// fanout Screen
-	for data := range eoutput {
-		// TODO: r.rtcSessions is rarely updated. Lock will hold down perf
-		for _, webRTC := range r.rtcSessions {
-			// encode frame
-			// fanout imageChannel
-			if webRTC.IsConnected() {
-				// NOTE: can block here
-				webRTC.ImageChannel <- data
-			}
+	for image := range r.imageChannel {
+		if !r.IsRunning {
+			log.Println("Room ", r.ID, " video channel closed")
+			return
+		}
+		if len(einput) < cap(einput) {
+			einput <- image
 		}
 	}
 }

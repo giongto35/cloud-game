@@ -122,10 +122,11 @@ func (na *naEmulator) LoadMeta(path string) emulator.Meta {
 
 func (na *naEmulator) Start() {
 	na.playGame(na.gamePath)
-
 	ticker := time.NewTicker(time.Second / 60)
+
 	for range ticker.C {
 		select {
+		// Slow response here
 		case <-na.done:
 			nanoarchShutdown()
 			log.Println("Closed Director")

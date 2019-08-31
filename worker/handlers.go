@@ -102,6 +102,7 @@ func (h *Handler) detachPeerConn(pc *webrtc.WebRTC) {
 			// Signal end of input Channel
 			log.Println("Signal input chan")
 			pc.InputChannel <- -1
+			close(pc.InputChannel)
 		}
 	}
 }
