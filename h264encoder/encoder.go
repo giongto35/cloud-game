@@ -77,6 +77,12 @@ func (v *H264Encoder) startLooping() {
 		if r := recover(); r != nil {
 			log.Println("Warn: Recovered panic in encoding ", r)
 		}
+
+		if v.Done == true {
+			// The first time we see IsRunning set to false, we release and return
+			v.release()
+			return
+		}
 	}()
 
 	for img := range v.Input {
@@ -89,12 +95,6 @@ func (v *H264Encoder) startLooping() {
 		v.enc.Encode(img)
 		v.Output <- v.buf.Bytes()
 		v.buf.Reset()
-	}
-
-	if v.Done == true {
-		// The first time we see IsRunning set to false, we release and return
-		v.release()
-		return
 	}
 }
 
