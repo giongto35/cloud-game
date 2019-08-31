@@ -219,7 +219,6 @@ func (r *Room) Close() {
 	log.Println("Closing room", r.ID)
 	log.Println("Closing director of room ", r.ID)
 	r.director.Close()
-	//close(r.director.Done)
 	log.Println("Closing input of room ", r.ID)
 	close(r.inputChannel)
 	close(r.Done)
