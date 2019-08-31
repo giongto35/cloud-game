@@ -17,6 +17,7 @@ const (
 
 // Candidate represents an ICE candidate
 type Candidate interface {
+	ID() string
 	Component() uint16
 	Address() string
 	LastReceived() time.Time

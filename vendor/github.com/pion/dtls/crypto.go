@@ -10,6 +10,7 @@ import (
 	"encoding/asn1"
 	"encoding/binary"
 	"math/big"
+	"time"
 )
 
 type ecdsaSignature struct {
@@ -119,4 +120,44 @@ func verifyCertificateVerify(handshakeBodies []byte, hashAlgorithm HashAlgorithm
 	}
 
 	return errKeySignatureVerifyUnimplemented
+}
+
+func verifyClientCert(cert *x509.Certificate, roots *x509.CertPool) error {
+	opts := x509.VerifyOptions{
+		Roots:         roots,
+		CurrentTime:   time.Now(),
+		Intermediates: x509.NewCertPool(),
+		KeyUsages:     []x509.ExtKeyUsage{x509.ExtKeyUsageClientAuth},
+	}
+	if _, err := cert.Verify(opts); err != nil {
+		return err
+	}
+	return nil
+}
+
+func verifyServerCert(cert *x509.Certificate, roots *x509.CertPool, serverName string) error {
+	opts := x509.VerifyOptions{
+		Roots:         roots,
+		CurrentTime:   time.Now(),
+		DNSName:       serverName,
+		Intermediates: x509.NewCertPool(),
+	}
+	if _, err := cert.Verify(opts); err != nil {
+		return err
+	}
+	return nil
+}
+
+func generateAEADAdditionalData(h *recordLayerHeader, payloadLen int) []byte {
+	var additionalData [13]byte
+	// SequenceNumber MUST be set first
+	// we only want uint48, clobbering an extra 2 (using uint64, Golang doesn't have uint48)
+	binary.BigEndian.PutUint64(additionalData[:], h.sequenceNumber)
+	binary.BigEndian.PutUint16(additionalData[:], h.epoch)
+	additionalData[8] = byte(h.contentType)
+	additionalData[9] = h.protocolVersion.major
+	additionalData[10] = h.protocolVersion.minor
+	binary.BigEndian.PutUint16(additionalData[len(additionalData)-2:], uint16(payloadLen))
+
+	return additionalData[:]
 }

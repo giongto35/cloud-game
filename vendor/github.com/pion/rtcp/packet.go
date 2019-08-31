@@ -63,6 +63,9 @@ func unmarshal(rawData []byte) (packet Packet, bytesprocessed int, err error) {
 	}
 
 	bytesprocessed = int(h.Length+1) * 4
+	if bytesprocessed > len(rawData) {
+		return nil, 0, errPacketTooShort
+	}
 	inPacket := rawData[:bytesprocessed]
 
 	switch h.Type {

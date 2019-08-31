@@ -160,5 +160,5 @@ func (d *MediaDescription) WithCandidate(value string) *MediaDescription {
 
 // WithICECandidate adds an ICE candidate to the media description
 func (d *MediaDescription) WithICECandidate(c ICECandidate) *MediaDescription {
-	return d.WithValueAttribute("candidate", c.marshalString())
+	return d.WithValueAttribute("candidate", c.Marshal())
 }

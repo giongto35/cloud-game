@@ -38,7 +38,8 @@ type ICECandidateAttribute struct {
 //                            *(SP extension-att-name SP
 //                                 extension-att-value)
 
-func (c ICECandidate) marshalString() string {
+// Marshal returns the string representation of the ICECandidate
+func (c ICECandidate) Marshal() string {
 	val := fmt.Sprintf("%s %d %s %d %s %d typ %s",
 		c.Foundation,
 		c.Component,
@@ -64,7 +65,8 @@ func (c ICECandidate) marshalString() string {
 	return val
 }
 
-func (c *ICECandidate) unmarshalString(raw string) error {
+// Unmarshal popuulates the ICECandidate from its string representation
+func (c *ICECandidate) Unmarshal(raw string) error {
 	split := strings.Fields(raw)
 	if len(split) < 8 {
 		return fmt.Errorf("attribute not long enough to be ICE candidate (%d)", len(split))

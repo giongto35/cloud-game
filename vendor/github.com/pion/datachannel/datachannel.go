@@ -3,6 +3,7 @@ package datachannel
 import (
 	"fmt"
 	"io"
+	"sync/atomic"
 
 	"github.com/pion/logging"
 	"github.com/pion/sctp"
@@ -36,6 +37,13 @@ type ReadWriteCloser interface {
 // DataChannel represents a data channel
 type DataChannel struct {
 	Config
+
+	// stats
+	messagesSent     uint32
+	messagesReceived uint32
+	bytesSent        uint64
+	bytesReceived    uint64
+
 	stream *sctp.Stream
 	log    logging.LeveledLogger
 }
@@ -199,8 +207,32 @@ func (c *DataChannel) ReadDataChannel(p []byte) (int, bool, error) {
 		case sctp.PayloadTypeWebRTCString, sctp.PayloadTypeWebRTCStringEmpty:
 			isString = true
 		}
+
+		atomic.AddUint32(&c.messagesReceived, 1)
+		atomic.AddUint64(&c.bytesReceived, uint64(n))
+
 		return n, isString, err
 	}
+}
+
+// MessagesSent returns the number of messages sent
+func (c *DataChannel) MessagesSent() uint32 {
+	return atomic.LoadUint32(&c.messagesSent)
+}
+
+// MessagesReceived returns the number of messages received
+func (c *DataChannel) MessagesReceived() uint32 {
+	return atomic.LoadUint32(&c.messagesReceived)
+}
+
+// BytesSent returns the number of bytes sent
+func (c *DataChannel) BytesSent() uint64 {
+	return atomic.LoadUint64(&c.bytesSent)
+}
+
+// BytesReceived returns the number of bytes received
+func (c *DataChannel) BytesReceived() uint64 {
+	return atomic.LoadUint64(&c.bytesReceived)
 }
 
 // StreamIdentifier returns the Stream identifier associated to the stream.
@@ -258,6 +290,9 @@ func (c *DataChannel) WriteDataChannel(p []byte, isString bool) (n int, err erro
 	case isString && len(p) == 0:
 		ppi = sctp.PayloadTypeWebRTCStringEmpty
 	}
+
+	atomic.AddUint32(&c.messagesSent, 1)
+	atomic.AddUint64(&c.bytesSent, uint64(len(p)))
 
 	return c.stream.WriteSCTP(p, ppi)
 }
