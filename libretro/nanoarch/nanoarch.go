@@ -61,7 +61,6 @@ var mu sync.Mutex
 var video struct {
 	program uint32
 	vao     uint32
-	texID   uint32
 	pitch   uint32
 	pixFmt  uint32
 	pixType uint32
@@ -119,10 +118,6 @@ func videoConfigure(geom *C.struct_retro_game_geometry) (int, int) {
 	nwidth, nheight := resizeToAspect(float64(geom.aspect_ratio), float64(geom.base_width), float64(geom.base_height))
 
 	fmt.Println("media config", nwidth, nheight, geom.base_width, geom.base_height, geom.aspect_ratio, video.bpp, scale)
-
-	if video.texID == 0 {
-		fmt.Println("Failed to create the video texture")
-	}
 
 	return int(math.Round(nwidth)), int(math.Round(nheight))
 }
@@ -239,7 +234,10 @@ func audioWrite2(buf unsafe.Pointer, frames C.size_t) C.size_t {
 
 	for i := 0; i < numFrames; i += 1 {
 		s := float32(pcm[i])
-		NAEmulator.audioChannel <- s
+		select {
+		case NAEmulator.audioChannel <- s:
+		default:
+		}
 	}
 
 	return 2 * frames
@@ -485,10 +483,6 @@ func nanoarchRun() {
 }
 
 func videoSetPixelFormat(format uint32) C.bool {
-	if video.texID != 0 {
-		log.Fatal("Tried to change pixel format after initialization.")
-	}
-
 	switch format {
 	case C.RETRO_PIXEL_FORMAT_0RGB1555:
 		video.pixFmt = gl.UNSIGNED_SHORT_5_5_5_1
