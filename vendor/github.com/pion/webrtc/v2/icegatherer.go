@@ -119,7 +119,7 @@ func (g *ICEGatherer) createAgent() error {
 
 	requestedNetworkTypes := g.networkTypes
 	if len(requestedNetworkTypes) == 0 {
-		requestedNetworkTypes = supportedNetworkTypes
+		requestedNetworkTypes = supportedNetworkTypes()
 	}
 
 	for _, typ := range requestedNetworkTypes {
@@ -147,6 +147,10 @@ func (g *ICEGatherer) Gather() error {
 
 	g.lock.Lock()
 	onLocalCandidateHdlr := g.onLocalCandidateHdlr
+	if onLocalCandidateHdlr == nil {
+		onLocalCandidateHdlr = func(*ICECandidate) {}
+	}
+
 	isTrickle := g.agentIsTrickle
 	agent := g.agent
 	g.lock.Unlock()
@@ -278,4 +282,115 @@ func (g *ICEGatherer) SignalCandidates() error {
 		go onLocalCandidateHdlr(nil)
 	}
 	return nil
+}
+
+func (g *ICEGatherer) collectStats(collector *statsReportCollector) {
+	collector.Collecting()
+
+	go func(collector *statsReportCollector) {
+		for _, candidatePairStats := range g.agent.GetCandidatePairsStats() {
+			collector.Collecting()
+
+			state, err := toStatsICECandidatePairState(candidatePairStats.State)
+			if err != nil {
+				g.log.Error(err.Error())
+			}
+
+			pairID := newICECandidatePairStatsID(candidatePairStats.LocalCandidateID,
+				candidatePairStats.RemoteCandidateID)
+
+			stats := ICECandidatePairStats{
+				Timestamp: statsTimestampFrom(candidatePairStats.Timestamp),
+				Type:      StatsTypeCandidatePair,
+				ID:        pairID,
+				// TransportID:
+				LocalCandidateID:            candidatePairStats.LocalCandidateID,
+				RemoteCandidateID:           candidatePairStats.RemoteCandidateID,
+				State:                       state,
+				Nominated:                   candidatePairStats.Nominated,
+				PacketsSent:                 candidatePairStats.PacketsSent,
+				PacketsReceived:             candidatePairStats.PacketsReceived,
+				BytesSent:                   candidatePairStats.BytesSent,
+				BytesReceived:               candidatePairStats.BytesReceived,
+				LastPacketSentTimestamp:     statsTimestampFrom(candidatePairStats.LastPacketSentTimestamp),
+				LastPacketReceivedTimestamp: statsTimestampFrom(candidatePairStats.LastPacketReceivedTimestamp),
+				FirstRequestTimestamp:       statsTimestampFrom(candidatePairStats.FirstRequestTimestamp),
+				LastRequestTimestamp:        statsTimestampFrom(candidatePairStats.LastRequestTimestamp),
+				LastResponseTimestamp:       statsTimestampFrom(candidatePairStats.LastResponseTimestamp),
+				TotalRoundTripTime:          candidatePairStats.TotalRoundTripTime,
+				CurrentRoundTripTime:        candidatePairStats.CurrentRoundTripTime,
+				AvailableOutgoingBitrate:    candidatePairStats.AvailableOutgoingBitrate,
+				AvailableIncomingBitrate:    candidatePairStats.AvailableIncomingBitrate,
+				CircuitBreakerTriggerCount:  candidatePairStats.CircuitBreakerTriggerCount,
+				RequestsReceived:            candidatePairStats.RequestsReceived,
+				RequestsSent:                candidatePairStats.RequestsSent,
+				ResponsesReceived:           candidatePairStats.ResponsesReceived,
+				ResponsesSent:               candidatePairStats.ResponsesSent,
+				RetransmissionsReceived:     candidatePairStats.RetransmissionsReceived,
+				RetransmissionsSent:         candidatePairStats.RetransmissionsSent,
+				ConsentRequestsSent:         candidatePairStats.ConsentRequestsSent,
+				ConsentExpiredTimestamp:     statsTimestampFrom(candidatePairStats.ConsentExpiredTimestamp),
+			}
+			collector.Collect(stats.ID, stats)
+		}
+
+		for _, candidateStats := range g.agent.GetLocalCandidatesStats() {
+			collector.Collecting()
+
+			networkType, err := getNetworkType(candidateStats.NetworkType)
+			if err != nil {
+				g.log.Error(err.Error())
+			}
+
+			candidateType, err := getCandidateType(candidateStats.CandidateType)
+			if err != nil {
+				g.log.Error(err.Error())
+			}
+
+			stats := ICECandidateStats{
+				Timestamp:     statsTimestampFrom(candidateStats.Timestamp),
+				ID:            candidateStats.ID,
+				Type:          StatsTypeLocalCandidate,
+				NetworkType:   networkType,
+				IP:            candidateStats.IP,
+				Port:          int32(candidateStats.Port),
+				Protocol:      networkType.Protocol(),
+				CandidateType: candidateType,
+				Priority:      int32(candidateStats.Priority),
+				URL:           candidateStats.URL,
+				RelayProtocol: candidateStats.RelayProtocol,
+				Deleted:       candidateStats.Deleted,
+			}
+			collector.Collect(stats.ID, stats)
+		}
+
+		for _, candidateStats := range g.agent.GetRemoteCandidatesStats() {
+			collector.Collecting()
+			networkType, err := getNetworkType(candidateStats.NetworkType)
+			if err != nil {
+				g.log.Error(err.Error())
+			}
+
+			candidateType, err := getCandidateType(candidateStats.CandidateType)
+			if err != nil {
+				g.log.Error(err.Error())
+			}
+
+			stats := ICECandidateStats{
+				Timestamp:     statsTimestampFrom(candidateStats.Timestamp),
+				ID:            candidateStats.ID,
+				Type:          StatsTypeRemoteCandidate,
+				NetworkType:   networkType,
+				IP:            candidateStats.IP,
+				Port:          int32(candidateStats.Port),
+				Protocol:      networkType.Protocol(),
+				CandidateType: candidateType,
+				Priority:      int32(candidateStats.Priority),
+				URL:           candidateStats.URL,
+				RelayProtocol: candidateStats.RelayProtocol,
+			}
+			collector.Collect(stats.ID, stats)
+		}
+		collector.Done()
+	}(collector)
 }

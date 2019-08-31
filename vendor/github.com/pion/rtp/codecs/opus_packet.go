@@ -31,5 +31,6 @@ func (p *OpusPacket) Unmarshal(packet []byte) ([]byte, error) {
 	if len(packet) == 0 {
 		return nil, fmt.Errorf("Payload is not large enough")
 	}
+	p.Payload = packet
 	return packet, nil
 }

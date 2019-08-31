@@ -181,15 +181,21 @@ func NewDefaultLoggerFactory() *DefaultLoggerFactory {
 	factory.Writer = os.Stdout
 
 	logLevels := map[string]LogLevel{
-		"ERROR": LogLevelError,
-		"WARN":  LogLevelWarn,
-		"INFO":  LogLevelInfo,
-		"DEBUG": LogLevelDebug,
-		"TRACE": LogLevelTrace,
+		"DISABLE": LogLevelDisabled,
+		"ERROR":   LogLevelError,
+		"WARN":    LogLevelWarn,
+		"INFO":    LogLevelInfo,
+		"DEBUG":   LogLevelDebug,
+		"TRACE":   LogLevelTrace,
 	}
 
 	for name, level := range logLevels {
-		env := os.Getenv(fmt.Sprintf("PIONS_LOG_%s", name))
+		env := os.Getenv(fmt.Sprintf("PION_LOG_%s", name))
+
+		if env == "" {
+			env = os.Getenv(fmt.Sprintf("PIONS_LOG_%s", name))
+		}
+
 		if env == "" {
 			continue
 		}

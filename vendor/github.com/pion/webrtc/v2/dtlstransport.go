@@ -31,10 +31,9 @@ type DTLSTransport struct {
 	certificates      []Certificate
 	remoteParameters  DTLSParameters
 	remoteCertificate []byte
-	// State     DTLSTransportState
+	state             DTLSTransportState
 
-	// OnStateChange func()
-	// OnError       func()
+	onStateChangeHdlr func(DTLSTransportState)
 
 	conn *dtls.Conn
 
@@ -43,6 +42,8 @@ type DTLSTransport struct {
 	srtpEndpoint  *mux.Endpoint
 	srtcpEndpoint *mux.Endpoint
 
+	dtlsMatcher mux.MatchFunc
+
 	api *API
 }
 
@@ -50,7 +51,12 @@ type DTLSTransport struct {
 // This constructor is part of the ORTC API. It is not
 // meant to be used together with the basic WebRTC API.
 func (api *API) NewDTLSTransport(transport *ICETransport, certificates []Certificate) (*DTLSTransport, error) {
-	t := &DTLSTransport{iceTransport: transport, api: api}
+	t := &DTLSTransport{
+		iceTransport: transport,
+		api:          api,
+		state:        DTLSTransportStateNew,
+		dtlsMatcher:  mux.MatchDTLS,
+	}
 
 	if len(certificates) > 0 {
 		now := time.Now()
@@ -83,12 +89,36 @@ func (t *DTLSTransport) ICETransport() *ICETransport {
 	return t.iceTransport
 }
 
+// onStateChange requires the caller holds the lock
+func (t *DTLSTransport) onStateChange(state DTLSTransportState) {
+	t.state = state
+	hdlr := t.onStateChangeHdlr
+	if hdlr != nil {
+		hdlr(state)
+	}
+}
+
+// OnStateChange sets a handler that is fired when the DTLS
+// connection state changes.
+func (t *DTLSTransport) OnStateChange(f func(DTLSTransportState)) {
+	t.lock.Lock()
+	defer t.lock.Unlock()
+	t.onStateChangeHdlr = f
+}
+
+// State returns the current dtls transport state.
+func (t *DTLSTransport) State() DTLSTransportState {
+	t.lock.RLock()
+	defer t.lock.RUnlock()
+	return t.state
+}
+
 // GetLocalParameters returns the DTLS parameters of the local DTLSTransport upon construction.
 func (t *DTLSTransport) GetLocalParameters() (DTLSParameters, error) {
 	fingerprints := []DTLSFingerprint{}
 
 	for _, c := range t.certificates {
-		prints, err := c.GetFingerprints() // TODO: Should be only one?
+		prints, err := c.GetFingerprints()
 		if err != nil {
 			return DTLSParameters{}, err
 		}
@@ -200,11 +230,15 @@ func (t *DTLSTransport) Start(remoteParameters DTLSParameters) error {
 		return err
 	}
 
+	if t.state != DTLSTransportStateNew {
+		return &rtcerr.InvalidStateError{Err: fmt.Errorf("attempted to start DTLSTransport that is not in new state: %s", t.state)}
+	}
+
 	dtlsEndpoint := t.iceTransport.NewEndpoint(mux.MatchDTLS)
 	t.srtpEndpoint = t.iceTransport.NewEndpoint(mux.MatchSRTP)
 	t.srtcpEndpoint = t.iceTransport.NewEndpoint(mux.MatchSRTCP)
 
-	// TODO: handle multiple certs
+	// pion/webrtc#753
 	cert := t.certificates[0]
 
 	dtlsCofig := &dtls.Config{
@@ -213,11 +247,15 @@ func (t *DTLSTransport) Start(remoteParameters DTLSParameters) error {
 		SRTPProtectionProfiles: []dtls.SRTPProtectionProfile{dtls.SRTP_AES128_CM_HMAC_SHA1_80},
 		ClientAuth:             dtls.RequireAnyClientCert,
 		LoggerFactory:          t.api.settingEngine.LoggerFactory,
+		InsecureSkipVerify:     true,
 	}
+
+	t.onStateChange(DTLSTransportStateConnecting)
 	if t.isClient() {
 		// Assumes the peer offered to be passive and we accepted.
 		dtlsConn, err := dtls.Client(dtlsEndpoint, dtlsCofig)
 		if err != nil {
+			t.onStateChange(DTLSTransportStateFailed)
 			return err
 		}
 		t.conn = dtlsConn
@@ -225,10 +263,12 @@ func (t *DTLSTransport) Start(remoteParameters DTLSParameters) error {
 		// Assumes we offer to be passive and this is accepted.
 		dtlsConn, err := dtls.Server(dtlsEndpoint, dtlsCofig)
 		if err != nil {
+			t.onStateChange(DTLSTransportStateFailed)
 			return err
 		}
 		t.conn = dtlsConn
 	}
+	t.onStateChange(DTLSTransportStateConnected)
 
 	// Check the fingerprint if a certificate was exchanged
 	remoteCert := t.conn.RemoteCertificate()
@@ -265,6 +305,7 @@ func (t *DTLSTransport) Stop() error {
 			closeErrs = append(closeErrs, err)
 		}
 	}
+	t.onStateChange(DTLSTransportStateClosed)
 	return util.FlattenErrs(closeErrs)
 }
 

@@ -24,8 +24,6 @@ type SCTPTransport struct {
 	// State represents the current state of the SCTP transport.
 	state SCTPTransportState
 
-	port uint16
-
 	// MaxMessageSize represents the maximum size of data that can be passed to
 	// DataChannel's send() method.
 	maxMessageSize float64
@@ -36,8 +34,9 @@ type SCTPTransport struct {
 
 	// OnStateChange  func()
 
-	association          *sctp.Association
-	onDataChannelHandler func(*DataChannel)
+	association                *sctp.Association
+	onDataChannelHandler       func(*DataChannel)
+	onDataChannelOpenedHandler func(*DataChannel)
 
 	api *API
 	log logging.LeveledLogger
@@ -50,7 +49,6 @@ func (api *API) NewSCTPTransport(dtls *DTLSTransport) *SCTPTransport {
 	res := &SCTPTransport{
 		dtlsTransport: dtls,
 		state:         SCTPTransportStateConnecting,
-		port:          5000, // TODO
 		api:           api,
 		log:           api.settingEngine.LoggerFactory.NewLogger("ortc"),
 	}
@@ -82,9 +80,6 @@ func (r *SCTPTransport) GetCapabilities() SCTPCapabilities {
 func (r *SCTPTransport) Start(remoteCaps SCTPCapabilities) error {
 	r.lock.Lock()
 	defer r.lock.Unlock()
-
-	// TODO: port
-	_ = r.maxMessageSize // TODO
 
 	if err := r.ensureDTLS(); err != nil {
 		return err
@@ -142,8 +137,8 @@ func (r *SCTPTransport) acceptDataChannels() {
 		if err != nil {
 			if err != io.EOF {
 				r.log.Errorf("Failed to accept data channel: %v", err)
+				// pion/webrtc#754
 			}
-			// TODO: Kill DataChannel/PeerConnection?
 			return
 		}
 
@@ -183,12 +178,20 @@ func (r *SCTPTransport) acceptDataChannels() {
 
 		if err != nil {
 			r.log.Errorf("Failed to accept data channel: %v", err)
-			// TODO: Kill DataChannel/PeerConnection?
+			// pion/webrtc#754
 			return
 		}
 
 		<-r.onDataChannel(rtcDC)
 		rtcDC.handleOpen(dc)
+
+		r.lock.Lock()
+		dcOpenedHdlr := r.onDataChannelOpenedHandler
+		r.lock.Unlock()
+
+		if dcOpenedHdlr != nil {
+			dcOpenedHdlr(rtcDC)
+		}
 	}
 }
 
@@ -198,6 +201,14 @@ func (r *SCTPTransport) OnDataChannel(f func(*DataChannel)) {
 	r.lock.Lock()
 	defer r.lock.Unlock()
 	r.onDataChannelHandler = f
+}
+
+// OnDataChannelOpened sets an event handler which is invoked when a data
+// channel is opened
+func (r *SCTPTransport) OnDataChannelOpened(f func(*DataChannel)) {
+	r.lock.Lock()
+	defer r.lock.Unlock()
+	r.onDataChannelOpenedHandler = f
 }
 
 func (r *SCTPTransport) onDataChannel(dc *DataChannel) (done chan struct{}) {
@@ -225,8 +236,8 @@ func (r *SCTPTransport) updateMessageSize() {
 	r.lock.Lock()
 	defer r.lock.Unlock()
 
-	var remoteMaxMessageSize float64 = 65536 // TODO: get from SDP
-	var canSendSize float64 = 65536          // TODO: Get from SCTP implementation
+	var remoteMaxMessageSize float64 = 65536 // pion/webrtc#758
+	var canSendSize float64 = 65536          // pion/webrtc#758
 
 	r.maxMessageSize = r.calcMessageSize(remoteMaxMessageSize, canSendSize)
 }

@@ -13,15 +13,16 @@ func (h handshakeMessageCertificate) handshakeType() handshakeType {
 }
 
 func (h *handshakeMessageCertificate) Marshal() ([]byte, error) {
-	if h.certificate == nil {
-		return nil, errCertificateUnset
+	var raw []byte
+	if h.certificate != nil {
+		raw = h.certificate.Raw
 	}
 
 	out := make([]byte, 6)
-	putBigEndianUint24(out, uint32(len(h.certificate.Raw))+3)
-	putBigEndianUint24(out[3:], uint32(len(h.certificate.Raw)))
+	putBigEndianUint24(out, uint32(len(raw))+3)
+	putBigEndianUint24(out[3:], uint32(len(raw)))
 
-	return append(out, h.certificate.Raw...), nil
+	return append(out, raw...), nil
 }
 
 func (h *handshakeMessageCertificate) Unmarshal(data []byte) error {
@@ -37,11 +38,12 @@ func (h *handshakeMessageCertificate) Unmarshal(data []byte) error {
 		return errLengthMismatch
 	}
 
-	cert, err := x509.ParseCertificate(data[6:])
-	if err != nil {
-		return err
+	if len(data) > 6 {
+		cert, err := x509.ParseCertificate(data[6:])
+		if err != nil {
+			return err
+		}
+		h.certificate = cert
 	}
-	h.certificate = cert
-
 	return nil
 }
