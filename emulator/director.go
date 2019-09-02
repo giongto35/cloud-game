@@ -5,9 +5,9 @@ import (
 	"log"
 	"time"
 
+	"github.com/giongto35/cloud-game/config"
 	"github.com/giongto35/cloud-game/emulator/nes"
 	"github.com/giongto35/cloud-game/util"
-	// "github.com/gordonklaus/portaudio"
 )
 
 // Director is the nes emulator
@@ -54,17 +54,11 @@ func (d *Director) SetView(view *GameView) {
 //d.view.UpdateInput(input)
 //}
 
-func (d *Director) LoadMeta(path string) Meta {
-	// portaudio.Initialize()
-	// defer portaudio.Terminate()
-
-	// audio := NewAudio()
-	// audio.Start()
-	// d.audio = audio
+func (d *Director) LoadMeta(path string) config.EmulatorMeta {
 	log.Println("Start game: ", path)
 
 	d.gamePath = path
-	return Meta{
+	return config.EmulatorMeta{
 		AudioSampleRate: 48000,
 		Fps:             300,
 		Width:           256,

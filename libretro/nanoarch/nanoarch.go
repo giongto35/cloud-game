@@ -7,7 +7,6 @@ import (
 	"image"
 	"image/color"
 	"log"
-	"math"
 	"os"
 	"os/user"
 	"reflect"
@@ -121,58 +120,56 @@ func resizeToAspect(ratio float64, sw float64, sh float64) (dw float64, dh float
 	return
 }
 
-func videoConfigure(geom *C.struct_retro_game_geometry) (int, int) {
-
-	nwidth, nheight := resizeToAspect(float64(geom.aspect_ratio), float64(geom.base_width), float64(geom.base_height))
-
-	fmt.Println("media config", nwidth, nheight, geom.base_width, geom.base_height, geom.aspect_ratio, video.bpp, scale)
-
-	return int(math.Round(nwidth)), int(math.Round(nheight))
-}
-
 //export coreVideoRefresh
 func coreVideoRefresh(data unsafe.Pointer, width C.unsigned, height C.unsigned, pitch C.size_t) {
 	bytesPerRow := int(uint32(pitch) / video.bpp)
 
 	if data != nil {
-		NAEmulator.imageChannel <- toImageRGBA(data, bytesPerRow)
+		NAEmulator.imageChannel <- toImageRGBA(data, bytesPerRow, int(width), int(height))
 	}
 }
 
 // toImageRGBA convert nanoarch 2d array to image.RGBA
-func toImageRGBA(data unsafe.Pointer, bytesPerRow int) *image.RGBA {
+func toImageRGBA(data unsafe.Pointer, bytesPerRow int, inputWidth, inputHeight int) *image.RGBA {
 	// Convert unsafe Pointer to bytes array
 	var bytes []byte
 
+	// Convert bytes array to image
+	// TODO: Reduce overhead of copying to bytes array by accessing unsafe.Pointer directly
 	sh := (*reflect.SliceHeader)(unsafe.Pointer(&bytes))
 	sh.Data = uintptr(data)
-	sh.Len = bytesPerRow * eheight * 4
-	sh.Cap = bytesPerRow * eheight * 4
+	sh.Len = bytesPerRow * inputHeight * 4
+	sh.Cap = bytesPerRow * inputHeight * 4
 
 	if video.pixFmt == BIT_FORMAT_SHORT_5_6_5 {
-		return to565Image(data, bytes, bytesPerRow)
+		return to565Image(data, bytes, bytesPerRow, inputWidth, inputHeight)
 	} else if video.pixFmt == BIT_FORMAT_INT_8_8_8_8_REV {
-		return to8888Image(data, bytes, bytesPerRow)
+		return to8888Image(data, bytes, bytesPerRow, inputWidth, inputHeight)
 	}
 	return nil
 }
 
-func to8888Image(data unsafe.Pointer, bytes []byte, bytesPerRow int) *image.RGBA {
+func to8888Image(data unsafe.Pointer, bytes []byte, bytesPerRow int, inputWidth, inputHeight int) *image.RGBA {
 	seek := 0
 
-	// Convert bytes array to image
-	// TODO: Reduce overhead of copying to bytes array by accessing unsafe.Pointer directly
+	// scaleWidth and scaleHeight is the scale
+	scaleWidth := float64(ewidth) / float64(inputWidth)
+	scaleHeight := float64(eheight) / float64(inputHeight)
+
 	image := image.NewRGBA(image.Rect(0, 0, ewidth, eheight))
-	for y := 0; y < eheight; y++ {
+	for y := 0; y < inputHeight; y++ {
 		for x := 0; x < bytesPerRow; x++ {
-			if x < ewidth {
+			xx := int(float64(x) * scaleWidth)
+			yy := int(float64(y) * scaleHeight)
+			if xx < ewidth {
 				b8 := bytes[seek]
 				g8 := bytes[seek+1]
 				r8 := bytes[seek+2]
 				a8 := bytes[seek+3]
 
-				image.Set(x, y, color.RGBA{byte(r8), byte(g8), byte(b8), byte(a8)})
+				image.Set(xx, yy, color.RGBA{byte(r8), byte(g8), byte(b8), byte(a8)})
 			}
+
 			seek += 4
 		}
 	}
@@ -181,15 +178,19 @@ func to8888Image(data unsafe.Pointer, bytes []byte, bytesPerRow int) *image.RGBA
 	return image
 }
 
-func to565Image(data unsafe.Pointer, bytes []byte, bytesPerRow int) *image.RGBA {
+func to565Image(data unsafe.Pointer, bytes []byte, bytesPerRow int, inputWidth, inputHeight int) *image.RGBA {
 	seek := 0
 
-	// Convert bytes array to image
-	// TODO: Reduce overhead of copying to bytes array by accessing unsafe.Pointer directly
+	// scaleWidth and scaleHeight is the scale
+	scaleWidth := float64(ewidth) / float64(inputWidth)
+	scaleHeight := float64(eheight) / float64(inputHeight)
+
 	image := image.NewRGBA(image.Rect(0, 0, ewidth, eheight))
-	for y := 0; y < eheight; y++ {
+	for y := 0; y < inputHeight; y++ {
 		for x := 0; x < bytesPerRow; x++ {
-			if x < ewidth {
+			xx := int(float64(x) * scaleWidth)
+			yy := int(float64(y) * scaleHeight)
+			if xx < ewidth {
 				var bi int
 				bi = (int)(bytes[seek]) + ((int)(bytes[seek+1]) << 8)
 				b5 := bi & 0x1F
@@ -200,8 +201,9 @@ func to565Image(data unsafe.Pointer, bytes []byte, bytesPerRow int) *image.RGBA 
 				g8 := (g6*255 + 31) / 63
 				r8 := (r5*255 + 15) / 31
 
-				image.Set(x, y, color.RGBA{byte(r8), byte(g8), byte(b8), 255})
+				image.Set(int(float64(xx)*scaleWidth), int(float64(yy)*scaleHeight), color.RGBA{byte(r8), byte(g8), byte(b8), 255})
 			}
+
 			seek += 2
 		}
 	}
@@ -444,12 +446,9 @@ func coreLoadGame(filename string) {
 
 	C.bridge_retro_get_system_av_info(retroGetSystemAVInfo, &avi)
 
-	ewidth, eheight = videoConfigure(&avi.geometry)
 	// Append the library name to the window title.
 	NAEmulator.meta.AudioSampleRate = int(avi.timing.sample_rate)
 	NAEmulator.meta.Fps = int(avi.timing.fps)
-	NAEmulator.meta.Width = ewidth
-	NAEmulator.meta.Height = eheight
 }
 
 // serializeSize returns the amount of data the implementation requires to serialize
