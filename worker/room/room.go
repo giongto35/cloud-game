@@ -96,10 +96,13 @@ func NewRoom(roomID string, gameName string, onlineStorage *storage.Client) *Roo
 		log.Printf("Room %s started. GamePath: %s, GameName: %s", roomID, game.Path, game.Name)
 
 		// Spawn new emulator based on gameName and plug-in all channels
-		room.director = getEmulator(game.Type, roomID, imageChannel, audioChannel, inputChannel)
-		meta := room.director.LoadMeta(game.Path)
-		go room.startVideo(meta.Width, meta.Height)
-		go room.startAudio(meta.AudioSampleRate)
+		emuName, _ := config.FileTypeToEmulator[game.Type]
+
+		room.director = getEmulator(emuName, roomID, imageChannel, audioChannel, inputChannel)
+		gameMeta := room.director.LoadMeta(game.Path)
+
+		go room.startVideo(gameMeta.Width, gameMeta.Height)
+		go room.startAudio(gameMeta.AudioSampleRate)
 		room.director.Start()
 
 		log.Printf("Room %s ended", roomID)
@@ -112,17 +115,12 @@ func NewRoom(roomID string, gameName string, onlineStorage *storage.Client) *Roo
 }
 
 // create director
-func getEmulator(gameType string, roomID string, imageChannel chan<- *image.RGBA, audioChannel chan<- float32, inputChannel <-chan int) emulator.CloudEmulator {
-	if gameType == "nes" {
+func getEmulator(emuName string, roomID string, imageChannel chan<- *image.RGBA, audioChannel chan<- float32, inputChannel <-chan int) emulator.CloudEmulator {
+	if emuName == "nes" {
 		return emulator.NewDirector(roomID, imageChannel, audioChannel, inputChannel)
 	}
 
-	ename, ok := config.FileTypeToEmulator[gameType]
-	if !ok {
-		return nil
-	}
-
-	nanoarch.Init(ename, roomID, imageChannel, audioChannel, inputChannel)
+	nanoarch.Init(emuName, roomID, imageChannel, audioChannel, inputChannel)
 	return nanoarch.NAEmulator
 }
 
