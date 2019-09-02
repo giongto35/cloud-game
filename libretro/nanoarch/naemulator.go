@@ -5,7 +5,7 @@ import (
 	"log"
 	"time"
 
-	emulator "github.com/giongto35/cloud-game/emulator"
+	"github.com/giongto35/cloud-game/config"
 	"github.com/giongto35/cloud-game/util"
 )
 
@@ -50,33 +50,30 @@ type naEmulator struct {
 	imageChannel chan<- *image.RGBA
 	audioChannel chan<- float32
 	inputChannel <-chan int
-	corePath     string
-	gamePath     string
-	roomID       string
 
+	meta            config.EmulatorMeta
+	gamePath        string
+	roomID          string
 	gameName        string
 	isSavingLoading bool
 
 	keys []bool
 	done chan struct{}
-	meta emulator.Meta
 }
 
 var NAEmulator *naEmulator
 
 // TODO: Load from config
-var emulatorCorePath = map[string]string{
-	"gba":    "libretro/cores/mgba_libretro.so",
-	"pcsx":   "libretro/cores/mednafen_psx_libretro.so",
-	"arcade": "libretro/cores/fbalpha2012_neogeo_libretro.so",
-	"snes":   "libretro/cores/mednafen_snes_libretro.so",
-	"mame":   "libretro/cores/mame2016_libretro.so",
-}
+var emulatorCorePath = map[string]string{}
 
 // NAEmulator implements CloudEmulator interface based on NanoArch(golang RetroArch)
 func NewNAEmulator(etype string, roomID string, imageChannel chan<- *image.RGBA, audioChannel chan<- float32, inputChannel <-chan int) *naEmulator {
+	meta := config.EmulatorConfig[etype]
+	ewidth = meta.Width
+	eheight = meta.Height
+
 	return &naEmulator{
-		corePath:     emulatorCorePath[etype],
+		meta:         meta,
 		imageChannel: imageChannel,
 		audioChannel: audioChannel,
 		inputChannel: inputChannel,
@@ -112,8 +109,8 @@ func (na *naEmulator) listenInput() {
 	}
 }
 
-func (na *naEmulator) LoadMeta(path string) emulator.Meta {
-	coreLoad(na.corePath)
+func (na *naEmulator) LoadMeta(path string) config.EmulatorMeta {
+	coreLoad(na.meta.Path)
 	coreLoadGame(path)
 	na.gamePath = path
 

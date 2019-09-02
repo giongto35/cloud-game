@@ -38,3 +38,40 @@ var FileTypeToEmulator = map[string]string{
 	"fig": "snes",
 	"bs":  "snes",
 }
+
+// There is no good way to determine main width and height of the emulator.
+// When game run, frame width and height can scale abnormally.
+type EmulatorMeta struct {
+	Path            string
+	Width           int
+	Height          int
+	AudioSampleRate int
+	Fps             int
+}
+
+var EmulatorConfig = map[string]EmulatorMeta{
+	"gba": EmulatorMeta{
+		Path:   "libretro/cores/mgba_libretro.so",
+		Width:  240,
+		Height: 160,
+	},
+	"pcsx": EmulatorMeta{
+		Path:   "libretro/cores/mednafen_psx_libretro.so",
+		Width:  350,
+		Height: 240,
+	},
+	"nes": EmulatorMeta{
+		Width:  0,
+		Height: 0,
+	},
+	"snes": EmulatorMeta{
+		Path:   "libretro/cores/mednafen_snes_libretro.so",
+		Width:  256,
+		Height: 224,
+	},
+	"mame": EmulatorMeta{
+		Path:   "libretro/cores/mame2016_libretro.so",
+		Width:  0,
+		Height: 0,
+	},
+}
