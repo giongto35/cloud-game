@@ -116,9 +116,9 @@ func NewRoom(roomID string, gameName string, onlineStorage *storage.Client) *Roo
 
 // create director
 func getEmulator(emuName string, roomID string, imageChannel chan<- *image.RGBA, audioChannel chan<- float32, inputChannel <-chan int) emulator.CloudEmulator {
-	if emuName == "nes" {
-		return emulator.NewDirector(roomID, imageChannel, audioChannel, inputChannel)
-	}
+	//if emuName == "nes" {
+	//return emulator.NewDirector(roomID, imageChannel, audioChannel, inputChannel)
+	//}
 
 	nanoarch.Init(emuName, roomID, imageChannel, audioChannel, inputChannel)
 	return nanoarch.NAEmulator
@@ -170,7 +170,7 @@ func (r *Room) startWebRTCSession(peerconnection *webrtc.WebRTC, playerIndex int
 			// the first 10 bits belong to player 1
 			// the next 10 belongs to player 2 ...
 			// We standardize and put it to inputChannel (20 bits)
-			input = input << ((uint(playerIndex) - 1) * emulator.NumKeys)
+			input = input << ((uint(playerIndex) - 1) * config.NumKeys)
 			select {
 			case r.inputChannel <- input:
 			default:

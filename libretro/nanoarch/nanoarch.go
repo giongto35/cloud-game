@@ -12,8 +12,6 @@ import (
 	"reflect"
 	"sync"
 	"unsafe"
-
-	"github.com/giongto35/cloud-game/emulator"
 )
 
 /*
@@ -97,7 +95,6 @@ const (
 )
 
 type CloudEmulator interface {
-	SetView(view *emulator.GameView)
 	Start(path string)
 	SaveGame(saveExtraFunc func() error) error
 	LoadGame() error

@@ -23,6 +23,8 @@ var WSWait = 20 * time.Second
 var MatchWorkerRandom = false
 var ProdEnv = "prod"
 
+const NumKeys = 10
+
 var Codec = CODEC_H264
 
 //var Codec = CODEC_VP8
@@ -61,8 +63,9 @@ var EmulatorConfig = map[string]EmulatorMeta{
 		Height: 240,
 	},
 	"nes": EmulatorMeta{
-		Width:  0,
-		Height: 0,
+		Path:   "libretro/cores/nestopia_libretro.so",
+		Width:  256,
+		Height: 240,
 	},
 	"snes": EmulatorMeta{
 		Path:   "libretro/cores/mednafen_snes_libretro.so",
