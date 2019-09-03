@@ -116,11 +116,8 @@ func NewRoom(roomID string, gameName string, onlineStorage *storage.Client) *Roo
 
 // create director
 func getEmulator(emuName string, roomID string, imageChannel chan<- *image.RGBA, audioChannel chan<- float32, inputChannel <-chan int) emulator.CloudEmulator {
-	//if emuName == "nes" {
-	//return emulator.NewDirector(roomID, imageChannel, audioChannel, inputChannel)
-	//}
-
 	nanoarch.Init(emuName, roomID, imageChannel, audioChannel, inputChannel)
+
 	return nanoarch.NAEmulator
 }
 
