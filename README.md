@@ -17,7 +17,7 @@ You can try hosting your own service following the instruction in the next sessi
 Screenshot | Screenshot
 :-------------------------:|:-------------------------:
 ![screenshot](document/img/landing-page-ps-hm.png)|![screenshot](document/img/landing-page-ps-x4.png)
-![screenshot](document/img/landing-page-gb.png)|![screenshot](document/img/landing-page.gif)
+![screenshot](document/img/landing-page-gb.png)|![screenshot](document/img/landing-page-front.png)
 
 ## Feature
 1. Cloud gaming: Game logic is hosted on a remote server. User doesn't have to install or setup anything. Images and audio are streamed to user in the most optimal way.
@@ -63,8 +63,9 @@ And run
 
 * *Pion* Webrtc team for the incredible Golang Webrtc library and their supports https://github.com/pion/webrtc/.  
 * *Nanoarch* Golang RetroArch https://github.com/libretro/go-nanoarch and https://retroarch.com.  
-* *fogleman* for the awesome NES emulator https://github.com/fogleman/nes.  
+* *gen2brain* for the h264 go encoder https://github.com/gen2brain/x264-go
 * *poi5305* for the video encoding https://github.com/poi5305/go-yuv2webRTC.  
+* *fogleman* for the NES emulator https://github.com/fogleman/nes.  
 * And last but not least, my longtime friend Tri as the co-author. 
 
 ## Contributor
