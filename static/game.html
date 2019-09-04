@@ -33,8 +33,8 @@
                 There is still audio because current audio flow is not from media but it is manually encoded (technical webRTC challenge). Later, when we can integrate audio to media, we can face the issue with mute again .
                 https://developers.google.com/web/updates/2017/09/autoplay-policy-changes
             -->
-            <!--<video id="game-screen" autoplay=true muted poster="/static/img/screen_loading.gif"></video>-->
-            <video id="game-screen" autoplay=true poster="/static/img/screen_loading.gif"></video>
+            <video id="game-screen" muted playinfullscreen="false" playsinline poster="/static/img/screen_loading.gif"></video>
+            <!--<video id="game-screen" autoplay=true poster="/static/img/screen_loading.gif"></video>-->
 
             <div id="menu-screen">
                 <div id="menu-container">
@@ -49,13 +49,15 @@
         <div id="btn-save" unselectable="on" class="btn big unselectable" value="save">save</div>
         <div id="btn-join" unselectable="on" class="btn big unselectable" value="join">play</div>
         <div id="btn-quit" unselectable="on" class="btn big unselectable" value="quit">quit</div>
+        <div id="btn-select" unselectable="on" class="btn big unselectable" value="select">Select</div>
+        <div id="btn-start" unselectable="on" class="btn big unselectable" value="start">Start</div>
 
 
         <div id="color-button-holder">
-            <div id="btn-select" unselectable="on" class="btn unselectable" value="select">Select</div>
-            <div id="btn-start" unselectable="on" class="btn unselectable" value="start">Start</div>
             <div id="btn-a" unselectable="on" class="btn unselectable" value="a">A</div>
             <div id="btn-b" unselectable="on" class="btn unselectable" value="b">B</div>
+            <div id="btn-x" unselectable="on" class="btn unselectable" value="x">X</div>
+            <div id="btn-y" unselectable="on" class="btn unselectable" value="y">Y</div>
         </div>
 
         <div id="lights-holder">
@@ -95,9 +97,18 @@
     <script src="/static/js/gesture_keyboard.js?1"></script>
     <script src="/static/js/gesture_touch.js?1"></script>
     <script src="/static/js/gesture_joystick.js?1"></script>
-    <script src="/static/js/ws.js?4"></script>
+    <script src="/static/js/ws.js?5"></script>
 
     <script src="/static/js/init.js?1"></script>
+    <!-- Global site tag (gtag.js) - Google Analytics -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=UA-145078282-1"></script>
+    <script>
+      window.dataLayer = window.dataLayer || [];
+      function gtag(){dataLayer.push(arguments);}
+      gtag('js', new Date());
+
+      gtag('config', 'UA-145078282-1');
+    </script>
 
 </body>
 

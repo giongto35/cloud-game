@@ -27,8 +27,6 @@ type Handler struct {
 	rooms map[string]*room.Room
 	// ID of the current server globalwise
 	serverID string
-	// Path to game list
-	gamePath string
 	// onlineStorage is client accessing to online storage (GCP)
 	onlineStorage *storage.Client
 	// sessions handles all sessions server is handler (key is sessionID)
@@ -36,14 +34,13 @@ type Handler struct {
 }
 
 // NewHandler returns a new server
-func NewHandler(overlordHost string, gamePath string) *Handler {
+func NewHandler(overlordHost string) *Handler {
 	onlineStorage := storage.NewInitClient()
 
 	return &Handler{
 		rooms:         map[string]*room.Room{},
 		sessions:      map[string]*Session{},
 		overlordHost:  overlordHost,
-		gamePath:      gamePath,
 		onlineStorage: onlineStorage,
 	}
 }
@@ -91,21 +88,21 @@ func (h *Handler) GetOverlordClient() *OverlordClient {
 // detachPeerConn detach/remove a peerconnection from current room
 func (h *Handler) detachPeerConn(pc *webrtc.WebRTC) {
 	log.Println("Detach peerconnection")
-	roomID := pc.RoomID
-	room := h.getRoom(roomID)
+	room := h.getRoom(pc.RoomID)
 	if room == nil {
 		return
 	}
 
-	// If room has no sessions, close room
 	if !room.EmptySessions() {
 		room.RemoveSession(pc)
+		// If no more session in that room, we close that room
 		if room.EmptySessions() {
 			log.Println("No session in room")
 			room.Close()
 			// Signal end of input Channel
 			log.Println("Signal input chan")
 			pc.InputChannel <- -1
+			close(pc.InputChannel)
 		}
 	}
 }
@@ -132,7 +129,7 @@ func (h *Handler) createNewRoom(gameName string, roomID string, playerIndex int)
 	// or the roomID doesn't have any running sessions (room was closed)
 	// we spawn a new room
 	if roomID == "" || !h.isRoomRunning(roomID) {
-		room := room.NewRoom(roomID, h.gamePath, gameName, h.onlineStorage)
+		room := room.NewRoom(roomID, gameName, h.onlineStorage)
 		// TODO: Might have race condition
 		h.rooms[room.ID] = room
 		return room

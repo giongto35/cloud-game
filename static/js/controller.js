@@ -37,14 +37,14 @@ function reloadGameMenu() {
 
     // sort gameList first
     gameList.sort(function (a, b) {
-        return a.name > b.name ? 1 : -1;
+        return a > b ? 1 : -1;
     });
 
     // generate html
     var listbox = $("#menu-container");
     listbox.html('');
     gameList.forEach(function (game) {
-        listbox.append(`<div class="menu-item unselectable" unselectable="on"><div><span>${game.name}</span></div></div>`);
+        listbox.append(`<div class="menu-item unselectable" unselectable="on"><div><span>${game}</span></div></div>`);
     });
 }
 
@@ -88,7 +88,7 @@ function pickGame(idx) {
     $(`.menu-item:eq(${idx}) span`).addClass("pick");
 
     gameIdx = idx;
-    log(`> [Pick] game ${gameIdx + 1}/${gameList.length} - ${gameList[gameIdx].name}`);
+    log(`> [Pick] game ${gameIdx + 1}/${gameList.length} - ${gameList[gameIdx]}`);
 }
 
 
@@ -129,9 +129,9 @@ function sendKeyState() {
 
         console.log(`Key state string: ${bits} ==> ${data}`);
 
-        // send packed keystate
-        var arrBuf = new Uint8Array(1);
-        arrBuf[0] = data;
+        var arrBuf = new Uint8Array(2);
+        arrBuf[0] = data & ((1 << 8) - 1);
+        arrBuf[1] = data >> 8;
         inputChannel.send(arrBuf);
 
         unchangePacket--;
@@ -193,6 +193,8 @@ function doButtonUp(name) {
             case "join":
             case "a":
             case "b":
+            case "x":
+            case "y":
             case "start":
             case "select":
                 startGame();

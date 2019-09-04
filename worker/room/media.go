@@ -4,8 +4,10 @@ import (
 	"fmt"
 	"log"
 
-	"github.com/giongto35/cloud-game/util"
-	vpxEncoder "github.com/giongto35/cloud-game/vpx-encoder"
+	"github.com/giongto35/cloud-game/config"
+	"github.com/giongto35/cloud-game/encoder"
+	"github.com/giongto35/cloud-game/h264encoder"
+	"github.com/giongto35/cloud-game/vpx-encoder"
 	"gopkg.in/hraban/opus.v2"
 )
 
@@ -97,13 +99,25 @@ func (r *Room) startAudio(sampleRate int) {
 }
 
 func (r *Room) startVideo(width, height int) {
-	size := int(float32(width*height) * 1.5)
-	yuv := make([]byte, size, size)
+	var encoder encoder.Encoder
+	var err error
 
-	encoder, err := vpxEncoder.NewVpxEncoder(width, height, 20, 1200, 5)
+	if config.Codec == config.CODEC_H264 {
+		encoder, err = h264encoder.NewH264Encoder(width, height, 20)
+	} else {
+		encoder, err = vpxencoder.NewVpxEncoder(width, height, 20, 1200, 5)
+	}
+
+	defer func() {
+		encoder.Stop()
+	}()
+
 	if err != nil {
+		fmt.Println("error create new encoder", err)
 		return
 	}
+	einput := encoder.GetInputChan()
+	eoutput := encoder.GetOutputChan()
 
 	// send screenshot
 	go func() {
@@ -113,28 +127,27 @@ func (r *Room) startVideo(width, height int) {
 			}
 		}()
 
-		for image := range r.imageChannel {
-			if !r.IsRunning {
-				log.Println("Room ", r.ID, " video channel closed")
-				return
-			}
-			if len(encoder.Input) < cap(encoder.Input) {
-				util.RgbaToYuvInplace(image, yuv, width, height)
-				encoder.Input <- yuv
+		// fanout Screen
+		for data := range eoutput {
+			// TODO: r.rtcSessions is rarely updated. Lock will hold down perf
+			for _, webRTC := range r.rtcSessions {
+				// encode frame
+				// fanout imageChannel
+				if webRTC.IsConnected() {
+					// NOTE: can block here
+					webRTC.ImageChannel <- data
+				}
 			}
 		}
 	}()
 
-	// fanout Screen
-	for data := range encoder.Output {
-		// TODO: r.rtcSessions is rarely updated. Lock will hold down perf
-		for _, webRTC := range r.rtcSessions {
-			// encode frame
-			// fanout imageChannel
-			if webRTC.IsConnected() {
-				// NOTE: can block here
-				webRTC.ImageChannel <- data
-			}
+	for image := range r.imageChannel {
+		if !r.IsRunning {
+			log.Println("Room ", r.ID, " video channel closed")
+			return
+		}
+		if len(einput) < cap(einput) {
+			einput <- image
 		}
 	}
 }
