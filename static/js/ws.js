@@ -24,14 +24,19 @@ conn.onmessage = e => {
     d = JSON.parse(e.data);
     switch (d["id"]) {
 
-    case "gamelist":
-        // parse files list to gamelist
-        files = JSON.parse(d["data"]);
+    case "init":
+        // TODO: Read from struct
+        // init package has 2 part [stunturn, gamelist]
+        // The first element is stunturn address
+        // The rest are list of game
+        data = JSON.parse(d["data"]);
+        stunturn = data[0]
+        startWebRTC(stunturn);
+        data.shift()
         gameList = [];
-        files.forEach(file => {
-            var file = file
-            var name = file.substr(0, file.indexOf('.'));
-            gameList.push({file: file, name: name});
+
+        data.forEach(name => {
+            gameList.push(name);
         });
 
         log("Received game list");
@@ -56,7 +61,7 @@ conn.onmessage = e => {
         // TODO: Calc time
         break;
     case "start":
-        roomID = d["room_id"];    
+        roomID = d["room_id"];
         log(`Got start with room id: ${roomID}`);
         popup("Started! You can share you game!")
         saveRoomID(roomID);
@@ -102,8 +107,8 @@ conn.onmessage = e => {
                     console.log(latenciesMap)
 
                     conn.send(JSON.stringify({"id": "checkLatency", "data": JSON.stringify(latenciesMap), "packet_id": latencyPacketID}));
-                    startWebRTC();
-        }
+                    //startWebRTC();
+                }
             }
             xmlHttp.onload = () => {
                 cntResp++;
@@ -116,8 +121,8 @@ conn.onmessage = e => {
 
                     //conn.send(JSON.stringify({"id": "checkLatency", "data": latenciesMap, "packet_id": latencyPacketID}));
                     conn.send(JSON.stringify({"id": "checkLatency", "data": JSON.stringify(latenciesMap), "packet_id": latencyPacketID}));
-                    startWebRTC();
-        }
+                    //startWebRTC();
+                }
             }
             xmlHttp.send( null );
         }
@@ -141,14 +146,10 @@ function sendPing() {
     conn.send(JSON.stringify({"id": "heartbeat", "data": Date.now().toString()}));
 }
 
-function startWebRTC() {
+function startWebRTC(iceservers) {
+    log(`received stunturn from worker ${iceservers}`)
     // webrtc
-    var iceservers = [];
-    if (STUNTURN == "") {
-        iceservers = defaultICE
-    } else {
-        iceservers = JSON.parse(STUNTURN);
-    }
+    iceservers = JSON.parse(iceservers);
     pc = new RTCPeerConnection({iceServers: iceservers });
 
     // input channel, ordered + reliable, id 0
@@ -197,18 +198,6 @@ function startWebRTC() {
     // video channel
     pc.ontrack = function (event) {
         stream.addTrack(event.track);
-        var promise = document.getElementById("game-screen").play();
-        if (promise !== undefined) {
-            promise.then(_ => {
-                console.log("Media can autoplay")
-            }).catch(error => {
-                // Usually error happens when we autoplay unmuted video, browser requires manual play.
-                // We already muted video and use separate audio encoding so it's fine now
-                console.log("Media Failed to autoplay")
-                console.log(error)
-                // TODO: Consider workaround
-            });
-        }
     }
 
 
@@ -261,14 +250,27 @@ function startGame() {
         popup("Game is not ready yet. Please wait");
         return false;
     }
+
+    var promise = document.getElementById("game-screen").play();
+    if (promise !== undefined) {
+        promise.then(_ => {
+            console.log("Media can autoplay")
+        }).catch(error => {
+            // Usually error happens when we autoplay unmuted video, browser requires manual play.
+            // We already muted video and use separate audio encoding so it's fine now
+            console.log("Media Failed to autoplay")
+            console.log(error)
+            // TODO: Consider workaround
+        });
+    }
+
     if (screenState != "menu") {
         return false;
     }
     log("Starting game screen");
     screenState = "game";
 
-    // conn.send(JSON.stringify({"id": "start", "data": gameList[gameIdx].file, "room_id": $("#room-txt").val(), "player_index": parseInt(playerIndex.value, 10)}));
-    conn.send(JSON.stringify({"id": "start", "data": gameList[gameIdx].file, "room_id": roomID != null ? roomID : '', "player_index": 1}));
+    conn.send(JSON.stringify({"id": "start", "data": gameList[gameIdx], "room_id": roomID != null ? roomID : '', "player_index": 1}));
 
     // clear menu screen
     stopGameInputTimer();

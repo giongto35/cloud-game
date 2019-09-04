@@ -11,9 +11,11 @@ import (
 	"strings"
 	"sync"
 
+	"github.com/giongto35/cloud-game/config"
 	"github.com/giongto35/cloud-game/emulator"
 	"github.com/giongto35/cloud-game/libretro/nanoarch"
 	"github.com/giongto35/cloud-game/util"
+	"github.com/giongto35/cloud-game/util/gamelist"
 	"github.com/giongto35/cloud-game/webrtc"
 	storage "github.com/giongto35/cloud-game/worker/cloud-storage"
 )
@@ -48,12 +50,18 @@ type Room struct {
 }
 
 // NewRoom creates a new room
-func NewRoom(roomID, gamePath, gameName string, onlineStorage *storage.Client) *Room {
-	// if no roomID is given, generate it
+func NewRoom(roomID string, gameName string, onlineStorage *storage.Client) *Room {
+	// If no roomID is given, generate it from gameName
+	// If the is roomID, get gameName from roomID
 	if roomID == "" {
 		roomID = generateRoomID(gameName)
+	} else {
+		gameName = getGameNameFromRoomID(roomID)
+		log.Println("Get Gamename from RoomID", gameName)
 	}
-	log.Println("Init new room", roomID, gameName)
+	gameInfo := gamelist.GetGameInfoFromName(gameName)
+
+	log.Println("Init new room: ", roomID, gameName, gameInfo)
 	imageChannel := make(chan *image.RGBA, 30)
 	audioChannel := make(chan float32, 30)
 	inputChannel := make(chan int, 100)
@@ -73,7 +81,7 @@ func NewRoom(roomID, gamePath, gameName string, onlineStorage *storage.Client) *
 	}
 
 	// Check if room is on local storage, if not, pull from GCS to local storage
-	go func(gamePath, gameName, roomID string) {
+	go func(game gamelist.GameInfo, roomID string) {
 		// Check room is on local or fetch from server
 		savepath := util.GetSavePath(roomID)
 		log.Println("Check ", savepath, " on local : ", room.isGameOnLocal(savepath))
@@ -85,50 +93,32 @@ func NewRoom(roomID, gamePath, gameName string, onlineStorage *storage.Client) *
 			}
 		}
 
-		if roomID != "" {
-			gameName = getGameNameFromRoomID(roomID)
-		}
-		log.Printf("Room %s started. GamePath: %s, GameName: %s", roomID, gamePath, gameName)
+		log.Printf("Room %s started. GamePath: %s, GameName: %s", roomID, game.Path, game.Name)
 
 		// Spawn new emulator based on gameName and plug-in all channels
-		room.director = getEmulator(gameName, roomID, imageChannel, audioChannel, inputChannel)
-		path := gamePath + "/" + gameName
-		meta := room.director.LoadMeta(path)
-		log.Printf("Load with Meta %+v", meta)
-		go room.startVideo(meta.Width, meta.Height)
-		go room.startAudio(meta.AudioSampleRate)
+		emuName, _ := config.FileTypeToEmulator[game.Type]
+
+		room.director = getEmulator(emuName, roomID, imageChannel, audioChannel, inputChannel)
+		gameMeta := room.director.LoadMeta(game.Path)
+
+		go room.startVideo(gameMeta.Width, gameMeta.Height)
+		go room.startAudio(gameMeta.AudioSampleRate)
 		room.director.Start()
 
 		log.Printf("Room %s ended", roomID)
 
 		// TODO: do we need GC, we can remove it
 		runtime.GC()
-	}(gamePath, gameName, roomID)
+	}(gameInfo, roomID)
 
 	return room
 }
 
 // create director
-func getEmulator(gameName string, roomID string, imageChannel chan<- *image.RGBA, audioChannel chan<- float32, inputChannel <-chan int) emulator.CloudEmulator {
-	gameType := getGameType(gameName)
+func getEmulator(emuName string, roomID string, imageChannel chan<- *image.RGBA, audioChannel chan<- float32, inputChannel <-chan int) emulator.CloudEmulator {
+	nanoarch.Init(emuName, roomID, imageChannel, audioChannel, inputChannel)
 
-	switch gameType {
-	case "nes":
-		return emulator.NewDirector(roomID, imageChannel, audioChannel, inputChannel)
-
-	case "gba":
-		nanoarch.Init("gba", roomID, imageChannel, audioChannel, inputChannel)
-		return nanoarch.NAEmulator
-
-	case "bin":
-		nanoarch.Init("pcsx", roomID, imageChannel, audioChannel, inputChannel)
-		return nanoarch.NAEmulator
-	case "zip":
-		nanoarch.Init("mame", roomID, imageChannel, audioChannel, inputChannel)
-		return nanoarch.NAEmulator
-	}
-
-	return nil
+	return nanoarch.NAEmulator
 }
 
 // getGameNameFromRoomID parse roomID to get roomID and gameName
@@ -140,19 +130,11 @@ func getGameNameFromRoomID(roomID string) string {
 	return parts[1]
 }
 
-func getGameType(gameName string) string {
-	parts := strings.Split(gameName, ".")
-	if len(parts) <= 1 {
-		return ""
-	}
-	return parts[len(parts)-1]
-}
-
 // generateRoomID generate a unique room ID containing 16 digits
 func generateRoomID(gameName string) string {
+	// RoomID contains random number + gameName
+	// Next time when we only get roomID, we can launch game based on gameName
 	roomID := strconv.FormatInt(rand.Int63(), 16) + "|" + gameName
-	log.Println("Generate Room ID", roomID)
-	//roomID := uuid.Must(uuid.NewV4()).String()
 	return roomID
 }
 
@@ -182,10 +164,10 @@ func (r *Room) startWebRTCSession(peerconnection *webrtc.WebRTC, playerIndex int
 		}
 
 		if peerconnection.IsConnected() {
-			// the first 8 bits belong to player 1
-			// the next 8 belongs to player 2 ...
-			// We standardize and put it to inputChannel (16 bits)
-			input = input << ((uint(playerIndex) - 1) * emulator.NumKeys)
+			// the first 10 bits belong to player 1
+			// the next 10 belongs to player 2 ...
+			// We standardize and put it to inputChannel (20 bits)
+			input = input << ((uint(playerIndex) - 1) * config.NumKeys)
 			select {
 			case r.inputChannel <- input:
 			default:
@@ -232,7 +214,6 @@ func (r *Room) Close() {
 	log.Println("Closing room", r.ID)
 	log.Println("Closing director of room ", r.ID)
 	r.director.Close()
-	//close(r.director.Done)
 	log.Println("Closing input of room ", r.ID)
 	close(r.inputChannel)
 	close(r.Done)

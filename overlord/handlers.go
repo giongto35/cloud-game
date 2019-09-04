@@ -13,8 +13,8 @@ import (
 
 	"github.com/giongto35/cloud-game/config"
 	"github.com/giongto35/cloud-game/cws"
-	"github.com/giongto35/cloud-game/overlord/gamelist"
 	"github.com/giongto35/cloud-game/util"
+	"github.com/giongto35/cloud-game/util/gamelist"
 	"github.com/gofrs/uuid"
 	"github.com/gorilla/websocket"
 )
@@ -25,6 +25,7 @@ const (
 )
 
 type Server struct {
+	// roomToServer map roomID to workerID
 	roomToServer map[string]string
 	// workerClients are the map serverID to worker Client
 	workerClients map[string]*WorkerClient
@@ -91,7 +92,7 @@ func (o *Server) WSO(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 	}
-	client := NewWorkerClient(c, serverID, address)
+	client := NewWorkerClient(c, serverID, address, fmt.Sprintf(config.StunTurnTemplate, address, address))
 	o.workerClients[serverID] = client
 	defer o.cleanConnection(client, serverID)
 
@@ -160,8 +161,8 @@ func (o *Server) WS(w http.ResponseWriter, r *http.Request) {
 	wssession.RouteBrowser()
 
 	wssession.BrowserClient.Send(cws.WSPacket{
-		ID:   "gamelist",
-		Data: gamelist.GetEncodedGameList(gamePath),
+		ID:   "init",
+		Data: createInitPackage(o.workerClients[serverID].StunTurnServer),
 	}, nil)
 
 	// If peerconnection is done (client.Done is signalled), we close peerconnection
@@ -272,6 +273,8 @@ func getLatencyMapFromBrowser(workerClients map[string]*WorkerClient, client *Br
 	return latencyMap
 }
 
+// cleanConnection is called when a worker is disconnected
+// connection from worker (client) to server is also closed
 func (o *Server) cleanConnection(client *WorkerClient, serverID string) {
 	log.Println("Unregister server from overlord")
 	// Remove serverID from servers
@@ -284,4 +287,17 @@ func (o *Server) cleanConnection(client *WorkerClient, serverID string) {
 	}
 
 	client.Close()
+}
+
+// createInitPackage returns serverhost + game list in encoded wspacket format
+// This package will be sent to initialize
+func createInitPackage(stunturn string) string {
+	var gameName []string
+	for _, game := range gamelist.GameList {
+		gameName = append(gameName, game.Name)
+	}
+
+	initPackage := append([]string{stunturn}, gameName...)
+	encodedList, _ := json.Marshal(initPackage)
+	return string(encodedList)
 }

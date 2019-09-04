@@ -1,9 +1,11 @@
 package emulator
 
+import "github.com/giongto35/cloud-game/config"
+
 // CloudEmulator is the interface of cloud emulator. Currently NES emulator and RetroArch implements this in codebase
 type CloudEmulator interface {
 	// LoadMeta returns meta data of emulator. Refer below
-	LoadMeta(path string) Meta
+	LoadMeta(path string) config.EmulatorMeta
 	// Start is called after LoadGame
 	Start()
 	// SaveGame save game state, saveExtraFunc is callback to do extra step. Ex: save to google cloud
@@ -14,12 +16,4 @@ type CloudEmulator interface {
 	GetHashPath() string
 	// Close will be called when the game is done
 	Close()
-}
-
-// Meta is metadata of game
-type Meta struct {
-	AudioSampleRate int
-	Fps             int
-	Width           int
-	Height          int
 }

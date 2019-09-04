@@ -20,8 +20,6 @@ import (
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 )
 
-const gamePath = "games"
-
 // Time allowed to write a message to the peer.
 var upgrader = websocket.Upgrader{}
 
@@ -49,7 +47,7 @@ func initilizeOverlord() {
 
 // initializeWorker setup a worker
 func initializeWorker() {
-	worker := worker.NewHandler(*config.OverlordHost, gamePath)
+	worker := worker.NewHandler(*config.OverlordHost)
 
 	defer func() {
 		log.Println("Close worker")
@@ -103,6 +101,7 @@ func main() {
 	if *config.IsMonitor {
 		go monitor()
 	}
+
 	// There are two server mode
 	// Overlord is coordinator. If the OvelordHost Param is `overlord`, we spawn a new host as Overlord.
 	// else we spawn new server as normal server connecting to OverlordHost.

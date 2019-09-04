@@ -1,0 +1,20 @@
+# go noise
+*.6
+*.8
+*.o
+*.so
+*.out
+*.go~
+*.cgo?.*
+_cgo_*
+_obj
+_test
+_testmain.go
+*.test
+
+# Vim noise
+*.swp
+
+# Just noise
+*~
+*.orig
