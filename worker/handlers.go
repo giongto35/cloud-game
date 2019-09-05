@@ -2,8 +2,11 @@ package worker
 
 import (
 	"log"
+	"os"
+	"path"
 	"time"
 
+	"github.com/giongto35/cloud-game/util"
 	"github.com/giongto35/cloud-game/webrtc"
 	storage "github.com/giongto35/cloud-game/worker/cloud-storage"
 	"github.com/giongto35/cloud-game/worker/room"
@@ -35,6 +38,10 @@ type Handler struct {
 
 // NewHandler returns a new server
 func NewHandler(overlordHost string) *Handler {
+	// Create offline storage folder
+	createOfflineStorage()
+
+	// Init online storage
 	onlineStorage := storage.NewInitClient()
 
 	return &Handler{
@@ -157,5 +164,11 @@ func (h *Handler) Close() {
 	// Close all room
 	for _, room := range h.rooms {
 		room.Close()
+	}
+}
+func createOfflineStorage() {
+	dir, _ := path.Split(util.GetSavePath("dummy"))
+	if err := os.MkdirAll(dir, 0755); err != nil {
+		log.Println("Failed to create offline storage, err: ", err)
 	}
 }
