@@ -75,15 +75,6 @@ func GetSavePath(roomID string) string {
 	return savePath(roomID)
 }
 
-// GetSRAMPath returns SRAM location of game based on roomID
-func GetSRAMPath(hash string) string {
-	return homeDir + "/.nes/sram/" + hash + ".dat"
-}
-
-func sramPath(hash string) string {
-	return homeDir + "/.nes/sram/" + hash + ".dat"
-}
-
 func savePath(hash string) string {
-	return homeDir + "/.nes/save/" + hash + ".dat"
+	return homeDir + "/.cr/save/" + hash + ".dat"
 }
