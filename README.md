@@ -16,13 +16,13 @@ Screenshot | Screenshot
 
 ## Try this game 
 [http://cloudretro.io](http://cloudretro.io)
-- On Desktop: 
-..- Arrow keys + Z(A) + X(B) + C(X) + V(Y) + Shift(Select) + Enter(Start)
-..- S(Save) + A(Load) + F(Full screen)
-..\*A(B) means they key A on keyboard is equivalent to key B in emulator
-- On Mobile:
-..- Just follow the UI.
-..- Only Android with latest chrome version can work for  the service
+- On Desktop:  
+..- Arrow keys + Z(A) + X(B) + C(X) + V(Y) + Shift(Select) + Enter(Start)  
+..- S(Save) + A(Load) + F(Full screen)  
+..\*A(B) means they key A on keyboard is equivalent to key B in emulator  
+- On Mobile:  
+..- Just follow the UI.  
+..- Only Android with latest chrome version can work for  the service  
 
 ## Feature
 1. Cloud gaming: Game logic and storage is hosted on cloud service. It reduces the cumbersome of game initialization.
