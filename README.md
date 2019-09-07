@@ -8,6 +8,7 @@ This project aims to bring the most modern and convenient gaming experience to u
 \*Because there are limited servers in US East, US West, Eu, Singapore, you may experience some latency issues in particular regions. You can try hosting your own service following the instruction the next section to have a better sense of smoothness.  
 
 **Video demo**: https://www.youtube.com/watch?v=koqWB1VKflo
+
 Screenshot | Screenshot
 :-------------------------:|:-------------------------:
 ![screenshot](document/img/landing-page-ps-hm.png)|![screenshot](document/img/landing-page-ps-x4.png)
