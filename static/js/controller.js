@@ -127,8 +127,6 @@ function sendKeyState() {
         });
         var data = parseInt(bits, 2);
 
-        console.log(`Key state string: ${bits} ==> ${data}`);
-
         var arrBuf = new Uint8Array(2);
         arrBuf[0] = data & ((1 << 8) - 1);
         arrBuf[1] = data >> 8;

@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"log"
 	"math/rand"
+	"runtime/debug"
 	"time"
 
 	"github.com/giongto35/cloud-game/config"
@@ -264,6 +265,7 @@ func (w *WebRTC) startStreaming(vp8Track *webrtc.Track, opusTrack *webrtc.Track)
 		defer func() {
 			if r := recover(); r != nil {
 				fmt.Println("Recovered from err", r)
+				log.Println(debug.Stack())
 			}
 		}()
 
@@ -283,6 +285,7 @@ func (w *WebRTC) startStreaming(vp8Track *webrtc.Track, opusTrack *webrtc.Track)
 		defer func() {
 			if r := recover(); r != nil {
 				fmt.Println("Recovered from err", r)
+				log.Println(debug.Stack())
 			}
 		}()
 

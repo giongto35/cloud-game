@@ -187,7 +187,7 @@ function startWebRTC(iceservers) {
             }).catch(log);
         }
         else if (pc.iceConnectionState === "disconnected") {
-            stopInputTimer();
+            stopGameInputTimer()
         }
     }
 
