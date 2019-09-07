@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"image"
 	"log"
+	"runtime/debug"
 
 	"github.com/gen2brain/x264-go"
 	"github.com/giongto35/cloud-game/encoder"
@@ -76,6 +77,7 @@ func (v *H264Encoder) startLooping() {
 	defer func() {
 		if r := recover(); r != nil {
 			log.Println("Warn: Recovered panic in encoding ", r)
+			log.Println(debug.Stack())
 		}
 
 		if v.Done == true {
@@ -92,7 +94,10 @@ func (v *H264Encoder) startLooping() {
 			return
 		}
 
-		v.enc.Encode(img)
+		err := v.enc.Encode(img)
+		if err != nil {
+			log.Println("err encoding ", img, " using h264")
+		}
 		v.Output <- v.buf.Bytes()
 		v.buf.Reset()
 	}

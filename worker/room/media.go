@@ -103,7 +103,7 @@ func (r *Room) startVideo(width, height int) {
 	var err error
 
 	if config.Codec == config.CODEC_H264 {
-		encoder, err = h264encoder.NewH264Encoder(width, height, 20)
+		encoder, err = h264encoder.NewH264Encoder(width, height, 1)
 	} else {
 		encoder, err = vpxencoder.NewVpxEncoder(width, height, 20, 1200, 5)
 	}
