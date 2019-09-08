@@ -1,5 +1,5 @@
-# CloudRetro, Open-source Cloud Gaming Service For Retro Games
-- [http://cloudretro.io](http://cloudretro.io)
+# CloudRetro
+**Open-source Cloud Gaming Service For Retro Games [http://cloudretro.io](http://cloudretro.io)**
 
 This project aims to bring the most modern and convenient gaming experience to user as well as experiement the performance of Cloud-gaming technology. You can play any retro games on your browser directly, which is fully compatible on multi-platform like Desktop, Android, IOS. This flexibility also enables online gaming experience to retro games.  
 
