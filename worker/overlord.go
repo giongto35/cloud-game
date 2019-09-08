@@ -208,6 +208,7 @@ func getServerIDOfRoom(oc *OverlordClient, roomID string) string {
 
 // getVideoEncoder returns video encoder based on some qualification.
 // Actually Android is only supporting VP8 but H264 has better encoding performance
+// TODO: Better use useragent attribute from frontend
 func getVideoEncoder(isMobile bool) string {
 	if isMobile == true {
 		return config.CODEC_VP8
