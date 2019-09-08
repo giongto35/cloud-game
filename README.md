@@ -3,7 +3,7 @@
 **Video demo**: https://www.youtube.com/watch?v=GUBrJGAxZZg
 
 ## Introduction
-This project aims to bring the most modern and convenient gaming experience to user as well as experiement the performance of Cloud-gaming technology. You can play any retro games on your browser directly, which is fully compatible with multi-platform like Desktop, Android, IOS. This flexibility also enables online gaming experience to retro games.  
+This project aims to bring the most modern and convenient gaming experience to users as well as experiement the performance of Cloud-gaming technology. Theoretically, Games are hosted on remote servers and media are streamed to the player in an optimal way to ensure the most comfortable user interaction. It opens the ability to play any retro games on your browser directly, which is fully compatible with multi-platform like Desktop, Android, ~~IOS~~. This flexibility also enables online gaming experience to retro games.  
 
 ## Try the service at
 **[http://cloudretro.io](http://cloudretro.io)**
@@ -16,7 +16,7 @@ Screenshot | Screenshot
 ![screenshot](document/img/landing-page-gb.png)|![screenshot](document/img/landing-page-front.png)
 
 ## Feature
-1. Cloud gaming: Game logic and storage is hosted on cloud service. It reduces the cumbersome of game initialization. Images and audio are streamed to user in the most optimal way.
+1. Cloud gaming: Game logic and storage is hosted on cloud service. It reduces the cumbersome of game initialization. Images and audio are streamed to user in the most optimal way using advanced encoding technology.
 2. Cross-platform compatibility: The game is run on web browser, the most universal built-in app. No console, plugin, external app or devices are needed. Chrome with the latest version and fully WebRTC support is recommended for the game. 
 3. Emulator agnostic: The game can be played directly without any extra effort to set up the gaming emulator or platform.
 4. Vertically scaled: The infrastructure is designed to be able to scale under high traffic by adding more instances.
