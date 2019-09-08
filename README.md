@@ -1,13 +1,14 @@
 # CloudRetro
-**Open-source Cloud Gaming Service For Retro Games**
-**[http://cloudretro.io](http://cloudretro.io)**
+**Open-source Cloud Gaming Service For Retro Games**  
+**Video demo**: https://www.youtube.com/watch?v=GUBrJGAxZZg
 
 ## Introduction
-This project aims to bring the most modern and convenient gaming experience to user as well as experiement the performance of Cloud-gaming technology. You can play any retro games on your browser directly, which is fully compatible on multi-platform like Desktop, Android, IOS. This flexibility also enables online gaming experience to retro games.  
+This project aims to bring the most modern and convenient gaming experience to users as well as experiement the performance of Cloud-gaming technology. Theoretically, games are hosted on remote servers and media are streamed to the player in an optimal way to ensure the most comfortable user interaction. It opens the ability to play any retro games on your browser directly, which are fully compatible with multi-platform like Desktop, Android, ~~IOS~~. This flexibility also enables online gaming experience to retro games.  
 
-\*Because there are limited servers in US East, US West, Eu, Singapore, you may experience some latency issues in particular regions. You can try hosting your own service following the instruction the next section to have a better sense of smoothness.  
+## Try the service at
+**[http://cloudretro.io](http://cloudretro.io)**
 
-**Video demo**: https://www.youtube.com/watch?v=koqWB1VKflo
+\*In ideal network condition and less resource contention, the game will run smoothly as in the video demo. Because there might be insufficient self-host servers in US East, US West, Eu, Singapore, you may experience some latency issues + connection problem. Please retry later in less peak hours. You can try hosting your own service following the instruction the next section to have a better sense of performance.  
 
 Screenshot | Screenshot
 :-------------------------:|:-------------------------:
@@ -15,7 +16,7 @@ Screenshot | Screenshot
 ![screenshot](document/img/landing-page-gb.png)|![screenshot](document/img/landing-page-front.png)
 
 ## Feature
-1. Cloud gaming: Game logic and storage is hosted on cloud service. It reduces the cumbersome of game initialization. Images and audio are streamed to user in the most optimal way.
+1. Cloud gaming: Game logic and storage is hosted on cloud service. It reduces the cumbersome of game initialization. Images and audio are streamed to user in the most optimal way using advanced encoding technology.
 2. Cross-platform compatibility: The game is run on web browser, the most universal built-in app. No console, plugin, external app or devices are needed. Chrome with the latest version and fully WebRTC support is recommended for the game. 
 3. Emulator agnostic: The game can be played directly without any extra effort to set up the gaming emulator or platform.
 4. Vertically scaled: The infrastructure is designed to be able to scale under high traffic by adding more instances.
@@ -33,7 +34,7 @@ Install Golang https://golang.org/doc/install . Because the project uses GoModul
 
 Install dependencies  
 
-  * Install [libvpx](https://www.webmproject.org/code/) and [pkg-config](https://www.freedesktop.org/wiki/Software/pkg-config/)
+  * Install [libvpx](https://www.webmproject.org/code/), [libopus](http://opus-codec.org/), [pkg-config](https://www.freedesktop.org/wiki/Software/pkg-config/)
 ```
 # Ubuntu
 apt-get install -y pkg-config libvpx-dev libopus-dev libopusfile-dev
@@ -48,8 +49,9 @@ brew install libvpx pkg-config opus opusfile
 Because coordinator and workers needs to run simulateneously. Workers connects to coordinator.
 1. Script
   * `make run`
-  * The scripts includes build the binary using Go module
+  * The scripts spawns 2 processes one in background and one in foreground
 2. Manual
+  * Need to run coordinator and worker separately in two session
   * `go run cmd/main.go -overlordhost overlord` - spawn coordinator
   * `go run cmd/main.go -overlordhost ws://localhost:8000/wso` - spawn workers connecting to coordinator
 
