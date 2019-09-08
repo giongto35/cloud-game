@@ -3,12 +3,12 @@
 **Video demo**: https://www.youtube.com/watch?v=GUBrJGAxZZg
 
 ## Introduction
-This project aims to bring the most modern and convenient gaming experience to users as well as experiement the performance of Cloud-gaming technology. Theoretically, Games are hosted on remote servers and media are streamed to the player in an optimal way to ensure the most comfortable user interaction. It opens the ability to play any retro games on your browser directly, which is fully compatible with multi-platform like Desktop, Android, ~~IOS~~. This flexibility also enables online gaming experience to retro games.  
+This project aims to bring the most modern and convenient gaming experience to users as well as experiement the performance of Cloud-gaming technology. Theoretically, games are hosted on remote servers and media are streamed to the player in an optimal way to ensure the most comfortable user interaction. It opens the ability to play any retro games on your browser directly, which are fully compatible with multi-platform like Desktop, Android, ~~IOS~~. This flexibility also enables online gaming experience to retro games.  
 
 ## Try the service at
 **[http://cloudretro.io](http://cloudretro.io)**
 
-\*In ideal network condition and less resource contention, the game will run smoothly as in the video demo. Because there might be insufficient self-host servers in US East, US West, Eu, Singapore, you may experience some latency issues + connection problem. Please retry in less peak hours. You can try hosting your own service following the instruction the next section to have a better sense of performance.  
+\*In ideal network condition and less resource contention, the game will run smoothly as in the video demo. Because there might be insufficient self-host servers in US East, US West, Eu, Singapore, you may experience some latency issues + connection problem. Please retry later in less peak hours. You can try hosting your own service following the instruction the next section to have a better sense of performance.  
 
 Screenshot | Screenshot
 :-------------------------:|:-------------------------:
