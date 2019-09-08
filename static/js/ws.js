@@ -270,7 +270,7 @@ function startGame() {
     log("Starting game screen");
     screenState = "game";
 
-    conn.send(JSON.stringify({"id": "start", "data": gameList[gameIdx], "room_id": roomID != null ? roomID : '', "player_index": 1}));
+    conn.send(JSON.stringify({"id": "start", "data": JSON.stringify({"game_name": gameList[gameIdx], "is_mobile": isMobileDevice()}), "room_id": roomID != null ? roomID : '', "player_index": 1}));
 
     // clear menu screen
     stopGameInputTimer();
@@ -283,3 +283,8 @@ function startGame() {
 
     return true
 }
+
+// Check mobile type because different mobile can accept different video encoder.
+function isMobileDevice() {
+    return (typeof window.orientation !== "undefined") || (navigator.userAgent.indexOf('IEMobile') !== -1);
+};
