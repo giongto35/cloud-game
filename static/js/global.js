@@ -19,7 +19,7 @@ const ICE_TIMEOUT = 2000;
 // Game state
 let screenState = "loader";
 let gameList = [];
-let gameIdx = 5; // contra
+let gameIdx = 9; // contra
 let gamePickerTimer = null;
 let roomID = null;
 
