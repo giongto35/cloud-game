@@ -2,10 +2,11 @@ package worker
 
 import (
 	"encoding/json"
+	"fmt"
 	"log"
 
-	"github.com/giongto35/cloud-game/config"
 	"github.com/giongto35/cloud-game/cws"
+	"github.com/giongto35/cloud-game/util"
 	"github.com/giongto35/cloud-game/webrtc"
 	"github.com/giongto35/cloud-game/worker/room"
 	"github.com/gorilla/websocket"
@@ -50,8 +51,19 @@ func (h *Handler) RouteOverlord() {
 		"initwebrtc",
 		func(resp cws.WSPacket) (req cws.WSPacket) {
 			log.Println("Received relay SDP of a browser from overlord")
+
 			peerconnection := webrtc.NewWebRTC()
-			localSession, err := peerconnection.StartClient(resp.Data, iceCandidates[resp.SessionID])
+			var initPacket struct {
+				SDP      string `json:"sdp"`
+				IsMobile bool   `json:"is_mobile"`
+			}
+			fmt.Println("HIHIHIHI!!!!", resp.Data)
+			err := json.Unmarshal([]byte(resp.Data), &initPacket)
+			if err != nil {
+				panic(err)
+			}
+			fmt.Println("HIHIHIHI!!!!", initPacket)
+			localSession, err := peerconnection.StartClient(initPacket.SDP, initPacket.IsMobile, iceCandidates[resp.SessionID])
 			//h.peerconnections[resp.SessionID] = peerconnection
 
 			// Create new sessions when we have new peerconnection initialized
@@ -92,7 +104,7 @@ func (h *Handler) RouteOverlord() {
 				panic(err)
 			}
 
-			room := h.startGameHandler(startPacket.GameName, resp.RoomID, resp.PlayerIndex, peerconnection, getVideoEncoder(startPacket.IsMobile))
+			room := h.startGameHandler(startPacket.GameName, resp.RoomID, resp.PlayerIndex, peerconnection, util.GetVideoEncoder(startPacket.IsMobile))
 			session.RoomID = room.ID
 			// TODO: can data race
 			h.rooms[room.ID] = room
@@ -204,16 +216,6 @@ func getServerIDOfRoom(oc *OverlordClient, roomID string) string {
 	log.Println("Received roomID from overlord ", packet.Data)
 
 	return packet.Data
-}
-
-// getVideoEncoder returns video encoder based on some qualification.
-// Actually Android is only supporting VP8 but H264 has better encoding performance
-// TODO: Better use useragent attribute from frontend
-func getVideoEncoder(isMobile bool) string {
-	if isMobile == true {
-		return config.CODEC_VP8
-	}
-	return config.CODEC_H264
 }
 
 func (h *Handler) startGameHandler(gameName, roomID string, playerIndex int, peerconnection *webrtc.WebRTC, videoEncoderType string) *room.Room {

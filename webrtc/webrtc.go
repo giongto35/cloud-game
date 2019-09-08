@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/giongto35/cloud-game/config"
+	"github.com/giongto35/cloud-game/util"
 	"github.com/gofrs/uuid"
 	"github.com/pion/webrtc/v2"
 	"github.com/pion/webrtc/v2/pkg/media"
@@ -92,7 +93,7 @@ type WebRTC struct {
 }
 
 // StartClient start webrtc
-func (w *WebRTC) StartClient(remoteSession string, iceCandidates []string) (string, error) {
+func (w *WebRTC) StartClient(remoteSession string, isMobile bool, iceCandidates []string) (string, error) {
 	defer func() {
 		if err := recover(); err != nil {
 			log.Println(err)
@@ -114,7 +115,7 @@ func (w *WebRTC) StartClient(remoteSession string, iceCandidates []string) (stri
 		return "", err
 	}
 
-	if config.Codec == config.CODEC_H264 {
+	if util.GetVideoEncoder(isMobile) == config.CODEC_H264 {
 		videoTrack, err = w.connection.NewTrack(webrtc.DefaultPayloadTypeH264, rand.Uint32(), "video", "pion2")
 	} else {
 		videoTrack, err = w.connection.NewTrack(webrtc.DefaultPayloadTypeVP8, rand.Uint32(), "video", "pion2")
@@ -122,6 +123,7 @@ func (w *WebRTC) StartClient(remoteSession string, iceCandidates []string) (stri
 	if err != nil {
 		return "", err
 	}
+
 	_, err = w.connection.AddTrack(videoTrack)
 	if err != nil {
 		return "", err
