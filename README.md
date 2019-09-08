@@ -62,7 +62,7 @@ And run
 ## Credits
 
 * *Pion* Webrtc team for the incredible Golang Webrtc library and their supports https://github.com/pion/webrtc/.  
-* *Nanoarch* Golang RetroArch https://github.com/libretro/go-nanoarch and https://retroarch.com.  
+* *Nanoarch/Retroarch* Golang RetroArch https://github.com/libretro/go-nanoarch and https://retroarch.com.  
 * *gen2brain* for the h264 go encoder https://github.com/gen2brain/x264-go
 * *poi5305* for the video encoding https://github.com/poi5305/go-yuv2webRTC.  
 * *fogleman* for the NES emulator https://github.com/fogleman/nes.  

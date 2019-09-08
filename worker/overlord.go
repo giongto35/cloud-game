@@ -1,8 +1,10 @@
 package worker
 
 import (
+	"encoding/json"
 	"log"
 
+	"github.com/giongto35/cloud-game/config"
 	"github.com/giongto35/cloud-game/cws"
 	"github.com/giongto35/cloud-game/webrtc"
 	"github.com/giongto35/cloud-game/worker/room"
@@ -79,7 +81,18 @@ func (h *Handler) RouteOverlord() {
 			session, _ := h.sessions[resp.SessionID]
 
 			peerconnection := session.peerconnection
-			room := h.startGameHandler(resp.Data, resp.RoomID, resp.PlayerIndex, peerconnection)
+			// TODO: Standardize for all types of packet. Make WSPacket generic
+			var startPacket struct {
+				GameName string `json:"game_name"`
+				IsMobile bool   `json:"is_mobile"`
+			}
+
+			err := json.Unmarshal([]byte(resp.Data), &startPacket)
+			if err != nil {
+				panic(err)
+			}
+
+			room := h.startGameHandler(startPacket.GameName, resp.RoomID, resp.PlayerIndex, peerconnection, getVideoEncoder(startPacket.IsMobile))
 			session.RoomID = room.ID
 			// TODO: can data race
 			h.rooms[room.ID] = room
@@ -193,7 +206,16 @@ func getServerIDOfRoom(oc *OverlordClient, roomID string) string {
 	return packet.Data
 }
 
-func (h *Handler) startGameHandler(gameName, roomID string, playerIndex int, peerconnection *webrtc.WebRTC) *room.Room {
+// getVideoEncoder returns video encoder based on some qualification.
+// Actually Android is only supporting VP8 but H264 has better encoding performance
+func getVideoEncoder(isMobile bool) string {
+	if isMobile == true {
+		return config.CODEC_VP8
+	}
+	return config.CODEC_H264
+}
+
+func (h *Handler) startGameHandler(gameName, roomID string, playerIndex int, peerconnection *webrtc.WebRTC, videoEncoderType string) *room.Room {
 	log.Println("Starting game", gameName)
 	// If we are connecting to overlord, request corresponding serverID based on roomID
 	// TODO: check if roomID is in the current server
@@ -202,7 +224,7 @@ func (h *Handler) startGameHandler(gameName, roomID string, playerIndex int, pee
 	// If room is not running
 	if room == nil {
 		// Create new room
-		room = h.createNewRoom(gameName, roomID, playerIndex)
+		room = h.createNewRoom(gameName, roomID, playerIndex, videoEncoderType)
 		// Wait for done signal from room
 		go func() {
 			<-room.Done

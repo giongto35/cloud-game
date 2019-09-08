@@ -131,12 +131,12 @@ func (h *Handler) detachRoom(roomID string) {
 
 // createNewRoom creates a new room
 // Return nil in case of room is existed
-func (h *Handler) createNewRoom(gameName string, roomID string, playerIndex int) *room.Room {
+func (h *Handler) createNewRoom(gameName string, roomID string, playerIndex int, videoEncoderType string) *room.Room {
 	// If the roomID is empty,
 	// or the roomID doesn't have any running sessions (room was closed)
 	// we spawn a new room
 	if roomID == "" || !h.isRoomRunning(roomID) {
-		room := room.NewRoom(roomID, gameName, h.onlineStorage)
+		room := room.NewRoom(roomID, gameName, videoEncoderType, h.onlineStorage)
 		// TODO: Might have race condition
 		h.rooms[room.ID] = room
 		return room
