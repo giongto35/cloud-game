@@ -1,14 +1,14 @@
 # CloudRetro
-**Open-source Cloud Gaming Service For Retro Games**
+**Open-source Cloud Gaming Service For Retro Games**  
 **Video demo**: https://www.youtube.com/watch?v=GUBrJGAxZZg
 
 ## Introduction
 This project aims to bring the most modern and convenient gaming experience to user as well as experiement the performance of Cloud-gaming technology. You can play any retro games on your browser directly, which is fully compatible with multi-platform like Desktop, Android, IOS. This flexibility also enables online gaming experience to retro games.  
 
-Try this service at:  
+## Try the service at
 **[http://cloudretro.io](http://cloudretro.io)**
 
-\*Because there are limited servers in US East, US West, Eu, Singapore, you may experience some latency issues in particular regions. You can try hosting your own service following the instruction the next section to have a better sense of smoothness.  
+\*In ideal network condition and less resource contention, the game will run smoothly as in the video demo. Because there might be insufficient self-host servers in US East, US West, Eu, Singapore, you may experience some latency issues + connection problem. Please retry in less peak hours. You can try hosting your own service following the instruction the next section to have a better sense of performance.  
 
 Screenshot | Screenshot
 :-------------------------:|:-------------------------:
