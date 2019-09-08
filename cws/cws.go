@@ -28,7 +28,8 @@ type Client struct {
 }
 
 type WSPacket struct {
-	ID   string `json:"id"`
+	ID string `json:"id"`
+	// TODO: Make Data generic: map[string]interface{} for more usecases
 	Data string `json:"data"`
 
 	RoomID      string `json:"room_id"`

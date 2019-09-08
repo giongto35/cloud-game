@@ -50,7 +50,7 @@ type Room struct {
 }
 
 // NewRoom creates a new room
-func NewRoom(roomID string, gameName string, onlineStorage *storage.Client) *Room {
+func NewRoom(roomID string, gameName string, videoEncoderType string, onlineStorage *storage.Client) *Room {
 	// If no roomID is given, generate it from gameName
 	// If the is roomID, get gameName from roomID
 	if roomID == "" {
@@ -101,7 +101,7 @@ func NewRoom(roomID string, gameName string, onlineStorage *storage.Client) *Roo
 		room.director = getEmulator(emuName, roomID, imageChannel, audioChannel, inputChannel)
 		gameMeta := room.director.LoadMeta(game.Path)
 
-		go room.startVideo(gameMeta.Width, gameMeta.Height)
+		go room.startVideo(gameMeta.Width, gameMeta.Height, videoEncoderType)
 		go room.startAudio(gameMeta.AudioSampleRate)
 		room.director.Start()
 
