@@ -209,8 +209,7 @@ function startWebRTC(iceservers) {
                 session = btoa(JSON.stringify(pc.localDescription));
                 log("Send SDP to remote peer");
                 // TODO: Fix curPacketID
-                //conn.send(JSON.stringify({"id": "initwebrtc", "data": session, "packet_id": curPacketID}));
-                conn.send(JSON.stringify({"id": "initwebrtc", "data": session}));
+                conn.send(JSON.stringify({"id": "initwebrtc", "data": JSON.stringify({"sdp": session, "is_mobile": isMobileDevice()})}));
                 iceSent = true
             }
         } else {
@@ -221,7 +220,7 @@ function startWebRTC(iceservers) {
                 if (!iceSent) {
                     log("Ice gathering timeout, send anyway")
                     session = btoa(JSON.stringify(pc.localDescription));
-                    conn.send(JSON.stringify({"id": "initwebrtc", "data": session}));
+                    conn.send(JSON.stringify({"id": "initwebrtc", "data": JSON.stringify({"sdp": session, "is_mobile": isMobileDevice()})}));
                     iceSent = true;
                 }
             }, ICE_TIMEOUT)

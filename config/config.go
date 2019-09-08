@@ -25,10 +25,6 @@ var ProdEnv = "prod"
 
 const NumKeys = 10
 
-var Codec = CODEC_H264
-
-//var Codec = CODEC_VP8
-
 var FileTypeToEmulator = map[string]string{
 	"gba": "gba",
 	"cue": "pcsx",

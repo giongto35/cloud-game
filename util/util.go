@@ -6,6 +6,8 @@ import (
 	"log"
 	"os/user"
 	"unsafe"
+
+	"github.com/giongto35/cloud-game/config"
 )
 
 // https://stackoverflow.com/questions/9465815/rgb-to-yuv420-algorithm-efficiency
@@ -77,4 +79,14 @@ func GetSavePath(roomID string) string {
 
 func savePath(hash string) string {
 	return homeDir + "/.cr/save/" + hash + ".dat"
+}
+
+// GetVideoEncoder returns video encoder based on some qualification.
+// Actually Android is only supporting VP8 but H264 has better encoding performance
+// TODO: Better use useragent attribute from frontend
+func GetVideoEncoder(isMobile bool) string {
+	if isMobile == true {
+		return config.CODEC_VP8
+	}
+	return config.CODEC_H264
 }
