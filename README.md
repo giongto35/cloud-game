@@ -49,8 +49,9 @@ brew install libvpx pkg-config opus opusfile
 Because coordinator and workers needs to run simulateneously. Workers connects to coordinator.
 1. Script
   * `make run`
-  * The scripts includes build the binary using Go module
+  * The scripts spawns 2 processes one in background and one in foreground
 2. Manual
+  * Need to run coordinator and worker separately in two session
   * `go run cmd/main.go -overlordhost overlord` - spawn coordinator
   * `go run cmd/main.go -overlordhost ws://localhost:8000/wso` - spawn workers connecting to coordinator
 
