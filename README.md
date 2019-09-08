@@ -34,7 +34,7 @@ Install Golang https://golang.org/doc/install . Because the project uses GoModul
 
 Install dependencies  
 
-  * Install [libvpx](https://www.webmproject.org/code/) and [pkg-config](https://www.freedesktop.org/wiki/Software/pkg-config/)
+  * Install [libvpx](https://www.webmproject.org/code/), [libopus](http://opus-codec.org/), [pkg-config](https://www.freedesktop.org/wiki/Software/pkg-config/)
 ```
 # Ubuntu
 apt-get install -y pkg-config libvpx-dev libopus-dev libopusfile-dev
