@@ -470,6 +470,9 @@ func serialize(size uint) ([]byte, error) {
 
 // unserialize unserializes internal state from a byte slice.
 func unserialize(bytes []byte, size uint) error {
+	if len(bytes) == 0 {
+		return nil
+	}
 	ok := bool(C.bridge_retro_unserialize(retroUnserialize, unsafe.Pointer(&bytes[0]), C.size_t(size)))
 	if !ok {
 		return errors.New("retro_unserialize failed")
