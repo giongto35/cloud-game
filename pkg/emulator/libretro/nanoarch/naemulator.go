@@ -5,7 +5,7 @@ import (
 	"log"
 	"time"
 
-	"github.com/giongto35/cloud-game/pkg/emulator"
+	"github.com/giongto35/cloud-game/pkg/config"
 	"github.com/giongto35/cloud-game/pkg/util"
 )
 
@@ -50,34 +50,30 @@ type naEmulator struct {
 	imageChannel chan<- *image.RGBA
 	audioChannel chan<- float32
 	inputChannel <-chan int
-	corePath     string
-	gamePath     string
-	roomID       string
 
+	meta            config.EmulatorMeta
+	gamePath        string
+	roomID          string
 	gameName        string
 	isSavingLoading bool
 
 	keys []bool
 	done chan struct{}
-	meta emulator.Meta
 }
 
 var NAEmulator *naEmulator
 
 // TODO: Load from config
-var emulatorCorePath = map[string]string{
-	"gba": "libretro/cores/mgba_libretro.so",
-	//"pcsx": "libretro/cores/mednafen_psx_libretro.so",
-	//"pcsx": "libretro/cores/mednafen_psx_hw_libretro.so",
-	"pcsx":   "libretro/cores/pcsx_rearmed_libretro.so",
-	"arcade": "libretro/cores/fbalpha2012_neogeo_libretro.so",
-	"mame":   "libretro/cores/mame2016_libretro.so",
-}
+var emulatorCorePath = map[string]string{}
 
 // NAEmulator implements CloudEmulator interface based on NanoArch(golang RetroArch)
 func NewNAEmulator(etype string, roomID string, imageChannel chan<- *image.RGBA, audioChannel chan<- float32, inputChannel <-chan int) *naEmulator {
+	meta := config.EmulatorConfig[etype]
+	ewidth = meta.Width
+	eheight = meta.Height
+
 	return &naEmulator{
-		corePath:     emulatorCorePath[etype],
+		meta:         meta,
 		imageChannel: imageChannel,
 		audioChannel: audioChannel,
 		inputChannel: inputChannel,
@@ -97,8 +93,12 @@ func (na *naEmulator) listenInput() {
 	// input from javascript follows bitmap. Ex: 00110101
 	// we decode the bitmap and send to channel
 	for inpBitmap := range NAEmulator.inputChannel {
-		for k := 0; k < len(na.keys); k++ {
-			key := bindRetroKeys[k]
+		for k := 0; k < len(bindRetroKeys); k++ {
+			key, ok := bindRetroKeys[k]
+			if ok == false {
+				continue
+			}
+
 			if (inpBitmap & 1) == 1 {
 				na.keys[key] = true
 			} else {
@@ -109,8 +109,8 @@ func (na *naEmulator) listenInput() {
 	}
 }
 
-func (na *naEmulator) LoadMeta(path string) emulator.Meta {
-	coreLoad(na.corePath)
+func (na *naEmulator) LoadMeta(path string) config.EmulatorMeta {
+	coreLoad(na.meta.Path)
 	coreLoadGame(path)
 	na.gamePath = path
 
@@ -119,10 +119,11 @@ func (na *naEmulator) LoadMeta(path string) emulator.Meta {
 
 func (na *naEmulator) Start() {
 	na.playGame(na.gamePath)
-
 	ticker := time.NewTicker(time.Second / 60)
+
 	for range ticker.C {
 		select {
+		// Slow response here
 		case <-na.done:
 			nanoarchShutdown()
 			log.Println("Closed Director")

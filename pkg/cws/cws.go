@@ -3,6 +3,7 @@ package cws
 import (
 	"encoding/json"
 	"log"
+	"runtime/debug"
 	"sync"
 	"time"
 
@@ -27,7 +28,8 @@ type Client struct {
 }
 
 type WSPacket struct {
-	ID   string `json:"id"`
+	ID string `json:"id"`
+	// TODO: Make Data generic: map[string]interface{} for more usecases
 	Data string `json:"data"`
 
 	RoomID      string `json:"room_id"`
@@ -96,6 +98,7 @@ func (c *Client) Receive(id string, f func(response WSPacket) (request WSPacket)
 		defer func() {
 			if err := recover(); err != nil {
 				log.Println("Recovered from err ", err)
+				log.Println(debug.Stack())
 			}
 		}()
 

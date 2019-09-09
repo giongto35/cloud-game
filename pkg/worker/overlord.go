@@ -1,9 +1,12 @@
 package worker
 
 import (
+	"encoding/json"
+	"fmt"
 	"log"
 
 	"github.com/giongto35/cloud-game/pkg/cws"
+	"github.com/giongto35/cloud-game/pkg/util"
 	"github.com/giongto35/cloud-game/pkg/webrtc"
 	"github.com/giongto35/cloud-game/pkg/worker/room"
 	"github.com/gorilla/websocket"
@@ -48,8 +51,19 @@ func (h *Handler) RouteOverlord() {
 		"initwebrtc",
 		func(resp cws.WSPacket) (req cws.WSPacket) {
 			log.Println("Received relay SDP of a browser from overlord")
+
 			peerconnection := webrtc.NewWebRTC()
-			localSession, err := peerconnection.StartClient(resp.Data, iceCandidates[resp.SessionID])
+			var initPacket struct {
+				SDP      string `json:"sdp"`
+				IsMobile bool   `json:"is_mobile"`
+			}
+			fmt.Println("HIHIHIHI!!!!", resp.Data)
+			err := json.Unmarshal([]byte(resp.Data), &initPacket)
+			if err != nil {
+				panic(err)
+			}
+			fmt.Println("HIHIHIHI!!!!", initPacket)
+			localSession, err := peerconnection.StartClient(initPacket.SDP, initPacket.IsMobile, iceCandidates[resp.SessionID])
 			//h.peerconnections[resp.SessionID] = peerconnection
 
 			// Create new sessions when we have new peerconnection initialized
@@ -79,7 +93,18 @@ func (h *Handler) RouteOverlord() {
 			session, _ := h.sessions[resp.SessionID]
 
 			peerconnection := session.peerconnection
-			room := h.startGameHandler(resp.Data, resp.RoomID, resp.PlayerIndex, peerconnection)
+			// TODO: Standardize for all types of packet. Make WSPacket generic
+			var startPacket struct {
+				GameName string `json:"game_name"`
+				IsMobile bool   `json:"is_mobile"`
+			}
+
+			err := json.Unmarshal([]byte(resp.Data), &startPacket)
+			if err != nil {
+				panic(err)
+			}
+
+			room := h.startGameHandler(startPacket.GameName, resp.RoomID, resp.PlayerIndex, peerconnection, util.GetVideoEncoder(startPacket.IsMobile))
 			session.RoomID = room.ID
 			// TODO: can data race
 			h.rooms[room.ID] = room
@@ -193,7 +218,7 @@ func getServerIDOfRoom(oc *OverlordClient, roomID string) string {
 	return packet.Data
 }
 
-func (h *Handler) startGameHandler(gameName, roomID string, playerIndex int, peerconnection *webrtc.WebRTC) *room.Room {
+func (h *Handler) startGameHandler(gameName, roomID string, playerIndex int, peerconnection *webrtc.WebRTC, videoEncoderType string) *room.Room {
 	log.Println("Starting game", gameName)
 	// If we are connecting to overlord, request corresponding serverID based on roomID
 	// TODO: check if roomID is in the current server
@@ -202,7 +227,7 @@ func (h *Handler) startGameHandler(gameName, roomID string, playerIndex int, pee
 	// If room is not running
 	if room == nil {
 		// Create new room
-		room = h.createNewRoom(gameName, roomID, playerIndex)
+		room = h.createNewRoom(gameName, roomID, playerIndex, videoEncoderType)
 		// Wait for done signal from room
 		go func() {
 			<-room.Done

@@ -187,7 +187,7 @@ function startWebRTC(iceservers) {
             }).catch(log);
         }
         else if (pc.iceConnectionState === "disconnected") {
-            stopInputTimer();
+            stopGameInputTimer()
         }
     }
 
@@ -209,8 +209,7 @@ function startWebRTC(iceservers) {
                 session = btoa(JSON.stringify(pc.localDescription));
                 log("Send SDP to remote peer");
                 // TODO: Fix curPacketID
-                //conn.send(JSON.stringify({"id": "initwebrtc", "data": session, "packet_id": curPacketID}));
-                conn.send(JSON.stringify({"id": "initwebrtc", "data": session}));
+                conn.send(JSON.stringify({"id": "initwebrtc", "data": JSON.stringify({"sdp": session, "is_mobile": isMobileDevice()})}));
                 iceSent = true
             }
         } else {
@@ -221,7 +220,7 @@ function startWebRTC(iceservers) {
                 if (!iceSent) {
                     log("Ice gathering timeout, send anyway")
                     session = btoa(JSON.stringify(pc.localDescription));
-                    conn.send(JSON.stringify({"id": "initwebrtc", "data": session}));
+                    conn.send(JSON.stringify({"id": "initwebrtc", "data": JSON.stringify({"sdp": session, "is_mobile": isMobileDevice()})}));
                     iceSent = true;
                 }
             }, ICE_TIMEOUT)
@@ -270,7 +269,7 @@ function startGame() {
     log("Starting game screen");
     screenState = "game";
 
-    conn.send(JSON.stringify({"id": "start", "data": gameList[gameIdx], "room_id": roomID != null ? roomID : '', "player_index": 1}));
+    conn.send(JSON.stringify({"id": "start", "data": JSON.stringify({"game_name": gameList[gameIdx], "is_mobile": isMobileDevice()}), "room_id": roomID != null ? roomID : '', "player_index": 1}));
 
     // clear menu screen
     stopGameInputTimer();
@@ -283,3 +282,8 @@ function startGame() {
 
     return true
 }
+
+// Check mobile type because different mobile can accept different video encoder.
+function isMobileDevice() {
+    return (typeof window.orientation !== "undefined") || (navigator.userAgent.indexOf('IEMobile') !== -1);
+};

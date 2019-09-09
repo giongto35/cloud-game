@@ -1,32 +1,33 @@
-# Web-based Cloud Gaming Service
-- [http://cloudretro.io](http://cloudretro.io)
+# CloudRetro
+**Open-source Cloud Gaming Service For Retro Games**  
+**Video demo**: https://www.youtube.com/watch?v=GUBrJGAxZZg
 
-- [**Game Instruction**](document/instruction/)
+## Introduction
+This project aims to bring the most modern and convenient gaming experience to users as well as experiement the performance of Cloud-gaming technology. Theoretically, games are hosted on remote servers and media are streamed to the player in an optimal way to ensure the most comfortable user interaction. It opens the ability to play any retro games on your browser directly, which are fully compatible with multi-platform like Desktop, Android, ~~IOS~~. This flexibility also enables online gaming experience to retro games.  
 
-**Video demo**: https://www.youtube.com/watch?v=koqWB1VKflo
+## Try the service at
+**[http://cloudretro.io](http://cloudretro.io)**  
+Click help button to see keyboard mapping.  
 
----
+\*In ideal network condition and less resource contention, the game will run smoothly as in the video demo. Because there might be insufficient self-host servers in US East, US West, Eu, Singapore, you may experience some latency issues + connection problem. Please retry later in less peak hours. You can try hosting your own service following the instruction the next section to have a better sense of performance.  
 
-CloudRetro, Open source Web-based Cloud Gaming Service building on [WebRTC](https://github.com/pion) and [LibRetro](https://retroarch.com/).  
-  
-This project aims to bring the most modern and convenient gaming experience to user. You can play any retro games on your browser directly, which is fully compatible on multi-platform like Desktop, Android, IOS. This flexibility also enables online gaming experience to retro games.  
-
-Note: **Due to the high cost of hosting, I will Hibernate the servers for a while. I'm working on a big change and will turn on hosting again. Sorry for that :(**  
-You can try hosting your own service following the instruction in the next session.  
-
-![screenshot](document/img/landing-page.gif)
-![screenshot](document/img/landing-page-gb.png)
+Screenshot | Screenshot
+:-------------------------:|:-------------------------:
+![screenshot](document/img/landing-page-ps-hm.png)|![screenshot](document/img/landing-page-ps-x4.png)
+![screenshot](document/img/landing-page-gb.png)|![screenshot](document/img/landing-page-front.png)
 
 ## Feature
-1. Cloud gaming: Game logic is hosted on a remote server. User doesn't have to install or setup anything. Images and audio are streamed to user in the most optimal way.
-2. Cross-platform compatibility: The game is run on webbrowser, the most universal built-in app. No console, plugin, external app or devices are needed. The device must support webRTC to perform streaming. Joystick is also supported.
-4. Emulator agnostic: The game can be play directly without emulator selection and initialization as long as the its cores are supported by RetroArch.
-3. Vertically scaled + Load balancing: We can add more machines to handle more traffic. The closest server with highest free resource will be assigned to user.
+1. Cloud gaming: Game logic and storage is hosted on cloud service. It reduces the cumbersome of game initialization. Images and audio are streamed to user in the most optimal way using advanced encoding technology.
+2. Cross-platform compatibility: The game is run on web browser, the most universal built-in app. No console, plugin, external app or devices are needed. Chrome with the latest version and fully WebRTC support is recommended for the game. 
+3. Emulator agnostic: The game can be played directly without any extra effort to set up the gaming emulator or platform.
+4. Vertically scaled: The infrastructure is designed to be able to scale under high traffic by adding more instances.
 5. Cloud storage: Game state is storing on online storage, so you can come back to continue playing in a game.
+6. Online multiplayer: Bring online multiplayer gaming to retro games. (In Road map)
+7. Collaborate gameplay: Follow the idea of "Twitch Plays Pokemon", multiple players can play the same game together (In Road map)
 
 ## Run on local by Docker
 
-You try hosting the server yourself by running `./run_local_docker.sh`. It will spawn a docker environment and you can access the emulator on `localhost:8000`.  
+You try running the server yourself by running `make run-docker`. It will spawn a docker environment and you can access the service on `localhost:8000`.  
 
 ## Development environment
 
@@ -34,7 +35,7 @@ Install Golang https://golang.org/doc/install . Because the project uses GoModul
 
 Install dependencies  
 
-  * Install [libvpx](https://www.webmproject.org/code/) and [pkg-config](https://www.freedesktop.org/wiki/Software/pkg-config/)
+  * Install [libvpx](https://www.webmproject.org/code/), [libopus](http://opus-codec.org/), [pkg-config](https://www.freedesktop.org/wiki/Software/pkg-config/)
 ```
 # Ubuntu
 apt-get install -y pkg-config libvpx-dev libopus-dev libopusfile-dev
@@ -46,46 +47,28 @@ brew install libvpx pkg-config opus opusfile
 ... not tested yet ...
 ```
 
-And run 
-  * `./run_local.sh`
-  * The scripts includes build the binary using Go module
+Because coordinator and workers needs to run simulateneously. Workers connects to coordinator.
+1. Script
+  * `make run`
+  * The scripts spawns 2 processes one in background and one in foreground
+2. Manual
+  * Need to run coordinator and worker separately in two session
+  * `go run cmd/main.go -overlordhost overlord` - spawn coordinator
+  * `go run cmd/main.go -overlordhost ws://localhost:8000/wso` - spawn workers connecting to coordinator
 
-## Documentation
-- ✏ [Design Doc](document/designdoc/)  
-- 💿 [Implementation Doc](document/implementation/)  
+## Wiki
+- [Wiki](https://github.com/giongto35/cloud-game/wiki)
 
 ## FAQ
-
-### How does the project start?
-
-- The project is inspired by Google Stadia. The most important question comes to everyone mind is how good is the latency? Will gaming experience is affected by the network? I did some researches on that topic and WebRTC seems to be the most suitable protocol for that purpose. I limited the project scope and made a POC of Cloud-gaming. The result indeed looks very promising.  
-
-### Why retroArch?
-
-- I first started the experiment with NES emulator. After seeing some positive result, I take a step further to integrate with RetroArch to challenge the system with high-end games like Playstation. In my opinion, combining RetroArch and Cloud will bring the best of both world together. The versality of RetroArch and the utility of streaming can deliver the most portable gaming experience to users.  
-
-### Why is the game lag for some people?
-
-- Cloud-gaming is very network-sensitive. It requires the server is close to the user, so please pick the nearest server to you. If there is not, you can try hosting the platform on your own machine followed above instruction and test.  
-- Cloud-gaming is based on WebRTC peer to peer, so there are some cases direct communication is not possible because of the firewall. In that case, relay communication happens and the game is not smooth. You can find a public network and retry.  
-- The current state of project is hosted on a limited resource, so during high traffic, the game might got lag due to CPU is overused, not because of the network. Besides, my memory management is not working properly sometimes and game sessions are not fully separated, so the game session can lag over time. In that case, please reload or continue your game by clicking share and reopen the old game.  
-
-### If RetroArch is already multi-platform, why do we need to make it cloud?
-
-- RetroArch is universal emulator but it still faces the issue of performance when running on low end mobile device or web frontend. As the logic is completely handled remotely, there will be no performance issue on the game. Even Playstation can be played smoothly on the service.
-- RetroArch requires loading cores and games but these steps are no longer necessary in Cloud-Gaming service. Games information and cores are stored in cloud storage.
-- However, High-end games requires a lot of computing power and it will involves an upgrade on hardware and infrastructure. Google has a lot of resource and its distributed GPU will enhance this cloud-gaming use case. My resource is not as abundant, so I prefer picking light retro games.
-
-### Why Web browser as the main platform?
-
-- Web browser is most universal built-in app and it will bring the most convenient and modern gaming experience together with cloud-gaming. You can try the platform on Android. Unfortunately, IOS doesn't support WebRTC protocol yet, [http://iswebrtcreadyyet.com/](http://iswebrtcreadyyet.com/)
+- [FAQ](https://github.com/giongto35/cloud-game/wiki/FAQ)  
 
 ## Credits
 
 * *Pion* Webrtc team for the incredible Golang Webrtc library and their supports https://github.com/pion/webrtc/.  
-* *Nanoarch* Golang RetroArch https://github.com/libretro/go-nanoarch and https://retroarch.com.  
-* *fogleman* for the awesome NES emulator https://github.com/fogleman/nes.  
+* *libretro/kivutar* Golang libretro https://github.com/libretro/go-nanoarch and https://retroarch.com.  
+* *gen2brain* for the h264 go encoder https://github.com/gen2brain/x264-go
 * *poi5305* for the video encoding https://github.com/poi5305/go-yuv2webRTC.  
+* *fogleman* for the NES emulator https://github.com/fogleman/nes.  
 * And last but not least, my longtime friend Tri as the co-author. 
 
 ## Contributor

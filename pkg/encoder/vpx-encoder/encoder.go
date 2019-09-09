@@ -126,6 +126,12 @@ func (v *VpxEncoder) startLooping() {
 		if r := recover(); r != nil {
 			log.Println("Warn: Recovered panic in encoding ", r)
 		}
+
+		if v.Done == true {
+			// The first time we see IsRunning set to false, we release and return
+			v.release()
+			return
+		}
 	}()
 
 	size := int(float32(v.width*v.height) * 1.5)
@@ -164,11 +170,6 @@ func (v *VpxEncoder) startLooping() {
 			continue
 		}
 		v.Output <- bs
-	}
-	if v.Done == true {
-		// The first time we see IsRunning set to false, we release and return
-		v.release()
-		return
 	}
 }
 

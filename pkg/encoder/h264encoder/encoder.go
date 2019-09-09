@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"image"
 	"log"
+	"runtime/debug"
 
 	"github.com/gen2brain/x264-go"
 	"github.com/giongto35/cloud-game/pkg/encoder"
@@ -76,6 +77,13 @@ func (v *H264Encoder) startLooping() {
 	defer func() {
 		if r := recover(); r != nil {
 			log.Println("Warn: Recovered panic in encoding ", r)
+			log.Println(debug.Stack())
+		}
+
+		if v.Done == true {
+			// The first time we see IsRunning set to false, we release and return
+			v.release()
+			return
 		}
 	}()
 
@@ -86,15 +94,12 @@ func (v *H264Encoder) startLooping() {
 			return
 		}
 
-		v.enc.Encode(img)
+		err := v.enc.Encode(img)
+		if err != nil {
+			log.Println("err encoding ", img, " using h264")
+		}
 		v.Output <- v.buf.Bytes()
 		v.buf.Reset()
-	}
-
-	if v.Done == true {
-		// The first time we see IsRunning set to false, we release and return
-		v.release()
-		return
 	}
 }
 
@@ -105,9 +110,6 @@ func (v *H264Encoder) release() {
 		log.Println("Releasing encoder")
 		// TODO: Bug here, after close it will signal
 		close(v.Output)
-		if v.Input != nil {
-			close(v.Input)
-		}
 		err := v.enc.Close()
 		if err != nil {
 			log.Println("Failed to close H264 encoder")
@@ -129,4 +131,5 @@ func (v *H264Encoder) GetOutputChan() chan []byte {
 // GetDoneChan returns done channel
 func (v *H264Encoder) Stop() {
 	v.Done = true
+	close(v.Input)
 }

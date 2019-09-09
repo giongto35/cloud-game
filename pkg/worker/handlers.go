@@ -2,8 +2,11 @@ package worker
 
 import (
 	"log"
+	"os"
+	"path"
 	"time"
 
+	"github.com/giongto35/cloud-game/pkg/util"
 	"github.com/giongto35/cloud-game/pkg/webrtc"
 	storage "github.com/giongto35/cloud-game/pkg/worker/cloud-storage"
 	"github.com/giongto35/cloud-game/pkg/worker/room"
@@ -35,6 +38,10 @@ type Handler struct {
 
 // NewHandler returns a new server
 func NewHandler(overlordHost string) *Handler {
+	// Create offline storage folder
+	createOfflineStorage()
+
+	// Init online storage
 	onlineStorage := storage.NewInitClient()
 	return &Handler{
 		rooms:         map[string]*room.Room{},
@@ -87,21 +94,21 @@ func (h *Handler) GetOverlordClient() *OverlordClient {
 // detachPeerConn detach/remove a peerconnection from current room
 func (h *Handler) detachPeerConn(pc *webrtc.WebRTC) {
 	log.Println("Detach peerconnection")
-	roomID := pc.RoomID
-	r := h.getRoom(roomID)
-	if r == nil {
+	room := h.getRoom(pc.RoomID)
+	if room == nil {
 		return
 	}
 
-	// If room has no sessions, close room
-	if !r.EmptySessions() {
-		r.RemoveSession(pc)
-		if r.EmptySessions() {
+	if !room.EmptySessions() {
+		room.RemoveSession(pc)
+		// If no more session in that room, we close that room
+		if room.EmptySessions() {
 			log.Println("No session in room")
-			r.Close()
+			room.Close()
 			// Signal end of input Channel
 			log.Println("Signal input chan")
 			pc.InputChannel <- -1
+			close(pc.InputChannel)
 		}
 	}
 }
@@ -123,12 +130,12 @@ func (h *Handler) detachRoom(roomID string) {
 
 // createNewRoom creates a new room
 // Return nil in case of room is existed
-func (h *Handler) createNewRoom(gameName string, roomID string, playerIndex int) *room.Room {
+func (h *Handler) createNewRoom(gameName string, roomID string, playerIndex int, videoEncoderType string) *room.Room {
 	// If the roomID is empty,
 	// or the roomID doesn't have any running sessions (room was closed)
 	// we spawn a new room
 	if roomID == "" || !h.isRoomRunning(roomID) {
-		room := room.NewRoom(roomID, gameName, h.onlineStorage)
+		room := room.NewRoom(roomID, gameName, videoEncoderType, h.onlineStorage)
 		// TODO: Might have race condition
 		h.rooms[room.ID] = room
 		return room
@@ -156,5 +163,11 @@ func (h *Handler) Close() {
 	// Close all room
 	for _, room := range h.rooms {
 		room.Close()
+	}
+}
+func createOfflineStorage() {
+	dir, _ := path.Split(util.GetSavePath("dummy"))
+	if err := os.MkdirAll(dir, 0755); err != nil {
+		log.Println("Failed to create offline storage, err: ", err)
 	}
 }

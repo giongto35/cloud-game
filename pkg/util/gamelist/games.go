@@ -60,7 +60,7 @@ func isValidGameType(gamePath string) bool {
 // getGameInfo returns game info from a path
 func getGameInfo(path string) GameInfo {
 	// Remove prefix to obtain file names
-	fileName := path[len(gamePath)+1:]
+	fileName := filepath.Base(path)
 	ext := filepath.Ext(fileName)
 	return GameInfo{
 		Name: strings.TrimSuffix(fileName, ext),

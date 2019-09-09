@@ -1,11 +1,19 @@
 # cloud.google.com/go v0.43.0
+<<<<<<< HEAD
 cloud.google.com/go/compute/metadata
+=======
+cloud.google.com/go/storage
+>>>>>>> 719d9c822881f3c8b752be357b61aeb7c5af4030
 cloud.google.com/go/iam
 cloud.google.com/go/internal
 cloud.google.com/go/internal/optional
 cloud.google.com/go/internal/trace
 cloud.google.com/go/internal/version
+<<<<<<< HEAD
 cloud.google.com/go/storage
+=======
+cloud.google.com/go/compute/metadata
+>>>>>>> 719d9c822881f3c8b752be357b61aeb7c5af4030
 # github.com/beorn7/perks v1.0.1
 github.com/beorn7/perks/quantile
 # github.com/cheekybits/genny v1.0.0
@@ -15,8 +23,11 @@ github.com/gen2brain/x264-go
 github.com/gen2brain/x264-go/x264c
 # github.com/gofrs/uuid v3.2.0+incompatible
 github.com/gofrs/uuid
+<<<<<<< HEAD
 # github.com/golang/glog v0.0.0-20160126235308-23def4e6c14b
 github.com/golang/glog
+=======
+>>>>>>> 719d9c822881f3c8b752be357b61aeb7c5af4030
 # github.com/golang/protobuf v1.3.2
 github.com/golang/protobuf/proto
 github.com/golang/protobuf/protoc-gen-go/descriptor
@@ -91,6 +102,10 @@ github.com/pion/webrtc/v2/pkg/rtcerr
 # github.com/pkg/errors v0.8.1
 github.com/pkg/errors
 # github.com/prometheus/client_golang v1.1.0
+<<<<<<< HEAD
+=======
+github.com/prometheus/client_golang/prometheus/promhttp
+>>>>>>> 719d9c822881f3c8b752be357b61aeb7c5af4030
 github.com/prometheus/client_golang/prometheus
 github.com/prometheus/client_golang/prometheus/internal
 github.com/prometheus/client_golang/prometheus/promhttp
@@ -99,6 +114,7 @@ github.com/prometheus/client_model/go
 # github.com/prometheus/common v0.6.0
 github.com/prometheus/common/expfmt
 github.com/prometheus/common/internal/bitbucket.org/ww/goautoneg
+<<<<<<< HEAD
 github.com/prometheus/common/model
 # github.com/prometheus/procfs v0.0.3
 github.com/prometheus/procfs
@@ -107,6 +123,14 @@ github.com/prometheus/procfs/internal/fs
 github.com/spf13/pflag
 # go.opencensus.io v0.22.0
 go.opencensus.io
+=======
+# github.com/prometheus/procfs v0.0.3
+github.com/prometheus/procfs
+github.com/prometheus/procfs/internal/fs
+# go.opencensus.io v0.22.0
+go.opencensus.io/trace
+go.opencensus.io/plugin/ochttp
+>>>>>>> 719d9c822881f3c8b752be357b61aeb7c5af4030
 go.opencensus.io/internal
 go.opencensus.io/internal/tagencoding
 go.opencensus.io/metric/metricdata
@@ -121,8 +145,20 @@ go.opencensus.io/tag
 go.opencensus.io/trace
 go.opencensus.io/trace/internal
 go.opencensus.io/trace/propagation
+<<<<<<< HEAD
 go.opencensus.io/trace/tracestate
 # golang.org/x/crypto v0.0.0-20190605123033-f99c8df09eb5
+=======
+go.opencensus.io
+go.opencensus.io/metric/metricdata
+go.opencensus.io/stats/internal
+go.opencensus.io/internal/tagencoding
+go.opencensus.io/metric/metricproducer
+go.opencensus.io/resource
+# golang.org/x/crypto v0.0.0-20190605123033-f99c8df09eb5
+golang.org/x/crypto/curve25519
+golang.org/x/crypto/hkdf
+>>>>>>> 719d9c822881f3c8b752be357b61aeb7c5af4030
 golang.org/x/crypto/chacha20poly1305
 golang.org/x/crypto/cryptobyte
 golang.org/x/crypto/cryptobyte/asn1
@@ -131,20 +167,36 @@ golang.org/x/crypto/hkdf
 golang.org/x/crypto/internal/chacha20
 golang.org/x/crypto/internal/subtle
 golang.org/x/crypto/poly1305
+<<<<<<< HEAD
 # golang.org/x/net v0.0.0-20190628185345-da137c7871d7
 golang.org/x/net/bpf
 golang.org/x/net/context
 golang.org/x/net/context/ctxhttp
 golang.org/x/net/dns/dnsmessage
 golang.org/x/net/http/httpguts
+=======
+golang.org/x/crypto/cryptobyte/asn1
+# golang.org/x/net v0.0.0-20190628185345-da137c7871d7
+golang.org/x/net/ipv4
+golang.org/x/net/dns/dnsmessage
+golang.org/x/net/bpf
+golang.org/x/net/internal/iana
+golang.org/x/net/internal/socket
+golang.org/x/net/trace
+golang.org/x/net/context
+golang.org/x/net/internal/timeseries
+>>>>>>> 719d9c822881f3c8b752be357b61aeb7c5af4030
 golang.org/x/net/http2
 golang.org/x/net/http2/hpack
 golang.org/x/net/idna
+<<<<<<< HEAD
 golang.org/x/net/internal/iana
 golang.org/x/net/internal/socket
 golang.org/x/net/internal/timeseries
 golang.org/x/net/ipv4
 golang.org/x/net/trace
+=======
+>>>>>>> 719d9c822881f3c8b752be357b61aeb7c5af4030
 # golang.org/x/oauth2 v0.0.0-20190604053449-0f29369cfe45
 golang.org/x/oauth2
 golang.org/x/oauth2/google
@@ -152,16 +204,27 @@ golang.org/x/oauth2/internal
 golang.org/x/oauth2/jws
 golang.org/x/oauth2/jwt
 # golang.org/x/sys v0.0.0-20190801041406-cbf593c0f2f3
+<<<<<<< HEAD
 golang.org/x/sys/cpu
 golang.org/x/sys/unix
 golang.org/x/sys/windows
+=======
+golang.org/x/sys/windows
+golang.org/x/sys/unix
+golang.org/x/sys/cpu
+>>>>>>> 719d9c822881f3c8b752be357b61aeb7c5af4030
 # golang.org/x/text v0.3.2
 golang.org/x/text/secure/bidirule
 golang.org/x/text/transform
 golang.org/x/text/unicode/bidi
 golang.org/x/text/unicode/norm
+<<<<<<< HEAD
 # google.golang.org/api v0.7.0
 google.golang.org/api/gensupport
+=======
+golang.org/x/text/transform
+# google.golang.org/api v0.7.0
+>>>>>>> 719d9c822881f3c8b752be357b61aeb7c5af4030
 google.golang.org/api/googleapi
 google.golang.org/api/googleapi/internal/uritemplates
 google.golang.org/api/googleapi/transport
@@ -172,6 +235,10 @@ google.golang.org/api/storage/v1
 google.golang.org/api/transport/http
 google.golang.org/api/transport/http/internal/propagation
 # google.golang.org/appengine v1.6.1
+<<<<<<< HEAD
+=======
+google.golang.org/appengine/urlfetch
+>>>>>>> 719d9c822881f3c8b752be357b61aeb7c5af4030
 google.golang.org/appengine
 google.golang.org/appengine/internal
 google.golang.org/appengine/internal/app_identity
@@ -180,14 +247,21 @@ google.golang.org/appengine/internal/datastore
 google.golang.org/appengine/internal/log
 google.golang.org/appengine/internal/modules
 google.golang.org/appengine/internal/remote_api
+<<<<<<< HEAD
 google.golang.org/appengine/internal/urlfetch
 google.golang.org/appengine/urlfetch
 # google.golang.org/genproto v0.0.0-20190716160619-c506a9f90610
 google.golang.org/genproto/googleapis/api/annotations
+=======
+# google.golang.org/genproto v0.0.0-20190716160619-c506a9f90610
+>>>>>>> 719d9c822881f3c8b752be357b61aeb7c5af4030
 google.golang.org/genproto/googleapis/iam/v1
 google.golang.org/genproto/googleapis/rpc/code
 google.golang.org/genproto/googleapis/rpc/status
+<<<<<<< HEAD
 google.golang.org/genproto/googleapis/type/expr
+=======
+>>>>>>> 719d9c822881f3c8b752be357b61aeb7c5af4030
 # google.golang.org/grpc v1.21.1
 google.golang.org/grpc
 google.golang.org/grpc/balancer

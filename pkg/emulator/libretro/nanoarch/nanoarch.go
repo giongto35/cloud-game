@@ -7,14 +7,11 @@ import (
 	"image"
 	"image/color"
 	"log"
-	"math"
 	"os"
 	"os/user"
 	"reflect"
 	"sync"
 	"unsafe"
-
-	"github.com/giongto35/cloud-game/pkg/emulator"
 )
 
 /*
@@ -60,7 +57,6 @@ var mu sync.Mutex
 var video struct {
 	program uint32
 	vao     uint32
-	texID   uint32
 	pitch   uint32
 	pixFmt  uint32
 	pixType uint32
@@ -71,24 +67,34 @@ var scale = 3.0
 
 const bufSize = 1024 * 4
 
-const joypadNumKeys int = C.RETRO_DEVICE_ID_JOYPAD_R3
+const joypadNumKeys = int(C.RETRO_DEVICE_ID_JOYPAD_R3 + 1)
 
-var joy [joypadNumKeys + 1]bool
+var joy [joypadNumKeys]bool
 var ewidth, eheight int
 
 var bindRetroKeys = map[int]int{
 	0: C.RETRO_DEVICE_ID_JOYPAD_A,
 	1: C.RETRO_DEVICE_ID_JOYPAD_B,
-	2: C.RETRO_DEVICE_ID_JOYPAD_SELECT,
-	3: C.RETRO_DEVICE_ID_JOYPAD_START,
-	4: C.RETRO_DEVICE_ID_JOYPAD_UP,
-	5: C.RETRO_DEVICE_ID_JOYPAD_DOWN,
-	6: C.RETRO_DEVICE_ID_JOYPAD_LEFT,
-	7: C.RETRO_DEVICE_ID_JOYPAD_RIGHT,
+	2: C.RETRO_DEVICE_ID_JOYPAD_X,
+	3: C.RETRO_DEVICE_ID_JOYPAD_Y,
+	4: C.RETRO_DEVICE_ID_JOYPAD_SELECT,
+	5: C.RETRO_DEVICE_ID_JOYPAD_START,
+	6: C.RETRO_DEVICE_ID_JOYPAD_UP,
+	7: C.RETRO_DEVICE_ID_JOYPAD_DOWN,
+	8: C.RETRO_DEVICE_ID_JOYPAD_LEFT,
+	9: C.RETRO_DEVICE_ID_JOYPAD_RIGHT,
 }
 
+const (
+	// BIT_FORMAT_SHORT_5_5_5_1 has 5 bits R, 5 bits G, 5 bits B, 1 bit alpha
+	BIT_FORMAT_SHORT_5_5_5_1 = iota
+	// BIT_FORMAT_INT_8_8_8_8_REV has 8 bits R, 8 bits G, 8 bits B, 8 bit alpha
+	BIT_FORMAT_INT_8_8_8_8_REV
+	// BIT_FORMAT_SHORT_5_6_5 has 5 bits R, 6 bits G, 5 bits
+	BIT_FORMAT_SHORT_5_6_5
+)
+
 type CloudEmulator interface {
-	SetView(view *emulator.GameView)
 	Start(path string)
 	SaveGame(saveExtraFunc func() error) error
 	LoadGame() error
@@ -111,58 +117,77 @@ func resizeToAspect(ratio float64, sw float64, sh float64) (dw float64, dh float
 	return
 }
 
-func videoConfigure(geom *C.struct_retro_game_geometry) (int, int) {
-
-	nwidth, nheight := resizeToAspect(float64(geom.aspect_ratio), float64(geom.base_width), float64(geom.base_height))
-
-	fmt.Println("media config", nwidth, nheight, geom.base_width, geom.base_height, geom.aspect_ratio, video.bpp, scale)
-
-	if video.texID == 0 {
-		fmt.Println("Failed to create the video texture")
-	}
-
-	video.pitch = uint32(geom.base_width) * video.bpp
-	return int(math.Round(nwidth)), int(math.Round(nheight))
-}
-
 //export coreVideoRefresh
 func coreVideoRefresh(data unsafe.Pointer, width C.unsigned, height C.unsigned, pitch C.size_t) {
-	if uint32(pitch) != video.pitch {
-		video.pitch = uint32(pitch)
-	}
+	bytesPerRow := int(uint32(pitch) / video.bpp)
 
 	if data != nil {
-		NAEmulator.imageChannel <- toImageRGBA(data)
+		NAEmulator.imageChannel <- toImageRGBA(data, bytesPerRow, int(width), int(height))
 	}
 }
 
 // toImageRGBA convert nanoarch 2d array to image.RGBA
-func toImageRGBA(data unsafe.Pointer) *image.RGBA {
+func toImageRGBA(data unsafe.Pointer, bytesPerRow int, inputWidth, inputHeight int) *image.RGBA {
 	// Convert unsafe Pointer to bytes array
 	var bytes []byte
-	// TODO: Investigate this
-	// seems like there is a padding of slice.
-	// If the resolution is 240 * 160. I have to convert to 256 * 160 slice.
-	// If the resolution is 320 * 240. I can keep it to 320 * 240.
-	// I'm making assumption that the slice is packed and it has padding to fill 64
-	var w = 0
-	for w < ewidth {
-		w += 64
-	}
-
-	sh := (*reflect.SliceHeader)(unsafe.Pointer(&bytes))
-	sh.Data = uintptr(data)
-	sh.Len = w * eheight * 2
-	sh.Cap = w * eheight * 2
-
-	seek := 0
 
 	// Convert bytes array to image
 	// TODO: Reduce overhead of copying to bytes array by accessing unsafe.Pointer directly
+	sh := (*reflect.SliceHeader)(unsafe.Pointer(&bytes))
+	sh.Data = uintptr(data)
+	sh.Len = bytesPerRow * inputHeight * 4
+	sh.Cap = bytesPerRow * inputHeight * 4
+
+	if video.pixFmt == BIT_FORMAT_SHORT_5_6_5 {
+		return to565Image(data, bytes, bytesPerRow, inputWidth, inputHeight)
+	} else if video.pixFmt == BIT_FORMAT_INT_8_8_8_8_REV {
+		return to8888Image(data, bytes, bytesPerRow, inputWidth, inputHeight)
+	}
+	return nil
+}
+
+func to8888Image(data unsafe.Pointer, bytes []byte, bytesPerRow int, inputWidth, inputHeight int) *image.RGBA {
+	seek := 0
+
+	// scaleWidth and scaleHeight is the scale
+	scaleWidth := float64(ewidth) / float64(inputWidth)
+	scaleHeight := float64(eheight) / float64(inputHeight)
+
 	image := image.NewRGBA(image.Rect(0, 0, ewidth, eheight))
-	for y := 0; y < eheight; y++ {
-		for x := 0; x < w; x++ {
-			if x < ewidth {
+	for y := 0; y < inputHeight; y++ {
+		for x := 0; x < bytesPerRow; x++ {
+			xx := int(float64(x) * scaleWidth)
+			yy := int(float64(y) * scaleHeight)
+			if xx < ewidth {
+				b8 := bytes[seek]
+				g8 := bytes[seek+1]
+				r8 := bytes[seek+2]
+				a8 := bytes[seek+3]
+
+				image.Set(xx, yy, color.RGBA{byte(r8), byte(g8), byte(b8), byte(a8)})
+			}
+
+			seek += 4
+		}
+	}
+
+	// TODO: Resize Image
+	return image
+}
+
+func to565Image(data unsafe.Pointer, bytes []byte, bytesPerRow int, inputWidth, inputHeight int) *image.RGBA {
+	seek := 0
+
+	// scaleWidth and scaleHeight is the scale
+	scaleWidth := float64(ewidth) / float64(inputWidth)
+	scaleHeight := float64(eheight) / float64(inputHeight)
+
+	image := image.NewRGBA(image.Rect(0, 0, ewidth, eheight))
+	for y := 0; y < inputHeight; y++ {
+		for x := 0; x < bytesPerRow; x++ {
+			xx := int(float64(x) * scaleWidth)
+			yy := int(float64(y) * scaleHeight)
+			if xx < ewidth {
 				var bi int
 				bi = (int)(bytes[seek]) + ((int)(bytes[seek+1]) << 8)
 				b5 := bi & 0x1F
@@ -173,20 +198,22 @@ func toImageRGBA(data unsafe.Pointer) *image.RGBA {
 				g8 := (g6*255 + 31) / 63
 				r8 := (r5*255 + 15) / 31
 
-				image.Set(x, y, color.RGBA{byte(r8), byte(g8), byte(b8), 255})
+				image.Set(int(float64(xx)*scaleWidth), int(float64(yy)*scaleHeight), color.RGBA{byte(r8), byte(g8), byte(b8), 255})
 			}
+
 			seek += 2
 		}
 	}
 
+	// TODO: Resize Image
 	return image
 }
 
 //export coreInputPoll
 func coreInputPoll() {
-	for i := range NAEmulator.keys {
-		joy[i] = NAEmulator.keys[i]
-	}
+	//for i := range NAEmulator.keys {
+	//joy[i] = NAEmulator.keys[i]
+	//}
 }
 
 //export coreInputState
@@ -195,7 +222,7 @@ func coreInputState(port C.unsigned, device C.unsigned, index C.unsigned, id C.u
 		return 0
 	}
 
-	if id < 255 && joy[id] {
+	if id < 255 && NAEmulator.keys[id] {
 		return 1
 	}
 	return 0
@@ -214,7 +241,10 @@ func audioWrite2(buf unsafe.Pointer, frames C.size_t) C.size_t {
 
 	for i := 0; i < numFrames; i += 1 {
 		s := float32(pcm[i])
-		NAEmulator.audioChannel <- s
+		select {
+		case NAEmulator.audioChannel <- s:
+		default:
+		}
 	}
 
 	return 2 * frames
@@ -261,8 +291,11 @@ func coreEnvironment(cmd C.unsigned, data unsafe.Pointer) C.bool {
 		if *format > C.RETRO_PIXEL_FORMAT_RGB565 {
 			return false
 		}
-		return true
+		return videoSetPixelFormat(*format)
 	case C.RETRO_ENVIRONMENT_GET_SYSTEM_DIRECTORY:
+		path := (**C.char)(data)
+		*path = C.CString("./libretro/system")
+		return true
 	case C.RETRO_ENVIRONMENT_GET_SAVE_DIRECTORY:
 		path := (**C.char)(data)
 		*path = C.CString(".")
@@ -410,12 +443,9 @@ func coreLoadGame(filename string) {
 
 	C.bridge_retro_get_system_av_info(retroGetSystemAVInfo, &avi)
 
-	ewidth, eheight = videoConfigure(&avi.geometry)
 	// Append the library name to the window title.
 	NAEmulator.meta.AudioSampleRate = int(avi.timing.sample_rate)
 	NAEmulator.meta.Fps = int(avi.timing.fps)
-	NAEmulator.meta.Width = ewidth
-	NAEmulator.meta.Height = eheight
 }
 
 // serializeSize returns the amount of data the implementation requires to serialize
@@ -440,6 +470,9 @@ func serialize(size uint) ([]byte, error) {
 
 // unserialize unserializes internal state from a byte slice.
 func unserialize(bytes []byte, size uint) error {
+	if len(bytes) == 0 {
+		return nil
+	}
 	ok := bool(C.bridge_retro_unserialize(retroUnserialize, unsafe.Pointer(&bytes[0]), C.size_t(size)))
 	if !ok {
 		return errors.New("retro_unserialize failed")
@@ -454,4 +487,26 @@ func nanoarchShutdown() {
 
 func nanoarchRun() {
 	C.bridge_retro_run(retroRun)
+}
+
+func videoSetPixelFormat(format uint32) C.bool {
+	switch format {
+	case C.RETRO_PIXEL_FORMAT_0RGB1555:
+		video.pixFmt = BIT_FORMAT_SHORT_5_5_5_1
+		video.bpp = 2
+		break
+	case C.RETRO_PIXEL_FORMAT_XRGB8888:
+		video.pixFmt = BIT_FORMAT_INT_8_8_8_8_REV
+		video.bpp = 4
+		break
+	case C.RETRO_PIXEL_FORMAT_RGB565:
+		video.pixFmt = BIT_FORMAT_SHORT_5_6_5
+		video.bpp = 2
+		break
+	default:
+		log.Fatalf("Unknown pixel type %v", format)
+	}
+
+	fmt.Printf("Video pixel: %v %v %v %v %v", video, format, C.RETRO_PIXEL_FORMAT_0RGB1555, C.RETRO_PIXEL_FORMAT_XRGB8888, C.RETRO_PIXEL_FORMAT_RGB565)
+	return true
 }

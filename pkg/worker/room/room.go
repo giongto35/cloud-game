@@ -50,13 +50,14 @@ type Room struct {
 }
 
 // NewRoom creates a new room
-func NewRoom(roomID string, gameName string, onlineStorage *storage.Client) *Room {
+func NewRoom(roomID string, gameName string, videoEncoderType string, onlineStorage *storage.Client) *Room {
 	// If no roomID is given, generate it from gameName
 	// If the is roomID, get gameName from roomID
 	if roomID == "" {
 		roomID = generateRoomID(gameName)
 	} else {
 		gameName = getGameNameFromRoomID(roomID)
+		log.Println("Get Gamename from RoomID", gameName)
 	}
 	gameInfo := gamelist.GetGameInfoFromName(gameName)
 
@@ -95,10 +96,13 @@ func NewRoom(roomID string, gameName string, onlineStorage *storage.Client) *Roo
 		log.Printf("Room %s started. GamePath: %s, GameName: %s", roomID, game.Path, game.Name)
 
 		// Spawn new emulator based on gameName and plug-in all channels
-		room.director = getEmulator(game.Type, roomID, imageChannel, audioChannel, inputChannel)
-		meta := room.director.LoadMeta(game.Path)
-		go room.startVideo(meta.Width, meta.Height)
-		go room.startAudio(meta.AudioSampleRate)
+		emuName, _ := config.FileTypeToEmulator[game.Type]
+
+		room.director = getEmulator(emuName, roomID, imageChannel, audioChannel, inputChannel)
+		gameMeta := room.director.LoadMeta(game.Path)
+
+		go room.startVideo(gameMeta.Width, gameMeta.Height, videoEncoderType)
+		go room.startAudio(gameMeta.AudioSampleRate)
 		room.director.Start()
 
 		log.Printf("Room %s ended", roomID)
@@ -111,17 +115,9 @@ func NewRoom(roomID string, gameName string, onlineStorage *storage.Client) *Roo
 }
 
 // create director
-func getEmulator(gameType string, roomID string, imageChannel chan<- *image.RGBA, audioChannel chan<- float32, inputChannel <-chan int) emulator.CloudEmulator {
-	if gameType == "nes" {
-		return emulator.NewDirector(roomID, imageChannel, audioChannel, inputChannel)
-	}
+func getEmulator(emuName string, roomID string, imageChannel chan<- *image.RGBA, audioChannel chan<- float32, inputChannel <-chan int) emulator.CloudEmulator {
+	nanoarch.Init(emuName, roomID, imageChannel, audioChannel, inputChannel)
 
-	ename, ok := config.FileTypeToEmulator[gameType]
-	if !ok {
-		return nil
-	}
-
-	nanoarch.Init(ename, roomID, imageChannel, audioChannel, inputChannel)
 	return nanoarch.NAEmulator
 }
 
@@ -168,10 +164,10 @@ func (r *Room) startWebRTCSession(peerconnection *webrtc.WebRTC, playerIndex int
 		}
 
 		if peerconnection.IsConnected() {
-			// the first 8 bits belong to player 1
-			// the next 8 belongs to player 2 ...
-			// We standardize and put it to inputChannel (16 bits)
-			input = input << ((uint(playerIndex) - 1) * emulator.NumKeys)
+			// the first 10 bits belong to player 1
+			// the next 10 belongs to player 2 ...
+			// We standardize and put it to inputChannel (20 bits)
+			input = input << ((uint(playerIndex) - 1) * config.NumKeys)
 			select {
 			case r.inputChannel <- input:
 			default:
@@ -218,7 +214,6 @@ func (r *Room) Close() {
 	log.Println("Closing room", r.ID)
 	log.Println("Closing director of room ", r.ID)
 	r.director.Close()
-	//close(r.director.Done)
 	log.Println("Closing input of room ", r.ID)
 	close(r.inputChannel)
 	close(r.Done)

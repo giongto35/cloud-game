@@ -7,11 +7,11 @@ import (
 	"fmt"
 	"log"
 	"math/rand"
+	"runtime/debug"
 	"time"
 
 	"github.com/giongto35/cloud-game/pkg/config"
-	"github.com/giongto35/cloud-game/pkg/encoder"
-
+	"github.com/giongto35/cloud-game/pkg/util"
 	"github.com/gofrs/uuid"
 	"github.com/pion/webrtc/v2"
 	"github.com/pion/webrtc/v2/pkg/media"
@@ -76,9 +76,7 @@ type InputDataPair struct {
 type WebRTC struct {
 	ID string
 
-	connection *webrtc.PeerConnection
-	// encoder     *vpxEncoder.VpxEncoder
-	encoder     encoder.Encoder
+	connection  *webrtc.PeerConnection
 	isConnected bool
 	isClosed    bool
 	// for yuvI420 image
@@ -94,7 +92,7 @@ type WebRTC struct {
 }
 
 // StartClient start webrtc
-func (w *WebRTC) StartClient(remoteSession string, iceCandidates []string) (string, error) {
+func (w *WebRTC) StartClient(remoteSession string, isMobile bool, iceCandidates []string) (string, error) {
 	defer func() {
 		if err := recover(); err != nil {
 			log.Println(err)
@@ -116,7 +114,7 @@ func (w *WebRTC) StartClient(remoteSession string, iceCandidates []string) (stri
 		return "", err
 	}
 
-	if config.Codec == config.CODEC_H264 {
+	if util.GetVideoEncoder(isMobile) == config.CODEC_H264 {
 		videoTrack, err = w.connection.NewTrack(webrtc.DefaultPayloadTypeH264, rand.Uint32(), "video", "pion2")
 	} else {
 		videoTrack, err = w.connection.NewTrack(webrtc.DefaultPayloadTypeVP8, rand.Uint32(), "video", "pion2")
@@ -124,6 +122,7 @@ func (w *WebRTC) StartClient(remoteSession string, iceCandidates []string) (stri
 	if err != nil {
 		return "", err
 	}
+
 	_, err = w.connection.AddTrack(videoTrack)
 	if err != nil {
 		return "", err
@@ -156,8 +155,8 @@ func (w *WebRTC) StartClient(remoteSession string, iceCandidates []string) (stri
 
 	// Register text message handling
 	inputTrack.OnMessage(func(msg webrtc.DataChannelMessage) {
-		// TODO: Can add recover here
-		w.InputChannel <- int(msg.Data[0])
+		// TODO: Can add recover here + generalize
+		w.InputChannel <- int(msg.Data[1])<<8 + int(msg.Data[0])
 	})
 
 	inputTrack.OnClose(func() {
@@ -243,17 +242,12 @@ func (w *WebRTC) StopClient() {
 
 	log.Println("===StopClient===")
 	w.isConnected = false
-	if w.encoder != nil {
-		// NOTE: We signal using bool value instead of channel for better performance
-		w.encoder.Stop()
-	}
 	if w.connection != nil {
 		w.connection.Close()
 	}
 	w.connection = nil
-	close(w.InputChannel)
+	//close(w.InputChannel)
 	// webrtc is producer, so we close
-	close(w.encoder.GetInputChan())
 	// NOTE: ImageChannel is waiting for input. Close in writer is not correct for this
 	close(w.ImageChannel)
 	close(w.AudioChannel)
@@ -271,7 +265,8 @@ func (w *WebRTC) startStreaming(vp8Track *webrtc.Track, opusTrack *webrtc.Track)
 	go func() {
 		defer func() {
 			if r := recover(); r != nil {
-				fmt.Println("Recovered when sent to closed encoder output channel")
+				fmt.Println("Recovered from err", r)
+				log.Println(debug.Stack())
 			}
 		}()
 
@@ -290,7 +285,8 @@ func (w *WebRTC) startStreaming(vp8Track *webrtc.Track, opusTrack *webrtc.Track)
 	go func() {
 		defer func() {
 			if r := recover(); r != nil {
-				fmt.Println("Recovered when sent to closed Audio Channel")
+				fmt.Println("Recovered from err", r)
+				log.Println(debug.Stack())
 			}
 		}()
 
