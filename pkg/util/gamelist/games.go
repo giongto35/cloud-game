@@ -14,7 +14,7 @@ type GameInfo struct {
 	Type string
 }
 
-const gamePath = "games"
+const gamePath = "assets/games"
 
 var GameList []GameInfo
 

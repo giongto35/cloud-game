@@ -6,8 +6,6 @@ PROJECT = cloud-game
 REPO_ROOT = github.com/giongto35
 ROOT = ${REPO_ROOT}/${PROJECT}
 
-PKGS := $(shell go list ./... | grep -v /vendor | grep -v /tests)
-
 fmt:
 	@goimports -w cmd pkg tests
 	@gofmt -s -w cmd pkg tests
@@ -17,19 +15,19 @@ compile: fmt
 
 check: fmt
 	@golangci-lint run cmd/... pkg/...
-	# @staticcheck -checks="all,-S1*" ./cmd/... ./pkg/... ./tests/...
+#	@staticcheck -checks="all,-S1*" ./cmd/... ./pkg/... ./tests/...
 
 dep:
 	go mod download
-	go mod vendor
-	go mod tidy
+#	go mod vendor
+#	go mod tidy
 
 # NOTE: there is problem with go mod vendor when it delete github.com/gen2brain/x264-go/x264c causing unable to build. https://github.com/golang/go/issues/26366
-build.cross: build
-	#CGO_ENABLED=1 GOOS=darwin GOARC=amd64 go build --ldflags '-linkmode external -extldflags "-static"' -o bin/overlord-darwin ./cmd/overlord
-	# CGO_ENABLED=1 GOOS=darwin GOARC=amd64 go build --ldflags '-linkmode external -extldflags "-static"' -o bin/overworker-darwin ./cmd/overworker
-	# CC=arm-linux-musleabihf-gcc GOOS=linux GOARC=amd64 CGO_ENABLED=1 go build --ldflags '-linkmode external -extldflags "-static"' -o bin/overlord-linu ./cmd/overlord
-	# CC=arm-linux-musleabihf-gcc GOOS=linux GOARC=amd64 CGO_ENABLED=1 go build --ldflags '-linkmode external -extldflags "-static"' -o bin/overworker-linux ./cmd/overworker
+#build.cross: build
+#	CGO_ENABLED=1 GOOS=darwin GOARC=amd64 go build --ldflags '-linkmode external -extldflags "-static"' -o bin/overlord-darwin ./cmd/overlord
+#	CGO_ENABLED=1 GOOS=darwin GOARC=amd64 go build --ldflags '-linkmode external -extldflags "-static"' -o bin/overworker-darwin ./cmd/overworker
+#	CC=arm-linux-musleabihf-gcc GOOS=linux GOARC=amd64 CGO_ENABLED=1 go build --ldflags '-linkmode external -extldflags "-static"' -o bin/overlord-linu ./cmd/overlord
+#	CC=arm-linux-musleabihf-gcc GOOS=linux GOARC=amd64 CGO_ENABLED=1 go build --ldflags '-linkmode external -extldflags "-static"' -o bin/overworker-linux ./cmd/overworker
 
 # A user can invoke tests in different ways:
 #  - make test runs all tests;
@@ -55,7 +53,7 @@ test-e2e: compile
 
 cover:
 	@go test -v -covermode=count -coverprofile=coverage.out $(TEST_PKGS)
-	# @$(GOPATH)/bin/goveralls -coverprofile=coverage.out -service=travis-ci -repotoken $(COVERALLS_TOKEN)
+#	@$(GOPATH)/bin/goveralls -coverprofile=coverage.out -service=travis-ci -repotoken $(COVERALLS_TOKEN)
 
 clean:
 	@rm -rf bin
@@ -68,6 +66,16 @@ dev.tools:
 dev.build: compile
 	go build -a -tags netgo -ldflags '-w' -o bin/overlord ./cmd/overlord
 	go build -a -tags netgo -ldflags '-w' -o bin/overworker ./cmd/overworker
+
+dev.build-local:
+	go build -o bin/overlord ./cmd/overlord
+	go build -o bin/overworker ./cmd/overworker
+
+dev.run: dev.build-local
+	./bin/overlord --v=5 &
+	./bin/overworker --overlordhost ws://localhost:8000/wso
+
+
 
 #dev.run: dev.build
 #	# Run coordinator first
@@ -83,28 +91,25 @@ dev.build: compile
 #	# Overlord and worker should be run separately. Local is for demo purpose
 #	docker run --privileged -v $PWD/games:/cloud-game/games -d --name cloud-game-local -p 8000:8000 -p 9000:9000 cloud-game-local bash -c "cmd -overlordhost ws://localhost:8000/wso & cmd -overlordhost overlord"
 
-build:
-	go build -o build/cloudretro ./cmd
+#build:
+#	go build -o build/cloudretro ./cmd
+#
+#run: build
+#	# Run coordinator first
+#	./build/cloudretro -overlordhost overlord &
+#	# Wait till overlord finish initialized
+#	# Run a worker connecting to overload
+#	./build/cloudretro -overlordhost ws://localhost:8000/wso
 
-run: build
-	# Run coordinator first
-	./build/cloudretro -overlordhost overlord &
-	# Wait till overlord finish initialized
-	# Run a worker connecting to overload
-	./build/cloudretro -overlordhost ws://localhost:8000/wso
+#run-docker:
+#	docker build . -t cloud-game-local
+#	docker stop cloud-game-local || true
+#	docker rm cloud-game-local || true
+#	# Overlord and worker should be run separately. Local is for demo purpose
+#	docker run --privileged -v $(PWD)/games:/cloud-game/games -d --name cloud-game-local -p 8000:8000 -p 9000:9000 cloud-game-local bash -c "cmd -overlordhost ws://localhost:8000/wso & cmd -overlordhost overlord"
+#
 
-run-docker:
-	docker build . -t cloud-game-local
-	docker stop cloud-game-local || true
-	docker rm cloud-game-local || true
-	# Overlord and worker should be run separately. Local is for demo purpose
-	docker run --privileged -v $(PWD)/games:/cloud-game/games -d --name cloud-game-local -p 8000:8000 -p 9000:9000 cloud-game-local bash -c "cmd -overlordhost ws://localhost:8000/wso & cmd -overlordhost overlord"
-
-#run with vendor will be faster
-build-vendor:
-	go build -o build/cloudretro -mod=vendor ./cmd
-
-run-fast: build-vendor
-	./build/cloudretro -overlordhost overlord &
-	./build/cloudretro -overlordhost ws://localhost:8000/wso
-
+#run-fast: build-vendor
+#	./build/cloudretro -overlordhost overlord &
+#	./build/cloudretro -overlordhost ws://localhost:8000/wso
+#

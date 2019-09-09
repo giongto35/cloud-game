@@ -13,6 +13,7 @@ import (
 	"time"
 
 	"github.com/giongto35/cloud-game/pkg/config"
+	"github.com/giongto35/cloud-game/pkg/util/logging"
 	"github.com/giongto35/cloud-game/pkg/worker"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 )
@@ -31,7 +32,7 @@ func initializeWorker() {
 	// It's recommend to run one worker on one instance. This logic is to make sure more than 1 workers still work
 	for {
 		log.Println("Listening at port: localhost:", port)
-		//err := http.ListenAndServe(":"+strconv.Itoa(port), nil)
+		// err := http.ListenAndServe(":"+strconv.Itoa(port), nil)
 		l, err := net.Listen("tcp", ":"+strconv.Itoa(port))
 		if err != nil {
 			port++
@@ -67,6 +68,9 @@ func monitor() {
 
 func main() {
 	flag.Parse()
+
+	logging.Init()
+	defer logging.Flush()
 
 	rand.Seed(time.Now().UTC().UnixNano())
 

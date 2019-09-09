@@ -64,7 +64,7 @@ func (h *Handler) RouteOverlord() {
 			}
 			fmt.Println("HIHIHIHI!!!!", initPacket)
 			localSession, err := peerconnection.StartClient(initPacket.SDP, initPacket.IsMobile, iceCandidates[resp.SessionID])
-			//h.peerconnections[resp.SessionID] = peerconnection
+			// h.peerconnections[resp.SessionID] = peerconnection
 
 			// Create new sessions when we have new peerconnection initialized
 			session := &Session{

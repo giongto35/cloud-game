@@ -20,8 +20,7 @@ import (
 )
 
 const (
-	gameboyIndex = "./static/game.html"
-	gamePath     = "games"
+	gameboyIndex = "./web/game.html"
 )
 
 type Server struct {
@@ -154,7 +153,7 @@ func (o *Server) WS(w http.ResponseWriter, r *http.Request) {
 		ServerID:      serverID,
 	}
 	// TODO:?
-	//defer wssession.Close()
+	// defer wssession.Close()
 	log.Println("New client will conect to server", wssession.ServerID)
 	wssession.WorkerClient.IsAvailable = false
 

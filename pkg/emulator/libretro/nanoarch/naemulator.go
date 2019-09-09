@@ -63,9 +63,6 @@ type naEmulator struct {
 
 var NAEmulator *naEmulator
 
-// TODO: Load from config
-var emulatorCorePath = map[string]string{}
-
 // NAEmulator implements CloudEmulator interface based on NanoArch(golang RetroArch)
 func NewNAEmulator(etype string, roomID string, imageChannel chan<- *image.RGBA, audioChannel chan<- float32, inputChannel <-chan int) *naEmulator {
 	meta := config.EmulatorConfig[etype]
