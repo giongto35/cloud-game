@@ -6,7 +6,8 @@
 This project aims to bring the most modern and convenient gaming experience to users as well as experiement the performance of Cloud-gaming technology. Theoretically, games are hosted on remote servers and media are streamed to the player in an optimal way to ensure the most comfortable user interaction. It opens the ability to play any retro games on your browser directly, which are fully compatible with multi-platform like Desktop, Android, ~~IOS~~. This flexibility also enables online gaming experience to retro games.  
 
 ## Try the service at
-**[http://cloudretro.io](http://cloudretro.io)**
+**[http://cloudretro.io](http://cloudretro.io)**  
+Click help button to see keyboard mapping.  
 
 \*In ideal network condition and less resource contention, the game will run smoothly as in the video demo. Because there might be insufficient self-host servers in US East, US West, Eu, Singapore, you may experience some latency issues + connection problem. Please retry later in less peak hours. You can try hosting your own service following the instruction the next section to have a better sense of performance.  
 
@@ -64,7 +65,7 @@ Because coordinator and workers needs to run simulateneously. Workers connects t
 ## Credits
 
 * *Pion* Webrtc team for the incredible Golang Webrtc library and their supports https://github.com/pion/webrtc/.  
-* *Nanoarch/Retroarch* Golang RetroArch https://github.com/libretro/go-nanoarch and https://retroarch.com.  
+* *libretro/kivutar* Golang libretro https://github.com/libretro/go-nanoarch and https://retroarch.com.  
 * *gen2brain* for the h264 go encoder https://github.com/gen2brain/x264-go
 * *poi5305* for the video encoding https://github.com/poi5305/go-yuv2webRTC.  
 * *fogleman* for the NES emulator https://github.com/fogleman/nes.  
