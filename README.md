@@ -7,7 +7,7 @@ This project aims to bring the most modern and convenient gaming experience to u
 
 ## Try the service at
 **[http://cloudretro.io](http://cloudretro.io)**  
-Click help button to see keyboard mapping.  
+*Chrome and Chrome on Android is recommended. It's not working on Iphone and some other explorer. Click help button to see keyboard mapping.*  
 
 \*In ideal network condition and less resource contention, the game will run smoothly as in the video demo. Because there might be insufficient self-host servers in US East, US West, Eu, Singapore, you may experience some latency issues + connection problem. Please retry later in less peak hours. You can try hosting your own service following the instruction the next section to have a better sense of performance.  
 
