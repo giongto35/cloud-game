@@ -60,7 +60,7 @@ Because coordinator and workers needs to run simulateneously. Workers connects t
 - [Wiki](https://github.com/giongto35/cloud-game/wiki)
 
 ## FAQ
-- [FAQ](https://github.com/giongto35/cloud-game/wiki/3.-FAQ)  
+- [FAQ](https://github.com/giongto35/cloud-game/wiki/FAQ)  
 
 ## Credits
 
