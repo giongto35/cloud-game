@@ -16,6 +16,7 @@ import (
 	"github.com/pion/mdns"
 	"github.com/pion/stun"
 	"github.com/pion/transport/packetio"
+	"github.com/pion/transport/vnet"
 	"golang.org/x/net/ipv4"
 )
 
@@ -78,8 +79,8 @@ type Agent struct {
 	onConnected     chan struct{}
 	onConnectedOnce sync.Once
 
-	connectivityChan <-chan time.Time
-	// force candidate to be contacted immediately (instead of waiting for connectivityChan)
+	connectivityTicker *time.Ticker
+	// force candidate to be contacted immediately (instead of waiting for connectivityTicker)
 	forceCandidateContact chan bool
 
 	trickle         bool
@@ -141,7 +142,10 @@ type Agent struct {
 	done chan struct{}
 	err  atomicError
 
-	log logging.LeveledLogger
+	loggerFactory logging.LoggerFactory
+	log           logging.LeveledLogger
+
+	net *vnet.Net
 }
 
 func (a *Agent) ok() error {
@@ -219,6 +223,10 @@ type AgentConfig struct {
 	PrflxAcceptanceMinWait *time.Duration
 	// HostAcceptanceMinWait specify a minimum wait time before selecting relay candidates
 	RelayAcceptanceMinWait *time.Duration
+
+	// Net is the our abstracted network interface for internal development purpose only
+	// (see github.com/pion/transport/vnet)
+	Net *vnet.Net
 }
 
 // NewAgent creates a new Agent
@@ -237,34 +245,44 @@ func NewAgent(config *AgentConfig) (*Agent, error) {
 		mDNSMode = MulticastDNSModeQueryOnly
 	}
 
+	loggerFactory := config.LoggerFactory
+	if loggerFactory == nil {
+		loggerFactory = logging.NewDefaultLoggerFactory()
+	}
+	log := loggerFactory.NewLogger("ice")
+
 	var mDNSConn *mdns.Conn
-	if mDNSMode != MulticastDNSModeDisabled {
-		addr, err := net.ResolveUDPAddr("udp4", mdns.DefaultAddress)
-		if err != nil {
-			return nil, err
+	mDNSConn, err = func() (*mdns.Conn, error) {
+		if mDNSMode == MulticastDNSModeDisabled {
+			return nil, nil
 		}
 
-		l, err := net.ListenUDP("udp4", addr)
-		if err != nil {
-			return nil, err
+		addr, mdnsErr := net.ResolveUDPAddr("udp4", mdns.DefaultAddress)
+		if mdnsErr != nil {
+			return nil, mdnsErr
+		}
+
+		l, mdnsErr := net.ListenUDP("udp4", addr)
+		if mdnsErr != nil {
+			// If ICE fails to start MulticastDNS server just warn the user and continue
+			log.Errorf("Failed to enable mDNS, continuing in mDNS disabled mode: (%s)", mdnsErr)
+			mDNSMode = MulticastDNSModeDisabled
+			return nil, nil
 		}
 
 		switch mDNSMode {
 		case MulticastDNSModeQueryOnly:
-			mDNSConn, err = mdns.Server(ipv4.NewPacketConn(l), &mdns.Config{})
+			return mdns.Server(ipv4.NewPacketConn(l), &mdns.Config{})
 		case MulticastDNSModeQueryAndGather:
-			mDNSConn, err = mdns.Server(ipv4.NewPacketConn(l), &mdns.Config{
+			return mdns.Server(ipv4.NewPacketConn(l), &mdns.Config{
 				LocalNames: []string{mDNSName},
 			})
+		default:
+			return nil, nil
 		}
-		if err != nil {
-			return nil, err
-		}
-	}
-
-	loggerFactory := config.LoggerFactory
-	if loggerFactory == nil {
-		loggerFactory = logging.NewDefaultLoggerFactory()
+	}()
+	if err != nil {
+		return nil, err
 	}
 
 	a := &Agent{
@@ -278,16 +296,18 @@ func NewAgent(config *AgentConfig) (*Agent, error) {
 		urls:                   config.Urls,
 		networkTypes:           config.NetworkTypes,
 
-		localUfrag:  randSeq(16),
-		localPwd:    randSeq(32),
-		taskChan:    make(chan task),
-		onConnected: make(chan struct{}),
-		buffer:      packetio.NewBuffer(),
-		done:        make(chan struct{}),
-		portmin:     config.PortMin,
-		portmax:     config.PortMax,
-		trickle:     config.Trickle,
-		log:         loggerFactory.NewLogger("ice"),
+		localUfrag:    randSeq(16),
+		localPwd:      randSeq(32),
+		taskChan:      make(chan task),
+		onConnected:   make(chan struct{}),
+		buffer:        packetio.NewBuffer(),
+		done:          make(chan struct{}),
+		portmin:       config.PortMin,
+		portmax:       config.PortMax,
+		trickle:       config.Trickle,
+		loggerFactory: loggerFactory,
+		log:           log,
+		net:           config.Net,
 
 		mDNSMode: mDNSMode,
 		mDNSName: mDNSName,
@@ -296,6 +316,15 @@ func NewAgent(config *AgentConfig) (*Agent, error) {
 		forceCandidateContact: make(chan bool, 1),
 	}
 	a.haveStarted.Store(false)
+
+	if a.net == nil {
+		a.net = vnet.NewNet(nil)
+	} else {
+		a.log.Warn("vnet is enabled")
+		if a.mDNSMode != MulticastDNSModeDisabled {
+			a.log.Warn("vnet does not support mDNS yet")
+		}
+	}
 
 	if config.MaxBindingRequests == nil {
 		a.maxBindingRequests = defaultMaxBindingRequests
@@ -432,9 +461,8 @@ func (a *Agent) startConnectivityChecks(isControlling bool, remoteUfrag, remoteP
 		agent.updateConnectionState(ConnectionStateChecking)
 
 		// TODO this should be dynamic, and grow when the connection is stable
-		agent.forceCandidateContact <- true
-		t := time.NewTicker(a.taskLoopInterval)
-		agent.connectivityChan = t.C
+		a.requestConnectivityCheck()
+		agent.connectivityTicker = time.NewTicker(a.taskLoopInterval)
 	})
 }
 
@@ -457,6 +485,7 @@ func (a *Agent) setSelectedPair(p *candidatePair) {
 	a.onSelectedCandidatePairChange(p)
 
 	a.selectedPair = p
+	a.selectedPair.nominated = true
 	a.updateConnectionState(ConnectionStateConnected)
 
 	// Close mDNS Conn. We don't need to do anymore querying
@@ -469,13 +498,16 @@ func (a *Agent) setSelectedPair(p *candidatePair) {
 
 func (a *Agent) pingAllCandidates() {
 	for _, p := range a.checklist {
-		if p.state != candidatePairStateChecking {
+
+		if p.state == CandidatePairStateWaiting {
+			p.state = CandidatePairStateInProgress
+		} else if p.state != CandidatePairStateInProgress {
 			continue
 		}
 
 		if p.bindingRequestCount > a.maxBindingRequests {
 			a.log.Tracef("max requests reached for pair %s, marking it as failed\n", p)
-			p.state = candidatePairStateFailed
+			p.state = CandidatePairStateFailed
 		} else {
 			a.selector.PingCandidate(p.local, p.remote)
 			p.bindingRequestCount++
@@ -486,7 +518,7 @@ func (a *Agent) pingAllCandidates() {
 func (a *Agent) getBestAvailableCandidatePair() *candidatePair {
 	var best *candidatePair
 	for _, p := range a.checklist {
-		if p.state == candidatePairStateFailed {
+		if p.state == CandidatePairStateFailed {
 			continue
 		}
 
@@ -502,7 +534,7 @@ func (a *Agent) getBestAvailableCandidatePair() *candidatePair {
 func (a *Agent) getBestValidCandidatePair() *candidatePair {
 	var best *candidatePair
 	for _, p := range a.checklist {
-		if p.state != candidatePairStateValid {
+		if p.state != CandidatePairStateSucceeded {
 			continue
 		}
 
@@ -553,7 +585,7 @@ func (a *Agent) taskLoop() {
 			select {
 			case <-a.forceCandidateContact:
 				a.selector.ContactCandidates()
-			case <-a.connectivityChan:
+			case <-a.connectivityTicker.C:
 				a.selector.ContactCandidates()
 			case t := <-a.taskChan:
 				// Run the task
@@ -614,6 +646,7 @@ func (a *Agent) AddRemoteCandidate(c Candidate) error {
 	// If we have a mDNS Candidate lets fully resolve it before adding it locally
 	if c.Type() == CandidateTypeHost && strings.HasSuffix(c.Address(), ".local") {
 		if a.mDNSMode == MulticastDNSModeDisabled {
+			a.log.Warnf("remote mDNS candidate added, but mDNS is disabled: (%s)", c.Address())
 			return nil
 		}
 
@@ -658,6 +691,13 @@ func (a *Agent) resolveAndAddMulticastCandidate(c *CandidateHost) {
 	}
 }
 
+func (a *Agent) requestConnectivityCheck() {
+	select {
+	case a.forceCandidateContact <- true:
+	default:
+	}
+}
+
 // addRemoteCandidate assumes you are holding the lock (must be execute using a.run)
 func (a *Agent) addRemoteCandidate(c Candidate) {
 	set := a.remoteCandidates[c.NetworkType()]
@@ -671,19 +711,13 @@ func (a *Agent) addRemoteCandidate(c Candidate) {
 	set = append(set, c)
 	a.remoteCandidates[c.NetworkType()] = set
 
-	for _, l := range a.localCandidates[NetworkTypeUDP4] {
-		if localRelay, ok := l.(*CandidateRelay); ok {
-			if err := localRelay.addPermission(c); err != nil {
-				a.log.Errorf("Failed to create TURN permission %v", err)
-			}
-		}
-	}
-
 	if localCandidates, ok := a.localCandidates[c.NetworkType()]; ok {
 		for _, localCandidate := range localCandidates {
 			a.addPair(localCandidate, c)
 		}
 	}
+
+	a.requestConnectivityCheck()
 }
 
 // addCandidate assumes you are holding the lock (must be execute using a.run)
@@ -759,6 +793,10 @@ func (a *Agent) Close() error {
 		}
 		if err := a.buffer.Close(); err != nil {
 			a.log.Warnf("failed to close buffer: %v", err)
+		}
+
+		if a.connectivityTicker != nil {
+			a.connectivityTicker.Stop()
 		}
 
 		a.closeMulticastConn()
@@ -905,7 +943,16 @@ func (a *Agent) handleInbound(m *stun.Message, local Candidate, remote net.Addr)
 				return
 			}
 
-			prflxCandidate, err := NewCandidatePeerReflexive(networkType.String(), ip.String(), port, local.Component(), "", 0)
+			prflxCandidateConfig := CandidatePeerReflexiveConfig{
+				Network:   networkType.String(),
+				Address:   ip.String(),
+				Port:      port,
+				Component: local.Component(),
+				RelAddr:   "",
+				RelPort:   0,
+			}
+
+			prflxCandidate, err := NewCandidatePeerReflexive(&prflxCandidateConfig)
 			if err != nil {
 				a.log.Errorf("Failed to create new remote prflx candidate (%s)", err)
 				return
@@ -968,6 +1015,113 @@ func (a *Agent) closeMulticastConn() {
 			a.log.Warnf("failed to close mDNS Conn: %v", err)
 		}
 	}
+}
+
+// GetCandidatePairsStats returns a list of candidate pair stats
+func (a *Agent) GetCandidatePairsStats() []CandidatePairStats {
+	resultChan := make(chan []CandidatePairStats)
+	err := a.run(func(agent *Agent) {
+		result := make([]CandidatePairStats, 0, len(agent.checklist))
+		for _, cp := range agent.checklist {
+			stat := CandidatePairStats{
+				Timestamp:         time.Now(),
+				LocalCandidateID:  cp.local.ID(),
+				RemoteCandidateID: cp.remote.ID(),
+				State:             cp.state,
+				Nominated:         cp.nominated,
+				// PacketsSent uint32
+				// PacketsReceived uint32
+				// BytesSent uint64
+				// BytesReceived uint64
+				// LastPacketSentTimestamp time.Time
+				// LastPacketReceivedTimestamp time.Time
+				// FirstRequestTimestamp time.Time
+				// LastRequestTimestamp time.Time
+				// LastResponseTimestamp time.Time
+				// TotalRoundTripTime float64
+				// CurrentRoundTripTime float64
+				// AvailableOutgoingBitrate float64
+				// AvailableIncomingBitrate float64
+				// CircuitBreakerTriggerCount uint32
+				// RequestsReceived uint64
+				// RequestsSent uint64
+				// ResponsesReceived uint64
+				// ResponsesSent uint64
+				// RetransmissionsReceived uint64
+				// RetransmissionsSent uint64
+				// ConsentRequestsSent uint64
+				// ConsentExpiredTimestamp time.Time
+			}
+			result = append(result, stat)
+		}
+		resultChan <- result
+	})
+	if err != nil {
+		a.log.Errorf("error getting candidate pairs stats %v", err)
+		return []CandidatePairStats{}
+	}
+	return <-resultChan
+}
+
+// GetLocalCandidatesStats returns a list of local candidates stats
+func (a *Agent) GetLocalCandidatesStats() []CandidateStats {
+	resultChan := make(chan []CandidateStats)
+	err := a.run(func(agent *Agent) {
+		result := make([]CandidateStats, 0, len(agent.localCandidates))
+		for networkType, localCandidates := range agent.localCandidates {
+			for _, c := range localCandidates {
+				stat := CandidateStats{
+					Timestamp:     time.Now(),
+					ID:            c.ID(),
+					NetworkType:   networkType,
+					IP:            c.Address(),
+					Port:          c.Port(),
+					CandidateType: c.Type(),
+					Priority:      c.Priority(),
+					// URL string
+					RelayProtocol: "udp",
+					// Deleted bool
+				}
+				result = append(result, stat)
+			}
+		}
+		resultChan <- result
+	})
+	if err != nil {
+		a.log.Errorf("error getting candidate pairs stats %v", err)
+		return []CandidateStats{}
+	}
+	return <-resultChan
+}
+
+// GetRemoteCandidatesStats returns a list of remote candidates stats
+func (a *Agent) GetRemoteCandidatesStats() []CandidateStats {
+	resultChan := make(chan []CandidateStats)
+	err := a.run(func(agent *Agent) {
+		result := make([]CandidateStats, 0, len(agent.remoteCandidates))
+		for networkType, localCandidates := range agent.remoteCandidates {
+			for _, c := range localCandidates {
+				stat := CandidateStats{
+					Timestamp:     time.Now(),
+					ID:            c.ID(),
+					NetworkType:   networkType,
+					IP:            c.Address(),
+					Port:          c.Port(),
+					CandidateType: c.Type(),
+					Priority:      c.Priority(),
+					// URL string
+					RelayProtocol: "udp",
+				}
+				result = append(result, stat)
+			}
+		}
+		resultChan <- result
+	})
+	if err != nil {
+		a.log.Errorf("error getting candidate pairs stats %v", err)
+		return []CandidateStats{}
+	}
+	return <-resultChan
 }
 
 // Role represents ICE agent role, which can be controlling or controlled.

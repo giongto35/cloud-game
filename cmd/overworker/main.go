@@ -10,7 +10,6 @@ import (
 	_ "net/http/pprof"
 	"runtime"
 	"strconv"
-	"strings"
 	"time"
 
 	"github.com/giongto35/cloud-game/pkg/config"
@@ -18,11 +17,9 @@ import (
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 )
 
-const gamePath = "games"
-
 // initializeWorker setup a worker
 func initializeWorker() {
-	worker := worker.NewHandler(*config.OverlordHost, gamePath)
+	worker := worker.NewHandler(*config.OverlordHost)
 
 	defer func() {
 		log.Println("Close worker")
@@ -76,9 +73,7 @@ func main() {
 	if *config.IsMonitor {
 		go monitor()
 	}
-	if strings.HasPrefix(*config.OverlordHost, "ws") && !strings.HasSuffix(*config.OverlordHost, "wso") {
-		log.Fatal("Overlord connection is invalid. Should have the form `ws://.../wso`")
-	}
+
 	log.Println("Running as worker ")
 	initializeWorker()
 }

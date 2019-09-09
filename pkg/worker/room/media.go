@@ -4,8 +4,10 @@ import (
 	"fmt"
 	"log"
 
-	"github.com/giongto35/cloud-game/pkg/util"
-	vpxEncoder "github.com/giongto35/cloud-game/pkg/vpx-encoder"
+	"github.com/giongto35/cloud-game/pkg/config"
+	"github.com/giongto35/cloud-game/pkg/encoder"
+	"github.com/giongto35/cloud-game/pkg/encoder/h264encoder"
+	vpxencoder "github.com/giongto35/cloud-game/pkg/encoder/vpx-encoder"
 	"gopkg.in/hraban/opus.v2"
 )
 
@@ -37,7 +39,7 @@ func resample(pcm []float32, targetSize int, srcSampleRate int, dstSampleRate in
 
 func (r *Room) startAudio(sampleRate int) {
 	log.Println("Enter fan audio")
-	//srcSampleRate := 32768
+	// srcSampleRate := 32768
 	srcSampleRate := sampleRate
 	dstSampleRate := 48000
 
@@ -97,13 +99,21 @@ func (r *Room) startAudio(sampleRate int) {
 }
 
 func (r *Room) startVideo(width, height int) {
-	size := int(float32(width*height) * 1.5)
-	yuv := make([]byte, size, size)
+	var encoder encoder.Encoder
+	var err error
 
-	encoder, err := vpxEncoder.NewVpxEncoder(width, height, 20, 1200, 5)
+	if config.Codec == config.CODEC_H264 {
+		encoder, err = h264encoder.NewH264Encoder(width, height, 20)
+	} else {
+		encoder, err = vpxencoder.NewVpxEncoder(width, height, 20, 1200, 5)
+	}
+
 	if err != nil {
+		fmt.Println("error create new encoder", err)
 		return
 	}
+	einput := encoder.GetInputChan()
+	eoutput := encoder.GetOutputChan()
 
 	// send screenshot
 	go func() {
@@ -118,15 +128,14 @@ func (r *Room) startVideo(width, height int) {
 				log.Println("Room ", r.ID, " video channel closed")
 				return
 			}
-			if len(encoder.Input) < cap(encoder.Input) {
-				util.RgbaToYuvInplace(image, yuv, width, height)
-				encoder.Input <- yuv
+			if len(einput) < cap(einput) {
+				einput <- image
 			}
 		}
 	}()
 
 	// fanout Screen
-	for data := range encoder.Output {
+	for data := range eoutput {
 		// TODO: r.rtcSessions is rarely updated. Lock will hold down perf
 		for _, webRTC := range r.rtcSessions {
 			// encode frame

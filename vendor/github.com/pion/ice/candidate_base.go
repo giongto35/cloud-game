@@ -11,6 +11,7 @@ import (
 )
 
 type candidateBase struct {
+	id            string
 	networkType   NetworkType
 	candidateType CandidateType
 
@@ -29,6 +30,11 @@ type candidateBase struct {
 	conn      net.PacketConn
 	closeCh   chan struct{}
 	closedCh  chan struct{}
+}
+
+// ID returns Candidate ID
+func (c *candidateBase) ID() string {
+	return c.id
 }
 
 // Address returns Candidate Address

@@ -7,29 +7,49 @@ type CandidateServerReflexive struct {
 	candidateBase
 }
 
+// CandidateServerReflexiveConfig is the config required to create a new CandidateServerReflexive
+type CandidateServerReflexiveConfig struct {
+	CandidateID string
+	Network     string
+	Address     string
+	Port        int
+	Component   uint16
+	RelAddr     string
+	RelPort     int
+}
+
 // NewCandidateServerReflexive creates a new server reflective candidate
-func NewCandidateServerReflexive(network string, address string, port int, component uint16, relAddr string, relPort int) (*CandidateServerReflexive, error) {
-	ip := net.ParseIP(address)
+func NewCandidateServerReflexive(config *CandidateServerReflexiveConfig) (*CandidateServerReflexive, error) {
+	ip := net.ParseIP(config.Address)
 	if ip == nil {
 		return nil, ErrAddressParseFailed
 	}
 
-	networkType, err := determineNetworkType(network, ip)
+	networkType, err := determineNetworkType(config.Network, ip)
 	if err != nil {
 		return nil, err
 	}
 
+	candidateID := config.CandidateID
+	if candidateID == "" {
+		candidateID, err = generateCandidateID()
+		if err != nil {
+			return nil, err
+		}
+	}
+
 	return &CandidateServerReflexive{
 		candidateBase: candidateBase{
+			id:            candidateID,
 			networkType:   networkType,
 			candidateType: CandidateTypeServerReflexive,
-			address:       address,
-			port:          port,
-			resolvedAddr:  &net.UDPAddr{IP: ip, Port: port},
-			component:     component,
+			address:       config.Address,
+			port:          config.Port,
+			resolvedAddr:  &net.UDPAddr{IP: ip, Port: config.Port},
+			component:     config.Component,
 			relatedAddress: &CandidateRelatedAddress{
-				Address: relAddr,
-				Port:    relPort,
+				Address: config.RelAddr,
+				Port:    config.RelPort,
 			},
 		},
 	}, nil

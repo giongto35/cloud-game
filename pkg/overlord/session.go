@@ -8,8 +8,8 @@ type Session struct {
 	ID            string
 	BrowserClient *BrowserClient
 	WorkerClient  *WorkerClient
-	//OverlordClient *OverlordClient
-	//peerconnection *webrtc.WebRTC
+	// OverlordClient *OverlordClient
+	// peerconnection *webrtc.WebRTC
 
 	// TODO: Decouple this
 	handler *Server

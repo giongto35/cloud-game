@@ -42,6 +42,36 @@ type Config struct {
 	PSK             PSKCallback
 	PSKIdentityHint []byte
 
+	// InsecureSkipVerify controls whether a client verifies the
+	// server's certificate chain and host name.
+	// If InsecureSkipVerify is true, TLS accepts any certificate
+	// presented by the server and any host name in that certificate.
+	// In this mode, TLS is susceptible to man-in-the-middle attacks.
+	// This should be used only for testing.
+	InsecureSkipVerify bool
+
+	// VerifyPeerCertificate, if not nil, is called after normal
+	// certificate verification by either a client or server. It
+	// receives the certificate provided by the peer and also a flag
+	// that tells if normal verification has succeedded. If it returns a
+	// non-nil error, the handshake is aborted and that error results.
+	//
+	// If normal verification fails then the handshake will abort before
+	// considering this callback. If normal verification is disabled by
+	// setting InsecureSkipVerify, or (for a server) when ClientAuth is
+	// RequestClientCert or RequireAnyClientCert, then this callback will
+	// be considered but the verified flag will always be false.
+	VerifyPeerCertificate func(cer *x509.Certificate, verified bool) error
+
+	// RootCAs defines the set of root certificate authorities
+	// that one peer uses when verifying the other peer's certificates.
+	// If RootCAs is nil, TLS uses the host's root CA set.
+	RootCAs *x509.CertPool
+
+	// ServerName is used to verify the hostname on the returned
+	// certificates unless InsecureSkipVerify is given.
+	ServerName string
+
 	LoggerFactory logging.LoggerFactory
 }
 
@@ -58,4 +88,6 @@ const (
 	NoClientCert ClientAuthType = iota
 	RequestClientCert
 	RequireAnyClientCert
+	VerifyClientCertIfGiven
+	RequireAndVerifyClientCert
 )

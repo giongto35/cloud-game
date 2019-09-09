@@ -5,7 +5,7 @@ import (
 
 	"github.com/giongto35/cloud-game/pkg/cws"
 	"github.com/giongto35/cloud-game/pkg/webrtc"
-	room2 "github.com/giongto35/cloud-game/pkg/worker/room"
+	"github.com/giongto35/cloud-game/pkg/worker/room"
 	"github.com/gorilla/websocket"
 )
 
@@ -76,8 +76,7 @@ func (h *Handler) RouteOverlord() {
 		"start",
 		func(resp cws.WSPacket) (req cws.WSPacket) {
 			log.Println("Received a start request from overlord")
-			session, ok := h.sessions[resp.SessionID]
-			log.Println("Find ", resp.SessionID, session, ok)
+			session, _ := h.sessions[resp.SessionID]
 
 			peerconnection := session.peerconnection
 			room := h.startGameHandler(resp.Data, resp.RoomID, resp.PlayerIndex, peerconnection)
@@ -194,8 +193,8 @@ func getServerIDOfRoom(oc *OverlordClient, roomID string) string {
 	return packet.Data
 }
 
-func (h *Handler) startGameHandler(gameName, roomID string, playerIndex int, peerconnection *webrtc.WebRTC) *room2.Room {
-	log.Println("Starting game")
+func (h *Handler) startGameHandler(gameName, roomID string, playerIndex int, peerconnection *webrtc.WebRTC) *room.Room {
+	log.Println("Starting game", gameName)
 	// If we are connecting to overlord, request corresponding serverID based on roomID
 	// TODO: check if roomID is in the current server
 	room := h.getRoom(roomID)

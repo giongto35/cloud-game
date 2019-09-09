@@ -35,10 +35,8 @@ conn.onmessage = e => {
         data.shift()
         gameList = [];
 
-        data.forEach(file => {
-            var file = file
-            var name = file.substr(0, file.indexOf('.'));
-            gameList.push({file: file, name: name});
+        data.forEach(name => {
+            gameList.push(name);
         });
 
         log("Received game list");
@@ -63,7 +61,7 @@ conn.onmessage = e => {
         // TODO: Calc time
         break;
     case "start":
-        roomID = d["room_id"];    
+        roomID = d["room_id"];
         log(`Got start with room id: ${roomID}`);
         popup("Started! You can share you game!")
         saveRoomID(roomID);
@@ -200,18 +198,6 @@ function startWebRTC(iceservers) {
     // video channel
     pc.ontrack = function (event) {
         stream.addTrack(event.track);
-        var promise = document.getElementById("game-screen").play();
-        if (promise !== undefined) {
-            promise.then(_ => {
-                console.log("Media can autoplay")
-            }).catch(error => {
-                // Usually error happens when we autoplay unmuted video, browser requires manual play.
-                // We already muted video and use separate audio encoding so it's fine now
-                console.log("Media Failed to autoplay")
-                console.log(error)
-                // TODO: Consider workaround
-            });
-        }
     }
 
 
@@ -264,14 +250,27 @@ function startGame() {
         popup("Game is not ready yet. Please wait");
         return false;
     }
+
+    var promise = document.getElementById("game-screen").play();
+    if (promise !== undefined) {
+        promise.then(_ => {
+            console.log("Media can autoplay")
+        }).catch(error => {
+            // Usually error happens when we autoplay unmuted video, browser requires manual play.
+            // We already muted video and use separate audio encoding so it's fine now
+            console.log("Media Failed to autoplay")
+            console.log(error)
+            // TODO: Consider workaround
+        });
+    }
+
     if (screenState != "menu") {
         return false;
     }
     log("Starting game screen");
     screenState = "game";
 
-    // conn.send(JSON.stringify({"id": "start", "data": gameList[gameIdx].file, "room_id": $("#room-txt").val(), "player_index": parseInt(playerIndex.value, 10)}));
-    conn.send(JSON.stringify({"id": "start", "data": gameList[gameIdx].file, "room_id": roomID != null ? roomID : '', "player_index": 1}));
+    conn.send(JSON.stringify({"id": "start", "data": gameList[gameIdx], "room_id": roomID != null ? roomID : '', "player_index": 1}));
 
     // clear menu screen
     stopGameInputTimer();

@@ -30,7 +30,7 @@ func (h *handshakeMessageServerHello) Marshal() ([]byte, error) {
 	if h.cipherSuite == nil {
 		return nil, errCipherSuiteUnset
 	} else if h.compressionMethod == nil {
-		return nil, errCompressionmethodUnset
+		return nil, errCompressionMethodUnset
 	}
 
 	out := make([]byte, handshakeMessageServerHelloVariableWidthStart)

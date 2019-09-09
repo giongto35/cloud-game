@@ -5,8 +5,8 @@ import (
 	"time"
 
 	"github.com/giongto35/cloud-game/pkg/webrtc"
-	storage2 "github.com/giongto35/cloud-game/pkg/worker/cloud-storage"
-	room2 "github.com/giongto35/cloud-game/pkg/worker/room"
+	storage "github.com/giongto35/cloud-game/pkg/worker/cloud-storage"
+	"github.com/giongto35/cloud-game/pkg/worker/room"
 	"github.com/gorilla/websocket"
 )
 
@@ -24,26 +24,22 @@ type Handler struct {
 	// Raw address of overlord
 	overlordHost string
 	// Rooms map : RoomID -> Room
-	rooms map[string]*room2.Room
+	rooms map[string]*room.Room
 	// ID of the current server globalwise
 	serverID string
-	// Path to game list
-	gamePath string
 	// onlineStorage is client accessing to online storage (GCP)
-	onlineStorage *storage2.Client
+	onlineStorage *storage.Client
 	// sessions handles all sessions server is handler (key is sessionID)
 	sessions map[string]*Session
 }
 
 // NewHandler returns a new server
-func NewHandler(overlordHost string, gamePath string) *Handler {
-	onlineStorage := storage2.NewInitClient()
-
+func NewHandler(overlordHost string) *Handler {
+	onlineStorage := storage.NewInitClient()
 	return &Handler{
-		rooms:         map[string]*room2.Room{},
+		rooms:         map[string]*room.Room{},
 		sessions:      map[string]*Session{},
 		overlordHost:  overlordHost,
-		gamePath:      gamePath,
 		onlineStorage: onlineStorage,
 	}
 }
@@ -92,17 +88,17 @@ func (h *Handler) GetOverlordClient() *OverlordClient {
 func (h *Handler) detachPeerConn(pc *webrtc.WebRTC) {
 	log.Println("Detach peerconnection")
 	roomID := pc.RoomID
-	room := h.getRoom(roomID)
-	if room == nil {
+	r := h.getRoom(roomID)
+	if r == nil {
 		return
 	}
 
 	// If room has no sessions, close room
-	if !room.EmptySessions() {
-		room.RemoveSession(pc)
-		if room.EmptySessions() {
+	if !r.EmptySessions() {
+		r.RemoveSession(pc)
+		if r.EmptySessions() {
 			log.Println("No session in room")
-			room.Close()
+			r.Close()
 			// Signal end of input Channel
 			log.Println("Signal input chan")
 			pc.InputChannel <- -1
@@ -111,7 +107,7 @@ func (h *Handler) detachPeerConn(pc *webrtc.WebRTC) {
 }
 
 // getRoom returns room from roomID
-func (h *Handler) getRoom(roomID string) *room2.Room {
+func (h *Handler) getRoom(roomID string) *room.Room {
 	room, ok := h.rooms[roomID]
 	if !ok {
 		return nil
@@ -127,12 +123,12 @@ func (h *Handler) detachRoom(roomID string) {
 
 // createNewRoom creates a new room
 // Return nil in case of room is existed
-func (h *Handler) createNewRoom(gameName string, roomID string, playerIndex int) *room2.Room {
+func (h *Handler) createNewRoom(gameName string, roomID string, playerIndex int) *room.Room {
 	// If the roomID is empty,
 	// or the roomID doesn't have any running sessions (room was closed)
 	// we spawn a new room
 	if roomID == "" || !h.isRoomRunning(roomID) {
-		room := room2.NewRoom(roomID, h.gamePath, gameName, h.onlineStorage)
+		room := room.NewRoom(roomID, gameName, h.onlineStorage)
 		// TODO: Might have race condition
 		h.rooms[room.ID] = room
 		return room
