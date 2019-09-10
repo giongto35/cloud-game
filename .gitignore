@@ -57,3 +57,6 @@ turnserver.conf
 
 ### Ignore build artifact directory
 ./build
+
+### jekyll
+_site/
