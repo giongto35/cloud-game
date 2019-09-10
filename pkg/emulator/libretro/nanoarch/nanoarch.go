@@ -340,9 +340,10 @@ var retroUnserialize unsafe.Pointer
 func coreLoad(sofile string) {
 
 	mu.Lock()
-	h := C.dlopen(C.CString(sofile), C.RTLD_NOW)
+	h := C.dlopen(C.CString(sofile), C.RTLD_LAZY)
 	if h == nil {
-		log.Fatalf("error loading %s\n", sofile)
+		err := C.dlerror()
+		log.Fatalf("error loading %s, err %+v", sofile, *err)
 	}
 
 	retroInit = C.dlsym(h, C.CString("retro_init"))

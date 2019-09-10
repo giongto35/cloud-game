@@ -13,33 +13,36 @@ import (
 // https://stackoverflow.com/questions/9465815/rgb-to-yuv420-algorithm-efficiency
 
 /*
-void rgba2yuv(void *destination, void *source, int width, int height, int stride) {
-	const int image_size = width * height;
-	unsigned char *rgba = source;
-  unsigned char *dst_y = destination;
-  unsigned char *dst_u = destination + image_size;
-  unsigned char *dst_v = destination + image_size + image_size/4;
+void rgba2yuv(void * destination, void * source, int width, int height, int stride) {
+  const int image_size = width * height;
+  unsigned char * rgba = source;
+  unsigned char * dst_y = destination;
+  unsigned char * dst_u = destination + image_size;
+  unsigned char * dst_v = destination + image_size + image_size / 4;
 
-	// Y plane
-	for( int y=0; y<height; ++y ) {
-    for( int x=0; x<width; ++x ) {
-      const int i = y*(width+stride) + x;
-			*dst_y++ = ( ( 66*rgba[4*i] + 129*rgba[4*i+1] + 25*rgba[4*i+2] ) >> 8 ) + 16;
-		}
+  int i, x, y;
+  // Y plane
+  for (y = 0; y < height; ++y) {
+    for (x = 0; x < width; ++x) {
+      i = y * (width + stride) + x;
+      * dst_y++ = ((66 * rgba[4 * i] + 129 * rgba[4 * i + 1] + 25 * rgba[4 * i + 2]) >> 8) + 16;
+    }
   }
+
   // U plane
-  for( int y=0; y<height; y+=2 ) {
-    for( int x=0; x<width; x+=2 ) {
-      const int i = y*(width+stride) + x;
-			*dst_u++ = ( ( -38*rgba[4*i] + -74*rgba[4*i+1] + 112*rgba[4*i+2] ) >> 8 ) + 128;
-		}
+  for (y = 0; y < height; y += 2) {
+    for (x = 0; x < width; x += 2) {
+      i = y * (width + stride) + x;
+      * dst_u++ = ((-38 * rgba[4 * i] + -74 * rgba[4 * i + 1] + 112 * rgba[4 * i + 2]) >> 8) + 128;
+    }
   }
+
   // V plane
-  for( int y=0; y<height; y+=2 ) {
-    for( int x=0; x<width; x+=2 ) {
-      const int i = y*(width+stride) + x;
-			*dst_v++ = ( ( 112*rgba[4*i] + -94*rgba[4*i+1] + -18*rgba[4*i+2] ) >> 8 ) + 128;
-		}
+  for (y = 0; y < height; y += 2) {
+    for (x = 0; x < width; x += 2) {
+      i = y * (width + stride) + x;
+      * dst_v++ = ((112 * rgba[4 * i] + -94 * rgba[4 * i + 1] + -18 * rgba[4 * i + 2]) >> 8) + 128;
+    }
   }
 }
 */

@@ -26,7 +26,7 @@ func New(ctx context.Context, cfg Config) *Overlord {
 }
 
 func (o *Overlord) Run() error {
-	go initilizeOverlord()
+	go o.initializeOverlord()
 	go o.RunMonitoringServer()
 	return nil
 }
@@ -45,8 +45,8 @@ func (o *Overlord) Shutdown() {
 	}
 }
 
-// initilizeOverlord setup an overlord server
-func initilizeOverlord() {
+// initializeOverlord setup an overlord server
+func (o *Overlord) initializeOverlord() {
 	overlord := NewServer()
 
 	http.HandleFunc("/", overlord.GetWeb)
