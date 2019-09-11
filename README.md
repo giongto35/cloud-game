@@ -13,8 +13,8 @@ This project aims to bring the most modern and convenient gaming experience to u
 
 Screenshot | Screenshot
 :-------------------------:|:-------------------------:
-![screenshot](document/img/landing-page-ps-hm.png)|![screenshot](document/img/landing-page-ps-x4.png)
-![screenshot](document/img/landing-page-gb.png)|![screenshot](document/img/landing-page-front.png)
+![screenshot](docs/img/landing-page-ps-hm.png)|![screenshot](docs/img/landing-page-ps-x4.png)
+![screenshot](docs/img/landing-page-gb.png)|![screenshot](docs/img/landing-page-front.png)
 
 ## Feature
 1. Cloud gaming: Game logic and storage is hosted on cloud service. It reduces the cumbersome of game initialization. Images and audio are streamed to user in the most optimal way using advanced encoding technology.
