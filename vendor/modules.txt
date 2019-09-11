@@ -1,11 +1,11 @@
 # cloud.google.com/go v0.43.0
-cloud.google.com/go/storage
+cloud.google.com/go/compute/metadata
 cloud.google.com/go/iam
 cloud.google.com/go/internal
 cloud.google.com/go/internal/optional
 cloud.google.com/go/internal/trace
 cloud.google.com/go/internal/version
-cloud.google.com/go/compute/metadata
+cloud.google.com/go/storage
 # github.com/beorn7/perks v1.0.1
 github.com/beorn7/perks/quantile
 # github.com/cheekybits/genny v1.0.0
@@ -15,10 +15,12 @@ github.com/gen2brain/x264-go
 github.com/gen2brain/x264-go/x264c
 # github.com/gofrs/uuid v3.2.0+incompatible
 github.com/gofrs/uuid
+# github.com/golang/glog v0.0.0-20160126235308-23def4e6c14b
+github.com/golang/glog
 # github.com/golang/protobuf v1.3.2
 github.com/golang/protobuf/proto
-github.com/golang/protobuf/ptypes
 github.com/golang/protobuf/protoc-gen-go/descriptor
+github.com/golang/protobuf/ptypes
 github.com/golang/protobuf/ptypes/any
 github.com/golang/protobuf/ptypes/duration
 github.com/golang/protobuf/ptypes/timestamp
@@ -82,65 +84,67 @@ github.com/pion/turn/internal/ipnet
 github.com/pion/turn/internal/proto
 # github.com/pion/webrtc/v2 v2.1.2
 github.com/pion/webrtc/v2
-github.com/pion/webrtc/v2/pkg/media
 github.com/pion/webrtc/v2/internal/mux
 github.com/pion/webrtc/v2/internal/util
+github.com/pion/webrtc/v2/pkg/media
 github.com/pion/webrtc/v2/pkg/rtcerr
 # github.com/pkg/errors v0.8.1
 github.com/pkg/errors
 # github.com/prometheus/client_golang v1.1.0
-github.com/prometheus/client_golang/prometheus/promhttp
 github.com/prometheus/client_golang/prometheus
 github.com/prometheus/client_golang/prometheus/internal
+github.com/prometheus/client_golang/prometheus/promhttp
 # github.com/prometheus/client_model v0.0.0-20190129233127-fd36f4220a90
 github.com/prometheus/client_model/go
 # github.com/prometheus/common v0.6.0
 github.com/prometheus/common/expfmt
-github.com/prometheus/common/model
 github.com/prometheus/common/internal/bitbucket.org/ww/goautoneg
+github.com/prometheus/common/model
 # github.com/prometheus/procfs v0.0.3
 github.com/prometheus/procfs
 github.com/prometheus/procfs/internal/fs
+# github.com/spf13/pflag v1.0.3
+github.com/spf13/pflag
 # go.opencensus.io v0.22.0
-go.opencensus.io/trace
-go.opencensus.io/plugin/ochttp
+go.opencensus.io
 go.opencensus.io/internal
-go.opencensus.io/trace/internal
-go.opencensus.io/trace/tracestate
+go.opencensus.io/internal/tagencoding
+go.opencensus.io/metric/metricdata
+go.opencensus.io/metric/metricproducer
+go.opencensus.io/plugin/ochttp
 go.opencensus.io/plugin/ochttp/propagation/b3
+go.opencensus.io/resource
 go.opencensus.io/stats
+go.opencensus.io/stats/internal
 go.opencensus.io/stats/view
 go.opencensus.io/tag
+go.opencensus.io/trace
+go.opencensus.io/trace/internal
 go.opencensus.io/trace/propagation
-go.opencensus.io
-go.opencensus.io/metric/metricdata
-go.opencensus.io/stats/internal
-go.opencensus.io/internal/tagencoding
-go.opencensus.io/metric/metricproducer
-go.opencensus.io/resource
+go.opencensus.io/trace/tracestate
 # golang.org/x/crypto v0.0.0-20190605123033-f99c8df09eb5
-golang.org/x/crypto/curve25519
-golang.org/x/crypto/hkdf
 golang.org/x/crypto/chacha20poly1305
 golang.org/x/crypto/cryptobyte
+golang.org/x/crypto/cryptobyte/asn1
+golang.org/x/crypto/curve25519
+golang.org/x/crypto/hkdf
 golang.org/x/crypto/internal/chacha20
 golang.org/x/crypto/internal/subtle
 golang.org/x/crypto/poly1305
-golang.org/x/crypto/cryptobyte/asn1
 # golang.org/x/net v0.0.0-20190628185345-da137c7871d7
-golang.org/x/net/ipv4
-golang.org/x/net/dns/dnsmessage
 golang.org/x/net/bpf
-golang.org/x/net/internal/iana
-golang.org/x/net/internal/socket
-golang.org/x/net/trace
 golang.org/x/net/context
-golang.org/x/net/internal/timeseries
+golang.org/x/net/context/ctxhttp
+golang.org/x/net/dns/dnsmessage
+golang.org/x/net/http/httpguts
 golang.org/x/net/http2
 golang.org/x/net/http2/hpack
-golang.org/x/net/context/ctxhttp
-golang.org/x/net/http/httpguts
 golang.org/x/net/idna
+golang.org/x/net/internal/iana
+golang.org/x/net/internal/socket
+golang.org/x/net/internal/timeseries
+golang.org/x/net/ipv4
+golang.org/x/net/trace
 # golang.org/x/oauth2 v0.0.0-20190604053449-0f29369cfe45
 golang.org/x/oauth2
 golang.org/x/oauth2/google
@@ -148,51 +152,52 @@ golang.org/x/oauth2/internal
 golang.org/x/oauth2/jws
 golang.org/x/oauth2/jwt
 # golang.org/x/sys v0.0.0-20190801041406-cbf593c0f2f3
-golang.org/x/sys/windows
-golang.org/x/sys/unix
 golang.org/x/sys/cpu
+golang.org/x/sys/unix
+golang.org/x/sys/windows
 # golang.org/x/text v0.3.2
 golang.org/x/text/secure/bidirule
+golang.org/x/text/transform
 golang.org/x/text/unicode/bidi
 golang.org/x/text/unicode/norm
-golang.org/x/text/transform
 # google.golang.org/api v0.7.0
+google.golang.org/api/gensupport
 google.golang.org/api/googleapi
+google.golang.org/api/googleapi/internal/uritemplates
+google.golang.org/api/googleapi/transport
+google.golang.org/api/internal
 google.golang.org/api/iterator
 google.golang.org/api/option
 google.golang.org/api/storage/v1
 google.golang.org/api/transport/http
-google.golang.org/api/googleapi/internal/uritemplates
-google.golang.org/api/internal
-google.golang.org/api/gensupport
-google.golang.org/api/googleapi/transport
 google.golang.org/api/transport/http/internal/propagation
 # google.golang.org/appengine v1.6.1
-google.golang.org/appengine/urlfetch
 google.golang.org/appengine
 google.golang.org/appengine/internal
-google.golang.org/appengine/internal/urlfetch
 google.golang.org/appengine/internal/app_identity
-google.golang.org/appengine/internal/modules
 google.golang.org/appengine/internal/base
 google.golang.org/appengine/internal/datastore
 google.golang.org/appengine/internal/log
+google.golang.org/appengine/internal/modules
 google.golang.org/appengine/internal/remote_api
+google.golang.org/appengine/internal/urlfetch
+google.golang.org/appengine/urlfetch
 # google.golang.org/genproto v0.0.0-20190716160619-c506a9f90610
+google.golang.org/genproto/googleapis/api/annotations
 google.golang.org/genproto/googleapis/iam/v1
 google.golang.org/genproto/googleapis/rpc/code
-google.golang.org/genproto/googleapis/api/annotations
-google.golang.org/genproto/googleapis/type/expr
 google.golang.org/genproto/googleapis/rpc/status
+google.golang.org/genproto/googleapis/type/expr
 # google.golang.org/grpc v1.21.1
 google.golang.org/grpc
-google.golang.org/grpc/codes
-google.golang.org/grpc/metadata
-google.golang.org/grpc/status
 google.golang.org/grpc/balancer
+google.golang.org/grpc/balancer/base
 google.golang.org/grpc/balancer/roundrobin
+google.golang.org/grpc/binarylog/grpc_binarylog_v1
+google.golang.org/grpc/codes
 google.golang.org/grpc/connectivity
 google.golang.org/grpc/credentials
+google.golang.org/grpc/credentials/internal
 google.golang.org/grpc/encoding
 google.golang.org/grpc/encoding/proto
 google.golang.org/grpc/grpclog
@@ -204,18 +209,17 @@ google.golang.org/grpc/internal/channelz
 google.golang.org/grpc/internal/envconfig
 google.golang.org/grpc/internal/grpcrand
 google.golang.org/grpc/internal/grpcsync
+google.golang.org/grpc/internal/syscall
 google.golang.org/grpc/internal/transport
 google.golang.org/grpc/keepalive
+google.golang.org/grpc/metadata
 google.golang.org/grpc/naming
 google.golang.org/grpc/peer
 google.golang.org/grpc/resolver
 google.golang.org/grpc/resolver/dns
 google.golang.org/grpc/resolver/passthrough
 google.golang.org/grpc/stats
+google.golang.org/grpc/status
 google.golang.org/grpc/tap
-google.golang.org/grpc/balancer/base
-google.golang.org/grpc/credentials/internal
-google.golang.org/grpc/binarylog/grpc_binarylog_v1
-google.golang.org/grpc/internal/syscall
 # gopkg.in/hraban/opus.v2 v2.0.0-20180426093920-0f2e0b4fc6cd
 gopkg.in/hraban/opus.v2
