@@ -27,7 +27,7 @@ Screenshot | Screenshot
 
 ## Run on local by Docker
 
-You try running the server yourself by running `make run-docker`. It will spawn a docker environment and you can access the service on `localhost:8000`.  
+You try running the server yourself by running `make dev.run-docker`. It will spawn a docker environment and you can access the service on `localhost:8000`.  
 
 ## Development environment
 
@@ -49,7 +49,7 @@ brew install libvpx pkg-config opus opusfile
 
 Because coordinator and workers needs to run simulateneously. Workers connects to coordinator.
 1. Script
-  * `make run`
+  * `make dev.run`
   * The scripts spawns 2 processes one in background and one in foreground
 2. Manual
   * Need to run coordinator and worker separately in two session
