@@ -179,7 +179,7 @@ func (o *Server) getBestWorkerClient(client *BrowserClient) (*WorkerClient, erro
 			return wc, nil
 		}
 		// if there is not debugHost, continue usual flow
-		log.Println("Not found, connecting to all servers")
+		log.Println("Not found, connecting to all available servers")
 	}
 
 	workerClients := o.getAvailableWorkers()
