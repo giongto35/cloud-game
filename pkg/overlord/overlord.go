@@ -47,7 +47,7 @@ func (o *Overlord) Shutdown() {
 
 // initializeOverlord setup an overlord server
 func (o *Overlord) initializeOverlord() {
-	overlord := NewServer()
+	overlord := NewServer(o.cfg)
 
 	http.HandleFunc("/", overlord.GetWeb)
 	http.Handle("/static/", http.StripPrefix("/static/", http.FileServer(http.Dir("./web"))))

@@ -2,7 +2,6 @@ package worker
 
 import (
 	"encoding/json"
-	"fmt"
 	"log"
 
 	"github.com/giongto35/cloud-game/pkg/cws"
@@ -57,12 +56,10 @@ func (h *Handler) RouteOverlord() {
 				SDP      string `json:"sdp"`
 				IsMobile bool   `json:"is_mobile"`
 			}
-			fmt.Println("HIHIHIHI!!!!", resp.Data)
 			err := json.Unmarshal([]byte(resp.Data), &initPacket)
 			if err != nil {
 				panic(err)
 			}
-			fmt.Println("HIHIHIHI!!!!", initPacket)
 			localSession, err := peerconnection.StartClient(initPacket.SDP, initPacket.IsMobile, iceCandidates[resp.SessionID])
 			// h.peerconnections[resp.SessionID] = peerconnection
 

@@ -10,9 +10,7 @@ const DefaultSTUNTURN = `[{"urls":"stun:stun-turn.webgame2d.com:3478"},{"urls":"
 const CODEC_VP8 = "VP8"
 const CODEC_H264 = "H264"
 
-var IsDebug = flag.Bool("debug", false, "Is game running in debug mode?")
 var Port = flag.String("port", "8000", "Port of the game")
-var IsMonitor = flag.Bool("monitor", false, "Turn on monitor")
 var FrontendSTUNTURN = flag.String("stunturn", DefaultSTUNTURN, "Frontend STUN TURN servers")
 var Mode = flag.String("mode", "dev", "Environment")
 var StunTurnTemplate = `[{"urls":"stun:stun.l.google.com:19302"},{"urls":"stun:%s:3478"},{"urls":"turn:%s:3478","username":"root","credential":"root"}]`

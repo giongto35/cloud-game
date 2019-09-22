@@ -294,7 +294,7 @@ func coreEnvironment(cmd C.unsigned, data unsafe.Pointer) C.bool {
 		return videoSetPixelFormat(*format)
 	case C.RETRO_ENVIRONMENT_GET_SYSTEM_DIRECTORY:
 		path := (**C.char)(data)
-		*path = C.CString("./libretro/system")
+		*path = C.CString("./pkg/emulator/libretro/system")
 		return true
 	case C.RETRO_ENVIRONMENT_GET_SAVE_DIRECTORY:
 		path := (**C.char)(data)
