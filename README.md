@@ -3,13 +3,13 @@
 **Video demo**: https://www.youtube.com/watch?v=GUBrJGAxZZg
 
 ## Introduction
-This project aims to experiment Cloud-gaming performance with [WebRTC](https://github.com/pion/webrtc/) and [libretro](https://www.libretro.com/), as well as trying to deliver the most modern and convenient gaming experience through the technology. Theoretically, games are run on remote servers and media are streamed to the player in an optimal way to ensure the most comfortable user interaction. It opens the ability to play any retro games on web-browser directly, which are fully compatible with multi-platform like Desktop, Android, ~~IOS~~. This flexibility also enables online gaming experience to retro games.  
+This project aims to experiment Cloud-gaming performance with [WebRTC](https://github.com/pion/webrtc/) and [libretro](https://www.libretro.com/), as well as trying to deliver the most modern and convenient gaming experience through the technology. Theoretically, games are run on remote servers and media are streamed to the player optimally to ensure the most comfortable user interaction. It opens the ability to play any retro games on web-browser directly, which are fully compatible with multi-platform like Desktop, Android, ~~IOS~~. This flexibility also enables online gaming experience to retro games.  
 
 ## Try the service at
 **[http://cloudretro.io](http://cloudretro.io)**  
-*Chrome and Chrome on Android is recommended. It's not working on Iphone and some other explorers. Click help button in the game UI to see keyboard mapping.*  
+*Chrome and Chrome on Android is recommended. It's not working on iPhone and some other explorers. Click help button in the game UI to see keyboard mapping.*  
 
-\*In ideal network condition and less resource contention on servers, the game will run smoothly as in the video demo. Because I only hosted the platform on a limited servers in US East, US West, Eu, Singapore, you may experience some latency issues + connection problem. Please retry later in less peak hours. You can try hosting your own service following the instruction the next section to have a better sense of performance.  
+\*In ideal network condition and less resource contention on servers, the game will run smoothly as in the video demo. Because I only hosted the platform on limited servers in US East, US West, Eu, Singapore, you may experience some latency issues + connection problem. You can try hosting the service following the instruction the next section to have a better sense of performance.  
 
 Screenshot | Screenshot
 :-------------------------:|:-------------------------:
@@ -47,10 +47,10 @@ brew install libvpx pkg-config opus opusfile
 ... not tested yet ...
 ```
 
-Because coordinator and workers needs to run simulateneously. Workers connects to coordinator.
+Because the coordinator and workers need to run simultaneously. Workers connect to the coordinator.
 1. Script
   * `make dev.run`
-  * The scripts spawns 2 processes one in background and one in foreground
+  * The scripts spawns 2 processes one in the background and one in foreground
 2. Manual
   * Need to run coordinator and worker separately in two session
   * `go run cmd/overlord/main.go` - spawn coordinator
