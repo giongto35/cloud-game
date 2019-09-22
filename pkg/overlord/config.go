@@ -8,6 +8,7 @@ import (
 type Config struct {
 	Port      int
 	URLPrefix string
+	DebugHost string
 
 	MonitoringConfig monitoring.ServerMonitoringConfig
 }
@@ -31,6 +32,7 @@ func (c *Config) AddFlags(fs *pflag.FlagSet) *Config {
 	fs.BoolVarP(&c.MonitoringConfig.ProfilingEnabled, "monitoring.pprof", "p", c.MonitoringConfig.ProfilingEnabled, "Enable golang pprof for server")
 	fs.IntVarP(&c.MonitoringConfig.Port, "monitoring.port", "", c.MonitoringConfig.Port, "Monitoring server port")
 	fs.StringVarP(&c.MonitoringConfig.URLPrefix, "monitoring.prefix", "", c.MonitoringConfig.URLPrefix, "Monitoring server url prefix")
+	fs.StringVarP(&c.DebugHost, "debughost", "d", "", "Specify the server want to connect directly to debug")
 
 	return c
 }

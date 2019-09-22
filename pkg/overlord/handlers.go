@@ -24,6 +24,7 @@ const (
 )
 
 type Server struct {
+	cfg Config
 	// roomToServer map roomID to workerID
 	roomToServer map[string]string
 	// workerClients are the map serverID to worker Client
@@ -33,8 +34,9 @@ type Server struct {
 var upgrader = websocket.Upgrader{}
 var errNotFound = errors.New("Not found")
 
-func NewServer() *Server {
+func NewServer(cfg Config) *Server {
 	return &Server{
+		cfg: cfg,
 		// Mapping serverID to client
 		workerClients: map[string]*WorkerClient{},
 		// Mapping roomID to server
@@ -127,30 +129,21 @@ func (o *Server) WS(w http.ResponseWriter, r *http.Request) {
 	client := NewBrowserClient(c)
 	go client.Listen()
 
-	// Set up server
-
-	workerClients := o.getAvailableWorkers()
-	// SessionID will be the unique per frontend connection
-	sessionID := uuid.Must(uuid.NewV4()).String()
-	var serverID string
-	if config.MatchWorkerRandom {
-		serverID, err = findBestServerRandom(workerClients)
-	} else {
-		serverID, err = findBestServerFromBrowser(workerClients, client)
-	}
-
+	// Get best server for frontend to connect to
+	workerClient, err := o.getBestWorkerClient(client)
 	if err != nil {
-		log.Println(err)
 		return
 	}
 
+	// SessionID will be the unique per frontend connection
+	sessionID := uuid.Must(uuid.NewV4()).String()
 	// Setup session
 	wssession := &Session{
 		ID:            sessionID,
 		handler:       o,
 		BrowserClient: client,
-		WorkerClient:  o.workerClients[serverID],
-		ServerID:      serverID,
+		WorkerClient:  workerClient,
+		ServerID:      workerClient.ServerID,
 	}
 	// TODO:?
 	// defer wssession.Close()
@@ -161,7 +154,7 @@ func (o *Server) WS(w http.ResponseWriter, r *http.Request) {
 
 	wssession.BrowserClient.Send(cws.WSPacket{
 		ID:   "init",
-		Data: createInitPackage(o.workerClients[serverID].StunTurnServer),
+		Data: createInitPackage(workerClient.StunTurnServer),
 	}, nil)
 
 	// If peerconnection is done (client.Done is signalled), we close peerconnection
@@ -178,6 +171,35 @@ func (o *Server) WS(w http.ResponseWriter, r *http.Request) {
 	wssession.WorkerClient.IsAvailable = true
 }
 
+func (o *Server) getBestWorkerClient(client *BrowserClient) (*WorkerClient, error) {
+	if o.cfg.DebugHost != "" {
+		log.Println("Connecting to debug host instead prod servers", o.cfg.DebugHost)
+		wc := o.getWorkerFromAddress(o.cfg.DebugHost)
+		if wc != nil {
+			return wc, nil
+		}
+		// if there is not debugHost, continue usual flow
+		log.Println("Not found, connecting to all servers")
+	}
+
+	workerClients := o.getAvailableWorkers()
+
+	var serverID string
+	var err error
+	if config.MatchWorkerRandom {
+		serverID, err = findBestServerRandom(workerClients)
+	} else {
+		serverID, err = findBestServerFromBrowser(workerClients, client)
+	}
+
+	if err != nil {
+		log.Println(err)
+		return nil, err
+	}
+
+	return o.workerClients[serverID], nil
+}
+
 // getAvailableWorkers returns the list of available worker
 func (o *Server) getAvailableWorkers() map[string]*WorkerClient {
 	workerClients := map[string]*WorkerClient{}
@@ -188,6 +210,17 @@ func (o *Server) getAvailableWorkers() map[string]*WorkerClient {
 	}
 
 	return workerClients
+}
+
+// getWorkerFromAddress returns the worker has given address
+func (o *Server) getWorkerFromAddress(address string) *WorkerClient {
+	for _, w := range o.workerClients {
+		if w.IsAvailable && w.Address == address {
+			return w
+		}
+	}
+
+	return nil
 }
 
 // findBestServer returns the best server for a session
