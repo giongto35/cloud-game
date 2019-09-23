@@ -1,0 +1,13 @@
+---
+---
+
+@import "{{ site.theme }}";
+
+.row {
+  display: flex;
+}
+
+.column {
+  flex: 50.0%;
+  padding: 5px;
+}
