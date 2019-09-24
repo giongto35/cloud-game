@@ -5,6 +5,7 @@ import (
 	"math/rand"
 	"os"
 	"os/signal"
+	"runtime"
 	"time"
 
 	"github.com/giongto35/cloud-game/pkg/util/logging"
@@ -14,6 +15,8 @@ import (
 )
 
 func main() {
+	// Due to the limit of libretro, one process can only run one game. For better performance, it's better run everything on one core
+	runtime.GOMAXPROCS(1)
 	rand.Seed(time.Now().UTC().UnixNano())
 
 	cfg := worker.NewDefaultConfig()

@@ -153,7 +153,6 @@ func to8888Image(data unsafe.Pointer, bytes []byte, bytesPerRow int, inputWidth,
 	scaleWidth := float64(ewidth) / float64(inputWidth)
 	scaleHeight := float64(eheight) / float64(inputHeight)
 
-	image := image.NewRGBA(image.Rect(0, 0, ewidth, eheight))
 	for y := 0; y < inputHeight; y++ {
 		for x := 0; x < bytesPerRow; x++ {
 			xx := int(float64(x) * scaleWidth)
@@ -164,7 +163,7 @@ func to8888Image(data unsafe.Pointer, bytes []byte, bytesPerRow int, inputWidth,
 				r8 := bytes[seek+2]
 				a8 := bytes[seek+3]
 
-				image.Set(xx, yy, color.RGBA{byte(r8), byte(g8), byte(b8), byte(a8)})
+				outputImg.Set(xx, yy, color.RGBA{byte(r8), byte(g8), byte(b8), byte(a8)})
 			}
 
 			seek += 4
@@ -172,7 +171,7 @@ func to8888Image(data unsafe.Pointer, bytes []byte, bytesPerRow int, inputWidth,
 	}
 
 	// TODO: Resize Image
-	return image
+	return outputImg
 }
 
 func to565Image(data unsafe.Pointer, bytes []byte, bytesPerRow int, inputWidth, inputHeight int) *image.RGBA {
@@ -182,7 +181,6 @@ func to565Image(data unsafe.Pointer, bytes []byte, bytesPerRow int, inputWidth, 
 	scaleWidth := float64(ewidth) / float64(inputWidth)
 	scaleHeight := float64(eheight) / float64(inputHeight)
 
-	image := image.NewRGBA(image.Rect(0, 0, ewidth, eheight))
 	for y := 0; y < inputHeight; y++ {
 		for x := 0; x < bytesPerRow; x++ {
 			xx := int(float64(x) * scaleWidth)
@@ -198,7 +196,7 @@ func to565Image(data unsafe.Pointer, bytes []byte, bytesPerRow int, inputWidth, 
 				g8 := (g6*255 + 31) / 63
 				r8 := (r5*255 + 15) / 31
 
-				image.Set(int(float64(xx)*scaleWidth), int(float64(yy)*scaleHeight), color.RGBA{byte(r8), byte(g8), byte(b8), 255})
+				outputImg.Set(int(float64(xx)*scaleWidth), int(float64(yy)*scaleHeight), color.RGBA{byte(r8), byte(g8), byte(b8), 255})
 			}
 
 			seek += 2
@@ -206,7 +204,7 @@ func to565Image(data unsafe.Pointer, bytes []byte, bytesPerRow int, inputWidth, 
 	}
 
 	// TODO: Resize Image
-	return image
+	return outputImg
 }
 
 //export coreInputPoll

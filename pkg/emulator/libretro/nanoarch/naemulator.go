@@ -62,12 +62,15 @@ type naEmulator struct {
 }
 
 var NAEmulator *naEmulator
+var outputImg *image.RGBA
 
 // NAEmulator implements CloudEmulator interface based on NanoArch(golang RetroArch)
 func NewNAEmulator(etype string, roomID string, imageChannel chan<- *image.RGBA, audioChannel chan<- float32, inputChannel <-chan int) *naEmulator {
 	meta := config.EmulatorConfig[etype]
 	ewidth = meta.Width
 	eheight = meta.Height
+	// outputImg is tmp img used for decoding and reuse in encoding flow
+	outputImg = image.NewRGBA(image.Rect(0, 0, ewidth, eheight))
 
 	return &naEmulator{
 		meta:         meta,

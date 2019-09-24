@@ -18,9 +18,10 @@ func NewDefaultConfig() Config {
 		Port: 8800,
 
 		MonitoringConfig: monitoring.ServerMonitoringConfig{
-			Port:          6601,
-			URLPrefix:     "/overlord",
-			MetricEnabled: true,
+			Port:             6601,
+			URLPrefix:        "/overlord",
+			MetricEnabled:    false,
+			ProfilingEnabled: false,
 		},
 	}
 }
