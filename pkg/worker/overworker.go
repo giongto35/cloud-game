@@ -10,7 +10,6 @@ import (
 
 	"github.com/giongto35/cloud-game/pkg/monitoring"
 	"github.com/golang/glog"
-	"github.com/prometheus/client_golang/prometheus/promhttp"
 )
 
 type OverWorker struct {
@@ -77,7 +76,7 @@ func (o *OverWorker) initializeWorker() {
 		l.Close()
 		if port == 9000 {
 			// only turn on metric for the first worker to avoid overlap
-			http.Handle("/metrics", promhttp.Handler())
+			//http.Handle("/metrics", promhttp.Handler())
 		}
 
 		// echo endpoint is where user will request to test latency
