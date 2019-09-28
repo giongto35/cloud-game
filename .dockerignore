@@ -1,1 +1,6 @@
 */assets/games/*
+.git
+.gitignore
+LICENSE
+VERSION
+docs
