@@ -74,10 +74,6 @@ func (o *OverWorker) initializeWorker() {
 		}
 
 		l.Close()
-		if port == 9000 {
-			// only turn on metric for the first worker to avoid overlap
-			//http.Handle("/metrics", promhttp.Handler())
-		}
 
 		// echo endpoint is where user will request to test latency
 		http.HandleFunc("/echo", func(w http.ResponseWriter, r *http.Request) {

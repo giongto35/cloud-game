@@ -17,10 +17,9 @@ func NewDefaultConfig() Config {
 		Port:            8800,
 		OverlordAddress: "ws://localhost:8000/wso",
 		MonitoringConfig: monitoring.ServerMonitoringConfig{
-			Port:             6601,
-			URLPrefix:        "/worker",
-			MetricEnabled:    false,
-			ProfilingEnabled: false,
+			Port:          6601,
+			URLPrefix:     "/worker",
+			MetricEnabled: true,
 		},
 	}
 }
