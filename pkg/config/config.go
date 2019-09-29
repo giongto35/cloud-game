@@ -23,6 +23,7 @@ const NumKeys = 10
 
 var FileTypeToEmulator = map[string]string{
 	"gba": "gba",
+	"gbc": "gba",
 	"cue": "pcsx",
 	"zip": "mame",
 	"nes": "nes",
