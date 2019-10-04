@@ -11,10 +11,10 @@ This project aims to experiment Cloud-gaming performance with [WebRTC](https://g
 
 \*In ideal network condition and less resource contention on servers, the game will run smoothly as in the video demo. Because I only hosted the platform on limited servers in US East, US West, Eu, Singapore, you may experience some latency issues + connection problem. You can try hosting the service following the instruction the next section to have a better sense of performance.  
 
-Screenshot | Screenshot
-:-------------------------:|:-------------------------:
-![screenshot](docs/img/landing-page-ps-hm.png)|![screenshot](docs/img/landing-page-ps-x4.png)
-![screenshot](docs/img/landing-page-gb.png)|![screenshot](docs/img/landing-page-front.png)
+|                   Screenshot                   |                   Screenshot                   |
+| :--------------------------------------------: | :--------------------------------------------: |
+| ![screenshot](docs/img/landing-page-ps-hm.png) | ![screenshot](docs/img/landing-page-ps-x4.png) |
+|  ![screenshot](docs/img/landing-page-gb.png)   | ![screenshot](docs/img/landing-page-front.png) |
 
 ## Feature
 1. Cloud gaming: Game logic and storage is hosted on cloud service. It reduces the cumbersome of game initialization. Images and audio are streamed to user in the most optimal way using advanced encoding technology.
@@ -33,6 +33,16 @@ You try running the server directly by `make dev.run-docker`. It will spawn a do
 
 Install Golang https://golang.org/doc/install . Because the project uses GoModule, so it requires Go1.11 version.
 
+(Optional) Setup MSYS2 (MinGW) environment if you are using Windows:
+  * Please refer to the Libretro [doc](https://docs.libretro.com/development/retroarch/compilation/windows/#environment-configuration) for initial environment setup
+  * Add Golang installation path into your .bashrc
+    ```
+    $ echo 'export PATH=/c/Go/bin:$PATH' >> ~/.bashrc
+    ```
+  * Install dependencies as described down bellow
+  * Copy required [Libretro Core DLLs](http://buildbot.libretro.com/nightly/windows/x86_64/) into the `cloud-game\assets\emulator\libretro\cores` folder and replace existing Linux SOs in the `cloud-game\pkg\config\config.go` EmulatorConfig object.
+  * Use `C:\msys64\mingw64.exe` for building
+
 Install dependencies  
 
   * Install [libvpx](https://www.webmproject.org/code/), [libopus](http://opus-codec.org/), [pkg-config](https://www.freedesktop.org/wiki/Software/pkg-config/)
@@ -43,8 +53,8 @@ apt-get install -y pkg-config libvpx-dev libopus-dev libopusfile-dev
 # MacOS
 brew install libvpx pkg-config opus opusfile
 
-# Windows
-... not tested yet ...
+# Windows (MSYS2)
+pacman -S --noconfirm --needed git make mingw-w64-x86_64-toolchain mingw-w64-x86_64-pkg-config mingw-w64-x86_64-dlfcn mingw-w64-x86_64-libvpx mingw-w64-x86_64-opusfile
 ```
 
 Because the coordinator and workers need to run simultaneously. Workers connect to the coordinator.
