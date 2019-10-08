@@ -196,7 +196,7 @@ func to565Image(data unsafe.Pointer, bytes []byte, bytesPerRow int, inputWidth, 
 				g8 := (g6*255 + 31) / 63
 				r8 := (r5*255 + 15) / 31
 
-				outputImg.Set(int(float64(xx)*scaleWidth), int(float64(yy)*scaleHeight), color.RGBA{byte(r8), byte(g8), byte(b8), 255})
+				outputImg.Set(xx, yy, color.RGBA{byte(r8), byte(g8), byte(b8), 255})
 			}
 
 			seek += 2
@@ -440,6 +440,23 @@ func coreLoadGame(filename string) {
 	avi := C.struct_retro_system_av_info{}
 
 	C.bridge_retro_get_system_av_info(retroGetSystemAVInfo, &avi)
+
+	fmt.Println("-----------------------------------")
+	fmt.Println("--- System audio and video info ---")
+	fmt.Println("-----------------------------------")
+	fmt.Println("  Aspect ratio: ", avi.geometry.aspect_ratio)
+	/* Nominal aspect ratio of game. If
+	* aspect_ratio is <= 0.0, an aspect ratio
+	* of base_width / base_height is assumed.
+	* A frontend could override this setting,
+	* if desired. */
+	fmt.Println("  Base width: ", avi.geometry.base_width)   /* Nominal video width of game. */
+	fmt.Println("  Base height: ", avi.geometry.base_height) /* Nominal video height of game. */
+	fmt.Println("  Max width: ", avi.geometry.max_width)     /* Maximum possible width of game. */
+	fmt.Println("  Max height: ", avi.geometry.max_height)   /* Maximum possible height of game. */
+	fmt.Println("  Sample rate: ", avi.timing.sample_rate)   /* Sampling rate of audio. */
+	fmt.Println("  FPS: ", avi.timing.fps)                   /* FPS of video content. */
+	fmt.Println("-----------------------------------")
 
 	// Append the library name to the window title.
 	NAEmulator.meta.AudioSampleRate = int(avi.timing.sample_rate)
