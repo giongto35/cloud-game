@@ -10,6 +10,11 @@ const DefaultSTUNTURN = `[{"urls":"stun:stun-turn.webgame2d.com:3478"},{"urls":"
 const CODEC_VP8 = "VP8"
 const CODEC_H264 = "H264"
 
+const AUDIO_RATE = 48000
+const AUDIO_CHANNELS = 2
+const AUDIO_MS = 10
+const AUDIO_FRAME = AUDIO_RATE * AUDIO_MS / 1000 * AUDIO_CHANNELS
+
 var Port = flag.String("port", "8000", "Port of the game")
 var FrontendSTUNTURN = flag.String("stunturn", DefaultSTUNTURN, "Frontend STUN TURN servers")
 var Mode = flag.String("mode", "dev", "Environment")

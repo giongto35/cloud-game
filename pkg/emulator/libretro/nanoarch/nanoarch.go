@@ -234,18 +234,17 @@ func min(a, b C.size_t) C.size_t {
 }
 
 func audioWrite2(buf unsafe.Pointer, frames C.size_t) C.size_t {
-	numFrames := int(frames) * 2
-	pcm := (*[1 << 30]int16)(unsafe.Pointer(buf))[:numFrames:numFrames]
+	// !to make it mono/stereo independent
+	samples := int(frames) * 2
+	pcm := (*[1 << 30]int16)(buf)[:samples:samples]
 
-	for i := 0; i < numFrames; i += 1 {
-		s := float32(pcm[i])
-		select {
-		case NAEmulator.audioChannel <- s:
-		default:
-		}
+	// !to rewrite this stuff
+	// (channels are not that fast to put bytes one by one)
+	for i := 0; i < samples; i += 1 {
+		NAEmulator.audioChannel <- pcm[i]
 	}
 
-	return 2 * frames
+	return frames
 }
 
 //export coreAudioSample
