@@ -28,7 +28,7 @@ type Room struct {
 	// imageChannel is image stream received from director
 	imageChannel <-chan *image.RGBA
 	// audioChannel is audio stream received from director
-	audioChannel <-chan float32
+	audioChannel <-chan int16
 	// inputChannel is input stream from websocket send to room
 	inputChannel chan<- int
 	// State of room
@@ -63,7 +63,7 @@ func NewRoom(roomID string, gameName string, videoEncoderType string, onlineStor
 
 	log.Println("Init new room: ", roomID, gameName, gameInfo)
 	imageChannel := make(chan *image.RGBA, 30)
-	audioChannel := make(chan float32, 30)
+	audioChannel := make(chan int16, 30)
 	inputChannel := make(chan int, 100)
 
 	room := &Room{
@@ -115,7 +115,7 @@ func NewRoom(roomID string, gameName string, videoEncoderType string, onlineStor
 }
 
 // create director
-func getEmulator(emuName string, roomID string, imageChannel chan<- *image.RGBA, audioChannel chan<- float32, inputChannel <-chan int) emulator.CloudEmulator {
+func getEmulator(emuName string, roomID string, imageChannel chan<- *image.RGBA, audioChannel chan<- int16, inputChannel <-chan int) emulator.CloudEmulator {
 	nanoarch.Init(emuName, roomID, imageChannel, audioChannel, inputChannel)
 
 	return nanoarch.NAEmulator
