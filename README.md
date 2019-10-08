@@ -40,8 +40,10 @@ Install Golang https://golang.org/doc/install . Because the project uses GoModul
     $ echo 'export PATH=/c/Go/bin:$PATH' >> ~/.bashrc
     ```
   * Install dependencies as described down bellow
-  * Copy required [Libretro Core DLLs](http://buildbot.libretro.com/nightly/windows/x86_64/) into the `cloud-game\assets\emulator\libretro\cores` folder and replace existing Linux SOs in the `cloud-game\pkg\config\config.go` EmulatorConfig object.
+  * Copy required [Libretro Core DLLs](http://buildbot.libretro.com/nightly/windows/x86_64/latest/) into the `cloud-game\assets\emulator\libretro\cores` folder and replace existing Linux SOs in the `cloud-game\pkg\config\config.go` EmulatorConfig object.
   * Use `C:\msys64\mingw64.exe` for building
+  * To run the app use either MinGw terminal or copy: libdl.dll, libogg-0.dll, libopenal-1.dll, libopus-0.dll, libopusfile-0.dll, libvpx-1.dll
+    files from `C:\msys64\mingw64\bin` into the `./bin` folder and then run.
 
 Install dependencies  
 
