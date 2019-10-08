@@ -11,10 +11,10 @@ import (
 	"gopkg.in/hraban/opus.v2"
 )
 
-func resample(pcm []float32, targetSize int, srcSampleRate int, dstSampleRate int) []float32 {
-	newPCML := make([]float32, targetSize/2)
-	newPCMR := make([]float32, targetSize/2)
-	newPCM := make([]float32, targetSize)
+func resample(pcm []int16, targetSize int, srcSampleRate int, dstSampleRate int) []int16 {
+	newPCML := make([]int16, targetSize/2)
+	newPCMR := make([]int16, targetSize/2)
+	newPCM := make([]int16, targetSize)
 	for i := 0; i+1 < len(pcm); i += 2 {
 		newPCML[(i/2)*dstSampleRate/srcSampleRate] = pcm[i]
 		newPCMR[(i/2)*dstSampleRate/srcSampleRate] = pcm[i+1]
@@ -39,29 +39,25 @@ func resample(pcm []float32, targetSize int, srcSampleRate int, dstSampleRate in
 
 func (r *Room) startAudio(sampleRate int) {
 	log.Println("Enter fan audio")
-	// srcSampleRate := 32768
 	srcSampleRate := sampleRate
-	dstSampleRate := 48000
 
-	enc, err := opus.NewEncoder(dstSampleRate, 2, opus.AppVoIP)
+	enc, err := opus.NewEncoder(config.AUDIO_RATE, 2, opus.AppAudio)
+	if err != nil {
+		log.Println("[!] Cannot create audio encoder", err)
+	}
 
 	enc.SetMaxBandwidth(opus.Fullband)
 	enc.SetBitrateToAuto()
 	enc.SetComplexity(10)
 
-	dstBufferSize := 240
-	srcBufferSize := dstBufferSize * srcSampleRate / dstSampleRate
+	dstBufferSize := config.AUDIO_FRAME
+	srcBufferSize := dstBufferSize * srcSampleRate / config.AUDIO_RATE
 	fmt.Println("src BufferSize", srcBufferSize)
-	pcm := make([]float32, srcBufferSize) // 640 * 1000 / 16000 == 40 ms
+	pcm := make([]int16, srcBufferSize) // 640 * 1000 / 16000 == 40 ms
 	idx := 0
 
-	if err != nil {
-		log.Println("[!] Cannot create audio encoder", err)
-		return
-	}
-
 	// fanout Audio
-	fmt.Println("listening audiochanel", r.IsRunning)
+	fmt.Println("listening audio channel", r.IsRunning)
 	for sample := range r.audioChannel {
 		if !r.IsRunning {
 			log.Println("Room ", r.ID, " audio channel closed")
@@ -72,9 +68,9 @@ func (r *Room) startAudio(sampleRate int) {
 		pcm[idx] = sample
 		idx++
 		if idx == len(pcm) {
-			data := make([]byte, dstBufferSize)
-			dstpcm := resample(pcm, dstBufferSize, srcSampleRate, dstSampleRate)
-			n, err := enc.EncodeFloat32(dstpcm, data)
+			data := make([]byte, 1024*2)
+			dstpcm := resample(pcm, dstBufferSize, srcSampleRate, config.AUDIO_RATE)
+			n, err := enc.Encode(dstpcm, data)
 
 			if err != nil {
 				log.Println("[!] Failed to decode", err)

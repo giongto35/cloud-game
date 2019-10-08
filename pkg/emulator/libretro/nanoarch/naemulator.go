@@ -48,7 +48,7 @@ import "C"
 // naEmulator implements CloudEmulator
 type naEmulator struct {
 	imageChannel chan<- *image.RGBA
-	audioChannel chan<- float32
+	audioChannel chan<- int16
 	inputChannel <-chan int
 
 	meta            config.EmulatorMeta
@@ -65,7 +65,7 @@ var NAEmulator *naEmulator
 var outputImg *image.RGBA
 
 // NAEmulator implements CloudEmulator interface based on NanoArch(golang RetroArch)
-func NewNAEmulator(etype string, roomID string, imageChannel chan<- *image.RGBA, audioChannel chan<- float32, inputChannel <-chan int) *naEmulator {
+func NewNAEmulator(etype string, roomID string, imageChannel chan<- *image.RGBA, audioChannel chan<- int16, inputChannel <-chan int) *naEmulator {
 	meta := config.EmulatorConfig[etype]
 	ewidth = meta.Width
 	eheight = meta.Height
@@ -84,7 +84,7 @@ func NewNAEmulator(etype string, roomID string, imageChannel chan<- *image.RGBA,
 }
 
 // Init initialize new RetroArch cloud emulator
-func Init(etype string, roomID string, imageChannel chan<- *image.RGBA, audioChannel chan<- float32, inputChannel <-chan int) {
+func Init(etype string, roomID string, imageChannel chan<- *image.RGBA, audioChannel chan<- int16, inputChannel <-chan int) {
 	NAEmulator = NewNAEmulator(etype, roomID, imageChannel, audioChannel, inputChannel)
 	go NAEmulator.listenInput()
 }
