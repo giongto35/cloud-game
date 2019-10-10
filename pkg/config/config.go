@@ -52,8 +52,8 @@ type EmulatorMeta struct {
 var EmulatorConfig = map[string]EmulatorMeta{
 	"gba": {
 		Path:   "assets/emulator/libretro/cores/mgba_libretro.so",
-		Width:  160,
-		Height: 144,
+		Width:  240,
+		Height: 160,
 	},
 	"pcsx": {
 		Path:   "assets/emulator/libretro/cores/mednafen_psx_libretro.so",

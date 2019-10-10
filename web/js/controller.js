@@ -216,7 +216,8 @@ function doButtonUp(name) {
 
         switch (name) {
             case "join":
-                copyToClipboard(window.location.href.split('?')[0] + `?id=${roomID}`)
+                escapeRoomID = escape(roomID)
+                copyToClipboard(window.location.href.split('?')[0] + `?id=${escapeRoomID}`)
                 popup("Copy link to clipboard!")
                 break;
 
