@@ -65,32 +65,37 @@ func (r *Room) startAudio(sampleRate int) {
 		}
 
 		// TODO: Use worker pool for encoding
-		pcm[idx] = sample
-		idx++
-		if idx == len(pcm) {
-			data := make([]byte, 1024*2)
-			dstpcm := resample(pcm, dstBufferSize, srcSampleRate, config.AUDIO_RATE)
-			n, err := enc.Encode(dstpcm, data)
+		fmt.Println(len(sample))
+		for _, s := range sample {
+			pcm[idx] = s
+			idx++
 
-			if err != nil {
-				log.Println("[!] Failed to decode", err)
+			if idx == len(pcm) {
+				data := make([]byte, 1024*2)
+				dstpcm := resample(pcm, dstBufferSize, srcSampleRate, config.AUDIO_RATE)
+				n, err := enc.Encode(dstpcm, data)
+
+				if err != nil {
+					log.Println("[!] Failed to decode", err)
+
+					idx = 0
+					continue
+				}
+				data = data[:n]
+
+				// TODO: r.rtcSessions is rarely updated. Lock will hold down perf
+				//r.sessionsLock.Lock()
+				for _, webRTC := range r.rtcSessions {
+					if webRTC.IsConnected() {
+						// NOTE: can block here
+						webRTC.AudioChannel <- data
+					}
+				}
 
 				idx = 0
-				continue
 			}
-			data = data[:n]
-
-			// TODO: r.rtcSessions is rarely updated. Lock will hold down perf
-			//r.sessionsLock.Lock()
-			for _, webRTC := range r.rtcSessions {
-				if webRTC.IsConnected() {
-					// NOTE: can block here
-					webRTC.AudioChannel <- data
-				}
-			}
-
-			idx = 0
 		}
+
 	}
 }
 

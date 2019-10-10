@@ -240,9 +240,9 @@ func audioWrite2(buf unsafe.Pointer, frames C.size_t) C.size_t {
 
 	// !to rewrite this stuff
 	// (channels are not that fast to put bytes one by one)
-	for i := 0; i < samples; i += 1 {
-		NAEmulator.audioChannel <- pcm[i]
-	}
+	//for i := 0; i < samples; i += 1 {
+	NAEmulator.audioChannel <- pcm
+	//}
 
 	return frames
 }
