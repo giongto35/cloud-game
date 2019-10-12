@@ -61,7 +61,7 @@ func NewWebRTC() *WebRTC {
 		ID: uuid.Must(uuid.NewV4()).String(),
 
 		ImageChannel: make(chan []byte, 30),
-		AudioChannel: make(chan []byte, 30),
+		AudioChannel: make(chan []byte, 1),
 		InputChannel: make(chan int, 100),
 	}
 	return w

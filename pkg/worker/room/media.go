@@ -8,6 +8,7 @@ import (
 	"github.com/giongto35/cloud-game/pkg/encoder"
 	"github.com/giongto35/cloud-game/pkg/encoder/h264encoder"
 	vpxencoder "github.com/giongto35/cloud-game/pkg/encoder/vpx-encoder"
+	"github.com/giongto35/cloud-game/pkg/util"
 	"gopkg.in/hraban/opus.v2"
 )
 
@@ -37,6 +38,13 @@ func resample(pcm []int16, targetSize int, srcSampleRate int, dstSampleRate int)
 	return newPCM
 }
 
+func min(x int, y int) int {
+	if x < y {
+		return x
+	}
+	return y
+}
+
 func (r *Room) startAudio(sampleRate int) {
 	log.Println("Enter fan audio")
 	srcSampleRate := sampleRate
@@ -64,33 +72,38 @@ func (r *Room) startAudio(sampleRate int) {
 			return
 		}
 
-		// TODO: Use worker pool for encoding
-		pcm[idx] = sample
-		idx++
-		if idx == len(pcm) {
-			data := make([]byte, 1024*2)
-			dstpcm := resample(pcm, dstBufferSize, srcSampleRate, config.AUDIO_RATE)
-			n, err := enc.Encode(dstpcm, data)
+		for i := 0; i < len(sample); {
+			rem := util.MinInt(len(sample)-i, len(pcm)-idx)
+			copy(pcm[idx:idx+rem], sample[i:i+rem])
+			i += rem
+			idx += rem
 
-			if err != nil {
-				log.Println("[!] Failed to decode", err)
+			if idx == len(pcm) {
+				data := make([]byte, 1024*2)
+				dstpcm := resample(pcm, dstBufferSize, srcSampleRate, config.AUDIO_RATE)
+				n, err := enc.Encode(dstpcm, data)
+
+				if err != nil {
+					log.Println("[!] Failed to decode", err)
+
+					idx = 0
+					continue
+				}
+				data = data[:n]
+
+				// TODO: r.rtcSessions is rarely updated. Lock will hold down perf
+				//r.sessionsLock.Lock()
+				for _, webRTC := range r.rtcSessions {
+					if webRTC.IsConnected() {
+						// NOTE: can block here
+						webRTC.AudioChannel <- data
+					}
+				}
 
 				idx = 0
-				continue
 			}
-			data = data[:n]
-
-			// TODO: r.rtcSessions is rarely updated. Lock will hold down perf
-			//r.sessionsLock.Lock()
-			for _, webRTC := range r.rtcSessions {
-				if webRTC.IsConnected() {
-					// NOTE: can block here
-					webRTC.AudioChannel <- data
-				}
-			}
-
-			idx = 0
 		}
+
 	}
 }
 
