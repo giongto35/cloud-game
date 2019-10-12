@@ -226,23 +226,16 @@ func coreInputState(port C.unsigned, device C.unsigned, index C.unsigned, id C.u
 	return 0
 }
 
-func min(a, b C.size_t) C.size_t {
-	if a < b {
-		return a
-	}
-	return b
-}
-
 func audioWrite2(buf unsafe.Pointer, frames C.size_t) C.size_t {
 	// !to make it mono/stereo independent
 	samples := int(frames) * 2
 	pcm := (*[1 << 30]int16)(buf)[:samples:samples]
 
-	// !to rewrite this stuff
-	// (channels are not that fast to put bytes one by one)
-	for i := 0; i < samples; i += 1 {
-		NAEmulator.audioChannel <- pcm[i]
-	}
+	p := make([]int16, samples)
+	// copy because pcm slice refer to buf underlying pointer, and buf pointer is the same in continuos frames
+	copy(p, pcm)
+
+	NAEmulator.audioChannel <- p
 
 	return frames
 }
