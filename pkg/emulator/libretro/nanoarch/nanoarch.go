@@ -226,13 +226,6 @@ func coreInputState(port C.unsigned, device C.unsigned, index C.unsigned, id C.u
 	return 0
 }
 
-func min(a, b C.size_t) C.size_t {
-	if a < b {
-		return a
-	}
-	return b
-}
-
 func audioWrite2(buf unsafe.Pointer, frames C.size_t) C.size_t {
 	// !to make it mono/stereo independent
 	samples := int(frames) * 2
