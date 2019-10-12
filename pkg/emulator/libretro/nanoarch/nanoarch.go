@@ -238,11 +238,11 @@ func audioWrite2(buf unsafe.Pointer, frames C.size_t) C.size_t {
 	samples := int(frames) * 2
 	pcm := (*[1 << 30]int16)(buf)[:samples:samples]
 
-	// !to rewrite this stuff
-	// (channels are not that fast to put bytes one by one)
-	//for i := 0; i < samples; i += 1 {
-	NAEmulator.audioChannel <- pcm
-	//}
+	p := make([]int16, samples)
+	// copy because pcm slice refer to buf underlying pointer, and buf pointer is the same in continuos frames
+	copy(p, pcm)
+
+	NAEmulator.audioChannel <- p
 
 	return frames
 }

@@ -64,8 +64,7 @@ func (r *Room) startAudio(sampleRate int) {
 			return
 		}
 
-		// TODO: Use worker pool for encoding
-		fmt.Println(len(sample))
+		// TODO: use subslice
 		for _, s := range sample {
 			pcm[idx] = s
 			idx++
