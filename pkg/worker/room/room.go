@@ -4,6 +4,7 @@ import (
 	"image"
 	"io/ioutil"
 	"log"
+	"math"
 	"math/rand"
 	"os"
 	"runtime"
@@ -101,7 +102,18 @@ func NewRoom(roomID string, gameName string, videoEncoderType string, onlineStor
 		room.director = getEmulator(emuName, roomID, imageChannel, audioChannel, inputChannel)
 		gameMeta := room.director.LoadMeta(game.Path)
 
-		go room.startVideo(gameMeta.Width, gameMeta.Height, videoEncoderType)
+		var nwidth, nheight int
+		if config.ENABLE_ASPECT_RATIO {
+			nwidth, nheight = resizeToAspect(gameMeta.Ratio, config.CUSTOM_WIDTH*config.SCALE, config.CUSTOM_HEIGHT*config.SCALE)
+		} else {
+			nwidth, nheight = gameMeta.Width*config.SCALE, gameMeta.Height*config.SCALE
+		}
+
+		log.Println("meta: ", gameMeta)
+
+		room.director.SetViewport(nwidth, nheight)
+
+		go room.startVideo(nwidth, nheight, videoEncoderType)
 		go room.startAudio(gameMeta.AudioSampleRate)
 		room.director.Start()
 
@@ -112,6 +124,17 @@ func NewRoom(roomID string, gameName string, videoEncoderType string, onlineStor
 	}(gameInfo, roomID)
 
 	return room
+}
+
+func resizeToAspect(ratio float64, sw int, sh int) (dw int, dh int) {
+	// ratio is always > 0
+	dw = int(math.Round(float64(sh)*ratio/2) * 2)
+	dh = sh
+	if dw > sw {
+		dw = sw
+		dh = int(math.Round(float64(sw)/ratio/2) * 2)
+	}
+	return
 }
 
 // create director
