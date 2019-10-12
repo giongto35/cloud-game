@@ -72,8 +72,6 @@ func (r *Room) startAudio(sampleRate int) {
 			return
 		}
 
-		// TODO: use subslice
-		//for _, s := range sample {
 		for i := 0; i < len(sample); {
 			rem := util.MinInt(len(sample)-i, len(pcm)-idx)
 			copy(pcm[idx:idx+rem], sample[i:i+rem])
