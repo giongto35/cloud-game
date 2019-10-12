@@ -8,6 +8,7 @@ import (
 	"github.com/giongto35/cloud-game/pkg/encoder"
 	"github.com/giongto35/cloud-game/pkg/encoder/h264encoder"
 	vpxencoder "github.com/giongto35/cloud-game/pkg/encoder/vpx-encoder"
+	"github.com/giongto35/cloud-game/pkg/util"
 	"gopkg.in/hraban/opus.v2"
 )
 
@@ -35,6 +36,13 @@ func resample(pcm []int16, targetSize int, srcSampleRate int, dstSampleRate int)
 	}
 
 	return newPCM
+}
+
+func min(x int, y int) int {
+	if x < y {
+		return x
+	}
+	return y
 }
 
 func (r *Room) startAudio(sampleRate int) {
@@ -65,9 +73,12 @@ func (r *Room) startAudio(sampleRate int) {
 		}
 
 		// TODO: use subslice
-		for _, s := range sample {
-			pcm[idx] = s
-			idx++
+		//for _, s := range sample {
+		for i := 0; i < len(sample); {
+			rem := util.MinInt(len(sample)-i, len(pcm)-idx)
+			copy(pcm[idx:idx+rem], sample[i:i+rem])
+			i += rem
+			idx += rem
 
 			if idx == len(pcm) {
 				data := make([]byte, 1024*2)
