@@ -2,6 +2,7 @@ package config
 
 import (
 	"flag"
+	"github.com/giongto35/cloud-game/pkg/emulator/libretro/image"
 	"time"
 )
 
@@ -14,6 +15,12 @@ const AUDIO_RATE = 48000
 const AUDIO_CHANNELS = 2
 const AUDIO_MS = 10
 const AUDIO_FRAME = AUDIO_RATE * AUDIO_MS / 1000 * AUDIO_CHANNELS
+
+const SCALE = 1.0
+const ENABLE_ASPECT_RATIO = true
+const CUSTOM_WIDTH = 320
+const CUSTOM_HEIGHT = 240
+const SCALER = image.ScaleNearestNeighbour
 
 var Port = flag.String("port", "8000", "Port of the game")
 var FrontendSTUNTURN = flag.String("stunturn", DefaultSTUNTURN, "Frontend STUN TURN servers")
@@ -47,6 +54,9 @@ type EmulatorMeta struct {
 	Height          int
 	AudioSampleRate int
 	Fps             int
+	BaseWidth       int
+	BaseHeight      int
+	Ratio           float64
 }
 
 var EmulatorConfig = map[string]EmulatorMeta{

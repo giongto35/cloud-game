@@ -7,6 +7,9 @@ type CloudEmulator interface {
 	// LoadMeta returns meta data of emulator. Refer below
 	LoadMeta(path string) config.EmulatorMeta
 	// Start is called after LoadGame
+
+	SetViewport(width int, height int)
+
 	Start()
 	// SaveGame save game state, saveExtraFunc is callback to do extra step. Ex: save to google cloud
 	SaveGame(saveExtraFunc func() error) error
