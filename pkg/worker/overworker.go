@@ -8,18 +8,20 @@ import (
 	"net/http"
 	"strconv"
 
+	"github.com/giongto35/cloud-game/pkg/config/worker"
+
 	"github.com/giongto35/cloud-game/pkg/monitoring"
 	"github.com/golang/glog"
 )
 
 type OverWorker struct {
 	ctx context.Context
-	cfg Config
+	cfg worker.Config
 
 	monitoringServer *monitoring.ServerMonitoring
 }
 
-func New(ctx context.Context, cfg Config) *OverWorker {
+func New(ctx context.Context, cfg worker.Config) *OverWorker {
 	return &OverWorker{
 		ctx: ctx,
 		cfg: cfg,
@@ -50,7 +52,7 @@ func (o *OverWorker) Shutdown() {
 
 // initializeWorker setup a worker
 func (o *OverWorker) initializeWorker() {
-	worker := NewHandler(o.cfg.OverlordAddress)
+	worker := NewHandler(o.cfg)
 
 	defer func() {
 		log.Println("Close worker")

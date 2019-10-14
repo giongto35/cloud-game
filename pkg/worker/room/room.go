@@ -12,6 +12,8 @@ import (
 	"strings"
 	"sync"
 
+	"github.com/giongto35/cloud-game/pkg/config/worker"
+
 	"github.com/giongto35/cloud-game/pkg/config"
 	"github.com/giongto35/cloud-game/pkg/emulator"
 	"github.com/giongto35/cloud-game/pkg/emulator/libretro/nanoarch"
@@ -51,7 +53,7 @@ type Room struct {
 }
 
 // NewRoom creates a new room
-func NewRoom(roomID string, gameName string, videoEncoderType string, onlineStorage *storage.Client) *Room {
+func NewRoom(roomID string, gameName string, videoEncoderType string, onlineStorage *storage.Client, cfg worker.Config) *Room {
 	// If no roomID is given, generate it from gameName
 	// If the is roomID, get gameName from roomID
 	if roomID == "" {
@@ -103,15 +105,24 @@ func NewRoom(roomID string, gameName string, videoEncoderType string, onlineStor
 		gameMeta := room.director.LoadMeta(game.Path)
 
 		var nwidth, nheight int
-		if config.ENABLE_ASPECT_RATIO {
-			nwidth, nheight = resizeToAspect(gameMeta.Ratio, config.CUSTOM_WIDTH*config.SCALE, config.CUSTOM_HEIGHT*config.SCALE)
+		if !cfg.DisableCustomSize {
+			baseAspectRatio := float64(gameMeta.BaseWidth) / float64(gameMeta.Height)
+			nwidth, nheight = resizeToAspect(baseAspectRatio, cfg.Width, cfg.Height)
+			log.Printf("Viewport size will be changed from %dx%d (%f) -> %dx%d", cfg.Width, cfg.Height,
+				baseAspectRatio, nwidth, nheight)
 		} else {
-			nwidth, nheight = gameMeta.Width*config.SCALE, gameMeta.Height*config.SCALE
+			log.Println("Viewport custom size is disabled, base size will be used instead")
+			nwidth, nheight = gameMeta.BaseWidth, gameMeta.BaseHeight
 		}
 
-		log.Println("meta: ", gameMeta)
+		if cfg.Scale > 1 {
+			nwidth, nheight = nwidth*cfg.Scale, nheight*cfg.Scale
+			log.Printf("Viewport size has scaled to %dx%d", nwidth, nheight)
+		}
 
 		room.director.SetViewport(nwidth, nheight)
+
+		log.Println("meta: ", gameMeta)
 
 		go room.startVideo(nwidth, nheight, videoEncoderType)
 		go room.startAudio(gameMeta.AudioSampleRate)

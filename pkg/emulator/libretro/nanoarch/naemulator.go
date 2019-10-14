@@ -114,8 +114,6 @@ func (na *naEmulator) LoadMeta(path string) config.EmulatorMeta {
 }
 
 func (na *naEmulator) SetViewport(width int, height int) {
-	log.Printf("Viewport resolution set to: %dx%d", width, height)
-
 	// outputImg is tmp img used for decoding and reuse in encoding flow
 	outputImg = image.NewRGBA(image.Rect(0, 0, width, height))
 
