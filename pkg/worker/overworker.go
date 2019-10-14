@@ -3,11 +3,12 @@ package worker
 import (
 	"context"
 	"fmt"
-	workerConfig "github.com/giongto35/cloud-game/pkg/worker/config"
 	"log"
 	"net"
 	"net/http"
 	"strconv"
+
+	workercfg "github.com/giongto35/cloud-game/pkg/worker/config"
 
 	"github.com/giongto35/cloud-game/pkg/monitoring"
 	"github.com/golang/glog"
@@ -15,12 +16,12 @@ import (
 
 type OverWorker struct {
 	ctx context.Context
-	cfg workerConfig.Config
+	cfg workercfg.Config
 
 	monitoringServer *monitoring.ServerMonitoring
 }
 
-func New(ctx context.Context, cfg workerConfig.Config) *OverWorker {
+func New(ctx context.Context, cfg workercfg.Config) *OverWorker {
 	return &OverWorker{
 		ctx: ctx,
 		cfg: cfg,

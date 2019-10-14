@@ -1,7 +1,6 @@
 package room
 
 import (
-	workerConfig "github.com/giongto35/cloud-game/pkg/worker/config"
 	"image"
 	"io/ioutil"
 	"log"
@@ -12,6 +11,8 @@ import (
 	"strconv"
 	"strings"
 	"sync"
+
+	workercfg "github.com/giongto35/cloud-game/pkg/worker/config"
 
 	"github.com/giongto35/cloud-game/pkg/config"
 	"github.com/giongto35/cloud-game/pkg/emulator"
@@ -52,7 +53,7 @@ type Room struct {
 }
 
 // NewRoom creates a new room
-func NewRoom(roomID string, gameName string, videoEncoderType string, onlineStorage *storage.Client, cfg workerConfig.Config) *Room {
+func NewRoom(roomID string, gameName string, videoEncoderType string, onlineStorage *storage.Client, cfg workercfg.Config) *Room {
 	// If no roomID is given, generate it from gameName
 	// If the is roomID, get gameName from roomID
 	if roomID == "" {

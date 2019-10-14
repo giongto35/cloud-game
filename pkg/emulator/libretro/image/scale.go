@@ -1,9 +1,10 @@
 package image
 
 import (
-	"golang.org/x/image/draw"
 	"image"
 	"image/color"
+
+	"golang.org/x/image/draw"
 )
 
 const (
