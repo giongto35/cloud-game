@@ -3,6 +3,7 @@ package worker
 import (
 	"context"
 	"fmt"
+	workerConfig "github.com/giongto35/cloud-game/pkg/worker/config"
 	"log"
 	"net"
 	"net/http"
@@ -14,12 +15,12 @@ import (
 
 type OverWorker struct {
 	ctx context.Context
-	cfg Config
+	cfg workerConfig.Config
 
 	monitoringServer *monitoring.ServerMonitoring
 }
 
-func New(ctx context.Context, cfg Config) *OverWorker {
+func New(ctx context.Context, cfg workerConfig.Config) *OverWorker {
 	return &OverWorker{
 		ctx: ctx,
 		cfg: cfg,
@@ -50,7 +51,7 @@ func (o *OverWorker) Shutdown() {
 
 // initializeWorker setup a worker
 func (o *OverWorker) initializeWorker() {
-	worker := NewHandler(o.cfg.OverlordAddress)
+	worker := NewHandler(o.cfg)
 
 	defer func() {
 		log.Println("Close worker")

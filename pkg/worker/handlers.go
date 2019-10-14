@@ -1,6 +1,7 @@
 package worker
 
 import (
+	workerConfig "github.com/giongto35/cloud-game/pkg/worker/config"
 	"log"
 	"os"
 	"path"
@@ -26,6 +27,7 @@ type Handler struct {
 	oClient *OverlordClient
 	// Raw address of overlord
 	overlordHost string
+	cfg          workerConfig.Config
 	// Rooms map : RoomID -> Room
 	rooms map[string]*room.Room
 	// ID of the current server globalwise
@@ -37,7 +39,7 @@ type Handler struct {
 }
 
 // NewHandler returns a new server
-func NewHandler(overlordHost string) *Handler {
+func NewHandler(cfg workerConfig.Config) *Handler {
 	// Create offline storage folder
 	createOfflineStorage()
 
@@ -46,7 +48,8 @@ func NewHandler(overlordHost string) *Handler {
 	return &Handler{
 		rooms:         map[string]*room.Room{},
 		sessions:      map[string]*Session{},
-		overlordHost:  overlordHost,
+		overlordHost:  cfg.OverlordAddress,
+		cfg:           cfg,
 		onlineStorage: onlineStorage,
 	}
 }
@@ -135,7 +138,7 @@ func (h *Handler) createNewRoom(gameName string, roomID string, playerIndex int,
 	// or the roomID doesn't have any running sessions (room was closed)
 	// we spawn a new room
 	if roomID == "" || !h.isRoomRunning(roomID) {
-		room := room.NewRoom(roomID, gameName, videoEncoderType, h.onlineStorage)
+		room := room.NewRoom(roomID, gameName, videoEncoderType, h.onlineStorage, h.cfg)
 		// TODO: Might have race condition
 		h.rooms[room.ID] = room
 		return room

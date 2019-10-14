@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	workerConfig "github.com/giongto35/cloud-game/pkg/worker/config"
 	"math/rand"
 	"os"
 	"os/signal"
@@ -16,7 +17,7 @@ import (
 func main() {
 	rand.Seed(time.Now().UTC().UnixNano())
 
-	cfg := worker.NewDefaultConfig()
+	cfg := workerConfig.NewDefaultConfig()
 	cfg.AddFlags(pflag.CommandLine)
 
 	logging.Init()
