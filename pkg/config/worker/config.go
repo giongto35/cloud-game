@@ -1,4 +1,4 @@
-package workerConfig
+package worker
 
 import (
 	"github.com/giongto35/cloud-game/pkg/monitoring"

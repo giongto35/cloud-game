@@ -6,7 +6,7 @@ import (
 	"path"
 	"time"
 
-	workercfg "github.com/giongto35/cloud-game/pkg/worker/config"
+	"github.com/giongto35/cloud-game/pkg/config/worker"
 
 	"github.com/giongto35/cloud-game/pkg/util"
 	"github.com/giongto35/cloud-game/pkg/webrtc"
@@ -28,7 +28,7 @@ type Handler struct {
 	oClient *OverlordClient
 	// Raw address of overlord
 	overlordHost string
-	cfg          workercfg.Config
+	cfg          worker.Config
 	// Rooms map : RoomID -> Room
 	rooms map[string]*room.Room
 	// ID of the current server globalwise
@@ -40,7 +40,7 @@ type Handler struct {
 }
 
 // NewHandler returns a new server
-func NewHandler(cfg workercfg.Config) *Handler {
+func NewHandler(cfg worker.Config) *Handler {
 	// Create offline storage folder
 	createOfflineStorage()
 
