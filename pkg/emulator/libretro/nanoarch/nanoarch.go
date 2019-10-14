@@ -4,7 +4,6 @@ import (
 	"bufio"
 	"errors"
 	"fmt"
-	"github.com/giongto35/cloud-game/pkg/config"
 	"github.com/giongto35/cloud-game/pkg/emulator/libretro/image"
 	"log"
 	"os"
@@ -104,7 +103,8 @@ func coreVideoRefresh(data unsafe.Pointer, width C.unsigned, height C.unsigned, 
 	bytes := int(height) * packedWidth * int(video.bpp)
 	data_ := (*[1 << 30]byte)(data)[:bytes:bytes]
 
-	image.DrawRgbaImage(int(video.pixFmt), config.SCALER, int(width), int(height),
+	// !to move it on the other side of the channel
+	image.DrawRgbaImage(int(video.pixFmt), image.ScaleBilinear, int(width), int(height),
 		packedWidth, ewidth, eheight, int(video.bpp), data_, outputImg)
 
 	NAEmulator.imageChannel <- outputImg
