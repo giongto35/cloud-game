@@ -74,6 +74,11 @@ Because the coordinator and workers need to run simultaneously. Workers connect 
 ## FAQ
 - [FAQ](https://github.com/giongto35/cloud-game/wiki/FAQ)  
 
+## Contribution
+- The project cannot be possible without the contribution with those amazing people:
+- [sadlil](https://github.com/sadlil) for massive code structure reogranization; log and monitor server introduction.
+- [sergystepanov](https://github.com/sergystepanov/) for Audio re-implementation; bilinear, nearest neighbor interpolation scaling; Window setup document.
+
 ## Credits
 
 * *Pion* Webrtc team for the incredible Golang Webrtc library and their supports https://github.com/pion/webrtc/.  
@@ -81,9 +86,8 @@ Because the coordinator and workers need to run simultaneously. Workers connect 
 * *gen2brain* for the h264 go encoder https://github.com/gen2brain/x264-go
 * *poi5305* for the video encoding https://github.com/poi5305/go-yuv2webRTC.  
 * *fogleman* for the NES emulator https://github.com/fogleman/nes.  
-* And last but not least, my longtime friend Tri as the co-author. 
 
-## Contributor
+## Author
 
 Nguyen Huu Thanh  
 https://www.linkedin.com/in/huuthanhnguyen/  
