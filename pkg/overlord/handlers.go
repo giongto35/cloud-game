@@ -129,10 +129,26 @@ func (o *Server) WS(w http.ResponseWriter, r *http.Request) {
 	client := NewBrowserClient(c)
 	go client.Listen()
 
-	// Get best server for frontend to connect to
-	workerClient, err := o.getBestWorkerClient(client)
-	if err != nil {
-		return
+	var workerClient *WorkerClient
+
+	// get roomID if it is embeded in request. Server will pair the frontend with the server running the room. It only happens when we are trying to access a running room over share link.
+	// TODO: Update link to the wiki
+	roomID := r.URL.Query().Get("room_id")
+	if roomID != "" {
+		log.Printf("Detected roomID %v from URL", roomID)
+		if workerID, ok := o.roomToServer[roomID]; ok {
+			workerClient = o.workerClients[workerID]
+			log.Printf("Found running server with id=%v client=%v", workerID, workerClient)
+		}
+	}
+
+	// If there is no existing server to connect to, we find the best possible worker for the frontend
+	if workerClient == nil {
+		// Get best server for frontend to connect to
+		workerClient, err = o.getBestWorkerClient(client)
+		if err != nil {
+			return
+		}
 	}
 
 	// SessionID will be the unique per frontend connection
