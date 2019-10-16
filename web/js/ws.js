@@ -2,7 +2,19 @@ var curPacketID = "";
 var curSessionID = "";
 // web socket
 
-conn = new WebSocket(`ws://${location.host}/ws`);
+// localStorage first
+//roomID = loadRoomID();
+roomID = "";
+
+// Shared URL second
+var rid = parseURLForRoom();
+if (rid !== null) {
+    roomID = rid;
+}
+
+// if from URL -> start game immediately!
+console.log(`ws://${location.host}/ws?room_id=${roomID}`)
+conn = new WebSocket(`ws://${location.host}/ws?room_id=${roomID}`);
 
 // Clear old roomID
 conn.onopen = () => {
@@ -288,3 +300,15 @@ function startGame() {
 function isMobileDevice() {
     return (typeof window.orientation !== "undefined") || (navigator.userAgent.indexOf('IEMobile') !== -1);
 };
+
+function parseURLForRoom() {
+    var queryDict = {}
+    location.search.substr(1).split("&").forEach(function(item) {
+        queryDict[item.split("=")[0]] = item.split("=")[1]
+    });
+    if (typeof queryDict["id"] === "string") {
+        return decodeURI(queryDict["id"]);
+    }
+    return null;
+}
+
