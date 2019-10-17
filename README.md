@@ -20,10 +20,11 @@ This project aims to experiment Cloud-gaming performance with [WebRTC](https://g
 1. Cloud gaming: Game logic and storage is hosted on cloud service. It reduces the cumbersome of game initialization. Images and audio are streamed to user in the most optimal way using advanced encoding technology.
 2. Cross-platform compatibility: The game is run on web browser, the most universal built-in app. No console, plugin, external app or devices are needed. Chrome with the latest version and fully WebRTC support is recommended for the game. 
 3. Emulator agnostic: The game can be played directly without any extra effort to set up the gaming emulator or platform.
-4. Vertically scaled: The infrastructure is designed to be able to scale under high traffic by adding more instances.
-5. Cloud storage: Game state is storing on online storage, so you can come back and continue playing your incomplete game later.
-6. Online multiplayer: Bring online multiplayer gaming to retro games. (In Road map)
-7. Collaborate gameplay: Follow the idea of "Twitch Plays Pokemon", multiple players can play the same game together (In Road map)
+4. Collaborate gameplay: Follow the idea of "Twitch Plays Pokemon", multiple players can play the same game together by addressing the same deeplink. The game experience is powered by cloud-gaming, so it's even smoother and diverse than "Twitch Plays Pokemon".  
+[Try Play Pokemon Emerald Together](http://cloudretro.io/?id=652e45d78d2b91cd%7CPokemon%20-%20Emerald%20Version%20%28U%29)
+5. Vertically scaled: The infrastructure is designed to be able to scale under high traffic by adding more instances.
+6. Cloud storage: Game state is storing on online storage, so you can come back and continue playing your incomplete game later.
+7. Online multiplayer: Bring online multiplayer gaming to retro games. (In Road map)
 
 ## Run on local by Docker
 
