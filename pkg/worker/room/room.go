@@ -50,6 +50,8 @@ type Room struct {
 	//meta emulator.Meta
 }
 
+const separator = "___"
+
 // NewRoom creates a new room
 func NewRoom(roomID string, gameName string, videoEncoderType string, onlineStorage *storage.Client) *Room {
 	// If no roomID is given, generate it from gameName
@@ -146,7 +148,7 @@ func getEmulator(emuName string, roomID string, imageChannel chan<- *image.RGBA,
 
 // getGameNameFromRoomID parse roomID to get roomID and gameName
 func getGameNameFromRoomID(roomID string) string {
-	parts := strings.Split(roomID, "|")
+	parts := strings.Split(roomID, separator)
 	if len(parts) <= 1 {
 		return ""
 	}
@@ -157,7 +159,7 @@ func getGameNameFromRoomID(roomID string) string {
 func generateRoomID(gameName string) string {
 	// RoomID contains random number + gameName
 	// Next time when we only get roomID, we can launch game based on gameName
-	roomID := strconv.FormatInt(rand.Int63(), 16) + "|" + gameName
+	roomID := strconv.FormatInt(rand.Int63(), 16) + separator + gameName
 	return roomID
 }
 
