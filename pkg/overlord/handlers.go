@@ -9,7 +9,6 @@ import (
 	"math"
 	"math/rand"
 	"net/http"
-	"strings"
 
 	"github.com/giongto35/cloud-game/pkg/config"
 	"github.com/giongto35/cloud-game/pkg/cws"
@@ -274,22 +273,26 @@ func findBestServerFromBrowser(workerClients map[string]*WorkerClient, client *B
 func getLatencyMapFromBrowser(workerClients map[string]*WorkerClient, client *BrowserClient) map[*WorkerClient]int64 {
 	workersList := []*WorkerClient{}
 
-	latencyMap := map[*WorkerClient]int64{}
-
-	// addressList is the list of worker addresses
-	addressList := []string{}
+	// oh wow! there are no sets in Go
+	addresses := make(map[string]struct{})
 	for _, workerClient := range workerClients {
 		workersList = append(workersList, workerClient)
-		addressList = append(addressList, workerClient.Address)
+		addresses[workerClient.Address] = struct{}{}
+	}
+
+	// make a comma separated list
+	addressList := ""
+	splitter := ""
+	for address := range addresses {
+		addressList += splitter + address
+		splitter = ","
 	}
 
 	// send this address to user and get back latency
-	log.Println("Send sync", addressList, strings.Join(addressList, ","))
-	data := client.SyncSend(cws.WSPacket{
-		ID:   "checkLatency",
-		Data: strings.Join(addressList, ","),
-	})
+	log.Println("Send sync", addressList)
+	data := client.SyncSend(cws.WSPacket{ID: "checkLatency", Data: addressList})
 
+	latencyMap := map[*WorkerClient]int64{}
 	respLatency := map[string]int64{}
 	err := json.Unmarshal([]byte(data.Data), &respLatency)
 	if err != nil {
