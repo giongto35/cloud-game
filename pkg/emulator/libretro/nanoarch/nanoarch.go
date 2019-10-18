@@ -4,14 +4,13 @@ import (
 	"bufio"
 	"errors"
 	"fmt"
-	"image"
-	"image/color"
 	"log"
 	"os"
 	"os/user"
-	"reflect"
 	"sync"
 	"unsafe"
+
+	"github.com/giongto35/cloud-game/pkg/emulator/libretro/image"
 )
 
 /*
@@ -63,8 +62,6 @@ var video struct {
 	bpp     uint32
 }
 
-var scale = 3.0
-
 const bufSize = 1024 * 4
 
 const joypadNumKeys = int(C.RETRO_DEVICE_ID_JOYPAD_R3 + 1)
@@ -85,15 +82,6 @@ var bindRetroKeys = map[int]int{
 	9: C.RETRO_DEVICE_ID_JOYPAD_RIGHT,
 }
 
-const (
-	// BIT_FORMAT_SHORT_5_5_5_1 has 5 bits R, 5 bits G, 5 bits B, 1 bit alpha
-	BIT_FORMAT_SHORT_5_5_5_1 = iota
-	// BIT_FORMAT_INT_8_8_8_8_REV has 8 bits R, 8 bits G, 8 bits B, 8 bit alpha
-	BIT_FORMAT_INT_8_8_8_8_REV
-	// BIT_FORMAT_SHORT_5_6_5 has 5 bits R, 6 bits G, 5 bits
-	BIT_FORMAT_SHORT_5_6_5
-)
-
 type CloudEmulator interface {
 	Start(path string)
 	SaveGame(saveExtraFunc func() error) error
@@ -102,109 +90,25 @@ type CloudEmulator interface {
 	Close()
 }
 
-func resizeToAspect(ratio float64, sw float64, sh float64) (dw float64, dh float64) {
-	if ratio <= 0 {
-		ratio = sw / sh
-	}
-
-	if sw/sh < 1.0 {
-		dw = dh * ratio
-		dh = sh
-	} else {
-		dw = sw
-		dh = dw / ratio
-	}
-	return
-}
-
 //export coreVideoRefresh
 func coreVideoRefresh(data unsafe.Pointer, width C.unsigned, height C.unsigned, pitch C.size_t) {
-	bytesPerRow := int(uint32(pitch) / video.bpp)
-
-	if data != nil {
-		NAEmulator.imageChannel <- toImageRGBA(data, bytesPerRow, int(width), int(height))
-	}
-}
-
-// toImageRGBA convert nanoarch 2d array to image.RGBA
-func toImageRGBA(data unsafe.Pointer, bytesPerRow int, inputWidth, inputHeight int) *image.RGBA {
-	// Convert unsafe Pointer to bytes array
-	var bytes []byte
-
-	// Convert bytes array to image
-	// TODO: Reduce overhead of copying to bytes array by accessing unsafe.Pointer directly
-	sh := (*reflect.SliceHeader)(unsafe.Pointer(&bytes))
-	sh.Data = uintptr(data)
-	sh.Len = bytesPerRow * inputHeight * 4
-	sh.Cap = bytesPerRow * inputHeight * 4
-
-	if video.pixFmt == BIT_FORMAT_SHORT_5_6_5 {
-		return to565Image(data, bytes, bytesPerRow, inputWidth, inputHeight)
-	} else if video.pixFmt == BIT_FORMAT_INT_8_8_8_8_REV {
-		return to8888Image(data, bytes, bytesPerRow, inputWidth, inputHeight)
-	}
-	return nil
-}
-
-func to8888Image(data unsafe.Pointer, bytes []byte, bytesPerRow int, inputWidth, inputHeight int) *image.RGBA {
-	seek := 0
-
-	// scaleWidth and scaleHeight is the scale
-	scaleWidth := float64(ewidth) / float64(inputWidth)
-	scaleHeight := float64(eheight) / float64(inputHeight)
-
-	for y := 0; y < inputHeight; y++ {
-		for x := 0; x < bytesPerRow; x++ {
-			xx := int(float64(x) * scaleWidth)
-			yy := int(float64(y) * scaleHeight)
-			if xx < ewidth {
-				b8 := bytes[seek]
-				g8 := bytes[seek+1]
-				r8 := bytes[seek+2]
-				a8 := bytes[seek+3]
-
-				outputImg.Set(xx, yy, color.RGBA{byte(r8), byte(g8), byte(b8), byte(a8)})
-			}
-
-			seek += 4
-		}
+	// some cores can return nothing
+	if data == nil {
+		return
 	}
 
-	// TODO: Resize Image
-	return outputImg
-}
+	// calculate real frame width in pixels from packed data (realWidth >= width)
+	packedWidth := int(uint32(pitch) / video.bpp)
 
-func to565Image(data unsafe.Pointer, bytes []byte, bytesPerRow int, inputWidth, inputHeight int) *image.RGBA {
-	seek := 0
+	// convert data from C
+	bytes := int(height) * packedWidth * int(video.bpp)
+	data_ := (*[1 << 30]byte)(data)[:bytes:bytes]
 
-	// scaleWidth and scaleHeight is the scale
-	scaleWidth := float64(ewidth) / float64(inputWidth)
-	scaleHeight := float64(eheight) / float64(inputHeight)
+	// !to move it on the other side of the channel
+	image.DrawRgbaImage(int(video.pixFmt), image.ScaleBilinear, int(width), int(height),
+		packedWidth, ewidth, eheight, int(video.bpp), data_, outputImg)
 
-	for y := 0; y < inputHeight; y++ {
-		for x := 0; x < bytesPerRow; x++ {
-			xx := int(float64(x) * scaleWidth)
-			yy := int(float64(y) * scaleHeight)
-			if xx < ewidth {
-				var bi int
-				bi = (int)(bytes[seek]) + ((int)(bytes[seek+1]) << 8)
-				b5 := bi & 0x1F
-				g6 := (bi >> 5) & 0x3F
-				r5 := (bi >> 11)
-
-				b8 := (b5*255 + 15) / 31
-				g8 := (g6*255 + 31) / 63
-				r8 := (r5*255 + 15) / 31
-
-				outputImg.Set(xx, yy, color.RGBA{byte(r8), byte(g8), byte(b8), 255})
-			}
-
-			seek += 2
-		}
-	}
-
-	// TODO: Resize Image
-	return outputImg
+	NAEmulator.imageChannel <- outputImg
 }
 
 //export coreInputPoll
@@ -434,15 +338,25 @@ func coreLoadGame(filename string) {
 
 	C.bridge_retro_get_system_av_info(retroGetSystemAVInfo, &avi)
 
+	// Append the library name to the window title.
+	NAEmulator.meta.AudioSampleRate = int(avi.timing.sample_rate)
+	NAEmulator.meta.Fps = int(avi.timing.fps)
+	NAEmulator.meta.BaseWidth = int(avi.geometry.base_width)
+	NAEmulator.meta.BaseHeight = int(avi.geometry.base_height)
+	// set aspect ratio
+	/* Nominal aspect ratio of game. If aspect_ratio is <= 0.0,
+	an aspect ratio of base_width / base_height is assumed.
+	* A frontend could override this setting, if desired. */
+	ratio := float64(avi.geometry.aspect_ratio)
+	if ratio <= 0.0 {
+		ratio = float64(avi.geometry.base_width) / float64(avi.geometry.base_height)
+	}
+	NAEmulator.meta.Ratio = ratio
+
 	fmt.Println("-----------------------------------")
 	fmt.Println("--- System audio and video info ---")
 	fmt.Println("-----------------------------------")
-	fmt.Println("  Aspect ratio: ", avi.geometry.aspect_ratio)
-	/* Nominal aspect ratio of game. If
-	* aspect_ratio is <= 0.0, an aspect ratio
-	* of base_width / base_height is assumed.
-	* A frontend could override this setting,
-	* if desired. */
+	fmt.Println("  Aspect ratio: ", ratio)
 	fmt.Println("  Base width: ", avi.geometry.base_width)   /* Nominal video width of game. */
 	fmt.Println("  Base height: ", avi.geometry.base_height) /* Nominal video height of game. */
 	fmt.Println("  Max width: ", avi.geometry.max_width)     /* Maximum possible width of game. */
@@ -450,10 +364,6 @@ func coreLoadGame(filename string) {
 	fmt.Println("  Sample rate: ", avi.timing.sample_rate)   /* Sampling rate of audio. */
 	fmt.Println("  FPS: ", avi.timing.fps)                   /* FPS of video content. */
 	fmt.Println("-----------------------------------")
-
-	// Append the library name to the window title.
-	NAEmulator.meta.AudioSampleRate = int(avi.timing.sample_rate)
-	NAEmulator.meta.Fps = int(avi.timing.fps)
 }
 
 // serializeSize returns the amount of data the implementation requires to serialize
@@ -500,15 +410,15 @@ func nanoarchRun() {
 func videoSetPixelFormat(format uint32) C.bool {
 	switch format {
 	case C.RETRO_PIXEL_FORMAT_0RGB1555:
-		video.pixFmt = BIT_FORMAT_SHORT_5_5_5_1
+		video.pixFmt = image.BIT_FORMAT_SHORT_5_5_5_1
 		video.bpp = 2
 		break
 	case C.RETRO_PIXEL_FORMAT_XRGB8888:
-		video.pixFmt = BIT_FORMAT_INT_8_8_8_8_REV
+		video.pixFmt = image.BIT_FORMAT_INT_8_8_8_8_REV
 		video.bpp = 4
 		break
 	case C.RETRO_PIXEL_FORMAT_RGB565:
-		video.pixFmt = BIT_FORMAT_SHORT_5_6_5
+		video.pixFmt = image.BIT_FORMAT_SHORT_5_6_5
 		video.bpp = 2
 		break
 	default:

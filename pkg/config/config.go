@@ -47,6 +47,9 @@ type EmulatorMeta struct {
 	Height          int
 	AudioSampleRate int
 	Fps             int
+	BaseWidth       int
+	BaseHeight      int
+	Ratio           float64
 }
 
 var EmulatorConfig = map[string]EmulatorMeta{
