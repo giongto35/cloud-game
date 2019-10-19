@@ -54,6 +54,9 @@ type Room struct {
 
 const separator = "___"
 
+// TODO: Remove after fully migrate
+const oldSeparator = "|"
+
 // NewRoom creates a new room
 func NewRoom(roomID string, gameName string, videoEncoderType string, onlineStorage *storage.Client, cfg worker.Config) *Room {
 	// If no roomID is given, generate it from gameName
@@ -107,14 +110,14 @@ func NewRoom(roomID string, gameName string, videoEncoderType string, onlineStor
 		gameMeta := room.director.LoadMeta(game.Path)
 
 		var nwidth, nheight int
-		if !cfg.DisableCustomSize {
+		if cfg.EnableAspectRatio {
 			baseAspectRatio := float64(gameMeta.BaseWidth) / float64(gameMeta.Height)
 			nwidth, nheight = resizeToAspect(baseAspectRatio, cfg.Width, cfg.Height)
 			log.Printf("Viewport size will be changed from %dx%d (%f) -> %dx%d", cfg.Width, cfg.Height,
 				baseAspectRatio, nwidth, nheight)
 		} else {
-			log.Println("Viewport custom size is disabled, base size will be used instead")
 			nwidth, nheight = gameMeta.BaseWidth, gameMeta.BaseHeight
+			log.Printf("Viewport custom size is disabled, base size will be used instead %dx%d", nwidth, nheight)
 		}
 
 		if cfg.Scale > 1 {
@@ -160,10 +163,15 @@ func getEmulator(emuName string, roomID string, imageChannel chan<- *image.RGBA,
 // getGameNameFromRoomID parse roomID to get roomID and gameName
 func getGameNameFromRoomID(roomID string) string {
 	parts := strings.Split(roomID, separator)
-	if len(parts) <= 1 {
-		return ""
+	if len(parts) > 1 {
+		return parts[1]
 	}
-	return parts[1]
+	// TODO: Remove when fully migrate
+	parts = strings.Split(roomID, oldSeparator)
+	if len(parts) > 1 {
+		return parts[1]
+	}
+	return ""
 }
 
 // generateRoomID generate a unique room ID containing 16 digits

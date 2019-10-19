@@ -60,7 +60,6 @@ func (r *Room) startAudio(sampleRate int) {
 
 	dstBufferSize := config.AUDIO_FRAME
 	srcBufferSize := dstBufferSize * srcSampleRate / config.AUDIO_RATE
-	fmt.Println("src BufferSize", srcBufferSize)
 	pcm := make([]int16, srcBufferSize) // 640 * 1000 / 16000 == 40 ms
 	idx := 0
 

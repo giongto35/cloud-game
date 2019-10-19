@@ -104,8 +104,8 @@ func coreVideoRefresh(data unsafe.Pointer, width C.unsigned, height C.unsigned, 
 	bytes := int(height) * packedWidth * int(video.bpp)
 	data_ := (*[1 << 30]byte)(data)[:bytes:bytes]
 
-	// !to move it on the other side of the channel
-	image.DrawRgbaImage(int(video.pixFmt), image.ScaleBilinear, int(width), int(height),
+	// we perform resize here so on the other side we can fan out stream
+	image.DrawRgbaImage(int(video.pixFmt), image.ScaleNearestNeighbour, int(width), int(height),
 		packedWidth, ewidth, eheight, int(video.bpp), data_, outputImg)
 
 	NAEmulator.imageChannel <- outputImg
