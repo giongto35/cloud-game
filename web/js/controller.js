@@ -180,8 +180,6 @@ function doButtonDown(name) {
 
 function doButtonUp(name) {
     $(`#btn-${name}`).removeClass("pressed");
-    // Due to chrome restriction, audio cannot be autoplay until there is user interaction.
-    document.getElementById("game-screen").muted = false
 
     if (screenState === "menu") {
         switch (name) {

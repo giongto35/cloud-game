@@ -272,6 +272,7 @@ function handleWindowMove(event) {
 }
 
 function handleWindowUp(event) {
+    document.getElementById("game-screen").muted = false;
     handleVpadJoystickUp(event);
     handleMenuUp(event);
     $(".btn").trigger("touchend");
