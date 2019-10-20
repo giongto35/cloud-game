@@ -27,6 +27,8 @@ const KEYBOARD_MAP = {
 $("body").on("keyup", function (event) {
     if (event.keyCode in KEYBOARD_MAP) {
         doButtonUp(KEYBOARD_MAP[event.keyCode]);
+        // unmute when there is user interaction
+        document.getElementById("game-screen").muted = false;
     }
 });
 

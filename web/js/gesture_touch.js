@@ -272,12 +272,13 @@ function handleWindowMove(event) {
 }
 
 function handleWindowUp(event) {
+    // unmute when there is user interaction
+    document.getElementById("game-screen").muted = false;
+
     handleVpadJoystickUp(event);
     handleMenuUp(event);
     $(".btn").trigger("touchend");
 }
-
-
 
 // Bind events for window
 $(window).on("mousemove", handleWindowMove);

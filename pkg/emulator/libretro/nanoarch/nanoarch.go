@@ -104,18 +104,11 @@ func coreVideoRefresh(data unsafe.Pointer, width C.unsigned, height C.unsigned, 
 	bytes := int(height) * packedWidth * int(video.bpp)
 	data_ := (*[1 << 30]byte)(data)[:bytes:bytes]
 
-	// !to move it on the other side of the channel
-	image.DrawRgbaImage(int(video.pixFmt), image.ScaleBilinear, int(width), int(height),
+	// image is resized here and push to channel. On the other side, images will be fan out
+	image.DrawRgbaImage(int(video.pixFmt), image.ScaleNearestNeighbour, int(width), int(height),
 		packedWidth, ewidth, eheight, int(video.bpp), data_, outputImg)
 
 	NAEmulator.imageChannel <- outputImg
-}
-
-//export coreInputPoll
-func coreInputPoll() {
-	//for i := range NAEmulator.keys {
-	//joy[i] = NAEmulator.keys[i]
-	//}
 }
 
 //export coreInputState

@@ -60,7 +60,6 @@ func (r *Room) startAudio(sampleRate int) {
 
 	dstBufferSize := config.AUDIO_FRAME
 	srcBufferSize := dstBufferSize * srcSampleRate / config.AUDIO_RATE
-	fmt.Println("src BufferSize", srcBufferSize)
 	pcm := make([]int16, srcBufferSize) // 640 * 1000 / 16000 == 40 ms
 	idx := 0
 
@@ -107,6 +106,7 @@ func (r *Room) startAudio(sampleRate int) {
 	}
 }
 
+// startVideo listen from imageChannel and push to Encoder. The output of encoder will be pushed to webRTC
 func (r *Room) startVideo(width, height int, videoEncoderType string) {
 	var encoder encoder.Encoder
 	var err error

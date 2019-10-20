@@ -11,7 +11,7 @@ type Config struct {
 
 	// video
 	Scale             int
-	DisableCustomSize bool
+	EnableAspectRatio bool
 	Width             int
 	Height            int
 
@@ -23,7 +23,7 @@ func NewDefaultConfig() Config {
 		Port:              8800,
 		OverlordAddress:   "ws://localhost:8000/wso",
 		Scale:             1,
-		DisableCustomSize: false,
+		EnableAspectRatio: false,
 		Width:             320,
 		Height:            240,
 		MonitoringConfig: monitoring.ServerMonitoringConfig{
@@ -39,7 +39,7 @@ func (c *Config) AddFlags(fs *pflag.FlagSet) *Config {
 	fs.StringVarP(&c.OverlordAddress, "overlordhost", "", c.OverlordAddress, "OverWorker URL to connect")
 
 	fs.IntVarP(&c.Scale, "scale", "s", c.Scale, "Set output viewport scale factor")
-	fs.BoolVarP(&c.DisableCustomSize, "disable-custom-size", "", c.DisableCustomSize, "Disable custom size")
+	fs.BoolVarP(&c.EnableAspectRatio, "ar", "", c.EnableAspectRatio, "Enable Aspect Ratio")
 	fs.IntVarP(&c.Width, "width", "w", c.Width, "Set custom viewport width")
 	fs.IntVarP(&c.Height, "height", "h", c.Height, "Set custom viewport height")
 

@@ -262,7 +262,6 @@ function startGame() {
         return false;
     }
 
-    document.getElementById("game-screen").muted = false
     var promise = document.getElementById("game-screen").play();
     if (promise !== undefined) {
         promise.then(_ => {
