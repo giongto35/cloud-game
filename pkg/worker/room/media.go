@@ -106,6 +106,7 @@ func (r *Room) startAudio(sampleRate int) {
 	}
 }
 
+// startVideo listen from imageChannel and push to Encoder. The output of encoder will be pushed to webRTC
 func (r *Room) startVideo(width, height int, videoEncoderType string) {
 	var encoder encoder.Encoder
 	var err error

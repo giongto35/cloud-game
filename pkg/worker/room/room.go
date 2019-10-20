@@ -92,23 +92,21 @@ func NewRoom(roomID string, gameName string, videoEncoderType string, onlineStor
 	go func(game gamelist.GameInfo, roomID string) {
 		// Check room is on local or fetch from server
 		savepath := util.GetSavePath(roomID)
-		log.Println("Check ", savepath, " on local : ", room.isGameOnLocal(savepath))
-		if !room.isGameOnLocal(savepath) {
-			// Fetch room from GCP to server
-			log.Println("Load room from online storage", savepath)
-			if err := room.saveOnlineRoomToLocal(roomID, savepath); err != nil {
-				log.Printf("Warn: Room %s is not in online storage, error %s", roomID, err)
-			}
+		log.Println("Check ", savepath, " on online storage : ", room.isGameOnLocal(savepath))
+		if err := room.saveOnlineRoomToLocal(roomID, savepath); err != nil {
+			log.Printf("Warn: Room %s is not in online storage, error %s", roomID, err)
 		}
 
+		// If not then load room or create room from local.
 		log.Printf("Room %s started. GamePath: %s, GameName: %s", roomID, game.Path, game.Name)
 
 		// Spawn new emulator based on gameName and plug-in all channels
 		emuName, _ := config.FileTypeToEmulator[game.Type]
-
 		room.director = getEmulator(emuName, roomID, imageChannel, audioChannel, inputChannel)
 		gameMeta := room.director.LoadMeta(game.Path)
 
+		// nwidth, nheight are the webRTC output size.
+		// There are currently two approach
 		var nwidth, nheight int
 		if cfg.EnableAspectRatio {
 			baseAspectRatio := float64(gameMeta.BaseWidth) / float64(gameMeta.Height)
@@ -119,7 +117,6 @@ func NewRoom(roomID string, gameName string, videoEncoderType string, onlineStor
 			nwidth, nheight = gameMeta.BaseWidth, gameMeta.BaseHeight
 			log.Printf("Viewport custom size is disabled, base size will be used instead %dx%d", nwidth, nheight)
 		}
-
 		if cfg.Scale > 1 {
 			nwidth, nheight = nwidth*cfg.Scale, nheight*cfg.Scale
 			log.Printf("Viewport size has scaled to %dx%d", nwidth, nheight)
@@ -129,6 +126,7 @@ func NewRoom(roomID string, gameName string, videoEncoderType string, onlineStor
 
 		log.Println("meta: ", gameMeta)
 
+		// Spawn video and audio encoding for webRTC
 		go room.startVideo(nwidth, nheight, videoEncoderType)
 		go room.startAudio(gameMeta.AudioSampleRate)
 		room.director.Start()
@@ -153,7 +151,7 @@ func resizeToAspect(ratio float64, sw int, sh int) (dw int, dh int) {
 	return
 }
 
-// create director
+// getEmulator creates new emulator and run it
 func getEmulator(emuName string, roomID string, imageChannel chan<- *image.RGBA, audioChannel chan<- []int16, inputChannel <-chan int) emulator.CloudEmulator {
 	nanoarch.Init(emuName, roomID, imageChannel, audioChannel, inputChannel)
 
@@ -267,6 +265,7 @@ func (r *Room) Close() {
 	//close(r.audioChannel)
 }
 
+// SaveGame will save game to local and trigger a callback to store game on onlineStorage, so the game can be accessed later
 func (r *Room) SaveGame() error {
 	onlineSaveFunc := func() error {
 		// Try to save the game to gCloud
