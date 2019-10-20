@@ -111,6 +111,10 @@ func coreVideoRefresh(data unsafe.Pointer, width C.unsigned, height C.unsigned, 
 	NAEmulator.imageChannel <- outputImg
 }
 
+//export coreInputPoll
+func coreInputPoll() {
+}
+
 //export coreInputState
 func coreInputState(port C.unsigned, device C.unsigned, index C.unsigned, id C.unsigned) C.int16_t {
 	if port > 0 || index > 0 || device != C.RETRO_DEVICE_JOYPAD {
