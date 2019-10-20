@@ -22,7 +22,7 @@ Theoretically, in cloud gaming, games are run on remote servers and media are st
 1. Cloud gaming: Game logic and storage is hosted on cloud service. It reduces the cumbersome of game initialization. Images and audio are streamed to user in the most optimal way using advanced encoding technology.
 2. Cross-platform compatibility: The game is run on web browser, the most universal built-in app. No console, plugin, external app or devices are needed. Chrome with the latest version and fully WebRTC support is recommended for the game. 
 3. Emulator agnostic: The game can be played directly without any extra effort to set up the gaming emulator or platform.
-4. Collaborate gameplay: Follow the idea of crowdplay([TwitchPlaysPokemon](https://en.wikipedia.org/wiki/Twitch_Plays_Pok%C3%A9mon)), multiple players can play the same game together by addressing the same deeplink. The game experience is powered by cloud-gaming, so the game is much smoother. Refer to: [create an anchor](#Crowd-Play,-play-game-together)]
+4. Collaborate gameplay: Follow the idea of crowdplay([TwitchPlaysPokemon](https://en.wikipedia.org/wiki/Twitch_Plays_Pok%C3%A9mon)), multiple players can play the same game together by addressing the same deeplink. The game experience is powered by cloud-gaming, so the game is much smoother. Refer to: [Try Crowd Play](#crowd-play-play-game-together)]
 5. Vertically scaled: The infrastructure is designed to be able to scale under high traffic by adding more instances.
 6. Cloud storage: Game state is storing on online storage, so you can come back and continue playing your incomplete game later.
 7. Online multiplayer: 2nd, 3rd player can join the same game in the same room.
