@@ -35,7 +35,8 @@ You try running the server directly by `make dev.run-docker`. It will spawn a do
 
 Install Golang https://golang.org/doc/install . Because the project uses GoModule, so it requires Go1.11 version.
 
-(Optional) Setup MSYS2 (MinGW) environment if you are using Windows:
+### (Window only) Extra setup
+Setup MSYS2 (MinGW) environment if you are using Windows:
   * Please refer to the Libretro [doc](https://docs.libretro.com/development/retroarch/compilation/windows/#environment-configuration) for initial environment setup
   * Add Golang installation path into your .bashrc
     ```
@@ -47,7 +48,7 @@ Install Golang https://golang.org/doc/install . Because the project uses GoModul
   * To run the app use either MinGw terminal or copy: libdl.dll, libogg-0.dll, libopenal-1.dll, libopus-0.dll, libopusfile-0.dll, libvpx-1.dll
     files from `C:\msys64\mingw64\bin` into the `./bin` folder and then run.
 
-Install dependencies  
+### (All) Install Dependencies
 
   * Install [libvpx](https://www.webmproject.org/code/), [libopus](http://opus-codec.org/), [pkg-config](https://www.freedesktop.org/wiki/Software/pkg-config/)
 ```
