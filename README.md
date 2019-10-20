@@ -3,7 +3,9 @@
 **Video demo**: https://www.youtube.com/watch?v=GUBrJGAxZZg
 
 ## Introduction
-This project aims to experiment Cloud-gaming performance with [WebRTC](https://github.com/pion/webrtc/) and [libretro](https://www.libretro.com/), as well as trying to deliver the most modern and convenient gaming experience through the technology. Theoretically, games are run on remote servers and media are streamed to the player optimally to ensure the most comfortable user interaction. It opens the ability to play any retro games on web-browser directly, which are fully compatible with multi-platform like Desktop, Android, ~~IOS~~. This flexibility also enables online gaming experience to retro games.  
+This project aims to experiment Cloud-gaming performance with [WebRTC](https://github.com/pion/webrtc/) and [libretro](https://www.libretro.com/), as well as trying to deliver the most modern and convenient gaming experience through the technology. 
+
+Theoretically, in cloud gaming, games are run on remote servers and media are streamed to the player optimally to ensure the most comfortable user interaction. It opens the ability to play any retro games on web-browser directly, which are fully compatible with multi-platform like Desktop, Android, ~~IOS~~. It enhances crowdplay ([TwitchPlaysPokemon](https://en.wikipedia.org/wiki/Twitch_Plays_Pok%C3%A9mon)) with realtime interaction. E.g: [Play Pokemon Emerald together](http://cloudretro.io/?id=652e45d78d2b91cd%7CPokemon%20-%20Emerald%20Version%20%28U%29).  
 
 ## Try the service at
 **[http://cloudretro.io](http://cloudretro.io)**  
@@ -20,11 +22,10 @@ This project aims to experiment Cloud-gaming performance with [WebRTC](https://g
 1. Cloud gaming: Game logic and storage is hosted on cloud service. It reduces the cumbersome of game initialization. Images and audio are streamed to user in the most optimal way using advanced encoding technology.
 2. Cross-platform compatibility: The game is run on web browser, the most universal built-in app. No console, plugin, external app or devices are needed. Chrome with the latest version and fully WebRTC support is recommended for the game. 
 3. Emulator agnostic: The game can be played directly without any extra effort to set up the gaming emulator or platform.
-4. Collaborate gameplay: Follow the idea of "Twitch Plays Pokemon", multiple players can play the same game together by addressing the same deeplink. The game experience is powered by cloud-gaming, so it's even smoother and diverse than "Twitch Plays Pokemon".  
-[Try Play Pokemon Emerald Together](http://cloudretro.io/?id=652e45d78d2b91cd%7CPokemon%20-%20Emerald%20Version%20%28U%29)
+4. Collaborate gameplay: Follow the idea of crowdplay([TwitchPlaysPokemon](https://en.wikipedia.org/wiki/Twitch_Plays_Pok%C3%A9mon)), multiple players can play the same game together by addressing the same deeplink. The game experience is powered by cloud-gaming, so the game is much smoother. [Check CrowdPlay section](#crowd-play-play-game-together)
 5. Vertically scaled: The infrastructure is designed to be able to scale under high traffic by adding more instances.
 6. Cloud storage: Game state is storing on online storage, so you can come back and continue playing your incomplete game later.
-7. Online multiplayer: Bring online multiplayer gaming to retro games. (In Road map)
+7. Online multiplayer: 2nd, 3rd player can join the same game in the same room.
 
 ## Run on local by Docker
 
@@ -34,7 +35,8 @@ You try running the server directly by `make dev.run-docker`. It will spawn a do
 
 Install Golang https://golang.org/doc/install . Because the project uses GoModule, so it requires Go1.11 version.
 
-(Optional) Setup MSYS2 (MinGW) environment if you are using Windows:
+### (Window only) Extra setup
+Setup MSYS2 (MinGW) environment if you are using Windows:
   * Please refer to the Libretro [doc](https://docs.libretro.com/development/retroarch/compilation/windows/#environment-configuration) for initial environment setup
   * Add Golang installation path into your .bashrc
     ```
@@ -46,7 +48,7 @@ Install Golang https://golang.org/doc/install . Because the project uses GoModul
   * To run the app use either MinGw terminal or copy: libdl.dll, libogg-0.dll, libopenal-1.dll, libopus-0.dll, libopusfile-0.dll, libvpx-1.dll
     files from `C:\msys64\mingw64\bin` into the `./bin` folder and then run.
 
-Install dependencies  
+### (All) Install Dependencies
 
   * Install [libvpx](https://www.webmproject.org/code/), [libopus](http://opus-codec.org/), [pkg-config](https://www.freedesktop.org/wiki/Software/pkg-config/)
 ```
@@ -74,6 +76,17 @@ Because the coordinator and workers need to run simultaneously. Workers connect 
 
 ## FAQ
 - [FAQ](https://github.com/giongto35/cloud-game/wiki/FAQ)  
+
+## Crowd Play, play game together
+By clicking these deep link, you can join the game directly and play it together with other people.  
+- [Play Pokemon Emerald](http://cloudretro.io/?id=652e45d78d2b91cd%7CPokemon%20-%20Emerald%20Version%20%28U%29) 
+- [Fire Emblem](http://cloudretro.io/?id=314ea4d7f9c94d25___Fire%20Emblem%20%28U%29%20%5B%21%5D)
+- [Advance War](http://cloudretro.io/?id=10fe582a7635b039___Advance%20Wars%20%28USA%29)
+- [Harvest Moon](http://cloudretro.io/?id=3f7462269e976303___Harvest%20Moon%20-%20Back%20to%20Nature%20%28USA%29)
+- [Play Pokemon Fire Red](http://cloudretro.io/?id=68bf168be6728020___Pokemon%20-%20Fire%20Red%20Version%20%28U%29%20%28V1.1%29) 
+- [Mario](http://cloudretro.io/?id=1953c570fee1f9e4___Super%20Mario%20Bros) 
+
+And you can host the new game by yourself by accessing [cloudretro.io](http://cloudretro.io) and click "share" button to generate a deeplink to your current game.
 
 ## Contribution
 - The project cannot be possible without the contribution with those amazing people:
