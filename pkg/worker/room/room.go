@@ -253,8 +253,9 @@ func (r *Room) Close() {
 	}
 
 	r.IsRunning = false
-	log.Println("Closing room", r.ID)
-	log.Println("Closing director of room ", r.ID)
+	log.Println("Closing room and director of room ", r.ID)
+	log.Println("Save Game before closing room")
+	r.SaveGame()
 	r.director.Close()
 	log.Println("Closing input of room ", r.ID)
 	close(r.inputChannel)
