@@ -306,7 +306,7 @@ function parseURLForRoom() {
         queryDict[item.split("=")[0]] = item.split("=")[1]
     });
     if (typeof queryDict["id"] === "string") {
-        return decodeURI(queryDict["id"]);
+        return decodeURIComponent(queryDict["id"]);
     }
     return null;
 }
