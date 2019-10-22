@@ -254,8 +254,12 @@ func (r *Room) Close() {
 
 	r.IsRunning = false
 	log.Println("Closing room and director of room ", r.ID)
-	log.Println("Save Game before closing room")
-	r.SaveGame()
+
+	// Save game before quit. Only save for game which was previous saved to avoid flooding database
+	if r.isRoomExisted() {
+		log.Println("Saved Game before closing room")
+		r.SaveGame()
+	}
 	r.director.Close()
 	log.Println("Closing input of room ", r.ID)
 	close(r.inputChannel)
@@ -264,6 +268,22 @@ func (r *Room) Close() {
 	// Just dont close it, let it be gc
 	//close(r.imageChannel)
 	//close(r.audioChannel)
+}
+
+func (r *Room) isRoomExisted() bool {
+	// Check if room is in online storage
+	_, err := r.onlineStorage.LoadFile(r.ID)
+	if err == nil {
+		return true
+	}
+
+	// Check if room is in local
+	savepath := util.GetSavePath(r.ID)
+	if r.isGameOnLocal(savepath) {
+		return true
+	}
+
+	return false
 }
 
 // SaveGame will save game to local and trigger a callback to store game on onlineStorage, so the game can be accessed later
