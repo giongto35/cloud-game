@@ -2,7 +2,7 @@
  * App controller module.
  * @version 1
  */
-/*const controller = */
+/* const controller = */
 (() => {
     const state = {
         screenState: 'loader',
@@ -42,10 +42,12 @@
     const onLatencyCheckRequest = (data) => {
         popup('Checking latency...');
         const timeoutMs = 2000;
+        const defaultTimeoutMs = ajax.defaultTimeoutMs();
+
         Promise.all((data.addresses || []).map(address => {
             let beforeTime = Date.now();
             return ajax.fetch(`http://${address}:9000/echo?_=${beforeTime}`, {}, timeoutMs)
-                .then(() => ({[address]: Date.now() - beforeTime}), () => ({[address]: ajax.timeout()}));
+                .then(() => ({[address]: Date.now() - beforeTime}), () => ({[address]: defaultTimeoutMs}));
         })).then(results => {
             // const latencies = Object.assign({}, ...results);
             const latencies = {};
@@ -103,7 +105,7 @@
         gameScreen.muted = false;
         const promise = gameScreen[0].play();
         if (promise !== undefined) {
-            promise.then(_ => log.info('Media can autoplay'))
+            promise.then(() => log.info('Media can autoplay'))
                 .catch(error => {
                     // Usually error happens when we autoplay unmuted video, browser requires manual play.
                     // We already muted video and use separate audio encoding so it's fine now
@@ -250,4 +252,4 @@
     });
     event.sub(KEY_STATE_UPDATED, data => rtcp.input(data));
 
-})($, room, event, env, gameList, input, log, KEY);
+})($, document, event, env, gameList, input, KEY, log, room);

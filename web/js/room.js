@@ -18,8 +18,8 @@ const room = (() => {
                 queryDict[item.split('=')[0]] = item.split('=')[1]
             });
 
-        if (typeof queryDict['id'] === 'string') {
-            return decodeURIComponent(queryDict['id']);
+        if (typeof queryDict.id === 'string') {
+            return decodeURIComponent(queryDict.id);
         }
 
         return null;
@@ -58,4 +58,4 @@ const room = (() => {
             return id;
         }
     }
-})(event);
+})(event, location, localStorage, window);

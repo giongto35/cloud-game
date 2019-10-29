@@ -3,16 +3,16 @@
  * @version 1
  */
 const ajax = (() => {
-    const timeout_ = 10000;
+    const defaultTimeout = 10000;
 
     return {
-        fetch: (url, options, timeout = timeout_) => new Promise((resolve, reject) => {
+        fetch: (url, options, timeout = defaultTimeout) => new Promise((resolve, reject) => {
             const controller = new AbortController();
             const signal = controller.signal;
-            const options_ = Object.assign({}, options, signal);
+            const allOptions = Object.assign({}, options, signal);
 
             // fetch(url, {...options, signal})
-            fetch(url, options_)
+            fetch(url, AllOptions)
                 .then(resolve, () => {
                     controller.abort();
                     return reject
@@ -24,6 +24,6 @@ const ajax = (() => {
                 reject();
             }, timeout);
         }),
-        timeout: () => timeout_
+        defaultTimeoutMs: () => defaultTimeout
     }
 })();

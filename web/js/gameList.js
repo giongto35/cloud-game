@@ -31,7 +31,7 @@ const gameList = (() => {
     const show = () => {
         render();
         menuItemChoice.show();
-        gameList.pickGame();
+        pickGame();
     };
 
     const hide = () => {
@@ -93,7 +93,7 @@ const gameList = (() => {
     const onMenuReleased = (position) => {
         menuTop -= position;
         const idx = Math.round((menuTop - MENU_TOP_POSITION) / -36);
-        gameList.pickGame(idx);
+        pickGame(idx);
     };
 
     event.sub(MENU_PRESSED, onMenuPressed);

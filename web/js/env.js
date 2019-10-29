@@ -134,4 +134,4 @@ const env = (() => {
             isLayoutSwitched: isLayoutSwitched
         })
     }
-})($, window, document, log);
+})($, document, log, navigator, screen, window);
