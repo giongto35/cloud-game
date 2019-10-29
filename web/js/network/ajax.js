@@ -12,7 +12,7 @@ const ajax = (() => {
             const allOptions = Object.assign({}, options, signal);
 
             // fetch(url, {...options, signal})
-            fetch(url, AllOptions)
+            fetch(url, allOptions)
                 .then(resolve, () => {
                     controller.abort();
                     return reject
