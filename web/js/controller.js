@@ -42,12 +42,12 @@
     const onLatencyCheckRequest = (data) => {
         popup('Checking latency...');
         const timeoutMs = 2000;
-        const defaultTimeoutMs = ajax.defaultTimeoutMs();
+        const maxTimeoutMs = timeoutMs > ajax.defaultTimeoutMs() ? timeoutMs : ajax.defaultTimeoutMs();
 
         Promise.all((data.addresses || []).map(address => {
             let beforeTime = Date.now();
             return ajax.fetch(`http://${address}:9000/echo?_=${beforeTime}`, {}, timeoutMs)
-                .then(() => ({[address]: Date.now() - beforeTime}), () => ({[address]: defaultTimeoutMs}));
+                .then(() => ({[address]: Date.now() - beforeTime}), () => ({[address]: maxTimeoutMs}));
         })).then(results => {
             // const latencies = Object.assign({}, ...results);
             const latencies = {};
@@ -79,9 +79,9 @@
         joinButton.html('play');
 
         // show menu scene
-        gameScreen.show().delay(0).fadeOut(0, function () {
+        gameScreen.show().delay(0).fadeOut(0, () => {
             log.debug('[control] loading menu screen');
-            menuScreen.fadeIn(0, function () {
+            menuScreen.fadeIn(0, () => {
                 gameList.show();
                 state.screenState = 'menu';
             });

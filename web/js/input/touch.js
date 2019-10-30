@@ -114,12 +114,12 @@ const touch = (() => {
         Right side - Control buttons
     */
 
-    function handleButtonDown(event) {
+    function handleButtonDown() {
         checkVpadState($(this).attr('value'), true);
         // add touchIdx?
     }
 
-    function handleButtonUp(event) {
+    function handleButtonUp() {
         checkVpadState($(this).attr('value'), false);
     }
 
