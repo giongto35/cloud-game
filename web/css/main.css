@@ -389,6 +389,10 @@ body {
     background-color: #333 !important;
 }
 
+#bottom-screen {
+    /* popups under the screen fix */
+    z-index: -1;
+}
 
 #game-screen {
     overflow: hidden;

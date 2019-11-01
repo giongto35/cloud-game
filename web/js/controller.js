@@ -4,43 +4,47 @@
  */
 /* const controller = */
 (() => {
-    const state = {
-        screenState: 'loader',
-        // flags first key press of a user
-        interacted: false
-    };
+    // current app state
+    let state;
+
+    // flags
+    // first user interaction
+    // used for mute/unmute
+    let interacted = false;
 
     // UI elements
     // use $element[0] for DOM element
     const gameScreen = $('#game-screen');
     const menuScreen = $('#menu-screen');
-    const saveButton = $('#btn-save');
-    const loadButton = $('#btn-load');
-    const joinButton = $('#btn-join');
     const helpOverlay = $('#help-overlay');
-    const popupBox = $("#noti-box");
+    const popupBox = $('#noti-box');
+    // keymap
+    const keyButtons = {};
+    Object.keys(KEY).forEach(button => {
+        keyButtons[KEY[button]] = $(`#btn-${KEY[button]}`);
+    });
+
+    const setState = (newState) => {
+        log.debug(`[control] [s] ${state ? state.name : '???'} -> ${newState.name}`);
+        state = newState;
+    };
 
     const onGameRoomAvailable = () => {
-        joinButton.html('share');
-        popup('Started! You can share you game!');
+        keyButtons[KEY.JOIN].html('share');
+        popup('Now you can share you game!');
     };
 
     const onConnectionReady = () => {
-        if (room.getId()) startGame();
-        if (state.screenState !== 'game') showMenuScreen();
-    };
-
-    const onMediaStreamInitialize = (data) => {
-        // TODO: Read from struct
-        // init package has 2 part [stunturn, game1, game2, game3 ...]
-        // const [stunturn, ...games] = data;
-        rtcp.start(data.data[0]);
-        data.data.shift();
-        gameList.set(data.data);
+        // start a game right away or show the menu
+        if (room.getId()) {
+            startGame();
+        } else {
+            state.menuReady();
+        }
     };
 
     const onLatencyCheckRequest = (data) => {
-        popup('Checking latency...');
+        popup('Ping check...');
         const timeoutMs = 2000;
         const maxTimeoutMs = timeoutMs > ajax.defaultTimeoutMs() ? timeoutMs : ajax.defaultTimeoutMs();
 
@@ -57,16 +61,34 @@
         });
     };
 
-    const toggleHelp = (show) => {
-        if (state.screenState === 'menu') {
-            saveButton.toggle(show);
-            loadButton.toggle(show);
-            menuScreen.toggle(!show);
-        } else {
-            gameScreen.toggle(!show);
-        }
+    const helpScreen = {
+        // don't call $ if holding the button
+        shown: false,
+        // undo the state when release the button
+        prevState: null,
+        // use function () if you need "this"
+        show: function (show) {
+            if (this.shown === show) return;
 
-        helpOverlay.toggle(show);
+            // hack
+            if (state === app.state.game || this.prevState === app.state.game) {
+                gameScreen.toggle(!show);
+            } else {
+                keyButtons[KEY.SAVE].toggle(show);
+                keyButtons[KEY.LOAD].toggle(show);
+                menuScreen.toggle(!show);
+            }
+            helpOverlay.toggle(show);
+
+            this.shown = show;
+
+            if (show) {
+                this.prevState = state;
+                setState(app.state.help);
+            } else {
+                setState(this.prevState);
+            }
+        }
     };
 
     const showMenuScreen = () => {
@@ -74,16 +96,16 @@
         gameScreen.hide();
         menuScreen.hide();
         gameList.hide();
-        saveButton.hide();
-        loadButton.hide();
-        joinButton.html('play');
+        keyButtons[KEY.SAVE].hide();
+        keyButtons[KEY.LOAD].hide();
+        keyButtons[KEY.JOIN].html('play');
 
         // show menu scene
         gameScreen.show().delay(0).fadeOut(0, () => {
             log.debug('[control] loading menu screen');
             menuScreen.fadeIn(0, () => {
                 gameList.show();
-                state.screenState = 'menu';
+                setState(app.state.menu);
             });
         });
     };
@@ -100,17 +122,17 @@
         }
 
         log.info('[control] starting game screen');
-        state.screenState = 'game';
 
-        gameScreen.muted = false;
+        setState(app.state.game);
+
         const promise = gameScreen[0].play();
         if (promise !== undefined) {
             promise.then(() => log.info('Media can autoplay'))
                 .catch(error => {
                     // Usually error happens when we autoplay unmuted video, browser requires manual play.
                     // We already muted video and use separate audio encoding so it's fine now
-                    log.info('Media Failed to autoplay');
-                    log.info(error)
+                    log.error('Media Failed to autoplay');
+                    log.error(error)
                     // TODO: Consider workaround
                 });
         }
@@ -126,8 +148,8 @@
         input.poll().disable();
         menuScreen.hide();
         gameScreen.show();
-        saveButton.show();
-        loadButton.show();
+        keyButtons[KEY.SAVE].show();
+        keyButtons[KEY.LOAD].show();
         // end clear
         input.poll().enable();
     };
@@ -137,98 +159,152 @@
         popupBox.fadeIn().delay(0).fadeOut();
     };
 
-    const copyToClipboard = (text) => {
-        const el = document.createElement('textarea');
-        el.value = text;
-        document.body.appendChild(el);
-        el.select();
-        document.execCommand('copy');
-        document.body.removeChild(el);
+    const onKeyPress = (data) => {
+        keyButtons[data.key].addClass('pressed');
+
+        if (KEY.HELP === data.key) helpScreen.show(true);
+
+        state.keyPress(data.key);
     };
 
-    const doButtonDown = (name) => {
-        $(`#btn-${name}`).addClass('pressed');
+    const onKeyRelease = (data) => {
+        keyButtons[data.key].removeClass('pressed');
 
-        if (state.screenState === 'menu') {
-            if (name === KEY.UP || name === KEY.DOWN) {
-                gameList.startGamePickerTimer(name === KEY.UP);
-            }
-        } else if (state.screenState === 'game') {
-            input.setKeyState(name, true);
+        if (KEY.HELP === data.key) helpScreen.show(false);
+
+        // maybe move it somewhere
+        if (!interacted) {
+            // unmute when there is user interaction
+            gameScreen[0].muted = false;
+            interacted = true;
         }
 
-        if (name === KEY.HELP) toggleHelp(true);
+        state.keyRelease(data.key);
     };
 
-    const doButtonUp = (name) => {
-        $(`#btn-${name}`).removeClass('pressed');
+    const app = {
+        state: {
+            eden: {
+                name: 'eden',
+                keyPress: () => {
+                },
+                keyRelease: () => {
+                },
+                menuReady: () => {
+                    showMenuScreen()
+                }
+            },
 
-        // log.debug(`[control] pressed: ${name}`);
+            help: {
+                name: 'help',
+                keyPress: () => {
+                },
+                keyRelease: () => {
+                },
+                menuReady: () => {
+                    // show silently
+                    gameScreen.hide();
+                    menuScreen.hide();
+                    gameList.hide();
+                    keyButtons[KEY.JOIN].html('play');
 
-        if (state.screenState === 'menu') {
-            switch (name) {
-                case KEY.UP:
-                case KEY.DOWN:
-                    gameList.stopGamePickerTimer();
-                    break;
-                case KEY.JOIN:
-                case KEY.A:
-                case KEY.B:
-                case KEY.X:
-                case KEY.Y:
-                case KEY.START:
-                case KEY.SELECT:
-                    startGame();
-                    break;
-                case KEY.QUIT:
-                    popup('You are already in menu screen!');
-                    break;
-                case KEY.LOAD:
-                    popup('Lets play to load game!');
-                    break;
-                case KEY.SAVE:
-                    popup('Lets play to save game!');
-                    break;
-            }
-        } else if (state.screenState === 'game') {
-            input.setKeyState(name, false);
+                    gameList.show();
 
-            switch (name) {
-                case KEY.JOIN:
-                    copyToClipboard(room.getLink());
-                    popup('Copy link to clipboard!');
-                    break;
-                case KEY.SAVE:
-                    socket.saveGame();
-                    break;
-                case KEY.LOAD:
-                    socket.loadGame();
-                    break;
-                case KEY.FULL:
-                    env.display().toggleFullscreen(gameScreen.height() !== window.innerHeight, gameScreen[0]);
-                    break;
-                case KEY.QUIT:
-                    input.poll().disable();
+                    helpScreen.prevState = app.state.menu;
+                }
+            },
 
-                    // TODO: Stop game
-                    socket.quitGame(room.getId());
-                    room.reset();
+            menu: {
+                name: 'menu',
+                keyPress: (key) => {
+                    switch (key) {
+                        case KEY.UP:
+                        case KEY.DOWN:
+                            gameList.startGamePickerTimer(key === KEY.UP);
+                            break;
+                    }
+                },
+                keyRelease: (key) => {
+                    switch (key) {
+                        case KEY.UP:
+                        case KEY.DOWN:
+                            gameList.stopGamePickerTimer();
+                            break;
+                        case KEY.JOIN:
+                        case KEY.A:
+                        case KEY.B:
+                        case KEY.X:
+                        case KEY.Y:
+                        case KEY.START:
+                        case KEY.SELECT:
+                            startGame();
+                            break;
+                        case KEY.QUIT:
+                            popup('You are already in menu screen!');
+                            break;
+                        case KEY.LOAD:
+                            popup('Lets play to load game!');
+                            break;
+                        case KEY.SAVE:
+                            popup('Lets play to save game!');
+                            break;
+                    }
+                },
+                menuReady: () => {
+                }
+            },
 
-                    popup('Quit!');
+            game: {
+                name: 'game',
+                keyPress: (key) => {
+                    input.setKeyState(key, true);
+                },
+                keyRelease: function (key) {
+                    input.setKeyState(key, false);
 
-                    location.reload();
-                    break;
+                    switch (key) {
+                        // nani? why join / copy switch, it's confusing
+                        case KEY.JOIN:
+                            room.copyToClipboard();
+                            popup('Copy link to clipboard!');
+                            break;
+                        case KEY.SAVE:
+                            socket.saveGame();
+                            break;
+                        case KEY.LOAD:
+                            socket.loadGame();
+                            break;
+                        case KEY.FULL:
+                            env.display().toggleFullscreen(gameScreen.height() !== window.innerHeight, gameScreen[0]);
+                            break;
+                        case KEY.QUIT:
+                            input.poll().disable();
+
+                            // TODO: Stop game
+                            socket.quitGame(room.getId());
+                            room.reset();
+
+                            popup('Quit!');
+
+                            location.reload();
+                            break;
+                    }
+
+                },
+                menuReady: () => {
+                }
             }
         }
-
-        if (name === KEY.HELP) toggleHelp(false);
     };
 
     // subscriptions
     event.sub(GAME_ROOM_AVAILABLE, onGameRoomAvailable, 2);
     event.sub(GAME_SAVED, () => popup('Saved'));
     event.sub(GAME_LOADED, () => popup('Loaded'));
-    event.sub(MEDIA_STREAM_INITIALIZED, onMediaStreamInitialize);
+    event.sub(MEDIA_STREAM_INITIALIZED, (data) => {
+        rtcp.start(data.stunturn);
+        gameList.set(data.games);
+    });
     event.sub(MEDIA_STREAM_SDP_AVAILABLE, (data) => rtcp.setRemoteDescription(data.sdp, gameScreen[0]));
     event.sub(MEDIA_STREAM_READY, () => rtcp.start());
     event.sub(CONNECTION_READY, onConnectionReady);
@@ -240,16 +316,11 @@
     event.sub(MENU_HANDLER_ATTACHED, (data) => {
         menuScreen.on(data.event, data.handler);
     });
-    event.sub(KEY_PRESSED, (data) => doButtonDown(data.key));
-    event.sub(KEY_RELEASED, (data) => {
-        if (!state.interacted) {
-            // unmute when there is user interaction
-            gameScreen[0].muted = false;
-            state.interacted = true;
-        }
-
-        doButtonUp(data.key)
-    });
+    event.sub(KEY_PRESSED, onKeyPress);
+    event.sub(KEY_RELEASED, onKeyRelease);
     event.sub(KEY_STATE_UPDATED, data => rtcp.input(data));
+
+    // initial app state
+    setState(app.state.eden);
 
 })($, document, event, env, gameList, input, KEY, log, room);

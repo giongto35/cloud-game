@@ -31,7 +31,11 @@ const socket = (() => {
 
             switch (message) {
                 case 'init':
-                    event.pub(MEDIA_STREAM_INITIALIZED, {data: JSON.parse(data.data)});
+                    // TODO: Read from struct
+                    // init package has 2 part [stunturn, game1, game2, game3 ...]
+                    // const [stunturn, ...games] = data;
+                    let serverData = JSON.parse(data.data);
+                    event.pub(MEDIA_STREAM_INITIALIZED, {stunturn: serverData.shift(), games: serverData});
                     break;
                 case 'sdp':
                     event.pub(MEDIA_STREAM_SDP_AVAILABLE, {sdp: data.data});
