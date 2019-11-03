@@ -41,6 +41,7 @@ const input = (() => {
         }
     };
 
+    // relatively slow method
     const sendKeyState = () => {
         // check if state is changed
         if (unchangePacket > 0) {

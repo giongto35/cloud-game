@@ -20,7 +20,7 @@ const gameList = (() => {
     };
 
     const render = () => {
-        log.debug('[control] load game menu');
+        log.debug('[games] load game menu');
 
         listBox.html(games
             .map(game => `<div class="menu-item unselectable" unselectable="on"><div><span>${game}</span></div></div>`)
@@ -64,7 +64,7 @@ const gameList = (() => {
     const startGamePickerTimer = (upDirection) => {
         if (gamePickTimer !== null) return;
 
-        log.debug('[control] start game picker timer');
+        log.debug('[games] start game picker timer');
         const shift = upDirection ? -1 : 1;
         pickGame(gameIndex + shift);
 
@@ -78,7 +78,7 @@ const gameList = (() => {
     const stopGamePickerTimer = () => {
         if (gamePickTimer === null) return;
 
-        log.debug('[control] stop game picker timer');
+        log.debug('[games] stop game picker timer');
         clearInterval(gamePickTimer);
         gamePickTimer = null;
     };
@@ -92,8 +92,8 @@ const gameList = (() => {
 
     const onMenuReleased = (position) => {
         menuTop -= position;
-        const idx = Math.round((menuTop - MENU_TOP_POSITION) / -36);
-        pickGame(idx);
+        const index = Math.round((menuTop - MENU_TOP_POSITION) / -36);
+        pickGame(index);
     };
 
     event.sub(MENU_PRESSED, onMenuPressed);

@@ -13,10 +13,8 @@ const rtcp = (() => {
     const start = (iceservers) => {
         log.info(`[rtcp] <- received stunturn from worker ${iceservers}`);
 
-        iceservers = JSON.parse(iceservers);
-
         connection = new RTCPeerConnection({
-            iceServers: iceservers
+            iceServers: JSON.parse(iceservers)
         });
 
         mediaStream = new MediaStream();
@@ -36,9 +34,6 @@ const rtcp = (() => {
         connection.oniceconnectionstatechange = ice.onIceConnectionStateChange;
         connection.onicegatheringstatechange = ice.onIceStateChange;
         connection.onicecandidate = ice.onIcecandidate;
-        // reserved for the future
-        // connection.onicecandidateerror = log.error;
-
         connection.ontrack = event => mediaStream.addTrack(event.track);
 
         connection.createOffer({offerToReceiveVideo: true, offerToReceiveAudio: true})

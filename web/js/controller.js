@@ -154,6 +154,7 @@
         input.poll().enable();
     };
 
+    // !to add debounce
     const popup = (msg) => {
         popupBox.html(msg);
         popupBox.fadeIn().delay(0).fadeOut();
