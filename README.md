@@ -1,6 +1,7 @@
 # CloudRetro
 **Open-source Cloud Gaming Service For Retro Games**  
 **Video demo**: https://www.youtube.com/watch?v=GUBrJGAxZZg
+**My Slide at GopherconVN2019**: https://docs.google.com/presentation/d/1VFv8l2hVUINv2U36r7L11g4Oa_zVjHlr6MYymUbQXT4/edit?usp=sharing
 
 ## Introduction
 This project aims to experiment Cloud-gaming performance with [WebRTC](https://github.com/pion/webrtc/) and [libretro](https://www.libretro.com/), as well as trying to deliver the most modern and convenient gaming experience through the technology. 
