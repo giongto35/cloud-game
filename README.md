@@ -1,6 +1,6 @@
 # CloudRetro
 **Open-source Cloud Gaming Service For Retro Games**  
-**Video demo**: https://www.youtube.com/watch?v=GUBrJGAxZZg
+**Video demo**: https://www.youtube.com/watch?v=GUBrJGAxZZg  
 **My Slide at GopherconVN2019**: https://docs.google.com/presentation/d/1VFv8l2hVUINv2U36r7L11g4Oa_zVjHlr6MYymUbQXT4/edit?usp=sharing
 
 ## Introduction
