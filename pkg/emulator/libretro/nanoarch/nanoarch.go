@@ -136,7 +136,10 @@ func audioWrite2(buf unsafe.Pointer, frames C.size_t) C.size_t {
 	// copy because pcm slice refer to buf underlying pointer, and buf pointer is the same in continuos frames
 	copy(p, pcm)
 
-	NAEmulator.audioChannel <- p
+	select {
+	case NAEmulator.audioChannel <- p:
+	default:
+	}
 
 	return frames
 }
