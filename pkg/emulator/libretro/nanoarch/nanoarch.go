@@ -10,6 +10,7 @@ import (
 	"sync"
 	"unsafe"
 
+	"github.com/giongto35/cloud-game/pkg/config"
 	"github.com/giongto35/cloud-game/pkg/emulator/libretro/image"
 )
 
@@ -231,13 +232,22 @@ var retroSerializeSize unsafe.Pointer
 var retroSerialize unsafe.Pointer
 var retroUnserialize unsafe.Pointer
 
-func coreLoad(sofile string) {
-
+func coreLoad(pathNoExt string) {
 	mu.Lock()
-	h := C.dlopen(C.CString(sofile), C.RTLD_LAZY)
+	// Different OS requires different library, bruteforce till it finish
+	h := C.dlopen(C.CString(pathNoExt+".so"), C.RTLD_LAZY)
+
+	for _, ext := range config.EmulatorExtension {
+		pathWithExt := pathNoExt + ext
+		h := C.dlopen(C.CString(pathWithExt), C.RTLD_LAZY)
+		if h != nil {
+			break
+		}
+	}
+
 	if h == nil {
 		err := C.dlerror()
-		log.Fatalf("error loading %s, err %+v", sofile, *err)
+		log.Fatalf("error loading %s, err %+v", pathNoExt, *err)
 	}
 
 	retroInit = C.dlsym(h, C.CString("retro_init"))
