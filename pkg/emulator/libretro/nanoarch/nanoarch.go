@@ -239,7 +239,7 @@ func coreLoad(pathNoExt string) {
 
 	for _, ext := range config.EmulatorExtension {
 		pathWithExt := pathNoExt + ext
-		h := C.dlopen(C.CString(pathWithExt), C.RTLD_LAZY)
+		h = C.dlopen(C.CString(pathWithExt), C.RTLD_LAZY)
 		if h != nil {
 			break
 		}
