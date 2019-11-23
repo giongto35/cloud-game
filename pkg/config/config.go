@@ -54,7 +54,7 @@ type EmulatorMeta struct {
 
 var EmulatorConfig = map[string]EmulatorMeta{
 	"gba": {
-		Path:   "assets/emulator/libretro/cores/mgba_libretro.so",
+		Path:   "assets/emulator/libretro/cores/mgba_libretro",
 		Width:  240,
 		Height: 160,
 	},
@@ -64,18 +64,20 @@ var EmulatorConfig = map[string]EmulatorMeta{
 		Height: 240,
 	},
 	"nes": {
-		Path:   "assets/emulator/libretro/cores/nestopia_libretro.so",
+		Path:   "assets/emulator/libretro/cores/nestopia_libretro",
 		Width:  256,
 		Height: 240,
 	},
 	"snes": {
-		Path:   "assets/emulator/libretro/cores/mednafen_snes_libretro.so",
+		Path:   "assets/emulator/libretro/cores/mednafen_snes_libretro",
 		Width:  256,
 		Height: 224,
 	},
 	"mame": {
-		Path:   "assets/emulator/libretro/cores/mame2016_libretro.so",
+		Path:   "assets/emulator/libretro/cores/mame2016_libretro",
 		Width:  0,
 		Height: 0,
 	},
 }
+
+var EmulatorExtension = []string{".so", ".dylib", ".dll"}
