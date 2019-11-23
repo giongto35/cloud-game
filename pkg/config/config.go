@@ -59,7 +59,7 @@ var EmulatorConfig = map[string]EmulatorMeta{
 		Height: 160,
 	},
 	"pcsx": {
-		Path:   "assets/emulator/libretro/cores/mednafen_psx_libretro",
+		Path:   "assets/emulator/libretro/cores/pcsx_rearmed_libretro.so",
 		Width:  350,
 		Height: 240,
 	},
