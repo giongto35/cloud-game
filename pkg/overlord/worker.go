@@ -17,13 +17,26 @@ type WorkerClient struct {
 
 // RouteWorker are all routes server received from worker
 func (o *Server) RouteWorker(workerClient *WorkerClient) {
-	// registerRoom event from a server, when server created a new room.
+	// registerRoom event from a worker, when worker created a new room.
 	// RoomID is global so it is managed by overlord.
 	workerClient.Receive("registerRoom", func(resp cws.WSPacket) cws.WSPacket {
-		log.Println("Overlord: Received registerRoom ", resp.Data, workerClient.ServerID)
+		log.Printf("Overlord: Received registerRoom room %s from worker %s", resp.Data, workerClient.ServerID)
 		o.roomToServer[resp.Data] = workerClient.ServerID
+		log.Printf("Overlord: Current room list is: %+v", o.roomToServer)
+
 		return cws.WSPacket{
 			ID: "registerRoom",
+		}
+	})
+
+	// closeRoom event from a worker, when worker close a room
+	workerClient.Receive("closeRoom", func(resp cws.WSPacket) cws.WSPacket {
+		log.Printf("Overlord: Received closeRoom room %s from worker %s", resp.Data, workerClient.ServerID)
+		delete(o.roomToServer, resp.Data)
+		log.Printf("Overlord: Current room list is: %+v", o.roomToServer)
+
+		return cws.WSPacket{
+			ID: "closeRoom",
 		}
 	})
 
