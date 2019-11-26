@@ -70,15 +70,11 @@ func NewRoom(roomID string, gameName string, videoEncoderType string, onlineStor
 	gameInfo := gamelist.GetGameInfoFromName(gameName)
 
 	log.Println("Init new room: ", roomID, gameName, gameInfo)
-	imageChannel := make(chan *image.RGBA, 30)
-	audioChannel := make(chan []int16, 30)
 	inputChannel := make(chan int, 100)
 
 	room := &Room{
 		ID: roomID,
 
-		imageChannel:  imageChannel,
-		audioChannel:  audioChannel,
 		inputChannel:  inputChannel,
 		rtcSessions:   []*webrtc.WebRTC{},
 		sessionsLock:  &sync.Mutex{},
@@ -102,7 +98,12 @@ func NewRoom(roomID string, gameName string, videoEncoderType string, onlineStor
 
 		// Spawn new emulator based on gameName and plug-in all channels
 		emuName, _ := config.FileTypeToEmulator[game.Type]
-		room.director = getEmulator(emuName, roomID, imageChannel, audioChannel, inputChannel)
+
+		director, imageChannel, audioChannel := nanoarch.Init(emuName, roomID, inputChannel)
+		room.director = director
+		room.imageChannel = imageChannel
+		room.audioChannel = audioChannel
+
 		gameMeta := room.director.LoadMeta(game.Path)
 
 		// nwidth, nheight are the webRTC output size.
@@ -153,7 +154,6 @@ func resizeToAspect(ratio float64, sw int, sh int) (dw int, dh int) {
 
 // getEmulator creates new emulator and run it
 func getEmulator(emuName string, roomID string, imageChannel chan<- *image.RGBA, audioChannel chan<- []int16, inputChannel <-chan int) emulator.CloudEmulator {
-	nanoarch.Init(emuName, roomID, imageChannel, audioChannel, inputChannel)
 
 	return nanoarch.NAEmulator
 }
