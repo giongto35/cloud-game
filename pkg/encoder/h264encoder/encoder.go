@@ -130,6 +130,7 @@ func (v *H264Encoder) GetOutputChan() chan []byte {
 
 // GetDoneChan returns done channel
 func (v *H264Encoder) Stop() {
-	v.Done = true
-	close(v.Input)
+	//v.Done = true
+	//close(v.Input)
+	v.release()
 }

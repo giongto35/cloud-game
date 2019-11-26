@@ -50,7 +50,6 @@ type VpxEncoder struct {
 	Input  chan *image.RGBA // yuvI420
 
 	IsRunning bool
-	Done      bool
 
 	width  int
 	height int
@@ -71,7 +70,6 @@ func NewVpxEncoder(w, h, fps, bitrate, keyframe int) (encoder.Encoder, error) {
 		Input:  make(chan *image.RGBA, chanSize),
 
 		IsRunning: true,
-		Done:      false,
 		// C
 		width:            w,
 		height:           h,
@@ -126,24 +124,12 @@ func (v *VpxEncoder) startLooping() {
 		if r := recover(); r != nil {
 			log.Println("Warn: Recovered panic in encoding ", r)
 		}
-
-		if v.Done == true {
-			// The first time we see IsRunning set to false, we release and return
-			v.release()
-			return
-		}
 	}()
 
 	size := int(float32(v.width*v.height) * 1.5)
 	yuv := make([]byte, size, size)
 
 	for img := range v.Input {
-		if v.Done == true {
-			// The first time we see IsRunning set to false, we release and return
-			v.release()
-			return
-		}
-
 		util.RgbaToYuvInplace(img, yuv, v.width, v.height)
 
 		// Add Image
@@ -201,5 +187,6 @@ func (v *VpxEncoder) GetOutputChan() chan []byte {
 
 // GetDoneChan returns done channel
 func (v *VpxEncoder) Stop() {
-	v.Done = true
+	log.Println("Encoder Stopped")
+	v.release()
 }
