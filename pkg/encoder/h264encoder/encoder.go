@@ -21,7 +21,6 @@ type H264Encoder struct {
 	enc *x264.Encoder
 
 	IsRunning bool
-	Done      bool
 	// C
 	width  int
 	height int
@@ -35,7 +34,6 @@ func NewH264Encoder(width, height, fps int) (encoder.Encoder, error) {
 		Input:  make(chan *image.RGBA, chanSize),
 
 		IsRunning: true,
-		Done:      false,
 
 		buf:    bytes.NewBuffer(make([]byte, 0)),
 		width:  width,
@@ -79,21 +77,9 @@ func (v *H264Encoder) startLooping() {
 			log.Println("Warn: Recovered panic in encoding ", r)
 			log.Println(debug.Stack())
 		}
-
-		if v.Done == true {
-			// The first time we see IsRunning set to false, we release and return
-			v.release()
-			return
-		}
 	}()
 
 	for img := range v.Input {
-		if v.Done == true {
-			// The first time we see IsRunning set to false, we release and return
-			v.release()
-			return
-		}
-
 		err := v.enc.Encode(img)
 		if err != nil {
 			log.Println("err encoding ", img, " using h264")
@@ -130,7 +116,5 @@ func (v *H264Encoder) GetOutputChan() chan []byte {
 
 // GetDoneChan returns done channel
 func (v *H264Encoder) Stop() {
-	//v.Done = true
-	//close(v.Input)
 	v.release()
 }
