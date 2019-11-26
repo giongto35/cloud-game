@@ -49,8 +49,6 @@ type VpxEncoder struct {
 	Output chan []byte      // frame
 	Input  chan *image.RGBA // yuvI420
 
-	IsRunning bool
-
 	width  int
 	height int
 	// C
@@ -69,7 +67,6 @@ func NewVpxEncoder(w, h, fps, bitrate, keyframe int) (encoder.Encoder, error) {
 		Output: make(chan []byte, 5*chanSize),
 		Input:  make(chan *image.RGBA, chanSize),
 
-		IsRunning: true,
 		// C
 		width:            w,
 		height:           h,
@@ -114,7 +111,6 @@ func (v *VpxEncoder) init() error {
 	if C.call_vpx_codec_enc_init(&v.vpxCodexCtx, encoder, &cfg) != 0 {
 		return fmt.Errorf("Failed to initialize encoder")
 	}
-	v.IsRunning = true
 	go v.startLooping()
 	return nil
 }
@@ -161,18 +157,14 @@ func (v *VpxEncoder) startLooping() {
 
 // Release release memory and stop loop
 func (v *VpxEncoder) release() {
-	if v.IsRunning {
-		v.IsRunning = false
-		log.Println("Releasing encoder")
-		C.vpx_img_free(&v.vpxImage)
-		C.vpx_codec_destroy(&v.vpxCodexCtx)
-		// TODO: Bug here, after close it will signal
-		close(v.Output)
-		if v.Input != nil {
-			close(v.Input)
-		}
+	log.Println("Releasing encoder")
+	C.vpx_img_free(&v.vpxImage)
+	C.vpx_codec_destroy(&v.vpxCodexCtx)
+	// TODO: Bug here, after close it will signal
+	close(v.Output)
+	if v.Input != nil {
+		close(v.Input)
 	}
-	// TODO: Can we merge IsRunning and Done together
 }
 
 // GetInputChan returns input channel
@@ -187,6 +179,5 @@ func (v *VpxEncoder) GetOutputChan() chan []byte {
 
 // GetDoneChan returns done channel
 func (v *VpxEncoder) Stop() {
-	log.Println("Encoder Stopped")
 	v.release()
 }

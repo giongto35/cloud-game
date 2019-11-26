@@ -20,7 +20,6 @@ type H264Encoder struct {
 	buf *bytes.Buffer
 	enc *x264.Encoder
 
-	IsRunning bool
 	// C
 	width  int
 	height int
@@ -32,8 +31,6 @@ func NewH264Encoder(width, height, fps int) (encoder.Encoder, error) {
 	v := &H264Encoder{
 		Output: make(chan []byte, 5*chanSize),
 		Input:  make(chan *image.RGBA, chanSize),
-
-		IsRunning: true,
 
 		buf:    bytes.NewBuffer(make([]byte, 0)),
 		width:  width,
@@ -49,8 +46,6 @@ func NewH264Encoder(width, height, fps int) (encoder.Encoder, error) {
 }
 
 func (v *H264Encoder) init() error {
-	v.IsRunning = true
-
 	opts := &x264.Options{
 		Width:     v.width,
 		Height:    v.height,
@@ -91,17 +86,13 @@ func (v *H264Encoder) startLooping() {
 
 // Release release memory and stop loop
 func (v *H264Encoder) release() {
-	if v.IsRunning {
-		v.IsRunning = false
-		log.Println("Releasing encoder")
-		// TODO: Bug here, after close it will signal
-		close(v.Output)
-		err := v.enc.Close()
-		if err != nil {
-			log.Println("Failed to close H264 encoder")
-		}
+	log.Println("Releasing encoder")
+	// TODO: Bug here, after close it will signal
+	close(v.Output)
+	err := v.enc.Close()
+	if err != nil {
+		log.Println("Failed to close H264 encoder")
 	}
-	// TODO: Can we merge IsRunning and Done together
 }
 
 // GetInputChan returns input channel
