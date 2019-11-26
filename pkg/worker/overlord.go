@@ -215,16 +215,17 @@ func getServerIDOfRoom(oc *OverlordClient, roomID string) string {
 	return packet.Data
 }
 
-func (h *Handler) startGameHandler(gameName, roomID string, playerIndex int, peerconnection *webrtc.WebRTC, videoEncoderType string) *room.Room {
+// startGameHandler starts a game if roomID is given, if not create new room
+func (h *Handler) startGameHandler(gameName, existedRoomID string, playerIndex int, peerconnection *webrtc.WebRTC, videoEncoderType string) *room.Room {
 	log.Println("Starting game", gameName)
 	// If we are connecting to overlord, request corresponding serverID based on roomID
-	// TODO: check if roomID is in the current server
-	room := h.getRoom(roomID)
-	log.Println("Got Room from local ", room, " ID: ", roomID)
+	// TODO: check if existedRoomID is in the current server
+	room := h.getRoom(existedRoomID)
 	// If room is not running
 	if room == nil {
+		log.Println("Got Room from local ", room, " ID: ", existedRoomID)
 		// Create new room
-		room = h.createNewRoom(gameName, roomID, playerIndex, videoEncoderType)
+		room = h.createNewRoom(gameName, existedRoomID, playerIndex, videoEncoderType)
 		// Wait for done signal from room
 		go func() {
 			<-room.Done
@@ -232,7 +233,7 @@ func (h *Handler) startGameHandler(gameName, roomID string, playerIndex int, pee
 			// send signal to overlord that the room is closed, overlord will remove that room
 			h.oClient.Send(cws.WSPacket{
 				ID:   "closeRoom",
-				Data: roomID,
+				Data: room.ID,
 			}, nil)
 		}()
 	}
@@ -248,7 +249,7 @@ func (h *Handler) startGameHandler(gameName, roomID string, playerIndex int, pee
 	if room != nil && h.oClient != nil {
 		h.oClient.Send(cws.WSPacket{
 			ID:   "registerRoom",
-			Data: roomID,
+			Data: room.ID,
 		}, nil)
 	}
 

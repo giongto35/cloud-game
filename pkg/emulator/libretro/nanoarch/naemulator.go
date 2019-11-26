@@ -65,8 +65,10 @@ var NAEmulator *naEmulator
 var outputImg *image.RGBA
 
 // NAEmulator implements CloudEmulator interface based on NanoArch(golang RetroArch)
-func NewNAEmulator(etype string, roomID string, imageChannel chan<- *image.RGBA, audioChannel chan<- []int16, inputChannel <-chan int) *naEmulator {
+func NewNAEmulator(etype string, roomID string, inputChannel <-chan int) (*naEmulator, chan *image.RGBA, chan []int16) {
 	meta := config.EmulatorConfig[etype]
+	imageChannel := make(chan *image.RGBA, 30)
+	audioChannel := make(chan []int16, 30)
 
 	return &naEmulator{
 		meta:         meta,
@@ -76,13 +78,17 @@ func NewNAEmulator(etype string, roomID string, imageChannel chan<- *image.RGBA,
 		keys:         make([]bool, joypadNumKeys),
 		roomID:       roomID,
 		done:         make(chan struct{}, 1),
-	}
+	}, imageChannel, audioChannel
 }
 
 // Init initialize new RetroArch cloud emulator
-func Init(etype string, roomID string, imageChannel chan<- *image.RGBA, audioChannel chan<- []int16, inputChannel <-chan int) {
-	NAEmulator = NewNAEmulator(etype, roomID, imageChannel, audioChannel, inputChannel)
+func Init(etype string, roomID string, inputChannel <-chan int) (*naEmulator, chan *image.RGBA, chan []int16) {
+	emulator, imageChannel, audioChannel := NewNAEmulator(etype, roomID, inputChannel)
+	// Set to global NAEmulator
+	NAEmulator = emulator
+
 	go NAEmulator.listenInput()
+	return emulator, imageChannel, audioChannel
 }
 
 func (na *naEmulator) listenInput() {
@@ -130,6 +136,8 @@ func (na *naEmulator) Start() {
 		// Slow response here
 		case <-na.done:
 			nanoarchShutdown()
+			close(na.imageChannel)
+			close(na.audioChannel)
 			log.Println("Closed Director")
 			return
 		default:
