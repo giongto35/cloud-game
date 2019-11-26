@@ -229,6 +229,11 @@ func (h *Handler) startGameHandler(gameName, roomID string, playerIndex int, pee
 		go func() {
 			<-room.Done
 			h.detachRoom(room.ID)
+			// send signal to overlord that the room is closed, overlord will remove that room
+			h.oClient.Send(cws.WSPacket{
+				ID:   "closeRoom",
+				Data: roomID,
+			}, nil)
 		}()
 	}
 
