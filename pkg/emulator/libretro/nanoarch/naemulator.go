@@ -3,6 +3,7 @@ package nanoarch
 import (
 	"image"
 	"log"
+	"sync"
 	"time"
 
 	"github.com/giongto35/cloud-game/pkg/config"
@@ -59,6 +60,9 @@ type naEmulator struct {
 
 	keys []bool
 	done chan struct{}
+
+	// lock to lock uninteruptable operation
+	lock *sync.Mutex
 }
 
 var NAEmulator *naEmulator
@@ -78,6 +82,7 @@ func NewNAEmulator(etype string, roomID string, inputChannel <-chan int) (*naEmu
 		keys:         make([]bool, joypadNumKeys),
 		roomID:       roomID,
 		done:         make(chan struct{}, 1),
+		lock:         &sync.Mutex{},
 	}, imageChannel, audioChannel
 }
 

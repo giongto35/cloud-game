@@ -18,20 +18,16 @@ import "C"
 
 import (
 	"io/ioutil"
-	"sync"
 )
 
-var saveLock int32
-var m sync.Mutex
-
 func (na *naEmulator) GetLock() {
-	//atomic.CompareAndSwapInt32(&saveLock, 0, 1)
-	m.Lock()
+	//atomic.CompareAndSwapInt32(&na.saveLock, 0, 1)
+	na.lock.Lock()
 }
 
 func (na *naEmulator) ReleaseLock() {
-	//atomic.CompareAndSwapInt32(&saveLock, 1, 0)
-	m.Unlock()
+	//atomic.CompareAndSwapInt32(&na.saveLock, 1, 0)
+	na.lock.Unlock()
 }
 
 // Save the current state to the filesystem. name is the name of the
