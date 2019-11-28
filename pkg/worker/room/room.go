@@ -199,6 +199,7 @@ func (r *Room) startWebRTCSession(peerconnection *webrtc.WebRTC, playerIndex int
 		}
 	}()
 
+	// bug: when inputchannel here = nil , skip and finish
 	for input := range peerconnection.InputChannel {
 		// NOTE: when room is no longer running. InputChannel needs to have extra event to go inside the loop
 		if peerconnection.Done || !peerconnection.IsConnected() || !r.IsRunning {
@@ -258,9 +259,16 @@ func (r *Room) Close() {
 	// Save game before quit. Only save for game which was previous saved to avoid flooding database
 	if r.isRoomExisted() {
 		log.Println("Saved Game before closing room")
-		r.SaveGame()
+		// use goroutine here because SaveGame attempt to acquire a emulator lock.
+		// the lock is holding before coming to close, so it will cause deadlock if SaveGame is synchronous
+		go func() {
+			// Save before close, so save can have correct state (Not sure) may again cause deadlock
+			r.SaveGame()
+			r.director.Close()
+		}()
+	} else {
+		r.director.Close()
 	}
-	r.director.Close()
 	log.Println("Closing input of room ", r.ID)
 	close(r.inputChannel)
 	close(r.Done)
