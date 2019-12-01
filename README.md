@@ -89,7 +89,7 @@ By clicking these deep link, you can join the game directly and play it together
 - [Mario](http://cloudretro.io/?id=1953c570fee1f9e4___Super%20Mario%20Bros) 
 
 And you can host the new game by yourself by accessing [cloudretro.io](http://cloudretro.io) and click "share" button to generate a deeplink to your current game.  
-Disclaimer: You may experience lagging when joining a room because the room is in a different zone. In that case, you should create a new room for crowd play.
+_Disclaimer: You may experience lagging when joining a room because the room is in a different zone. In that case, you should create a new room for crowd play._
 
 ![screenshot](docs/img/crowdplay.gif)
 
