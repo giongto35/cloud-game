@@ -88,9 +88,10 @@ By clicking these deep link, you can join the game directly and play it together
 - [Play Pokemon Fire Red](http://cloudretro.io/?id=68bf168be6728020___Pokemon%20-%20Fire%20Red%20Version%20%28U%29%20%28V1.1%29) 
 - [Mario](http://cloudretro.io/?id=1953c570fee1f9e4___Super%20Mario%20Bros) 
 
-![screenshot](docs/img/landing-page-ps-hm.png)
+And you can host the new game by yourself by accessing [cloudretro.io](http://cloudretro.io) and click "share" button to generate a deeplink to your current game.  
+Disclaimer: You may experience lagging when joining a room because the room is in a different zone. In that case, you should create a new room for crowd play.
 
-And you can host the new game by yourself by accessing [cloudretro.io](http://cloudretro.io) and click "share" button to generate a deeplink to your current game.
+![screenshot](docs/img/crowdplay.gif)
 
 ## Contribution
 - The project cannot be possible without the contribution with those amazing people:
