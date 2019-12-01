@@ -61,7 +61,7 @@ clean:
 	@go clean
 
 dev.tools:
-	./hack/script/install_tools.sh
+	./hack/scripts/install_tools.sh
 
 dev.build: compile
 	go build -a -tags netgo -ldflags '-w' -o bin/overlord ./cmd/overlord
