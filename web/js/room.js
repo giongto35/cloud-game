@@ -11,7 +11,11 @@ const room = (() => {
     // !to rewrite
     const parseURLForRoom = () => {
         let queryDict = {};
+        let regex = /^\/?([A-Za-z]*)\/?/g;
+        var zone = regex.exec(location.pathname)[1]
+        var room = null
 
+        // get room from URL
         location.search.substr(1)
             .split('&')
             .forEach((item) => {
@@ -19,10 +23,10 @@ const room = (() => {
             });
 
         if (typeof queryDict.id === 'string') {
-            return decodeURIComponent(queryDict.id);
+            room =  decodeURIComponent(queryDict.id);
         }
 
-        return null;
+        return [room, zone];
     };
 
     event.sub(GAME_ROOM_AVAILABLE, data => {
@@ -50,12 +54,15 @@ const room = (() => {
             //roomID = loadRoomID();
 
             // Shared URL second
-            const parsedId = parseURLForRoom();
+            const [parsedId, czone] = parseURLForRoom();
             if (parsedId !== null) {
                 id = parsedId;
             }
+            if (czone !== null) {
+                zone = czone;
+            }
 
-            return id;
+            return [id, zone];
         },
         copyToClipboard: () => {
             const el = document.createElement('textarea');

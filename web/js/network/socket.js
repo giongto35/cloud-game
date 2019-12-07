@@ -11,8 +11,11 @@ const socket = (() => {
     let conn;
     let curPacketId = '';
 
-    const init = (roomId) => {
-        conn = new WebSocket(`ws://${location.host}/ws${roomId ? `?room_id=${roomId}` : ''}`);
+    const init = (roomId, zone) => {
+        const paramString = new URLSearchParams({roomId: roomId, zone: zone})
+
+        //conn = new WebSocket(`ws://${location.host}/ws${roomId ? `?room_id=${roomId}` : '' }&zone=${zone}`);
+        conn = new WebSocket(`ws://${location.host}/ws?{paramString.toString()}`);
 
         // Clear old roomID
         conn.onopen = () => {

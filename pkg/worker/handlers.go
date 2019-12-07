@@ -2,6 +2,7 @@ package worker
 
 import (
 	"log"
+	"net/url"
 	"os"
 	"path"
 	"time"
@@ -58,7 +59,7 @@ func NewHandler(cfg worker.Config) *Handler {
 // Run starts a Handler running logic
 func (h *Handler) Run() {
 	for {
-		oClient, err := setupOverlordConnection(h.overlordHost)
+		oClient, err := setupOverlordConnection(h.overlordHost, h.cfg.Zone)
 		if err != nil {
 			log.Println("Cannot connect to overlord. Retrying...")
 			time.Sleep(time.Second)
@@ -74,8 +75,16 @@ func (h *Handler) Run() {
 	}
 }
 
-func setupOverlordConnection(ohost string) (*OverlordClient, error) {
-	conn, err := createOverlordConnection(ohost)
+func setupOverlordConnection(ohost string, zone string) (*OverlordClient, error) {
+	overlordURL := url.URL{
+		Scheme:   "ws",
+		Host:     ohost,
+		Path:     "/wso",
+		RawQuery: "zone=" + zone,
+	}
+	log.Println("Worker connecting to overlord:", overlordURL.String())
+
+	conn, err := createOverlordConnection(overlordURL.String())
 	if err != nil {
 		return nil, err
 	}
