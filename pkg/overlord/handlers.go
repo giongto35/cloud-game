@@ -114,7 +114,7 @@ func (o *Server) WSO(w http.ResponseWriter, r *http.Request) {
 
 // WSO handles all connections from user/frontend to overlord
 func (o *Server) WS(w http.ResponseWriter, r *http.Request) {
-	log.Println("Browser connected to overlord")
+	log.Println("A user connected to overlord ", r.URL)
 	defer func() {
 		if r := recover(); r != nil {
 			log.Println("Warn: Something wrong. Recovered in ", r)
