@@ -7,7 +7,7 @@ $(document).ready(() => {
     joystick.init();
     touch.init();
 
-    const roomId = room.loadMaybe();
+    [roomId, zone] = room.loadMaybe();
     // if from URL -> start game immediately!
-    socket.init(roomId);
+    socket.init(roomId, zone);
 });
