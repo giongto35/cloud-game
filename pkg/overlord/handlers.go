@@ -7,7 +7,6 @@ import (
 	"html/template"
 	"log"
 	"math"
-	"math/rand"
 	"net/http"
 	"strings"
 
@@ -25,9 +24,9 @@ const (
 
 type Server struct {
 	cfg Config
-	// roomToServer map roomID to workerID
-	roomToServer map[string]string
-	// workerClients are the map serverID to worker Client
+	// roomToWorker map roomID to workerID
+	roomToWorker map[string]string
+	// workerClients are the map workerID to worker Client
 	workerClients map[string]*WorkerClient
 }
 
@@ -40,7 +39,7 @@ func NewServer(cfg Config) *Server {
 		// Mapping serverID to client
 		workerClients: map[string]*WorkerClient{},
 		// Mapping roomID to server
-		roomToServer: map[string]string{},
+		roomToWorker: map[string]string{},
 	}
 }
 
@@ -80,8 +79,11 @@ func (o *Server) WSO(w http.ResponseWriter, r *http.Request) {
 
 	// Register to workersClients map the client connection
 	address := util.GetRemoteAddress(c)
-	fmt.Println("Is public", util.IsPublicIP(address))
-	fmt.Println("Mode: ", *config.Mode, config.ProdEnv)
+	// Zone of the worker
+	zone := r.URL.Query().Get("zone")
+
+	fmt.Printf("Is public: %v zone: %v\n", util.IsPublicIP(address), zone)
+
 	if !util.IsPublicIP(address) && *config.Mode == config.ProdEnv {
 		// Don't accept private IP for worker's address in prod mode
 		// However, if the worker in the same host with overlord, we can get public IP of worker
@@ -93,7 +95,7 @@ func (o *Server) WSO(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 	}
-	client := NewWorkerClient(c, serverID, address, fmt.Sprintf(config.StunTurnTemplate, address, address))
+	client := NewWorkerClient(c, serverID, address, fmt.Sprintf(config.StunTurnTemplate, address, address), zone)
 	o.workerClients[serverID] = client
 	defer o.cleanConnection(client, serverID)
 
@@ -110,9 +112,9 @@ func (o *Server) WSO(w http.ResponseWriter, r *http.Request) {
 	client.Listen()
 }
 
-// WSO handles all connections from frontend to overlord
+// WSO handles all connections from user/frontend to overlord
 func (o *Server) WS(w http.ResponseWriter, r *http.Request) {
-	log.Println("Browser connected to overlord")
+	log.Println("A user connected to overlord ", r.URL)
 	defer func() {
 		if r := recover(); r != nil {
 			log.Println("Warn: Something wrong. Recovered in ", r)
@@ -134,18 +136,28 @@ func (o *Server) WS(w http.ResponseWriter, r *http.Request) {
 	// get roomID if it is embeded in request. Server will pair the frontend with the server running the room. It only happens when we are trying to access a running room over share link.
 	// TODO: Update link to the wiki
 	roomID := r.URL.Query().Get("room_id")
+	// zone param is to pick worker in that zone only
+	// if there is no zone param, we can pic
+	userZone := r.URL.Query().Get("zone")
+
 	if roomID != "" {
 		log.Printf("Detected roomID %v from URL", roomID)
-		if workerID, ok := o.roomToServer[roomID]; ok {
+		if workerID, ok := o.roomToWorker[roomID]; ok {
 			workerClient = o.workerClients[workerID]
-			log.Printf("Found running server with id=%v client=%v", workerID, workerClient)
+			if userZone != "" && workerClient.Zone != userZone {
+				// if there is zone param, we need to ensure ther worker in that zone
+				// if not we consider the room is missing
+				workerClient = nil
+			} else {
+				log.Printf("Found running server with id=%v client=%v", workerID, workerClient)
+			}
 		}
 	}
 
 	// If there is no existing server to connect to, we find the best possible worker for the frontend
 	if workerClient == nil {
 		// Get best server for frontend to connect to
-		workerClient, err = o.getBestWorkerClient(client)
+		workerClient, err = o.getBestWorkerClient(client, userZone)
 		if err != nil {
 			return
 		}
@@ -187,7 +199,7 @@ func (o *Server) WS(w http.ResponseWriter, r *http.Request) {
 	wssession.WorkerClient.IsAvailable = true
 }
 
-func (o *Server) getBestWorkerClient(client *BrowserClient) (*WorkerClient, error) {
+func (o *Server) getBestWorkerClient(client *BrowserClient, zone string) (*WorkerClient, error) {
 	if o.cfg.DebugHost != "" {
 		log.Println("Connecting to debug host instead prod servers", o.cfg.DebugHost)
 		wc := o.getWorkerFromAddress(o.cfg.DebugHost)
@@ -200,14 +212,7 @@ func (o *Server) getBestWorkerClient(client *BrowserClient) (*WorkerClient, erro
 
 	workerClients := o.getAvailableWorkers()
 
-	var serverID string
-	var err error
-	if config.MatchWorkerRandom {
-		serverID, err = findBestServerRandom(workerClients)
-	} else {
-		serverID, err = findBestServerFromBrowser(workerClients, client)
-	}
-
+	serverID, err := findBestServerFromBrowser(workerClients, client, zone)
 	if err != nil {
 		log.Println(err)
 		return nil, err
@@ -239,27 +244,9 @@ func (o *Server) getWorkerFromAddress(address string) *WorkerClient {
 	return nil
 }
 
-// findBestServer returns the best server for a session
-func findBestServerRandom(workerClients map[string]*WorkerClient) (string, error) {
-	// TODO: Find best Server by latency, currently return by ping
-	if len(workerClients) == 0 {
-		return "", errors.New("No server found")
-	}
-
-	r := rand.Intn(len(workerClients))
-	for k := range workerClients {
-		if r == 0 {
-			return k, nil
-		}
-		r--
-	}
-
-	return "", errors.New("No server found")
-}
-
 // findBestServerFromBrowser returns the best server for a session
 // All workers addresses are sent to user and user will ping to get latency
-func findBestServerFromBrowser(workerClients map[string]*WorkerClient, client *BrowserClient) (string, error) {
+func findBestServerFromBrowser(workerClients map[string]*WorkerClient, client *BrowserClient, zone string) (string, error) {
 	// TODO: Find best Server by latency, currently return by ping
 	if len(workerClients) == 0 {
 		return "", errors.New("No server found")
@@ -277,6 +264,11 @@ func findBestServerFromBrowser(workerClients map[string]*WorkerClient, client *B
 
 	// get the worker with lowest latency to user
 	for wc, l := range latencies {
+		if zone != "" && wc.Zone != zone {
+			// skip worker not in the zone if zone param is given
+			continue
+		}
+
 		if l < minLatency {
 			bestWorker = wc
 			minLatency = l
@@ -328,9 +320,9 @@ func (o *Server) cleanConnection(client *WorkerClient, serverID string) {
 	// Remove serverID from servers
 	delete(o.workerClients, serverID)
 	// Clean all rooms connecting to that server
-	for roomID, roomServer := range o.roomToServer {
+	for roomID, roomServer := range o.roomToWorker {
 		if roomServer == serverID {
-			delete(o.roomToServer, roomID)
+			delete(o.roomToWorker, roomID)
 		}
 	}
 

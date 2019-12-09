@@ -5,7 +5,6 @@ import (
 	"time"
 )
 
-const defaultoverlord = "ws://localhost:9000/wso"
 const DefaultSTUNTURN = `[{"urls":"stun:stun-turn.webgame2d.com:3478"},{"urls":"turn:stun-turn.webgame2d.com:3478","username":"root","credential":"root"}]`
 const CODEC_VP8 = "VP8"
 const CODEC_H264 = "H264"
