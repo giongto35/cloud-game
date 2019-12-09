@@ -71,7 +71,7 @@ Because the coordinator and workers need to run simultaneously. Workers connect 
 2. Manual
   * Need to run coordinator and worker separately in two session
   * `go run cmd/overlord/main.go` - spawn coordinator
-  * `go run cmd/overworker/main.go --overlordhost ws://localhost:8000/wso` - spawn workers connecting to coordinator
+  * `go run cmd/overworker/main.go --overlordhost localhost:8000` - spawn workers connecting to coordinator
 
 ## Wiki
 - [Wiki](https://github.com/giongto35/cloud-game/wiki)
@@ -95,8 +95,8 @@ _Disclaimer: You may experience lagging when joining a room because the room is 
 
 ## Contribution
 - The project cannot be possible without the contribution with those amazing people:
+- [sergystepanov](https://github.com/sergystepanov/) for Front end refactor; Audio re-implementation; bilinear, nearest neighbor interpolation scaling; Window setup document.
 - [sadlil](https://github.com/sadlil) for massive code structure reogranization; log and monitor server introduction.
-- [sergystepanov](https://github.com/sergystepanov/) for Audio re-implementation; bilinear, nearest neighbor interpolation scaling; Window setup document.
 
 ## Credits
 
