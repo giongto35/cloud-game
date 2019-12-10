@@ -4,7 +4,7 @@ const input = (() => {
     const KEY_BITS = [KEY.A, KEY.B, KEY.X, KEY.Y, KEY.SELECT, KEY.START, KEY.UP, KEY.DOWN, KEY.LEFT, KEY.RIGHT];
 
     let gameInputTimer = null;
-    let unchangePacket = INPUT_STATE_PACKET;
+    let unchangePacket = 0;
 
     // Game controller state
     let keyState = {
