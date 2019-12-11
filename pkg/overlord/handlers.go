@@ -140,6 +140,8 @@ func (o *Server) WS(w http.ResponseWriter, r *http.Request) {
 	// if there is no zone param, we can pic
 	userZone := r.URL.Query().Get("zone")
 
+	log.Printf("Get Room %s Zone %s From URL %v", roomID, userZone, r.URL)
+
 	if roomID != "" {
 		log.Printf("Detected roomID %v from URL", roomID)
 		if workerID, ok := o.roomToWorker[roomID]; ok {

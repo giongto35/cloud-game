@@ -12,7 +12,7 @@ const socket = (() => {
     let curPacketId = '';
 
     const init = (roomId, zone) => {
-        const paramString = new URLSearchParams({roomId: roomId, zone: zone})
+        const paramString = new URLSearchParams({room_id: roomId, zone: zone})
 
         conn = new WebSocket(`ws://${location.host}/ws?${paramString.toString()}`);
 
