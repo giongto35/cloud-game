@@ -121,6 +121,9 @@
             return;
         }
 
+        //const el = document.createElement('textarea');
+        const playeridx = parseInt($('#playeridx').val(), 10)
+
         log.info('[control] starting game screen');
 
         setState(app.state.game);
@@ -142,7 +145,7 @@
         // currently it's a game with the index 1
         // on the server this game is ignored and the actual game will be extracted from the share link
         // so there's no point in doing this and this' really confusing
-        socket.startGame(gameList.getCurrentGame(), env.isMobileDevice(), room.getId(), 1);
+        socket.startGame(gameList.getCurrentGame(), env.isMobileDevice(), room.getId(), playeridx);
 
         // clear menu screen
         input.poll().disable();
