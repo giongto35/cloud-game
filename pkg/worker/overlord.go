@@ -176,6 +176,27 @@ func (h *Handler) RouteOverlord() {
 		})
 
 	oClient.Receive(
+		"playerIdx",
+		func(resp cws.WSPacket) (req cws.WSPacket) {
+			log.Println("Received an update player index event from overlord")
+			log.Println("Loading game state")
+			req.ID = "load"
+			req.Data = "ok"
+			if resp.RoomID != "" {
+				room := h.getRoom(resp.RoomID)
+				err := room.UpdatePlayerIndex(resp.Data)
+				if err != nil {
+					log.Println("[!] Cannot load game state: ", err)
+					req.Data = "error"
+				}
+			} else {
+				req.Data = "error"
+			}
+
+			return req
+		})
+
+	oClient.Receive(
 		"icecandidate",
 		func(resp cws.WSPacket) (req cws.WSPacket) {
 			log.Println("Received a icecandidate from overlord: ", resp.Data)

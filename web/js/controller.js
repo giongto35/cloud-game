@@ -281,6 +281,16 @@
                         case KEY.FULL:
                             env.display().toggleFullscreen(gameScreen.height() !== window.innerHeight, gameScreen[0]);
                             break;
+
+                        case KEY.PAD1:
+                            socket.updatePlayerIndex(0);
+                        case KEY.PAD2:
+                            socket.updatePlayerIndex(1);
+                        case KEY.PAD3:
+                            socket.updatePlayerIndex(2);
+                        case KEY.PAD4:
+                            socket.updatePlayerIndex(3);
+
                         case KEY.QUIT:
                             input.poll().disable();
 
@@ -305,6 +315,8 @@
     event.sub(GAME_ROOM_AVAILABLE, onGameRoomAvailable, 2);
     event.sub(GAME_SAVED, () => popup('Saved'));
     event.sub(GAME_LOADED, () => popup('Loaded'));
+    event.sub(GAME_PLAYER_IDX, (idx) => popup(idx));
+
     event.sub(MEDIA_STREAM_INITIALIZED, (data) => {
         rtcp.start(data.stunturn);
         gameList.set(data.games);

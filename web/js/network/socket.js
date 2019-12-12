@@ -77,6 +77,7 @@ const socket = (() => {
     });
     const saveGame = () => send({"id": "save", "data": ""});
     const loadGame = () => send({"id": "load", "data": ""});
+    const updatePlayerIndex = (idx) => send({"id": "playerIdx", "data": idx});
     const startGame = (gameName, isMobile, roomId, playerIndex) => send({
         "id": "start",
         "data": JSON.stringify({
