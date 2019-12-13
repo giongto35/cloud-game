@@ -32,8 +32,9 @@ type Room struct {
 	imageChannel <-chan *image.RGBA
 	// audioChannel is audio stream received from director
 	audioChannel <-chan []int16
-	// inputChannel is input stream from websocket send to room
-	inputChannel chan<- int
+	// inputChannel is input stream send to director. This inputChannel is combined
+	// input from webRTC + connection info (player indexc)
+	inputChannel chan<- nanoarch.InputEvent
 	// State of room
 	IsRunning bool
 	// Done channel is to fire exit event when room is closed
@@ -70,7 +71,7 @@ func NewRoom(roomID string, gameName string, videoEncoderType string, onlineStor
 	gameInfo := gamelist.GetGameInfoFromName(gameName)
 
 	log.Println("Init new room: ", roomID, gameName, gameInfo)
-	inputChannel := make(chan int, 100)
+	inputChannel := make(chan nanoarch.InputEvent, 100)
 
 	room := &Room{
 		ID: roomID,
@@ -185,14 +186,19 @@ func (r *Room) isGameOnLocal(savepath string) bool {
 	return err == nil
 }
 
-func (r *Room) AddConnectionToRoom(peerconnection *webrtc.WebRTC, playerIndex int) {
+func (r *Room) AddConnectionToRoom(peerconnection *webrtc.WebRTC) {
 	peerconnection.AttachRoomID(r.ID)
 	r.rtcSessions = append(r.rtcSessions, peerconnection)
 
-	go r.startWebRTCSession(peerconnection, playerIndex)
+	go r.startWebRTCSession(peerconnection)
 }
 
-func (r *Room) startWebRTCSession(peerconnection *webrtc.WebRTC, playerIndex int) {
+func (r *Room) UpdatePlayerIndex(peerconnection *webrtc.WebRTC, playerIndex int) {
+	log.Println("Updated player Index to: ", playerIndex)
+	peerconnection.GameMeta.PlayerIndex = playerIndex
+}
+
+func (r *Room) startWebRTCSession(peerconnection *webrtc.WebRTC) {
 	defer func() {
 		if r := recover(); r != nil {
 			log.Println("Warn: Recovered when sent to close inputChannel")
@@ -210,9 +216,9 @@ func (r *Room) startWebRTCSession(peerconnection *webrtc.WebRTC, playerIndex int
 			// the first 10 bits belong to player 1
 			// the next 10 belongs to player 2 ...
 			// We standardize and put it to inputChannel (20 bits)
-			input = input << ((uint(playerIndex) - 1) * config.NumKeys)
+			//input = input << ((uint(playerIndex) - 1) * config.NumKeys)
 			select {
-			case r.inputChannel <- input:
+			case r.inputChannel <- nanoarch.InputEvent{KeyState: input, PlayerIdx: peerconnection.GameMeta.PlayerIndex}:
 			default:
 			}
 		}

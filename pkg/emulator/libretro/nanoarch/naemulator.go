@@ -50,7 +50,7 @@ import "C"
 type naEmulator struct {
 	imageChannel chan<- *image.RGBA
 	audioChannel chan<- []int16
-	inputChannel <-chan int
+	inputChannel <-chan InputEvent
 
 	meta            config.EmulatorMeta
 	gamePath        string
@@ -65,11 +65,16 @@ type naEmulator struct {
 	lock *sync.Mutex
 }
 
+type InputEvent struct {
+	KeyState  int
+	PlayerIdx int
+}
+
 var NAEmulator *naEmulator
 var outputImg *image.RGBA
 
 // NAEmulator implements CloudEmulator interface based on NanoArch(golang RetroArch)
-func NewNAEmulator(etype string, roomID string, inputChannel <-chan int) (*naEmulator, chan *image.RGBA, chan []int16) {
+func NewNAEmulator(etype string, roomID string, inputChannel <-chan InputEvent) (*naEmulator, chan *image.RGBA, chan []int16) {
 	meta := config.EmulatorConfig[etype]
 	imageChannel := make(chan *image.RGBA, 30)
 	audioChannel := make(chan []int16, 30)
@@ -79,7 +84,7 @@ func NewNAEmulator(etype string, roomID string, inputChannel <-chan int) (*naEmu
 		imageChannel: imageChannel,
 		audioChannel: audioChannel,
 		inputChannel: inputChannel,
-		keys:         make([]bool, joypadNumKeys),
+		keys:         make([]bool, joypadNumKeys*4),
 		roomID:       roomID,
 		done:         make(chan struct{}, 1),
 		lock:         &sync.Mutex{},
@@ -87,7 +92,7 @@ func NewNAEmulator(etype string, roomID string, inputChannel <-chan int) (*naEmu
 }
 
 // Init initialize new RetroArch cloud emulator
-func Init(etype string, roomID string, inputChannel <-chan int) (*naEmulator, chan *image.RGBA, chan []int16) {
+func Init(etype string, roomID string, inputChannel <-chan InputEvent) (*naEmulator, chan *image.RGBA, chan []int16) {
 	emulator, imageChannel, audioChannel := NewNAEmulator(etype, roomID, inputChannel)
 	// Set to global NAEmulator
 	NAEmulator = emulator
@@ -99,7 +104,9 @@ func Init(etype string, roomID string, inputChannel <-chan int) (*naEmulator, ch
 func (na *naEmulator) listenInput() {
 	// input from javascript follows bitmap. Ex: 00110101
 	// we decode the bitmap and send to channel
-	for inpBitmap := range NAEmulator.inputChannel {
+	for inpEvent := range NAEmulator.inputChannel {
+		inpBitmap := inpEvent.KeyState
+
 		for k := 0; k < len(bindRetroKeys); k++ {
 			key, ok := bindRetroKeys[k]
 			if ok == false {
@@ -107,9 +114,9 @@ func (na *naEmulator) listenInput() {
 			}
 
 			if (inpBitmap & 1) == 1 {
-				na.keys[key] = true
+				na.keys[key*4+inpEvent.PlayerIdx] = true
 			} else {
-				na.keys[key] = false
+				na.keys[key*4+inpEvent.PlayerIdx] = false
 			}
 			inpBitmap >>= 1
 		}

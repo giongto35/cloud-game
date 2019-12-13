@@ -3,6 +3,7 @@ package worker
 import (
 	"encoding/json"
 	"log"
+	"strconv"
 
 	"github.com/giongto35/cloud-game/pkg/cws"
 	"github.com/giongto35/cloud-game/pkg/util"
@@ -179,16 +180,16 @@ func (h *Handler) RouteOverlord() {
 		"playerIdx",
 		func(resp cws.WSPacket) (req cws.WSPacket) {
 			log.Println("Received an update player index event from overlord")
-			log.Println("Loading game state")
-			req.ID = "load"
+			req.ID = "playerIdx"
 			req.Data = "ok"
-			if resp.RoomID != "" {
-				room := h.getRoom(resp.RoomID)
-				err := room.UpdatePlayerIndex(resp.Data)
-				if err != nil {
-					log.Println("[!] Cannot load game state: ", err)
-					req.Data = "error"
-				}
+
+			room := h.getRoom(resp.RoomID)
+			session := h.getSession(resp.SessionID)
+			idx, err := strconv.Atoi(resp.Data)
+			log.Printf("Got session %v and room %v", session, room)
+
+			if room != nil && session != nil && err == nil {
+				room.UpdatePlayerIndex(session.peerconnection, idx)
 			} else {
 				req.Data = "error"
 			}
@@ -245,8 +246,10 @@ func (h *Handler) startGameHandler(gameName, existedRoomID string, playerIndex i
 	// If room is not running
 	if room == nil {
 		log.Println("Got Room from local ", room, " ID: ", existedRoomID)
-		// Create new room
-		room = h.createNewRoom(gameName, existedRoomID, playerIndex, videoEncoderType)
+		// Create new room and update player index
+		room = h.createNewRoom(gameName, existedRoomID, videoEncoderType)
+		room.UpdatePlayerIndex(peerconnection, playerIndex)
+
 		// Wait for done signal from room
 		go func() {
 			<-room.Done
@@ -263,7 +266,7 @@ func (h *Handler) startGameHandler(gameName, existedRoomID string, playerIndex i
 	log.Println("Is PC in room", room.IsPCInRoom(peerconnection))
 	if !room.IsPCInRoom(peerconnection) {
 		h.detachPeerConn(peerconnection)
-		room.AddConnectionToRoom(peerconnection, playerIndex)
+		room.AddConnectionToRoom(peerconnection)
 	}
 
 	// Register room to overlord if we are connecting to overlord

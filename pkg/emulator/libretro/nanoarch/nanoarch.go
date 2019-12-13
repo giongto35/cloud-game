@@ -118,11 +118,11 @@ func coreInputPoll() {
 
 //export coreInputState
 func coreInputState(port C.unsigned, device C.unsigned, index C.unsigned, id C.unsigned) C.int16_t {
-	if port > 0 || index > 0 || device != C.RETRO_DEVICE_JOYPAD {
+	if id >= 255 || index > 0 || device != C.RETRO_DEVICE_JOYPAD {
 		return 0
 	}
 
-	if id < 255 && NAEmulator.keys[id] {
+	if NAEmulator.keys[id*4+port] {
 		return 1
 	}
 	return 0

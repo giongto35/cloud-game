@@ -122,7 +122,7 @@
         }
 
         //const el = document.createElement('textarea');
-        const playeridx = parseInt($('#playeridx').val(), 10)
+        const playeridx = parseInt($('#playeridx').val(), 10) - 1
 
         log.info('[control] starting game screen');
 
@@ -267,7 +267,7 @@
                     input.setKeyState(key, false);
 
                     switch (key) {
-                        // nani? why join / copy switch, it's confusing
+                        // nani? why join / copy switch, it's confusing. Me: It's because of the original design to update label only :-s.
                         case KEY.JOIN:
                             room.copyToClipboard();
                             popup('Copy link to clipboard!');
@@ -282,15 +282,21 @@
                             env.display().toggleFullscreen(gameScreen.height() !== window.innerHeight, gameScreen[0]);
                             break;
 
+                        // update player index
                         case KEY.PAD1:
                             socket.updatePlayerIndex(0);
+                            break;
                         case KEY.PAD2:
                             socket.updatePlayerIndex(1);
+                            break;
                         case KEY.PAD3:
                             socket.updatePlayerIndex(2);
+                            break;
                         case KEY.PAD4:
                             socket.updatePlayerIndex(3);
+                            break;
 
+                        // quit
                         case KEY.QUIT:
                             input.poll().disable();
 
