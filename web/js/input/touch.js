@@ -130,7 +130,7 @@ const touch = (() => {
     */
 
     function handlePlayerSlider() {
-            event.pub(GAME_PLAYER_IDX, $(this).val());
+            socket.updatePlayerIndex($(this).val() - 1);
     }
 
 

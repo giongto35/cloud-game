@@ -139,6 +139,7 @@ func (o *Server) WS(w http.ResponseWriter, r *http.Request) {
 	// zone param is to pick worker in that zone only
 	// if there is no zone param, we can pic
 	userZone := r.URL.Query().Get("zone")
+	log.Println("A user connected to overlord ", roomID, userZone)
 
 	log.Printf("Get Room %s Zone %s From URL %v", roomID, userZone, r.URL)
 
@@ -213,6 +214,7 @@ func (o *Server) getBestWorkerClient(client *BrowserClient, zone string) (*Worke
 	}
 
 	workerClients := o.getAvailableWorkers()
+	log.Println("Current workerClients: ", o.workerClients)
 
 	serverID, err := findBestServerFromBrowser(workerClients, client, zone)
 	if err != nil {

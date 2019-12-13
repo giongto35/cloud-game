@@ -181,7 +181,6 @@ func (h *Handler) RouteOverlord() {
 		func(resp cws.WSPacket) (req cws.WSPacket) {
 			log.Println("Received an update player index event from overlord")
 			req.ID = "playerIdx"
-			req.Data = "ok"
 
 			room := h.getRoom(resp.RoomID)
 			session := h.getSession(resp.SessionID)
@@ -190,6 +189,7 @@ func (h *Handler) RouteOverlord() {
 
 			if room != nil && session != nil && err == nil {
 				room.UpdatePlayerIndex(session.peerconnection, idx)
+				req.Data = strconv.Itoa(idx)
 			} else {
 				req.Data = "error"
 			}

@@ -50,7 +50,7 @@
         <div id="btn-join" unselectable="on" class="btn big unselectable" value="join">play</div>
         <div id="slider-playeridx" class="slidecontainer">
           player index
-          <input type="range" min="1" max="4" value="1" class="slider" id="playeridx">
+          <input type="range" min="1" max="4" value="1" class="slider" id="playeridx" onkeydown="event.preventDefault()">
         </div>
 
         <div id="btn-quit" unselectable="on" class="btn big unselectable" value="quit">quit</div>

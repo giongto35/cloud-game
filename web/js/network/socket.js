@@ -25,6 +25,7 @@ const socket = (() => {
         };
         conn.onerror = error => log.error(`[ws] ${error}`);
         conn.onclose = () => log.info('[ws] closed');
+        // Message received from server
         conn.onmessage = response => {
             const data = JSON.parse(response.data);
             const message = data.id;
@@ -58,6 +59,9 @@ const socket = (() => {
                     break;
                 case 'load':
                     event.pub(GAME_LOADED);
+                    break;
+                case 'playerIdx':
+                    event.pub(GAME_PLAYER_IDX, data.data);
                     break;
                 case 'checkLatency':
                     curPacketId = data.packet_id;

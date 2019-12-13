@@ -186,6 +186,13 @@
         state.keyRelease(data.key);
     };
 
+    const updatePlayerIndex = (idx) => {
+        var slider = document.getElementById('playeridx');
+        slider.value = idx + 1;
+        socket.updatePlayerIndex(idx);
+    };
+
+
     const app = {
         state: {
             eden: {
@@ -268,7 +275,9 @@
 
                     switch (key) {
                         // nani? why join / copy switch, it's confusing. Me: It's because of the original design to update label only :-s.
-                        case KEY.JOIN:
+                        case KEY.JOIN: // or SHARE
+                            // save when click share
+                            event.pub(KEY_PRESSED, {key: KEY.SAVE})
                             room.copyToClipboard();
                             popup('Copy link to clipboard!');
                             break;
@@ -284,16 +293,16 @@
 
                         // update player index
                         case KEY.PAD1:
-                            socket.updatePlayerIndex(0);
+                            updatePlayerIndex(0);
                             break;
                         case KEY.PAD2:
-                            socket.updatePlayerIndex(1);
+                            updatePlayerIndex(1);
                             break;
                         case KEY.PAD3:
-                            socket.updatePlayerIndex(2);
+                            updatePlayerIndex(2);
                             break;
                         case KEY.PAD4:
-                            socket.updatePlayerIndex(3);
+                            updatePlayerIndex(3);
                             break;
 
                         // quit
@@ -321,7 +330,7 @@
     event.sub(GAME_ROOM_AVAILABLE, onGameRoomAvailable, 2);
     event.sub(GAME_SAVED, () => popup('Saved'));
     event.sub(GAME_LOADED, () => popup('Loaded'));
-    event.sub(GAME_PLAYER_IDX, (idx) => popup(idx));
+    event.sub(GAME_PLAYER_IDX, (idx) => popup(parseInt(idx)+1));
 
     event.sub(MEDIA_STREAM_INITIALIZED, (data) => {
         rtcp.start(data.stunturn);
