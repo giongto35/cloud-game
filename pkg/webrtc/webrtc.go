@@ -89,6 +89,14 @@ type WebRTC struct {
 	curFPS   int
 
 	RoomID string
+
+	// store thing related to game
+	GameMeta GameMeta
+}
+
+// Game Meta
+type GameMeta struct {
+	PlayerIndex int
 }
 
 // StartClient start webrtc

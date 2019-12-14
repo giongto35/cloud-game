@@ -21,6 +21,10 @@ const keyboard = (() => {
         83: KEY.SAVE, // s
         87: KEY.JOIN, // w
         65: KEY.LOAD, // a
+        49: KEY.PAD1, // 1
+        50: KEY.PAD2, // 2
+        51: KEY.PAD3, // 3
+        52: KEY.PAD4, // 4
         70: KEY.FULL, // f
         72: KEY.HELP, // h
     };

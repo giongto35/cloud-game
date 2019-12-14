@@ -136,6 +136,16 @@ func (h *Handler) getRoom(roomID string) *room.Room {
 	return room
 }
 
+// getRoom returns session from sessionID
+func (h *Handler) getSession(sessionID string) *Session {
+	session, ok := h.sessions[sessionID]
+	if !ok {
+		return nil
+	}
+
+	return session
+}
+
 // detachRoom detach room from Handler
 func (h *Handler) detachRoom(roomID string) {
 	delete(h.rooms, roomID)
@@ -143,7 +153,7 @@ func (h *Handler) detachRoom(roomID string) {
 
 // createNewRoom creates a new room
 // Return nil in case of room is existed
-func (h *Handler) createNewRoom(gameName string, roomID string, playerIndex int, videoEncoderType string) *room.Room {
+func (h *Handler) createNewRoom(gameName string, roomID string, videoEncoderType string) *room.Room {
 	// If the roomID is empty,
 	// or the roomID doesn't have any running sessions (room was closed)
 	// we spawn a new room

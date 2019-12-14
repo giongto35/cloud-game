@@ -123,6 +123,23 @@ func (s *Session) RouteBrowser() {
 
 		return resp
 	})
+
+	browserClient.Receive("playerIdx", func(resp cws.WSPacket) (req cws.WSPacket) {
+		log.Println("Overlord: Received update player index request from a browser")
+		log.Println("Overlord: Relay update player index request from a browser to worker")
+		// TODO: Async
+		resp.SessionID = s.ID
+		resp.RoomID = s.RoomID
+		wc, ok := s.handler.workerClients[s.ServerID]
+		if !ok {
+			return cws.EmptyPacket
+		}
+		resp = wc.SyncSend(
+			resp,
+		)
+
+		return resp
+	})
 }
 
 // NewOverlordClient returns a client connecting to browser. This connection exchanges information between clients and server

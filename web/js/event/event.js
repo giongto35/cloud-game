@@ -60,6 +60,7 @@ const LATENCY_CHECK_REQUESTED = 'latencyCheckRequested';
 const GAME_ROOM_AVAILABLE = 'gameRoomAvailable';
 const GAME_SAVED = 'gameSaved';
 const GAME_LOADED = 'gameLoaded';
+const GAME_PLAYER_IDX = 'gamePlayerIndex';
 
 const CONNECTION_READY = 'connectionReady';
 const CONNECTION_CLOSED = 'connectionClosed';

@@ -25,6 +25,7 @@ const socket = (() => {
         };
         conn.onerror = error => log.error(`[ws] ${error}`);
         conn.onclose = () => log.info('[ws] closed');
+        // Message received from server
         conn.onmessage = response => {
             const data = JSON.parse(response.data);
             const message = data.id;
@@ -59,6 +60,9 @@ const socket = (() => {
                 case 'load':
                     event.pub(GAME_LOADED);
                     break;
+                case 'playerIdx':
+                    event.pub(GAME_PLAYER_IDX, data.data);
+                    break;
                 case 'checkLatency':
                     curPacketId = data.packet_id;
                     const addresses = data.data.split(',');
@@ -77,6 +81,7 @@ const socket = (() => {
     });
     const saveGame = () => send({"id": "save", "data": ""});
     const loadGame = () => send({"id": "load", "data": ""});
+    const updatePlayerIndex = (idx) => send({"id": "playerIdx", "data": idx.toString()});
     const startGame = (gameName, isMobile, roomId, playerIndex) => send({
         "id": "start",
         "data": JSON.stringify({
@@ -94,6 +99,7 @@ const socket = (() => {
         latency: latency,
         saveGame: saveGame,
         loadGame: loadGame,
+        updatePlayerIndex: updatePlayerIndex,
         startGame: startGame,
         quitGame: quitGame
     }

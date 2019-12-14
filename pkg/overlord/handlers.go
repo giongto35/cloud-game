@@ -139,7 +139,6 @@ func (o *Server) WS(w http.ResponseWriter, r *http.Request) {
 	// zone param is to pick worker in that zone only
 	// if there is no zone param, we can pic
 	userZone := r.URL.Query().Get("zone")
-
 	log.Printf("Get Room %s Zone %s From URL %v", roomID, userZone, r.URL)
 
 	if roomID != "" {
