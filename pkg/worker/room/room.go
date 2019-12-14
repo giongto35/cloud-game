@@ -216,7 +216,6 @@ func (r *Room) startWebRTCSession(peerconnection *webrtc.WebRTC) {
 			// the first 10 bits belong to player 1
 			// the next 10 belongs to player 2 ...
 			// We standardize and put it to inputChannel (20 bits)
-			//input = input << ((uint(playerIndex) - 1) * config.NumKeys)
 			select {
 			case r.inputChannel <- nanoarch.InputEvent{KeyState: input, PlayerIdx: peerconnection.GameMeta.PlayerIndex}:
 			default:
