@@ -60,7 +60,7 @@ func (o *Overlord) initializeOverlord() {
 	// worker facing port
 	http.HandleFunc("/wso", overlord.WSO)
 	log.Println("Listening at port: localhost:8000")
-	err := http.ListenAndServe(":8000", nil)
+	err := http.ListenAndServeTLS(":8000", "server.crt", "server.key", nil)
 	// Print err if overlord cannot launch
 	if err != nil {
 		log.Fatal(err)

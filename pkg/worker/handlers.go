@@ -1,6 +1,10 @@
 package worker
 
 import (
+	"crypto/tls"
+	"crypto/x509"
+	"fmt"
+	"io/ioutil"
 	"log"
 	"net/url"
 	"os"
@@ -61,13 +65,13 @@ func (h *Handler) Run() {
 	for {
 		oClient, err := setupOverlordConnection(h.overlordHost, h.cfg.Zone)
 		if err != nil {
-			log.Println("Cannot connect to overlord. Retrying...")
+			log.Printf("Cannot connect to overlord. %v Retrying...", err)
 			time.Sleep(time.Second)
 			continue
 		}
 
 		h.oClient = oClient
-		log.Println("Connected to overlord successfully.")
+		log.Println("Connected to overlord successfully.", oClient, err)
 		go h.oClient.Heartbeat()
 		h.RouteOverlord()
 		h.oClient.Listen()
@@ -77,27 +81,39 @@ func (h *Handler) Run() {
 
 func setupOverlordConnection(ohost string, zone string) (*OverlordClient, error) {
 	overlordURL := url.URL{
-		Scheme:   "ws",
+		Scheme:   "wss",
 		Host:     ohost,
 		Path:     "/wso",
 		RawQuery: "zone=" + zone,
 	}
 	log.Println("Worker connecting to overlord:", overlordURL.String())
 
-	conn, err := createOverlordConnection(overlordURL.String())
+	conn, err := createOverlordConnection(&overlordURL)
 	if err != nil {
 		return nil, err
 	}
 	return NewOverlordClient(conn), nil
 }
 
-func createOverlordConnection(ohost string) (*websocket.Conn, error) {
-	c, _, err := websocket.DefaultDialer.Dial(ohost, nil)
+func createOverlordConnection(ourl *url.URL) (*websocket.Conn, error) {
+
+	roots := x509.NewCertPool()
+	severCert, err := ioutil.ReadFile("./server.crt")
+	if err != nil {
+		fmt.Println("Could not load server certificate!")
+		log.Fatal(err)
+	}
+	if ok := roots.AppendCertsFromPEM(severCert); !ok {
+		log.Fatal("Cannot append serverCert to Root")
+	}
+
+	d := websocket.Dialer{TLSClientConfig: &tls.Config{RootCAs: roots, InsecureSkipVerify: true}}
+	ws, _, err := d.Dial(ourl.String(), nil)
 	if err != nil {
 		return nil, err
 	}
 
-	return c, nil
+	return ws, nil
 }
 
 func (h *Handler) GetOverlordClient() *OverlordClient {

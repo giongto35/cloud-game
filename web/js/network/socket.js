@@ -14,7 +14,7 @@ const socket = (() => {
     const init = (roomId, zone) => {
         const paramString = new URLSearchParams({room_id: roomId, zone: zone})
 
-        conn = new WebSocket(`ws://${location.host}/ws?${paramString.toString()}`);
+        conn = new WebSocket(`wss://${location.host}/ws?${paramString.toString()}`);
 
         // Clear old roomID
         conn.onopen = () => {
