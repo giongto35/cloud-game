@@ -2,11 +2,15 @@ package overlord
 
 import (
 	"context"
+	"crypto/tls"
+	"fmt"
 	"log"
 	"net/http"
 
 	"github.com/giongto35/cloud-game/pkg/monitoring"
 	"github.com/golang/glog"
+
+	"golang.org/x/crypto/acme/autocert"
 )
 
 type Overlord struct {
@@ -49,20 +53,55 @@ func (o *Overlord) Shutdown() {
 func (o *Overlord) initializeOverlord() {
 	overlord := NewServer(o.cfg)
 
-	http.HandleFunc("/", overlord.GetWeb)
-	http.Handle("/static/", http.StripPrefix("/static/", http.FileServer(http.Dir("./web"))))
+	hostPolicy := func(ctx context.Context, host string) error {
+		// Note: change to your real host
+		allowedHost := "www.cloudretro.io"
+		if host == allowedHost {
+			return nil
+		}
+		return fmt.Errorf("acme/autocert: only %s host is allowed", allowedHost)
+	}
+	certManager := &autocert.Manager{
+		Prompt:     autocert.AcceptTOS,
+		HostPolicy: hostPolicy,
+		Cache:      autocert.DirCache("certs"),
+	}
+	fmt.Println("HAHA")
+	mux := http.NewServeMux()
+	mux.HandleFunc("/", overlord.GetWeb)
+	mux.Handle("/static/", http.StripPrefix("/static/", http.FileServer(http.Dir("./web"))))
 
+	fmt.Println("HIHI")
 	// browser facing port
 	go func() {
-		http.HandleFunc("/ws", overlord.WS)
+		mux.HandleFunc("/ws", overlord.WS)
+	}()
+	mux.HandleFunc("/wso", overlord.WSO)
+
+	s := &http.Server{
+		Addr:    ":443",
+		Handler: mux,
+		TLSConfig: &tls.Config{
+			GetCertificate: certManager.GetCertificate,
+		},
+	}
+
+	fmt.Println("HOHO")
+	// worker facing port
+	log.Println("Listening at port: localhost:8000")
+	go func() {
+		err := http.ListenAndServe(":8000", certManager.HTTPHandler(nil))
+		// Print err if overlord cannot launch
+		if err != nil {
+			log.Fatal(err)
+		}
 	}()
 
-	// worker facing port
-	http.HandleFunc("/wso", overlord.WSO)
-	log.Println("Listening at port: localhost:8000")
-	err := http.ListenAndServeTLS(":8000", "server.crt", "server.key", nil)
-	// Print err if overlord cannot launch
-	if err != nil {
-		log.Fatal(err)
-	}
+	s.ListenAndServeTLS("", "")
 }
+
+//func makeHTTPServer() *http.Server {
+//mux := &http.ServeMux{}
+//mux.HandleFunc("/", handleIndex)
+//return makeServerFromMux(mux)
+//}
