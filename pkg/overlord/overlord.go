@@ -49,6 +49,16 @@ func (o *Overlord) Shutdown() {
 	}
 }
 
+func makeHTTPToHTTPSRedirectServer() *http.Server {
+	handleRedirect := func(w http.ResponseWriter, r *http.Request) {
+		newURI := "https://" + r.Host + r.URL.String()
+		http.Redirect(w, r, newURI, http.StatusFound)
+	}
+	server := http.NewServeMux()
+	server.HandleFunc("/", handleRedirect)
+	return server
+}
+
 // initializeOverlord setup an overlord server
 func (o *Overlord) initializeOverlord() {
 	overlord := NewServer(o.cfg)
