@@ -14,7 +14,13 @@ const socket = (() => {
     const init = (roomId, zone) => {
         const paramString = new URLSearchParams({room_id: roomId, zone: zone})
 
-        conn = new WebSocket(`wss://${location.host}/ws?${paramString.toString()}`);
+        // if localhost
+        if (location.hostname === "localhost" || location.hostname === "127.0.0.1") {
+            scheme = "ws"
+        } else {
+            scheme = "wss"
+        }
+        conn = new WebSocket(`${scheme}://${location.host}/ws?${paramString.toString()}`);
 
         // Clear old roomID
         conn.onopen = () => {

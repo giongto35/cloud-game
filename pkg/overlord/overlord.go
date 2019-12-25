@@ -6,7 +6,9 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"time"
 
+	"github.com/giongto35/cloud-game/pkg/config"
 	"github.com/giongto35/cloud-game/pkg/monitoring"
 	"github.com/golang/glog"
 
@@ -49,69 +51,92 @@ func (o *Overlord) Shutdown() {
 	}
 }
 
-func makeHTTPToHTTPSRedirectServer() *http.Server {
+func makeServerFromMux(mux *http.ServeMux) *http.Server {
+	// set timeouts so that a slow or malicious client doesn't
+	// hold resources forever
+	return &http.Server{
+		ReadTimeout:  5 * time.Second,
+		WriteTimeout: 5 * time.Second,
+		IdleTimeout:  120 * time.Second,
+		Handler:      mux,
+	}
+}
+
+func makeHTTPServer(server *Server) *http.Server {
+	mux := &http.ServeMux{}
+	mux.HandleFunc("/", server.GetWeb)
+	mux.HandleFunc("/ws", server.WS)
+	mux.HandleFunc("/wso", server.WSO)
+	mux.Handle("/static/", http.StripPrefix("/static/", http.FileServer(http.Dir("./web"))))
+
+	return makeServerFromMux(mux)
+}
+
+func makeHTTPToHTTPSRedirectServer(server *Server) *http.Server {
 	handleRedirect := func(w http.ResponseWriter, r *http.Request) {
 		newURI := "https://" + r.Host + r.URL.String()
 		http.Redirect(w, r, newURI, http.StatusFound)
 	}
-	server := http.NewServeMux()
-	server.HandleFunc("/", handleRedirect)
-	return server
+	mux := &http.ServeMux{}
+	mux.HandleFunc("/", handleRedirect)
+	mux.HandleFunc("/ws", handleRedirect)
+	mux.HandleFunc("/wso", handleRedirect)
+	mux.Handle("/static/", http.StripPrefix("/static/", http.FileServer(http.Dir("./web"))))
+
+	return makeServerFromMux(mux)
 }
 
 // initializeOverlord setup an overlord server
 func (o *Overlord) initializeOverlord() {
 	overlord := NewServer(o.cfg)
 
-	hostPolicy := func(ctx context.Context, host string) error {
-		// Note: change to your real host
-		allowedHost := "www.cloudretro.io"
-		if host == allowedHost {
-			return nil
+	var certManager *autocert.Manager
+	var httpsSrv *http.Server
+
+	log.Println("Initializing Overlord Server")
+	if *config.Mode == config.ProdEnv {
+		hostPolicy := func(ctx context.Context, host string) error {
+			// Note: change to your real host
+			allowedHost := "www.cloudretro.io"
+			if host == allowedHost {
+				return nil
+			}
+			return fmt.Errorf("acme/autocert: only %s host is allowed", allowedHost)
 		}
-		return fmt.Errorf("acme/autocert: only %s host is allowed", allowedHost)
-	}
-	certManager := &autocert.Manager{
-		Prompt:     autocert.AcceptTOS,
-		HostPolicy: hostPolicy,
-		Cache:      autocert.DirCache("certs"),
-	}
-	fmt.Println("HAHA")
-	mux := http.NewServeMux()
-	mux.HandleFunc("/", overlord.GetWeb)
-	mux.Handle("/static/", http.StripPrefix("/static/", http.FileServer(http.Dir("./web"))))
-
-	fmt.Println("HIHI")
-	// browser facing port
-	go func() {
-		mux.HandleFunc("/ws", overlord.WS)
-	}()
-	mux.HandleFunc("/wso", overlord.WSO)
-
-	s := &http.Server{
-		Addr:    ":443",
-		Handler: mux,
-		TLSConfig: &tls.Config{
-			GetCertificate: certManager.GetCertificate,
-		},
-	}
-
-	fmt.Println("HOHO")
-	// worker facing port
-	log.Println("Listening at port: localhost:8000")
-	go func() {
-		err := http.ListenAndServe(":8000", certManager.HTTPHandler(nil))
-		// Print err if overlord cannot launch
-		if err != nil {
-			log.Fatal(err)
+		certManager = &autocert.Manager{
+			Prompt:     autocert.AcceptTOS,
+			HostPolicy: hostPolicy,
+			Cache:      autocert.DirCache("."),
 		}
-	}()
 
-	s.ListenAndServeTLS("", "")
+		httpsSrv = makeHTTPServer(overlord)
+		httpsSrv.Addr = ":443"
+		httpsSrv.TLSConfig = &tls.Config{GetCertificate: certManager.GetCertificate}
+
+		go func() {
+			fmt.Printf("Starting HTTPS server on %s\n", httpsSrv.Addr)
+			err := httpsSrv.ListenAndServeTLS("", "")
+			if err != nil {
+				log.Fatalf("httpsSrv.ListendAndServeTLS() failed with %s", err)
+			}
+		}()
+	}
+
+	var httpSrv *http.Server
+	log.Println("Redirect server")
+	if *config.Mode == config.ProdEnv {
+		httpSrv = makeHTTPToHTTPSRedirectServer(overlord)
+	} else {
+		httpSrv = makeHTTPServer(overlord)
+	}
+
+	if certManager != nil {
+		httpSrv.Handler = certManager.HTTPHandler(httpSrv.Handler)
+	}
+
+	httpSrv.Addr = ":8000"
+	err := httpSrv.ListenAndServe()
+	if err != nil {
+		log.Fatalf("httpSrv.ListenAndServe() failed with %s", err)
+	}
 }
-
-//func makeHTTPServer() *http.Server {
-//mux := &http.ServeMux{}
-//mux.HandleFunc("/", handleIndex)
-//return makeServerFromMux(mux)
-//}

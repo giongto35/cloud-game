@@ -2,15 +2,13 @@ package worker
 
 import (
 	"crypto/tls"
-	"crypto/x509"
-	"fmt"
-	"io/ioutil"
 	"log"
 	"net/url"
 	"os"
 	"path"
 	"time"
 
+	"github.com/giongto35/cloud-game/pkg/config"
 	"github.com/giongto35/cloud-game/pkg/config/worker"
 
 	"github.com/giongto35/cloud-game/pkg/util"
@@ -80,8 +78,16 @@ func (h *Handler) Run() {
 }
 
 func setupOverlordConnection(ohost string, zone string) (*OverlordClient, error) {
+	var scheme string
+
+	if *config.Mode == config.ProdEnv {
+		scheme = "wss"
+	} else {
+		scheme = "ws"
+	}
+
 	overlordURL := url.URL{
-		Scheme:   "wss",
+		Scheme:   scheme,
 		Host:     ohost,
 		Path:     "/wso",
 		RawQuery: "zone=" + zone,
@@ -96,18 +102,13 @@ func setupOverlordConnection(ohost string, zone string) (*OverlordClient, error)
 }
 
 func createOverlordConnection(ourl *url.URL) (*websocket.Conn, error) {
-
-	roots := x509.NewCertPool()
-	severCert, err := ioutil.ReadFile("./server.crt")
-	if err != nil {
-		fmt.Println("Could not load server certificate!")
-		log.Fatal(err)
-	}
-	if ok := roots.AppendCertsFromPEM(severCert); !ok {
-		log.Fatal("Cannot append serverCert to Root")
+	var d websocket.Dialer
+	if ourl.Scheme == "wss" {
+		d = websocket.Dialer{TLSClientConfig: &tls.Config{InsecureSkipVerify: true}}
+	} else {
+		d = websocket.Dialer{}
 	}
 
-	d := websocket.Dialer{TLSClientConfig: &tls.Config{RootCAs: roots, InsecureSkipVerify: true}}
 	ws, _, err := d.Dial(ourl.String(), nil)
 	if err != nil {
 		return nil, err
