@@ -2,13 +2,17 @@ package worker
 
 import (
 	"context"
+	"crypto/tls"
 	"fmt"
 	"log"
 	"net"
 	"net/http"
 	"strconv"
+	"time"
 
+	"github.com/giongto35/cloud-game/pkg/config"
 	"github.com/giongto35/cloud-game/pkg/config/worker"
+	"golang.org/x/crypto/acme/autocert"
 
 	"github.com/giongto35/cloud-game/pkg/monitoring"
 	"github.com/golang/glog"
@@ -50,6 +54,83 @@ func (o *OverWorker) Shutdown() {
 	}
 }
 
+func makeServerFromMux(mux *http.ServeMux) *http.Server {
+	// set timeouts so that a slow or malicious client doesn't
+	// hold resources forever
+	return &http.Server{
+		ReadTimeout:  5 * time.Second,
+		WriteTimeout: 5 * time.Second,
+		IdleTimeout:  120 * time.Second,
+		Handler:      mux,
+	}
+}
+
+func makeHTTPServer() *http.Server {
+	mux := &http.ServeMux{}
+	mux.HandleFunc("/echo", func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Access-Control-Allow-Origin", "*")
+		fmt.Fprintf(w, "echo")
+	})
+
+	return makeServerFromMux(mux)
+}
+
+func makeHTTPToHTTPSRedirectServer() *http.Server {
+	handleRedirect := func(w http.ResponseWriter, r *http.Request) {
+		newURI := "https://" + r.Host + r.URL.String()
+		http.Redirect(w, r, newURI, http.StatusFound)
+	}
+	mux := &http.ServeMux{}
+	mux.HandleFunc("/", handleRedirect)
+
+	return makeServerFromMux(mux)
+}
+
+func (o *OverWorker) spawnServer(port int) {
+	var certManager *autocert.Manager
+	var httpsSrv *http.Server
+
+	if *config.Mode == config.ProdEnv {
+		hostPolicy := func(ctx context.Context, host string) error {
+			return nil
+		}
+		certManager = &autocert.Manager{
+			Prompt:     autocert.AcceptTOS,
+			HostPolicy: hostPolicy,
+			Cache:      autocert.DirCache(""),
+		}
+
+		httpsSrv = makeHTTPServer()
+		httpsSrv.Addr = ":443"
+		httpsSrv.TLSConfig = &tls.Config{GetCertificate: certManager.GetCertificate}
+
+		go func() {
+			fmt.Printf("Starting HTTPS server on %s\n", httpsSrv.Addr)
+			err := httpsSrv.ListenAndServeTLS("", "")
+			if err != nil {
+				log.Fatalf("httpsSrv.ListendAndServeTLS() failed with %s", err)
+			}
+		}()
+	}
+
+	var httpSrv *http.Server
+	if *config.Mode == config.ProdEnv {
+		httpSrv = makeHTTPToHTTPSRedirectServer()
+	} else {
+		httpSrv = makeHTTPServer()
+	}
+
+	if certManager != nil {
+		httpSrv.Handler = certManager.HTTPHandler(httpSrv.Handler)
+	}
+
+	httpSrv.Addr = ":" + strconv.Itoa(port)
+	err := httpSrv.ListenAndServe()
+	if err != nil {
+		log.Fatalf("httpSrv.ListenAndServe() failed with %s", err)
+	}
+}
+
 // initializeWorker setup a worker
 func (o *OverWorker) initializeWorker() {
 	worker := NewHandler(o.cfg)
@@ -77,12 +158,6 @@ func (o *OverWorker) initializeWorker() {
 
 		l.Close()
 
-		// echo endpoint is where user will request to test latency
-		http.HandleFunc("/echo", func(w http.ResponseWriter, r *http.Request) {
-			w.Header().Set("Access-Control-Allow-Origin", "*")
-			fmt.Fprintf(w, "echo")
-		})
-
-		http.ListenAndServe(":"+strconv.Itoa(port), nil)
+		o.spawnServer(port)
 	}
 }

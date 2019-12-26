@@ -123,7 +123,6 @@ func (o *Overlord) initializeOverlord() {
 	}
 
 	var httpSrv *http.Server
-	log.Println("Redirect server")
 	if *config.Mode == config.ProdEnv {
 		httpSrv = makeHTTPToHTTPSRedirectServer(overlord)
 	} else {
