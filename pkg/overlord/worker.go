@@ -1,16 +1,20 @@
 package overlord
 
 import (
+	"fmt"
 	"log"
 
 	"github.com/giongto35/cloud-game/pkg/cws"
 	"github.com/gorilla/websocket"
 )
 
+const publicWorkerTemplate = "%s/ping/%s"
+
 type WorkerClient struct {
 	*cws.Client
 	ServerID       string
-	Address        string
+	Address        string // ip address of worker
+	PublicDomain   string // public domain of worker, used for serving echo route
 	StunTurnServer string
 	IsAvailable    bool
 	Zone           string
@@ -57,11 +61,12 @@ func (o *Server) RouteWorker(workerClient *WorkerClient) {
 }
 
 // NewWorkerClient returns a client connecting to worker. This connection exchanges information between workers and server
-func NewWorkerClient(c *websocket.Conn, serverID string, address string, stunturn string, zone string) *WorkerClient {
+func NewWorkerClient(c *websocket.Conn, serverID string, address string, domain string, stunturn string, zone string) *WorkerClient {
 	return &WorkerClient{
 		Client:         cws.NewClient(c),
 		ServerID:       serverID,
 		Address:        address,
+		PublicDomain:   fmt.Sprintf(publicWorkerTemplate, domain, serverID),
 		StunTurnServer: stunturn,
 		IsAvailable:    true,
 		Zone:           zone,

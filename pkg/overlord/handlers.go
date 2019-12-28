@@ -84,6 +84,7 @@ func (o *Server) WSO(w http.ResponseWriter, r *http.Request) {
 
 	fmt.Printf("Is public: %v zone: %v\n", util.IsPublicIP(address), zone)
 
+	// In case worker and overlord in the same host
 	if !util.IsPublicIP(address) && *config.Mode == config.ProdEnv {
 		// Don't accept private IP for worker's address in prod mode
 		// However, if the worker in the same host with overlord, we can get public IP of worker
@@ -95,7 +96,7 @@ func (o *Server) WSO(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 	}
-	client := NewWorkerClient(c, serverID, address, fmt.Sprintf(config.StunTurnTemplate, address, address), zone)
+	client := NewWorkerClient(c, serverID, address, o.cfg.PublicDomain, fmt.Sprintf(config.StunTurnTemplate, address, address), zone)
 	o.workerClients[serverID] = client
 	defer o.cleanConnection(client, serverID)
 
@@ -213,7 +214,7 @@ func (o *Server) getBestWorkerClient(client *BrowserClient, zone string) (*Worke
 
 	workerClients := o.getAvailableWorkers()
 
-	serverID, err := findBestServerFromBrowser(workerClients, client, zone)
+	serverID, err := o.findBestServerFromBrowser(workerClients, client, zone)
 	if err != nil {
 		log.Println(err)
 		return nil, err
@@ -247,13 +248,13 @@ func (o *Server) getWorkerFromAddress(address string) *WorkerClient {
 
 // findBestServerFromBrowser returns the best server for a session
 // All workers addresses are sent to user and user will ping to get latency
-func findBestServerFromBrowser(workerClients map[string]*WorkerClient, client *BrowserClient, zone string) (string, error) {
+func (o *Server) findBestServerFromBrowser(workerClients map[string]*WorkerClient, client *BrowserClient, zone string) (string, error) {
 	// TODO: Find best Server by latency, currently return by ping
 	if len(workerClients) == 0 {
 		return "", errors.New("No server found")
 	}
 
-	latencies := getLatencyMapFromBrowser(workerClients, client)
+	latencies := o.getLatencyMapFromBrowser(workerClients, client)
 	log.Println("Latency map", latencies)
 
 	if len(latencies) == 0 {
@@ -280,16 +281,15 @@ func findBestServerFromBrowser(workerClients map[string]*WorkerClient, client *B
 }
 
 // getLatencyMapFromBrowser get all latencies from worker to user
-func getLatencyMapFromBrowser(workerClients map[string]*WorkerClient, client *BrowserClient) map[*WorkerClient]int64 {
+func (o *Server) getLatencyMapFromBrowser(workerClients map[string]*WorkerClient, client *BrowserClient) map[*WorkerClient]int64 {
 	workersList := []*WorkerClient{}
-
+	addressList := []string{}
 	latencyMap := map[*WorkerClient]int64{}
 
 	// addressList is the list of worker addresses
-	addressList := []string{}
 	for _, workerClient := range workerClients {
 		workersList = append(workersList, workerClient)
-		addressList = append(addressList, workerClient.Address)
+		addressList = append(addressList, workerClient.PublicDomain)
 	}
 
 	// send this address to user and get back latency
@@ -307,7 +307,7 @@ func getLatencyMapFromBrowser(workerClients map[string]*WorkerClient, client *Br
 	}
 
 	for _, workerClient := range workersList {
-		if latency, ok := respLatency[workerClient.Address]; ok {
+		if latency, ok := respLatency[workerClient.PublicDomain]; ok {
 			latencyMap[workerClient] = latency
 		}
 	}

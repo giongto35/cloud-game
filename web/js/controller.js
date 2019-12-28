@@ -50,7 +50,7 @@
 
         Promise.all((data.addresses || []).map(address => {
             let beforeTime = Date.now();
-            return ajax.fetch(`http://${address}:9000/echo?_=${beforeTime}`, {}, timeoutMs)
+            return ajax.fetch(`${address}?_=${beforeTime}`, {method: "GET", redirect: "follow"}, timeoutMs)
                 .then(() => ({[address]: Date.now() - beforeTime}), () => ({[address]: maxTimeoutMs}));
         })).then(results => {
             // const latencies = Object.assign({}, ...results);

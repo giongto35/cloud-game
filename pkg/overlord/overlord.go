@@ -11,6 +11,7 @@ import (
 	"github.com/giongto35/cloud-game/pkg/config"
 	"github.com/giongto35/cloud-game/pkg/monitoring"
 	"github.com/golang/glog"
+	"github.com/gorilla/mux"
 
 	"golang.org/x/crypto/acme/autocert"
 )
@@ -62,14 +63,31 @@ func makeServerFromMux(mux *http.ServeMux) *http.Server {
 	}
 }
 
-func makeHTTPServer(server *Server) *http.Server {
-	mux := &http.ServeMux{}
-	mux.HandleFunc("/", server.GetWeb)
-	mux.HandleFunc("/ws", server.WS)
-	mux.HandleFunc("/wso", server.WSO)
-	mux.Handle("/static/", http.StripPrefix("/static/", http.FileServer(http.Dir("./web"))))
+func (server *Server) redirectEcho(w http.ResponseWriter, r *http.Request) {
+	vars := mux.Vars(r)
 
-	return makeServerFromMux(mux)
+	workerID := vars["worker_id"]
+
+	//w.Header().Set("AllowedRedirectUris", "*")
+	fmt.Println("workerID", workerID)
+	hostURL := "https://" + server.workerClients[workerID].Address + "/echo"
+	//hostURL := "http://localhost:9000/echo"
+	log.Println("Redirecting echo to", hostURL)
+	http.Redirect(w, r, hostURL, http.StatusFound)
+}
+
+func makeHTTPServer(server *Server) *http.Server {
+	r := mux.NewRouter()
+	r.HandleFunc("/", server.GetWeb)
+	r.HandleFunc("/ws", server.WS)
+	r.HandleFunc("/wso", server.WSO)
+	r.HandleFunc("/ping/{worker_id}", server.redirectEcho)
+	r.PathPrefix("/static/").Handler(http.StripPrefix("/static/", http.FileServer(http.Dir("./web"))))
+
+	svmux := &http.ServeMux{}
+	svmux.Handle("/", r)
+
+	return makeServerFromMux(svmux)
 }
 
 func makeHTTPToHTTPSRedirectServer(server *Server) *http.Server {
@@ -77,13 +95,16 @@ func makeHTTPToHTTPSRedirectServer(server *Server) *http.Server {
 		newURI := "https://" + r.Host + r.URL.String()
 		http.Redirect(w, r, newURI, http.StatusFound)
 	}
-	mux := &http.ServeMux{}
-	mux.HandleFunc("/", handleRedirect)
-	mux.HandleFunc("/ws", handleRedirect)
-	mux.HandleFunc("/wso", handleRedirect)
-	mux.Handle("/static/", http.StripPrefix("/static/", http.FileServer(http.Dir("./web"))))
+	r := mux.NewRouter()
+	r.HandleFunc("/", handleRedirect)
+	r.HandleFunc("/ws", handleRedirect)
+	r.HandleFunc("/wso", handleRedirect)
+	r.PathPrefix("/static/").Handler(http.StripPrefix("/static/", http.FileServer(http.Dir("./web"))))
 
-	return makeServerFromMux(mux)
+	svmux := &http.ServeMux{}
+	svmux.Handle("/", r)
+
+	return makeServerFromMux(svmux)
 }
 
 // initializeOverlord setup an overlord server
@@ -97,7 +118,7 @@ func (o *Overlord) initializeOverlord() {
 	if *config.Mode == config.ProdEnv {
 		hostPolicy := func(ctx context.Context, host string) error {
 			// Note: change to your real host
-			allowedHost := "www.cloudretro.io"
+			allowedHost := "cloudretro.io"
 			if host == allowedHost {
 				return nil
 			}

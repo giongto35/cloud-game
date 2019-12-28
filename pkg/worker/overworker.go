@@ -69,7 +69,7 @@ func makeHTTPServer() *http.Server {
 	mux := &http.ServeMux{}
 	mux.HandleFunc("/echo", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Access-Control-Allow-Origin", "*")
-		fmt.Fprintf(w, "echo")
+		log.Println(w, "echo")
 	})
 
 	return makeServerFromMux(mux)
@@ -78,6 +78,7 @@ func makeHTTPServer() *http.Server {
 func makeHTTPToHTTPSRedirectServer() *http.Server {
 	handleRedirect := func(w http.ResponseWriter, r *http.Request) {
 		newURI := "https://" + r.Host + r.URL.String()
+		log.Println(w, "echo")
 		http.Redirect(w, r, newURI, http.StatusFound)
 	}
 	mux := &http.ServeMux{}
@@ -101,7 +102,7 @@ func (o *OverWorker) spawnServer(port int) {
 		}
 
 		httpsSrv = makeHTTPServer()
-		httpsSrv.Addr = ":443"
+		httpsSrv.Addr = ":" + strconv.Itoa(port-9000+443) // equivalent https port
 		httpsSrv.TLSConfig = &tls.Config{GetCertificate: certManager.GetCertificate}
 
 		go func() {
