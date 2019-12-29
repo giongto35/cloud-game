@@ -98,11 +98,11 @@ func (o *OverWorker) spawnServer(port int) {
 		certManager = &autocert.Manager{
 			Prompt:     autocert.AcceptTOS,
 			HostPolicy: hostPolicy,
-			Cache:      autocert.DirCache(""),
+			Cache:      autocert.DirCache("assets/cache"),
 		}
 
 		httpsSrv = makeHTTPServer()
-		httpsSrv.Addr = ":" + strconv.Itoa(port-9000+443) // equivalent https port
+		httpsSrv.Addr = ":" + strconv.Itoa(port-9000+500) // equivalent https port
 		httpsSrv.TLSConfig = &tls.Config{GetCertificate: certManager.GetCertificate}
 
 		go func() {

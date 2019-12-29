@@ -13,8 +13,11 @@ import (
 	"github.com/golang/glog"
 	"github.com/gorilla/mux"
 
+	"golang.org/x/crypto/acme"
 	"golang.org/x/crypto/acme/autocert"
 )
+
+const stagingLEURL = "https://acme-staging-v02.api.letsencrypt.org/directory"
 
 type Overlord struct {
 	ctx context.Context
@@ -115,19 +118,28 @@ func (o *Overlord) initializeOverlord() {
 	var httpsSrv *http.Server
 
 	log.Println("Initializing Overlord Server")
-	if *config.Mode == config.ProdEnv {
+	if *config.Mode == config.ProdEnv || *config.Mode == config.StagingEnv {
 		hostPolicy := func(ctx context.Context, host string) error {
 			// Note: change to your real host
-			allowedHost := "cloudretro.io"
+
+			allowedHost := "webgame2d.com"
 			if host == allowedHost {
 				return nil
 			}
 			return fmt.Errorf("acme/autocert: only %s host is allowed", allowedHost)
 		}
+		var leurl string
+		if *config.Mode == config.StagingEnv {
+			leurl = stagingLEURL
+		} else {
+			leurl = acme.LetsEncryptURL
+		}
+
 		certManager = &autocert.Manager{
 			Prompt:     autocert.AcceptTOS,
 			HostPolicy: hostPolicy,
-			Cache:      autocert.DirCache("."),
+			Cache:      autocert.DirCache("assets/cache"),
+			Client:     &acme.Client{DirectoryURL: leurl},
 		}
 
 		httpsSrv = makeHTTPServer(overlord)

@@ -22,6 +22,7 @@ var StunTurnTemplate = `[{"urls":"stun:stun.l.google.com:19302"},{"urls":"stun:%
 var WSWait = 20 * time.Second
 var MatchWorkerRandom = false
 var ProdEnv = "prod"
+var StagingEnv = "staging"
 
 const NumKeys = 10
 
