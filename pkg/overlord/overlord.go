@@ -66,25 +66,11 @@ func makeServerFromMux(mux *http.ServeMux) *http.Server {
 	}
 }
 
-func (server *Server) redirectEcho(w http.ResponseWriter, r *http.Request) {
-	vars := mux.Vars(r)
-
-	workerID := vars["worker_id"]
-
-	//w.Header().Set("AllowedRedirectUris", "*")
-	fmt.Println("workerID", workerID)
-	hostURL := "https://" + server.workerClients[workerID].Address + "/echo"
-	//hostURL := "http://localhost:9000/echo"
-	log.Println("Redirecting echo to", hostURL)
-	http.Redirect(w, r, hostURL, http.StatusFound)
-}
-
 func makeHTTPServer(server *Server) *http.Server {
 	r := mux.NewRouter()
 	r.HandleFunc("/", server.GetWeb)
 	r.HandleFunc("/ws", server.WS)
 	r.HandleFunc("/wso", server.WSO)
-	r.HandleFunc("/ping/{worker_id}", server.redirectEcho)
 	r.PathPrefix("/static/").Handler(http.StripPrefix("/static/", http.FileServer(http.Dir("./web"))))
 
 	svmux := &http.ServeMux{}
@@ -156,7 +142,7 @@ func (o *Overlord) initializeOverlord() {
 	}
 
 	var httpSrv *http.Server
-	if *config.Mode == config.ProdEnv {
+	if *config.Mode == config.ProdEnv || *config.Mode == config.StagingEnv {
 		httpSrv = makeHTTPToHTTPSRedirectServer(overlord)
 	} else {
 		httpSrv = makeHTTPServer(overlord)

@@ -30,6 +30,8 @@ type Server struct {
 	workerClients map[string]*WorkerClient
 }
 
+const pingServerTemp = "https://%s.%s/echo"
+
 var upgrader = websocket.Upgrader{}
 var errNotFound = errors.New("Not found")
 
@@ -65,6 +67,16 @@ func (o *Server) GetWeb(w http.ResponseWriter, r *http.Request) {
 	tmpl.Execute(w, data)
 }
 
+// getPingServer returns the server for latency check of a zone. In latency check to find best worker step, we use this server to find the closest worker.
+func (o *Server) getPingServer(zone string) string {
+	if *config.Mode == config.ProdEnv || *config.Mode == config.StagingEnv {
+		return fmt.Sprintf(pingServerTemp, zone, o.cfg.PublicDomain)
+	}
+
+	// dev env
+	return "http://localhost:9000/echo"
+}
+
 // WSO handles all connections from a new worker to overlord
 func (o *Server) WSO(w http.ResponseWriter, r *http.Request) {
 	fmt.Println("Connected")
@@ -82,6 +94,8 @@ func (o *Server) WSO(w http.ResponseWriter, r *http.Request) {
 	// Zone of the worker
 	zone := r.URL.Query().Get("zone")
 
+	pingServer := o.getPingServer(zone)
+
 	fmt.Printf("Is public: %v zone: %v\n", util.IsPublicIP(address), zone)
 
 	// In case worker and overlord in the same host
@@ -96,7 +110,7 @@ func (o *Server) WSO(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 	}
-	client := NewWorkerClient(c, serverID, address, o.cfg.PublicDomain, fmt.Sprintf(config.StunTurnTemplate, address, address), zone)
+	client := NewWorkerClient(c, serverID, address, fmt.Sprintf(config.StunTurnTemplate, address, address), zone, pingServer)
 	o.workerClients[serverID] = client
 	defer o.cleanConnection(client, serverID)
 
@@ -289,7 +303,7 @@ func (o *Server) getLatencyMapFromBrowser(workerClients map[string]*WorkerClient
 	// addressList is the list of worker addresses
 	for _, workerClient := range workerClients {
 		workersList = append(workersList, workerClient)
-		addressList = append(addressList, workerClient.PublicDomain)
+		addressList = append(addressList, workerClient.PingServer)
 	}
 
 	// send this address to user and get back latency
@@ -307,7 +321,7 @@ func (o *Server) getLatencyMapFromBrowser(workerClients map[string]*WorkerClient
 	}
 
 	for _, workerClient := range workersList {
-		if latency, ok := respLatency[workerClient.PublicDomain]; ok {
+		if latency, ok := respLatency[workerClient.PingServer]; ok {
 			latencyMap[workerClient] = latency
 		}
 	}

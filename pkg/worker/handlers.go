@@ -80,7 +80,7 @@ func (h *Handler) Run() {
 func setupOverlordConnection(ohost string, zone string) (*OverlordClient, error) {
 	var scheme string
 
-	if *config.Mode == config.ProdEnv {
+	if *config.Mode == config.ProdEnv || *config.Mode == config.StagingEnv {
 		scheme = "wss"
 	} else {
 		scheme = "ws"

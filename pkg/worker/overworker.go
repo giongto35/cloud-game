@@ -12,6 +12,7 @@ import (
 
 	"github.com/giongto35/cloud-game/pkg/config"
 	"github.com/giongto35/cloud-game/pkg/config/worker"
+	"golang.org/x/crypto/acme"
 	"golang.org/x/crypto/acme/autocert"
 
 	"github.com/giongto35/cloud-game/pkg/monitoring"
@@ -24,6 +25,8 @@ type OverWorker struct {
 
 	monitoringServer *monitoring.ServerMonitoring
 }
+
+const stagingLEURL = "https://acme-staging-v02.api.letsencrypt.org/directory"
 
 func New(ctx context.Context, cfg worker.Config) *OverWorker {
 	return &OverWorker{
@@ -91,18 +94,26 @@ func (o *OverWorker) spawnServer(port int) {
 	var certManager *autocert.Manager
 	var httpsSrv *http.Server
 
-	if *config.Mode == config.ProdEnv {
+	if *config.Mode == config.ProdEnv || *config.Mode == config.StagingEnv {
 		hostPolicy := func(ctx context.Context, host string) error {
 			return nil
 		}
+		var leurl string
+		if *config.Mode == config.StagingEnv {
+			leurl = stagingLEURL
+		} else {
+			leurl = acme.LetsEncryptURL
+		}
+
 		certManager = &autocert.Manager{
 			Prompt:     autocert.AcceptTOS,
 			HostPolicy: hostPolicy,
 			Cache:      autocert.DirCache("assets/cache"),
+			Client:     &acme.Client{DirectoryURL: leurl},
 		}
 
 		httpsSrv = makeHTTPServer()
-		httpsSrv.Addr = ":" + strconv.Itoa(port-9000+500) // equivalent https port
+		httpsSrv.Addr = ":" + strconv.Itoa(port-9000+443) // equivalent https port
 		httpsSrv.TLSConfig = &tls.Config{GetCertificate: certManager.GetCertificate}
 
 		go func() {
@@ -115,7 +126,7 @@ func (o *OverWorker) spawnServer(port int) {
 	}
 
 	var httpSrv *http.Server
-	if *config.Mode == config.ProdEnv {
+	if *config.Mode == config.ProdEnv || *config.Mode == config.StagingEnv {
 		httpSrv = makeHTTPToHTTPSRedirectServer()
 	} else {
 		httpSrv = makeHTTPServer()
