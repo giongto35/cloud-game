@@ -81,7 +81,6 @@ func makeHTTPServer() *http.Server {
 func makeHTTPToHTTPSRedirectServer() *http.Server {
 	handleRedirect := func(w http.ResponseWriter, r *http.Request) {
 		newURI := "https://" + r.Host + r.URL.String()
-		log.Println(w, "echo")
 		http.Redirect(w, r, newURI, http.StatusFound)
 	}
 	mux := &http.ServeMux{}
@@ -95,9 +94,6 @@ func (o *OverWorker) spawnServer(port int) {
 	var httpsSrv *http.Server
 
 	if *config.Mode == config.ProdEnv || *config.Mode == config.StagingEnv {
-		hostPolicy := func(ctx context.Context, host string) error {
-			return nil
-		}
 		var leurl string
 		if *config.Mode == config.StagingEnv {
 			leurl = stagingLEURL
@@ -106,14 +102,13 @@ func (o *OverWorker) spawnServer(port int) {
 		}
 
 		certManager = &autocert.Manager{
-			Prompt:     autocert.AcceptTOS,
-			HostPolicy: hostPolicy,
-			Cache:      autocert.DirCache("assets/cache"),
-			Client:     &acme.Client{DirectoryURL: leurl},
+			Prompt: autocert.AcceptTOS,
+			Cache:  autocert.DirCache("assets/cache"),
+			Client: &acme.Client{DirectoryURL: leurl},
 		}
 
 		httpsSrv = makeHTTPServer()
-		httpsSrv.Addr = ":" + strconv.Itoa(port-9000+443) // equivalent https port
+		httpsSrv.Addr = ":443"
 		httpsSrv.TLSConfig = &tls.Config{GetCertificate: certManager.GetCertificate}
 
 		go func() {

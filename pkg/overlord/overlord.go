@@ -108,7 +108,7 @@ func (o *Overlord) initializeOverlord() {
 		hostPolicy := func(ctx context.Context, host string) error {
 			// Note: change to your real host
 
-			allowedHost := "webgame2d.com"
+			allowedHost := "cloudretro.io"
 			if host == allowedHost {
 				return nil
 			}
