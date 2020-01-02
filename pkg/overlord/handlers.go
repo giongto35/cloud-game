@@ -30,6 +30,9 @@ type Server struct {
 	workerClients map[string]*WorkerClient
 }
 
+const pingServerTemp = "https://%s.%s/echo"
+const devPingServer = "http://localhost:9000/echo"
+
 var upgrader = websocket.Upgrader{}
 var errNotFound = errors.New("Not found")
 
@@ -65,6 +68,16 @@ func (o *Server) GetWeb(w http.ResponseWriter, r *http.Request) {
 	tmpl.Execute(w, data)
 }
 
+// getPingServer returns the server for latency check of a zone. In latency check to find best worker step, we use this server to find the closest worker.
+func (o *Server) getPingServer(zone string) string {
+	if *config.Mode == config.ProdEnv || *config.Mode == config.StagingEnv {
+		return fmt.Sprintf(pingServerTemp, zone, o.cfg.PublicDomain)
+	}
+
+	// If not Prod or Staging, return dev environment
+	return devPingServer
+}
+
 // WSO handles all connections from a new worker to overlord
 func (o *Server) WSO(w http.ResponseWriter, r *http.Request) {
 	fmt.Println("Connected")
@@ -82,8 +95,11 @@ func (o *Server) WSO(w http.ResponseWriter, r *http.Request) {
 	// Zone of the worker
 	zone := r.URL.Query().Get("zone")
 
+	pingServer := o.getPingServer(zone)
+
 	fmt.Printf("Is public: %v zone: %v\n", util.IsPublicIP(address), zone)
 
+	// In case worker and overlord in the same host
 	if !util.IsPublicIP(address) && *config.Mode == config.ProdEnv {
 		// Don't accept private IP for worker's address in prod mode
 		// However, if the worker in the same host with overlord, we can get public IP of worker
@@ -95,7 +111,7 @@ func (o *Server) WSO(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 	}
-	client := NewWorkerClient(c, serverID, address, fmt.Sprintf(config.StunTurnTemplate, address, address), zone)
+	client := NewWorkerClient(c, serverID, address, fmt.Sprintf(config.StunTurnTemplate, address, address), zone, pingServer)
 	o.workerClients[serverID] = client
 	defer o.cleanConnection(client, serverID)
 
@@ -213,7 +229,7 @@ func (o *Server) getBestWorkerClient(client *BrowserClient, zone string) (*Worke
 
 	workerClients := o.getAvailableWorkers()
 
-	serverID, err := findBestServerFromBrowser(workerClients, client, zone)
+	serverID, err := o.findBestServerFromBrowser(workerClients, client, zone)
 	if err != nil {
 		log.Println(err)
 		return nil, err
@@ -247,13 +263,13 @@ func (o *Server) getWorkerFromAddress(address string) *WorkerClient {
 
 // findBestServerFromBrowser returns the best server for a session
 // All workers addresses are sent to user and user will ping to get latency
-func findBestServerFromBrowser(workerClients map[string]*WorkerClient, client *BrowserClient, zone string) (string, error) {
+func (o *Server) findBestServerFromBrowser(workerClients map[string]*WorkerClient, client *BrowserClient, zone string) (string, error) {
 	// TODO: Find best Server by latency, currently return by ping
 	if len(workerClients) == 0 {
 		return "", errors.New("No server found")
 	}
 
-	latencies := getLatencyMapFromBrowser(workerClients, client)
+	latencies := o.getLatencyMapFromBrowser(workerClients, client)
 	log.Println("Latency map", latencies)
 
 	if len(latencies) == 0 {
@@ -280,16 +296,15 @@ func findBestServerFromBrowser(workerClients map[string]*WorkerClient, client *B
 }
 
 // getLatencyMapFromBrowser get all latencies from worker to user
-func getLatencyMapFromBrowser(workerClients map[string]*WorkerClient, client *BrowserClient) map[*WorkerClient]int64 {
+func (o *Server) getLatencyMapFromBrowser(workerClients map[string]*WorkerClient, client *BrowserClient) map[*WorkerClient]int64 {
 	workersList := []*WorkerClient{}
-
+	addressList := []string{}
 	latencyMap := map[*WorkerClient]int64{}
 
 	// addressList is the list of worker addresses
-	addressList := []string{}
 	for _, workerClient := range workerClients {
 		workersList = append(workersList, workerClient)
-		addressList = append(addressList, workerClient.Address)
+		addressList = append(addressList, workerClient.PingServer)
 	}
 
 	// send this address to user and get back latency
@@ -307,7 +322,7 @@ func getLatencyMapFromBrowser(workerClients map[string]*WorkerClient, client *Br
 	}
 
 	for _, workerClient := range workersList {
-		if latency, ok := respLatency[workerClient.Address]; ok {
+		if latency, ok := respLatency[workerClient.PingServer]; ok {
 			latencyMap[workerClient] = latency
 		}
 	}

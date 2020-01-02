@@ -2,12 +2,22 @@ package overlord
 
 import (
 	"context"
+	"crypto/tls"
+	"fmt"
 	"log"
 	"net/http"
+	"time"
 
+	"github.com/giongto35/cloud-game/pkg/config"
 	"github.com/giongto35/cloud-game/pkg/monitoring"
 	"github.com/golang/glog"
+	"github.com/gorilla/mux"
+
+	"golang.org/x/crypto/acme"
+	"golang.org/x/crypto/acme/autocert"
 )
+
+const stagingLEURL = "https://acme-staging-v02.api.letsencrypt.org/directory"
 
 type Overlord struct {
 	ctx context.Context
@@ -45,24 +55,97 @@ func (o *Overlord) Shutdown() {
 	}
 }
 
+func makeServerFromMux(mux *http.ServeMux) *http.Server {
+	// set timeouts so that a slow or malicious client doesn't
+	// hold resources forever
+	return &http.Server{
+		ReadTimeout:  5 * time.Second,
+		WriteTimeout: 5 * time.Second,
+		IdleTimeout:  120 * time.Second,
+		Handler:      mux,
+	}
+}
+
+func makeHTTPServer(server *Server) *http.Server {
+	r := mux.NewRouter()
+	r.HandleFunc("/", server.GetWeb)
+	r.HandleFunc("/ws", server.WS)
+	r.HandleFunc("/wso", server.WSO)
+	r.PathPrefix("/static/").Handler(http.StripPrefix("/static/", http.FileServer(http.Dir("./web"))))
+
+	svmux := &http.ServeMux{}
+	svmux.Handle("/", r)
+
+	return makeServerFromMux(svmux)
+}
+
+func makeHTTPToHTTPSRedirectServer(server *Server) *http.Server {
+	handleRedirect := func(w http.ResponseWriter, r *http.Request) {
+		newURI := "https://" + r.Host + r.URL.String()
+		http.Redirect(w, r, newURI, http.StatusFound)
+	}
+	r := mux.NewRouter()
+	r.HandleFunc("/", handleRedirect)
+	r.HandleFunc("/ws", handleRedirect)
+	r.HandleFunc("/wso", handleRedirect)
+	r.PathPrefix("/static/").Handler(http.StripPrefix("/static/", http.FileServer(http.Dir("./web"))))
+
+	svmux := &http.ServeMux{}
+	svmux.Handle("/", r)
+
+	return makeServerFromMux(svmux)
+}
+
 // initializeOverlord setup an overlord server
 func (o *Overlord) initializeOverlord() {
 	overlord := NewServer(o.cfg)
 
-	http.HandleFunc("/", overlord.GetWeb)
-	http.Handle("/static/", http.StripPrefix("/static/", http.FileServer(http.Dir("./web"))))
+	var certManager *autocert.Manager
+	var httpsSrv *http.Server
 
-	// browser facing port
-	go func() {
-		http.HandleFunc("/ws", overlord.WS)
-	}()
+	log.Println("Initializing Overlord Server")
+	if *config.Mode == config.ProdEnv || *config.Mode == config.StagingEnv {
+		var leurl string
+		if *config.Mode == config.StagingEnv {
+			leurl = stagingLEURL
+		} else {
+			leurl = acme.LetsEncryptURL
+		}
 
-	// worker facing port
-	http.HandleFunc("/wso", overlord.WSO)
-	log.Println("Listening at port: localhost:8000")
-	err := http.ListenAndServe(":8000", nil)
-	// Print err if overlord cannot launch
+		certManager = &autocert.Manager{
+			Prompt:     autocert.AcceptTOS,
+			HostPolicy: autocert.HostWhitelist(o.cfg.PublicDomain),
+			Cache:      autocert.DirCache("assets/cache"),
+			Client:     &acme.Client{DirectoryURL: leurl},
+		}
+
+		httpsSrv = makeHTTPServer(overlord)
+		httpsSrv.Addr = ":443"
+		httpsSrv.TLSConfig = &tls.Config{GetCertificate: certManager.GetCertificate}
+
+		go func() {
+			fmt.Printf("Starting HTTPS server on %s\n", httpsSrv.Addr)
+			err := httpsSrv.ListenAndServeTLS("", "")
+			if err != nil {
+				log.Fatalf("httpsSrv.ListendAndServeTLS() failed with %s", err)
+			}
+		}()
+	}
+
+	var httpSrv *http.Server
+	if *config.Mode == config.ProdEnv || *config.Mode == config.StagingEnv {
+		httpSrv = makeHTTPToHTTPSRedirectServer(overlord)
+	} else {
+		httpSrv = makeHTTPServer(overlord)
+	}
+
+	if certManager != nil {
+		httpSrv.Handler = certManager.HTTPHandler(httpSrv.Handler)
+	}
+
+	httpSrv.Addr = ":8000"
+	err := httpSrv.ListenAndServe()
 	if err != nil {
-		log.Fatal(err)
+		log.Fatalf("httpSrv.ListenAndServe() failed with %s", err)
 	}
 }

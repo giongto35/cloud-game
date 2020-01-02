@@ -1,12 +1,14 @@
 package worker
 
 import (
+	"crypto/tls"
 	"log"
 	"net/url"
 	"os"
 	"path"
 	"time"
 
+	"github.com/giongto35/cloud-game/pkg/config"
 	"github.com/giongto35/cloud-game/pkg/config/worker"
 
 	"github.com/giongto35/cloud-game/pkg/util"
@@ -61,13 +63,13 @@ func (h *Handler) Run() {
 	for {
 		oClient, err := setupOverlordConnection(h.overlordHost, h.cfg.Zone)
 		if err != nil {
-			log.Println("Cannot connect to overlord. Retrying...")
+			log.Printf("Cannot connect to overlord. %v Retrying...", err)
 			time.Sleep(time.Second)
 			continue
 		}
 
 		h.oClient = oClient
-		log.Println("Connected to overlord successfully.")
+		log.Println("Connected to overlord successfully.", oClient, err)
 		go h.oClient.Heartbeat()
 		h.RouteOverlord()
 		h.oClient.Listen()
@@ -76,28 +78,43 @@ func (h *Handler) Run() {
 }
 
 func setupOverlordConnection(ohost string, zone string) (*OverlordClient, error) {
+	var scheme string
+
+	if *config.Mode == config.ProdEnv || *config.Mode == config.StagingEnv {
+		scheme = "wss"
+	} else {
+		scheme = "ws"
+	}
+
 	overlordURL := url.URL{
-		Scheme:   "ws",
+		Scheme:   scheme,
 		Host:     ohost,
 		Path:     "/wso",
 		RawQuery: "zone=" + zone,
 	}
 	log.Println("Worker connecting to overlord:", overlordURL.String())
 
-	conn, err := createOverlordConnection(overlordURL.String())
+	conn, err := createOverlordConnection(&overlordURL)
 	if err != nil {
 		return nil, err
 	}
 	return NewOverlordClient(conn), nil
 }
 
-func createOverlordConnection(ohost string) (*websocket.Conn, error) {
-	c, _, err := websocket.DefaultDialer.Dial(ohost, nil)
+func createOverlordConnection(ourl *url.URL) (*websocket.Conn, error) {
+	var d websocket.Dialer
+	if ourl.Scheme == "wss" {
+		d = websocket.Dialer{TLSClientConfig: &tls.Config{InsecureSkipVerify: true}}
+	} else {
+		d = websocket.Dialer{}
+	}
+
+	ws, _, err := d.Dial(ourl.String(), nil)
 	if err != nil {
 		return nil, err
 	}
 
-	return c, nil
+	return ws, nil
 }
 
 func (h *Handler) GetOverlordClient() *OverlordClient {

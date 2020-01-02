@@ -7,10 +7,14 @@ import (
 	"github.com/gorilla/websocket"
 )
 
+const pingServer = "%s://%s/echo"
+
 type WorkerClient struct {
 	*cws.Client
-	ServerID       string
-	Address        string
+	ServerID string
+	Address  string // ip address of worker
+	// public server used for ping check (Cannot use worker address because they are not publicly exposed)
+	PingServer     string
 	StunTurnServer string
 	IsAvailable    bool
 	Zone           string
@@ -57,10 +61,11 @@ func (o *Server) RouteWorker(workerClient *WorkerClient) {
 }
 
 // NewWorkerClient returns a client connecting to worker. This connection exchanges information between workers and server
-func NewWorkerClient(c *websocket.Conn, serverID string, address string, stunturn string, zone string) *WorkerClient {
+func NewWorkerClient(c *websocket.Conn, serverID string, address string, stunturn string, zone, pingServer string) *WorkerClient {
 	return &WorkerClient{
 		Client:         cws.NewClient(c),
 		ServerID:       serverID,
+		PingServer:     pingServer,
 		Address:        address,
 		StunTurnServer: stunturn,
 		IsAvailable:    true,
