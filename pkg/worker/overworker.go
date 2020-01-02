@@ -115,7 +115,7 @@ func (o *OverWorker) spawnServer(port int) {
 			fmt.Printf("Starting HTTPS server on %s\n", httpsSrv.Addr)
 			err := httpsSrv.ListenAndServeTLS("", "")
 			if err != nil {
-				log.Fatalf("httpsSrv.ListendAndServeTLS() failed with %s", err)
+				log.Printf("httpsSrv.ListendAndServeTLS() failed with %s", err)
 			}
 		}()
 	}
@@ -134,7 +134,7 @@ func (o *OverWorker) spawnServer(port int) {
 	httpSrv.Addr = ":" + strconv.Itoa(port)
 	err := httpSrv.ListenAndServe()
 	if err != nil {
-		log.Fatalf("httpSrv.ListenAndServe() failed with %s", err)
+		log.Printf("httpSrv.ListenAndServe() failed with %s", err)
 	}
 }
 

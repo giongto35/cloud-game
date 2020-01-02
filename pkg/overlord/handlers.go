@@ -31,6 +31,7 @@ type Server struct {
 }
 
 const pingServerTemp = "https://%s.%s/echo"
+const devPingServer = "http://localhost:9000/echo"
 
 var upgrader = websocket.Upgrader{}
 var errNotFound = errors.New("Not found")
@@ -74,7 +75,7 @@ func (o *Server) getPingServer(zone string) string {
 	}
 
 	// If not Prod or Staging, return dev environment
-	return "http://localhost:9000/echo"
+	return devPingServer
 }
 
 // WSO handles all connections from a new worker to overlord
