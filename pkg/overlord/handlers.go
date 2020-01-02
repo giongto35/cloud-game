@@ -73,7 +73,7 @@ func (o *Server) getPingServer(zone string) string {
 		return fmt.Sprintf(pingServerTemp, zone, o.cfg.PublicDomain)
 	}
 
-	// dev env
+	// If not Prod or Staging, return dev environment
 	return "http://localhost:9000/echo"
 }
 

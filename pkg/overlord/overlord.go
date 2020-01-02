@@ -105,15 +105,6 @@ func (o *Overlord) initializeOverlord() {
 
 	log.Println("Initializing Overlord Server")
 	if *config.Mode == config.ProdEnv || *config.Mode == config.StagingEnv {
-		hostPolicy := func(ctx context.Context, host string) error {
-			// Note: change to your real host
-
-			allowedHost := "cloudretro.io"
-			if host == allowedHost {
-				return nil
-			}
-			return fmt.Errorf("acme/autocert: only %s host is allowed", allowedHost)
-		}
 		var leurl string
 		if *config.Mode == config.StagingEnv {
 			leurl = stagingLEURL
@@ -123,7 +114,7 @@ func (o *Overlord) initializeOverlord() {
 
 		certManager = &autocert.Manager{
 			Prompt:     autocert.AcceptTOS,
-			HostPolicy: hostPolicy,
+			HostPolicy: autocert.HostWhitelist(o.cfg.PublicDomain),
 			Cache:      autocert.DirCache("assets/cache"),
 			Client:     &acme.Client{DirectoryURL: leurl},
 		}
