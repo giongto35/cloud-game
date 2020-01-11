@@ -83,6 +83,19 @@ var bindRetroKeys = map[int]int{
 	9: C.RETRO_DEVICE_ID_JOYPAD_RIGHT,
 }
 
+var bindKeysMap = map[int]int{
+	C.RETRO_DEVICE_ID_JOYPAD_A:      0,
+	C.RETRO_DEVICE_ID_JOYPAD_B:      1,
+	C.RETRO_DEVICE_ID_JOYPAD_X:      2,
+	C.RETRO_DEVICE_ID_JOYPAD_Y:      3,
+	C.RETRO_DEVICE_ID_JOYPAD_SELECT: 4,
+	C.RETRO_DEVICE_ID_JOYPAD_START:  5,
+	C.RETRO_DEVICE_ID_JOYPAD_UP:     6,
+	C.RETRO_DEVICE_ID_JOYPAD_DOWN:   7,
+	C.RETRO_DEVICE_ID_JOYPAD_LEFT:   8,
+	C.RETRO_DEVICE_ID_JOYPAD_RIGHT:  9,
+}
+
 type CloudEmulator interface {
 	Start(path string)
 	SaveGame(saveExtraFunc func() error) error
@@ -122,8 +135,17 @@ func coreInputState(port C.unsigned, device C.unsigned, index C.unsigned, id C.u
 		return 0
 	}
 
-	if NAEmulator.keys[id*4+port] {
-		return 1
+	// map from id to controll key
+	key, ok := bindKeysMap[int(id)]
+	if !ok {
+		return 0
+	}
+
+	// check if any player is pressing that key
+	for k := range keysMap {
+		if ((keysMap[k][port] >> uint(key)) & 1) == 1 {
+			return 1
+		}
 	}
 	return 0
 }

@@ -217,7 +217,7 @@ func (r *Room) startWebRTCSession(peerconnection *webrtc.WebRTC) {
 			// the next 10 belongs to player 2 ...
 			// We standardize and put it to inputChannel (20 bits)
 			select {
-			case r.inputChannel <- nanoarch.InputEvent{KeyState: input, PlayerIdx: peerconnection.GameMeta.PlayerIndex}:
+			case r.inputChannel <- nanoarch.InputEvent{KeyState: input, PlayerIdx: peerconnection.GameMeta.PlayerIndex, ConnID: peerconnection.ID}:
 			default:
 			}
 		}
@@ -237,6 +237,11 @@ func (r *Room) RemoveSession(w *webrtc.WebRTC) {
 			log.Println("Removed session ", s.ID, " from room: ", r.ID)
 			break
 		}
+	}
+	// Detach input. Send end signal
+	select {
+	case r.inputChannel <- nanoarch.InputEvent{KeyState: -1, ConnID: w.ID}:
+	default:
 	}
 }
 
