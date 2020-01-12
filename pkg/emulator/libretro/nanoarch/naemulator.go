@@ -68,6 +68,7 @@ type naEmulator struct {
 type InputEvent struct {
 	KeyState  int
 	PlayerIdx int
+	ConnID    string
 }
 
 var NAEmulator *naEmulator
@@ -91,6 +92,8 @@ func NewNAEmulator(etype string, roomID string, inputChannel <-chan InputEvent) 
 	}, imageChannel, audioChannel
 }
 
+var keysMap = map[string][]int{}
+
 // Init initialize new RetroArch cloud emulator
 func Init(etype string, roomID string, inputChannel <-chan InputEvent) (*naEmulator, chan *image.RGBA, chan []int16) {
 	emulator, imageChannel, audioChannel := NewNAEmulator(etype, roomID, inputChannel)
@@ -107,19 +110,17 @@ func (na *naEmulator) listenInput() {
 	for inpEvent := range NAEmulator.inputChannel {
 		inpBitmap := inpEvent.KeyState
 
-		for k := 0; k < len(bindRetroKeys); k++ {
-			key, ok := bindRetroKeys[k]
-			if ok == false {
-				continue
-			}
-
-			if (inpBitmap & 1) == 1 {
-				na.keys[key*4+inpEvent.PlayerIdx] = true
-			} else {
-				na.keys[key*4+inpEvent.PlayerIdx] = false
-			}
-			inpBitmap >>= 1
+		if inpBitmap == -1 {
+			// terminated
+			delete(keysMap, inpEvent.ConnID)
+			continue
 		}
+
+		if _, ok := keysMap[inpEvent.ConnID]; !ok {
+			keysMap[inpEvent.ConnID] = make([]int, 4)
+		}
+
+		keysMap[inpEvent.ConnID][inpEvent.PlayerIdx] = inpBitmap
 	}
 }
 
