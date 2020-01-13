@@ -64,24 +64,10 @@ var video struct {
 }
 
 const bufSize = 1024 * 4
-
 const joypadNumKeys = int(C.RETRO_DEVICE_ID_JOYPAD_R3 + 1)
 
 var joy [joypadNumKeys]bool
 var ewidth, eheight int
-
-var bindRetroKeys = map[int]int{
-	0: C.RETRO_DEVICE_ID_JOYPAD_A,
-	1: C.RETRO_DEVICE_ID_JOYPAD_B,
-	2: C.RETRO_DEVICE_ID_JOYPAD_X,
-	3: C.RETRO_DEVICE_ID_JOYPAD_Y,
-	4: C.RETRO_DEVICE_ID_JOYPAD_SELECT,
-	5: C.RETRO_DEVICE_ID_JOYPAD_START,
-	6: C.RETRO_DEVICE_ID_JOYPAD_UP,
-	7: C.RETRO_DEVICE_ID_JOYPAD_DOWN,
-	8: C.RETRO_DEVICE_ID_JOYPAD_LEFT,
-	9: C.RETRO_DEVICE_ID_JOYPAD_RIGHT,
-}
 
 var bindKeysMap = map[int]int{
 	C.RETRO_DEVICE_ID_JOYPAD_A:      0,
@@ -142,8 +128,8 @@ func coreInputState(port C.unsigned, device C.unsigned, index C.unsigned, id C.u
 	}
 
 	// check if any player is pressing that key
-	for k := range keysMap {
-		if ((keysMap[k][port] >> uint(key)) & 1) == 1 {
+	for k := range NAEmulator.keysMap {
+		if ((NAEmulator.keysMap[k][port] >> uint(key)) & 1) == 1 {
 			return 1
 		}
 	}

@@ -58,8 +58,8 @@ type naEmulator struct {
 	gameName        string
 	isSavingLoading bool
 
-	keys []bool
-	done chan struct{}
+	keysMap map[string][]int
+	done    chan struct{}
 
 	// lock to lock uninteruptable operation
 	lock *sync.Mutex
@@ -74,6 +74,8 @@ type InputEvent struct {
 var NAEmulator *naEmulator
 var outputImg *image.RGBA
 
+const maxPort = 8
+
 // NAEmulator implements CloudEmulator interface based on NanoArch(golang RetroArch)
 func NewNAEmulator(etype string, roomID string, inputChannel <-chan InputEvent) (*naEmulator, chan *image.RGBA, chan []int16) {
 	meta := config.EmulatorConfig[etype]
@@ -85,14 +87,12 @@ func NewNAEmulator(etype string, roomID string, inputChannel <-chan InputEvent) 
 		imageChannel: imageChannel,
 		audioChannel: audioChannel,
 		inputChannel: inputChannel,
-		keys:         make([]bool, joypadNumKeys*4),
+		keysMap:      map[string][]int{},
 		roomID:       roomID,
 		done:         make(chan struct{}, 1),
 		lock:         &sync.Mutex{},
 	}, imageChannel, audioChannel
 }
-
-var keysMap = map[string][]int{}
 
 // Init initialize new RetroArch cloud emulator
 func Init(etype string, roomID string, inputChannel <-chan InputEvent) (*naEmulator, chan *image.RGBA, chan []int16) {
@@ -112,15 +112,15 @@ func (na *naEmulator) listenInput() {
 
 		if inpBitmap == -1 {
 			// terminated
-			delete(keysMap, inpEvent.ConnID)
+			delete(na.keysMap, inpEvent.ConnID)
 			continue
 		}
 
-		if _, ok := keysMap[inpEvent.ConnID]; !ok {
-			keysMap[inpEvent.ConnID] = make([]int, 4)
+		if _, ok := na.keysMap[inpEvent.ConnID]; !ok {
+			na.keysMap[inpEvent.ConnID] = make([]int, maxPort)
 		}
 
-		keysMap[inpEvent.ConnID][inpEvent.PlayerIdx] = inpBitmap
+		na.keysMap[inpEvent.ConnID][inpEvent.PlayerIdx] = inpBitmap
 	}
 }
 
