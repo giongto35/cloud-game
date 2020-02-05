@@ -74,9 +74,9 @@ var EmulatorConfig = map[string]EmulatorMeta{
 		Height: 224,
 	},
 	"mame": {
-		Path:   "assets/emulator/libretro/cores/mame2016_libretro",
-		Width:  0,
-		Height: 0,
+		Path:   "assets/emulator/libretro/cores/fbneo_libretro",
+		Width:  240,
+		Height: 160,
 	},
 }
 

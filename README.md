@@ -25,7 +25,7 @@ Crowd play: **[Pokemon Emerald](http://cloudretro.io/?id=652e45d78d2b91cd%7CPoke
 2. **Cross-platform compatibility**: The game is run on web browser, the most universal built-in app. No console, plugin, external app or devices are needed. Chrome with the latest version and fully WebRTC support is recommended for the game.
 3. **Emulator agnostic**: The game can be played directly without any extra effort to set up the gaming emulator or platform.
 4. **Collaborate gameplay**: Follow the idea of crowdplay([TwitchPlaysPokemon](https://en.wikipedia.org/wiki/Twitch_Plays_Pok%C3%A9mon)), multiple players can play the same game together by addressing the same deeplink. The game experience is powered by cloud-gaming, so the game is much smoother. [Check CrowdPlay section](#crowd-play-play-game-together)
-5. **Online multiplayer**: The first time in history, you can play multiplayer on Retro games online.
+5. **Online multiplayer**: The first time in history, you can play multiplayer on Retro games online. You can try Samurai Showndown with 2 players for fighting game example.
 5. **Horizontally scaled**: The infrastructure is designed to be able to scale under high traffic by adding more instances.
 6. **Cloud storage**: Game state is storing on online storage, so you can come back and continue playing your incomplete game later.
 
