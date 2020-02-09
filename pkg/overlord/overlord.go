@@ -68,10 +68,10 @@ func makeServerFromMux(mux *http.ServeMux) *http.Server {
 
 func makeHTTPServer(server *Server) *http.Server {
 	r := mux.NewRouter()
-	r.HandleFunc("/", server.GetWeb)
 	r.HandleFunc("/ws", server.WS)
 	r.HandleFunc("/wso", server.WSO)
 	r.PathPrefix("/static/").Handler(http.StripPrefix("/static/", http.FileServer(http.Dir("./web"))))
+	r.PathPrefix("/").HandlerFunc(server.GetWeb)
 
 	svmux := &http.ServeMux{}
 	svmux.Handle("/", r)
@@ -85,10 +85,7 @@ func makeHTTPToHTTPSRedirectServer(server *Server) *http.Server {
 		http.Redirect(w, r, newURI, http.StatusFound)
 	}
 	r := mux.NewRouter()
-	r.HandleFunc("/", handleRedirect)
-	r.HandleFunc("/ws", handleRedirect)
-	r.HandleFunc("/wso", handleRedirect)
-	r.PathPrefix("/static/").Handler(http.StripPrefix("/static/", http.FileServer(http.Dir("./web"))))
+	r.PathPrefix("/").HandlerFunc(handleRedirect)
 
 	svmux := &http.ServeMux{}
 	svmux.Handle("/", r)
