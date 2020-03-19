@@ -27,7 +27,7 @@ package e2e
 // 	URLs: []string{"stun:stun.l.google.com:19302"},
 // }}}
 //
-// func initOverlord() (*httptest.Server, *httptest.Server) {
+// func initCoordinator() (*httptest.Server, *httptest.Server) {
 // 	server := overlord.NewServer()
 // 	overlordWorker := httptest.NewServer(http.HandlerFunc(server.WSO))
 // 	overlordBrowser := httptest.NewServer(http.HandlerFunc(server.WS))
@@ -137,7 +137,7 @@ package e2e
 // 	// If receive roomID, the server is running correctly
 // }
 //
-// func TestSingleServerOneOverlord(t *testing.T) {
+// func TestSingleServerOneCoordinator(t *testing.T) {
 // 	/*
 // 		Case scenario:
 // 		- A server X are initilized
@@ -146,7 +146,7 @@ package e2e
 // 		- Room received not empty.
 // 	*/
 //
-// 	oworker, obrowser := initOverlord()
+// 	oworker, obrowser := initCoordinator()
 // 	defer obrowser.Close()
 // 	defer oworker.Close()
 //
@@ -178,7 +178,7 @@ package e2e
 // 	fmt.Println("Done")
 // }
 //
-// func TestTwoServerOneOverlord(t *testing.T) {
+// func TestTwoServerOneCoordinator(t *testing.T) {
 // 	/*
 // 	   Case scenario:
 // 	   - Two server X, Y are initilized
@@ -190,7 +190,7 @@ package e2e
 // 	   - Client B can join a room hosted on A
 // 	*/
 //
-// 	oworker, obrowser := initOverlord()
+// 	oworker, obrowser := initCoordinator()
 // 	defer obrowser.Close()
 // 	defer oworker.Close()
 //
@@ -277,7 +277,7 @@ package e2e
 // 	   TODO: Current test just make sure the game is running, not check if the game is the same
 // 	*/
 //
-// 	oworker, obrowser := initOverlord()
+// 	oworker, obrowser := initCoordinator()
 // 	defer obrowser.Close()
 // 	defer oworker.Close()
 //
@@ -306,7 +306,7 @@ package e2e
 //
 // 	log.Println("Closing room and server")
 // 	client.Close()
-// 	worker.GetOverlordClient().Close()
+// 	worker.GetCoordinatorClient().Close()
 // 	worker.Close()
 //
 // 	// Close server and reconnect
@@ -356,7 +356,7 @@ package e2e
 // 	*/
 // 	// This test only run if GCP storage is set
 //
-// 	oworker, obrowser := initOverlord()
+// 	oworker, obrowser := initCoordinator()
 // 	defer obrowser.Close()
 // 	defer oworker.Close()
 //
@@ -390,7 +390,7 @@ package e2e
 //
 // 	log.Println("Closing room and server")
 // 	client.Close()
-// 	worker.GetOverlordClient().Close()
+// 	worker.GetCoordinatorClient().Close()
 // 	worker.Close()
 // 	// Remove room on local
 // 	path := util.GetSavePath(saveRoomID)
@@ -429,7 +429,7 @@ package e2e
 // 	fmt.Println("Done")
 // }
 
-//func TestRejoinNoOverlordMultiple(t *testing.T) {
+//func TestRejoinNoCoordinatorMultiple(t *testing.T) {
 //[>
 //Case scenario:
 //- A server X without connecting to overlord
@@ -470,7 +470,7 @@ package e2e
 
 //}
 
-//func TestRejoinWithOverlordMultiple(t *testing.T) {
+//func TestRejoinWithCoordinatorMultiple(t *testing.T) {
 //[>
 //Case scenario:
 //- A server X is initialized connecting to overlord
@@ -480,10 +480,10 @@ package e2e
 //*/
 
 //// Init slave server
-//o := initOverlord()
+//o := initCoordinator()
 //defer o.Close()
 
-//oconn := connectTestOverlordServer(t, o.URL)
+//oconn := connectTestCoordinatorServer(t, o.URL)
 //// Init slave server
 //s := initServer(t, oconn)
 //defer s.Close()

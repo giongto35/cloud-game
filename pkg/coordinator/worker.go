@@ -1,4 +1,4 @@
-package overlord
+package coordinator
 
 import (
 	"log"
@@ -23,11 +23,11 @@ type WorkerClient struct {
 // RouteWorker are all routes server received from worker
 func (o *Server) RouteWorker(workerClient *WorkerClient) {
 	// registerRoom event from a worker, when worker created a new room.
-	// RoomID is global so it is managed by overlord.
+	// RoomID is global so it is managed by coordinator.
 	workerClient.Receive("registerRoom", func(resp cws.WSPacket) cws.WSPacket {
-		log.Printf("Overlord: Received registerRoom room %s from worker %s", resp.Data, workerClient.ServerID)
+		log.Printf("Coordinator: Received registerRoom room %s from worker %s", resp.Data, workerClient.ServerID)
 		o.roomToWorker[resp.Data] = workerClient.ServerID
-		log.Printf("Overlord: Current room list is: %+v", o.roomToWorker)
+		log.Printf("Coordinator: Current room list is: %+v", o.roomToWorker)
 
 		return cws.WSPacket{
 			ID: "registerRoom",
@@ -36,9 +36,9 @@ func (o *Server) RouteWorker(workerClient *WorkerClient) {
 
 	// closeRoom event from a worker, when worker close a room
 	workerClient.Receive("closeRoom", func(resp cws.WSPacket) cws.WSPacket {
-		log.Printf("Overlord: Received closeRoom room %s from worker %s", resp.Data, workerClient.ServerID)
+		log.Printf("Coordinator: Received closeRoom room %s from worker %s", resp.Data, workerClient.ServerID)
 		delete(o.roomToWorker, resp.Data)
-		log.Printf("Overlord: Current room list is: %+v", o.roomToWorker)
+		log.Printf("Coordinator: Current room list is: %+v", o.roomToWorker)
 
 		return cws.WSPacket{
 			ID: "closeRoom",
@@ -47,7 +47,7 @@ func (o *Server) RouteWorker(workerClient *WorkerClient) {
 
 	// getRoom returns the server ID based on requested roomID.
 	workerClient.Receive("getRoom", func(resp cws.WSPacket) cws.WSPacket {
-		log.Println("Overlord: Received a getroom request")
+		log.Println("Coordinator: Received a getroom request")
 		log.Println("Result: ", o.roomToWorker[resp.Data])
 		return cws.WSPacket{
 			ID:   "getRoom",

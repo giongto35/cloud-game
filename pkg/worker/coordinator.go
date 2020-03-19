@@ -12,34 +12,34 @@ import (
 	"github.com/gorilla/websocket"
 )
 
-// OverlordClient maintans connection to overlord
-// We expect only one OverlordClient for each server
-type OverlordClient struct {
+// CoordinatorClient maintans connection to coordinator
+// We expect only one CoordinatorClient for each server
+type CoordinatorClient struct {
 	*cws.Client
 }
 
-// NewOverlordClient returns a client connecting to overlord for coordiation between different server
-func NewOverlordClient(oc *websocket.Conn) *OverlordClient {
+// NewCoordinatorClient returns a client connecting to coordinator for coordiation between different server
+func NewCoordinatorClient(oc *websocket.Conn) *CoordinatorClient {
 	if oc == nil {
 		return nil
 	}
 
-	oClient := &OverlordClient{
+	oClient := &CoordinatorClient{
 		Client: cws.NewClient(oc),
 	}
 	return oClient
 }
 
-// RouteOverlord are all routes server received from overlord
-func (h *Handler) RouteOverlord() {
+// RouteCoordinator are all routes server received from coordinator
+func (h *Handler) RouteCoordinator() {
 	iceCandidates := map[string][]string{}
 	oClient := h.oClient
 
-	// Received from overlord the serverID
+	// Received from coordinator the serverID
 	oClient.Receive(
 		"serverID",
 		func(response cws.WSPacket) (request cws.WSPacket) {
-			// Stick session with serverID got from overlord
+			// Stick session with serverID got from coordinator
 			log.Println("Received serverID ", response.Data)
 			h.serverID = response.Data
 
@@ -50,7 +50,7 @@ func (h *Handler) RouteOverlord() {
 	oClient.Receive(
 		"initwebrtc",
 		func(resp cws.WSPacket) (req cws.WSPacket) {
-			log.Println("Received relay SDP of a browser from overlord")
+			log.Println("Received relay SDP of a browser from coordinator")
 
 			peerconnection := webrtc.NewWebRTC()
 			var initPacket struct {
@@ -87,7 +87,7 @@ func (h *Handler) RouteOverlord() {
 	oClient.Receive(
 		"start",
 		func(resp cws.WSPacket) (req cws.WSPacket) {
-			log.Println("Received a start request from overlord")
+			log.Println("Received a start request from coordinator")
 			session, _ := h.sessions[resp.SessionID]
 
 			peerconnection := session.peerconnection
@@ -117,7 +117,7 @@ func (h *Handler) RouteOverlord() {
 	oClient.Receive(
 		"quit",
 		func(resp cws.WSPacket) (req cws.WSPacket) {
-			log.Println("Received a quit request from overlord")
+			log.Println("Received a quit request from coordinator")
 			session, ok := h.sessions[resp.SessionID]
 			log.Println("Find ", resp.SessionID, session, ok)
 
@@ -134,7 +134,7 @@ func (h *Handler) RouteOverlord() {
 	oClient.Receive(
 		"save",
 		func(resp cws.WSPacket) (req cws.WSPacket) {
-			log.Println("Received a save game from overlord")
+			log.Println("Received a save game from coordinator")
 			log.Println("RoomID:", resp.RoomID)
 			req.ID = "save"
 			req.Data = "ok"
@@ -158,7 +158,7 @@ func (h *Handler) RouteOverlord() {
 	oClient.Receive(
 		"load",
 		func(resp cws.WSPacket) (req cws.WSPacket) {
-			log.Println("Received a load game from overlord")
+			log.Println("Received a load game from coordinator")
 			log.Println("Loading game state")
 			req.ID = "load"
 			req.Data = "ok"
@@ -179,7 +179,7 @@ func (h *Handler) RouteOverlord() {
 	oClient.Receive(
 		"playerIdx",
 		func(resp cws.WSPacket) (req cws.WSPacket) {
-			log.Println("Received an update player index event from overlord")
+			log.Println("Received an update player index event from coordinator")
 			req.ID = "playerIdx"
 
 			room := h.getRoom(resp.RoomID)
@@ -200,7 +200,7 @@ func (h *Handler) RouteOverlord() {
 	oClient.Receive(
 		"icecandidate",
 		func(resp cws.WSPacket) (req cws.WSPacket) {
-			log.Println("Received a icecandidate from overlord: ", resp.Data)
+			log.Println("Received a icecandidate from coordinator: ", resp.Data)
 			iceCandidates[resp.SessionID] = append(iceCandidates[resp.SessionID], resp.Data)
 
 			return cws.EmptyPacket
@@ -224,15 +224,15 @@ func (h *Handler) RouteOverlord() {
 	)
 }
 
-func getServerIDOfRoom(oc *OverlordClient, roomID string) string {
-	log.Println("Request overlord roomID ", roomID)
+func getServerIDOfRoom(oc *CoordinatorClient, roomID string) string {
+	log.Println("Request coordinator roomID ", roomID)
 	packet := oc.SyncSend(
 		cws.WSPacket{
 			ID:   "getRoom",
 			Data: roomID,
 		},
 	)
-	log.Println("Received roomID from overlord ", packet.Data)
+	log.Println("Received roomID from coordinator ", packet.Data)
 
 	return packet.Data
 }
@@ -240,7 +240,7 @@ func getServerIDOfRoom(oc *OverlordClient, roomID string) string {
 // startGameHandler starts a game if roomID is given, if not create new room
 func (h *Handler) startGameHandler(gameName, existedRoomID string, playerIndex int, peerconnection *webrtc.WebRTC, videoEncoderType string) *room.Room {
 	log.Println("Starting game", gameName)
-	// If we are connecting to overlord, request corresponding serverID based on roomID
+	// If we are connecting to coordinator, request corresponding serverID based on roomID
 	// TODO: check if existedRoomID is in the current server
 	room := h.getRoom(existedRoomID)
 	// If room is not running
@@ -254,7 +254,7 @@ func (h *Handler) startGameHandler(gameName, existedRoomID string, playerIndex i
 		go func() {
 			<-room.Done
 			h.detachRoom(room.ID)
-			// send signal to overlord that the room is closed, overlord will remove that room
+			// send signal to coordinator that the room is closed, coordinator will remove that room
 			h.oClient.Send(cws.WSPacket{
 				ID:   "closeRoom",
 				Data: room.ID,
@@ -269,7 +269,7 @@ func (h *Handler) startGameHandler(gameName, existedRoomID string, playerIndex i
 		room.AddConnectionToRoom(peerconnection)
 	}
 
-	// Register room to overlord if we are connecting to overlord
+	// Register room to coordinator if we are connecting to coordinator
 	if room != nil && h.oClient != nil {
 		h.oClient.Send(cws.WSPacket{
 			ID:   "registerRoom",

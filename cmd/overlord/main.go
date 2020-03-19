@@ -7,7 +7,7 @@ import (
 	"os/signal"
 	"time"
 
-	"github.com/giongto35/cloud-game/pkg/overlord"
+	"github.com/giongto35/cloud-game/pkg/coordinator"
 	"github.com/giongto35/cloud-game/pkg/util/logging"
 	"github.com/golang/glog"
 	"github.com/spf13/pflag"
@@ -16,7 +16,7 @@ import (
 func main() {
 	rand.Seed(time.Now().UTC().UnixNano())
 
-	cfg := overlord.NewDefaultConfig()
+	cfg := coordinator.NewDefaultConfig()
 	cfg.AddFlags(pflag.CommandLine)
 
 	logging.Init()
@@ -24,11 +24,11 @@ func main() {
 
 	ctx, cancelCtx := context.WithCancel(context.Background())
 
-	glog.Infof("Initializing overlord server")
-	glog.V(4).Infof("Overlord configs %v", cfg)
-	o := overlord.New(ctx, cfg)
+	glog.Infof("Initializing coordinator server")
+	glog.V(4).Infof("Coordinator configs %v", cfg)
+	o := coordinator.New(ctx, cfg)
 	if err := o.Run(); err != nil {
-		glog.Errorf("Failed to run overlord server, reason %v", err)
+		glog.Errorf("Failed to run coordinator server, reason %v", err)
 		os.Exit(1)
 	}
 
@@ -36,7 +36,7 @@ func main() {
 	signal.Notify(stop, os.Interrupt)
 	select {
 	case <-stop:
-		glog.Infoln("Received SIGTERM, Quiting Overlord")
+		glog.Infoln("Received SIGTERM, Quiting Coordinator")
 		o.Shutdown()
 		cancelCtx()
 	}

@@ -1,4 +1,4 @@
-package overlord
+package coordinator
 
 import (
 	"log"
@@ -20,8 +20,8 @@ func (s *Session) RouteBrowser() {
 	})
 
 	browserClient.Receive("icecandidate", func(resp cws.WSPacket) cws.WSPacket {
-		log.Println("Overlord: Received icecandidate from a browser", resp.Data)
-		log.Println("Overlord: Relay icecandidate from a browser to worker")
+		log.Println("Coordinator: Received icecandidate from a browser", resp.Data)
+		log.Println("Coordinator: Relay icecandidate from a browser to worker")
 
 		wc, ok := s.handler.workerClients[s.ServerID]
 		if !ok {
@@ -33,12 +33,12 @@ func (s *Session) RouteBrowser() {
 	})
 
 	browserClient.Receive("initwebrtc", func(resp cws.WSPacket) cws.WSPacket {
-		log.Println("Overlord: Received sdp request from a browser")
-		log.Println("Overlord: Relay sdp request from a browser to worker")
+		log.Println("Coordinator: Received sdp request from a browser")
+		log.Println("Coordinator: Relay sdp request from a browser to worker")
 
 		// relay SDP to target worker and get back SDP of the worker
 		// TODO: Async
-		log.Println("Overlord: serverID: ", s.ServerID, resp.SessionID)
+		log.Println("Coordinator: serverID: ", s.ServerID, resp.SessionID)
 		resp.SessionID = s.ID
 		wc, ok := s.handler.workerClients[s.ServerID]
 		if !ok {
@@ -48,15 +48,15 @@ func (s *Session) RouteBrowser() {
 			resp,
 		)
 
-		log.Println("Overlord: Received sdp request from a worker")
-		log.Println("Overlord: Sending back sdp to browser")
+		log.Println("Coordinator: Received sdp request from a worker")
+		log.Println("Coordinator: Sending back sdp to browser")
 
 		return sdp
 	})
 
 	browserClient.Receive("quit", func(resp cws.WSPacket) (req cws.WSPacket) {
-		log.Println("Overlord: Received quit request from a browser")
-		log.Println("Overlord: Relay quit request from a browser to worker")
+		log.Println("Coordinator: Received quit request from a browser")
+		log.Println("Coordinator: Relay quit request from a browser to worker")
 
 		// TODO: Async
 		resp.SessionID = s.ID
@@ -72,8 +72,8 @@ func (s *Session) RouteBrowser() {
 	})
 
 	browserClient.Receive("start", func(resp cws.WSPacket) cws.WSPacket {
-		log.Println("Overlord: Received start request from a browser")
-		log.Println("Overlord: Relay start request from a browser to worker")
+		log.Println("Coordinator: Received start request from a browser")
+		log.Println("Coordinator: Relay start request from a browser to worker")
 		// TODO: Async
 		resp.SessionID = s.ID
 		wc, ok := s.handler.workerClients[s.ServerID]
@@ -91,8 +91,8 @@ func (s *Session) RouteBrowser() {
 	})
 
 	browserClient.Receive("save", func(resp cws.WSPacket) (req cws.WSPacket) {
-		log.Println("Overlord: Received save request from a browser")
-		log.Println("Overlord: Relay save request from a browser to worker")
+		log.Println("Coordinator: Received save request from a browser")
+		log.Println("Coordinator: Relay save request from a browser to worker")
 		// TODO: Async
 		resp.SessionID = s.ID
 		resp.RoomID = s.RoomID
@@ -108,8 +108,8 @@ func (s *Session) RouteBrowser() {
 	})
 
 	browserClient.Receive("load", func(resp cws.WSPacket) (req cws.WSPacket) {
-		log.Println("Overlord: Received load request from a browser")
-		log.Println("Overlord: Relay load request from a browser to worker")
+		log.Println("Coordinator: Received load request from a browser")
+		log.Println("Coordinator: Relay load request from a browser to worker")
 		// TODO: Async
 		resp.SessionID = s.ID
 		resp.RoomID = s.RoomID
@@ -125,8 +125,8 @@ func (s *Session) RouteBrowser() {
 	})
 
 	browserClient.Receive("playerIdx", func(resp cws.WSPacket) (req cws.WSPacket) {
-		log.Println("Overlord: Received update player index request from a browser")
-		log.Println("Overlord: Relay update player index request from a browser to worker")
+		log.Println("Coordinator: Received update player index request from a browser")
+		log.Println("Coordinator: Relay update player index request from a browser to worker")
 		// TODO: Async
 		resp.SessionID = s.ID
 		resp.RoomID = s.RoomID
@@ -142,7 +142,7 @@ func (s *Session) RouteBrowser() {
 	})
 }
 
-// NewOverlordClient returns a client connecting to browser. This connection exchanges information between clients and server
+// NewCoordinatorClient returns a client connecting to browser. This connection exchanges information between clients and server
 func NewBrowserClient(c *websocket.Conn) *BrowserClient {
 	return &BrowserClient{
 		Client: cws.NewClient(c),

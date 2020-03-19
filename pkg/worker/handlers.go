@@ -23,15 +23,15 @@ const (
 	debugIndex   = "./static/game.html"
 )
 
-// Flag to determine if the server is overlord or not
+// Flag to determine if the server is coordinator or not
 var upgrader = websocket.Upgrader{}
 
 type Handler struct {
-	// Client that connects to overlord
-	oClient *OverlordClient
-	// Raw address of overlord
-	overlordHost string
-	cfg          worker.Config
+	// Client that connects to coordinator
+	oClient *CoordinatorClient
+	// Raw address of coordinator
+	coordinatorHost string
+	cfg             worker.Config
 	// Rooms map : RoomID -> Room
 	rooms map[string]*room.Room
 	// ID of the current server globalwise
@@ -50,34 +50,34 @@ func NewHandler(cfg worker.Config) *Handler {
 	// Init online storage
 	onlineStorage := storage.NewInitClient()
 	return &Handler{
-		rooms:         map[string]*room.Room{},
-		sessions:      map[string]*Session{},
-		overlordHost:  cfg.OverlordAddress,
-		cfg:           cfg,
-		onlineStorage: onlineStorage,
+		rooms:           map[string]*room.Room{},
+		sessions:        map[string]*Session{},
+		coordinatorHost: cfg.CoordinatorAddress,
+		cfg:             cfg,
+		onlineStorage:   onlineStorage,
 	}
 }
 
 // Run starts a Handler running logic
 func (h *Handler) Run() {
 	for {
-		oClient, err := setupOverlordConnection(h.overlordHost, h.cfg.Zone)
+		oClient, err := setupCoordinatorConnection(h.coordinatorHost, h.cfg.Zone)
 		if err != nil {
-			log.Printf("Cannot connect to overlord. %v Retrying...", err)
+			log.Printf("Cannot connect to coordinator. %v Retrying...", err)
 			time.Sleep(time.Second)
 			continue
 		}
 
 		h.oClient = oClient
-		log.Println("Connected to overlord successfully.", oClient, err)
+		log.Println("Connected to coordinator successfully.", oClient, err)
 		go h.oClient.Heartbeat()
-		h.RouteOverlord()
+		h.RouteCoordinator()
 		h.oClient.Listen()
-		// If cannot listen, reconnect to overlord
+		// If cannot listen, reconnect to coordinator
 	}
 }
 
-func setupOverlordConnection(ohost string, zone string) (*OverlordClient, error) {
+func setupCoordinatorConnection(ohost string, zone string) (*CoordinatorClient, error) {
 	var scheme string
 
 	if *config.Mode == config.ProdEnv || *config.Mode == config.StagingEnv {
@@ -86,22 +86,22 @@ func setupOverlordConnection(ohost string, zone string) (*OverlordClient, error)
 		scheme = "ws"
 	}
 
-	overlordURL := url.URL{
+	coordinatorURL := url.URL{
 		Scheme:   scheme,
 		Host:     ohost,
 		Path:     "/wso",
 		RawQuery: "zone=" + zone,
 	}
-	log.Println("Worker connecting to overlord:", overlordURL.String())
+	log.Println("Worker connecting to coordinator:", coordinatorURL.String())
 
-	conn, err := createOverlordConnection(&overlordURL)
+	conn, err := createCoordinatorConnection(&coordinatorURL)
 	if err != nil {
 		return nil, err
 	}
-	return NewOverlordClient(conn), nil
+	return NewCoordinatorClient(conn), nil
 }
 
-func createOverlordConnection(ourl *url.URL) (*websocket.Conn, error) {
+func createCoordinatorConnection(ourl *url.URL) (*websocket.Conn, error) {
 	var d websocket.Dialer
 	if ourl.Scheme == "wss" {
 		d = websocket.Dialer{TLSClientConfig: &tls.Config{InsecureSkipVerify: true}}
@@ -117,7 +117,7 @@ func createOverlordConnection(ourl *url.URL) (*websocket.Conn, error) {
 	return ws, nil
 }
 
-func (h *Handler) GetOverlordClient() *OverlordClient {
+func (h *Handler) GetCoordinatorClient() *CoordinatorClient {
 	return h.oClient
 }
 

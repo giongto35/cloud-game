@@ -24,9 +24,9 @@ dep:
 
 # NOTE: there is problem with go mod vendor when it delete github.com/gen2brain/x264-go/x264c causing unable to build. https://github.com/golang/go/issues/26366
 #build.cross: build
-#	CGO_ENABLED=1 GOOS=darwin GOARC=amd64 go build --ldflags '-linkmode external -extldflags "-static"' -o bin/overlord-darwin ./cmd/overlord
+#	CGO_ENABLED=1 GOOS=darwin GOARC=amd64 go build --ldflags '-linkmode external -extldflags "-static"' -o bin/coordinator-darwin ./cmd/coordinator
 #	CGO_ENABLED=1 GOOS=darwin GOARC=amd64 go build --ldflags '-linkmode external -extldflags "-static"' -o bin/overworker-darwin ./cmd/overworker
-#	CC=arm-linux-musleabihf-gcc GOOS=linux GOARC=amd64 CGO_ENABLED=1 go build --ldflags '-linkmode external -extldflags "-static"' -o bin/overlord-linu ./cmd/overlord
+#	CC=arm-linux-musleabihf-gcc GOOS=linux GOARC=amd64 CGO_ENABLED=1 go build --ldflags '-linkmode external -extldflags "-static"' -o bin/coordinator-linu ./cmd/coordinator
 #	CC=arm-linux-musleabihf-gcc GOOS=linux GOARC=amd64 CGO_ENABLED=1 go build --ldflags '-linkmode external -extldflags "-static"' -o bin/overworker-linux ./cmd/overworker
 
 # A user can invoke tests in different ways:
@@ -64,20 +64,20 @@ dev.tools:
 	./hack/scripts/install_tools.sh
 
 dev.build: compile
-	go build -a -tags netgo -ldflags '-w' -o bin/overlord ./cmd/overlord
+	go build -a -tags netgo -ldflags '-w' -o bin/coordinator ./cmd/coordinator
 	go build -a -tags netgo -ldflags '-w' -o bin/overworker ./cmd/overworker
 
 dev.build-local:
-	go build -o bin/overlord ./cmd/overlord
+	go build -o bin/coordinator ./cmd/coordinator
 	go build -o bin/overworker ./cmd/overworker
 
 dev.run: dev.build-local
-	./bin/overlord --v=5 &
-	./bin/overworker --overlordhost localhost:8000
+	./bin/coordinator --v=5 &
+	./bin/overworker --coordinatorhost localhost:8000
 
 dev.run-docker:
 	docker build . -t cloud-game-local
 	docker stop cloud-game-local || true
 	docker rm cloud-game-local || true
-	# Overlord and worker should be run separately.
-	docker run --privileged -v $PWD/games:/cloud-game/games -d --name cloud-game-local -p 8000:8000 -p 9000:9000 cloud-game-local bash -c "overlord --v=5 & overworker --overlordhost localhost:8000"
+	# Coordinator and worker should be run separately.
+	docker run --privileged -v $PWD/games:/cloud-game/games -d --name cloud-game-local -p 8000:8000 -p 9000:9000 cloud-game-local bash -c "coordinator --v=5 & overworker --coordinatorhost localhost:8000"
