@@ -70,8 +70,8 @@ Because the coordinator and workers need to run simultaneously. Workers connect 
   * The scripts spawns 2 processes one in the background and one in foreground
 2. Manual
   * Need to run coordinator and worker separately in two session
-  * `go run cmd/overlord/main.go` - spawn coordinator
-  * `go run cmd/overworker/main.go --overlordhost localhost:8000` - spawn workers connecting to coordinator
+  * `go run cmd/coordinator/main.go` - spawn coordinator
+  * `go run cmd/worker/main.go --coordinatorhost localhost:8000` - spawn workers connecting to coordinator
 
 ## Wiki
 - [Wiki](https://github.com/giongto35/cloud-game/wiki)

@@ -37,8 +37,8 @@ func NewDefaultConfig() Config {
 }
 
 func (c *Config) AddFlags(fs *pflag.FlagSet) *Config {
-	fs.IntVarP(&c.Port, "port", "", 8800, "OverWorker server port")
-	fs.StringVarP(&c.CoordinatorAddress, "coordinatorhost", "", c.CoordinatorAddress, "OverWorker URL to connect")
+	fs.IntVarP(&c.Port, "port", "", 8800, "Worker server port")
+	fs.StringVarP(&c.CoordinatorAddress, "coordinatorhost", "", c.CoordinatorAddress, "Worker URL to connect")
 	fs.StringVarP(&c.Zone, "zone", "z", c.Zone, "Zone of the worker")
 
 	fs.IntVarP(&c.Scale, "scale", "s", c.Scale, "Set output viewport scale factor")
