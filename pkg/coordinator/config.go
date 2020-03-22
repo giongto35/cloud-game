@@ -1,4 +1,4 @@
-package overlord
+package coordinator
 
 import (
 	"github.com/giongto35/cloud-game/pkg/monitoring"
@@ -21,7 +21,7 @@ func NewDefaultConfig() Config {
 
 		MonitoringConfig: monitoring.ServerMonitoringConfig{
 			Port:             6601,
-			URLPrefix:        "/overlord",
+			URLPrefix:        "/coordinator",
 			MetricEnabled:    false,
 			ProfilingEnabled: false,
 		},
@@ -29,7 +29,7 @@ func NewDefaultConfig() Config {
 }
 
 func (c *Config) AddFlags(fs *pflag.FlagSet) *Config {
-	fs.IntVarP(&c.Port, "port", "", 8800, "Overlord server port")
+	fs.IntVarP(&c.Port, "port", "", 8800, "Coordinator server port")
 
 	fs.BoolVarP(&c.MonitoringConfig.MetricEnabled, "monitoring.metric", "m", c.MonitoringConfig.MetricEnabled, "Enable prometheus metric for server")
 	fs.BoolVarP(&c.MonitoringConfig.ProfilingEnabled, "monitoring.pprof", "p", c.MonitoringConfig.ProfilingEnabled, "Enable golang pprof for server")

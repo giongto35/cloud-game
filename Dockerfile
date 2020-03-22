@@ -9,7 +9,7 @@ COPY . /cloud-game/
 WORKDIR /cloud-game
 
 # Install server dependencies
-RUN go install ./cmd/overlord
-RUN go install ./cmd/overworker
+RUN go install ./cmd/coordinator
+RUN go install ./cmd/worker
 
 EXPOSE 8000

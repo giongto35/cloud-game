@@ -1,4 +1,4 @@
-package overlord
+package coordinator
 
 import (
 	"encoding/json"
@@ -78,17 +78,17 @@ func (o *Server) getPingServer(zone string) string {
 	return devPingServer
 }
 
-// WSO handles all connections from a new worker to overlord
+// WSO handles all connections from a new worker to coordinator
 func (o *Server) WSO(w http.ResponseWriter, r *http.Request) {
 	fmt.Println("Connected")
 	c, err := upgrader.Upgrade(w, r, nil)
 	if err != nil {
-		log.Print("Overlord: [!] WS upgrade:", err)
+		log.Print("Coordinator: [!] WS upgrade:", err)
 		return
 	}
 	// Register new server
 	serverID := uuid.Must(uuid.NewV4()).String()
-	log.Println("Overlord: A new server connected to Overlord", serverID)
+	log.Println("Coordinator: A new server connected to Coordinator", serverID)
 
 	// Register to workersClients map the client connection
 	address := util.GetRemoteAddress(c)
@@ -99,10 +99,10 @@ func (o *Server) WSO(w http.ResponseWriter, r *http.Request) {
 
 	fmt.Printf("Is public: %v zone: %v\n", util.IsPublicIP(address), zone)
 
-	// In case worker and overlord in the same host
+	// In case worker and coordinator in the same host
 	if !util.IsPublicIP(address) && *config.Mode == config.ProdEnv {
 		// Don't accept private IP for worker's address in prod mode
-		// However, if the worker in the same host with overlord, we can get public IP of worker
+		// However, if the worker in the same host with coordinator, we can get public IP of worker
 		log.Printf("Error: address %s is invalid", address)
 		address = util.GetHostPublicIP()
 		log.Println("Find public address:", address)
@@ -128,9 +128,9 @@ func (o *Server) WSO(w http.ResponseWriter, r *http.Request) {
 	client.Listen()
 }
 
-// WSO handles all connections from user/frontend to overlord
+// WSO handles all connections from user/frontend to coordinator
 func (o *Server) WS(w http.ResponseWriter, r *http.Request) {
-	log.Println("A user connected to overlord ", r.URL)
+	log.Println("A user connected to coordinator ", r.URL)
 	defer func() {
 		if r := recover(); r != nil {
 			log.Println("Warn: Something wrong. Recovered in ", r)
@@ -332,7 +332,7 @@ func (o *Server) getLatencyMapFromBrowser(workerClients map[string]*WorkerClient
 // cleanConnection is called when a worker is disconnected
 // connection from worker (client) to server is also closed
 func (o *Server) cleanConnection(client *WorkerClient, serverID string) {
-	log.Println("Unregister server from overlord")
+	log.Println("Unregister server from coordinator")
 	// Remove serverID from servers
 	delete(o.workerClients, serverID)
 	// Clean all rooms connecting to that server

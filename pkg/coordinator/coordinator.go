@@ -1,4 +1,4 @@
-package overlord
+package coordinator
 
 import (
 	"context"
@@ -19,15 +19,15 @@ import (
 
 const stagingLEURL = "https://acme-staging-v02.api.letsencrypt.org/directory"
 
-type Overlord struct {
+type Coordinator struct {
 	ctx context.Context
 	cfg Config
 
 	monitoringServer *monitoring.ServerMonitoring
 }
 
-func New(ctx context.Context, cfg Config) *Overlord {
-	return &Overlord{
+func New(ctx context.Context, cfg Config) *Coordinator {
+	return &Coordinator{
 		ctx: ctx,
 		cfg: cfg,
 
@@ -35,21 +35,21 @@ func New(ctx context.Context, cfg Config) *Overlord {
 	}
 }
 
-func (o *Overlord) Run() error {
-	go o.initializeOverlord()
+func (o *Coordinator) Run() error {
+	go o.initializeCoordinator()
 	go o.RunMonitoringServer()
 	return nil
 }
 
-func (o *Overlord) RunMonitoringServer() {
-	glog.Infoln("Starting monitoring server for overlord")
+func (o *Coordinator) RunMonitoringServer() {
+	glog.Infoln("Starting monitoring server for coordinator")
 	err := o.monitoringServer.Run()
 	if err != nil {
 		glog.Errorf("Failed to start monitoring server, reason %s", err)
 	}
 }
 
-func (o *Overlord) Shutdown() {
+func (o *Coordinator) Shutdown() {
 	if err := o.monitoringServer.Shutdown(o.ctx); err != nil {
 		glog.Errorln("Failed to shutdown monitoring server")
 	}
@@ -93,14 +93,14 @@ func makeHTTPToHTTPSRedirectServer(server *Server) *http.Server {
 	return makeServerFromMux(svmux)
 }
 
-// initializeOverlord setup an overlord server
-func (o *Overlord) initializeOverlord() {
-	overlord := NewServer(o.cfg)
+// initializeCoordinator setup an coordinator server
+func (o *Coordinator) initializeCoordinator() {
+	coordinator := NewServer(o.cfg)
 
 	var certManager *autocert.Manager
 	var httpsSrv *http.Server
 
-	log.Println("Initializing Overlord Server")
+	log.Println("Initializing Coordinator Server")
 	if *config.Mode == config.ProdEnv || *config.Mode == config.StagingEnv {
 		var leurl string
 		if *config.Mode == config.StagingEnv {
@@ -116,7 +116,7 @@ func (o *Overlord) initializeOverlord() {
 			Client:     &acme.Client{DirectoryURL: leurl},
 		}
 
-		httpsSrv = makeHTTPServer(overlord)
+		httpsSrv = makeHTTPServer(coordinator)
 		httpsSrv.Addr = ":443"
 		httpsSrv.TLSConfig = &tls.Config{GetCertificate: certManager.GetCertificate}
 
@@ -131,9 +131,9 @@ func (o *Overlord) initializeOverlord() {
 
 	var httpSrv *http.Server
 	if *config.Mode == config.ProdEnv || *config.Mode == config.StagingEnv {
-		httpSrv = makeHTTPToHTTPSRedirectServer(overlord)
+		httpSrv = makeHTTPToHTTPSRedirectServer(coordinator)
 	} else {
-		httpSrv = makeHTTPServer(overlord)
+		httpSrv = makeHTTPServer(coordinator)
 	}
 
 	if certManager != nil {

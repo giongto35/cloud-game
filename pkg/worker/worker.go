@@ -19,7 +19,7 @@ import (
 	"github.com/golang/glog"
 )
 
-type OverWorker struct {
+type Worker struct {
 	ctx context.Context
 	cfg worker.Config
 
@@ -28,8 +28,8 @@ type OverWorker struct {
 
 const stagingLEURL = "https://acme-staging-v02.api.letsencrypt.org/directory"
 
-func New(ctx context.Context, cfg worker.Config) *OverWorker {
-	return &OverWorker{
+func New(ctx context.Context, cfg worker.Config) *Worker {
+	return &Worker{
 		ctx: ctx,
 		cfg: cfg,
 
@@ -37,13 +37,13 @@ func New(ctx context.Context, cfg worker.Config) *OverWorker {
 	}
 }
 
-func (o *OverWorker) Run() error {
+func (o *Worker) Run() error {
 	go o.initializeWorker()
 	go o.RunMonitoringServer()
 	return nil
 }
 
-func (o *OverWorker) RunMonitoringServer() {
+func (o *Worker) RunMonitoringServer() {
 	glog.Infoln("Starting monitoring server for overwork")
 	err := o.monitoringServer.Run()
 	if err != nil {
@@ -51,7 +51,7 @@ func (o *OverWorker) RunMonitoringServer() {
 	}
 }
 
-func (o *OverWorker) Shutdown() {
+func (o *Worker) Shutdown() {
 	if err := o.monitoringServer.Shutdown(o.ctx); err != nil {
 		glog.Errorln("Failed to shutdown monitoring server")
 	}
@@ -89,7 +89,7 @@ func makeHTTPToHTTPSRedirectServer() *http.Server {
 	return makeServerFromMux(mux)
 }
 
-func (o *OverWorker) spawnServer(port int) {
+func (o *Worker) spawnServer(port int) {
 	var certManager *autocert.Manager
 	var httpsSrv *http.Server
 
@@ -139,7 +139,7 @@ func (o *OverWorker) spawnServer(port int) {
 }
 
 // initializeWorker setup a worker
-func (o *OverWorker) initializeWorker() {
+func (o *Worker) initializeWorker() {
 	worker := NewHandler(o.cfg)
 
 	defer func() {
