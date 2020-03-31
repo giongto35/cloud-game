@@ -1,7 +1,7 @@
 const input = (() => {
     const INPUT_HZ = 100;
     const INPUT_STATE_PACKET = 1;
-    const KEY_BITS = [KEY.A, KEY.B, KEY.X, KEY.Y, KEY.SELECT, KEY.START, KEY.UP, KEY.DOWN, KEY.LEFT, KEY.RIGHT];
+    const KEY_BITS = [KEY.A, KEY.B, KEY.X, KEY.Y, KEY.L, KEY.R, KEY.SELECT, KEY.START, KEY.UP, KEY.DOWN, KEY.LEFT, KEY.RIGHT];
 
     let gameInputTimer = null;
     let unchangePacket = 0;
@@ -13,6 +13,8 @@ const input = (() => {
         [KEY.B]: false,
         [KEY.X]: false,
         [KEY.Y]: false,
+        [KEY.L]: false,
+        [KEY.R]: false,
         [KEY.START]: false,
         [KEY.SELECT]: false,
         // dpad
@@ -55,6 +57,7 @@ const input = (() => {
             let arrBuf = new Uint8Array(2);
             arrBuf[0] = data & ((1 << 8) - 1);
             arrBuf[1] = data >> 8;
+            log.info(arrBuf)
             event.pub(KEY_STATE_UPDATED, arrBuf);
 
             unchangePacket--;
