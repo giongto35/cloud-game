@@ -1,19 +1,22 @@
 # CloudRetro
-**Open-source Cloud Gaming Service For Retro Games**  
-**Video demo**: https://www.youtube.com/watch?v=GUBrJGAxZZg  
+
+<img src="https://github.com/giongto35/cloud-game/workflows/Release/badge.svg" alt="Release status">
+
+**Open-source Cloud Gaming Service For Retro Games**
+**Video demo**: https://www.youtube.com/watch?v=GUBrJGAxZZg
 **My Slide at GopherconVN2019**: https://docs.google.com/presentation/d/1VFv8l2hVUINv2U36r7L11g4Oa_zVjHlr6MYymUbQXT4/edit?usp=sharing
 
 ## Introduction
-CloudRetro provides an open-source cloud gaming platform for retro games. It started as an experiment for testing cloud gaming performance with [WebRTC](https://github.com/pion/webrtc/) and [libretro](https://www.libretro.com/), and now it aims to deliver the most modern and convenient gaming experience through the technology. 
+CloudRetro provides an open-source cloud gaming platform for retro games. It started as an experiment for testing cloud gaming performance with [WebRTC](https://github.com/pion/webrtc/) and [libretro](https://www.libretro.com/), and now it aims to deliver the most modern and convenient gaming experience through the technology.
 
-Theoretically, in cloud gaming, games are run on remote servers and media are streamed to the player optimally to ensure the most comfortable user interaction. It opens the ability to play any retro games on web-browser directly, which are fully compatible with multi-platform like Desktop, Android, ~~IOS~~. It enhances crowdplay ([TwitchPlaysPokemon](https://en.wikipedia.org/wiki/Twitch_Plays_Pok%C3%A9mon)) with realtime interaction. E.g: [Play Pokemon Emerald together](http://cloudretro.io/?id=652e45d78d2b91cd%7CPokemon%20-%20Emerald%20Version%20%28U%29).  
+Theoretically, in cloud gaming, games are run on remote servers and media are streamed to the player optimally to ensure the most comfortable user interaction. It opens the ability to play any retro games on web-browser directly, which are fully compatible with multi-platform like Desktop, Android, ~~IOS~~. It enhances crowdplay ([TwitchPlaysPokemon](https://en.wikipedia.org/wiki/Twitch_Plays_Pok%C3%A9mon)) with realtime interaction. E.g: [Play Pokemon Emerald together](http://cloudretro.io/?id=652e45d78d2b91cd%7CPokemon%20-%20Emerald%20Version%20%28U%29).
 
 ## Try the service at
-Single play: **[http://cloudretro.io](http://cloudretro.io)**  
-Crowd play: **[Pokemon Emerald](http://cloudretro.io/?id=652e45d78d2b91cd%7CPokemon%20-%20Emerald%20Version%20%28U%29)**  
-*Chrome and Chrome on Android is recommended. It's not working on iPhone and some other explorers. Click help button in the game UI to see keyboard mapping.*  
+Single play: **[http://cloudretro.io](http://cloudretro.io)**
+Crowd play: **[Pokemon Emerald](http://cloudretro.io/?id=652e45d78d2b91cd%7CPokemon%20-%20Emerald%20Version%20%28U%29)**
+*Chrome and Chrome on Android is recommended. It's not working on iPhone and some other explorers. Click help button in the game UI to see keyboard mapping.*
 
-\*In ideal network condition and less resource contention on servers, the game will run smoothly as in the video demo. Because I only hosted the platform on limited servers in US East, US West, Eu, Singapore, you may experience some latency issues + connection problem. You can try hosting the service following the instruction the next section to have a better sense of performance.  
+\*In ideal network condition and less resource contention on servers, the game will run smoothly as in the video demo. Because I only hosted the platform on limited servers in US East, US West, Eu, Singapore, you may experience some latency issues + connection problem. You can try hosting the service following the instruction the next section to have a better sense of performance.
 
 |                   Screenshot                   |                   Screenshot                   |
 | :--------------------------------------------: | :--------------------------------------------: |
@@ -31,7 +34,7 @@ Crowd play: **[Pokemon Emerald](http://cloudretro.io/?id=652e45d78d2b91cd%7CPoke
 
 ## Run on local by Docker
 
-You try running the server directly by `make dev.run-docker`. It will spawn a docker environment and you can access the service on `localhost:8000`.  
+You try running the server directly by `make dev.run-docker`. It will spawn a docker environment and you can access the service on `localhost:8000`.
 
 ## Development environment
 
@@ -77,18 +80,18 @@ Because the coordinator and workers need to run simultaneously. Workers connect 
 - [Wiki](https://github.com/giongto35/cloud-game/wiki)
 
 ## FAQ
-- [FAQ](https://github.com/giongto35/cloud-game/wiki/FAQ)  
+- [FAQ](https://github.com/giongto35/cloud-game/wiki/FAQ)
 
 ## Crowd Play, play game together
-By clicking these deep link, you can join the game directly and play it together with other people.  
-- [Play Pokemon Emerald](http://cloudretro.io/?id=652e45d78d2b91cd%7CPokemon%20-%20Emerald%20Version%20%28U%29) 
+By clicking these deep link, you can join the game directly and play it together with other people.
+- [Play Pokemon Emerald](http://cloudretro.io/?id=652e45d78d2b91cd%7CPokemon%20-%20Emerald%20Version%20%28U%29)
 - [Fire Emblem](http://cloudretro.io/?id=314ea4d7f9c94d25___Fire%20Emblem%20%28U%29%20%5B%21%5D)
 - [Advance War](http://cloudretro.io/?id=10fe582a7635b039___Advance%20Wars%20%28USA%29)
 - [Harvest Moon](http://cloudretro.io/?id=3f7462269e976303___Harvest%20Moon%20-%20Back%20to%20Nature%20%28USA%29)
-- [Play Pokemon Fire Red](http://cloudretro.io/?id=68bf168be6728020___Pokemon%20-%20Fire%20Red%20Version%20%28U%29%20%28V1.1%29) 
-- [Mario](http://cloudretro.io/?id=1953c570fee1f9e4___Super%20Mario%20Bros) 
+- [Play Pokemon Fire Red](http://cloudretro.io/?id=68bf168be6728020___Pokemon%20-%20Fire%20Red%20Version%20%28U%29%20%28V1.1%29)
+- [Mario](http://cloudretro.io/?id=1953c570fee1f9e4___Super%20Mario%20Bros)
 
-And you can host the new game by yourself by accessing [cloudretro.io](http://cloudretro.io) and click "share" button to generate a deeplink to your current game.  
+And you can host the new game by yourself by accessing [cloudretro.io](http://cloudretro.io) and click "share" button to generate a deeplink to your current game.
 _Disclaimer: You may experience lagging when joining a room because the room is in a different zone. In that case, you should create a new room for crowd play._
 
 ![screenshot](docs/img/crowdplay.gif)
@@ -100,17 +103,17 @@ _Disclaimer: You may experience lagging when joining a room because the room is 
 
 ## Credits
 
-* *Pion* Webrtc team for the incredible Golang Webrtc library and their supports https://github.com/pion/webrtc/.  
-* *libretro/kivutar* Golang libretro https://github.com/libretro/go-nanoarch and https://www.libretro.com/.  
+* *Pion* Webrtc team for the incredible Golang Webrtc library and their supports https://github.com/pion/webrtc/.
+* *libretro/kivutar* Golang libretro https://github.com/libretro/go-nanoarch and https://www.libretro.com/.
 * *gen2brain* for the h264 go encoder https://github.com/gen2brain/x264-go
-* *poi5305* for the video encoding https://github.com/poi5305/go-yuv2webRTC.  
-* *fogleman* for the NES emulator https://github.com/fogleman/nes.  
+* *poi5305* for the video encoding https://github.com/poi5305/go-yuv2webRTC.
+* *fogleman* for the NES emulator https://github.com/fogleman/nes.
 
 ## Author
 
-Nguyen Huu Thanh  
-https://www.linkedin.com/in/huuthanhnguyen/  
+Nguyen Huu Thanh
+https://www.linkedin.com/in/huuthanhnguyen/
 
-Tri Dang Minh  
-https://trich.im  
+Tri Dang Minh
+https://trich.im
 
