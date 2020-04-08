@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	"github.com/giongto35/cloud-game/pkg/config"
+	"github.com/giongto35/cloud-game/pkg/util"
 )
 
 type GameInfo struct {
@@ -15,6 +16,8 @@ type GameInfo struct {
 }
 
 const gamePath = "assets/games"
+
+var excludeFiles = []string{"neogeo"}
 
 var GameList []GameInfo
 
@@ -42,6 +45,11 @@ func getAllGames(gamePath string) []GameInfo {
 		if info != nil && !info.IsDir() && isValidGameType(path) {
 			// Add to games list
 			gameInfo := getGameInfo(path)
+			// Skip file that is in excludeFiles (bios files)
+			if util.ContainsString(excludeFiles, gameInfo.Name) {
+				return nil
+			}
+
 			games = append(games, gameInfo)
 		}
 		return nil

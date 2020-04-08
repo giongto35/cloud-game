@@ -4,6 +4,10 @@ const KEY = (() => {
         B: 'b',
         X: 'x',
         Y: 'y',
+        L: 'l',
+        R: 'r',
+        L: 'l',
+        R: 'r',
         START: 'start',
         SELECT: 'select',
         LOAD: 'load',
@@ -16,5 +20,9 @@ const KEY = (() => {
         DOWN: 'down',
         LEFT: 'left',
         RIGHT: 'right',
+        PAD1: 'pad1',
+        PAD2: 'pad2',
+        PAD3: 'pad3',
+        PAD4: 'pad4',
     }
 })();

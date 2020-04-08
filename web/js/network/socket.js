@@ -11,8 +11,16 @@ const socket = (() => {
     let conn;
     let curPacketId = '';
 
-    const init = (roomId) => {
-        conn = new WebSocket(`ws://${location.host}/ws${roomId ? `?room_id=${roomId}` : ''}`);
+    const init = (roomId, zone) => {
+        const paramString = new URLSearchParams({room_id: roomId, zone: zone})
+
+        // if localhost, local LAN connection
+        if (location.hostname === "localhost" || location.hostname === "127.0.0.1" || location.hostname.startsWith("192.168")) {
+            scheme = "ws"
+        } else {
+            scheme = "wss"
+        }
+        conn = new WebSocket(`${scheme}://${location.host}/ws?${paramString.toString()}`);
 
         // Clear old roomID
         conn.onopen = () => {
@@ -23,6 +31,7 @@ const socket = (() => {
         };
         conn.onerror = error => log.error(`[ws] ${error}`);
         conn.onclose = () => log.info('[ws] closed');
+        // Message received from server
         conn.onmessage = response => {
             const data = JSON.parse(response.data);
             const message = data.id;
@@ -57,6 +66,9 @@ const socket = (() => {
                 case 'load':
                     event.pub(GAME_LOADED);
                     break;
+                case 'playerIdx':
+                    event.pub(GAME_PLAYER_IDX, data.data);
+                    break;
                 case 'checkLatency':
                     curPacketId = data.packet_id;
                     const addresses = data.data.split(',');
@@ -75,6 +87,7 @@ const socket = (() => {
     });
     const saveGame = () => send({"id": "save", "data": ""});
     const loadGame = () => send({"id": "load", "data": ""});
+    const updatePlayerIndex = (idx) => send({"id": "playerIdx", "data": idx.toString()});
     const startGame = (gameName, isMobile, roomId, playerIndex) => send({
         "id": "start",
         "data": JSON.stringify({
@@ -92,6 +105,7 @@ const socket = (() => {
         latency: latency,
         saveGame: saveGame,
         loadGame: loadGame,
+        updatePlayerIndex: updatePlayerIndex,
         startGame: startGame,
         quitGame: quitGame
     }

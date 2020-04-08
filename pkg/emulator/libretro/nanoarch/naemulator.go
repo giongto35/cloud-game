@@ -3,6 +3,7 @@ package nanoarch
 import (
 	"image"
 	"log"
+	"sync"
 	"time"
 
 	"github.com/giongto35/cloud-game/pkg/config"
@@ -49,7 +50,7 @@ import "C"
 type naEmulator struct {
 	imageChannel chan<- *image.RGBA
 	audioChannel chan<- []int16
-	inputChannel <-chan int
+	inputChannel <-chan InputEvent
 
 	meta            config.EmulatorMeta
 	gamePath        string
@@ -57,51 +58,69 @@ type naEmulator struct {
 	gameName        string
 	isSavingLoading bool
 
-	keys []bool
-	done chan struct{}
+	keysMap map[string][]int
+	done    chan struct{}
+
+	// lock to lock uninteruptable operation
+	lock *sync.Mutex
+}
+
+type InputEvent struct {
+	KeyState  int
+	PlayerIdx int
+	ConnID    string
 }
 
 var NAEmulator *naEmulator
 var outputImg *image.RGBA
 
+const maxPort = 8
+
 // NAEmulator implements CloudEmulator interface based on NanoArch(golang RetroArch)
-func NewNAEmulator(etype string, roomID string, imageChannel chan<- *image.RGBA, audioChannel chan<- []int16, inputChannel <-chan int) *naEmulator {
+func NewNAEmulator(etype string, roomID string, inputChannel <-chan InputEvent) (*naEmulator, chan *image.RGBA, chan []int16) {
 	meta := config.EmulatorConfig[etype]
+	imageChannel := make(chan *image.RGBA, 30)
+	audioChannel := make(chan []int16, 30)
 
 	return &naEmulator{
 		meta:         meta,
 		imageChannel: imageChannel,
 		audioChannel: audioChannel,
 		inputChannel: inputChannel,
-		keys:         make([]bool, joypadNumKeys),
+		keysMap:      map[string][]int{},
 		roomID:       roomID,
 		done:         make(chan struct{}, 1),
-	}
+		lock:         &sync.Mutex{},
+	}, imageChannel, audioChannel
 }
 
 // Init initialize new RetroArch cloud emulator
-func Init(etype string, roomID string, imageChannel chan<- *image.RGBA, audioChannel chan<- []int16, inputChannel <-chan int) {
-	NAEmulator = NewNAEmulator(etype, roomID, imageChannel, audioChannel, inputChannel)
+func Init(etype string, roomID string, inputChannel <-chan InputEvent) (*naEmulator, chan *image.RGBA, chan []int16) {
+	emulator, imageChannel, audioChannel := NewNAEmulator(etype, roomID, inputChannel)
+	// Set to global NAEmulator
+	NAEmulator = emulator
+
 	go NAEmulator.listenInput()
+	return emulator, imageChannel, audioChannel
 }
 
 func (na *naEmulator) listenInput() {
 	// input from javascript follows bitmap. Ex: 00110101
 	// we decode the bitmap and send to channel
-	for inpBitmap := range NAEmulator.inputChannel {
-		for k := 0; k < len(bindRetroKeys); k++ {
-			key, ok := bindRetroKeys[k]
-			if ok == false {
-				continue
-			}
+	for inpEvent := range NAEmulator.inputChannel {
+		inpBitmap := inpEvent.KeyState
 
-			if (inpBitmap & 1) == 1 {
-				na.keys[key] = true
-			} else {
-				na.keys[key] = false
-			}
-			inpBitmap >>= 1
+		if inpBitmap == -1 {
+			// terminated
+			delete(na.keysMap, inpEvent.ConnID)
+			continue
 		}
+
+		if _, ok := na.keysMap[inpEvent.ConnID]; !ok {
+			na.keysMap[inpEvent.ConnID] = make([]int, maxPort)
+		}
+
+		na.keysMap[inpEvent.ConnID][inpEvent.PlayerIdx] = inpBitmap
 	}
 }
 
@@ -130,6 +149,8 @@ func (na *naEmulator) Start() {
 		// Slow response here
 		case <-na.done:
 			nanoarchShutdown()
+			close(na.imageChannel)
+			close(na.audioChannel)
 			log.Println("Closed Director")
 			return
 		default:

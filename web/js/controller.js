@@ -50,7 +50,7 @@
 
         Promise.all((data.addresses || []).map(address => {
             let beforeTime = Date.now();
-            return ajax.fetch(`http://${address}:9000/echo?_=${beforeTime}`, {}, timeoutMs)
+            return ajax.fetch(`${address}?_=${beforeTime}`, {method: "GET", redirect: "follow"}, timeoutMs)
                 .then(() => ({[address]: Date.now() - beforeTime}), () => ({[address]: maxTimeoutMs}));
         })).then(results => {
             // const latencies = Object.assign({}, ...results);
@@ -121,6 +121,9 @@
             return;
         }
 
+        //const el = document.createElement('textarea');
+        const playeridx = parseInt($('#playeridx').val(), 10) - 1
+
         log.info('[control] starting game screen');
 
         setState(app.state.game);
@@ -142,7 +145,7 @@
         // currently it's a game with the index 1
         // on the server this game is ignored and the actual game will be extracted from the share link
         // so there's no point in doing this and this' really confusing
-        socket.startGame(gameList.getCurrentGame(), env.isMobileDevice(), room.getId(), 1);
+        socket.startGame(gameList.getCurrentGame(), env.isMobileDevice(), room.getId(), playeridx);
 
         // clear menu screen
         input.poll().disable();
@@ -182,6 +185,13 @@
 
         state.keyRelease(data.key);
     };
+
+    const updatePlayerIndex = (idx) => {
+        var slider = document.getElementById('playeridx');
+        slider.value = idx + 1;
+        socket.updatePlayerIndex(idx);
+    };
+
 
     const app = {
         state: {
@@ -264,8 +274,10 @@
                     input.setKeyState(key, false);
 
                     switch (key) {
-                        // nani? why join / copy switch, it's confusing
-                        case KEY.JOIN:
+                        // nani? why join / copy switch, it's confusing. Me: It's because of the original design to update label only :-s.
+                        case KEY.JOIN: // or SHARE
+                            // save when click share
+                            event.pub(KEY_PRESSED, {key: KEY.SAVE})
                             room.copyToClipboard();
                             popup('Copy link to clipboard!');
                             break;
@@ -278,6 +290,22 @@
                         case KEY.FULL:
                             env.display().toggleFullscreen(gameScreen.height() !== window.innerHeight, gameScreen[0]);
                             break;
+
+                        // update player index
+                        case KEY.PAD1:
+                            updatePlayerIndex(0);
+                            break;
+                        case KEY.PAD2:
+                            updatePlayerIndex(1);
+                            break;
+                        case KEY.PAD3:
+                            updatePlayerIndex(2);
+                            break;
+                        case KEY.PAD4:
+                            updatePlayerIndex(3);
+                            break;
+
+                        // quit
                         case KEY.QUIT:
                             input.poll().disable();
 
@@ -302,6 +330,8 @@
     event.sub(GAME_ROOM_AVAILABLE, onGameRoomAvailable, 2);
     event.sub(GAME_SAVED, () => popup('Saved'));
     event.sub(GAME_LOADED, () => popup('Loaded'));
+    event.sub(GAME_PLAYER_IDX, (idx) => popup(parseInt(idx)+1));
+
     event.sub(MEDIA_STREAM_INITIALIZED, (data) => {
         rtcp.start(data.stunturn);
         gameList.set(data.games);

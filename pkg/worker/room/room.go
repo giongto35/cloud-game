@@ -32,8 +32,9 @@ type Room struct {
 	imageChannel <-chan *image.RGBA
 	// audioChannel is audio stream received from director
 	audioChannel <-chan []int16
-	// inputChannel is input stream from websocket send to room
-	inputChannel chan<- int
+	// inputChannel is input stream send to director. This inputChannel is combined
+	// input from webRTC + connection info (player indexc)
+	inputChannel chan<- nanoarch.InputEvent
 	// State of room
 	IsRunning bool
 	// Done channel is to fire exit event when room is closed
@@ -70,15 +71,11 @@ func NewRoom(roomID string, gameName string, videoEncoderType string, onlineStor
 	gameInfo := gamelist.GetGameInfoFromName(gameName)
 
 	log.Println("Init new room: ", roomID, gameName, gameInfo)
-	imageChannel := make(chan *image.RGBA, 30)
-	audioChannel := make(chan []int16, 30)
-	inputChannel := make(chan int, 100)
+	inputChannel := make(chan nanoarch.InputEvent, 100)
 
 	room := &Room{
 		ID: roomID,
 
-		imageChannel:  imageChannel,
-		audioChannel:  audioChannel,
 		inputChannel:  inputChannel,
 		rtcSessions:   []*webrtc.WebRTC{},
 		sessionsLock:  &sync.Mutex{},
@@ -102,7 +99,12 @@ func NewRoom(roomID string, gameName string, videoEncoderType string, onlineStor
 
 		// Spawn new emulator based on gameName and plug-in all channels
 		emuName, _ := config.FileTypeToEmulator[game.Type]
-		room.director = getEmulator(emuName, roomID, imageChannel, audioChannel, inputChannel)
+
+		director, imageChannel, audioChannel := nanoarch.Init(emuName, roomID, inputChannel)
+		room.director = director
+		room.imageChannel = imageChannel
+		room.audioChannel = audioChannel
+
 		gameMeta := room.director.LoadMeta(game.Path)
 
 		// nwidth, nheight are the webRTC output size.
@@ -153,7 +155,6 @@ func resizeToAspect(ratio float64, sw int, sh int) (dw int, dh int) {
 
 // getEmulator creates new emulator and run it
 func getEmulator(emuName string, roomID string, imageChannel chan<- *image.RGBA, audioChannel chan<- []int16, inputChannel <-chan int) emulator.CloudEmulator {
-	nanoarch.Init(emuName, roomID, imageChannel, audioChannel, inputChannel)
 
 	return nanoarch.NAEmulator
 }
@@ -185,20 +186,26 @@ func (r *Room) isGameOnLocal(savepath string) bool {
 	return err == nil
 }
 
-func (r *Room) AddConnectionToRoom(peerconnection *webrtc.WebRTC, playerIndex int) {
+func (r *Room) AddConnectionToRoom(peerconnection *webrtc.WebRTC) {
 	peerconnection.AttachRoomID(r.ID)
 	r.rtcSessions = append(r.rtcSessions, peerconnection)
 
-	go r.startWebRTCSession(peerconnection, playerIndex)
+	go r.startWebRTCSession(peerconnection)
 }
 
-func (r *Room) startWebRTCSession(peerconnection *webrtc.WebRTC, playerIndex int) {
+func (r *Room) UpdatePlayerIndex(peerconnection *webrtc.WebRTC, playerIndex int) {
+	log.Println("Updated player Index to: ", playerIndex)
+	peerconnection.GameMeta.PlayerIndex = playerIndex
+}
+
+func (r *Room) startWebRTCSession(peerconnection *webrtc.WebRTC) {
 	defer func() {
 		if r := recover(); r != nil {
 			log.Println("Warn: Recovered when sent to close inputChannel")
 		}
 	}()
 
+	// bug: when inputchannel here = nil , skip and finish
 	for input := range peerconnection.InputChannel {
 		// NOTE: when room is no longer running. InputChannel needs to have extra event to go inside the loop
 		if peerconnection.Done || !peerconnection.IsConnected() || !r.IsRunning {
@@ -206,12 +213,8 @@ func (r *Room) startWebRTCSession(peerconnection *webrtc.WebRTC, playerIndex int
 		}
 
 		if peerconnection.IsConnected() {
-			// the first 10 bits belong to player 1
-			// the next 10 belongs to player 2 ...
-			// We standardize and put it to inputChannel (20 bits)
-			input = input << ((uint(playerIndex) - 1) * config.NumKeys)
 			select {
-			case r.inputChannel <- input:
+			case r.inputChannel <- nanoarch.InputEvent{KeyState: input, PlayerIdx: peerconnection.GameMeta.PlayerIndex, ConnID: peerconnection.ID}:
 			default:
 			}
 		}
@@ -231,6 +234,11 @@ func (r *Room) RemoveSession(w *webrtc.WebRTC) {
 			log.Println("Removed session ", s.ID, " from room: ", r.ID)
 			break
 		}
+	}
+	// Detach input. Send end signal
+	select {
+	case r.inputChannel <- nanoarch.InputEvent{KeyState: -1, ConnID: w.ID}:
+	default:
 	}
 }
 
@@ -258,9 +266,16 @@ func (r *Room) Close() {
 	// Save game before quit. Only save for game which was previous saved to avoid flooding database
 	if r.isRoomExisted() {
 		log.Println("Saved Game before closing room")
-		r.SaveGame()
+		// use goroutine here because SaveGame attempt to acquire a emulator lock.
+		// the lock is holding before coming to close, so it will cause deadlock if SaveGame is synchronous
+		go func() {
+			// Save before close, so save can have correct state (Not sure) may again cause deadlock
+			r.SaveGame()
+			r.director.Close()
+		}()
+	} else {
+		r.director.Close()
 	}
-	r.director.Close()
 	log.Println("Closing input of room ", r.ID)
 	close(r.inputChannel)
 	close(r.Done)

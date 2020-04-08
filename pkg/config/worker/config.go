@@ -6,26 +6,28 @@ import (
 )
 
 type Config struct {
-	Port            int
-	OverlordAddress string
+	Port               int
+	CoordinatorAddress string
 
 	// video
 	Scale             int
 	EnableAspectRatio bool
 	Width             int
 	Height            int
+	Zone              string
 
 	MonitoringConfig monitoring.ServerMonitoringConfig
 }
 
 func NewDefaultConfig() Config {
 	return Config{
-		Port:              8800,
-		OverlordAddress:   "ws://localhost:8000/wso",
-		Scale:             1,
-		EnableAspectRatio: false,
-		Width:             320,
-		Height:            240,
+		Port:               8800,
+		CoordinatorAddress: "localhost:8000",
+		Scale:              1,
+		EnableAspectRatio:  false,
+		Width:              320,
+		Height:             240,
+		Zone:               "",
 		MonitoringConfig: monitoring.ServerMonitoringConfig{
 			Port:          6601,
 			URLPrefix:     "/worker",
@@ -35,8 +37,9 @@ func NewDefaultConfig() Config {
 }
 
 func (c *Config) AddFlags(fs *pflag.FlagSet) *Config {
-	fs.IntVarP(&c.Port, "port", "", 8800, "OverWorker server port")
-	fs.StringVarP(&c.OverlordAddress, "overlordhost", "", c.OverlordAddress, "OverWorker URL to connect")
+	fs.IntVarP(&c.Port, "port", "", 8800, "Worker server port")
+	fs.StringVarP(&c.CoordinatorAddress, "coordinatorhost", "", c.CoordinatorAddress, "Worker URL to connect")
+	fs.StringVarP(&c.Zone, "zone", "z", c.Zone, "Zone of the worker")
 
 	fs.IntVarP(&c.Scale, "scale", "s", c.Scale, "Set output viewport scale factor")
 	fs.BoolVarP(&c.EnableAspectRatio, "ar", "", c.EnableAspectRatio, "Enable Aspect Ratio")

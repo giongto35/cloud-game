@@ -10,6 +10,7 @@ import (
 	"sync"
 	"unsafe"
 
+	"github.com/giongto35/cloud-game/pkg/config"
 	"github.com/giongto35/cloud-game/pkg/emulator/libretro/image"
 )
 
@@ -63,23 +64,24 @@ var video struct {
 }
 
 const bufSize = 1024 * 4
-
 const joypadNumKeys = int(C.RETRO_DEVICE_ID_JOYPAD_R3 + 1)
 
 var joy [joypadNumKeys]bool
 var ewidth, eheight int
 
-var bindRetroKeys = map[int]int{
-	0: C.RETRO_DEVICE_ID_JOYPAD_A,
-	1: C.RETRO_DEVICE_ID_JOYPAD_B,
-	2: C.RETRO_DEVICE_ID_JOYPAD_X,
-	3: C.RETRO_DEVICE_ID_JOYPAD_Y,
-	4: C.RETRO_DEVICE_ID_JOYPAD_SELECT,
-	5: C.RETRO_DEVICE_ID_JOYPAD_START,
-	6: C.RETRO_DEVICE_ID_JOYPAD_UP,
-	7: C.RETRO_DEVICE_ID_JOYPAD_DOWN,
-	8: C.RETRO_DEVICE_ID_JOYPAD_LEFT,
-	9: C.RETRO_DEVICE_ID_JOYPAD_RIGHT,
+var bindKeysMap = map[int]int{
+	C.RETRO_DEVICE_ID_JOYPAD_A:      0,
+	C.RETRO_DEVICE_ID_JOYPAD_B:      1,
+	C.RETRO_DEVICE_ID_JOYPAD_X:      2,
+	C.RETRO_DEVICE_ID_JOYPAD_Y:      3,
+	C.RETRO_DEVICE_ID_JOYPAD_L:      4,
+	C.RETRO_DEVICE_ID_JOYPAD_R:      5,
+	C.RETRO_DEVICE_ID_JOYPAD_SELECT: 6,
+	C.RETRO_DEVICE_ID_JOYPAD_START:  7,
+	C.RETRO_DEVICE_ID_JOYPAD_UP:     8,
+	C.RETRO_DEVICE_ID_JOYPAD_DOWN:   9,
+	C.RETRO_DEVICE_ID_JOYPAD_LEFT:   10,
+	C.RETRO_DEVICE_ID_JOYPAD_RIGHT:  11,
 }
 
 type CloudEmulator interface {
@@ -117,12 +119,21 @@ func coreInputPoll() {
 
 //export coreInputState
 func coreInputState(port C.unsigned, device C.unsigned, index C.unsigned, id C.unsigned) C.int16_t {
-	if port > 0 || index > 0 || device != C.RETRO_DEVICE_JOYPAD {
+	if id >= 255 || index > 0 || device != C.RETRO_DEVICE_JOYPAD {
 		return 0
 	}
 
-	if id < 255 && NAEmulator.keys[id] {
-		return 1
+	// map from id to controll key
+	key, ok := bindKeysMap[int(id)]
+	if !ok {
+		return 0
+	}
+
+	// check if any player is pressing that key
+	for k := range NAEmulator.keysMap {
+		if ((NAEmulator.keysMap[k][port] >> uint(key)) & 1) == 1 {
+			return 1
+		}
 	}
 	return 0
 }
@@ -136,7 +147,10 @@ func audioWrite2(buf unsafe.Pointer, frames C.size_t) C.size_t {
 	// copy because pcm slice refer to buf underlying pointer, and buf pointer is the same in continuos frames
 	copy(p, pcm)
 
-	NAEmulator.audioChannel <- p
+	select {
+	case NAEmulator.audioChannel <- p:
+	default:
+	}
 
 	return frames
 }
@@ -228,13 +242,22 @@ var retroSerializeSize unsafe.Pointer
 var retroSerialize unsafe.Pointer
 var retroUnserialize unsafe.Pointer
 
-func coreLoad(sofile string) {
-
+func coreLoad(pathNoExt string) {
 	mu.Lock()
-	h := C.dlopen(C.CString(sofile), C.RTLD_LAZY)
+	// Different OS requires different library, bruteforce till it finish
+	h := C.dlopen(C.CString(pathNoExt+".so"), C.RTLD_LAZY)
+
+	for _, ext := range config.EmulatorExtension {
+		pathWithExt := pathNoExt + ext
+		h = C.dlopen(C.CString(pathWithExt), C.RTLD_LAZY)
+		if h != nil {
+			break
+		}
+	}
+
 	if h == nil {
 		err := C.dlerror()
-		log.Fatalf("error loading %s, err %+v", sofile, *err)
+		log.Fatalf("error loading %s, err %+v", pathNoExt, *err)
 	}
 
 	retroInit = C.dlsym(h, C.CString("retro_init"))

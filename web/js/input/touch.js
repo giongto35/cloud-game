@@ -20,6 +20,7 @@ const touch = (() => {
 
     const window_ = $(window);
     const buttons = $(".btn");
+    const playerSlider = $("#playeridx")
     const dpad = $(".dpad");
 
     function resetVpadState() {
@@ -125,6 +126,15 @@ const touch = (() => {
 
 
     /*
+        Player index slider
+    */
+
+    function handlePlayerSlider() {
+            socket.updatePlayerIndex($(this).val() - 1);
+    }
+
+
+    /*
         Touch menu
     */
 
@@ -225,6 +235,11 @@ const touch = (() => {
     vpadHolder.on('mousedown', handleVpadJoystickDown);
     vpadHolder.on('touchstart', handleVpadJoystickDown);
     vpadHolder.on('touchend', handleVpadJoystickUp);
+
+    // touch/mouse events for player slider.
+    playerSlider.on('oninput', handlePlayerSlider);
+    playerSlider.on('onchange', handlePlayerSlider);
+    playerSlider.on('mouseup', handlePlayerSlider);
 
     // Bind events for menu
     // TODO change this flow

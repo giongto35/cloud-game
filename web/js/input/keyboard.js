@@ -14,13 +14,19 @@ const keyboard = (() => {
         88: KEY.B, // x
         67: KEY.X, // c
         86: KEY.Y, // v
+        65: KEY.L, // a
+        83: KEY.R, // s
         13: KEY.START, // enter
         16: KEY.SELECT, // shift
         // non-game
         81: KEY.QUIT, // q
-        83: KEY.SAVE, // s
         87: KEY.JOIN, // w
-        65: KEY.LOAD, // a
+        75: KEY.SAVE, // k
+        76: KEY.LOAD, // l
+        49: KEY.PAD1, // 1
+        50: KEY.PAD2, // 2
+        51: KEY.PAD3, // 3
+        52: KEY.PAD4, // 4
         70: KEY.FULL, // f
         72: KEY.HELP, // h
     };

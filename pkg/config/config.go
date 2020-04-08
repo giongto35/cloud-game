@@ -5,7 +5,6 @@ import (
 	"time"
 )
 
-const defaultoverlord = "ws://localhost:9000/wso"
 const DefaultSTUNTURN = `[{"urls":"stun:stun-turn.webgame2d.com:3478"},{"urls":"turn:stun-turn.webgame2d.com:3478","username":"root","credential":"root"}]`
 const CODEC_VP8 = "VP8"
 const CODEC_H264 = "H264"
@@ -23,6 +22,7 @@ var StunTurnTemplate = `[{"urls":"stun:stun.l.google.com:19302"},{"urls":"stun:%
 var WSWait = 20 * time.Second
 var MatchWorkerRandom = false
 var ProdEnv = "prod"
+var StagingEnv = "staging"
 
 const NumKeys = 10
 
@@ -54,28 +54,30 @@ type EmulatorMeta struct {
 
 var EmulatorConfig = map[string]EmulatorMeta{
 	"gba": {
-		Path:   "assets/emulator/libretro/cores/mgba_libretro.so",
+		Path:   "assets/emulator/libretro/cores/mgba_libretro",
 		Width:  240,
 		Height: 160,
 	},
 	"pcsx": {
-		Path:   "assets/emulator/libretro/cores/mednafen_psx_libretro.so",
+		Path:   "assets/emulator/libretro/cores/pcsx_rearmed_libretro",
 		Width:  350,
 		Height: 240,
 	},
 	"nes": {
-		Path:   "assets/emulator/libretro/cores/nestopia_libretro.so",
+		Path:   "assets/emulator/libretro/cores/nestopia_libretro",
 		Width:  256,
 		Height: 240,
 	},
 	"snes": {
-		Path:   "assets/emulator/libretro/cores/mednafen_snes_libretro.so",
+		Path:   "assets/emulator/libretro/cores/mednafen_snes_libretro",
 		Width:  256,
 		Height: 224,
 	},
 	"mame": {
-		Path:   "assets/emulator/libretro/cores/mame2016_libretro.so",
-		Width:  0,
-		Height: 0,
+		Path:   "assets/emulator/libretro/cores/fbneo_libretro",
+		Width:  240,
+		Height: 160,
 	},
 }
+
+var EmulatorExtension = []string{".so", ".dylib", ".dll"}
