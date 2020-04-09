@@ -6,8 +6,6 @@ const KEY = (() => {
         Y: 'y',
         L: 'l',
         R: 'r',
-        L: 'l',
-        R: 'r',
         START: 'start',
         SELECT: 'select',
         LOAD: 'load',

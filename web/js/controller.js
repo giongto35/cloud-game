@@ -30,7 +30,7 @@
     };
 
     const onGameRoomAvailable = () => {
-        keyButtons[KEY.JOIN].html('share');
+        //keyButtons[KEY.JOIN].html('share');
         popup('Now you can share you game!');
     };
 
@@ -98,7 +98,7 @@
         gameList.hide();
         keyButtons[KEY.SAVE].hide();
         keyButtons[KEY.LOAD].hide();
-        keyButtons[KEY.JOIN].html('play');
+        //keyButtons[KEY.JOIN].html('play');
 
         // show menu scene
         gameScreen.show().delay(0).fadeOut(0, () => {
@@ -164,7 +164,11 @@
     };
 
     const onKeyPress = (data) => {
-        keyButtons[data.key].addClass('pressed');
+        if (data.key == "up" || data.key == "down" || data.key == "left" || data.key == "right") {
+            keyButtons[data.key].addClass('dpad-pressed');
+        } else {
+            keyButtons[data.key].addClass('pressed');
+        }
 
         if (KEY.HELP === data.key) helpScreen.show(true);
 
@@ -172,7 +176,11 @@
     };
 
     const onKeyRelease = (data) => {
-        keyButtons[data.key].removeClass('pressed');
+        if (data.key == "up" || data.key == "down" || data.key == "left" || data.key == "right") {
+            keyButtons[data.key].removeClass('dpad-pressed');
+        } else {
+            keyButtons[data.key].removeClass('pressed');
+        }
 
         if (KEY.HELP === data.key) helpScreen.show(false);
 
@@ -217,7 +225,7 @@
                     gameScreen.hide();
                     menuScreen.hide();
                     gameList.hide();
-                    keyButtons[KEY.JOIN].html('play');
+                    //keyButtons[KEY.JOIN].html('play');
 
                     gameList.show();
 

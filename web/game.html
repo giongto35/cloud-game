@@ -7,11 +7,11 @@
     <meta name="apple-mobile-web-app-capable" content="yes">
 
     <meta property="og:type" content="cloud-game" />
-    <meta property="og:title" content="Cloud Gaming - NES Emulator" />
+    <meta property="og:title" content="Web-based Cloud Gaming for Retro Games" />
     <meta property="og:description" content="Play and share cloud gaming experience with your friends" />
     <meta property="og:image" content="http://cloud.webgame2d.com/static/img/ogimage.jpg" />
     <meta property="og:url" content="" />
-    <meta property="og:site_name" content="Cloud gaming" />
+    <meta property="og:site_name" content="Cloud Retro" />
     <meta property="og:author" content="giongto35 trichimtrich" />
 
     <link href="/static/css/font-awesome.css?1" rel="stylesheet">
@@ -20,6 +20,8 @@
 
 <body>
     <div id="gamebody">
+        <!--<div id="ui-emulator-bg"></div>-->
+
         <div id="circle-pad-holder">
             <div id="btn-up" class="dpad" value="up"></div>
             <div id="btn-down" class="dpad" value="down"></div>
@@ -34,7 +36,6 @@
                 https://developers.google.com/web/updates/2017/09/autoplay-policy-changes
             -->
             <video id="game-screen" muted playinfullscreen="false" playsinline onloadstart="this.volume=0.5" poster="/static/img/screen_loading.gif"></video>
-            <!--<video id="game-screen" autoplay=true poster="/static/img/screen_loading.gif"></video>-->
 
             <div id="menu-screen">
                 <div id="menu-container">
@@ -45,30 +46,25 @@
 
         </div>
 
-        <div id="btn-load" unselectable="on" class="btn big unselectable" value="load">load</div>
-        <div id="btn-save" unselectable="on" class="btn big unselectable" value="save">save</div>
-        <div id="btn-join" unselectable="on" class="btn big unselectable" value="join">play</div>
+        <div id="guide-txt"><b>Arrows</b>(move),<b>ZXCVAS</b>(game ABXYLR),<b>1/2</b>(1st/2nd player),<b>Shift/Enter/K/L</b>(select/start/save/load),<b>F</b>(fullscreen),<b>share</b>(copy sharelink to clipboard)</div>
+        <div id="btn-load" unselectable="on" class="btn big unselectable" value="load"></div>
+        <div id="btn-save" unselectable="on" class="btn big unselectable" value="save"></div>
+        <div id="btn-join" unselectable="on" class="btn big unselectable" value="join"></div>
         <div id="slider-playeridx" class="slidecontainer">
           player index
           <input type="range" min="1" max="4" value="1" class="slider" id="playeridx" onkeydown="event.preventDefault()">
         </div>
 
-        <div id="btn-quit" unselectable="on" class="btn big unselectable" value="quit">quit</div>
-        <div id="btn-select" unselectable="on" class="btn big unselectable" value="select">Select</div>
-        <div id="btn-start" unselectable="on" class="btn big unselectable" value="start">Start</div>
+        <div id="btn-quit" unselectable="on" class="btn big unselectable" value="quit"></div>
+        <div id="btn-select" unselectable="on" class="btn big unselectable" value="select"></div>
+        <div id="btn-start" unselectable="on" class="btn big unselectable" value="start"></div>
 
 
         <div id="color-button-holder">
-            <div id="btn-a" unselectable="on" class="btn unselectable" value="a">A</div>
-            <div id="btn-b" unselectable="on" class="btn unselectable" value="b">B</div>
-            <div id="btn-x" unselectable="on" class="btn unselectable" value="x">X</div>
-            <div id="btn-y" unselectable="on" class="btn unselectable" value="y">Y</div>
-        </div>
-
-        <div id="lights-holder">
-            <div id="light-1"></div>
-            <div id="light-2"></div>
-            <div id="light-3"></div>
+            <div id="btn-a" unselectable="on" class="btn unselectable" value="a"></div>
+            <div id="btn-b" unselectable="on" class="btn unselectable" value="b"></div>
+            <div id="btn-x" unselectable="on" class="btn unselectable" value="x"></div>
+            <div id="btn-y" unselectable="on" class="btn unselectable" value="y"></div>
         </div>
 
         <!-- TODO: remove -->
@@ -80,7 +76,7 @@
             <div id="help-overlay-background"></div>
             <div id="help-overlay-detail"></div>
         </div>
-        <div id="btn-help" unselectable="on" class="btn unselectable" value="help">Help</div>
+        <div id="btn-help" unselectable="on" class="btn unselectable" value="help"></div>
     </div>
 
     <a id="ribbon" style="position: fixed; right: 0; top: 0;" href="https://github.com/giongto35/cloud-game"><img width="149" height="149" src="https://github.blog/wp-content/uploads/2008/12/forkme_right_gray_6d6d6d.png?resize=149%2C149" class="attachment-full size-full" alt="Fork me on GitHub" data-recalc-dims="1"></a>
@@ -92,22 +88,22 @@
 
     <script src="/static/js/lib/jquery-3.4.1.min.js"></script>
 
-    <script src="/static/js/log.js?v=1"></script>
-    <script src="/static/js/env.js?v=1"></script>
-    <script src="/static/js/event/event.js?v=1"></script>
-    <script src="/static/js/input/keys.js?v=1"></script>
-    <script src="/static/js/input/input.js?v=1"></script>
-    <script src="/static/js/gameList.js?v=1"></script>
-    <script src="/static/js/room.js?v=1"></script>
-    <script src="/static/js/controller.js?v=2"></script>
-    <script src="/static/js/input/keyboard.js?v=1"></script>
-    <script src="/static/js/input/touch.js?v=1"></script>
-    <script src="/static/js/input/joystick.js?v=1"></script>
-    <script src="/static/js/network/ajax.js?v=1"></script>
-    <script src="/static/js/network/socket.js?v=2"></script>
-    <script src="/static/js/network/rtcp.js?v=1"></script>
+    <script src="/static/js/log.js?v=3"></script>
+    <script src="/static/js/env.js?v=3"></script>
+    <script src="/static/js/event/event.js?v=3"></script>
+    <script src="/static/js/input/keys.js?v=3"></script>
+    <script src="/static/js/input/input.js?v=3"></script>
+    <script src="/static/js/gameList.js?v=3"></script>
+    <script src="/static/js/room.js?v=3"></script>
+    <script src="/static/js/controller.js?v=3"></script>
+    <script src="/static/js/input/keyboard.js?v=3"></script>
+    <script src="/static/js/input/touch.js?v=3"></script>
+    <script src="/static/js/input/joystick.js?v=3"></script>
+    <script src="/static/js/network/ajax.js?v=3"></script>
+    <script src="/static/js/network/socket.js?v=3"></script>
+    <script src="/static/js/network/rtcp.js?v=3"></script>
 
-    <script src="/static/js/init.js?v=1"></script>
+    <script src="/static/js/init.js?v=3"></script>
 
     <!-- Global site tag (gtag.js) - Google Analytics -->
     <script async src="https://www.googletagmanager.com/gtag/js?id=UA-145078282-1"></script>

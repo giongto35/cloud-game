@@ -8,18 +8,29 @@ body {
     display: block;
     width: 556px;
     height: 278px;
-    background-color: #edf1f0;
-    -moz-border-radius: 30px;
-    -webkit-border-radius: 30px;
-    border-radius: 30px;
     top: 50%;
     left: 50%;
     position: fixed;
     transform: translate(-50%, -50%);
 
-    -webkit-box-shadow: inset 0px 0px 2px 2px rgba(219, 222, 222, 1);
-    -moz-box-shadow: inset 0px 0px 2px 2px rgba(219, 222, 222, 1);
-    box-shadow: inset 0px 0px 2px 2px rgba(219, 222, 222, 1);
+    /*-webkit-box-shadow: inset 0px 0px 2px 2px rgba(219, 222, 222, 1);*/
+    /*-moz-box-shadow: inset 0px 0px 2px 2px rgba(219, 222, 222, 1);*/
+    /*box-shadow: inset 0px 0px 2px 2px rgba(219, 222, 222, 1);*/
+
+    background-image: url('/static/img/ui/bg.png');
+    background-repeat: no-repeat;
+    background-size: 100% 100%;
+}
+
+#ui-emulator-bg {
+    width: 100%;
+    height: 100%;
+    display: block;
+    position: absolute;
+
+    background-image: url('/static/img/ui/bg.png');
+    background-repeat: no-repeat;
+    background-size: 100% 100%;
 }
 
 #help-overlay {
@@ -56,36 +67,31 @@ body {
     height: 100px;
     position: absolute;
     top: 155px;
-    left: 30px;
-    background-color: #eaebeb;
-    -moz-border-radius: 50%;
-    -webkit-border-radius: 50%;
-    border-radius: 50%;
-    -webkit-box-shadow: inset 0px 0px 2px 2px rgba(219, 222, 222, 1);
-    -moz-box-shadow: inset 0px 0px 2px 2px rgba(219, 222, 222, 1);
-    box-shadow: inset 0px 0px 2px 2px rgba(219, 222, 222, 1);
+    left: 22px;
+    background-size: contain;
+    background-image: url('/static/img/ui/bt MOVE.png');
 }
 
+#guide-txt {
+    color: #bababa;
+    font-size: 8px;
+    top: 263px;
+    left: 30px;
+    width: 1000px;
+    position: absolute;
+}
 
 #circle-pad {
     display: block;
     width: 70px;
     height: 70px;
     position: absolute;
-    /* transform: translate(-50%, -50%);
-    -moz-transform: translate(-50%, -50%);
-    -webkit-transform: translate(-50%, -50%); */
+    background-size: contain;
     top: 15px;
     left: 15px;
-    background-color: #00f;
-    -moz-border-radius: 50%;
-    -webkit-border-radius: 50%;
-    border-radius: 50%;
-    -webkit-box-shadow: 0px 0px 2px 2px rgba(219, 222, 222, 1);
-    -moz-box-shadow: 0px 0px 2px 2px rgba(219, 222, 222, 1);
-    box-shadow: 0px 0px 2px 2px rgba(219, 222, 222, 1);
 
     opacity: 0.5;
+    background-image: url('/static/img/ui/bong.png');
 }
 
 
@@ -94,15 +100,21 @@ body {
     height: 20px;
     display: block;
     position: absolute;
-    background-color: #e4e5e5;
-    border: 2px solid rgba(219, 222, 222, 1);
 }
 
+#player-index {
+    border-bottom: 0px;
+
+    background-repeat: no-repeat;
+    background-size: contain;
+    background-image: url('/static/img/ui/bt PlayerIndex.png');
+}
 
 #btn-up {
     top: 18px;
     left: 50%;
     border-bottom: 0px;
+    border-radius: 3px;
     transform: translateX(-50%);
     -webkit-transform: translateX(-50%);
     -moz-transform: translateX(-50%);
@@ -112,6 +124,7 @@ body {
     bottom: 18px;
     left: 50%;
     border-top: 0px;
+    border-radius: 3px;
     transform: translateX(-50%);
     -webkit-transform: translateX(-50%);
     -moz-transform: translateX(-50%);
@@ -122,6 +135,7 @@ body {
     left: 18px;
     top: 50%;
     border-right: 0px;
+    border-radius: 3px;
     transform: translateY(-50%);
     -webkit-transform: translateY(-50%);
     -moz-transform: translateY(-50%);
@@ -131,6 +145,7 @@ body {
     right: 18px;
     top: 50%;
     border-left: 0px;
+    border-radius: 3px;
     transform: translateY(-50%);
     -webkit-transform: translateY(-50%);
     -moz-transform: translateY(-50%);
@@ -150,10 +165,10 @@ body {
     -moz-border-radius: 5px 5px 5px 5px;
     -webkit-border-radius: 5px 5px 5px 5px;
     border-radius: 5px 5px 5px 5px;
-    
+
     -webkit-box-shadow: 0px 0px 2px 2px rgba(219, 222, 222, 1);
     -moz-box-shadow: 0px 0px 2px 2px rgba(219, 222, 222, 1);
-    box-shadow: 0px 0px 2px 2px rgba(219, 222, 222, 1);
+    box-shadow: 0px 0px 2px 2px rgba(25, 25, 25, 1);
 }
 
 #color-button-holder {
@@ -171,13 +186,9 @@ body {
     text-align: center;
     width: 40px;
     height: 30px;
+    background-size: contain;
     position: absolute;
-    -moz-border-radius: 50%;
-    -webkit-border-radius: 50%;
-    border-radius: 50%;
-    -webkit-box-shadow: 0px 0px 2px 2px rgba(219, 222, 222, 1);
-    -moz-box-shadow: 0px 0px 2px 2px rgba(219, 222, 222, 1);
-    box-shadow: 0px 0px 2px 2px rgba(219, 222, 222, 1);
+    background-repeat: no-repeat;
 }
 
 
@@ -188,68 +199,63 @@ body {
     width: 100px;
     height: 25px;
     position: absolute;
-    -moz-border-radius: 25px;
-    -webkit-border-radius: 25px;
-    border-radius: 25px;
-    -webkit-box-shadow: 0px 0px 2px 2px rgba(219, 222, 222, 1);
-    -moz-box-shadow: 0px 0px 2px 2px rgba(219, 222, 222, 1);
-    box-shadow: 0px 0px 2px 2px rgba(219, 222, 222, 1);
 }
 
 #btn-help {
     padding-top: 0px;
-    width: 40px;
-    height: 20px;
-    font-size: 15px;
+    width: 28px;
+    height: 28px;
 
     top: 10px;
-    left: 15px;
+    left: 23px;
 
-    background-color: lightskyblue;
+    background-image: url('/static/img/ui/Help.png');
 }
 
 #btn-load {
     top: 20px;
     left: 435px;
-    background-color: #f5a54b;
+
+    background-image: url('/static/img/ui/bt LOAD.png');
 }
 
 #btn-save {
     top: 60px;
     left: 435px;
-    background-color: #b844ee;
+
+    background-image: url('/static/img/ui/bt SAVE.png');
 }
 
 #btn-join {
-    background-color: #52f367;
     top: 70px;
-    left: 20px;
-    border-radius: 25px 0 0 25px;
-    width: 55px;
+    left: 22px;
+    height: 25px;
+
+    background-image: url('/static/img/ui/bt SHARE.png');
 }
 
 #btn-quit {
-    background-color: #5947f5;
     top: 70px;
     left: 75px;
-    border-radius: 0px 25px 25px 0px;
-    width: 55px;
+    height: 25px;
+
+    background-image: url('/static/img/ui/bt QUIT.png');
 }
 
 #btn-select {
-    background-color: #F7EDE3;
     top: 100px;
-    left: 425px;
-    border-radius: 25px 0 0 25px;
-    width: 55px;
+    left: 435px;
+    height: 25px;
+
+    background-image: url('/static/img/ui/bt SELECT.png');
 }
 
 #btn-start {
-    background-color: #F7EDE3;
     top: 100px;
-    left: 490px;
-    border-radius: 0px 25px 25px 0px;
-    width: 55px;
+    left: 489px;
+    width: 60px;
+
+    background-image: url('/static/img/ui/bt START.png');
 }
 
 #btn-a {
@@ -258,7 +264,8 @@ body {
     transform: translateX(-50%);
     -webkit-transform: translateX(-50%);
     -moz-transform: translateX(-50%);
-    background-color: #ea6e4a;
+
+    background-image: url('/static/img/ui/bt A.png');
 }
 
 
@@ -268,7 +275,8 @@ body {
     transform: translateY(-50%);
     -webkit-transform: translateY(-50%);
     -moz-transform: translateY(-50%);
-    background-color: #d4b95e;
+
+    background-image: url('/static/img/ui/bt B.png');
 }
 
 #btn-x {
@@ -277,7 +285,8 @@ body {
     transform: translateX(-50%);
     -webkit-transform: translateX(-50%);
     -moz-transform: translateX(-50%);
-    background-color: #6fa8eb;
+
+    background-image: url('/static/img/ui/bt X.png');
 }
 
 
@@ -287,7 +296,8 @@ body {
     transform: translateY(-50%);
     -webkit-transform: translateY(-50%);
     -moz-transform: translateY(-50%);
-    background-color: #43be85;
+
+    background-image: url('/static/img/ui/bt Y.png');
 }
 
 
@@ -299,40 +309,6 @@ body {
     top: 0;
     left: 460px;
 }
-
-#light-1 {
-    display: block;
-    width: 5px;
-    height: 10px;
-    background-color: #009BEB;
-    position: absolute;
-    top: 0;
-    left: 0;
-}
-
-#light-2 {
-    display: block;
-    width: 5px;
-    height: 10px;
-    background-color: #7a7e7d;
-    position: absolute;
-    top: 0;
-    left: 20px;
-}
-
-#light-3 {
-    display: block;
-    width: 5px;
-    height: 10px;
-    background-color: #7a7e7d;
-    position: absolute;
-    top: 0;
-    left: 40px;
-    animation: blink 1.5s cubic-bezier(1.0, 0, 0, 1.0) infinite;
-    -webkit-animation: blink 1.5s cubic-bezier(1.0, 0, 0, 1.0) infinite;
-    -moz-animation: blink 1.5s cubic-bezier(1.0, 0, 0, 1.0) infinite;
-}
-
 
 @-webkit-keyframes blink {
     0% {
@@ -375,18 +351,33 @@ body {
 
 #room-txt {
     position: absolute;
-    width: 110px;
-    top: 40px;
-    left: 25px;
-    padding-left: 2px;
-    -moz-border-radius: 8px;
-    -webkit-border-radius: 8px;
-    border-radius: 8px;
+    width: 98px;
+    top: 45px;
+    left: 23px;
+    color: #bababa;
+    padding-left: 0px;
+    -moz-border-radius: 6px;
+    -webkit-border-radius: 6px;
+    border-radius: 6px;
+
+    outline: none;
+    border-top-style: hidden;
+    border-right-style: hidden;
+    border-left-style: hidden;
+    border-bottom-style: hidden;
+
+    background-image: url('/static/img/ui/FrameTEXT.png');
+    background-size: cover;
 }
 
 
 .pressed {
-    background-color: #333 !important;
+  filter: brightness(50%);
+}
+
+.dpad-pressed {
+  background-color: #333 !important;
+  opacity: 0.75;
 }
 
 #bottom-screen {
@@ -540,6 +531,7 @@ body {
     padding-top: 10px;
     text-align: center;
 
+    color: #bababa;
     position: absolute;
     top: 90px;
     left: 20px;
@@ -552,12 +544,15 @@ body {
   appearance: none;
   width: 100%; /* Full-width */
   height: 25px; /* Specified height */
-  background: #d3d3d3; /* Grey background */
   outline: none; /* Remove outline */
-  opacity: 0.7; /* Set transparency (for mouse-over effects on hover) */
+  /*opacity: 0.7; [> Set transparency (for mouse-over effects on hover) <]*/
   -webkit-transition: .2s; /* 0.2 seconds transition on hover */
   transition: opacity .2s;
-  border-radius: 8px;
+
+  background-color: transparent;
+  background-repeat: no-repeat;
+  background-size: contain;
+  background-image: url('/static/img/ui/FramePlayerIndex.png');
 }
 
 /* Mouse-over effects */
@@ -571,17 +566,22 @@ body {
   appearance: none;
   width: 25px; /* Set a specific slider handle width */
   height: 25px; /* Slider handle height */
-  background: #4CAF50; /* Green background */
   cursor: pointer; /* Cursor on hover */
-  border-radius: 8px;
+
+  background-repeat: no-repeat;
+  background-size: contain;
+  background-image: url('/static/img/ui/bt PlayerIndex.png');
 }
 
 .slider::-moz-range-thumb {
   width: 25px; /* Set a specific slider handle width */
   height: 25px; /* Slider handle height */
-  background: #4CAF50; /* Green background */
   cursor: pointer; /* Cursor on hover */
   border-radius: 8px;
+
+  background-repeat: no-repeat;
+  background-size: contain;
+  background-image: url('/static/img/ui/bt PlayerIndex.png');
 }
 
 * {
