@@ -17,7 +17,7 @@
 #  a new Github release is created with such tags.
 # ------------------------------------------------------------------------
 
-name: Release
+name: release
 # run only when pushing v-prefixed SemVer tags (e.g. v1.0.0, v2.0.1, and etc.)
 on:
   push:
@@ -46,7 +46,7 @@ jobs:
         go-version: ${{ env.go-version }}
     - name: Set up Go environment
       shell: bash
-      # add Go's bin folder into environmet (to be able to call its tools)
+      # add Go's bin folder into environment (to be able to call its tools)
       run: |
         echo "::set-env name=GOPATH::$(go env GOPATH)"
         echo "::add-path::$(go env GOPATH)/bin"
