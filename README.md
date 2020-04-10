@@ -1,10 +1,11 @@
 # CloudRetro
 
+[![Build](https://github.com/giongto35/cloud-game/workflows/build/badge.svg)](https://github.com/giongto35/cloud-game/actions?query=workflow:build)
 [![Latest release](https://img.shields.io/github/v/release/giongto35/cloud-game.svg)](https://github.com/giongto35/cloud-game/releases/latest)
 
-**Open-source Cloud Gaming Service For Retro Games**  
-**Video demo**: https://www.youtube.com/watch?v=GUBrJGAxZZg  
-**My Slide at GopherconVN2019**: https://docs.google.com/presentation/d/1VFv8l2hVUINv2U36r7L11g4Oa_zVjHlr6MYymUbQXT4/edit?usp=sharing  
+**Open-source Cloud Gaming Service For Retro Games**
+**Video demo**: https://www.youtube.com/watch?v=GUBrJGAxZZg
+**My Slide at GopherconVN2019**: https://docs.google.com/presentation/d/1VFv8l2hVUINv2U36r7L11g4Oa_zVjHlr6MYymUbQXT4/edit?usp=sharing
 
 ## Introduction
 CloudRetro provides an open-source cloud gaming platform for retro games. It started as an experiment for testing cloud gaming performance with [WebRTC](https://github.com/pion/webrtc/) and [libretro](https://www.libretro.com/), and now it aims to deliver the most modern and convenient gaming experience through the technology.

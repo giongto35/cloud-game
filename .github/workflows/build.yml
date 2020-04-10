@@ -1,0 +1,76 @@
+# ------------------------------------------------------------------------
+#  Build workflow for multiple OSes (Linux x64, macOS x64, Windows x64)
+# ------------------------------------------------------------------------
+
+name: build
+# run only when pushing into the master only
+on:
+  push:
+    branches:
+      - master
+    tags-ignore:
+      - 'v*'
+env:
+  go-version: 1.13
+jobs:
+  build:
+    name: Build
+    strategy:
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - name: Get the source
+        uses: actions/checkout@v2
+      - name: Set up Go
+        uses: actions/setup-go@v1
+        with:
+          go-version: ${{ env.go-version }}
+      - name: Set up Go environment
+        shell: bash
+        # add Go's bin folder into environment (to be able to call its tools)
+        run: |
+          echo "::set-env name=GOPATH::$(go env GOPATH)"
+          echo "::add-path::$(go env GOPATH)/bin"
+
+      - name: Get Linux dev libraries and tools
+        if: matrix.os == 'ubuntu-latest'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y make pkg-config libvpx-dev libopus-dev libopusfile-dev
+
+      - name: Get MacOS dev libraries and tools
+        if: matrix.os == 'macos-latest'
+        run: |
+          brew install libvpx pkg-config opus opusfile
+
+      - name: Get Windows dev libraries and tools
+        if: matrix.os == 'windows-latest'
+        uses: numworks/setup-msys2@v1
+        with:
+          msystem: MINGW64
+          path-type: inherit
+
+      - name: Load Go modules maybe?
+        uses: actions/cache@v1
+        with:
+          path: ~/go/pkg/mod
+          key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
+          restore-keys: |
+            ${{ runner.os }}-go-
+
+      - name: Build Windows app
+        if: matrix.os == 'windows-latest'
+        run: |
+          msys2do pacman -S --noconfirm --needed make mingw-w64-x86_64-gcc mingw-w64-x86_64-pkg-config mingw-w64-x86_64-dlfcn mingw-w64-x86_64-libvpx mingw-w64-x86_64-opusfile
+          msys2do make build
+
+      - name: Build Linux app
+        if: matrix.os == 'ubuntu-latest'
+        run: |
+          make build
+
+      - name: Build macOS app
+        if: matrix.os == 'macos-latest'
+        run: |
+          make build
