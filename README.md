@@ -3,8 +3,8 @@
 [![Build](https://github.com/giongto35/cloud-game/workflows/build/badge.svg)](https://github.com/giongto35/cloud-game/actions?query=workflow:build)
 [![Latest release](https://img.shields.io/github/v/release/giongto35/cloud-game.svg)](https://github.com/giongto35/cloud-game/releases/latest)
 
-**Open-source Cloud Gaming Service For Retro Games**
-**Video demo**: https://www.youtube.com/watch?v=GUBrJGAxZZg
+**Open-source Cloud Gaming Service For Retro Games**  
+**Video demo**: https://www.youtube.com/watch?v=GUBrJGAxZZg  
 **My Slide at GopherconVN2019**: https://docs.google.com/presentation/d/1VFv8l2hVUINv2U36r7L11g4Oa_zVjHlr6MYymUbQXT4/edit?usp=sharing
 
 ## Introduction
@@ -13,8 +13,8 @@ CloudRetro provides an open-source cloud gaming platform for retro games. It sta
 Theoretically, in cloud gaming, games are run on remote servers and media are streamed to the player optimally to ensure the most comfortable user interaction. It opens the ability to play any retro games on web-browser directly, which are fully compatible with multi-platform like Desktop, Android, ~~IOS~~. It enhances crowdplay ([TwitchPlaysPokemon](https://en.wikipedia.org/wiki/Twitch_Plays_Pok%C3%A9mon)) with realtime interaction. E.g: [Play Pokemon Emerald together](http://cloudretro.io/?id=652e45d78d2b91cd%7CPokemon%20-%20Emerald%20Version%20%28U%29).
 
 ## Try the service at
-Single play: **[http://cloudretro.io](http://cloudretro.io)**
-Crowd play: **[Pokemon Emerald](http://cloudretro.io/?id=652e45d78d2b91cd%7CPokemon%20-%20Emerald%20Version%20%28U%29)**
+Single play: **[http://cloudretro.io](http://cloudretro.io)**  
+Crowd play: **[Pokemon Emerald](http://cloudretro.io/?id=652e45d78d2b91cd%7CPokemon%20-%20Emerald%20Version%20%28U%29)**  
 *Chrome and Chrome on Android is recommended. It's not working on iPhone and some other explorers. Click help button in the game UI to see keyboard mapping.*
 
 \*In ideal network condition and less resource contention on servers, the game will run smoothly as in the video demo. Because I only hosted the platform on limited servers in US East, US West, Eu, Singapore, you may experience some latency issues + connection problem. You can try hosting the service following the instruction the next section to have a better sense of performance.
@@ -92,7 +92,7 @@ By clicking these deep link, you can join the game directly and play it together
 - [Play Pokemon Fire Red](http://cloudretro.io/?id=68bf168be6728020___Pokemon%20-%20Fire%20Red%20Version%20%28U%29%20%28V1.1%29)
 - [Mario](http://cloudretro.io/?id=1953c570fee1f9e4___Super%20Mario%20Bros)
 
-And you can host the new game by yourself by accessing [cloudretro.io](http://cloudretro.io) and click "share" button to generate a deeplink to your current game.
+And you can host the new game by yourself by accessing [cloudretro.io](http://cloudretro.io) and click "share" button to generate a deeplink to your current game.  
 _Disclaimer: You may experience lagging when joining a room because the room is in a different zone. In that case, you should create a new room for crowd play._
 
 ![screenshot](docs/img/crowdplay.gif)
@@ -112,9 +112,9 @@ _Disclaimer: You may experience lagging when joining a room because the room is 
 
 ## Author
 
-Nguyen Huu Thanh
+Nguyen Huu Thanh  
 https://www.linkedin.com/in/huuthanhnguyen/
 
-Tri Dang Minh
+Tri Dang Minh  
 https://trich.im
 
