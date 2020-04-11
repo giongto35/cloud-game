@@ -103,8 +103,6 @@ body {
 }
 
 #player-index {
-    border-bottom: 0px;
-
     background-repeat: no-repeat;
     background-size: contain;
     background-image: url('/static/img/ui/bt PlayerIndex.png');
@@ -437,8 +435,8 @@ body {
 
 
 @font-face {
-    font-family: 'YourFontName'; /*a name to be used later*/
-    src: url('/static/fonts/6809 chargen.ttf'); /*URL to font*/
+    font-family: 'Roboto'; /*a name to be used later*/
+    src: url('/static/fonts/Roboto-thin.ttf'); /*URL to font*/
 }
 
 .menu-item {
@@ -448,7 +446,7 @@ body {
     width: 100%;
     height: 36px; /* 35 + 1 border = 36px */
 
-    font-family: 'YourFontName';
+    font-family: 'Roboto';
     font-size: 19px;
     /* border-top: 1px dashed blue; */
 }
@@ -530,6 +528,8 @@ body {
     display: block;
     padding-top: 10px;
     text-align: center;
+    font-family: 'Roboto';
+    font-size: 15px;
 
     color: #bababa;
     position: absolute;
@@ -568,17 +568,20 @@ body {
   height: 25px; /* Slider handle height */
   cursor: pointer; /* Cursor on hover */
 
+  background-color: transparent;
   background-repeat: no-repeat;
   background-size: contain;
   background-image: url('/static/img/ui/bt PlayerIndex.png');
 }
 
 .slider::-moz-range-thumb {
+  appearance: none;
   width: 25px; /* Set a specific slider handle width */
   height: 25px; /* Slider handle height */
   cursor: pointer; /* Cursor on hover */
-  border-radius: 8px;
 
+  border: 0px;
+  background-color: transparent;
   background-repeat: no-repeat;
   background-size: contain;
   background-image: url('/static/img/ui/bt PlayerIndex.png');
