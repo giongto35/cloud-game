@@ -48,7 +48,7 @@ const event = (() => {
             if (!topics[topic] || topics[topic].length < 1) return;
 
             topics[topic].forEach((listener) => {
-                listener.listener(data || {})
+                listener.listener(data !== undefined ? data : {})
             });
         }
     }
