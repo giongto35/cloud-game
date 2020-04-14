@@ -18,6 +18,7 @@
     const menuScreen = $('#menu-screen');
     const helpOverlay = $('#help-overlay');
     const popupBox = $('#noti-box');
+    const playerSlider = document.getElementById('playeridx');
     // keymap
     const keyButtons = {};
     Object.keys(KEY).forEach(button => {
@@ -164,7 +165,7 @@
     };
 
     const onKeyPress = (data) => {
-        if (data.key == "up" || data.key == "down" || data.key == "left" || data.key == "right") {
+        if (data.key === "up" || data.key === "down" || data.key === "left" || data.key === "right") {
             keyButtons[data.key].addClass('dpad-pressed');
         } else {
             keyButtons[data.key].addClass('pressed');
@@ -176,7 +177,7 @@
     };
 
     const onKeyRelease = (data) => {
-        if (data.key == "up" || data.key == "down" || data.key == "left" || data.key == "right") {
+        if (data.key === "up" || data.key === "down" || data.key === "left" || data.key === "right") {
             keyButtons[data.key].removeClass('dpad-pressed');
         } else {
             keyButtons[data.key].removeClass('pressed');
@@ -195,151 +196,150 @@
     };
 
     const updatePlayerIndex = (idx) => {
-        var slider = document.getElementById('playeridx');
-        slider.value = idx + 1;
+        playerSlider.value = idx + 1;
         socket.updatePlayerIndex(idx);
     };
 
 
-    const app = {
-        state: {
-            eden: {
-                name: 'eden',
-                keyPress: () => {
-                },
-                keyRelease: () => {
-                },
-                menuReady: () => {
-                    showMenuScreen()
-                }
-            },
+    // teh application state machine
+    // (or some kind of automata)
+    const app = (() => {
+        // nil function for n/a state transition
+        const doNothing = function () {
+        };
 
-            help: {
-                name: 'help',
-                keyPress: () => {
+        return {
+            state: {
+                eden: {
+                    name: 'eden',
+                    keyPress: doNothing,
+                    keyRelease: doNothing,
+                    menuReady: () => showMenuScreen()
                 },
-                keyRelease: () => {
-                },
-                menuReady: () => {
-                    // show silently
-                    gameScreen.hide();
-                    menuScreen.hide();
-                    gameList.hide();
-                    //keyButtons[KEY.JOIN].html('play');
 
-                    gameList.show();
-
-                    helpScreen.prevState = app.state.menu;
-                }
-            },
-
-            menu: {
-                name: 'menu',
-                keyPress: (key) => {
-                    switch (key) {
-                        case KEY.UP:
-                        case KEY.DOWN:
-                            gameList.startGamePickerTimer(key === KEY.UP);
-                            break;
+                help: {
+                    name: 'help',
+                    keyPress: doNothing,
+                    keyRelease: doNothing,
+                    menuReady: () => {
+                        // show silently
+                        gameScreen.hide();
+                        menuScreen.hide();
+                        gameList.hide();
+                        //keyButtons[KEY.JOIN].html('play');
+                        gameList.show();
+                        helpScreen.prevState = app.state.menu;
                     }
                 },
-                keyRelease: (key) => {
-                    switch (key) {
-                        case KEY.UP:
-                        case KEY.DOWN:
-                            gameList.stopGamePickerTimer();
-                            break;
-                        case KEY.JOIN:
-                        case KEY.A:
-                        case KEY.B:
-                        case KEY.X:
-                        case KEY.Y:
-                        case KEY.START:
-                        case KEY.SELECT:
-                            startGame();
-                            break;
-                        case KEY.QUIT:
-                            popup('You are already in menu screen!');
-                            break;
-                        case KEY.LOAD:
-                            popup('Lets play to load game!');
-                            break;
-                        case KEY.SAVE:
-                            popup('Lets play to save game!');
-                            break;
-                    }
+
+                menu: {
+                    name: 'menu',
+                    keyPress: (key) => {
+                        switch (key) {
+                            case KEY.UP:
+                            case KEY.DOWN:
+                                gameList.startGamePickerTimer(key === KEY.UP);
+                                break;
+                        }
+                    },
+                    keyRelease: (key) => {
+                        switch (key) {
+                            case KEY.UP:
+                            case KEY.DOWN:
+                                gameList.stopGamePickerTimer();
+                                break;
+                            case KEY.JOIN:
+                            case KEY.A:
+                            case KEY.B:
+                            case KEY.X:
+                            case KEY.Y:
+                            case KEY.START:
+                            case KEY.SELECT:
+                                startGame();
+                                break;
+                            case KEY.QUIT:
+                                popup('You are already in menu screen!');
+                                break;
+                            case KEY.LOAD:
+                                popup('Lets play to load game!');
+                                break;
+                            case KEY.SAVE:
+                                popup('Lets play to save game!');
+                                break;
+                            case KEY.STATS:
+                                event.pub(STATS_TOGGLE);
+                                break;
+                        }
+                    },
+                    menuReady: doNothing
                 },
-                menuReady: () => {
+
+                game: {
+                    name: 'game',
+                    keyPress: (key) => {
+                        input.setKeyState(key, true);
+                    },
+                    keyRelease: function (key) {
+                        input.setKeyState(key, false);
+
+                        switch (key) {
+                            case KEY.JOIN: // or SHARE
+                                // save when click share
+                                event.pub(KEY_PRESSED, {key: KEY.SAVE})
+                                room.copyToClipboard();
+                                popup('Copy link to clipboard!');
+                                break;
+                            case KEY.SAVE:
+                                socket.saveGame();
+                                break;
+                            case KEY.LOAD:
+                                socket.loadGame();
+                                break;
+                            case KEY.FULL:
+                                env.display().toggleFullscreen(gameScreen.height() !== window.innerHeight, gameScreen[0]);
+                                break;
+
+                            // update player index
+                            case KEY.PAD1:
+                                updatePlayerIndex(0);
+                                break;
+                            case KEY.PAD2:
+                                updatePlayerIndex(1);
+                                break;
+                            case KEY.PAD3:
+                                updatePlayerIndex(2);
+                                break;
+                            case KEY.PAD4:
+                                updatePlayerIndex(3);
+                                break;
+
+                            case KEY.QUIT:
+                                input.poll().disable();
+
+                                // TODO: Stop game
+                                socket.quitGame(room.getId());
+                                room.reset();
+
+                                popup('Quit!');
+
+                                location.reload();
+                                break;
+                            case KEY.STATS:
+                                event.pub(STATS_TOGGLE);
+                                break;
+                        }
+                    },
+                    menuReady: doNothing
                 }
             },
-
-            game: {
-                name: 'game',
-                keyPress: (key) => {
-                    input.setKeyState(key, true);
-                },
-                keyRelease: function (key) {
-                    input.setKeyState(key, false);
-
-                    switch (key) {
-                        // nani? why join / copy switch, it's confusing. Me: It's because of the original design to update label only :-s.
-                        case KEY.JOIN: // or SHARE
-                            // save when click share
-                            event.pub(KEY_PRESSED, {key: KEY.SAVE})
-                            room.copyToClipboard();
-                            popup('Copy link to clipboard!');
-                            break;
-                        case KEY.SAVE:
-                            socket.saveGame();
-                            break;
-                        case KEY.LOAD:
-                            socket.loadGame();
-                            break;
-                        case KEY.FULL:
-                            env.display().toggleFullscreen(gameScreen.height() !== window.innerHeight, gameScreen[0]);
-                            break;
-
-                        // update player index
-                        case KEY.PAD1:
-                            updatePlayerIndex(0);
-                            break;
-                        case KEY.PAD2:
-                            updatePlayerIndex(1);
-                            break;
-                        case KEY.PAD3:
-                            updatePlayerIndex(2);
-                            break;
-                        case KEY.PAD4:
-                            updatePlayerIndex(3);
-                            break;
-
-                        // quit
-                        case KEY.QUIT:
-                            input.poll().disable();
-
-                            // TODO: Stop game
-                            socket.quitGame(room.getId());
-                            room.reset();
-
-                            popup('Quit!');
-
-                            location.reload();
-                            break;
-                    }
-
-                },
-                menuReady: () => {
-                }
-            }
         }
-    };
+    })();
 
     // subscriptions
     event.sub(GAME_ROOM_AVAILABLE, onGameRoomAvailable, 2);
     event.sub(GAME_SAVED, () => popup('Saved'));
     event.sub(GAME_LOADED, () => popup('Loaded'));
-    event.sub(GAME_PLAYER_IDX, (idx) => popup(parseInt(idx)+1));
-
+    event.sub(GAME_PLAYER_IDX, (idx) => popup(parseInt(idx) + 1));
     event.sub(MEDIA_STREAM_INITIALIZED, (data) => {
         rtcp.start(data.stunturn);
         gameList.set(data.games);
@@ -361,5 +361,4 @@
 
     // initial app state
     setState(app.state.eden);
-
-})($, document, event, env, gameList, input, KEY, log, room);
+})($, document, event, env, gameList, input, KEY, log, room, stats);

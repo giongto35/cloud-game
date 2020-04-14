@@ -15,7 +15,7 @@
     <meta property="og:author" content="giongto35 trichimtrich" />
 
     <link href="/static/css/font-awesome.css?2" rel="stylesheet">
-    <link href="/static/css/main.css?2" rel="stylesheet">
+    <link href="/static/css/main.css?3" rel="stylesheet">
 </head>
 
 <body>
@@ -31,6 +31,7 @@
         </div>
 
         <div id="bottom-screen">
+            <div id="stats-overlay" class="no-select" hidden></div>
             <!--NOTE: New browser doesn't allow unmuted video player. So we muted here.
                 There is still audio because current audio flow is not from media but it is manually encoded (technical webRTC challenge). Later, when we can integrate audio to media, we can face the issue with mute again .
                 https://developers.google.com/web/updates/2017/09/autoplay-policy-changes
@@ -95,6 +96,7 @@
     <script src="/static/js/input/input.js?v=3"></script>
     <script src="/static/js/gameList.js?v=3"></script>
     <script src="/static/js/room.js?v=3"></script>
+    <script src="/static/js/stats/stats.js?v=1"></script>
     <script src="/static/js/controller.js?v=3"></script>
     <script src="/static/js/input/keyboard.js?v=3"></script>
     <script src="/static/js/input/touch.js?v=3"></script>
