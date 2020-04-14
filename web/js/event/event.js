@@ -83,3 +83,4 @@ const KEY_RELEASED = 'keyReleased';
 const KEY_STATE_UPDATED = 'keyStateUpdated';
 
 const STATS_TOGGLE = 'statsToggle';
+const HELP_OVERLAY_TOGGLED = 'helpOverlayToggled';

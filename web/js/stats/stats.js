@@ -3,6 +3,7 @@
  *
  * Events:
  * <- STATS_TOGGLE
+ * <- HELP_OVERLAY_TOGGLED
  *
  * @version 1
  */
@@ -10,6 +11,7 @@ const stats = (() => {
     const modules = [];
     const snapshotPeriodSec = 1;
     let _renderer;
+    let tempHide = false;
 
     // UI
     const statsOverlayEl = document.getElementById('stats-overlay');
@@ -130,6 +132,26 @@ const stats = (() => {
         }
     }
 
+    /**
+     * Handles help overlay toggle event.
+     *
+     * !to make it more declarative
+     *
+     * @param {Object} overlay Overlay data.
+     * @param {boolean} overlay.shown A flag if the overlay is being currently showed.
+     */
+    const onHelpOverlayToggle = (overlay) => {
+        if (!statsOverlayEl.hidden && overlay.shown && !tempHide) {
+            statsOverlayEl.hidden = true;
+            tempHide = true;
+        } else {
+           if (tempHide) {
+               statsOverlayEl.hidden = false;
+               tempHide = false;
+           }
+        }
+    }
+
     const render = () => {
         modules.forEach(m => m.render(statsOverlayEl));
     }
@@ -141,6 +163,7 @@ const stats = (() => {
         .forEach(m => statsOverlayEl.append(m));
 
     event.sub(STATS_TOGGLE, onToggle);
+    event.sub(HELP_OVERLAY_TOGGLED, onHelpOverlayToggle)
 
     return {
         enable,
