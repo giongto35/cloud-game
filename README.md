@@ -19,7 +19,10 @@ Direct play an existing game: **[Pokemon Emerald](http://cloudretro.io/?id=652e4
 
 \*In ideal network condition and less resource contention on servers, the game will run smoothly as in the video demo. Because I only hosted the platform on limited servers in US East, US West, Eu, Singapore, you may experience some latency issues + connection problem. You can try hosting the service following the instruction the next section to have a better sense of performance.
 
-![screenshot](docs/img/landing-page-dark.png)
+|                   Screenshot                   |                   Screenshot                   |
+| :--------------------------------------------: | :--------------------------------------------: |
+| ![screenshot](docs/img/landing-page-ps-hm.png) | ![screenshot](docs/img/landing-page-ps-x4.png) |
+| ![screenshot](docs/img/landing-page-gb.png)    | ![screenshot](docs/img/landing-page-front.png) |
 
 ## Feature
 1. **Cloud gaming**: Game logic and storage is hosted on cloud service. It reduces the cumbersome of game initialization. Images and audio are streamed to user in the most optimal way using advanced encoding technology.
@@ -75,7 +78,7 @@ Because the coordinator and workers need to run simultaneously. Workers connect 
   * `go run cmd/worker/main.go --coordinatorhost localhost:8000` - spawn workers connecting to coordinator
 
 ## Wiki
-- [Wiki](https://github.com/giongto35/cloud-game/wiki)
+- [Wiki](https://github.com/giongto35/cloud-game/wiki)  
 |                   Screenshot                   |                   Screenshot                   |
 | :--------------------------------------------: | :--------------------------------------------: |
 | ![screenshot](docs/img/overview.png)           | ![screenshot](docs/img/worker-internal.png)    |
