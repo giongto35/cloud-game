@@ -12,7 +12,9 @@ CloudRetro provides an open-source cloud gaming platform for retro games. It sta
 
 Theoretically, in cloud gaming, games are run on remote servers and media are streamed to the player optimally to ensure the most comfortable user interaction. It opens the ability to play any retro games on web-browser directly, which are fully compatible with multi-platform like Desktop, Android, ~~IOS~~. 
 
-![screenshot](docs/img/CloudRetroDiagram.png)
+<p align="center">
+  <img width="460" height="300" src="docs/img/CloudRetroDiagram.png">
+</p>
 
 ## Try the service at
 Single play: **[http://cloudretro.io](http://cloudretro.io)**  
@@ -90,7 +92,7 @@ By clicking these deep link, you can join the game directly and play it together
 And you can host the new game by yourself by accessing [cloudretro.io](http://cloudretro.io) and click "share" button to generate a deeplink to your current game.  
 
 ![screenshot](docs/img/multiplatform.png)
-synchronize a game session on multiple devices
+Synchronize a game session on multiple devices
 
 ## Contribution
 - The project cannot be possible without the contribution with those amazing people:
