@@ -79,7 +79,8 @@ Because the coordinator and workers need to run simultaneously. Workers connect 
 
 ## Wiki
 - [Wiki](https://github.com/giongto35/cloud-game/wiki)  
-|                   Screenshot                   |                   Screenshot                   |
+
+|                   High level                   |                   Worker internal              |
 | :--------------------------------------------: | :--------------------------------------------: |
 | ![screenshot](docs/img/overview.png)           | ![screenshot](docs/img/worker-internal.png)    |
 
