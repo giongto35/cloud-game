@@ -78,7 +78,7 @@ Because the coordinator and workers need to run simultaneously. Workers connect 
 - [Wiki](https://github.com/giongto35/cloud-game/wiki)
 |                   Screenshot                   |                   Screenshot                   |
 | :--------------------------------------------: | :--------------------------------------------: |
-| ![screenshot](docs/img/overview.png) | ![screenshot](docs/img/worker-internal.png) |
+| ![screenshot](docs/img/overview.png)           | ![screenshot](docs/img/worker-internal.png)    |
 
 ## FAQ
 - [FAQ](https://github.com/giongto35/cloud-game/wiki/FAQ)
@@ -91,7 +91,7 @@ By clicking these deep link, you can join the game directly and play it together
 And you can host the new game by yourself by accessing [cloudretro.io](http://cloudretro.io) and click "share" button to generate a deeplink to your current game.  
 
 <p align="center">
-  <img width="460" height="300" src="docs/img/multiplatform.png">
+  <img width="420" height="300" src="docs/img/multiplatform.png"> <br>
 Synchronize a game session on multiple devices
 </p>
 
