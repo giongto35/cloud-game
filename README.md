@@ -10,19 +10,18 @@
 ## Introduction
 CloudRetro provides an open-source cloud gaming platform for retro games. It started as an experiment for testing cloud gaming performance with [WebRTC](https://github.com/pion/webrtc/) and [libretro](https://www.libretro.com/), and now it aims to deliver the most modern and convenient gaming experience through the technology.
 
-Theoretically, in cloud gaming, games are run on remote servers and media are streamed to the player optimally to ensure the most comfortable user interaction. It opens the ability to play any retro games on web-browser directly, which are fully compatible with multi-platform like Desktop, Android, ~~IOS~~. It enhances crowdplay ([TwitchPlaysPokemon](https://en.wikipedia.org/wiki/Twitch_Plays_Pok%C3%A9mon)) with realtime interaction. E.g: [Play Pokemon Emerald together](http://cloudretro.io/?id=652e45d78d2b91cd%7CPokemon%20-%20Emerald%20Version%20%28U%29).
+Theoretically, in cloud gaming, games are run on remote servers and media are streamed to the player optimally to ensure the most comfortable user interaction. It opens the ability to play any retro games on web-browser directly, which are fully compatible with multi-platform like Desktop, Android, ~~IOS~~. 
+
+![screenshot](docs/img/CloudRetroDiagram.png)
 
 ## Try the service at
 Single play: **[http://cloudretro.io](http://cloudretro.io)**  
-Crowd play: **[Pokemon Emerald](http://cloudretro.io/?id=652e45d78d2b91cd%7CPokemon%20-%20Emerald%20Version%20%28U%29)**  
+Direct play an existing game: **[Pokemon Emerald](http://cloudretro.io/?id=652e45d78d2b91cd%7CPokemon%20-%20Emerald%20Version%20%28U%29)**  
 *Chrome and Chrome on Android is recommended. It's not working on iPhone and some other explorers. Click help button in the game UI to see keyboard mapping.*
 
 \*In ideal network condition and less resource contention on servers, the game will run smoothly as in the video demo. Because I only hosted the platform on limited servers in US East, US West, Eu, Singapore, you may experience some latency issues + connection problem. You can try hosting the service following the instruction the next section to have a better sense of performance.
 
-|                   Screenshot                   |                   Screenshot                   |
-| :--------------------------------------------: | :--------------------------------------------: |
-| ![screenshot](docs/img/landing-page-ps-hm.png) | ![screenshot](docs/img/landing-page-ps-x4.png) |
-| ![screenshot](docs/img/landing-page-gb.png)    | ![screenshot](docs/img/landing-page-front.png) |
+![screenshot](docs/img/landing-page-dark.png)
 
 ## Feature
 1. **Cloud gaming**: Game logic and storage is hosted on cloud service. It reduces the cumbersome of game initialization. Images and audio are streamed to user in the most optimal way using advanced encoding technology.
@@ -87,19 +86,15 @@ Because the coordinator and workers need to run simultaneously. Workers connect 
 By clicking these deep link, you can join the game directly and play it together with other people.
 - [Play Pokemon Emerald](http://cloudretro.io/?id=652e45d78d2b91cd%7CPokemon%20-%20Emerald%20Version%20%28U%29)
 - [Fire Emblem](http://cloudretro.io/?id=314ea4d7f9c94d25___Fire%20Emblem%20%28U%29%20%5B%21%5D)
-- [Advance War](http://cloudretro.io/?id=10fe582a7635b039___Advance%20Wars%20%28USA%29)
-- [Harvest Moon](http://cloudretro.io/?id=3f7462269e976303___Harvest%20Moon%20-%20Back%20to%20Nature%20%28USA%29)
-- [Play Pokemon Fire Red](http://cloudretro.io/?id=68bf168be6728020___Pokemon%20-%20Fire%20Red%20Version%20%28U%29%20%28V1.1%29)
-- [Mario](http://cloudretro.io/?id=1953c570fee1f9e4___Super%20Mario%20Bros)
 
 And you can host the new game by yourself by accessing [cloudretro.io](http://cloudretro.io) and click "share" button to generate a deeplink to your current game.  
-_Disclaimer: You may experience lagging when joining a room because the room is in a different zone. In that case, you should create a new room for crowd play._
 
-![screenshot](docs/img/crowdplay.gif)
+![screenshot](docs/img/multiplatform.png)
+synchronize a game session on multiple devices
 
 ## Contribution
 - The project cannot be possible without the contribution with those amazing people:
-- [sergystepanov](https://github.com/sergystepanov/) for Front end refactor; Audio re-implementation; bilinear, nearest neighbor interpolation scaling; Window setup document.
+- [sergystepanov](https://github.com/sergystepanov/) for Front end refactor; Audio re-implementation; bilinear, nearest neighbor interpolation scaling; Window setup document; build workflow on multi-os.
 - [sadlil](https://github.com/sadlil) for massive code structure reogranization; log and monitor server introduction.
 
 ## Credits
