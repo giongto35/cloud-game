@@ -413,6 +413,7 @@ body {
     height: 36px;
     background-color: #FFCF9E;
     opacity: 0.75;
+    font-family: 'Roboto';
 
     top: 50%;
     left: 0;
@@ -436,7 +437,12 @@ body {
 
 @font-face {
     font-family: 'Roboto'; /*a name to be used later*/
-    src: url('/static/fonts/Roboto-thin.ttf'); /*URL to font*/
+    src: url('/static/fonts/Roboto-Regular.ttf'); /*URL to font*/
+}
+
+@font-face {
+    font-family: '6809'; /*a name to be used later*/
+    src: url('/static/fonts/6809 chargen.ttf'); /*URL to font*/
 }
 
 .menu-item {
@@ -446,7 +452,7 @@ body {
     width: 100%;
     height: 36px; /* 35 + 1 border = 36px */
 
-    font-family: 'Roboto';
+    font-family: '6809';
     font-size: 19px;
     /* border-top: 1px dashed blue; */
 }
