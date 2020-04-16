@@ -12,10 +12,6 @@ CloudRetro provides an open-source cloud gaming platform for retro games. It sta
 
 Theoretically, in cloud gaming, games are run on remote servers and media are streamed to the player optimally to ensure the most comfortable user interaction. It opens the ability to play any retro games on web-browser directly, which are fully compatible with multi-platform like Desktop, Android, ~~IOS~~. 
 
-<p align="center">
-  <img width="460" height="300" src="docs/img/CloudRetroDiagram.png">
-</p>
-
 ## Try the service at
 Single play: **[http://cloudretro.io](http://cloudretro.io)**  
 Direct play an existing game: **[Pokemon Emerald](http://cloudretro.io/?id=652e45d78d2b91cd%7CPokemon%20-%20Emerald%20Version%20%28U%29)**  
@@ -80,6 +76,9 @@ Because the coordinator and workers need to run simultaneously. Workers connect 
 
 ## Wiki
 - [Wiki](https://github.com/giongto35/cloud-game/wiki)
+|                   Screenshot                   |                   Screenshot                   |
+| :--------------------------------------------: | :--------------------------------------------: |
+| ![screenshot](docs/img/overview.png) | ![screenshot](docs/img/worker-internal.png) |
 
 ## FAQ
 - [FAQ](https://github.com/giongto35/cloud-game/wiki/FAQ)
@@ -91,8 +90,10 @@ By clicking these deep link, you can join the game directly and play it together
 
 And you can host the new game by yourself by accessing [cloudretro.io](http://cloudretro.io) and click "share" button to generate a deeplink to your current game.  
 
-![screenshot](docs/img/multiplatform.png)
+<p align="center">
+  <img width="460" height="300" src="docs/img/multiplatform.png">
 Synchronize a game session on multiple devices
+</p>
 
 ## Contribution
 - The project cannot be possible without the contribution with those amazing people:
