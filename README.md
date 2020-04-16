@@ -77,8 +77,9 @@ Because the coordinator and workers need to run simultaneously. Workers connect 
   * `go run cmd/coordinator/main.go` - spawn coordinator
   * `go run cmd/worker/main.go --coordinatorhost localhost:8000` - spawn workers connecting to coordinator
 
-## Wiki
-- [Wiki](https://github.com/giongto35/cloud-game/wiki)  
+## Technical Document
+- [webrtchacks Blog: Open Source Cloud Gaming with WebRTC](https://webrtchacks.com/open-source-cloud-gaming-with-webrtc/)  
+- [Wiki (outdated)](https://github.com/giongto35/cloud-game/wiki)  
 
 |                   High level                   |                   Worker internal              |
 | :--------------------------------------------: | :--------------------------------------------: |
