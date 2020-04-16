@@ -9,12 +9,130 @@
  */
 const stats = (() => {
     const modules = [];
-    const snapshotPeriodSec = 1;
+    const snapshotPeriodMSec = 200;
     let _renderer;
     let tempHide = false;
 
+    // !to add connection drop noticing
+
     // UI
     const statsOverlayEl = document.getElementById('stats-overlay');
+
+    /**
+     *
+     * @returns {{render: render}}
+     */
+    const graph = () => {
+        const _canvas = document.createElement('canvas'),
+            _context = _canvas.getContext('2d');
+
+        const size = 25;
+        let i = 0;
+        let data = [];
+
+        // viewport size
+        _canvas.style.height = '2em';
+        _canvas.style.width = '100%';
+
+        // scale
+        const scale = 1 // window.devicePixelRatio * 2;
+
+        // internal size
+        _canvas.width = 100 * scale;
+        _canvas.height = 20 * scale;
+
+        _context.scale(scale, scale);
+        _context.imageSmoothingEnabled = false;
+        _context.fillStyle = '#f6f6f6';
+
+        // bar size
+        const barWidth = Math.round(_canvas.width / scale / size),
+            barHeight = Math.round(_canvas.height / scale);
+        let maxHeight = 0,
+            prevMaxHeight = 0;
+
+        const max = () => maxHeight
+
+        const get = () => _canvas
+
+        const add = (value) => {
+            if (i > size - 1) i = 0;
+            data.splice(i, 1, value);
+            render(data, i);
+            i++;
+        }
+
+        // 0,0   w,0   0,0   w,0   0,0   w,0
+        // +-------+   +-------+   +-------+
+        // |       |   |+1-+   |   |+1-+   |
+        // |       |   |||||   |   |||||+2-+
+        // |       |   |||||   |   |||||||||
+        // +-------+   +----+--+   +-------+
+        // 0,h   w,h   0,h   w,h   0,h   w,h
+        // []          [3]         [3, 2]
+        //
+        // O(N+N) :( can be O(1) without visual scale
+        const render = (stats = [], index = 0) => {
+            _context.fillRect(0, 0, _canvas.width, _canvas.height);
+
+            // !to move outside maybe?
+            maxHeight = stats[0];
+            for (let i = 1; i < stats.length; i++) if (stats[i] > maxHeight) maxHeight = stats[i];
+
+            // keep scale grow but
+            // reset the max height only at the start of the new cycle
+            if (index > 0) {
+                if (maxHeight > prevMaxHeight) {
+                    prevMaxHeight = maxHeight;
+                } else {
+                    maxHeight = prevMaxHeight;
+                }
+            } else {
+                prevMaxHeight = maxHeight;
+            }
+
+            _context.fillStyle = 'red';
+            const gap = 2;
+            let wasLeadingBar = false;
+            let barIndex = 0;
+            stats.forEach(value => {
+                let x0 = barIndex * barWidth,
+                    // normalize y with maxHeight = canvas.height
+                    // the range [0 + gap; canvas.height]
+                    y0 = barHeight - (barHeight * (value / maxHeight)) + gap,
+                    x1 = barWidth,
+                    y1 = barHeight;
+
+                // draw something if value is 0
+                if (y0 >= barHeight) y0 -= 5;
+
+                // whether it normal or leading bar
+                if (barIndex === index) {
+                    y0 = 0;
+                    _context.fillStyle = 'rgba(17,144,213,0.34)';
+                    wasLeadingBar = true;
+                } else {
+                    // because context style switching is kinda expensive
+                    if (wasLeadingBar) {
+                        _context.fillStyle = 'red';
+                        wasLeadingBar = false;
+                    }
+                }
+
+                _context.fillRect(x0, y0, x1, y1);
+                barIndex++;
+            });
+
+            _context.fillStyle = '#f6f6f6';
+        }
+
+        return {
+            add,
+            get,
+            max,
+            render
+        }
+    }
 
     /**
      * Get cached module UI.
@@ -22,17 +140,34 @@ const stats = (() => {
      * HTML:
      * <div><div>LABEL</div><span>VALUE</span>
      *
-     * Return exposed ui sub-tree and the _value as only changing node.
+     * Returns exposed ui sub-tree and the _value as only changing node.
+     *
+     * @param label
+     * @param withGraph
+     * @returns {{node: HTMLElement, value: HTMLElement, graph: Object}}
      */
-    const moduleUi = (label = '') => {
+    const moduleUi = (label = '', withGraph = false) => {
         const ui = document.createElement('div'),
             _label = document.createElement('div'),
             _value = document.createElement('span');
         ui.append(_label, _value);
 
+        let _graph;
+        if (withGraph) {
+            const _container = document.createElement('span');
+            _graph = graph();
+            _container.append(_graph.get());
+            ui.append(_container);
+        }
+
         _label.innerHTML = label;
 
-        return {node: ui, value: _value};
+        return {node: ui, value: _value, graph: _graph};
+    }
+
+    function getRandomArbitrary(min, max) {
+        // x -= 10;
+        return Math.round(Math.random() * (max - min) + min);
     }
 
     /**
@@ -69,7 +204,7 @@ const stats = (() => {
         let previous = Date.now();
 
         // UI
-        const ui = moduleUi('Ping');
+        const ui = moduleUi('Ping', true);
 
         const onPingRequest = (data) => previous = data.time;
 
@@ -77,6 +212,7 @@ const stats = (() => {
             length++;
             const delta = Date.now() - previous;
             mean += Math.round((delta - mean) / length);
+
             if (length % window === 0) {
                 length = 1;
                 mean = delta;
@@ -96,7 +232,13 @@ const stats = (() => {
         }
 
         const render = () => {
-            ui.value.innerText = `${mean < 1 ? '<1' : mean} ms`;
+            // const v = getRandomArbitrary(50, 300);
+
+            // const val = !Math.round(Math.random()) ? v : mean
+            const val = mean;
+
+            ui.graph.add(val);
+            ui.value.innerText = `${val < 1 ? '<1' : val} (${ui.graph.max()}) ms`;
 
             return ui.node;
         }
@@ -111,9 +253,7 @@ const stats = (() => {
     const enable = () => {
         modules.forEach(m => m.enable());
         render();
-        _renderer = window.setInterval(() => {
-            render();
-        }, snapshotPeriodSec * 1000);
+        _renderer = window.setInterval(render, snapshotPeriodMSec);
         statsOverlayEl.hidden = false;
     };
 
@@ -124,13 +264,7 @@ const stats = (() => {
         statsOverlayEl.hidden = true;
     }
 
-    const onToggle = () => {
-        if (_renderer) {
-            disable();
-        } else {
-            enable();
-        }
-    }
+    const onToggle = () => _renderer ? disable() : enable();
 
     /**
      * Handles help overlay toggle event.
@@ -145,10 +279,10 @@ const stats = (() => {
             statsOverlayEl.hidden = true;
             tempHide = true;
         } else {
-           if (tempHide) {
-               statsOverlayEl.hidden = false;
-               tempHide = false;
-           }
+            if (tempHide) {
+                statsOverlayEl.hidden = false;
+                tempHide = false;
+            }
         }
     }
 
@@ -169,4 +303,5 @@ const stats = (() => {
         enable,
         disable,
     }
-})(document, event, log, window);
+})
+(document, event, log, window);
