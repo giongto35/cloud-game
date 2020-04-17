@@ -10,10 +10,10 @@
 const stats = (() => {
     const modules = [];
     const snapshotPeriodMSec = 200;
-    let _renderer;
+    let _statsRendererId = 0;
     let tempHide = false;
 
-    // !to add connection drop noticing
+    // !to add connection drop notice
 
     // UI
     const statsOverlayEl = document.getElementById('stats-overlay');
@@ -22,11 +22,20 @@ const stats = (() => {
      *
      * @returns {{render: render}}
      */
-    const graph = () => {
+    const graph = (options = {
+        historySize: 25,
+        width: 120,
+        height: 20,
+        topGap: 2,
+        style: {
+            fillColor: '#f6f6f6',
+            barColor: 'red',
+            leadBarColor: 'rgba(17,144,213,0.34)'
+        }
+    }) => {
         const _canvas = document.createElement('canvas'),
             _context = _canvas.getContext('2d');
 
-        const size = 25;
         let i = 0;
         let data = [];
 
@@ -34,19 +43,19 @@ const stats = (() => {
         _canvas.style.height = '2em';
         _canvas.style.width = '100%';
 
-        // scale
+        // scale for Retina stuff
         const scale = 1 // window.devicePixelRatio * 2;
 
         // internal size
-        _canvas.width = 100 * scale;
-        _canvas.height = 20 * scale;
+        _canvas.width = options.width * scale;
+        _canvas.height = options.height * scale;
 
         _context.scale(scale, scale);
         _context.imageSmoothingEnabled = false;
-        _context.fillStyle = '#f6f6f6';
+        _context.fillStyle = options.fillStyle;
 
         // bar size
-        const barWidth = Math.round(_canvas.width / scale / size),
+        const barWidth = Math.round(_canvas.width / scale / options.historySize),
             barHeight = Math.round(_canvas.height / scale);
         let maxHeight = 0,
             prevMaxHeight = 0;
@@ -56,7 +65,7 @@ const stats = (() => {
         const get = () => _canvas
 
         const add = (value) => {
-            if (i > size - 1) i = 0;
+            if (i > options.historySize - 1) i = 0;
             data.splice(i, 1, value);
             render(data, i);
             i++;
@@ -73,6 +82,7 @@ const stats = (() => {
         //
         // O(N+N) :( can be O(1) without visual scale
         const render = (stats = [], index = 0) => {
+            setFillColor(options.style.fillColor);
             _context.fillRect(0, 0, _canvas.width, _canvas.height);
 
             // !to move outside maybe?
@@ -91,47 +101,33 @@ const stats = (() => {
                 prevMaxHeight = maxHeight;
             }
 
-            _context.fillStyle = 'red';
-            const gap = 2;
-            let wasLeadingBar = false;
-            let barIndex = 0;
-            stats.forEach(value => {
-                let x0 = barIndex * barWidth,
+            for (let j = 0; j < stats.length; j++) {
+                let x0 = j * barWidth,
                     // normalize y with maxHeight = canvas.height
                     // the range [0 + gap; canvas.height]
-                    y0 = barHeight - (barHeight * (value / maxHeight)) + gap,
+                    y0 = Math.round(barHeight - (barHeight * (stats[j] / maxHeight)) + options.topGap),
                     x1 = barWidth,
                     y1 = barHeight;
 
-                // draw something if value is 0
-                if (y0 >= barHeight) y0 -= 5;
+                // draw something if the normalized value is too low
+                if (y0 + 1 >= barHeight) y0 -= 4;
 
-                // whether it normal or leading bar
-                if (barIndex === index) {
+                const isLeadingBar = j === index;
+                if (isLeadingBar) {
                     y0 = 0;
-                    _context.fillStyle = 'rgba(17,144,213,0.34)';
-                    wasLeadingBar = true;
-                } else {
-                    // because context style switching is kinda expensive
-                    if (wasLeadingBar) {
-                        _context.fillStyle = 'red';
-                        wasLeadingBar = false;
-                    }
                 }
 
+                // a really expensive color switching
+                setFillColor(!isLeadingBar ? options.style.barColor : options.style.leadBarColor);
                 _context.fillRect(x0, y0, x1, y1);
-                barIndex++;
-            });
-
-            _context.fillStyle = '#f6f6f6';
+            }
         }
 
-        return {
-            add,
-            get,
-            max,
-            render
+        function setFillColor(color = options.style.fillColor) {
+            if (_context.fillStyle !== color) _context.fillStyle = color;
         }
+
+        return {add, get, max, render, data}
     }
 
     /**
@@ -144,7 +140,7 @@ const stats = (() => {
      *
      * @param label
      * @param withGraph
-     * @returns {{node: HTMLElement, value: HTMLElement, graph: Object}}
+     * @returns {{el: HTMLDivElement, update: function}}
      */
     const moduleUi = (label = '', withGraph = false) => {
         const ui = document.createElement('div'),
@@ -162,12 +158,18 @@ const stats = (() => {
 
         _label.innerHTML = label;
 
-        return {node: ui, value: _value, graph: _graph};
-    }
+        const update = (value, callback) => {
+            if (_graph) _graph.add(value);
 
-    function getRandomArbitrary(min, max) {
-        // x -= 10;
-        return Math.round(Math.random() * (max - min) + min);
+            if (callback) {
+                callback({el: ui, label: _label, value: _value, newValue: value, graph: _graph});
+                return;
+            }
+
+            _value.textContent = `${value < 1 ? '<1' : value} (${_graph.max()}) ms`;
+        }
+
+        return {el: ui, update}
     }
 
     /**
@@ -200,8 +202,8 @@ const stats = (() => {
 
         let mean = 0;
         let length = 0;
-        let window = 5;
         let previous = Date.now();
+        const window = 5;
 
         // UI
         const ui = moduleUi('Ping', true);
@@ -231,40 +233,78 @@ const stats = (() => {
             listeners = [];
         }
 
-        const render = () => {
-            // const v = getRandomArbitrary(50, 300);
+        const render = () => ui.update(mean);
 
-            // const val = !Math.round(Math.random()) ? v : mean
-            const val = mean;
+        const get = () => ui.el;
 
-            ui.graph.add(val);
-            ui.value.innerText = `${val < 1 ? '<1' : val} (${ui.graph.max()}) ms`;
-
-            return ui.node;
-        }
-
-        return {
-            enable,
-            disable,
-            render,
-        }
+        return {get, enable, disable, render}
     })(event, moduleUi);
 
+    /**
+     * Random numbers submodule.
+     *
+     *
+     * ?Interface:
+     *  void enable()
+     *  void disable()
+     *  void render()
+     *
+     * @version 1
+     */
+    const random = (() => {
+        let _rendererId = 0;
+        const frequencyMs = 1000;
+
+        const ui = moduleUi('Magic', true);
+
+        const getSome = (min, max) => Math.round(Math.random() * (max - min) + min);
+
+        const enable = () => {
+            renderItself();
+            _rendererId = window.setInterval(renderItself, frequencyMs);
+        }
+
+        const disable = () => {
+            if (_rendererId > 0) {
+                window.clearInterval(_rendererId);
+                _rendererId = 0;
+            }
+        }
+
+        // dummy
+        const render = () => {
+        }
+
+        const customText = (_ui) => {
+            console.info(_ui.graph.data);
+            _ui.value.textContent = `${_ui.newValue} (${_ui.graph.max()}) x`;
+        }
+
+        const renderItself = () => ui.update(getSome(42, 999), customText);
+
+        const get = () => ui.el;
+
+        return {get, enable, disable, render}
+    })(event, moduleUi, window);
+
+    // !to use requestAnimationFrame instead of intervals
     const enable = () => {
         modules.forEach(m => m.enable());
         render();
-        _renderer = window.setInterval(render, snapshotPeriodMSec);
+        _statsRendererId = window.setInterval(render, snapshotPeriodMSec);
         statsOverlayEl.hidden = false;
     };
 
     const disable = () => {
         modules.forEach(m => m.disable());
-        if (_renderer) window.clearInterval(_renderer);
-        _renderer = undefined;
+        if (_statsRendererId) {
+            window.clearInterval(_statsRendererId);
+            _statsRendererId = 0;
+        }
         statsOverlayEl.hidden = true;
     }
 
-    const onToggle = () => _renderer ? disable() : enable();
+    const onToggle = () => _statsRendererId ? disable() : enable();
 
     /**
      * Handles help overlay toggle event.
@@ -286,22 +326,16 @@ const stats = (() => {
         }
     }
 
-    const render = () => {
-        modules.forEach(m => m.render(statsOverlayEl));
-    }
+    const render = () => modules.forEach(m => m.render());
 
     // add submodules
     modules.push(latency);
-    modules
-        .map(m => m.render(statsOverlayEl))
-        .forEach(m => statsOverlayEl.append(m));
+    modules.push(random);
+    modules.forEach(m => statsOverlayEl.append(m.get()));
 
     event.sub(STATS_TOGGLE, onToggle);
     event.sub(HELP_OVERLAY_TOGGLED, onHelpOverlayToggle)
 
-    return {
-        enable,
-        disable,
-    }
+    return {enable, disable,}
 })
 (document, event, log, window);

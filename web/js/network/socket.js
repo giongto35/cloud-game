@@ -81,7 +81,7 @@ const socket = (() => {
     const ping = () => {
         const time = Date.now();
         send({"id": "heartbeat", "data": time.toString()});
-        event.pub(PING_REQUEST, {interval: pingIntervalMs, time: time});
+        event.pub(PING_REQUEST, {time: time});
     }
     const send = (data) => conn.send(JSON.stringify(data));
     const latency = (workers, packetId) => send({

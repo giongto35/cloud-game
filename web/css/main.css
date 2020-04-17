@@ -612,8 +612,7 @@ body {
     display: inline-block;
     font-weight: 500;
     padding: 0 .5em;
-    text-align: right;
-    width: 2em;
+    width: 4em;
 }
 
 .no-select {
