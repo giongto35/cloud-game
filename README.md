@@ -92,6 +92,8 @@ Because the coordinator and workers need to run simultaneously. Workers connect 
 By clicking these deep link, you can join the game directly and play it together with other people.
 - [Play Pokemon Emerald](http://cloudretro.io/?id=652e45d78d2b91cd%7CPokemon%20-%20Emerald%20Version%20%28U%29)
 - [Fire Emblem](http://cloudretro.io/?id=314ea4d7f9c94d25___Fire%20Emblem%20%28U%29%20%5B%21%5D)
+- [Samurai Showdown 4](https://cloudretro.io/?id=733c73064c368832___samsho4)
+- [Metal Slug X](https://cloudretro.io/?id=2a9c4b3f1c872d28___mslugx)
 
 And you can host the new game by yourself by accessing [cloudretro.io](http://cloudretro.io) and click "share" button to generate a deeplink to your current game.  
 
