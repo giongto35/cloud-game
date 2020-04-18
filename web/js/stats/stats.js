@@ -26,11 +26,10 @@ const stats = (() => {
         historySize: 25,
         width: 120,
         height: 20,
-        topGap: 2,
+        pad: 4,
         style: {
-            fillColor: '#f6f6f6',
             barColor: 'red',
-            leadBarColor: 'rgba(17,144,213,0.34)'
+            leadBarColor: 'white'
         }
     }) => {
         const _canvas = document.createElement('canvas'),
@@ -71,23 +70,33 @@ const stats = (() => {
             i++;
         }
 
-        // 0,0   w,0   0,0   w,0   0,0   w,0
-        // +-------+   +-------+   +-------+
-        // |       |   |+1-+   |   |+1-+   |
-        // |       |   |||||   |   |||||+2-+
-        // |       |   |||||   |   |||||||||
-        // +-------+   +----+--+   +-------+
-        // 0,h   w,h   0,h   w,h   0,h   w,h
-        // []          [3]         [3, 2]
-        //
-        // O(N+N) :( can be O(1) without visual scale
+        /**
+         *  Draws a bar graph on the canvas.
+         *
+         * @param stats A list of values to graph.
+         * @param index The index of the last updated value in the list.
+         */
         const render = (stats = [], index = 0) => {
-            setFillColor(options.style.fillColor);
-            _context.fillRect(0, 0, _canvas.width, _canvas.height);
 
-            // !to move outside maybe?
+            // 0,0   w,0   0,0   w,0   0,0   w,0
+            // +-------+   +-------+   +---------+
+            // |       |   |+-1-+  |   |+-1-+    |
+            // |       |   ||||||  |   ||||||+-2-+
+            // |       |   ||||||  |   |||||||||||
+            // +-------+   +----+--+   +---------+
+            // 0,h   w,h   0,h   w,h   0,h     w,h
+            // []          [3]         [3, 2]
+            //
+            // O(N+N) :( can be O(1) without visual scale
+
+            _context.clearRect(0, 0, _canvas.width, _canvas.height);
+
             maxHeight = stats[0];
-            for (let i = 1; i < stats.length; i++) if (stats[i] > maxHeight) maxHeight = stats[i];
+            let minHeight = 0;
+            for (let k = 1; k < stats.length; k++) {
+                if (stats[k] > maxHeight) maxHeight = stats[k];
+                if (stats[k] < minHeight) minHeight = stats[k];
+            }
 
             // keep scale grow but
             // reset the max height only at the start of the new cycle
@@ -102,47 +111,40 @@ const stats = (() => {
             }
 
             for (let j = 0; j < stats.length; j++) {
-                let x0 = j * barWidth,
-                    // normalize y with maxHeight = canvas.height
-                    // the range [0 + gap; canvas.height]
-                    y0 = Math.round(barHeight - (barHeight * (stats[j] / maxHeight)) + options.topGap),
-                    x1 = barWidth,
-                    y1 = barHeight;
+                let x = j * barWidth,
+                    y = (barHeight - options.pad * 2) * (stats[j] - minHeight) / (maxHeight - minHeight) + options.pad;
 
-                // draw something if the normalized value is too low
-                if (y0 + 1 >= barHeight) y0 -= 4;
+                drawRect(x, barHeight - y, barWidth, barHeight);
 
-                const isLeadingBar = j === index;
-                if (isLeadingBar) {
-                    y0 = 0;
+                // draw bar pointer
+                if (j === index) {
+                    drawRect(x, barHeight - 1, barWidth, barHeight, options.style.leadBarColor);
                 }
-
-                // a really expensive color switching
-                setFillColor(!isLeadingBar ? options.style.barColor : options.style.leadBarColor);
-                _context.fillRect(x0, y0, x1, y1);
             }
         }
 
-        function setFillColor(color = options.style.fillColor) {
+        const drawRect = (x, y, w, h, color = options.style.barColor) => {
             if (_context.fillStyle !== color) _context.fillStyle = color;
+            _context.fillRect(x, y, w, h);
         }
 
-        return {add, get, max, render, data}
+        return {add, get, max, render}
     }
 
     /**
      * Get cached module UI.
      *
      * HTML:
-     * <div><div>LABEL</div><span>VALUE</span>
+     * <div><div>LABEL</div><span>VALUE</span>[<span><canvas/><span>]</div>
      *
      * Returns exposed ui sub-tree and the _value as only changing node.
      *
-     * @param label
-     * @param withGraph
+     * @param label The name of the stat to show.
+     * @param withGraph True if to draw a graph.
+     * @param postfix The name of dimension of the stat.
      * @returns {{el: HTMLDivElement, update: function}}
      */
-    const moduleUi = (label = '', withGraph = false) => {
+    const moduleUi = (label = '', withGraph = false, postfix = 'ms') => {
         const ui = document.createElement('div'),
             _label = document.createElement('div'),
             _value = document.createElement('span');
@@ -158,15 +160,9 @@ const stats = (() => {
 
         _label.innerHTML = label;
 
-        const update = (value, callback) => {
+        const update = (value) => {
             if (_graph) _graph.add(value);
-
-            if (callback) {
-                callback({el: ui, label: _label, value: _value, newValue: value, graph: _graph});
-                return;
-            }
-
-            _value.textContent = `${value < 1 ? '<1' : value} (${_graph.max()}) ms`;
+            _value.textContent = `${value < 1 ? '<1' : value} (${_graph.max()}) ${postfix}`;
         }
 
         return {el: ui, update}
@@ -191,6 +187,7 @@ const stats = (() => {
      * <- PING_REQUEST
      *
      * ?Interface:
+     *  HTMLElement get()
      *  void enable()
      *  void disable()
      *  void render()
@@ -243,8 +240,10 @@ const stats = (() => {
     /**
      * Random numbers submodule.
      *
+     * Renders itself without external calls.
      *
      * ?Interface:
+     *  HTMLElement get()
      *  void enable()
      *  void disable()
      *  void render()
@@ -255,13 +254,13 @@ const stats = (() => {
         let _rendererId = 0;
         const frequencyMs = 1000;
 
-        const ui = moduleUi('Magic', true);
+        const ui = moduleUi('Magic', true, 'x');
 
         const getSome = (min, max) => Math.round(Math.random() * (max - min) + min);
 
         const enable = () => {
-            renderItself();
-            _rendererId = window.setInterval(renderItself, frequencyMs);
+            _render();
+            _rendererId = window.setInterval(_render, frequencyMs);
         }
 
         const disable = () => {
@@ -275,17 +274,12 @@ const stats = (() => {
         const render = () => {
         }
 
-        const customText = (_ui) => {
-            console.info(_ui.graph.data);
-            _ui.value.textContent = `${_ui.newValue} (${_ui.graph.max()}) x`;
-        }
-
-        const renderItself = () => ui.update(getSome(42, 999), customText);
+        const _render = () => ui.update(getSome(42, 999));
 
         const get = () => ui.el;
 
         return {get, enable, disable, render}
-    })(event, moduleUi, window);
+    })(moduleUi, window);
 
     // !to use requestAnimationFrame instead of intervals
     const enable = () => {
@@ -336,6 +330,5 @@ const stats = (() => {
     event.sub(STATS_TOGGLE, onToggle);
     event.sub(HELP_OVERLAY_TOGGLED, onHelpOverlayToggle)
 
-    return {enable, disable,}
-})
-(document, event, log, window);
+    return {enable, disable}
+})(document, event, log, window);
