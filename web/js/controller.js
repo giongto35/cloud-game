@@ -359,6 +359,15 @@
     event.sub(KEY_RELEASED, onKeyRelease);
     event.sub(KEY_STATE_UPDATED, data => rtcp.input(data));
 
+    // game screen stuff
+    gameScreen.on('loadstart', () => {
+        gameScreen[0].volume = 0.5;
+        gameScreen[0].poster = '/static/img/screen_loading.gif';
+    });
+    gameScreen.on('canplay', () => {
+        gameScreen[0].poster = '';
+    });
+
     // initial app state
     setState(app.state.eden);
 
