@@ -65,9 +65,8 @@ const stats = (() => {
 
         const add = (value) => {
             if (i > options.historySize - 1) i = 0;
-            data.splice(i, 1, value);
-            render(data, i);
-            i++;
+            data[i] = value;
+            render(data, i++);
         }
 
         /**
@@ -78,7 +77,7 @@ const stats = (() => {
          */
         const render = (stats = [], index = 0) => {
 
-            // 0,0   w,0   0,0   w,0   0,0   w,0
+            // 0,0   w,0   0,0   w,0   0,0     w,0
             // +-------+   +-------+   +---------+
             // |       |   |+-1-+  |   |+-1-+    |
             // |       |   ||||||  |   ||||||+-2-+
@@ -98,17 +97,9 @@ const stats = (() => {
                 if (stats[k] < minHeight) minHeight = stats[k];
             }
 
-            // keep scale grow but
-            // reset the max height only at the start of the new cycle
-            if (index > 0) {
-                if (maxHeight > prevMaxHeight) {
-                    prevMaxHeight = maxHeight;
-                } else {
-                    maxHeight = prevMaxHeight;
-                }
-            } else {
-                prevMaxHeight = maxHeight;
-            }
+            // keep graph scale grow but postpone shrink til the new cycle
+            if (index > 0 && prevMaxHeight > maxHeight) maxHeight = prevMaxHeight;
+            prevMaxHeight = maxHeight;
 
             for (let j = 0; j < stats.length; j++) {
                 let x = j * barWidth,
@@ -162,7 +153,8 @@ const stats = (() => {
 
         const update = (value) => {
             if (_graph) _graph.add(value);
-            _value.textContent = `${value < 1 ? '<1' : value} (${_graph.max()}) ${postfix}`;
+            // 203 (333) ms
+            _value.textContent = `${value < 1 ? '<1' : value} ${_graph ? `(${_graph.max()}) ` : ''}${postfix}`;
         }
 
         return {el: ui, update}
