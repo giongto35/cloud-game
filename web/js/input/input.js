@@ -57,7 +57,6 @@ const input = (() => {
             let arrBuf = new Uint8Array(2);
             arrBuf[0] = data & ((1 << 8) - 1);
             arrBuf[1] = data >> 8;
-            log.info(arrBuf)
             event.pub(KEY_STATE_UPDATED, arrBuf);
 
             unchangePacket--;
