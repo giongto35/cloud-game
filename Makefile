@@ -19,7 +19,6 @@ check: fmt
 
 dep:
 	go mod download
-#	go mod vendor
 #	go mod tidy
 
 # NOTE: there is problem with go mod vendor when it delete github.com/gen2brain/x264-go/x264c causing unable to build. https://github.com/golang/go/issues/26366

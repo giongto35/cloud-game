@@ -61,5 +61,6 @@ bin/
 _output/
 ./build
 release/
+vendor/
 
 .dockerignore
