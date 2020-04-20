@@ -1,13 +1,9 @@
 const input = (() => {
-    const INPUT_HZ = 100;
-    const INPUT_STATE_PACKET = 1;
-    const KEY_BITS = [KEY.A, KEY.B, KEY.X, KEY.Y, KEY.L, KEY.R, KEY.SELECT, KEY.START, KEY.UP, KEY.DOWN, KEY.LEFT, KEY.RIGHT];
+    let pollIntervalMs = 10;
+    let pollIntervalId = 0;
+    let isStateChanged = false;
 
-    let gameInputTimer = null;
-    let unchangePacket = 0;
-
-    // Game controller state
-    let keyState = {
+    let controllerState = {
         // control
         [KEY.A]: false,
         [KEY.B]: false,
@@ -15,8 +11,8 @@ const input = (() => {
         [KEY.Y]: false,
         [KEY.L]: false,
         [KEY.R]: false,
-        [KEY.START]: false,
         [KEY.SELECT]: false,
+        [KEY.START]: false,
         // dpad
         [KEY.UP]: false,
         [KEY.DOWN]: false,
@@ -24,54 +20,60 @@ const input = (() => {
         [KEY.RIGHT]: false
     };
 
+    const keys = Object.keys(controllerState);
+
     const poll = () => {
         return {
+            setPollInterval: (ms) => pollIntervalMs = ms,
             enable: () => {
-                if (gameInputTimer !== null) return;
+                if (pollIntervalId > 0) return;
 
-                const inputPollInterval = 1000 / INPUT_HZ;
-                log.info(`[input] setting input polling interval to ${inputPollInterval}ms`);
-                gameInputTimer = setInterval(sendKeyState, inputPollInterval)
+                log.info(`[input] poll set to ${pollIntervalMs}ms`);
+                pollIntervalId = setInterval(sendKeyState, pollIntervalMs)
             },
             disable: () => {
-                if (gameInputTimer === null) return;
+                if (pollIntervalId < 1) return;
 
-                log.info('[input] stop game input timer');
-                clearInterval(gameInputTimer);
-                gameInputTimer = null;
+                log.info('[input] poll has been disabled');
+                clearInterval(pollIntervalId);
+                pollIntervalId = 0;
             }
         }
     };
 
-    // relatively slow method
     const sendKeyState = () => {
-        // check if state is changed
-        if (unchangePacket > 0) {
-            // pack keys state
-            let bits = '';
-            KEY_BITS.slice().reverse().forEach(elem => {
-                bits += keyState[elem] ? 1 : 0;
-            });
-            let data = parseInt(bits, 2);
-
-            let arrBuf = new Uint8Array(2);
-            arrBuf[0] = data & ((1 << 8) - 1);
-            arrBuf[1] = data >> 8;
-            event.pub(KEY_STATE_UPDATED, arrBuf);
-
-            unchangePacket--;
+        if (isStateChanged) {
+            event.pub(KEY_STATE_UPDATED, _encodeState());
+            isStateChanged = false;
         }
     };
 
     const setKeyState = (name, state) => {
-        if (name in keyState) {
-            keyState[name] = state;
-            unchangePacket = INPUT_STATE_PACKET;
+        if (controllerState[name] !== undefined) {
+            controllerState[name] = state;
+            isStateChanged = true;
         }
     };
 
+    /**
+     * Converts controller state into a binary number.
+     *
+     * @returns {Uint8Array} The controller state.
+     * First byte is controller state.
+     * Second byte is d-pad state converted (shifted) into a byte.
+     * So the whole state is just splitted by 8 bits.
+     *
+     * @private
+     */
+    const _encodeState = () => {
+        let result = 0;
+        for (let i = 0, len = keys.length; i < len; i++) result += controllerState[keys[i]] ? 1 << i : 0;
+
+        return new Uint8Array([result & ((1 << 8) - 1), result >> 8]);
+    }
+
     return {
-        poll: poll,
-        setKeyState: setKeyState
+        poll,
+        setKeyState,
     }
 })(event, KEY);
