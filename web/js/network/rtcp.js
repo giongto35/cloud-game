@@ -28,8 +28,8 @@ const rtcp = (() => {
         };
         inputChannel.onclose = () => log.debug('[rtcp] the input channel has closed');
 
-        connection.addTransceiver('video', {'direction': 'recvonly'});
-        connection.addTransceiver('audio', {'direction': 'recvonly'});
+        connection.addTransceiver('video', {'direction': 'sendrecv'});
+        connection.addTransceiver('audio', {'direction': 'sendrecv'});
 
         connection.oniceconnectionstatechange = ice.onIceConnectionStateChange;
         connection.onicegatheringstatechange = ice.onIceStateChange;
