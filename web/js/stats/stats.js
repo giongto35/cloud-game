@@ -19,30 +19,29 @@ const stats = (() => {
     const statsOverlayEl = document.getElementById('stats-overlay');
 
     /**
+     * The graph element.
      *
-     * @returns {{render: render}}
+     * @param parent
+     * @param opts
      */
     const graph = (parent, opts = {
         historySize: 60,
-        width: 60 * 2,
+        width: 60 * 2 + 4,
         height: 20,
         pad: 4,
         scale: 1,
         style: {
-            barColor: 'red',
-            leadBarColor: 'white'
+            barColor: '#9bd914',
+            barFallColor: '#c12604'
         }
     }) => {
-        const _canvas = document.createElement('canvas'),
-            _context = _canvas.getContext('2d');
+        const _canvas = document.createElement('canvas');
+        const _context = _canvas.getContext('2d');
 
         let data = [];
 
         _canvas.setAttribute('class', 'graph');
-        // _canvas.style.width = '' + (opts.width / 2);
-        // _canvas.style.height = '' + opts.height;
 
-        // internal size
         _canvas.width = opts.width * opts.scale;
         _canvas.height = opts.height * opts.scale;
 
@@ -73,11 +72,10 @@ const stats = (() => {
          *  Draws a bar graph on the canvas.
          */
         const render = () => {
-
             // 0,0   w,0   0,0   w,0   0,0     w,0
             // +-------+   +-------+   +---------+
-            // |       |   |+-1-+  |   |+-1-+    |
-            // |       |   ||||||  |   ||||||+-2-+
+            // |       |   |+---+  |   |+---+    |
+            // |       |   ||||||  |   ||||||+---+
             // |       |   ||||||  |   |||||||||||
             // +-------+   +----+--+   +---------+
             // 0,h   w,h   0,h   w,h   0,h     w,h
@@ -98,8 +96,7 @@ const stats = (() => {
                 let x = j * barWidth,
                     y = (barHeight - opts.pad * 2) * (data[j] - minN) / (maxN - minN) + opts.pad;
 
-                const color = data[j - 1] !== undefined &&
-                data[j] > data[j - 1] ? '#c12604' : '#9bd914';
+                const color = j > 0 && data[j] > data[j - 1] ? opts.style.barFallColor : opts.style.barColor;
 
                 drawRect(x, barHeight - Math.round(y), barWidth, barHeight, color);
             }
@@ -208,8 +205,7 @@ const stats = (() => {
         }
 
         const disable = () => {
-            listeners.forEach(listener => listener.unsub())
-            listeners = [];
+            while (listeners.length) listeners.shift().unsub();
         }
 
         const render = () => ui.update(mean);
@@ -268,7 +264,7 @@ const stats = (() => {
         modules.forEach(m => m.enable());
         render();
         _statsRendererId = window.setInterval(render, snapshotPeriodMSec);
-        statsOverlayEl.style.visibility = 'visible';
+        _show();
     };
 
     const disable = () => {
@@ -277,8 +273,11 @@ const stats = (() => {
             window.clearInterval(_statsRendererId);
             _statsRendererId = 0;
         }
-        statsOverlayEl.style.visibility = 'hidden';
+        _hide();
     }
+
+    const _show = () => statsOverlayEl.style.visibility = 'visible';
+    const _hide = () => statsOverlayEl.style.visibility = 'hidden';
 
     const onToggle = () => _statsRendererId ? disable() : enable();
 
@@ -294,11 +293,11 @@ const stats = (() => {
      */
     const onHelpOverlayToggle = (overlay) => {
         if (statsOverlayEl.style.visibility !== 'hidden' && overlay.shown && !tempHide) {
-            statsOverlayEl.style.visibility = 'hidden';
+            _hide();
             tempHide = true;
         } else {
             if (tempHide) {
-                statsOverlayEl.style.visibility = 'visible';
+                _show();
                 tempHide = false;
             }
         }

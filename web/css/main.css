@@ -624,6 +624,10 @@ body {
 }
 
 #stats-overlay > div {
+    display: flex;
+    flex-flow: wrap;
+    justify-content: space-between;
+
     margin-bottom: 1em;
 }
 
@@ -635,7 +639,9 @@ body {
 
 #stats-overlay .graph {
     width: 100%;
-    image-rendering: pixelated;
+    /* artifacts with pixelated option */
+    /*image-rendering: pixelated;*/
+    image-rendering: optimizeSpeed;
 }
 
 .no-select {
