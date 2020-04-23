@@ -601,24 +601,41 @@ body {
 
 #stats-overlay {
     position: absolute;
-    z-index: 9999;
+    z-index: 200;
     backface-visibility: hidden;
-    top: 1em;
-    right: 1em;
+
+    display: flex;
+    flex-direction: column;
+    justify-content: space-around;
+
+    top: 1.1em;
+    right: 1.1em;
     color: #fff;
-    background: #0000006b;
-    padding: .2em;
+    background: #000;
+    opacity: .765;
+    padding: .5em 1em .1em 1em;
+
+    font-family: monospace;
     font-size: 40%;
 
-    width: 4rem;
-    height: 3rem;
+    width: 70px;
+
+    visibility: hidden;
+}
+
+#stats-overlay > div {
+    margin-bottom: 1em;
 }
 
 #stats-overlay>div>div {
     display: inline-block;
     font-weight: 500;
-    padding: 0 .5em;
     width: 4em;
+}
+
+#stats-overlay .graph {
+    width: 100%;
+    image-rendering: pixelated;
 }
 
 .no-select {

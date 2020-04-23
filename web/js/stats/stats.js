@@ -22,11 +22,12 @@ const stats = (() => {
      *
      * @returns {{render: render}}
      */
-    const graph = (options = {
-        historySize: 25,
-        width: 120,
+    const graph = (parent, opts = {
+        historySize: 60,
+        width: 60 * 2,
         height: 20,
         pad: 4,
+        scale: 1,
         style: {
             barColor: 'red',
             leadBarColor: 'white'
@@ -35,47 +36,43 @@ const stats = (() => {
         const _canvas = document.createElement('canvas'),
             _context = _canvas.getContext('2d');
 
-        let i = 0;
         let data = [];
 
-        // viewport size
-        _canvas.style.height = '2em';
-        _canvas.style.width = '100%';
-
-        // scale for Retina stuff
-        const scale = 1 // window.devicePixelRatio * 2;
+        _canvas.setAttribute('class', 'graph');
+        // _canvas.style.width = '' + (opts.width / 2);
+        // _canvas.style.height = '' + opts.height;
 
         // internal size
-        _canvas.width = options.width * scale;
-        _canvas.height = options.height * scale;
+        _canvas.width = opts.width * opts.scale;
+        _canvas.height = opts.height * opts.scale;
 
-        _context.scale(scale, scale);
+        _context.scale(opts.scale, opts.scale);
         _context.imageSmoothingEnabled = false;
-        _context.fillStyle = options.fillStyle;
+        _context.fillStyle = opts.fillStyle;
+
+        if (parent) parent.append(_canvas);
 
         // bar size
-        const barWidth = Math.round(_canvas.width / scale / options.historySize),
-            barHeight = Math.round(_canvas.height / scale);
-        let maxHeight = 0,
-            prevMaxHeight = 0;
+        const barWidth = Math.round(_canvas.width / opts.scale / opts.historySize);
+        const barHeight = Math.round(_canvas.height / opts.scale);
 
-        const max = () => maxHeight
+        let maxN = 0,
+            minN = 0;
+
+        const max = () => maxN
 
         const get = () => _canvas
 
         const add = (value) => {
-            if (i > options.historySize - 1) i = 0;
-            data[i] = value;
-            render(data, i++);
+            if (data.length > opts.historySize) data.shift();
+            data.push(value);
+            render();
         }
 
         /**
          *  Draws a bar graph on the canvas.
-         *
-         * @param stats A list of values to graph.
-         * @param index The index of the last updated value in the list.
          */
-        const render = (stats = [], index = 0) => {
+        const render = () => {
 
             // 0,0   w,0   0,0   w,0   0,0     w,0
             // +-------+   +-------+   +---------+
@@ -90,32 +87,26 @@ const stats = (() => {
 
             _context.clearRect(0, 0, _canvas.width, _canvas.height);
 
-            maxHeight = stats[0];
-            let minHeight = 0;
-            for (let k = 1; k < stats.length; k++) {
-                if (stats[k] > maxHeight) maxHeight = stats[k];
-                if (stats[k] < minHeight) minHeight = stats[k];
+            maxN = data[0];
+            minN = 0;
+            for (let k = 1; k < data.length; k++) {
+                if (data[k] > maxN) maxN = data[k];
+                if (data[k] < minN) minN = data[k];
             }
 
-            // keep graph scale grow but postpone shrink til the new cycle
-            if (index > 0 && prevMaxHeight > maxHeight) maxHeight = prevMaxHeight;
-            prevMaxHeight = maxHeight;
-
-            for (let j = 0; j < stats.length; j++) {
+            for (let j = 0; j < data.length; j++) {
                 let x = j * barWidth,
-                    y = (barHeight - options.pad * 2) * (stats[j] - minHeight) / (maxHeight - minHeight) + options.pad;
+                    y = (barHeight - opts.pad * 2) * (data[j] - minN) / (maxN - minN) + opts.pad;
 
-                drawRect(x, barHeight - y, barWidth, barHeight);
+                const color = data[j - 1] !== undefined &&
+                data[j] > data[j - 1] ? '#c12604' : '#9bd914';
 
-                // draw bar pointer
-                if (j === index) {
-                    drawRect(x, barHeight - 1, barWidth, barHeight, options.style.leadBarColor);
-                }
+                drawRect(x, barHeight - Math.round(y), barWidth, barHeight, color);
             }
         }
 
-        const drawRect = (x, y, w, h, color = options.style.barColor) => {
-            if (_context.fillStyle !== color) _context.fillStyle = color;
+        const drawRect = (x, y, w, h, color = opts.style.barColor) => {
+            _context.fillStyle = color;
             _context.fillRect(x, y, w, h);
         }
 
@@ -144,9 +135,8 @@ const stats = (() => {
         let _graph;
         if (withGraph) {
             const _container = document.createElement('span');
-            _graph = graph();
-            _container.append(_graph.get());
             ui.append(_container);
+            _graph = graph(_container);
         }
 
         _label.innerHTML = label;
@@ -278,7 +268,7 @@ const stats = (() => {
         modules.forEach(m => m.enable());
         render();
         _statsRendererId = window.setInterval(render, snapshotPeriodMSec);
-        statsOverlayEl.hidden = false;
+        statsOverlayEl.style.visibility = 'visible';
     };
 
     const disable = () => {
@@ -287,26 +277,28 @@ const stats = (() => {
             window.clearInterval(_statsRendererId);
             _statsRendererId = 0;
         }
-        statsOverlayEl.hidden = true;
+        statsOverlayEl.style.visibility = 'hidden';
     }
 
     const onToggle = () => _statsRendererId ? disable() : enable();
 
     /**
      * Handles help overlay toggle event.
+     * Workaround for a not normal app layout layering.
      *
      * !to make it more declarative
+     * !to remove when app layering is fixed
      *
      * @param {Object} overlay Overlay data.
      * @param {boolean} overlay.shown A flag if the overlay is being currently showed.
      */
     const onHelpOverlayToggle = (overlay) => {
-        if (!statsOverlayEl.hidden && overlay.shown && !tempHide) {
-            statsOverlayEl.hidden = true;
+        if (statsOverlayEl.style.visibility !== 'hidden' && overlay.shown && !tempHide) {
+            statsOverlayEl.style.visibility = 'hidden';
             tempHide = true;
         } else {
             if (tempHide) {
-                statsOverlayEl.hidden = false;
+                statsOverlayEl.style.visibility = 'visible';
                 tempHide = false;
             }
         }
