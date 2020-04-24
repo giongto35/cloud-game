@@ -9,9 +9,12 @@
  */
 const stats = (() => {
     const modules = [];
-    const snapshotPeriodMSec = 200;
-    let _statsRendererId = 0;
     let tempHide = false;
+
+    // internal rendering stuff
+    const drawFps = 32;
+    let time = 0;
+    let active = false;
 
     // !to add connection drop notice
 
@@ -85,7 +88,7 @@ const stats = (() => {
 
             _context.clearRect(0, 0, _canvas.width, _canvas.height);
 
-            maxN = data[0];
+            maxN = data[0] || 1;
             minN = 0;
             for (let k = 1; k < data.length; k++) {
                 if (data[k] > maxN) maxN = data[k];
@@ -231,14 +234,15 @@ const stats = (() => {
     const random = (() => {
         let _rendererId = 0;
         const frequencyMs = 1000;
+        let val = 0;
 
         const ui = moduleUi('Magic', true, 'x');
 
         const getSome = (min, max) => Math.round(Math.random() * (max - min) + min);
 
         const enable = () => {
-            _render();
-            _rendererId = window.setInterval(_render, frequencyMs);
+            render();
+            _rendererId = window.setInterval(poll, frequencyMs);
         }
 
         const disable = () => {
@@ -250,36 +254,49 @@ const stats = (() => {
 
         // dummy
         const render = () => {
+            _render();
         }
 
-        const _render = () => ui.update(getSome(42, 999));
+        const poll = () => val = getSome(42, 999);
+
+        const _render = () => ui.update(val);
 
         const get = () => ui.el;
 
         return {get, enable, disable, render}
     })(moduleUi, window);
 
-    // !to use requestAnimationFrame instead of intervals
     const enable = () => {
+        active = true;
         modules.forEach(m => m.enable());
         render();
-        _statsRendererId = window.setInterval(render, snapshotPeriodMSec);
+        draw();
         _show();
     };
 
-    const disable = () => {
-        modules.forEach(m => m.disable());
-        if (_statsRendererId) {
-            window.clearInterval(_statsRendererId);
-            _statsRendererId = 0;
+    function draw(timestamp) {
+        if (!active) return;
+
+        const time_ = time + 1000 / drawFps;
+
+        if (timestamp > time_) {
+            time = timestamp;
+            render();
         }
+
+        requestAnimationFrame(draw);
+    }
+
+    const disable = () => {
+        active = false;
+        modules.forEach(m => m.disable());
         _hide();
     }
 
     const _show = () => statsOverlayEl.style.visibility = 'visible';
     const _hide = () => statsOverlayEl.style.visibility = 'hidden';
 
-    const onToggle = () => _statsRendererId ? disable() : enable();
+    const onToggle = () => active ? disable() : enable();
 
     /**
      * Handles help overlay toggle event.
