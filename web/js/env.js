@@ -1,14 +1,15 @@
 const env = (() => {
-    const win = $(window);
+    // UI
     const doc = $(document);
+    const gameBoy = $('#gamebody');
+    const ghRibbon = $('#ribbon');
 
-    // Screen state
     let isLayoutSwitched = false;
 
     // Window rerender / rotate screen if needed
     const fixScreenLayout = () => {
-        let targetWidth = doc.width() * 0.9;
-        let targetHeight = doc.height() * 0.9;
+        let targetWidth = Math.round(doc.width() * 0.9 / 2) * 2,
+            targetHeight = Math.round(doc.height() * 0.9 / 2) * 2;
 
         // mobile == full screen
         if (env.getOs() === 'android') {
@@ -19,44 +20,39 @@ const env = (() => {
         // Should have maximum box for desktop?
         // targetWidth = 800; targetHeight = 600; // test on desktop
 
-        fixElementLayout($('#gamebody'), targetWidth, targetHeight);
+        rescaleGameBoy(targetWidth, targetHeight);
 
-        const elem = $('#ribbon');
-        let st = '';
-        if (isLayoutSwitched) {
-            st = 'rotate(90deg)';
-            elem.css('bottom', 0);
-            elem.css('top', '');
-        } else {
-            elem.css('bottom', '');
-            elem.css('top', 0);
-        }
-        elem.css('transform', st);
-        elem.css('-webkit-transform', st);
-        elem.css('-moz-transform', st);
+        let st = isLayoutSwitched ? 'rotate(90deg)' : '';
+        ghRibbon.css({
+            'bottom': isLayoutSwitched ? 0 : '',
+            'top': isLayoutSwitched ? '' : 0,
+            'transform': st,
+            '-webkit-transform': st,
+            '-moz-transform': st
+        })
     };
 
-    const fixElementLayout = (elem, targetWidth, targetHeight) => {
-        let st = 'translate(-50%, -50%) ';
+    const rescaleGameBoy = (targetWidth, targetHeight) => {
+        const transformations = ['translate(-50%, -50%)'];
 
         // rotate portrait layout
-        if (isPortrait()) {
-            st += `rotate(90deg) `;
-            let tmp = targetHeight;
-            targetHeight = targetWidth;
-            targetWidth = tmp;
-            isLayoutSwitched = true;
-        } else {
-            isLayoutSwitched = false;
+        isLayoutSwitched = isPortrait();
+        if (isLayoutSwitched) {
+            transformations.push('rotate(90deg)');
+            [targetWidth, targetHeight] = [targetHeight, targetWidth]
         }
 
         // scale, fit to target size
-        st += `scale(${Math.min(targetWidth / elem.width(), targetHeight / elem.height())}) `;
+        const scale = Math.min(targetWidth / gameBoy.width(), targetHeight / gameBoy.height());
+        transformations.push(`scale(${scale})`);
 
-        elem.css('transform', st);
-        elem.css('-webkit-transform', st);
-        elem.css('-moz-transform', st);
-    };
+        const transform = transformations.join(' ');
+        gameBoy.css({
+            'transform': transform,
+            '-webkit-transform': transform,
+            '-moz-transform': transform
+        });
+    }
 
     const getOS = () => {
         // linux? ios?
@@ -118,9 +114,8 @@ const env = (() => {
         }
     };
 
-    // bindings
-    win.on('resize', fixScreenLayout);
-    win.on('orientationchange', fixScreenLayout);
+    window.addEventListener('resize', fixScreenLayout);
+    window.addEventListener('orientationchange', fixScreenLayout);
 
     return {
         getOs: getOS,
