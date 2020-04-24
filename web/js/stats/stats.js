@@ -132,6 +132,8 @@ const stats = (() => {
             _value = document.createElement('span');
         ui.append(_label, _value);
 
+        let postfix_ = postfix;
+
         let _graph;
         if (withGraph) {
             const _container = document.createElement('span');
@@ -141,13 +143,15 @@ const stats = (() => {
 
         _label.innerHTML = label;
 
+        const withPostfix = (value) => postfix_ = value;
+
         const update = (value) => {
             if (_graph) _graph.add(value);
             // 203 (333) ms
-            _value.textContent = `${value < 1 ? '<1' : value} ${_graph ? `(${_graph.max()}) ` : ''}${postfix}`;
+            _value.textContent = `${value < 1 ? '<1' : value} ${_graph ? `(${_graph.max()}) ` : ''}${postfix_}`;
         }
 
-        return {el: ui, update}
+        return {el: ui, update, withPostfix}
     }
 
     /**
@@ -219,9 +223,7 @@ const stats = (() => {
     })(event, moduleUi);
 
     /**
-     * Random numbers submodule.
-     *
-     * Renders itself without external calls.
+     * User agent memory stats.
      *
      * ?Interface:
      *  HTMLElement get()
@@ -231,40 +233,50 @@ const stats = (() => {
      *
      * @version 1
      */
-    const random = (() => {
-        let _rendererId = 0;
-        const frequencyMs = 1000;
-        let val = 0;
+    const clientMemory = (() => {
+        let active = false;
 
-        const ui = moduleUi('Magic', true, 'x');
+        const ui = moduleUi('Memory', false, 'B');
 
-        const getSome = (min, max) => Math.round(Math.random() * (max - min) + min);
+        if (window.performance && !performance.memory)
+            performance.memory = {usedJSHeapSize: 0, totalJSHeapSize: 0};
 
-        const enable = () => {
-            render();
-            _rendererId = window.setInterval(poll, frequencyMs);
-        }
+        const convert = (() => {
+            const measures = ['B', 'KB', 'MB', 'GB'];
 
-        const disable = () => {
-            if (_rendererId > 0) {
-                window.clearInterval(_rendererId);
-                _rendererId = 0;
+            const toSize = (bytes, fractions = 2) => {
+                if (bytes === 0) return 0;
+
+                const precision = Math.pow(10, fractions);
+                const i = Math.floor(Math.log(bytes) / Math.log(1000));
+
+                // hack
+                ui.withPostfix(measures[i]);
+
+                return Math.round(bytes * precision / Math.pow(1000, i)) / precision;
             }
-        }
 
-        // dummy
-        const render = () => {
-            _render();
-        }
-
-        const poll = () => val = getSome(42, 999);
-
-        const _render = () => ui.update(val);
+            return {toSize}
+        })();
 
         const get = () => ui.el;
 
+        const enable = () => {
+            active = true;
+            render();
+        }
+
+        const disable = () => active = false;
+
+        const render = () => {
+            if (!active) return;
+
+            const m = performance.memory.usedJSHeapSize;
+            ui.update(m > 0 ? convert.toSize(m) : 'N/A');
+        }
+
         return {get, enable, disable, render}
-    })(moduleUi, window);
+    })(moduleUi, performance, window);
 
     const enable = () => {
         active = true;
@@ -323,8 +335,10 @@ const stats = (() => {
     const render = () => modules.forEach(m => m.render());
 
     // add submodules
-    modules.push(latency);
-    modules.push(random);
+    modules.push(
+        latency,
+        clientMemory
+    );
     modules.forEach(m => statsOverlayEl.append(m.get()));
 
     event.sub(STATS_TOGGLE, onToggle);
