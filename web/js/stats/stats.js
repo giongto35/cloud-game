@@ -321,7 +321,7 @@ const stats = (() => {
      * @param {boolean} overlay.shown A flag if the overlay is being currently showed.
      */
     const onHelpOverlayToggle = (overlay) => {
-        if (statsOverlayEl.style.visibility !== 'hidden' && overlay.shown && !tempHide) {
+        if (statsOverlayEl.style.visibility === 'visible' && overlay.shown && !tempHide) {
             _hide();
             tempHide = true;
         } else {
