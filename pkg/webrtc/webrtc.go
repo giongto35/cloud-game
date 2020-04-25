@@ -17,42 +17,32 @@ import (
 	"github.com/pion/webrtc/v2/pkg/media"
 )
 
+// TODO: double check if no need TURN server here
 var webrtcconfig = webrtc.Configuration{ICEServers: []webrtc.ICEServer{{URLs: []string{"stun:stun.l.google.com:19302"}}}}
 
-// Allows compressing offer/answer to bypass terminal input limits.
-const compress = false
-
 // Encode encodes the input in base64
-// It can optionally zip the input before encoding
-func Encode(obj interface{}) string {
+func Encode(obj interface{}) (string, error) {
 	b, err := json.Marshal(obj)
 	if err != nil {
-		panic(err)
+		return "", err
 	}
 
-	if compress {
-		b = zip(b)
-	}
-
-	return base64.StdEncoding.EncodeToString(b)
+	return base64.StdEncoding.EncodeToString(b), nil
 }
 
 // Decode decodes the input from base64
-// It can optionally unzip the input after decoding
-func Decode(in string, obj interface{}) {
+func Decode(in string, obj interface{}) error {
 	b, err := base64.StdEncoding.DecodeString(in)
 	if err != nil {
-		panic(err)
-	}
-
-	if compress {
-		b = unzip(b)
+		return err
 	}
 
 	err = json.Unmarshal(b, obj)
 	if err != nil {
-		panic(err)
+		return err
 	}
+
+	return nil
 }
 
 // NewWebRTC create
@@ -99,8 +89,10 @@ type GameMeta struct {
 	PlayerIndex int
 }
 
+type OnIceCallback func(candidate string)
+
 // StartClient start webrtc
-func (w *WebRTC) StartClient(remoteSession string, isMobile bool, iceCandidates []string) (string, error) {
+func (w *WebRTC) StartClient(isMobile bool, iceCB OnIceCallback) (string, error) {
 	defer func() {
 		if err := recover(); err != nil {
 			log.Println(err)
@@ -122,10 +114,11 @@ func (w *WebRTC) StartClient(remoteSession string, isMobile bool, iceCandidates 
 		return "", err
 	}
 
+	// add video track
 	if util.GetVideoEncoder(isMobile) == config.CODEC_H264 {
-		videoTrack, err = w.connection.NewTrack(webrtc.DefaultPayloadTypeH264, rand.Uint32(), "video", "pion2")
+		videoTrack, err = w.connection.NewTrack(webrtc.DefaultPayloadTypeH264, rand.Uint32(), "video", "game-video")
 	} else {
-		videoTrack, err = w.connection.NewTrack(webrtc.DefaultPayloadTypeVP8, rand.Uint32(), "video", "pion2")
+		videoTrack, err = w.connection.NewTrack(webrtc.DefaultPayloadTypeVP8, rand.Uint32(), "video", "game-video")
 	}
 	if err != nil {
 		return "", err
@@ -135,9 +128,10 @@ func (w *WebRTC) StartClient(remoteSession string, isMobile bool, iceCandidates 
 	if err != nil {
 		return "", err
 	}
+	log.Println("Add video track")
 
-	// audio track
-	opusTrack, err := w.connection.NewTrack(webrtc.DefaultPayloadTypeOpus, rand.Uint32(), "audio", "pion2b")
+	// add audio track
+	opusTrack, err := w.connection.NewTrack(webrtc.DefaultPayloadTypeOpus, rand.Uint32(), "audio", "game-audio")
 	if err != nil {
 		return "", err
 	}
@@ -145,12 +139,13 @@ func (w *WebRTC) StartClient(remoteSession string, isMobile bool, iceCandidates 
 	if err != nil {
 		return "", err
 	}
+	log.Println("Add audio track")
 
+	// create data channel for input, and register callbacks
 	dfalse := false
 	dtrue := true
 	var d0 uint16 = 0
 
-	// input channel
 	inputTrack, err := w.connection.CreateDataChannel("a", &webrtc.DataChannelInit{
 		Ordered:    &dfalse,
 		Negotiated: &dtrue,
@@ -188,58 +183,127 @@ func (w *WebRTC) StartClient(remoteSession string, isMobile bool, iceCandidates 
 		}
 	})
 
-	// TODO: take a look at this
 	w.connection.OnICECandidate(func(iceCandidate *webrtc.ICECandidate) {
-		log.Println(iceCandidate)
+		if iceCandidate != nil {
+			candidate, err := Encode(iceCandidate.ToJSON())
+			if err != nil {
+				log.Println("Encode IceCandidate failed: " + iceCandidate.ToJSON().Candidate)
+				return
+			}
+			iceCB(candidate)
+		}
+
 	})
 
-	offer := webrtc.SessionDescription{}
+	// // TODO: take a look at this
+	// w.connection.OnICECandidate(func(candidate *webrtc.ICECandidate) {
+	// 	// send candidate to browser
+	// 	log.Println(candidate)
+	// })
 
-	Decode(remoteSession, &offer)
+	// Stream provider supposes to send offer
+	offer, err := w.connection.CreateOffer(nil)
+	if err != nil {
+		return "", err
+	}
+	log.Println("Created Offer")
 
-	err = w.connection.SetRemoteDescription(offer)
+	err = w.connection.SetLocalDescription(offer)
 	if err != nil {
 		return "", err
 	}
 
-	// Parse candidates list
-	// This logic is wrong
-	for _, bcandidate := range iceCandidates {
-		iceCandidate := webrtc.ICECandidateInit{}
-		if err := json.Unmarshal([]byte(bcandidate), &iceCandidate); err != nil {
-			log.Println("Cannot parse ", bcandidate)
-			continue
-		}
-		log.Println("Add iceCandidate: ", iceCandidate)
-		w.connection.AddICECandidate(iceCandidate)
-	}
-
-	answer, err := w.connection.CreateAnswer(nil)
+	localSession, err := Encode(offer)
 	if err != nil {
 		return "", err
 	}
 
-	err = w.connection.SetLocalDescription(answer)
-	if err != nil {
-		return "", err
-	}
-
-	// Sendback answer from server
-	localSession := Encode(answer)
 	return localSession, nil
+
+	// offer := webrtc.SessionDescription{}
+
+	// Decode(remoteSession, &offer)
+
+	// err = w.connection.SetRemoteDescription(offer)
+	// if err != nil {
+	// 	return "", err
+	// }
+
+	// // Parse candidates list
+	// // This logic is wrong
+	// for _, bcandidate := range iceCandidates {
+	// 	iceCandidate := webrtc.ICECandidateInit{}
+	// 	if err := json.Unmarshal([]byte(bcandidate), &iceCandidate); err != nil {
+	// 		log.Println("Cannot parse ", bcandidate)
+	// 		continue
+	// 	}
+	// 	log.Println("Add iceCandidate: ", iceCandidate)
+	// 	w.connection.AddICECandidate(iceCandidate)
+	// }
+
+	// answer, err := w.connection.CreateAnswer(nil)
+	// if err != nil {
+	// 	return "", err
+	// }
+
+	// err = w.connection.SetLocalDescription(answer)
+	// if err != nil {
+	// 	return "", err
+	// }
+
+	// // Sendback answer from server
+	// localSession := Encode(answer)
+	// return localSession, nil
 }
 
 func (w *WebRTC) AttachRoomID(roomID string) {
 	w.RoomID = roomID
 }
 
-// TODO: Take a look at this
-func (w *WebRTC) AddCandidate(candidate webrtc.ICECandidateInit) {
-	err := w.connection.AddICECandidate(candidate)
+func (w *WebRTC) SetRemoteSDP(remoteSDP string) error {
+	var answer webrtc.SessionDescription
+	err := Decode(remoteSDP, &answer)
 	if err != nil {
-		log.Println("Cannot add candidate: ", err)
+		log.Println("Decode remote sdp from peer failed")
+		return err
 	}
+
+	err = w.connection.SetRemoteDescription(answer)
+	if err != nil {
+		log.Println("Set remote description from peer failed")
+		return err
+	}
+
+	log.Println("Set Remote Description")
+	return nil
 }
+
+func (w *WebRTC) AddCandidate(candidate string) error {
+	var iceCandidate webrtc.ICECandidateInit
+	err := Decode(candidate, &iceCandidate)
+	if err != nil {
+		log.Println("Decode Ice candidate from peer failed")
+		return err
+	}
+	log.Println("Decoded Ice: " + iceCandidate.Candidate)
+
+	err = w.connection.AddICECandidate(iceCandidate)
+	if err != nil {
+		log.Println("Add Ice candidate from peer failed")
+		return err
+	}
+
+	log.Println("Add Ice Candidate: " + iceCandidate.Candidate)
+	return nil
+}
+
+// // TODO: Take a look at this
+// func (w *WebRTC) AddCandidate(candidate webrtc.ICECandidateInit) {
+// 	err := w.connection.AddICECandidate(candidate)
+// 	if err != nil {
+// 		log.Println("Cannot add candidate: ", err)
+// 	}
+// }
 
 // StopClient disconnect
 func (w *WebRTC) StopClient() {
@@ -266,7 +330,6 @@ func (w *WebRTC) IsConnected() bool {
 	return w.isConnected
 }
 
-// func (w *WebRTC) startStreaming(vp8Track *webrtc.Track, opusTrack *webrtc.Track) {
 func (w *WebRTC) startStreaming(vp8Track *webrtc.Track, opusTrack *webrtc.Track) {
 	log.Println("Start streaming")
 	// receive frame buffer

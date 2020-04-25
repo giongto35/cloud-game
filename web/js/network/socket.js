@@ -6,7 +6,8 @@
  * @version 1
  */
 const socket = (() => {
-    const pingIntervalMs = 1000 / 5;
+    const pingIntervalMs = 2000;
+    // const pingIntervalMs = 1000 / 5;
 
     let conn;
     let curPacketId = '';
@@ -46,7 +47,7 @@ const socket = (() => {
                     let serverData = JSON.parse(data.data);
                     event.pub(MEDIA_STREAM_INITIALIZED, {stunturn: serverData.shift(), games: serverData});
                     break;
-                case 'sdp':
+                case 'offer':
                     event.pub(MEDIA_STREAM_SDP_AVAILABLE, {sdp: data.data});
                     break;
                 case 'requestOffer':

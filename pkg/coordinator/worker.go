@@ -58,6 +58,15 @@ func (o *Server) RouteWorker(workerClient *WorkerClient) {
 	workerClient.Receive("heartbeat", func(resp cws.WSPacket) cws.WSPacket {
 		return resp
 	})
+
+	/* WebRTC */
+
+	workerClient.Receive("candidate", func(resp cws.WSPacket) cws.WSPacket {
+		// forward from worker -> browser
+		// TODO: no browser client, how ?
+
+		return cws.EmptyPacket
+	})
 }
 
 // NewWorkerClient returns a client connecting to worker. This connection exchanges information between workers and server

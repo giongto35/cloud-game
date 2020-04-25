@@ -15,28 +15,20 @@ type BrowserClient struct {
 func (s *Session) RouteBrowser() {
 	browserClient := s.BrowserClient
 
+	// websocket
 	browserClient.Receive("heartbeat", func(resp cws.WSPacket) cws.WSPacket {
 		return resp
 	})
 
-	browserClient.Receive("icecandidate", func(resp cws.WSPacket) cws.WSPacket {
-		log.Println("Coordinator: Received icecandidate from a browser", resp.Data)
-		log.Println("Coordinator: Relay icecandidate from a browser to worker")
-
-		wc, ok := s.handler.workerClients[s.ServerID]
-		if !ok {
-			return cws.EmptyPacket
-		}
-		wc.Send(resp, nil)
-
-		return cws.EmptyPacket
-	})
-
+	// webrtc
 	browserClient.Receive("initwebrtc", func(resp cws.WSPacket) cws.WSPacket {
-		log.Println("Coordinator: Received sdp request from a browser")
-		log.Println("Coordinator: Relay sdp request from a browser to worker")
+		// initwebrtc now only sends signal to worker, asks it to createOffer
+		log.Println("Coordinator: Received initwebrtc request from a browser")
+		log.Println("Coordinator: Relay initwebrtc request from a browser to worker")
 
-		// relay SDP to target worker and get back SDP of the worker
+		// relay request to target worker
+		// worker creates a PeerConnection, and createOffer
+		// send SDP back to browser
 		// TODO: Async
 		log.Println("Coordinator: serverID: ", s.ServerID, resp.SessionID)
 		resp.SessionID = s.ID
@@ -54,6 +46,40 @@ func (s *Session) RouteBrowser() {
 		return sdp
 	})
 
+	browserClient.Receive("answer", func(resp cws.WSPacket) cws.WSPacket {
+		// SDP of browser createAnswer
+		// forward to worker
+		log.Println("Coordinator: Received browser answered SDP")
+		log.Println("Coordinator: Relay SDP from a browser to worker")
+
+		// TODO: refactor this manual assignment
+		resp.SessionID = s.ID
+		wc, ok := s.handler.workerClients[s.ServerID]
+		if !ok {
+			return cws.EmptyPacket
+		}
+		wc.Send(resp, nil)
+
+		// no need to response
+		return cws.EmptyPacket
+	})
+
+	browserClient.Receive("candidate", func(resp cws.WSPacket) cws.WSPacket {
+		log.Println("Coordinator: Received icecandidate from a browser", resp.Data)
+		log.Println("Coordinator: Relay icecandidate from a browser to worker")
+
+		// TODO: refactor this manual assignment
+		resp.SessionID = s.ID
+		wc, ok := s.handler.workerClients[s.ServerID]
+		if !ok {
+			return cws.EmptyPacket
+		}
+		wc.Send(resp, nil)
+
+		return cws.EmptyPacket
+	})
+
+	// game
 	browserClient.Receive("quit", func(resp cws.WSPacket) (req cws.WSPacket) {
 		log.Println("Coordinator: Received quit request from a browser")
 		log.Println("Coordinator: Relay quit request from a browser to worker")

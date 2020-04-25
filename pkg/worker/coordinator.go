@@ -32,8 +32,10 @@ func NewCoordinatorClient(oc *websocket.Conn) *CoordinatorClient {
 
 // RouteCoordinator are all routes server received from coordinator
 func (h *Handler) RouteCoordinator() {
-	iceCandidates := map[string][]string{}
+	// iceCandidates := map[string][]string{}
 	oClient := h.oClient
+
+	/* Coordinator */
 
 	// Received from coordinator the serverID
 	oClient.Receive(
@@ -47,6 +49,8 @@ func (h *Handler) RouteCoordinator() {
 		},
 	)
 
+	/* WebRTC Connection */
+
 	oClient.Receive(
 		"initwebrtc",
 		func(resp cws.WSPacket) (req cws.WSPacket) {
@@ -54,14 +58,25 @@ func (h *Handler) RouteCoordinator() {
 
 			peerconnection := webrtc.NewWebRTC()
 			var initPacket struct {
-				SDP      string `json:"sdp"`
-				IsMobile bool   `json:"is_mobile"`
+				// SDP      string `json:"sdp"`
+				IsMobile bool `json:"is_mobile"`
 			}
 			err := json.Unmarshal([]byte(resp.Data), &initPacket)
 			if err != nil {
 				panic(err)
 			}
-			localSession, err := peerconnection.StartClient(initPacket.SDP, initPacket.IsMobile, iceCandidates[resp.SessionID])
+
+			localSession, err := peerconnection.StartClient(
+				initPacket.IsMobile,
+				func(candidate string) {
+					// send back candidate string to browser
+					oClient.Send(cws.WSPacket{
+						ID:   "candidate",
+						Data: candidate,
+					}, nil)
+				},
+			)
+			// localSession, err := peerconnection.StartClient(initPacket.IsMobile, iceCandidates[resp.SessionID])
 			// h.peerconnections[resp.SessionID] = peerconnection
 
 			// Create new sessions when we have new peerconnection initialized
@@ -77,12 +92,57 @@ func (h *Handler) RouteCoordinator() {
 			}
 
 			return cws.WSPacket{
-				ID:        "sdp",
+				ID:        "offer",
 				Data:      localSession,
 				SessionID: resp.SessionID,
 			}
 		},
 	)
+
+	oClient.Receive(
+		"answer",
+		func(resp cws.WSPacket) (req cws.WSPacket) {
+			session, ok := h.sessions[resp.SessionID]
+			log.Println("Find ", resp.SessionID, session, ok)
+
+			if ok {
+				peerconnection := session.peerconnection
+
+				err := peerconnection.SetRemoteSDP(resp.Data)
+				if err != nil {
+					log.Println("Error: Cannot set RemoteSDP of client: " + resp.SessionID)
+				}
+			}
+
+			return cws.EmptyPacket
+		},
+	)
+
+	oClient.Receive(
+		"candidate",
+		func(resp cws.WSPacket) (req cws.WSPacket) {
+			session, ok := h.sessions[resp.SessionID]
+			log.Println("Find ", resp.SessionID, session, ok)
+
+			if ok {
+				peerconnection := session.peerconnection
+
+				err := peerconnection.AddCandidate(resp.Data)
+				if err != nil {
+					log.Println("Error: Cannot add IceCandidate of client: " + resp.SessionID)
+				}
+			}
+
+			return cws.EmptyPacket
+
+			// log.Println("Received a icecandidate from coordinator: ", resp.Data)
+			// iceCandidates[resp.SessionID] = append(iceCandidates[resp.SessionID], resp.Data)
+
+			// return cws.EmptyPacket
+		},
+	)
+
+	/* Game Logic */
 
 	oClient.Receive(
 		"start",
@@ -196,16 +256,6 @@ func (h *Handler) RouteCoordinator() {
 
 			return req
 		})
-
-	oClient.Receive(
-		"icecandidate",
-		func(resp cws.WSPacket) (req cws.WSPacket) {
-			log.Println("Received a icecandidate from coordinator: ", resp.Data)
-			iceCandidates[resp.SessionID] = append(iceCandidates[resp.SessionID], resp.Data)
-
-			return cws.EmptyPacket
-		},
-	)
 
 	oClient.Receive(
 		"terminateSession",

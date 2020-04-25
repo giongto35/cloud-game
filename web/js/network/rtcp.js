@@ -36,11 +36,15 @@ const rtcp = (() => {
         connection.onicecandidate = ice.onIcecandidate;
         connection.ontrack = event => mediaStream.addTrack(event.track);
 
-        connection.createOffer({offerToReceiveVideo: true, offerToReceiveAudio: true})
-            .then(offer => {
-                log.info(offer.sdp);
-                connection.setLocalDescription(offer).catch(log.error);
-            });
+        socket.send({
+            'id': 'initwebrtc',
+            'data': JSON.stringify({'is_mobile': env.isMobileDevice()}),
+        });
+        // connection.createOffer({offerToReceiveVideo: true, offerToReceiveAudio: true})
+        //     .then(offer => {
+        //         log.info(offer.sdp);
+        //         connection.setLocalDescription(offer).catch(log.error);
+        //     });
     };
 
     const ice = (() => {
@@ -59,11 +63,22 @@ const rtcp = (() => {
 
         return {
             onIcecandidate: event => {
-                if (event.candidate && !isGatheringDone) {
-                    log.info(JSON.stringify(event.candidate));
-                } else {
-                    sendCandidates()
+                // this trigger when setRemoteDesc success
+                // send any candidate to worker
+                if (event.candidate != null) {
+                    candidate = JSON.stringify(event.candidate);
+                    log.info(`[rtcp] got ice candidate: ${candidate}`);
+                    socket.send({
+                        'id': 'candidate',
+                        'data': btoa(candidate),
+                    })
                 }
+
+                // if (event.candidate && !isGatheringDone) {
+                //     log.info(JSON.stringify(event.candidate));
+                // } else {
+                //     sendCandidates()
+                // }
                 // TODO: Fix curPacketID
             },
             onIceStateChange: event => {
@@ -72,7 +87,7 @@ const rtcp = (() => {
                         log.info('[rtcp] ice gathering');
                         timeForIceGathering = setTimeout(() => {
                             log.info(`[rtcp] ice gathering was aborted due to timeout ${ICE_TIMEOUT}ms`);
-                            sendCandidates();
+                            // sendCandidates();
                         }, ICE_TIMEOUT);
                         break;
                     case 'complete':
@@ -111,12 +126,23 @@ const rtcp = (() => {
 
     return {
         start: start,
-        setRemoteDescription: (data, media) => {
-            connection.setRemoteDescription(new RTCSessionDescription(JSON.parse(atob(data))))
-            // set media object stream
-                .then(() => {
+        setRemoteDescription: async (data, media) => {
+            offer = new RTCSessionDescription(JSON.parse(atob(data)));
+            await connection.setRemoteDescription(offer);
+            
+            answer = await connection.createAnswer({});
+            await connection.setLocalDescription(answer);
+
+            socket.send({
+                'id': 'answer',
+                'data': btoa(JSON.stringify(answer)),
+            });
+
+            // connection.setRemoteDescription()
+            // // set media object stream
+            //     .then(() => {
                     media.srcObject = mediaStream;
-                })
+            //     })
         },
         input: (data) => inputChannel.send(data),
         isConnected: () => connected,

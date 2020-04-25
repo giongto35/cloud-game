@@ -80,7 +80,8 @@ func (o *Server) getPingServer(zone string) string {
 
 // WSO handles all connections from a new worker to coordinator
 func (o *Server) WSO(w http.ResponseWriter, r *http.Request) {
-	fmt.Println("Connected")
+	// be aware of ReadBufferSize, WriteBufferSize (default 4096)
+	// https://pkg.go.dev/github.com/gorilla/websocket?tab=doc#Upgrader
 	c, err := upgrader.Upgrade(w, r, nil)
 	if err != nil {
 		log.Print("Coordinator: [!] WS upgrade:", err)
@@ -97,7 +98,7 @@ func (o *Server) WSO(w http.ResponseWriter, r *http.Request) {
 
 	pingServer := o.getPingServer(zone)
 
-	fmt.Printf("Is public: %v zone: %v\n", util.IsPublicIP(address), zone)
+	log.Printf("Is public: %v zone: %v", util.IsPublicIP(address), zone)
 
 	// In case worker and coordinator in the same host
 	if !util.IsPublicIP(address) && *config.Mode == config.ProdEnv {
@@ -137,6 +138,8 @@ func (o *Server) WS(w http.ResponseWriter, r *http.Request) {
 		}
 	}()
 
+	// be aware of ReadBufferSize, WriteBufferSize (default 4096)
+	// https://pkg.go.dev/github.com/gorilla/websocket?tab=doc#Upgrader
 	c, err := upgrader.Upgrade(w, r, nil)
 	if err != nil {
 		log.Print("[!] WS upgrade:", err)
