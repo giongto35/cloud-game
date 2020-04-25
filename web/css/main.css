@@ -8,14 +8,16 @@ body {
     display: block;
     width: 556px;
     height: 278px;
-    top: 50%;
-    left: 50%;
-    position: fixed;
-    transform: translate(-50%, -50%);
 
     /*-webkit-box-shadow: inset 0px 0px 2px 2px rgba(219, 222, 222, 1);*/
     /*-moz-box-shadow: inset 0px 0px 2px 2px rgba(219, 222, 222, 1);*/
     /*box-shadow: inset 0px 0px 2px 2px rgba(219, 222, 222, 1);*/
+
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    margin-right: -50%;
+    transform: translate(-50%, -50%);
 
     background-image: url('/static/img/ui/bg.png');
     background-repeat: no-repeat;
@@ -427,7 +429,6 @@ body {
     display: block;
     position: absolute;
     /* background-color: red; */
-
 
     width: 100%;
 
