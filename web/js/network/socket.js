@@ -6,8 +6,25 @@
  * @version 1
  */
 const socket = (() => {
-    const pingIntervalMs = 2000;
-    // const pingIntervalMs = 1000 / 5;
+    // TODO: this ping is for maintain websocket state
+    /*
+        https://tools.ietf.org/html/rfc6455#section-5.5.2
+
+        Chrome doesn't support
+            https://groups.google.com/a/chromium.org/forum/#!topic/net-dev/2RAm-ZYAIYY
+            https://bugs.chromium.org/p/chromium/issues/detail?id=706002
+
+        Firefox has option but not enable 'network.websocket.timeout.ping.request'
+
+        Suppose ping message must be sent from WebSocket Server.
+        Gorilla WS doesnot support it.
+        https://github.com/gorilla/websocket/blob/5ed622c449da6d44c3c8329331ff47a9e5844f71/examples/filewatch/main.go#L104
+
+        Below is high level implementation of ping.
+        // TODO: find the best ping time, currently 2 seconds works well in Chrome+Firefox
+    */
+    const pingIntervalMs = 2000; // 2 secs
+    // const pingIntervalMs = 1000 / 5; // too much
 
     let conn;
     let curPacketId = '';
@@ -48,12 +65,8 @@ const socket = (() => {
                     event.pub(MEDIA_STREAM_INITIALIZED, {stunturn: serverData.shift(), games: serverData});
                     break;
                 case 'offer':
+                    // this is offer from worker
                     event.pub(MEDIA_STREAM_SDP_AVAILABLE, {sdp: data.data});
-                    break;
-                case 'requestOffer':
-                    // !to remove? wtf
-                    curPacketId = data.packet_id;
-                    event.pub(MEDIA_STREAM_READY);
                     break;
                 case 'heartbeat':
                     // reserved
