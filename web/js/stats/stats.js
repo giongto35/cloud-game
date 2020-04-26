@@ -18,14 +18,10 @@ const stats = (() => {
 
     // !to add connection drop notice
 
-    // UI
     const statsOverlayEl = document.getElementById('stats-overlay');
 
     /**
      * The graph element.
-     *
-     * @param parent
-     * @param opts
      */
     const graph = (parent, opts = {
         historySize: 60,
@@ -84,7 +80,6 @@ const stats = (() => {
             // 0,h   w,h   0,h   w,h   0,h     w,h
             // []          [3]         [3, 2]
             //
-            // O(N+N) :( can be O(1) without visual scale
 
             _context.clearRect(0, 0, _canvas.width, _canvas.height);
 
@@ -119,14 +114,12 @@ const stats = (() => {
      * HTML:
      * <div><div>LABEL</div><span>VALUE</span>[<span><canvas/><span>]</div>
      *
-     * Returns exposed ui sub-tree and the _value as only changing node.
-     *
      * @param label The name of the stat to show.
      * @param withGraph True if to draw a graph.
-     * @param postfix The name of dimension of the stat.
+     * @param postfix Supposed to be the name of the stat passed as a function.
      * @returns {{el: HTMLDivElement, update: function}}
      */
-    const moduleUi = (label = '', withGraph = false, postfix = 'ms') => {
+    const moduleUi = (label = '', withGraph = false, postfix = () => 'ms') => {
         const ui = document.createElement('div'),
             _label = document.createElement('div'),
             _value = document.createElement('span');
@@ -148,7 +141,7 @@ const stats = (() => {
         const update = (value) => {
             if (_graph) _graph.add(value);
             // 203 (333) ms
-            _value.textContent = `${value < 1 ? '<1' : value} ${_graph ? `(${_graph.max()}) ` : ''}${postfix_}`;
+            _value.textContent = `${value < 1 ? '<1' : value} ${_graph ? `(${_graph.max()}) ` : ''}${postfix_(value)}`;
         }
 
         return {el: ui, update, withPostfix}
@@ -157,8 +150,8 @@ const stats = (() => {
     /**
      * Latency stats submodule.
      *
-     * Accumulates the simple rolling delta mean value
-     * between a server request and a following server response values.
+     * Accumulates the simple rolling mean value
+     * between the next server request and following server response values.
      *
      *      window
      *   _____________
@@ -188,7 +181,6 @@ const stats = (() => {
         let previous = Date.now();
         const window = 5;
 
-        // UI
         const ui = moduleUi('Ping', true);
 
         const onPingRequest = (data) => previous = data.time;
@@ -236,28 +228,11 @@ const stats = (() => {
     const clientMemory = (() => {
         let active = false;
 
-        const ui = moduleUi('Memory', false, 'B');
+        const measures = ['B', 'KB', 'MB', 'GB'];
+        const precision = Math.pow(10, 2);
+        let mLog = 0;
 
-        if (window.performance && !performance.memory)
-            performance.memory = {usedJSHeapSize: 0, totalJSHeapSize: 0};
-
-        const convert = (() => {
-            const measures = ['B', 'KB', 'MB', 'GB'];
-
-            const toSize = (bytes, fractions = 2) => {
-                if (bytes === 0) return 0;
-
-                const precision = Math.pow(10, fractions);
-                const i = Math.floor(Math.log(bytes) / Math.log(1000));
-
-                // hack
-                ui.withPostfix(measures[i]);
-
-                return Math.round(bytes * precision / Math.pow(1000, i)) / precision;
-            }
-
-            return {toSize}
-        })();
+        const ui = moduleUi('Memory', false, (x) => (x > 0) ? measures[mLog] : '');
 
         const get = () => ui.el;
 
@@ -272,8 +247,17 @@ const stats = (() => {
             if (!active) return;
 
             const m = performance.memory.usedJSHeapSize;
-            ui.update(m > 0 ? convert.toSize(m) : 'N/A');
+            let newValue = 'N/A';
+
+            if (m > 0) {
+                mLog = Math.floor(Math.log(m) / Math.log(1000));
+                newValue = Math.round(m * precision / Math.pow(1000, mLog)) / precision;
+            }
+
+            ui.update(newValue);
         }
+
+        if (window.performance && !performance.memory) performance.memory = {usedJSHeapSize: 0, totalJSHeapSize: 0};
 
         return {get, enable, disable, render}
     })(moduleUi, performance, window);
@@ -314,7 +298,6 @@ const stats = (() => {
      * Handles help overlay toggle event.
      * Workaround for a not normal app layout layering.
      *
-     * !to make it more declarative
      * !to remove when app layering is fixed
      *
      * @param {Object} overlay Overlay data.
