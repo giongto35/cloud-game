@@ -381,6 +381,7 @@ body {
 }
 
 #bottom-screen {
+    position: absolute;
     /* popups under the screen fix */
     z-index: -1;
 }
@@ -391,6 +392,7 @@ body {
     height: 100%;
     display: none;
     background-color: #222222;
+    position: absolute;
 }
 
 
@@ -598,3 +600,55 @@ body {
       touch-action: manipulation;
   }
 
+#stats-overlay {
+    position: absolute;
+    z-index: 200;
+    backface-visibility: hidden;
+
+    display: flex;
+    flex-direction: column;
+    justify-content: space-around;
+
+    top: 1.1em;
+    right: 1.1em;
+    color: #fff;
+    background: #000;
+    opacity: .765;
+    padding: .5em 1em .1em 1em;
+
+    font-family: monospace;
+    font-size: 40%;
+
+    width: 70px;
+
+    visibility: hidden;
+}
+
+#stats-overlay > div {
+    display: flex;
+    flex-flow: wrap;
+    justify-content: space-between;
+
+    margin-bottom: 1em;
+}
+
+#stats-overlay>div>div {
+    display: inline-block;
+    font-weight: 500;
+    width: 4em;
+}
+
+#stats-overlay .graph {
+    width: 100%;
+    /* artifacts with pixelated option */
+    /*image-rendering: pixelated;*/
+    image-rendering: optimizeSpeed;
+}
+
+.no-select {
+    -webkit-touch-callout: none;
+    -webkit-user-select: none;
+    -moz-user-select: none;
+    -ms-user-select: none;
+    user-select: none;
+}

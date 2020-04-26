@@ -67,7 +67,7 @@
         // undo the state when release the button
         prevState: null,
         // use function () if you need "this"
-        show: function (show) {
+        show: function (show, event) {
             if (this.shown === show) return;
 
             // hack
@@ -88,6 +88,8 @@
             } else {
                 setState(this.prevState);
             }
+
+            if (event) event.pub(HELP_OVERLAY_TOGGLED, {shown: show});
         }
     };
 
@@ -170,7 +172,9 @@
             keyButtons[data.key].addClass('pressed');
         }
 
-        if (KEY.HELP === data.key) helpScreen.show(true);
+        if (KEY.HELP === data.key) {
+            helpScreen.show(true, event);
+        }
 
         state.keyPress(data.key);
     };
@@ -182,7 +186,9 @@
             keyButtons[data.key].removeClass('pressed');
         }
 
-        if (KEY.HELP === data.key) helpScreen.show(false);
+        if (KEY.HELP === data.key) {
+            helpScreen.show(false, event);
+        }
 
         // maybe move it somewhere
         if (!interacted) {
@@ -267,6 +273,9 @@
                         case KEY.SAVE:
                             popup('Lets play to save game!');
                             break;
+                        case KEY.STATS:
+                            event.pub(STATS_TOGGLE);
+                            break;
                     }
                 },
                 menuReady: () => {
@@ -325,6 +334,10 @@
 
                             location.reload();
                             break;
+
+                        case KEY.STATS:
+                            event.pub(STATS_TOGGLE);
+                            break;
                     }
 
                 },
@@ -370,5 +383,4 @@
 
     // initial app state
     setState(app.state.eden);
-
-})($, document, event, env, gameList, input, KEY, log, room);
+})($, document, event, env, gameList, input, KEY, log, room, stats);

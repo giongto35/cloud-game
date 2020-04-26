@@ -56,6 +56,8 @@ const event = (() => {
 
 // events
 const LATENCY_CHECK_REQUESTED = 'latencyCheckRequested';
+const PING_REQUEST = 'pingRequest';
+const PING_RESPONSE = 'pingResponse';
 
 const GAME_ROOM_AVAILABLE = 'gameRoomAvailable';
 const GAME_SAVED = 'gameSaved';
@@ -79,3 +81,6 @@ const MENU_RELEASED = 'menuReleased';
 const KEY_PRESSED = 'keyPressed';
 const KEY_RELEASED = 'keyReleased';
 const KEY_STATE_UPDATED = 'keyStateUpdated';
+
+const STATS_TOGGLE = 'statsToggle';
+const HELP_OVERLAY_TOGGLED = 'helpOverlayToggled';

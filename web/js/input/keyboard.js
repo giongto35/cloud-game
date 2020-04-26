@@ -29,6 +29,7 @@ const keyboard = (() => {
         52: KEY.PAD4, // 4
         70: KEY.FULL, // f
         72: KEY.HELP, // h
+        220: KEY.STATS, // backslash
     };
 
     const onKey = (code, callback) => {

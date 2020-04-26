@@ -55,7 +55,7 @@ const socket = (() => {
                     event.pub(MEDIA_STREAM_READY);
                     break;
                 case 'heartbeat':
-                    // reserved
+                    event.pub(PING_RESPONSE);
                     break;
                 case 'start':
                     event.pub(GAME_ROOM_AVAILABLE, {roomId: data.room_id});
@@ -78,7 +78,11 @@ const socket = (() => {
     };
 
     // TODO: format the package with time
-    const ping = () => send({"id": "heartbeat", "data": Date.now().toString()});
+    const ping = () => {
+        const time = Date.now();
+        send({"id": "heartbeat", "data": time.toString()});
+        event.pub(PING_REQUEST, {time: time});
+    }
     const send = (data) => conn.send(JSON.stringify(data));
     const latency = (workers, packetId) => send({
         "id": "checkLatency",
