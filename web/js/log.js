@@ -1,6 +1,6 @@
 const log = (() => {
-    let level = 'info';
     const levels = {'trace': 0, 'debug': 1, 'error': 2, 'info': 3};
+    let level = settings.loadOr('log.level', 'info');
 
     const atLeast = (lv) => (levels[lv] || -1) >= levels[level];
 
@@ -18,4 +18,4 @@ const log = (() => {
             level = level_
         }
     }
-})();
+})(console, settings);

@@ -352,7 +352,7 @@
     event.sub(GAME_ROOM_AVAILABLE, onGameRoomAvailable, 2);
     event.sub(GAME_SAVED, () => popup('Saved'));
     event.sub(GAME_LOADED, () => popup('Loaded'));
-    event.sub(GAME_PLAYER_IDX, (idx) => popup(parseInt(idx)+1));
+    event.sub(GAME_PLAYER_IDX, (idx) => popup(parseInt(idx) + 1));
 
     event.sub(MEDIA_STREAM_INITIALIZED, (data) => {
         rtcp.start(data.stunturn);
@@ -374,6 +374,7 @@
     event.sub(KEY_PRESSED, onKeyPress);
     event.sub(KEY_RELEASED, onKeyRelease);
     event.sub(KEY_STATE_UPDATED, data => rtcp.input(data));
+    event.sub(SETTINGS_CHANGED, () => console.log('Settings has been changed'));
 
     // game screen stuff
     gameScreen.on('loadstart', () => {

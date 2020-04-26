@@ -1,4 +1,4 @@
-log.setLevel('debug');
+// log.setLevel('debug');
 
 $(document).ready(() => {
     env.display().fixScreenLayout();

@@ -86,3 +86,5 @@ const KEY_STATE_UPDATED = 'keyStateUpdated';
 
 const STATS_TOGGLE = 'statsToggle';
 const HELP_OVERLAY_TOGGLED = 'helpOverlayToggled';
+
+const SETTINGS_CHANGED = 'settingsChanged';

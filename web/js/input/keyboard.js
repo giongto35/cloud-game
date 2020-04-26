@@ -4,8 +4,7 @@
  * @version 1
  */
 const keyboard = (() => {
-
-    const KEYBOARD_MAP = {
+    const defaultMap = Object.freeze({
         37: KEY.LEFT,
         38: KEY.UP,
         39: KEY.RIGHT,
@@ -29,19 +28,31 @@ const keyboard = (() => {
         52: KEY.PAD4, // 4
         70: KEY.FULL, // f
         72: KEY.HELP, // h
-        220: KEY.STATS, // backslash
-    };
+        220: KEY.STATS, // backspace
+    });
 
-    const onKey = (code, callback) => {
-        if (code in KEYBOARD_MAP) callback(KEYBOARD_MAP[code]);
-    };
+    const settingsKey = 'input.keyboard.map';
+    const keyMap = settings.loadOr(settingsKey, defaultMap);
+
+    const remap = (map = {}) => {
+        // map = {38: KEY.DOWN, 40: KEY.UP};
+
+        settings.set(settingsKey, map);
+        console.log('remapped')
+    }
+
+    const onKey = (code, callback) => !keyMap[code] || callback(keyMap[code]);
 
     return {
         init: () => {
-            const body = $('body');
-            body.on('keyup', ev => onKey(ev.keyCode, key => event.pub(KEY_RELEASED, {key: key})));
-            body.on('keydown', ev => onKey(ev.keyCode, key => event.pub(KEY_PRESSED, {key: key})));
+            const body = document.body;
+            body.addEventListener('keyup', e => onKey(e.keyCode, key => event.pub(KEY_RELEASED, {key: key})));
+            body.addEventListener('keydown', e => onKey(e.keyCode, key => event.pub(KEY_PRESSED, {key: key})));
             log.info('[input] keyboard has been initialized');
+        },
+        settings: {
+            remap
         }
     }
-})(event, KEY);
+})
+(event, document, KEY, settings);
