@@ -68,6 +68,9 @@ const socket = (() => {
                     // this is offer from worker
                     event.pub(MEDIA_STREAM_SDP_AVAILABLE, {sdp: data.data});
                     break;
+                case 'candidate':
+                    event.pub(MEDIA_STREAM_CANDIDATE_ADD, {candidate: data.data});
+                    break;
                 case 'heartbeat':
                     // reserved
                     break;

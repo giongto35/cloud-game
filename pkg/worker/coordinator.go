@@ -54,16 +54,16 @@ func (h *Handler) RouteCoordinator() {
 	oClient.Receive(
 		"initwebrtc",
 		func(resp cws.WSPacket) (req cws.WSPacket) {
-			log.Println("Received relay SDP of a browser from coordinator")
+			log.Println("Received a request to createOffer from browser via coordinator")
 
 			peerconnection := webrtc.NewWebRTC()
 			var initPacket struct {
-				// SDP      string `json:"sdp"`
 				IsMobile bool `json:"is_mobile"`
 			}
 			err := json.Unmarshal([]byte(resp.Data), &initPacket)
 			if err != nil {
-				panic(err)
+				log.Println("Error: Cannot decode json:", err)
+				return cws.EmptyPacket
 			}
 
 			localSession, err := peerconnection.StartClient(
@@ -71,11 +71,13 @@ func (h *Handler) RouteCoordinator() {
 				func(candidate string) {
 					// send back candidate string to browser
 					oClient.Send(cws.WSPacket{
-						ID:   "candidate",
-						Data: candidate,
+						ID:        "candidate",
+						Data:      candidate,
+						SessionID: resp.SessionID,
 					}, nil)
 				},
 			)
+
 			// localSession, err := peerconnection.StartClient(initPacket.IsMobile, iceCandidates[resp.SessionID])
 			// h.peerconnections[resp.SessionID] = peerconnection
 
@@ -84,17 +86,16 @@ func (h *Handler) RouteCoordinator() {
 				peerconnection: peerconnection,
 			}
 			h.sessions[resp.SessionID] = session
-
 			log.Println("Start peerconnection", resp.SessionID)
+
 			if err != nil {
 				log.Println("Error: Cannot create new webrtc session", err)
 				return cws.EmptyPacket
 			}
 
 			return cws.WSPacket{
-				ID:        "offer",
-				Data:      localSession,
-				SessionID: resp.SessionID,
+				ID:   "offer",
+				Data: localSession,
 			}
 		},
 	)
@@ -102,16 +103,18 @@ func (h *Handler) RouteCoordinator() {
 	oClient.Receive(
 		"answer",
 		func(resp cws.WSPacket) (req cws.WSPacket) {
-			session, ok := h.sessions[resp.SessionID]
-			log.Println("Find ", resp.SessionID, session, ok)
+			log.Println("Received answer SDP from browser")
+			session := h.getSession(resp.SessionID)
 
-			if ok {
+			if session != nil {
 				peerconnection := session.peerconnection
 
 				err := peerconnection.SetRemoteSDP(resp.Data)
 				if err != nil {
 					log.Println("Error: Cannot set RemoteSDP of client: " + resp.SessionID)
 				}
+			} else {
+				log.Printf("Error: No session for ID: %s\n", resp.SessionID)
 			}
 
 			return cws.EmptyPacket
@@ -121,24 +124,21 @@ func (h *Handler) RouteCoordinator() {
 	oClient.Receive(
 		"candidate",
 		func(resp cws.WSPacket) (req cws.WSPacket) {
-			session, ok := h.sessions[resp.SessionID]
-			log.Println("Find ", resp.SessionID, session, ok)
+			log.Println("Received remote Ice Candidate from browser")
+			session := h.getSession(resp.SessionID)
 
-			if ok {
+			if session != nil {
 				peerconnection := session.peerconnection
 
 				err := peerconnection.AddCandidate(resp.Data)
 				if err != nil {
 					log.Println("Error: Cannot add IceCandidate of client: " + resp.SessionID)
 				}
+			} else {
+				log.Printf("Error: No session for ID: %s\n", resp.SessionID)
 			}
 
 			return cws.EmptyPacket
-
-			// log.Println("Received a icecandidate from coordinator: ", resp.Data)
-			// iceCandidates[resp.SessionID] = append(iceCandidates[resp.SessionID], resp.Data)
-
-			// return cws.EmptyPacket
 		},
 	)
 
@@ -148,7 +148,11 @@ func (h *Handler) RouteCoordinator() {
 		"start",
 		func(resp cws.WSPacket) (req cws.WSPacket) {
 			log.Println("Received a start request from coordinator")
-			session, _ := h.sessions[resp.SessionID]
+			session := h.getSession(resp.SessionID)
+			if session == nil {
+				log.Printf("Error: No session for ID: %s\n", resp.SessionID)
+				return cws.EmptyPacket
+			}
 
 			peerconnection := session.peerconnection
 			// TODO: Standardize for all types of packet. Make WSPacket generic
@@ -159,7 +163,8 @@ func (h *Handler) RouteCoordinator() {
 
 			err := json.Unmarshal([]byte(resp.Data), &startPacket)
 			if err != nil {
-				panic(err)
+				log.Println("Error: Cannot decode json:", err)
+				return cws.EmptyPacket
 			}
 
 			room := h.startGameHandler(startPacket.GameName, resp.RoomID, resp.PlayerIndex, peerconnection, util.GetVideoEncoder(startPacket.IsMobile))
@@ -178,13 +183,16 @@ func (h *Handler) RouteCoordinator() {
 		"quit",
 		func(resp cws.WSPacket) (req cws.WSPacket) {
 			log.Println("Received a quit request from coordinator")
-			session, ok := h.sessions[resp.SessionID]
-			log.Println("Find ", resp.SessionID, session, ok)
+			session := h.getSession(resp.SessionID)
 
-			room := h.getRoom(session.RoomID)
-			// Defensive coding, check if the peerconnection is in room
-			if room.IsPCInRoom(session.peerconnection) {
-				h.detachPeerConn(session.peerconnection)
+			if session != nil {
+				room := h.getRoom(session.RoomID)
+				// Defensive coding, check if the peerconnection is in room
+				if room.IsPCInRoom(session.peerconnection) {
+					h.detachPeerConn(session.peerconnection)
+				}
+			} else {
+				log.Printf("Error: No session for ID: %s\n", resp.SessionID)
 			}
 
 			return cws.EmptyPacket
@@ -261,12 +269,13 @@ func (h *Handler) RouteCoordinator() {
 		"terminateSession",
 		func(resp cws.WSPacket) (req cws.WSPacket) {
 			log.Println("Received a terminate session ", resp.SessionID)
-			session, ok := h.sessions[resp.SessionID]
-			log.Println("Find ", session, ok)
-			if ok {
+			session := h.getSession(resp.SessionID)
+			if session != nil {
 				session.Close()
 				delete(h.sessions, resp.SessionID)
 				h.detachPeerConn(session.peerconnection)
+			} else {
+				log.Printf("Error: No session for ID: %s\n", resp.SessionID)
 			}
 
 			return cws.EmptyPacket

@@ -6,6 +6,9 @@ const rtcp = (() => {
     let connection;
     let inputChannel;
     let mediaStream;
+    let candidates = Array();
+    let isAnswered = false;
+    let isFlushing = false;
 
     let connected = false;
     let inputReady = false;
@@ -20,13 +23,18 @@ const rtcp = (() => {
         mediaStream = new MediaStream();
 
         // input channel, ordered + reliable, id 0
-        inputChannel = connection.createDataChannel('a', {ordered: true, negotiated: true, id: 0,});
-        inputChannel.onopen = () => {
-            log.debug('[rtcp] the input channel has opened');
-            inputReady = true;
-            event.pub(CONNECTION_READY)
-        };
-        inputChannel.onclose = () => log.debug('[rtcp] the input channel has closed');
+        // inputChannel = connection.createDataChannel('a', {ordered: true, negotiated: true, id: 0,});
+        // recv dataChannel from worker
+        connection.ondatachannel = e => {
+            log.debug(`[rtcp] ondatachannel: ${e.channel.label}`)
+            inputChannel = e.channel;
+            inputChannel.onopen = () => {
+                log.debug('[rtcp] the input channel has opened');
+                inputReady = true;
+                event.pub(CONNECTION_READY)
+            };
+            inputChannel.onclose = () => log.debug('[rtcp] the input channel has closed');
+        }
 
         connection.addTransceiver('video', {'direction': 'sendrecv'});
         connection.addTransceiver('audio', {'direction': 'sendrecv'});
@@ -40,11 +48,6 @@ const rtcp = (() => {
             'id': 'initwebrtc',
             'data': JSON.stringify({'is_mobile': env.isMobileDevice()}),
         });
-        // connection.createOffer({offerToReceiveVideo: true, offerToReceiveAudio: true})
-        //     .then(offer => {
-        //         log.info(offer.sdp);
-        //         connection.setLocalDescription(offer).catch(log.error);
-        //     });
     };
 
     const ice = (() => {
@@ -52,14 +55,6 @@ const rtcp = (() => {
         let timeForIceGathering;
 
         const ICE_TIMEOUT = 2000;
-
-        const sendCandidates = () => {
-            if (isGatheringDone) return;
-            const session = btoa(JSON.stringify(connection.localDescription));
-            const data = JSON.stringify({"sdp": session, "is_mobile": env.isMobileDevice()});
-            socket.send({"id": "initwebrtc", "data": data});
-            isGatheringDone = true;
-        };
 
         return {
             onIcecandidate: event => {
@@ -73,13 +68,6 @@ const rtcp = (() => {
                         'data': btoa(candidate),
                     })
                 }
-
-                // if (event.candidate && !isGatheringDone) {
-                //     log.info(JSON.stringify(event.candidate));
-                // } else {
-                //     sendCandidates()
-                // }
-                // TODO: Fix curPacketID
             },
             onIceStateChange: event => {
                 switch (event.target.iceGatheringState) {
@@ -133,16 +121,33 @@ const rtcp = (() => {
             answer = await connection.createAnswer({});
             await connection.setLocalDescription(answer);
 
+            isAnswered = true;
+            event.pub(MEDIA_STREAM_CANDIDATE_FLUSH);
+
             socket.send({
                 'id': 'answer',
                 'data': btoa(JSON.stringify(answer)),
             });
 
-            // connection.setRemoteDescription()
-            // // set media object stream
-            //     .then(() => {
-                    media.srcObject = mediaStream;
-            //     })
+            media.srcObject = mediaStream;
+        },
+        addCandidate: (data) => {
+            if (data == '') {
+                event.pub(MEDIA_STREAM_CANDIDATE_FLUSH);
+            } else {
+                candidates.push(data);
+            }
+        },
+        flushCandidate: () => {
+            if (isFlushing || !isAnswered) return;
+            isFlushing = true;
+            candidates.forEach(data => {
+                d = atob(data);
+                candidate = new RTCIceCandidate(JSON.parse(d));
+                log.debug('[rtcp] add candidate: ' + d);
+                connection.addIceCandidate(candidate);
+            });
+            isFlushing = false;
         },
         input: (data) => inputChannel.send(data),
         isConnected: () => connected,

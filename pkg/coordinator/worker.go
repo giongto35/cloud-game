@@ -82,8 +82,15 @@ func (o *Server) RouteWorker(wc *WorkerClient) {
 
 	/* WebRTC */
 	wc.Receive("candidate", func(resp cws.WSPacket) cws.WSPacket {
-		// forward from worker -> browser
-		// TODO: no browser client, how ?
+		wc.Println("Received IceCandidate from worker -> relay to browser")
+		bc, ok := o.browserClients[resp.SessionID]
+		if ok {
+			// Remove SessionID while sending back to browser
+			resp.SessionID = ""
+			bc.Send(resp, nil)
+		} else {
+			wc.Println("Error: unknown SessionID:", resp.SessionID)
+		}
 
 		return cws.EmptyPacket
 	})

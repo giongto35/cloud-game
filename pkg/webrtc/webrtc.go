@@ -142,15 +142,8 @@ func (w *WebRTC) StartClient(isMobile bool, iceCB OnIceCallback) (string, error)
 	log.Println("Add audio track")
 
 	// create data channel for input, and register callbacks
-	dfalse := false
-	dtrue := true
-	var d0 uint16 = 0
-
-	inputTrack, err := w.connection.CreateDataChannel("a", &webrtc.DataChannelInit{
-		Ordered:    &dfalse,
-		Negotiated: &dtrue,
-		ID:         &d0,
-	})
+	// order: true, negotiated: false, id: random
+	inputTrack, err := w.connection.CreateDataChannel("game-input", nil)
 
 	inputTrack.OnOpen(func() {
 		log.Printf("Data channel '%s'-'%d' open.\n", inputTrack.Label(), inputTrack.ID())
@@ -185,21 +178,19 @@ func (w *WebRTC) StartClient(isMobile bool, iceCB OnIceCallback) (string, error)
 
 	w.connection.OnICECandidate(func(iceCandidate *webrtc.ICECandidate) {
 		if iceCandidate != nil {
+			log.Println("OnIceCandidate:", iceCandidate.ToJSON().Candidate)
 			candidate, err := Encode(iceCandidate.ToJSON())
 			if err != nil {
 				log.Println("Encode IceCandidate failed: " + iceCandidate.ToJSON().Candidate)
 				return
 			}
 			iceCB(candidate)
+		} else {
+			// finish, send null
+			iceCB("")
 		}
 
 	})
-
-	// // TODO: take a look at this
-	// w.connection.OnICECandidate(func(candidate *webrtc.ICECandidate) {
-	// 	// send candidate to browser
-	// 	log.Println(candidate)
-	// })
 
 	// Stream provider supposes to send offer
 	offer, err := w.connection.CreateOffer(nil)
@@ -219,41 +210,6 @@ func (w *WebRTC) StartClient(isMobile bool, iceCB OnIceCallback) (string, error)
 	}
 
 	return localSession, nil
-
-	// offer := webrtc.SessionDescription{}
-
-	// Decode(remoteSession, &offer)
-
-	// err = w.connection.SetRemoteDescription(offer)
-	// if err != nil {
-	// 	return "", err
-	// }
-
-	// // Parse candidates list
-	// // This logic is wrong
-	// for _, bcandidate := range iceCandidates {
-	// 	iceCandidate := webrtc.ICECandidateInit{}
-	// 	if err := json.Unmarshal([]byte(bcandidate), &iceCandidate); err != nil {
-	// 		log.Println("Cannot parse ", bcandidate)
-	// 		continue
-	// 	}
-	// 	log.Println("Add iceCandidate: ", iceCandidate)
-	// 	w.connection.AddICECandidate(iceCandidate)
-	// }
-
-	// answer, err := w.connection.CreateAnswer(nil)
-	// if err != nil {
-	// 	return "", err
-	// }
-
-	// err = w.connection.SetLocalDescription(answer)
-	// if err != nil {
-	// 	return "", err
-	// }
-
-	// // Sendback answer from server
-	// localSession := Encode(answer)
-	// return localSession, nil
 }
 
 func (w *WebRTC) AttachRoomID(roomID string) {
@@ -296,14 +252,6 @@ func (w *WebRTC) AddCandidate(candidate string) error {
 	log.Println("Add Ice Candidate: " + iceCandidate.Candidate)
 	return nil
 }
-
-// // TODO: Take a look at this
-// func (w *WebRTC) AddCandidate(candidate webrtc.ICECandidateInit) {
-// 	err := w.connection.AddICECandidate(candidate)
-// 	if err != nil {
-// 		log.Println("Cannot add candidate: ", err)
-// 	}
-// }
 
 // StopClient disconnect
 func (w *WebRTC) StopClient() {
