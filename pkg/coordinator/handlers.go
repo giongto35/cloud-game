@@ -28,6 +28,8 @@ type Server struct {
 	roomToWorker map[string]string
 	// workerClients are the map workerID to worker Client
 	workerClients map[string]*WorkerClient
+	// browserClients are the map sessionID to browser Client
+	browserClients map[string]*BrowserClient
 }
 
 const pingServerTemp = "https://%s.%s/echo"
@@ -39,10 +41,12 @@ var errNotFound = errors.New("Not found")
 func NewServer(cfg Config) *Server {
 	return &Server{
 		cfg: cfg,
-		// Mapping serverID to client
-		workerClients: map[string]*WorkerClient{},
 		// Mapping roomID to server
 		roomToWorker: map[string]string{},
+		// Mapping workerID to worker
+		workerClients: map[string]*WorkerClient{},
+		// Mapping sessionID to browser
+		browserClients: map[string]*BrowserClient{},
 	}
 }
 
@@ -80,58 +84,81 @@ func (o *Server) getPingServer(zone string) string {
 
 // WSO handles all connections from a new worker to coordinator
 func (o *Server) WSO(w http.ResponseWriter, r *http.Request) {
+	log.Println("Coordinator: A worker is connecting...")
+
 	// be aware of ReadBufferSize, WriteBufferSize (default 4096)
 	// https://pkg.go.dev/github.com/gorilla/websocket?tab=doc#Upgrader
 	c, err := upgrader.Upgrade(w, r, nil)
 	if err != nil {
-		log.Print("Coordinator: [!] WS upgrade:", err)
+		log.Println("Coordinator: [!] WS upgrade:", err)
 		return
 	}
-	// Register new server
-	serverID := uuid.Must(uuid.NewV4()).String()
-	log.Println("Coordinator: A new server connected to Coordinator", serverID)
+
+	// Generate workerID
+	var workerID string
+	for {
+		workerID = uuid.Must(uuid.NewV4()).String()
+		// check duplicate
+		if _, ok := o.workerClients[workerID]; !ok {
+			break
+		}
+	}
+
+	// Create a workerClient instance
+	wc := NewWorkerClient(c, workerID)
+	wc.Println("Generated worker ID")
 
 	// Register to workersClients map the client connection
 	address := util.GetRemoteAddress(c)
+	wc.Println("Address:", address)
 	// Zone of the worker
 	zone := r.URL.Query().Get("zone")
+	wc.Printf("Is public: %v zone: %v", util.IsPublicIP(address), zone)
 
 	pingServer := o.getPingServer(zone)
-
-	log.Printf("Is public: %v zone: %v", util.IsPublicIP(address), zone)
 
 	// In case worker and coordinator in the same host
 	if !util.IsPublicIP(address) && *config.Mode == config.ProdEnv {
 		// Don't accept private IP for worker's address in prod mode
 		// However, if the worker in the same host with coordinator, we can get public IP of worker
-		log.Printf("Error: address %s is invalid", address)
+		wc.Printf("[!] Address %s is invalid", address)
+
 		address = util.GetHostPublicIP()
-		log.Println("Find public address:", address)
+		wc.Printf("Find public address: %s", address)
+
 		if address == "" || !util.IsPublicIP(address) {
 			// Skip this worker because we cannot find public IP
+			wc.Println("[!] Unable to find public address, reject worker")
 			return
 		}
 	}
-	client := NewWorkerClient(c, serverID, address, fmt.Sprintf(config.StunTurnTemplate, address, address), zone, pingServer)
-	o.workerClients[serverID] = client
-	defer o.cleanConnection(client, serverID)
 
-	// Sendback the ID to server
-	client.Send(
-		cws.WSPacket{
-			ID:   "serverID",
-			Data: serverID,
-		},
-		nil,
-	)
-	o.RouteWorker(client)
+	// Create a workerClient instance
+	wc.Address = address
+	wc.StunTurnServer = fmt.Sprintf(config.StunTurnTemplate, address, address)
+	wc.Zone = zone
+	wc.PingServer = pingServer
 
-	client.Listen()
+	// Eveything is cool
+	// Attach to Server instance with workerID, add defer
+	o.workerClients[workerID] = wc
+	defer o.cleanWorker(wc, workerID)
+
+	// Sendback the ID to worker
+	// TODO: do we need this packet?
+	wc.Send(cws.WSPacket{
+		ID:   "serverID",
+		Data: workerID,
+	}, nil)
+
+	// Add receiver callbacks, and listen
+	o.RouteWorker(wc)
+	wc.Listen()
 }
 
 // WSO handles all connections from user/frontend to coordinator
 func (o *Server) WS(w http.ResponseWriter, r *http.Request) {
-	log.Println("A user connected to coordinator ", r.URL)
+	log.Println("Coordinator: A user is connecting...")
 	defer func() {
 		if r := recover(); r != nil {
 			log.Println("Warn: Something wrong. Recovered in ", r)
@@ -142,15 +169,29 @@ func (o *Server) WS(w http.ResponseWriter, r *http.Request) {
 	// https://pkg.go.dev/github.com/gorilla/websocket?tab=doc#Upgrader
 	c, err := upgrader.Upgrade(w, r, nil)
 	if err != nil {
-		log.Print("[!] WS upgrade:", err)
+		log.Println("Coordinator: [!] WS upgrade:", err)
 		return
 	}
-	defer c.Close()
 
-	client := NewBrowserClient(c)
-	go client.Listen()
+	// Generate sessionID for browserClient
+	var sessionID string
+	for {
+		sessionID = uuid.Must(uuid.NewV4()).String()
+		// check duplicate
+		if _, ok := o.browserClients[sessionID]; !ok {
+			break
+		}
+	}
 
-	var workerClient *WorkerClient
+	// Create browserClient instance
+	bc := NewBrowserClient(c, sessionID)
+	bc.Println("Generated worker ID")
+
+	// Run browser listener first (to capture ping)
+	go bc.Listen()
+
+	/* Create a session - mapping browserClient with workerClient */
+	var wc *WorkerClient
 
 	// get roomID if it is embeded in request. Server will pair the frontend with the server running the room. It only happens when we are trying to access a running room over share link.
 	// TODO: Update link to the wiki
@@ -158,76 +199,71 @@ func (o *Server) WS(w http.ResponseWriter, r *http.Request) {
 	// zone param is to pick worker in that zone only
 	// if there is no zone param, we can pic
 	userZone := r.URL.Query().Get("zone")
-	log.Printf("Get Room %s Zone %s From URL %v", roomID, userZone, r.URL)
+
+	bc.Printf("Get Room %s Zone %s From URL %v", roomID, userZone, r.URL)
 
 	if roomID != "" {
-		log.Printf("Detected roomID %v from URL", roomID)
+		bc.Printf("Detected roomID %v from URL", roomID)
 		if workerID, ok := o.roomToWorker[roomID]; ok {
-			workerClient = o.workerClients[workerID]
-			if userZone != "" && workerClient.Zone != userZone {
+			wc = o.workerClients[workerID]
+			if userZone != "" && wc.Zone != userZone {
 				// if there is zone param, we need to ensure ther worker in that zone
 				// if not we consider the room is missing
-				workerClient = nil
+				wc = nil
 			} else {
-				log.Printf("Found running server with id=%v client=%v", workerID, workerClient)
+				bc.Printf("Found running server with id=%v client=%v", workerID, wc)
 			}
 		}
 	}
 
 	// If there is no existing server to connect to, we find the best possible worker for the frontend
-	if workerClient == nil {
+	if wc == nil {
 		// Get best server for frontend to connect to
-		workerClient, err = o.getBestWorkerClient(client, userZone)
+		wc, err = o.getBestWorkerClient(bc, userZone)
 		if err != nil {
 			return
 		}
 	}
 
-	// SessionID will be the unique per frontend connection
-	sessionID := uuid.Must(uuid.NewV4()).String()
-	// Setup session
-	wssession := &Session{
-		ID:            sessionID,
-		handler:       o,
-		BrowserClient: client,
-		WorkerClient:  workerClient,
-		ServerID:      workerClient.ServerID,
-	}
-	// TODO:?
-	// defer wssession.Close()
-	log.Println("New client will conect to server", wssession.ServerID)
-	wssession.WorkerClient.IsAvailable = false
+	// Assign available worker to browserClient
+	bc.WorkerID = wc.WorkerID
+	wc.IsAvailable = false
 
-	wssession.RouteBrowser()
+	// Everything is cool
+	// Attach to Server instance with sessionID
+	o.browserClients[sessionID] = bc
+	defer o.cleanBrowser(bc, sessionID)
 
-	wssession.BrowserClient.Send(cws.WSPacket{
+	// Routing browserClient message
+	o.RouteBrowser(bc)
+
+	bc.Send(cws.WSPacket{
 		ID:   "init",
-		Data: createInitPackage(workerClient.StunTurnServer),
+		Data: createInitPackage(wc.StunTurnServer),
 	}, nil)
 
 	// If peerconnection is done (client.Done is signalled), we close peerconnection
-	<-client.Done
+	<-bc.Done
+
 	// Notify worker to clean session
-	wssession.WorkerClient.Send(
-		cws.WSPacket{
-			ID:        "terminateSession",
-			SessionID: sessionID,
-		},
-		nil,
-	)
+	wc.Send(cws.WSPacket{
+		ID:        "terminateSession",
+		SessionID: sessionID,
+	}, nil)
+
 	// WorkerClient become available again
-	wssession.WorkerClient.IsAvailable = true
+	wc.IsAvailable = true
 }
 
 func (o *Server) getBestWorkerClient(client *BrowserClient, zone string) (*WorkerClient, error) {
 	if o.cfg.DebugHost != "" {
-		log.Println("Connecting to debug host instead prod servers", o.cfg.DebugHost)
+		client.Println("Connecting to debug host instead prod servers", o.cfg.DebugHost)
 		wc := o.getWorkerFromAddress(o.cfg.DebugHost)
 		if wc != nil {
 			return wc, nil
 		}
 		// if there is not debugHost, continue usual flow
-		log.Println("Not found, connecting to all available servers")
+		client.Println("Not found, connecting to all available servers")
 	}
 
 	workerClients := o.getAvailableWorkers()
@@ -273,7 +309,7 @@ func (o *Server) findBestServerFromBrowser(workerClients map[string]*WorkerClien
 	}
 
 	latencies := o.getLatencyMapFromBrowser(workerClients, client)
-	log.Println("Latency map", latencies)
+	client.Println("Latency map", latencies)
 
 	if len(latencies) == 0 {
 		return "", errors.New("No server found")
@@ -295,7 +331,7 @@ func (o *Server) findBestServerFromBrowser(workerClients map[string]*WorkerClien
 		}
 	}
 
-	return bestWorker.ServerID, nil
+	return bestWorker.WorkerID, nil
 }
 
 // getLatencyMapFromBrowser get all latencies from worker to user
@@ -311,7 +347,7 @@ func (o *Server) getLatencyMapFromBrowser(workerClients map[string]*WorkerClient
 	}
 
 	// send this address to user and get back latency
-	log.Println("Send sync", addressList, strings.Join(addressList, ","))
+	client.Println("Send sync", addressList, strings.Join(addressList, ","))
 	data := client.SyncSend(cws.WSPacket{
 		ID:   "checkLatency",
 		Data: strings.Join(addressList, ","),
@@ -332,20 +368,28 @@ func (o *Server) getLatencyMapFromBrowser(workerClients map[string]*WorkerClient
 	return latencyMap
 }
 
-// cleanConnection is called when a worker is disconnected
-// connection from worker (client) to server is also closed
-func (o *Server) cleanConnection(client *WorkerClient, serverID string) {
-	log.Println("Unregister server from coordinator")
-	// Remove serverID from servers
-	delete(o.workerClients, serverID)
+// cleanBrowser is called when a browser is disconnected
+func (o *Server) cleanBrowser(bc *BrowserClient, sessionID string) {
+	bc.Println("Disconnect from coordinator")
+	delete(o.browserClients, sessionID)
+	bc.Close()
+}
+
+// cleanWorker is called when a worker is disconnected
+// connection from worker to coordinator is also closed
+func (o *Server) cleanWorker(wc *WorkerClient, workerID string) {
+	wc.Println("Unregister worker from coordinator")
+	// Remove workerID from workerClients
+	delete(o.workerClients, workerID)
 	// Clean all rooms connecting to that server
 	for roomID, roomServer := range o.roomToWorker {
-		if roomServer == serverID {
+		if roomServer == workerID {
+			wc.Printf("Remove room %s", roomID)
 			delete(o.roomToWorker, roomID)
 		}
 	}
 
-	client.Close()
+	wc.Close()
 }
 
 // createInitPackage returns serverhost + game list in encoded wspacket format
