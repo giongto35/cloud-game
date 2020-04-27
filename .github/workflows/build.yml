@@ -62,7 +62,7 @@ jobs:
       - name: Build Windows app
         if: matrix.os == 'windows-latest'
         run: |
-          msys2do pacman -S --noconfirm --needed make mingw-w64-x86_64-gcc mingw-w64-x86_64-pkg-config mingw-w64-x86_64-dlfcn mingw-w64-x86_64-libvpx mingw-w64-x86_64-opusfile
+          msys2do pacman -Sy --noconfirm --needed make mingw-w64-x86_64-{gcc,pkg-config,dlfcn,libvpx,opusfile}
           msys2do make build
 
       - name: Build Linux app

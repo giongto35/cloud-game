@@ -10,7 +10,7 @@
 ## Introduction
 CloudRetro provides an open-source cloud gaming platform for retro games. It started as an experiment for testing cloud gaming performance with [WebRTC](https://github.com/pion/webrtc/) and [libretro](https://www.libretro.com/), and now it aims to deliver the most modern and convenient gaming experience through the technology.
 
-Theoretically, in cloud gaming, games are run on remote servers and media are streamed to the player optimally to ensure the most comfortable user interaction. It opens the ability to play any retro games on web-browser directly, which are fully compatible with multi-platform like Desktop, Android, ~~IOS~~. 
+Theoretically, in cloud gaming, games are run on remote servers and media are streamed to the player optimally to ensure the most comfortable user interaction. It opens the ability to play any retro games on web-browser directly, which are fully compatible with multi-platform like Desktop, Android, ~~IOS~~.
 
 ## Try the service at
 Single play: **[http://cloudretro.io](http://cloudretro.io)**  
@@ -65,7 +65,7 @@ apt-get install -y pkg-config libvpx-dev libopus-dev libopusfile-dev
 brew install libvpx pkg-config opus opusfile
 
 # Windows (MSYS2)
-pacman -S --noconfirm --needed git make mingw-w64-x86_64-toolchain mingw-w64-x86_64-pkg-config mingw-w64-x86_64-dlfcn mingw-w64-x86_64-libvpx mingw-w64-x86_64-opusfile
+pacman -Sy --noconfirm --needed git make mingw-w64-x86_64-{gcc,pkg-config,dlfcn,libvpx,opusfile}
 ```
 
 Because the coordinator and workers need to run simultaneously. Workers connect to the coordinator.
@@ -78,8 +78,8 @@ Because the coordinator and workers need to run simultaneously. Workers connect 
   * `go run cmd/worker/main.go --coordinatorhost localhost:8000` - spawn workers connecting to coordinator
 
 ## Technical Document
-- [webrtchacks Blog: Open Source Cloud Gaming with WebRTC](https://webrtchacks.com/open-source-cloud-gaming-with-webrtc/)  
-- [Wiki (outdated)](https://github.com/giongto35/cloud-game/wiki)  
+- [webrtchacks Blog: Open Source Cloud Gaming with WebRTC](https://webrtchacks.com/open-source-cloud-gaming-with-webrtc/)
+- [Wiki (outdated)](https://github.com/giongto35/cloud-game/wiki)
 
 |                   High level                   |                   Worker internal              |
 | :--------------------------------------------: | :--------------------------------------------: |
@@ -95,7 +95,7 @@ By clicking these deep link, you can join the game directly and play it together
 - [Samurai Showdown 4](https://cloudretro.io/?id=733c73064c368832___samsho4)
 - [Metal Slug X](https://cloudretro.io/?id=2a9c4b3f1c872d28___mslugx)
 
-And you can host the new game by yourself by accessing [cloudretro.io](http://cloudretro.io) and click "share" button to generate a deeplink to your current game.  
+And you can host the new game by yourself by accessing [cloudretro.io](http://cloudretro.io) and click "share" button to generate a deeplink to your current game.
 
 <p align="center">
   <img width="420" height="300" src="docs/img/multiplatform.png"> <br>
