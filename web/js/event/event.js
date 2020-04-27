@@ -69,6 +69,8 @@ const CONNECTION_CLOSED = 'connectionClosed';
 
 const MEDIA_STREAM_INITIALIZED = 'mediaStreamInitialized';
 const MEDIA_STREAM_SDP_AVAILABLE = 'mediaStreamSdpAvailable';
+const MEDIA_STREAM_CANDIDATE_ADD = 'mediaStreamCandidateAdd';
+const MEDIA_STREAM_CANDIDATE_FLUSH = 'mediaStreamCandidateFlush';
 const MEDIA_STREAM_READY = 'mediaStreamReady';
 
 const GAMEPAD_CONNECTED = 'gamepadConnected';

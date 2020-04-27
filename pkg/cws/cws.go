@@ -35,9 +35,8 @@ type WSPacket struct {
 	RoomID      string `json:"room_id"`
 	PlayerIndex int    `json:"player_index"`
 
-	TargetHostID string `json:"target_id"`
-	PacketID     string `json:"packet_id"`
-	// Globally ID of a session
+	PacketID string `json:"packet_id"`
+	// Globally ID of a browser session
 	SessionID string `json:"session_id"`
 }
 

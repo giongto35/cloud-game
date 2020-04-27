@@ -1,7 +1,6 @@
 package util
 
 import (
-	"log"
 	"net"
 	"strings"
 
@@ -11,7 +10,7 @@ import (
 // GetRemoteAddress returns public address of websocket connection
 func GetRemoteAddress(conn *websocket.Conn) string {
 	var remoteAddr string
-	log.Println("Address :", conn.RemoteAddr().String())
+	// log.Println("Address :", conn.RemoteAddr().String())
 	if parts := strings.Split(conn.RemoteAddr().String(), ":"); len(parts) == 2 {
 		remoteAddr = parts[0]
 	}
