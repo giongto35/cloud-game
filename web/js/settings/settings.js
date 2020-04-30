@@ -84,7 +84,7 @@ const settings = (() => {
         }
     });
 
-    const _import = () => {
+    const _import = (data = {}) => {
     }
 
     const _export = () => {
@@ -109,7 +109,7 @@ const settings = (() => {
 
         if (revision > store.settings._version) {
             // !to handle this as migrations
-            console.warn(`Your settings are in older format (v${store.settings._version})`);
+            log.warning(`Your settings are in older format (v${store.settings._version})`);
         }
     }
 
@@ -143,7 +143,7 @@ const settings = (() => {
             for (let k in Object.keys(value)) {
                 const old = store.settings[key][k];
                 store.settings[key][k] = value[k];
-                console.log(`${k} was set from ${old} to ${value[k]}`)
+                log.debug(`${k} was set from ${old} to ${value[k]}`)
             }
         } else {
             store.settings[key] = value;
@@ -154,13 +154,12 @@ const settings = (() => {
         event.pub(SETTINGS_CHANGED);
     }
 
-    init();
-
     return {
+        init,
         loadOr,
         get,
         set,
         import: _import,
         export: _export
     }
-})(console, event, JSON, localStorage);
+})(event, JSON, localStorage, log);

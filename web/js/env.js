@@ -116,6 +116,7 @@ const env = (() => {
 
     window.addEventListener('resize', fixScreenLayout);
     window.addEventListener('orientationchange', fixScreenLayout);
+    document.addEventListener('DOMContentLoaded', () => fixScreenLayout(), false);
 
     return {
         getOs: getOS,

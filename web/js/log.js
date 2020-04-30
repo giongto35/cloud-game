@@ -1,6 +1,6 @@
 const log = (() => {
-    const levels = {'trace': 0, 'debug': 1, 'error': 2, 'info': 3};
-    let level = settings.loadOr('log.level', 'info');
+    const levels = {'trace': 0, 'debug': 1, 'error': 2, 'warning': 3, 'info': 4};
+    let level = 'info';
 
     const atLeast = (lv) => (levels[lv] || -1) >= levels[level];
 
@@ -12,10 +12,13 @@ const log = (() => {
             atLeast('debug') && console.debug.apply(null, arguments)
         },
         error: function () {
-            atLeast('error') && console.error.apply(null, arguments)
+            console.error.apply(null, arguments)
+        },
+        warning: function() {
+            atLeast('warning') && console.warn.apply(null, arguments)
         },
         setLevel: (level_) => {
             level = level_
         }
     }
-})(console, settings);
+})(console);

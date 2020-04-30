@@ -32,19 +32,18 @@ const keyboard = (() => {
     });
 
     const settingsKey = 'input.keyboard.map';
-    const keyMap = settings.loadOr(settingsKey, defaultMap);
+    let keyMap = {};
 
     const remap = (map = {}) => {
-        // map = {38: KEY.DOWN, 40: KEY.UP};
-
         settings.set(settingsKey, map);
-        console.log('remapped')
+        log.info('Keyboard keys have been remapped')
     }
 
     const onKey = (code, callback) => !keyMap[code] || callback(keyMap[code]);
 
     return {
         init: () => {
+            keyMap = settings.loadOr(settingsKey, defaultMap);
             const body = document.body;
             body.addEventListener('keyup', e => onKey(e.keyCode, key => event.pub(KEY_RELEASED, {key: key})));
             body.addEventListener('keydown', e => onKey(e.keyCode, key => event.pub(KEY_PRESSED, {key: key})));
@@ -55,4 +54,4 @@ const keyboard = (() => {
         }
     }
 })
-(event, document, KEY, settings);
+(event, document, KEY, log, settings);
