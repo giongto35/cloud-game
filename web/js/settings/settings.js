@@ -9,6 +9,8 @@
  * Doing it this way allows us to considerably simplify the code and make sure that
  * exposed settings will have the latest values without additional update/get calls.
  *
+ * Uses ES6.
+ *
  * @version 1
  */
 const settings = (() => {
@@ -36,8 +38,8 @@ const settings = (() => {
         return {
             get: key => store_.settings[key],
             set: nil,
+            save: nil,
             loadSettings: nil,
-            isSupported: true,
         }
     }
 
@@ -48,12 +50,13 @@ const settings = (() => {
      * If you want to roll your own, then use its "interface".
      */
     const localStorageProvider = ((store_ = {settings: {}}) => {
+        if (!_isSupported()) return undefined;
+
         const root = 'settings';
-        const isSupported = _isSupported();
 
         const _serialize = data => JSON.stringify(data, null, 2);
 
-        const _save = () => localStorage.setItem(root, _serialize(store_.settings));
+        const save = () => localStorage.setItem(root, _serialize(store_.settings));
 
         function _isSupported() {
             const testKey = '_test_42';
@@ -69,7 +72,7 @@ const settings = (() => {
 
         const get = key => JSON.parse(localStorage.getItem(key));
 
-        const set = (key, value) => _save();
+        const set = (key, value) => save();
 
         const loadSettings = () => {
             if (!localStorage.getItem(root)) _save();
@@ -79,12 +82,27 @@ const settings = (() => {
         return {
             get,
             set,
+            save,
             loadSettings,
-            isSupported,
         }
     });
 
-    const _import = (data = {}) => {
+    /**
+     * Nuke existing settings with provided data.
+     * @param text The text to extract data from.
+     * @private
+     */
+    const _import = (text) => {
+        if (!text) return;
+
+        try {
+            for (const property of Object.getOwnPropertyNames(store.settings)) delete store.settings[property];
+            Object.assign(store.settings, JSON.parse(text).settings);
+            provider.save();
+            event.pub(SETTINGS_CHANGED);
+        } catch (e) {
+            log.error(`Your import file is broken!`);
+        }
     }
 
     const _export = () => {
@@ -102,13 +120,11 @@ const settings = (() => {
     }
 
     const init = () => {
-        provider = localStorageProvider(store);
-        if (!provider.isSupported) provider = voidProvider(store);
-
+        provider = localStorageProvider(store) || voidProvider(store);
         provider.loadSettings();
 
         if (revision > store.settings._version) {
-            // !to handle this as migrations
+            // !to handle this with migrations
             log.warning(`Your settings are in older format (v${store.settings._version})`);
         }
     }
@@ -129,26 +145,24 @@ const settings = (() => {
         } else {
             // !to check if settings doesn't have new properties from default & update
             // or it have one which defaults doesn't have
-
         }
 
         return store.settings[key];
     }
 
     const set = (key, value) => {
-        // replace or set object's values directly
-        // instead of changing the whole reference
-        // that way we can access new values right away
-        if (typeof value === 'object' && value !== null) {
-            for (let k in Object.keys(value)) {
-                const old = store.settings[key][k];
+        // mutate existing settings
+        // without changing the reference
+        if (Array.isArray(value)) {
+            store.settings[key].splice(0, Infinity, ...value);
+        } else if (typeof value === 'object' && value !== null) {
+            for (const k of Object.keys(value)) {
+                log.debug(`Change ${k}: ${store.settings[key][k]} -> ${value[k]}`);
                 store.settings[key][k] = value[k];
-                log.debug(`${k} was set from ${old} to ${value[k]}`)
             }
         } else {
             store.settings[key] = value;
         }
-        // !to add arrays
 
         provider.set(key, value);
         event.pub(SETTINGS_CHANGED);
