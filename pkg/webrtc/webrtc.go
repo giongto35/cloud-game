@@ -52,6 +52,7 @@ func NewWebRTC() *WebRTC {
 
 		ImageChannel: make(chan []byte, 30),
 		AudioChannel: make(chan []byte, 1),
+		VoiceChannel: nil,
 		InputChannel: make(chan int, 100),
 	}
 	return w
@@ -72,6 +73,7 @@ type WebRTC struct {
 	// for yuvI420 image
 	ImageChannel chan []byte
 	AudioChannel chan []byte
+	VoiceChannel chan []byte
 	InputChannel chan int
 
 	Done     bool
@@ -141,6 +143,7 @@ func (w *WebRTC) StartClient(isMobile bool, iceCB OnIceCallback) (string, error)
 	}
 	log.Println("Add audio track")
 
+	// User voice chat Track
 	// create data channel for input, and register callbacks
 	// order: true, negotiated: false, id: random
 	inputTrack, err := w.connection.CreateDataChannel("game-input", nil)
@@ -159,6 +162,26 @@ func (w *WebRTC) StartClient(isMobile bool, iceCB OnIceCallback) (string, error)
 		log.Println("Data channel closed")
 		log.Println("Closed webrtc")
 	})
+
+	// send voice
+	go func() {
+		for {
+			// poll
+			if w.VoiceChannel == nil {
+				time.Sleep(time.Second)
+				continue
+			}
+
+			// if there is new voice channel, send it
+			// try close
+			for rtpBuf := range w.VoiceChannel {
+				if !w.isConnected {
+					return
+				}
+				opusTrack.Write(rtpBuf)
+			}
+		}
+	}()
 
 	// WebRTC state callback
 	w.connection.OnICEConnectionStateChange(func(connectionState webrtc.ICEConnectionState) {
@@ -188,6 +211,18 @@ func (w *WebRTC) StartClient(isMobile bool, iceCB OnIceCallback) (string, error)
 		} else {
 			// finish, send null
 			iceCB("")
+		}
+
+	})
+
+	w.connection.OnTrack(func(remoteTrack *webrtc.Track, receiver *webrtc.RTPReceiver) {
+		log.Println("!!!Received voice audio track")
+		rtpBuf := make([]byte, 1400)
+		for {
+			i, err := remoteTrack.Read(rtpBuf)
+			if err == nil && w.VoiceChannel != nil {
+				w.VoiceChannel <- rtpBuf[:i]
+			}
 		}
 
 	})
