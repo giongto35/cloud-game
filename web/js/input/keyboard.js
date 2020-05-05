@@ -28,7 +28,8 @@ const keyboard = (() => {
         52: KEY.PAD4, // 4
         70: KEY.FULL, // f
         72: KEY.HELP, // h
-        220: KEY.STATS, // backspace
+        220: KEY.STATS, // \
+        57: KEY.SETTINGS // 9
     });
 
     const settingsKey = 'input.keyboard.map';

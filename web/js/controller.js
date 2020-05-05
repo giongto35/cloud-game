@@ -2,14 +2,13 @@
  * App controller module.
  * @version 1
  */
-/* const controller = */
 (() => {
-    // current app state
+    // application state
     let state;
+    let lastState;
 
     // flags
     // first user interaction
-    // used for mute/unmute
     let interacted = false;
 
     // UI elements
@@ -18,19 +17,45 @@
     const menuScreen = $('#menu-screen');
     const helpOverlay = $('#help-overlay');
     const popupBox = $('#noti-box');
+    const playerIndex = document.getElementById('playeridx');
+
     // keymap
     const keyButtons = {};
     Object.keys(KEY).forEach(button => {
         keyButtons[KEY[button]] = $(`#btn-${KEY[button]}`);
     });
 
-    const setState = (newState) => {
-        log.debug(`[control] [s] ${state ? state.name : '???'} -> ${newState.name}`);
-        state = newState;
+    /**
+     * State machine transition.
+     * @param newState A new state strictly from app.state.*
+     * @example
+     * setState(app.state.eden)
+     */
+    const setState = (newState = app.state.eden) => {
+        if (newState === state) return;
+
+        const prevState = state;
+
+        // keep the current state intact for one of the "uber" states
+        if (state && state._uber) {
+            // if we are done with the uber state
+            if (lastState === newState) state = newState;
+            lastState = newState;
+        } else {
+            lastState = state
+            state = newState;
+        }
+
+        if (log.is(log.level.debug)) {
+            const previous = prevState ? prevState.name : '???';
+            const current = state ? state.name : '???';
+            const kept = lastState ? lastState.name : '???';
+
+            log.debug(`[state] ${previous} -> ${current} [${kept}]`);
+        }
     };
 
     const onGameRoomAvailable = () => {
-        //keyButtons[KEY.JOIN].html('share');
         popup('Now you can share you game!');
     };
 
@@ -46,71 +71,55 @@
     const onLatencyCheckRequest = (data) => {
         popup('Ping check...');
         const timeoutMs = 2000;
-        // TODO: why we use maximum timeout
-        const maxTimeoutMs = timeoutMs > ajax.defaultTimeoutMs() ? timeoutMs : ajax.defaultTimeoutMs();
 
-        Promise.all((data.addresses || []).map(address => {
-            let beforeTime = Date.now();
-            return ajax.fetch(`${address}?_=${beforeTime}`, {method: "GET", redirect: "follow"}, timeoutMs)
-                .then(() => ({[address]: Date.now() - beforeTime}), () => ({[address]: maxTimeoutMs}));
-        })).then(results => {
-            // const latencies = Object.assign({}, ...results);
-            const latencies = {};
-            results.map(latency => Object.keys(latency).forEach(address => latencies[address] = latency[address]));
-            log.info('[ping] <->', latencies);
-            socket.latency(latencies, data.packetId);
-        });
+        Promise.all((data.addresses || [])
+            .map(ip => {
+                const requestTime = Date.now();
+                return ajax.fetch(`${ip}?_=${requestTime}`, {method: "GET", redirect: "follow"}, timeoutMs)
+                    .then(() => ({[ip]: Date.now() - requestTime}), () => ({[ip]: timeoutMs}));
+            }))
+            .then(results => {
+                const latencies = Object.assign({}, ...results);
+                log.info('[ping] <->', latencies);
+                socket.latency(latencies, data.packetId);
+            });
     };
 
     const helpScreen = {
         // don't call $ if holding the button
         shown: false,
-        // undo the state when release the button
-        prevState: null,
         // use function () if you need "this"
         show: function (show, event) {
             if (this.shown === show) return;
 
-            // hack
-            if (state === app.state.game || this.prevState === app.state.game) {
+            if (state === app.state.game) {
                 gameScreen.toggle(!show);
             } else {
-                keyButtons[KEY.SAVE].toggle(show);
-                keyButtons[KEY.LOAD].toggle(show);
                 menuScreen.toggle(!show);
             }
+
+            keyButtons[KEY.SAVE].toggle(show);
+            keyButtons[KEY.LOAD].toggle(show);
+
             helpOverlay.toggle(show);
 
             this.shown = show;
-
-            if (show) {
-                this.prevState = state;
-                setState(app.state.help);
-            } else {
-                setState(this.prevState);
-            }
 
             if (event) event.pub(HELP_OVERLAY_TOGGLED, {shown: show});
         }
     };
 
     const showMenuScreen = () => {
-        // clear scenes
+        log.debug('[control] loading menu screen');
+
         gameScreen.hide();
-        menuScreen.hide();
-        gameList.hide();
         keyButtons[KEY.SAVE].hide();
         keyButtons[KEY.LOAD].hide();
-        //keyButtons[KEY.JOIN].html('play');
 
-        // show menu scene
-        gameScreen.show().delay(0).fadeOut(0, () => {
-            log.debug('[control] loading menu screen');
-            menuScreen.fadeIn(0, () => {
-                gameList.show();
-                setState(app.state.menu);
-            });
-        });
+        gameList.show();
+        menuScreen.show();
+
+        setState(app.state.menu);
     };
 
     const startGame = () => {
@@ -124,10 +133,7 @@
             return;
         }
 
-        //const el = document.createElement('textarea');
-        const playeridx = parseInt($('#playeridx').val(), 10) - 1
-
-        log.info('[control] starting game screen');
+        log.info('[control] game start');
 
         setState(app.state.game);
 
@@ -148,7 +154,7 @@
         // currently it's a game with the index 1
         // on the server this game is ignored and the actual game will be extracted from the share link
         // so there's no point in doing this and this' really confusing
-        socket.startGame(gameList.getCurrentGame(), env.isMobileDevice(), room.getId(), playeridx);
+        socket.startGame(gameList.getCurrentGame(), env.isMobileDevice(), room.getId(), +playerIndex.value - 1);
 
         // clear menu screen
         input.poll().disable();
@@ -166,29 +172,37 @@
         popupBox.fadeIn().delay(0).fadeOut();
     };
 
+    const _dpadArrowKeys = [KEY.UP, KEY.DOWN, KEY.LEFT, KEY.RIGHT];
+
+    // pre-state key press handler
     const onKeyPress = (data) => {
-        if (data.key == "up" || data.key == "down" || data.key == "left" || data.key == "right") {
-            keyButtons[data.key].addClass('dpad-pressed');
+        const button = keyButtons[data.key];
+
+        if (_dpadArrowKeys.includes(data.key)) {
+            button.addClass('dpad-pressed');
         } else {
-            keyButtons[data.key].addClass('pressed');
+            if (button) button.addClass('pressed');
         }
 
-        if (KEY.HELP === data.key) {
-            helpScreen.show(true, event);
+        if (state !== app.state.settings) {
+            if (KEY.HELP === data.key) helpScreen.show(true, event);
         }
 
         state.keyPress(data.key);
     };
 
+    // pre-state key release handler
     const onKeyRelease = (data) => {
-        if (data.key == "up" || data.key == "down" || data.key == "left" || data.key == "right") {
-            keyButtons[data.key].removeClass('dpad-pressed');
+        const button = keyButtons[data.key];
+
+        if (_dpadArrowKeys.includes(data.key)) {
+            button.removeClass('dpad-pressed');
         } else {
-            keyButtons[data.key].removeClass('pressed');
+            if (button) button.removeClass('pressed');
         }
 
-        if (KEY.HELP === data.key) {
-            helpScreen.show(false, event);
+        if (state !== app.state.settings) {
+            if (KEY.HELP === data.key) helpScreen.show(false, event);
         }
 
         // maybe move it somewhere
@@ -198,46 +212,41 @@
             interacted = true;
         }
 
+        // change app state if settings
+        if (KEY.SETTINGS === data.key) setState(app.state.settings);
+
         state.keyRelease(data.key);
     };
 
-    const updatePlayerIndex = (idx) => {
-        var slider = document.getElementById('playeridx');
-        slider.value = idx + 1;
+    const updatePlayerIndex = idx => {
+        playerIndex.value = idx + 1;
         socket.updatePlayerIndex(idx);
     };
 
+    // noop function for the state
+    const _nil = () => {
+    }
 
     const app = {
         state: {
             eden: {
                 name: 'eden',
-                keyPress: () => {
-                },
-                keyRelease: () => {
-                },
-                menuReady: () => {
-                    showMenuScreen()
-                }
+                keyPress: _nil,
+                keyRelease: _nil,
+                menuReady: () => showMenuScreen()
             },
 
-            help: {
-                name: 'help',
-                keyPress: () => {
+            settings: {
+                _uber: true,
+                name: 'settings',
+                keyPress: _nil,
+                keyRelease: key => {
+                    if (key === KEY.SETTINGS) {
+                        const visible = settings.ui.toggle();
+                        if (!visible) setState(lastState);
+                    }
                 },
-                keyRelease: () => {
-                },
-                menuReady: () => {
-                    // show silently
-                    gameScreen.hide();
-                    menuScreen.hide();
-                    gameList.hide();
-                    //keyButtons[KEY.JOIN].html('play');
-
-                    gameList.show();
-
-                    helpScreen.prevState = app.state.menu;
-                }
+                menuReady: () => showMenuScreen()
             },
 
             menu: {
@@ -277,22 +286,22 @@
                         case KEY.STATS:
                             event.pub(STATS_TOGGLE);
                             break;
+                        case KEY.SETTINGS:
+                            break;
                     }
                 },
-                menuReady: () => {
-                }
+                menuReady: _nil
             },
 
             game: {
                 name: 'game',
-                keyPress: (key) => {
+                keyPress: key => {
                     input.setKeyState(key, true);
                 },
                 keyRelease: function (key) {
                     input.setKeyState(key, false);
 
                     switch (key) {
-                        // nani? why join / copy switch, it's confusing. Me: It's because of the original design to update label only :-s.
                         case KEY.JOIN: // or SHARE
                             // save when click share
                             event.pub(KEY_PRESSED, {key: KEY.SAVE})
@@ -323,7 +332,6 @@
                             updatePlayerIndex(3);
                             break;
 
-                        // quit
                         case KEY.QUIT:
                             input.poll().disable();
 
@@ -340,10 +348,8 @@
                             event.pub(STATS_TOGGLE);
                             break;
                     }
-
                 },
-                menuReady: () => {
-                }
+                menuReady: _nil
             }
         }
     };
@@ -352,7 +358,7 @@
     event.sub(GAME_ROOM_AVAILABLE, onGameRoomAvailable, 2);
     event.sub(GAME_SAVED, () => popup('Saved'));
     event.sub(GAME_LOADED, () => popup('Loaded'));
-    event.sub(GAME_PLAYER_IDX, (idx) => popup(parseInt(idx) + 1));
+    event.sub(GAME_PLAYER_IDX, idx => popup(+idx + 1));
 
     event.sub(MEDIA_STREAM_INITIALIZED, (data) => {
         rtcp.start(data.stunturn);
@@ -374,7 +380,7 @@
     event.sub(KEY_PRESSED, onKeyPress);
     event.sub(KEY_RELEASED, onKeyRelease);
     event.sub(KEY_STATE_UPDATED, data => rtcp.input(data));
-    event.sub(SETTINGS_CHANGED, () => console.log('Settings has been changed'));
+    event.sub(SETTINGS_CHANGED, () => popup('Settings have been updated'));
 
     // game screen stuff
     gameScreen.on('loadstart', () => {
@@ -387,4 +393,4 @@
 
     // initial app state
     setState(app.state.eden);
-})($, document, event, env, gameList, input, KEY, log, room, stats);
+})($, document, event, env, gameList, input, KEY, log, room, settings, stats);

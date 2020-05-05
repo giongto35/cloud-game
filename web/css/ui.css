@@ -1,0 +1,109 @@
+
+.hidden {
+    display: none;
+}
+
+#btn-settings {
+    position: relative;
+    top: 15px;
+    left: 55px;
+}
+
+.modal-window {
+    position: fixed;
+
+    top: 0;
+    right: 0;
+    bottom: 0;
+    left: 0;
+
+    background-color: rgba(0, 0, 0, 0.7);
+
+    z-index: 9999;
+    visibility: hidden;
+    opacity: 0;
+    pointer-events: none;
+
+    -webkit-transition: all 0.2s;
+    transition: all 0.2s;
+}
+
+.modal-visible {
+    visibility: visible;
+    opacity: 1;
+    pointer-events: auto;
+}
+
+
+.modal-window > div {
+    width: 400px;
+    position: absolute;
+    top: 40%;
+    left: 50%;
+    -webkit-transform: translate(-50%, -50%);
+    transform: translate(-50%, -50%);
+    padding: 2em;
+    background: #ffffff;
+}
+
+.modal-window header {
+    font-weight: bold;
+}
+
+.modal-window h1 {
+    font-size: 150%;
+    margin: 0 0 15px;
+}
+
+.semi-button {
+    cursor: pointer;
+}
+
+#modal-close {
+    position: absolute;
+
+    top: 1rem;
+    right: 1rem;
+
+    color: #aaa;
+    font-size: 80%;
+    text-align: center;
+    text-decoration: none;
+}
+#modal-close:hover {
+    color: black;
+}
+
+#settings {
+    font-family: monospace;
+}
+
+#settings-data {
+    overflow-y: auto;
+    height: 50vh;
+}
+
+.container {
+    display: grid;
+    -webkit-box-pack: center;
+    justify-content: center;
+    -webkit-box-align: center;
+    align-items: center;
+    height: 100vh;
+}
+
+.modal-window div:not(:last-of-type) {
+    margin-bottom: 15px;
+}
+
+.btn2 {
+    font-size: 80%;
+    background-color: #fff;
+    padding: .2em .4em;
+    border-radius: 3px;
+    text-decoration: none;
+}
+.btn2 i {
+    padding-right: 0.3em;
+}
+

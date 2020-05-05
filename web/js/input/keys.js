@@ -23,5 +23,6 @@ const KEY = (() => {
         PAD3: 'pad3',
         PAD4: 'pad4',
         STATS: 'stats',
+        SETTINGS: 'settings',
     }
 })();

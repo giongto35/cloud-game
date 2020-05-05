@@ -28,6 +28,10 @@ const settings = (() => {
 
     const exportFileName = `cg.settings.v${revision}.txt`;
 
+    const ui = document.getElementById('settings');
+    const close = document.getElementById('modal-close');
+    const data = document.getElementById('settings-data');
+
     /**
      * The NullObject provider if everything else fails.
      */
@@ -75,7 +79,7 @@ const settings = (() => {
         const set = (key, value) => save();
 
         const loadSettings = () => {
-            if (!localStorage.getItem(root)) _save();
+            if (!localStorage.getItem(root)) save();
             store_.settings = JSON.parse(localStorage.getItem(root));
         }
 
@@ -92,7 +96,7 @@ const settings = (() => {
      * @param text The text to extract data from.
      * @private
      */
-    const _import = (text) => {
+    const _import = text => {
         if (!text) return;
 
         try {
@@ -168,12 +172,52 @@ const settings = (() => {
         event.pub(SETTINGS_CHANGED);
     }
 
+    // oh, wow!
+    const _render = () => {
+        const els = [];
+        Object.keys(store.settings).forEach(k => {
+            const value = store.settings[k];
+
+            if (typeof value === 'object' && value !== null) {
+                els.push(`<div>${k} → ...</div>`);
+
+                els.push('<div>');
+                Object.keys(value).forEach(kk => {
+                    els.push(`<div>${kk} → ${value[kk]}</div>`);
+                })
+                els.push('</div>')
+            } else
+                els.push(`<div>${k} → ${store.settings[k]}</div>`);
+        })
+
+        data.innerHTML = '';
+        data.innerHTML = els.join('');
+    }
+
+    const toggle = () => {
+        const what = ui.classList.toggle('modal-visible');
+
+        if (what) {
+            _render();
+        }
+
+        return what;
+    }
+
+    // init
+    close.addEventListener('click', () => {
+        toggle();
+    })
+
     return {
         init,
         loadOr,
         get,
         set,
         import: _import,
-        export: _export
+        export: _export,
+        ui: {
+            toggle,
+        }
     }
-})(event, JSON, localStorage, log);
+})(document, event, JSON, localStorage, log);
