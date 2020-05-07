@@ -52,7 +52,7 @@ func NewWebRTC() *WebRTC {
 
 		ImageChannel: make(chan []byte, 30),
 		AudioChannel: make(chan []byte, 1),
-		VoiceChannel: nil,
+		VoiceChannel: make(chan []byte, 1),
 		InputChannel: make(chan int, 100),
 	}
 	return w
@@ -142,12 +142,12 @@ func (w *WebRTC) StartClient(isMobile bool, iceCB OnIceCallback) (string, error)
 		return "", err
 	}
 	// add audio track
-	audio, err := w.connection.AddTransceiverFromKind(webrtc.RTPCodecTypeAudio, webrtc.RtpTransceiverInit{Direction: webrtc.RTPTransceiverDirectionRecvonly})
+	//audio, err := w.connection.AddTransceiverFromKind(webrtc.RTPCodecTypeAudio, webrtc.RtpTransceiverInit{Direction: webrtc.RTPTransceiverDirectionRecvonly})
 
-	log.Println("Add audio track", audio, err)
-	log.Printf("transceivers %+v", w.connection.GetTransceivers())
-	log.Printf("%+v", w.connection.GetReceivers()[0])
-	log.Printf("%+v", w.connection.GetReceivers()[1])
+	//log.Println("Add audio track", audio, err)
+	//log.Printf("transceivers %+v", w.connection.GetTransceivers())
+	//log.Printf("%+v", w.connection.GetReceivers()[0])
+	//log.Printf("%+v", w.connection.GetReceivers()[1])
 	//log.Printf("%+v", w.connection.GetReceivers()[2])
 
 	// User voice chat Track
@@ -182,6 +182,7 @@ func (w *WebRTC) StartClient(isMobile bool, iceCB OnIceCallback) (string, error)
 			// if there is new voice channel, send it
 			// try close
 			for rtpBuf := range w.VoiceChannel {
+				fmt.Println("sending voice")
 				if !w.isConnected {
 					return
 				}
