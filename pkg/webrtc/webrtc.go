@@ -141,7 +141,14 @@ func (w *WebRTC) StartClient(isMobile bool, iceCB OnIceCallback) (string, error)
 	if err != nil {
 		return "", err
 	}
-	log.Println("Add audio track")
+	// add audio track
+	audio, err := w.connection.AddTransceiverFromKind(webrtc.RTPCodecTypeAudio, webrtc.RtpTransceiverInit{Direction: webrtc.RTPTransceiverDirectionRecvonly})
+
+	log.Println("Add audio track", audio, err)
+	log.Printf("transceivers %+v", w.connection.GetTransceivers())
+	log.Printf("%+v", w.connection.GetReceivers()[0])
+	log.Printf("%+v", w.connection.GetReceivers()[1])
+	//log.Printf("%+v", w.connection.GetReceivers()[2])
 
 	// User voice chat Track
 	// create data channel for input, and register callbacks
@@ -217,6 +224,7 @@ func (w *WebRTC) StartClient(isMobile bool, iceCB OnIceCallback) (string, error)
 
 	w.connection.OnTrack(func(remoteTrack *webrtc.Track, receiver *webrtc.RTPReceiver) {
 		log.Println("!!!Received voice audio track")
+		log.Printf("transceivers with audio tracks %+v", w.connection.GetTransceivers())
 		rtpBuf := make([]byte, 1400)
 		for {
 			i, err := remoteTrack.Read(rtpBuf)

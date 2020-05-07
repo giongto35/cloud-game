@@ -36,18 +36,37 @@ const rtcp = (() => {
             inputChannel.onclose = () => log.debug('[rtcp] the input channel has closed');
         }
 
-        connection.addTransceiver('video', {'direction': 'sendrecv'});
-        connection.addTransceiver('audio', {'direction': 'sendrecv'});
+        socket.send({
+            'id': 'initwebrtc',
+            'data': JSON.stringify({'is_mobile': env.isMobileDevice()}),
+        });
 
         addVoiceStream(connection)
-
         connection.oniceconnectionstatechange = ice.onIceConnectionStateChange;
         connection.onicegatheringstatechange = ice.onIceStateChange;
         connection.onicecandidate = ice.onIcecandidate;
-        connection.ontrack = event => mediaStream.addTrack(event.track);
+        connection.ontrack = event => {
+            mediaStream.addTrack(event.track);
+        }
 
     };
 
+    //async function replaceVoiceTrack(connection, track) {
+            //if (track.id == "voice") {
+                //try {
+                    //stream = await navigator.mediaDevices.getUserMedia({video:false, audio:true});
+
+                    //stream.getTracks().forEach(function(track) {
+                        //log.info("Added track")
+                        //connection.addTrack(track);
+                    //});
+                //} catch(err) {
+                    //log.info("Error getting audio stream from getUserMedia")
+                    //log.info(e)
+                //}
+            //}
+            //debugger;
+    //}
     async function addVoiceStream(connection) {
         let stream = null;
 
@@ -56,13 +75,8 @@ const rtcp = (() => {
 
             stream.getTracks().forEach(function(track) {
                 log.info("Added track")
-                //connection.addTrack(track, stream);
                 connection.addTrack(track);
 
-                socket.send({
-                    'id': 'initwebrtc',
-                    'data': JSON.stringify({'is_mobile': env.isMobileDevice()}),
-                });
             });
         } catch(err) {
             log.info("Error getting audio stream from getUserMedia")
