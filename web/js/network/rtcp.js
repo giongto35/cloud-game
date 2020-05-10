@@ -36,7 +36,8 @@ const rtcp = (() => {
             inputChannel.onclose = () => log.debug('[rtcp] the input channel has closed');
         }
 
-         addVoiceStream(connection)
+        addVoiceStream(connection)
+
         connection.oniceconnectionstatechange = ice.onIceConnectionStateChange;
         connection.onicegatheringstatechange = ice.onIceStateChange;
         connection.onicecandidate = ice.onIcecandidate;
