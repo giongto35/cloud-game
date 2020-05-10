@@ -36,9 +36,9 @@
 
 
 .modal-window > div {
-    width: 400px;
+    width: 42vw;
     position: absolute;
-    top: 40%;
+    top: 50%;
     left: 50%;
     -webkit-transform: translate(-50%, -50%);
     transform: translate(-50%, -50%);
@@ -59,20 +59,7 @@
     cursor: pointer;
 }
 
-#modal-close {
-    position: absolute;
 
-    top: 1rem;
-    right: 1rem;
-
-    color: #aaa;
-    font-size: 80%;
-    text-align: center;
-    text-decoration: none;
-}
-#modal-close:hover {
-    color: black;
-}
 
 #settings {
     font-family: monospace;
@@ -105,5 +92,16 @@
 }
 .btn2 i {
     padding-right: 0.3em;
+}
+
+.settings__controls {
+    color: #aaa;
+    font-size: 80%;
+    text-align: center;
+    text-decoration: none;
+}
+
+.settings__controls span:hover {
+    color: black;
 }
 

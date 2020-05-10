@@ -9,16 +9,21 @@
  * Doing it this way allows us to considerably simplify the code and make sure that
  * exposed settings will have the latest values without additional update/get calls.
  *
- * Uses ES6.
+ * Uses ES8.
  *
  * @version 1
  */
 const settings = (() => {
+    // internal settings format version
     const revision = 1;
 
-    // the main store with settings passed around by reference
-    // (because of that we need a wrapper object)
-    // don't do this at work (it's faster to write than immutable code)
+    /**
+     * The main store with settings passed around by reference
+     * (because of that we need a wrapper object)
+     * don't do this at work (it's faster to write than immutable code).
+     *
+     * @type {{settings: {_version: number}}}
+     */
     let store = {
         settings: {
             _version: revision
@@ -26,10 +31,25 @@ const settings = (() => {
     };
     let provider;
 
-    const exportFileName = `cg.settings.v${revision}.txt`;
+    /**
+     * Enum for settings types (the explicit type of a key-value pair).
+     *
+     * Normally, enums should be used when you need to track more than
+     * 3 states (true, false, null) of something.
+     *
+     * @readonly
+     * @enum {number}
+     */
+    const option = Object.freeze({undefined: 0, string: 1, number: 2, object: 3, list: 4});
 
+    const exportFileName = `cloud-game.settings.v${revision}.txt`;
+
+    // ui references
     const ui = document.getElementById('settings');
-    const close = document.getElementById('modal-close');
+    const close = document.getElementById('settings__controls__close'),
+        load = document.getElementById('settings__controls__load'),
+        save = document.getElementById('settings__controls__save'),
+        reset = document.getElementById('settings__controls__reset');
     const data = document.getElementById('settings-data');
 
     /**
@@ -44,6 +64,7 @@ const settings = (() => {
             set: nil,
             save: nil,
             loadSettings: nil,
+            reset: nil,
         }
     }
 
@@ -54,7 +75,7 @@ const settings = (() => {
      * If you want to roll your own, then use its "interface".
      */
     const localStorageProvider = ((store_ = {settings: {}}) => {
-        if (!_isSupported()) return undefined;
+        if (!_isSupported()) return;
 
         const root = 'settings';
 
@@ -83,11 +104,17 @@ const settings = (() => {
             store_.settings = JSON.parse(localStorage.getItem(root));
         }
 
+        const reset = () => {
+            localStorage.removeItem(root);
+            loadSettings();
+        }
+
         return {
             get,
             set,
             save,
             loadSettings,
+            reset,
         }
     });
 
@@ -97,8 +124,6 @@ const settings = (() => {
      * @private
      */
     const _import = text => {
-        if (!text) return;
-
         try {
             for (const property of Object.getOwnPropertyNames(store.settings)) delete store.settings[property];
             Object.assign(store.settings, JSON.parse(text).settings);
@@ -107,13 +132,16 @@ const settings = (() => {
         } catch (e) {
             log.error(`Your import file is broken!`);
         }
+
+        // !to call re-render
+        // _render();
     }
 
     const _export = () => {
         let el = document.createElement('a');
         el.setAttribute(
             'href',
-            `data:text/plain;charset=utf-8,${encodeURIComponent(JSON.stringify(store))}`
+            `data:text/plain;charset=utf-8,${encodeURIComponent(JSON.stringify(store, null, 2))}`
         );
         el.setAttribute('download', exportFileName);
         el.style.display = 'none';
@@ -155,17 +183,23 @@ const settings = (() => {
     }
 
     const set = (key, value) => {
-        // mutate existing settings
-        // without changing the reference
-        if (Array.isArray(value)) {
-            store.settings[key].splice(0, Infinity, ...value);
-        } else if (typeof value === 'object' && value !== null) {
-            for (const k of Object.keys(value)) {
-                log.debug(`Change ${k}: ${store.settings[key][k]} -> ${value[k]}`);
-                store.settings[key][k] = value[k];
-            }
-        } else {
-            store.settings[key] = value;
+        const type = getType(value);
+
+        // mutate settings w/o changing the reference
+        switch (type) {
+            case option.list:
+                store.settings[key].splice(0, Infinity, ...value);
+                break;
+            case option.object:
+                for (const k of Object.keys(value)) {
+                    log.debug(`Change ${k}: ${store.settings[key][k]} -> ${value[k]}`);
+                    store.settings[key][k] = value[k];
+                }
+                break;
+            case option.string:
+            case option.number:
+            case option.undefined:
+                store.settings[key] = value;
         }
 
         provider.set(key, value);
@@ -174,6 +208,8 @@ const settings = (() => {
 
     // oh, wow!
     const _render = () => {
+        console.debug('Rendering the settings...');
+
         const els = [];
         Object.keys(store.settings).forEach(k => {
             const value = store.settings[k];
@@ -194,20 +230,66 @@ const settings = (() => {
         data.innerHTML = els.join('');
     }
 
-    const toggle = () => {
-        const what = ui.classList.toggle('modal-visible');
+    /**
+     * Settings modal window toggle handler.
+     * @returns {boolean} True in case if it's opened.
+     */
+    const toggle = () => ui.classList.toggle('modal-visible') && !_render();
 
-        if (what) {
-            _render();
-        }
-
-        return what;
+    // !to handle undefineds and nulls
+    function getType(value) {
+        if (value === undefined) return option.undefined
+        else if (Array.isArray(value)) return option.list
+        else if (typeof value === 'object' && value !== null) return option.object
+        else if (typeof value === 'string') return option.string
+        else if (typeof value === 'number') return option.number
+        else return option.undefined;
     }
 
-    // init
-    close.addEventListener('click', () => {
-        toggle();
-    })
+    // handlers
+    const onClose = () => toggle()
+
+    const onSave = () => {
+        _export();
+    }
+
+    const _fileReader = (() => {
+        let callback_ = () => {
+        }
+
+        const el = document.createElement('input');
+        const reader = new FileReader();
+
+        el.type = 'file';
+        el.onchange = event => {
+            if (event.target.files.length) reader.readAsBinaryString(event.target.files[0]);
+        }
+        reader.onload = event => callback_(event.target.result);
+
+        return {
+            read: callback => {
+                callback_ = callback;
+                el.click()
+            },
+        }
+    })();
+
+    // !to add a proper handler
+    const onLoad = () => {
+        _fileReader.read(data => console.log(data));
+    }
+
+    const onReset = () => {
+        if (window.confirm("Are you sure want to reset your settings?")) {
+            provider.reset();
+        }
+    }
+
+    // internal init section
+    close.addEventListener('click', onClose)
+    save.addEventListener('click', onSave)
+    load.addEventListener('click', onLoad)
+    reset.addEventListener('click', onReset)
 
     return {
         init,
@@ -220,4 +302,4 @@ const settings = (() => {
             toggle,
         }
     }
-})(document, event, JSON, localStorage, log);
+})(document, event, JSON, localStorage, log, window);

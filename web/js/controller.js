@@ -233,7 +233,7 @@
                 name: 'eden',
                 keyPress: _nil,
                 keyRelease: _nil,
-                menuReady: () => showMenuScreen()
+                menuReady: showMenuScreen
             },
 
             settings: {
@@ -242,11 +242,11 @@
                 keyPress: _nil,
                 keyRelease: key => {
                     if (key === KEY.SETTINGS) {
-                        const visible = settings.ui.toggle();
-                        if (!visible) setState(lastState);
+                        const isSettingsOpened = settings.ui.toggle();
+                        if (!isSettingsOpened) setState(lastState);
                     }
                 },
-                menuReady: () => showMenuScreen()
+                menuReady: showMenuScreen
             },
 
             menu: {

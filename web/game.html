@@ -77,6 +77,7 @@
             <div id="help-overlay-detail"></div>
         </div>
         <div id="btn-help" unselectable="on" class="btn unselectable" value="help"></div>
+
         <div id="btn-settings" class="unselectable" value="settings">
             <a class="btn2" href="#settings">Settings</a>
         </div>
@@ -84,9 +85,15 @@
 
     <div id="settings" class="modal-window">
         <div>
-            <span title="Close" id="modal-close" class="semi-button">X</span>
+            <div class="settings__controls">
+                <span title="Save" id="settings__controls__save" class="semi-button">↑</span>
+                <span title="Load" id="settings__controls__load" class="semi-button">↓</span>
+                <span title="Reset" id="settings__controls__reset" class="semi-button">⟲</span>
+                <span title="Close" id="settings__controls__close" class="semi-button">X</span>
+            </div>
             <h1>Settings</h1>
             <div id="settings-data"></div>
+        </div>
     </div>
 
     <a id="ribbon" style="position: fixed; right: 0; top: 0;" href="https://github.com/giongto35/cloud-game"><img width="149" height="149" src="https://github.blog/wp-content/uploads/2008/12/forkme_right_gray_6d6d6d.png?resize=149%2C149" class="attachment-full size-full" alt="Fork me on GitHub" data-recalc-dims="1"></a>
@@ -99,6 +106,7 @@
 
     <script src="/static/js/lib/jquery-3.4.1.min.js"></script>
 
+    <script src="/static/js/gui/gui.js?v=1"></script>
     <script src="/static/js/log.js?v=5"></script>
     <script src="/static/js/event/event.js?v=5"></script>
     <script src="/static/js/input/keys.js?v=3"></script>
