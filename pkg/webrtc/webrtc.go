@@ -145,7 +145,7 @@ func (w *WebRTC) StartClient(isMobile bool, iceCB OnIceCallback) (string, error)
 	}
 
 	// add voice track
-	voiceTrack, err := w.connection.NewTrack(webrtc.DefaultPayloadTypeOpus, rand.Uint32(), "voice", "game-audio")
+	voiceTrack, err := w.connection.NewTrack(webrtc.DefaultPayloadTypeOpus, rand.Uint32(), "voice", "game-voice")
 	if err != nil {
 		return "", err
 	}
@@ -206,10 +206,10 @@ func (w *WebRTC) StartClient(isMobile bool, iceCB OnIceCallback) (string, error)
 	})
 
 	w.connection.OnTrack(func(remoteTrack *webrtc.Track, receiver *webrtc.RTPReceiver) {
-		log.Printf("Received new track", remoteTrack)
 		rtpBuf := make([]byte, 1400)
 		for {
 			i, err := remoteTrack.Read(rtpBuf)
+			log.Println(i)
 			if err == nil && w.VoiceInChannel != nil {
 				w.VoiceInChannel <- rtpBuf[:i]
 			}
@@ -354,13 +354,11 @@ func (w *WebRTC) startStreaming(vp8Track *webrtc.Track, opusTrack *webrtc.Track,
 			}
 		}()
 
-		log.Println("Go func send voice")
 		for data := range w.VoiceOutChannel {
 			if !w.isConnected {
 				return
 			}
-			n, err := opusTrack.Write(data)
-			log.Println(n, len(data))
+			_, err := opusTrack.Write(data)
 			if err != nil {
 				log.Println("Warn: Err write sample: ", err)
 			}

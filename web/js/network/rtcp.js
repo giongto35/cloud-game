@@ -42,7 +42,9 @@ const rtcp = (() => {
         connection.onicegatheringstatechange = ice.onIceStateChange;
         connection.onicecandidate = ice.onIcecandidate;
         connection.ontrack = event => {
-            mediaStream.addTrack(event.track);
+            if (event.track.kind == "video" || event.track.kind == "audio") {
+                mediaStream.addTrack(event.track);
+            }
         }
 
     };
