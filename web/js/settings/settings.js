@@ -31,6 +31,9 @@ const settings = (() => {
     };
     let provider;
 
+    // keep defaults after load to be able to reset
+    const overriddenDefaults = {};
+
     /**
      * Enum for settings types (the explicit type of a key-value pair).
      *
@@ -105,8 +108,12 @@ const settings = (() => {
         }
 
         const reset = () => {
+            Object.keys(store_.settings).forEach(k => {
+                if (overriddenDefaults.hasOwnProperty(k)) store.settings[k] = overriddenDefaults[k];
+            });
+
             localStorage.removeItem(root);
-            loadSettings();
+            localStorage.setItem(root, _serialize(store_.settings));
         }
 
         return {
@@ -171,6 +178,9 @@ const settings = (() => {
      * @returns A slice of the settings with the given key.
      */
     const loadOr = (key, default_) => {
+        // keep defaults no matter what (thicc algo :)
+        overriddenDefaults[key] = default_;
+
         if (!store.settings.hasOwnProperty(key)) {
             store.settings[key] = {};
             set(key, default_);
@@ -221,7 +231,7 @@ const settings = (() => {
                 Object.keys(value).forEach(kk => {
                     els.push(`<div>${kk} → ${value[kk]}</div>`);
                 })
-                els.push('</div>')
+                els.push('</div>');
             } else
                 els.push(`<div>${k} → ${store.settings[k]}</div>`);
         })
@@ -247,12 +257,16 @@ const settings = (() => {
     }
 
     // handlers
-    const onClose = () => toggle()
+    const onClose = () => event.pub(SETTINGS_CLOSED);
 
-    const onSave = () => {
-        _export();
-    }
+    const onSave = () => _export();
 
+    /**
+     * File reader submodule (FileReader API).
+     *
+     * @type {{read: read}} Tries to read a file.
+     * @private
+     */
     const _fileReader = (() => {
         let callback_ = () => {
         }
@@ -261,23 +275,27 @@ const settings = (() => {
         const reader = new FileReader();
 
         el.type = 'file';
-        el.onchange = event => {
-            if (event.target.files.length) reader.readAsBinaryString(event.target.files[0]);
-        }
+        el.accept = '.txt';
+        el.onchange = event => event.target.files.length && reader.readAsBinaryString(event.target.files[0]);
         reader.onload = event => callback_(event.target.result);
 
         return {
             read: callback => {
                 callback_ = callback;
-                el.click()
+                el.click();
             },
         }
     })();
 
-    // !to add a proper handler
-    const onLoad = () => {
-        _fileReader.read(data => console.log(data));
+    const onFileLoad = text => {
+        try {
+            _import(text);
+        } catch (e) {
+            log.error(`Couldn't read your settings!`, e);
+        }
     }
+
+    const onLoad = () => _fileReader.read(onFileLoad);
 
     const onReset = () => {
         if (window.confirm("Are you sure want to reset your settings?")) {
@@ -286,10 +304,10 @@ const settings = (() => {
     }
 
     // internal init section
-    close.addEventListener('click', onClose)
-    save.addEventListener('click', onSave)
-    load.addEventListener('click', onLoad)
-    reset.addEventListener('click', onReset)
+    close.addEventListener('click', onClose);
+    save.addEventListener('click', onSave);
+    load.addEventListener('click', onLoad);
+    reset.addEventListener('click', onReset);
 
     return {
         init,

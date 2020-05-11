@@ -5,8 +5,8 @@
 
 #btn-settings {
     position: relative;
-    top: 15px;
-    left: 55px;
+    top: 14px;
+    left: 62px;
 }
 
 .modal-window {
@@ -85,13 +85,13 @@
 
 .btn2 {
     font-size: 80%;
-    background-color: #fff;
     padding: .2em .4em;
     border-radius: 3px;
     text-decoration: none;
-}
-.btn2 i {
-    padding-right: 0.3em;
+    background-color: #515151;
+    color: #2c3234;
+
+    height: 1rem;
 }
 
 .settings__controls {

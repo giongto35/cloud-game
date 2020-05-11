@@ -381,6 +381,9 @@
     event.sub(KEY_RELEASED, onKeyRelease);
     event.sub(KEY_STATE_UPDATED, data => rtcp.input(data));
     event.sub(SETTINGS_CHANGED, () => popup('Settings have been updated'));
+    event.sub(SETTINGS_CLOSED, () => {
+        state.keyRelease(KEY.SETTINGS);
+    });
 
     // game screen stuff
     gameScreen.on('loadstart', () => {
