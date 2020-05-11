@@ -149,7 +149,7 @@ func (w *WebRTC) StartClient(isMobile bool, iceCB OnIceCallback) (string, error)
 	if err != nil {
 		return "", err
 	}
-	_, err = w.connection.AddTrack(voiceTrack)
+	//_, err = w.connection.AddTrack(voiceTrack)
 	if err != nil {
 		return "", err
 	}
@@ -209,7 +209,6 @@ func (w *WebRTC) StartClient(isMobile bool, iceCB OnIceCallback) (string, error)
 		rtpBuf := make([]byte, 1400)
 		for {
 			i, err := remoteTrack.Read(rtpBuf)
-			log.Println(i)
 			if err == nil && w.VoiceInChannel != nil {
 				w.VoiceInChannel <- rtpBuf[:i]
 			}
@@ -331,18 +330,18 @@ func (w *WebRTC) startStreaming(vp8Track *webrtc.Track, opusTrack *webrtc.Track,
 			}
 		}()
 
-		//for data := range w.AudioChannel {
-		//if !w.isConnected {
-		//return
-		//}
-		//err := opusTrack.WriteSample(media.Sample{
-		//Data:    data,
-		//Samples: uint32(config.AUDIO_FRAME / config.AUDIO_CHANNELS),
-		//})
-		//if err != nil {
-		//log.Println("Warn: Err write sample: ", err)
-		//}
-		//}
+		for data := range w.AudioChannel {
+			if !w.isConnected {
+				return
+			}
+			err := opusTrack.WriteSample(media.Sample{
+				Data:    data,
+				Samples: uint32(config.AUDIO_FRAME / config.AUDIO_CHANNELS),
+			})
+			if err != nil {
+				log.Println("Warn: Err write sample: ", err)
+			}
+		}
 	}()
 
 	// send voice

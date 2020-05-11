@@ -21,6 +21,7 @@ const rtcp = (() => {
         });
 
         mediaStream = new MediaStream();
+        voiceStream = new MediaStream();
 
         // input channel, ordered + reliable, id 0
         // inputChannel = connection.createDataChannel('a', {ordered: true, negotiated: true, id: 0,});
@@ -38,11 +39,23 @@ const rtcp = (() => {
 
         addVoiceStream(connection)
 
+                socket.send({
+                    'id': 'initwebrtc',
+                    'data': JSON.stringify({'is_mobile': env.isMobileDevice()}),
+                });
+
         connection.oniceconnectionstatechange = ice.onIceConnectionStateChange;
         connection.onicegatheringstatechange = ice.onIceStateChange;
         connection.onicecandidate = ice.onIcecandidate;
         connection.ontrack = event => {
-            if (event.track.kind == "video" || event.track.kind == "audio") {
+            if (event.streams[0].id == "game-voice") {
+                mediaStream.addTrack(event.track);
+            } else
+            if (event.track.kind == "audio") {
+                voiceStream.addTrack(event.track)
+                const voiceAudio = document.getElementById('voice-audio');
+                voiceAudio.srcObject = voiceStream
+            } else {
                 mediaStream.addTrack(event.track);
             }
         }
@@ -58,11 +71,6 @@ const rtcp = (() => {
             stream.getTracks().forEach(function(track) {
                 log.info("Added track")
                 connection.addTrack(track);
-
-                socket.send({
-                    'id': 'initwebrtc',
-                    'data': JSON.stringify({'is_mobile': env.isMobileDevice()}),
-                });
 
             });
         } catch(err) {
