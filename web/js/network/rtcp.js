@@ -39,25 +39,20 @@ const rtcp = (() => {
 
         addVoiceStream(connection)
 
-                socket.send({
-                    'id': 'initwebrtc',
-                    'data': JSON.stringify({'is_mobile': env.isMobileDevice()}),
-                });
-
         connection.oniceconnectionstatechange = ice.onIceConnectionStateChange;
         connection.onicegatheringstatechange = ice.onIceStateChange;
         connection.onicecandidate = ice.onIcecandidate;
         connection.ontrack = event => {
-            if (event.streams[0].id == "game-voice") {
+            //if (event.streams[0].id == "game-voice") {
+                //mediaStream.addTrack(event.track);
+            //} else
+            //if (event.track.kind == "audio") {
+                //voiceStream.addTrack(event.track)
+                //const voiceAudio = document.getElementById('voice-audio');
+                //voiceAudio.srcObject = voiceStream
+            //} else {
                 mediaStream.addTrack(event.track);
-            } else
-            if (event.track.kind == "audio") {
-                voiceStream.addTrack(event.track)
-                const voiceAudio = document.getElementById('voice-audio');
-                voiceAudio.srcObject = voiceStream
-            } else {
-                mediaStream.addTrack(event.track);
-            }
+            //}
         }
 
     };
@@ -73,9 +68,16 @@ const rtcp = (() => {
                 connection.addTrack(track);
 
             });
-        } catch(err) {
+
+        } catch(e) {
             log.info("Error getting audio stream from getUserMedia")
             log.info(e)
+
+        } finally {
+            socket.send({
+                'id': 'initwebrtc',
+                'data': JSON.stringify({'is_mobile': env.isMobileDevice()}),
+            });
         }
     }
 

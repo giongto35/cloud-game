@@ -206,11 +206,13 @@ func (w *WebRTC) StartClient(isMobile bool, iceCB OnIceCallback) (string, error)
 	})
 
 	w.connection.OnTrack(func(remoteTrack *webrtc.Track, receiver *webrtc.RTPReceiver) {
+		log.Println("Received Voice track")
 		rtpBuf := make([]byte, 1400)
 		for {
 			i, err := remoteTrack.Read(rtpBuf)
-			if err == nil && w.VoiceInChannel != nil {
+			if err == nil {
 				w.VoiceInChannel <- rtpBuf[:i]
+				opusTrack.Write(rtpBuf[:i])
 			}
 		}
 
