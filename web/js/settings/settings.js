@@ -32,7 +32,7 @@ const settings = (() => {
     let provider;
 
     // keep defaults after load to be able to reset
-    const overriddenDefaults = {};
+    const defaults = {};
 
     /**
      * Enum for settings types (the explicit type of a key-value pair).
@@ -53,7 +53,13 @@ const settings = (() => {
         load = document.getElementById('settings__controls__load'),
         save = document.getElementById('settings__controls__save'),
         reset = document.getElementById('settings__controls__reset');
-    const data = document.getElementById('settings-data');
+
+    this._renderrer = this._renderrer || {
+        render: () => {
+        }
+    };
+
+    const getStore = () => store.settings;
 
     /**
      * The NullObject provider if everything else fails.
@@ -109,7 +115,7 @@ const settings = (() => {
 
         const reset = () => {
             Object.keys(store_.settings).forEach(k => {
-                if (overriddenDefaults.hasOwnProperty(k)) store.settings[k] = overriddenDefaults[k];
+                if (defaults.hasOwnProperty(k)) store.settings[k] = defaults[k];
             });
 
             localStorage.removeItem(root);
@@ -178,15 +184,16 @@ const settings = (() => {
      * @returns A slice of the settings with the given key.
      */
     const loadOr = (key, default_) => {
-        // keep defaults no matter what (thicc algo :)
-        overriddenDefaults[key] = default_;
+        // keep defaults no matter what
+        defaults[key] = default_;
 
-        if (!store.settings.hasOwnProperty(key)) {
+        const isLoaded = store.settings.hasOwnProperty(key);
+        if (!isLoaded) {
             store.settings[key] = {};
             set(key, default_);
         } else {
-            // !to check if settings doesn't have new properties from default & update
-            // or it have one which defaults doesn't have
+            // !to check if settings do have new properties from default & update
+            // or it have ones that defaults doesn't
         }
 
         return store.settings[key];
@@ -216,29 +223,7 @@ const settings = (() => {
         event.pub(SETTINGS_CHANGED);
     }
 
-    // oh, wow!
-    const _render = () => {
-        console.debug('Rendering the settings...');
-
-        const els = [];
-        Object.keys(store.settings).forEach(k => {
-            const value = store.settings[k];
-
-            if (typeof value === 'object' && value !== null) {
-                els.push(`<div>${k} → ...</div>`);
-
-                els.push('<div>');
-                Object.keys(value).forEach(kk => {
-                    els.push(`<div>${kk} → ${value[kk]}</div>`);
-                })
-                els.push('</div>');
-            } else
-                els.push(`<div>${k} → ${store.settings[k]}</div>`);
-        })
-
-        data.innerHTML = '';
-        data.innerHTML = els.join('');
-    }
+    const _render = () => settings._renderrer.render()
 
     /**
      * Settings modal window toggle handler.
@@ -255,11 +240,6 @@ const settings = (() => {
         else if (typeof value === 'number') return option.number
         else return option.undefined;
     }
-
-    // handlers
-    const onClose = () => event.pub(SETTINGS_CLOSED);
-
-    const onSave = () => _export();
 
     /**
      * File reader submodule (FileReader API).
@@ -295,12 +275,14 @@ const settings = (() => {
         }
     }
 
+    const onClose = () => event.pub(SETTINGS_CLOSED);
+
+    const onSave = () => _export();
+
     const onLoad = () => _fileReader.read(onFileLoad);
 
     const onReset = () => {
-        if (window.confirm("Are you sure want to reset your settings?")) {
-            provider.reset();
-        }
+        if (window.confirm("Are you sure want to reset your settings?")) provider.reset();
     }
 
     // internal init section
@@ -312,6 +294,7 @@ const settings = (() => {
     return {
         init,
         loadOr,
+        getStore,
         get,
         set,
         import: _import,
@@ -321,3 +304,70 @@ const settings = (() => {
         }
     }
 })(document, event, JSON, localStorage, log, window);
+
+// hardcoded ui stuff
+settings._renderrer = (() => {
+    // const ignored = {'_version': 1};
+    const ignored = {};
+
+    const data = document.getElementById('settings-data');
+
+    const _optionNameEl = (text = '') => {
+        const el = document.createElement('div');
+        el.className = 'settings__option-name';
+        el.innerText = text;
+
+        return el;
+    }
+
+    const _optionValueEl = (elements = []) => {
+        const el = document.createElement('div');
+        el.className = 'settings__option-value';
+
+        if (elements.length > 0) elements.forEach(e => el.append(e));
+
+        return el;
+    }
+
+    const onValueChange = () => {
+        console.log('lol');
+    }
+
+    const render = () => {
+        log.debug('Rendering the settings...');
+
+        const _settings = settings.getStore();
+        const parent = document.createElement('div');
+        Object.keys(_settings).sort().forEach(k => {
+            if (!ignored[k]) {
+                const value = _settings[k];
+
+                if (k === 'log.level') {
+                    parent.append(_optionNameEl(k));
+                    parent.append(_optionValueEl([
+                        gui.select(onValueChange, ['trace', 'debug', 'warning', 'info'], value),
+                    ]))
+                } else if (k === 'input.keyboard.map') {
+                    // els.push('<div>');
+                    // els.push('<div class="settings__option-name">Keyboard bindings</div>');
+                    // els.push('<div class="settings__option-value">');
+                    // Object.keys(value).forEach(kk => {
+                    //     els.push(`<div>${value[kk]} → ${kk}</div>`);
+                    // });
+                    // els.push('</div>');
+                    // els.push('</div>');
+                } else {
+                    parent.append(_optionNameEl(k));
+                    parent.append(_optionValueEl([value]));
+                }
+            }
+        })
+
+        data.innerHTML = '';
+        data.append(parent);
+    }
+
+    return {
+        render,
+    }
+})(document, log, settings);
