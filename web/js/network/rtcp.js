@@ -43,16 +43,13 @@ const rtcp = (() => {
         connection.onicegatheringstatechange = ice.onIceStateChange;
         connection.onicecandidate = ice.onIcecandidate;
         connection.ontrack = event => {
-            //if (event.streams[0].id == "game-voice") {
-                //mediaStream.addTrack(event.track);
-            //} else
-            //if (event.track.kind == "audio") {
-                //voiceStream.addTrack(event.track)
-                //const voiceAudio = document.getElementById('voice-audio');
-                //voiceAudio.srcObject = voiceStream
-            //} else {
+            if (event.streams[0].id == "game-voice") {
+                voiceStream.addTrack(event.track)
+                const voiceAudio = document.getElementById('voice-audio');
+                voiceAudio.srcObject = voiceStream
+            } else {
                 mediaStream.addTrack(event.track);
-            //}
+            }
         }
 
     };

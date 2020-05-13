@@ -149,10 +149,9 @@ func (w *WebRTC) StartClient(isMobile bool, iceCB OnIceCallback) (string, error)
 	if err != nil {
 		return "", err
 	}
-	//_, err = w.connection.AddTrack(voiceTrack)
-	if err != nil {
-		return "", err
-	}
+	// TODO: can receive track but the voice is not recorded
+
+	_, err = w.connection.AddTransceiverFromKind(webrtc.RTPCodecTypeAudio, webrtc.RtpTransceiverInit{Direction: webrtc.RTPTransceiverDirectionRecvonly})
 
 	// create data channel for input, and register callbacks
 	// order: true, negotiated: false, id: random
@@ -206,10 +205,18 @@ func (w *WebRTC) StartClient(isMobile bool, iceCB OnIceCallback) (string, error)
 	})
 
 	w.connection.OnTrack(func(remoteTrack *webrtc.Track, receiver *webrtc.RTPReceiver) {
-		log.Println("Received Voice track")
 		rtpBuf := make([]byte, 1400)
+
+		// VoiceOutput Track
+		_, err = w.connection.AddTrack(voiceTrack)
+		if err != nil {
+			panic(err)
+			//return "", err
+		}
+
 		for {
 			i, err := remoteTrack.Read(rtpBuf)
+			// TODO: can receive track but the voice doesn't work
 			if err == nil {
 				w.VoiceInChannel <- rtpBuf[:i]
 				opusTrack.Write(rtpBuf[:i])
@@ -359,7 +366,7 @@ func (w *WebRTC) startStreaming(vp8Track *webrtc.Track, opusTrack *webrtc.Track,
 			if !w.isConnected {
 				return
 			}
-			_, err := opusTrack.Write(data)
+			_, err := voiceTrack.Write(data)
 			if err != nil {
 				log.Println("Warn: Err write sample: ", err)
 			}
