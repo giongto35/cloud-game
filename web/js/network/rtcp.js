@@ -43,13 +43,7 @@ const rtcp = (() => {
         connection.onicegatheringstatechange = ice.onIceStateChange;
         connection.onicecandidate = ice.onIcecandidate;
         connection.ontrack = event => {
-            if (event.streams[0].id == "game-voice") {
-                voiceStream.addTrack(event.track)
-                const voiceAudio = document.getElementById('voice-audio');
-                voiceAudio.srcObject = voiceStream
-            } else {
-                mediaStream.addTrack(event.track);
-            }
+            mediaStream.addTrack(event.track);
         }
 
     };
@@ -61,9 +55,8 @@ const rtcp = (() => {
             stream = await navigator.mediaDevices.getUserMedia({video:false, audio:true});
 
             stream.getTracks().forEach(function(track) {
-                log.info("Added track")
+                log.info("Added voice track")
                 connection.addTrack(track);
-
             });
 
         } catch(e) {

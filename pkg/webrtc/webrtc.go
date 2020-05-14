@@ -144,13 +144,6 @@ func (w *WebRTC) StartClient(isMobile bool, iceCB OnIceCallback) (string, error)
 		return "", err
 	}
 
-	// add voice track
-	voiceTrack, err := w.connection.NewTrack(webrtc.DefaultPayloadTypeOpus, rand.Uint32(), "voice", "game-voice")
-	if err != nil {
-		return "", err
-	}
-	// TODO: can receive track but the voice is not recorded
-
 	_, err = w.connection.AddTransceiverFromKind(webrtc.RTPCodecTypeAudio, webrtc.RtpTransceiverInit{Direction: webrtc.RTPTransceiverDirectionRecvonly})
 
 	// create data channel for input, and register callbacks
@@ -179,7 +172,7 @@ func (w *WebRTC) StartClient(isMobile bool, iceCB OnIceCallback) (string, error)
 			go func() {
 				w.isConnected = true
 				log.Println("ConnectionStateConnected")
-				w.startStreaming(videoTrack, opusTrack, voiceTrack)
+				w.startStreaming(videoTrack, opusTrack)
 			}()
 
 		}
@@ -207,19 +200,12 @@ func (w *WebRTC) StartClient(isMobile bool, iceCB OnIceCallback) (string, error)
 	w.connection.OnTrack(func(remoteTrack *webrtc.Track, receiver *webrtc.RTPReceiver) {
 		rtpBuf := make([]byte, 1400)
 
-		// VoiceOutput Track
-		_, err = w.connection.AddTrack(voiceTrack)
-		if err != nil {
-			panic(err)
-			//return "", err
-		}
-
+		log.Println("Received Voice from Client")
 		for {
 			i, err := remoteTrack.Read(rtpBuf)
 			// TODO: can receive track but the voice doesn't work
 			if err == nil {
 				w.VoiceInChannel <- rtpBuf[:i]
-				opusTrack.Write(rtpBuf[:i])
 			}
 		}
 
@@ -311,7 +297,7 @@ func (w *WebRTC) IsConnected() bool {
 	return w.isConnected
 }
 
-func (w *WebRTC) startStreaming(vp8Track *webrtc.Track, opusTrack *webrtc.Track, voiceTrack *webrtc.Track) {
+func (w *WebRTC) startStreaming(vp8Track *webrtc.Track, opusTrack *webrtc.Track) {
 	log.Println("Start streaming")
 	// receive frame buffer
 	go func() {
@@ -366,7 +352,7 @@ func (w *WebRTC) startStreaming(vp8Track *webrtc.Track, opusTrack *webrtc.Track,
 			if !w.isConnected {
 				return
 			}
-			_, err := voiceTrack.Write(data)
+			_, err := opusTrack.Write(data)
 			if err != nil {
 				log.Println("Warn: Err write sample: ", err)
 			}
