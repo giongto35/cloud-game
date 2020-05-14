@@ -35,6 +35,11 @@ type Room struct {
 	// inputChannel is input stream send to director. This inputChannel is combined
 	// input from webRTC + connection info (player indexc)
 	inputChannel chan<- nanoarch.InputEvent
+	// voiceInChannel is voice stream received from users
+	voiceInChannel chan []byte
+	// voiceOutChannel is voice stream broadcasted to all users
+	voiceOutChannel chan []byte
+	voiceSample     [][]byte
 	// State of room
 	IsRunning bool
 	// Done channel is to fire exit event when room is closed
@@ -76,11 +81,13 @@ func NewRoom(roomID string, gameName string, videoEncoderType string, onlineStor
 	room := &Room{
 		ID: roomID,
 
-		inputChannel:  inputChannel,
-		rtcSessions:   []*webrtc.WebRTC{},
-		sessionsLock:  &sync.Mutex{},
-		IsRunning:     true,
-		onlineStorage: onlineStorage,
+		inputChannel:    inputChannel,
+		voiceInChannel:  make(chan []byte, 1),
+		voiceOutChannel: make(chan []byte, 1),
+		rtcSessions:     []*webrtc.WebRTC{},
+		sessionsLock:    &sync.Mutex{},
+		IsRunning:       true,
+		onlineStorage:   onlineStorage,
 
 		Done: make(chan struct{}, 1),
 	}
@@ -131,6 +138,7 @@ func NewRoom(roomID string, gameName string, videoEncoderType string, onlineStor
 		// Spawn video and audio encoding for webRTC
 		go room.startVideo(nwidth, nheight, videoEncoderType)
 		go room.startAudio(gameMeta.AudioSampleRate)
+		go room.startVoice()
 		room.director.Start()
 
 		log.Printf("Room %s ended", roomID)
@@ -202,6 +210,22 @@ func (r *Room) startWebRTCSession(peerconnection *webrtc.WebRTC) {
 	defer func() {
 		if r := recover(); r != nil {
 			log.Println("Warn: Recovered when sent to close inputChannel")
+		}
+	}()
+
+	log.Println("Start WebRTC session")
+	go func() {
+		// set up voice input and output. A room has multiple voice input and only one combined voice output.
+		for voiceInput := range peerconnection.VoiceInChannel {
+			// NOTE: when room is no longer running. InputChannel needs to have extra event to go inside the loop
+			if peerconnection.Done || !peerconnection.IsConnected() || !r.IsRunning {
+				break
+			}
+
+			if peerconnection.IsConnected() {
+				r.voiceInChannel <- voiceInput
+			}
+
 		}
 	}()
 

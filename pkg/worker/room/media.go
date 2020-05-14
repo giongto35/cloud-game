@@ -45,6 +45,20 @@ func min(x int, y int) int {
 	return y
 }
 
+func (r *Room) startVoice() {
+	// broadcast voice
+	go func() {
+		for sample := range r.voiceInChannel {
+			for _, webRTC := range r.rtcSessions {
+				if webRTC.IsConnected() {
+					// NOTE: can block here
+					webRTC.VoiceOutChannel <- sample
+				}
+			}
+		}
+	}()
+}
+
 func (r *Room) startAudio(sampleRate int) {
 	log.Println("Enter fan audio")
 	srcSampleRate := sampleRate

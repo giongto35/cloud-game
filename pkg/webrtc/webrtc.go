@@ -20,6 +20,42 @@ import (
 // TODO: double check if no need TURN server here
 var webrtcconfig = webrtc.Configuration{ICEServers: []webrtc.ICEServer{{URLs: []string{"stun:stun.l.google.com:19302"}}}}
 
+type InputDataPair struct {
+	data int
+	time time.Time
+}
+
+// WebRTC connection
+type WebRTC struct {
+	ID string
+
+	connection  *webrtc.PeerConnection
+	isConnected bool
+	isClosed    bool
+	// for yuvI420 image
+	ImageChannel    chan []byte
+	AudioChannel    chan []byte
+	VoiceInChannel  chan []byte
+	VoiceOutChannel chan []byte
+	InputChannel    chan int
+
+	Done     bool
+	lastTime time.Time
+	curFPS   int
+
+	RoomID string
+
+	// store thing related to game
+	GameMeta GameMeta
+}
+
+// Game Meta
+type GameMeta struct {
+	PlayerIndex int
+}
+
+type OnIceCallback func(candidate string)
+
 // Encode encodes the input in base64
 func Encode(obj interface{}) (string, error) {
 	b, err := json.Marshal(obj)
@@ -50,46 +86,14 @@ func NewWebRTC() *WebRTC {
 	w := &WebRTC{
 		ID: uuid.Must(uuid.NewV4()).String(),
 
-		ImageChannel: make(chan []byte, 30),
-		AudioChannel: make(chan []byte, 1),
-		InputChannel: make(chan int, 100),
+		ImageChannel:    make(chan []byte, 30),
+		AudioChannel:    make(chan []byte, 1),
+		VoiceInChannel:  make(chan []byte, 1),
+		VoiceOutChannel: make(chan []byte, 1),
+		InputChannel:    make(chan int, 100),
 	}
 	return w
 }
-
-type InputDataPair struct {
-	data int
-	time time.Time
-}
-
-// WebRTC connection
-type WebRTC struct {
-	ID string
-
-	connection  *webrtc.PeerConnection
-	isConnected bool
-	isClosed    bool
-	// for yuvI420 image
-	ImageChannel chan []byte
-	AudioChannel chan []byte
-	InputChannel chan int
-
-	Done     bool
-	lastTime time.Time
-	curFPS   int
-
-	RoomID string
-
-	// store thing related to game
-	GameMeta GameMeta
-}
-
-// Game Meta
-type GameMeta struct {
-	PlayerIndex int
-}
-
-type OnIceCallback func(candidate string)
 
 // StartClient start webrtc
 func (w *WebRTC) StartClient(isMobile bool, iceCB OnIceCallback) (string, error) {
@@ -139,7 +143,8 @@ func (w *WebRTC) StartClient(isMobile bool, iceCB OnIceCallback) (string, error)
 	if err != nil {
 		return "", err
 	}
-	log.Println("Add audio track")
+
+	_, err = w.connection.AddTransceiverFromKind(webrtc.RTPCodecTypeAudio, webrtc.RtpTransceiverInit{Direction: webrtc.RTPTransceiverDirectionRecvonly})
 
 	// create data channel for input, and register callbacks
 	// order: true, negotiated: false, id: random
@@ -188,6 +193,20 @@ func (w *WebRTC) StartClient(isMobile bool, iceCB OnIceCallback) (string, error)
 		} else {
 			// finish, send null
 			iceCB("")
+		}
+
+	})
+
+	w.connection.OnTrack(func(remoteTrack *webrtc.Track, receiver *webrtc.RTPReceiver) {
+		rtpBuf := make([]byte, 1400)
+
+		log.Println("Received Voice from Client")
+		for {
+			i, err := remoteTrack.Read(rtpBuf)
+			// TODO: can receive track but the voice doesn't work
+			if err == nil {
+				w.VoiceInChannel <- rtpBuf[:i]
+			}
 		}
 
 	})
@@ -320,6 +339,25 @@ func (w *WebRTC) startStreaming(vp8Track *webrtc.Track, opusTrack *webrtc.Track)
 		}
 	}()
 
+	// send voice
+	go func() {
+		defer func() {
+			if r := recover(); r != nil {
+				fmt.Println("Recovered from err", r)
+				log.Println(debug.Stack())
+			}
+		}()
+
+		for data := range w.VoiceOutChannel {
+			if !w.isConnected {
+				return
+			}
+			_, err := opusTrack.Write(data)
+			if err != nil {
+				log.Println("Warn: Err write sample: ", err)
+			}
+		}
+	}()
 }
 
 func (w *WebRTC) calculateFPS() int {
