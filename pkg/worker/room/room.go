@@ -36,7 +36,7 @@ type Room struct {
 	// input from webRTC + connection info (player indexc)
 	inputChannel chan<- nanoarch.InputEvent
 	// voiceInChannel is voice stream received from users
-	voiceInChannel map[string]chan []byte
+	voiceInChannel chan []byte
 	// voiceOutChannel is voice stream broadcasted to all users
 	voiceOutChannel chan []byte
 	voiceSample     [][]byte
@@ -82,7 +82,7 @@ func NewRoom(roomID string, gameName string, videoEncoderType string, onlineStor
 		ID: roomID,
 
 		inputChannel:    inputChannel,
-		voiceInChannel:  make(map[string]chan []byte),
+		voiceInChannel:  make(chan []byte, 1),
 		voiceOutChannel: make(chan []byte, 1),
 		rtcSessions:     []*webrtc.WebRTC{},
 		sessionsLock:    &sync.Mutex{},
@@ -213,17 +213,9 @@ func (r *Room) startWebRTCSession(peerconnection *webrtc.WebRTC) {
 		}
 	}()
 
-	r.voiceInChannel[peerconnection.ID] = make(chan []byte, 1)
-
-	log.Println("!!!!!!!!!!!Start WebRTC session")
+	log.Println("Start WebRTC session")
 	go func() {
 		// set up voice input and output. A room has multiple voice input and only one combined voice output.
-		go func() {
-			for v := range r.voiceOutChannel {
-				peerconnection.VoiceOutChannel <- v
-			}
-		}()
-
 		for voiceInput := range peerconnection.VoiceInChannel {
 			// NOTE: when room is no longer running. InputChannel needs to have extra event to go inside the loop
 			if peerconnection.Done || !peerconnection.IsConnected() || !r.IsRunning {
@@ -231,7 +223,7 @@ func (r *Room) startWebRTCSession(peerconnection *webrtc.WebRTC) {
 			}
 
 			if peerconnection.IsConnected() {
-				r.voiceInChannel[peerconnection.ID] <- voiceInput
+				r.voiceInChannel <- voiceInput
 			}
 
 		}

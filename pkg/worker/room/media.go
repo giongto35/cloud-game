@@ -46,30 +46,17 @@ func min(x int, y int) int {
 }
 
 func (r *Room) startVoice() {
-	//var combinedVoice []byte
-	//combinedVoice = make([]byte, config.AUDIO_FRAME)
-	//ticker := time.NewTicker(time.Second / config.AUDIO_MS)
-
-	//for range ticker.C {
-	for {
-		// if there is new voice channel, send it
-		// try close
-		//var l int
-		for _, voices := range r.voiceInChannel {
-			select {
-			case samples := <-voices:
-				//log.Println("Voices", len(combinedVoice), len(samples))
-				//l = len(samples)
-				//for i, b := range samples {
-				//combinedVoice[i] += b
-				//}
-				r.voiceOutChannel <- samples
+	// broadcast voice
+	go func() {
+		for sample := range r.voiceInChannel {
+			for _, webRTC := range r.rtcSessions {
+				if webRTC.IsConnected() {
+					// NOTE: can block here
+					webRTC.VoiceOutChannel <- sample
+				}
 			}
-
 		}
-
-		//r.voiceOutChannel <- combinedVoice[:l]
-	}
+	}()
 }
 
 func (r *Room) startAudio(sampleRate int) {

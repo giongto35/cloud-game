@@ -21,7 +21,6 @@ const rtcp = (() => {
         });
 
         mediaStream = new MediaStream();
-        voiceStream = new MediaStream();
 
         // input channel, ordered + reliable, id 0
         // inputChannel = connection.createDataChannel('a', {ordered: true, negotiated: true, id: 0,});

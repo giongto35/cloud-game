@@ -15,7 +15,6 @@
     // UI elements
     // use $element[0] for DOM element
     const gameScreen = $('#game-screen');
-    const voiceAudio = $('#voice-audio');
     const menuScreen = $('#menu-screen');
     const helpOverlay = $('#help-overlay');
     const popupBox = $('#noti-box');
@@ -143,15 +142,6 @@
                     // TODO: Consider workaround
                 });
         }
-
-            //voiceAudio[0].play().then(() => log.info('Media can autoplay'))
-                //.catch(error => {
-                    //// Usually error happens when we autoplay unmuted video, browser requires manual play.
-                    //// We already muted video and use separate audio encoding so it's fine now
-                    //log.error('Media Failed to autoplay');
-                    //log.error(error)
-                    //// TODO: Consider workaround
-                //});
 
         // TODO get current game from the URL and not from the list?
         // if we are opening a share link it will send the default game name to the server
