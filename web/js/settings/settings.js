@@ -14,7 +14,7 @@
  * @version 1
  */
 const settings = (() => {
-    // internal settings format version
+    // internal structure version
     const revision = 1;
 
     /**
@@ -37,9 +37,6 @@ const settings = (() => {
     /**
      * Enum for settings types (the explicit type of a key-value pair).
      *
-     * Normally, enums should be used when you need to track more than
-     * 3 states (true, false, null) of something.
-     *
      * @readonly
      * @enum {number}
      */
@@ -48,8 +45,8 @@ const settings = (() => {
     const exportFileName = `cloud-game.settings.v${revision}.txt`;
 
     // ui references
-    const ui = document.getElementById('settings');
-    const close = document.getElementById('settings__controls__close'),
+    const ui = document.getElementById('app-settings'),
+        close = document.getElementById('settings__controls__close'),
         load = document.getElementById('settings__controls__load'),
         save = document.getElementById('settings__controls__save'),
         reset = document.getElementById('settings__controls__reset');
@@ -100,6 +97,7 @@ const settings = (() => {
                 localStorage.removeItem(testKey);
                 return true;
             } catch (e) {
+                log.error(e);
                 return false;
             }
         }
@@ -181,7 +179,7 @@ const settings = (() => {
      *
      * @param key A key to find values with.
      * @param default_ The default values to set if none exist.
-     * @returns A slice of the settings with the given key.
+     * @returns A slice of the settings with the given key or a copy of the value.
      */
     const loadOr = (key, default_) => {
         // keep defaults no matter what
@@ -216,6 +214,7 @@ const settings = (() => {
             case option.string:
             case option.number:
             case option.undefined:
+            default:
                 store.settings[key] = value;
         }
 
@@ -307,64 +306,94 @@ const settings = (() => {
 
 // hardcoded ui stuff
 settings._renderrer = (() => {
-    // const ignored = {'_version': 1};
+    // options to ignore
+    // i.e. ignored = {'_version': 1};
     const ignored = {};
 
     const data = document.getElementById('settings-data');
 
-    const _optionNameEl = (text = '') => {
-        const el = document.createElement('div');
-        el.className = 'settings__option-name';
-        el.innerText = text;
+    const _option = () => {
+        const wrapperEl = document.createElement('div');
+        wrapperEl.classList.add('settings__option');
 
-        return el;
+        const nameEl = document.createElement('div');
+        nameEl.classList.add('settings__option-name');
+        wrapperEl.append(nameEl);
+
+        const valueEl = document.createElement('div');
+        valueEl.classList.add('settings__option-value');
+        wrapperEl.append(valueEl);
+
+        return {
+            withName: function (name = '') {
+                nameEl.innerText = name;
+                return this;
+            },
+            withClass: function (name = '') {
+                wrapperEl.classList.add(name);
+                return this;
+            },
+            readOnly: function () {
+            },
+            restartNeeded: function () {
+                nameEl.classList.add('restart-needed-asterisk');
+                return this;
+            },
+            add: function (...elements) {
+                if (elements.length) for (let _el of elements.flat()) valueEl.append(_el);
+                return this;
+            },
+            build: () => wrapperEl,
+        };
     }
 
-    const _optionValueEl = (elements = []) => {
-        const el = document.createElement('div');
-        el.className = 'settings__option-value';
+    /**
+     * Handles a normal option change.
+     *
+     * @param key The name (id) of an option.
+     * @param newValue A new value to set.
+     * @param oldValue An old value to use somehow if needed.
+     */
+    const onChange = (key, newValue, oldValue) => settings.set(key, newValue);
 
-        if (elements.length > 0) elements.forEach(e => el.append(e));
-
-        return el;
-    }
-
-    const onValueChange = () => {
-        console.log('lol');
-    }
+    const onKeyBindingChange = (key, newValue) => console.log('rebind', key, newValue);
 
     const render = () => {
         log.debug('Rendering the settings...');
 
         const _settings = settings.getStore();
         const parent = document.createElement('div');
-        Object.keys(_settings).sort().forEach(k => {
-            if (!ignored[k]) {
-                const value = _settings[k];
 
-                if (k === 'log.level') {
-                    parent.append(_optionNameEl(k));
-                    parent.append(_optionValueEl([
-                        gui.select(onValueChange, ['trace', 'debug', 'warning', 'info'], value),
-                    ]))
-                } else if (k === 'input.keyboard.map') {
-                    // els.push('<div>');
-                    // els.push('<div class="settings__option-name">Keyboard bindings</div>');
-                    // els.push('<div class="settings__option-value">');
-                    // Object.keys(value).forEach(kk => {
-                    //     els.push(`<div>${value[kk]} → ${kk}</div>`);
-                    // });
-                    // els.push('</div>');
-                    // els.push('</div>');
-                } else {
-                    parent.append(_optionNameEl(k));
-                    parent.append(_optionValueEl([value]));
-                }
+        for (let k of Object.keys(_settings).sort()) {
+            if (ignored[k]) continue;
+
+            const value = _settings[k];
+            switch (k) {
+                case '_version':
+                    parent.append(_option().withName('Format version').add(value).build());
+                    break;
+                case 'log.level':
+                    parent.append(
+                        _option().withName('Log level')
+                            .restartNeeded()
+                            .add(gui.select(k, onChange, ['trace', 'debug', 'warning', 'info'], value))
+                            .build()
+                    );
+                    break;
+                case 'input.keyboard.map':
+                    parent.append(
+                        _option().withName('Keyboard bindings')
+                            .withClass('keyboard-bindings')
+                            .add(Object.keys(value).map(k => gui.binding(value[k], k, onKeyBindingChange)))
+                            .build()
+                    );
+                    break;
+                default:
+                    parent.append(_option().withName(k).add(value).build());
             }
-        })
+        }
 
-        data.innerHTML = '';
-        data.append(parent);
+        data.replaceWith(parent);
     }
 
     return {

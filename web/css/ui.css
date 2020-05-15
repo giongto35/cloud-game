@@ -60,8 +60,7 @@
 }
 
 
-
-#settings {
+#app-settings {
     font-family: monospace;
 }
 
@@ -105,10 +104,31 @@
     color: black;
 }
 
+#settings-data > div {
+    display: grid;
+    grid-template-columns: 30% auto;
+}
+
 .settings__option-name {
     background-color: beige;
 }
+
+.restart-needed-asterisk:after {
+    content: '*';
+    color: red;
+}
+
 .settings__option-value {
 
 }
 
+.keyboard-bindings .settings__option-value {
+    display: grid;
+    grid-template-columns: 25% 25% auto auto;
+}
+
+.binding-element {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
