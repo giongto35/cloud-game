@@ -1,5 +1,5 @@
 settings.init();
-log.setLevel(settings.loadOr('log.level', 'debug'));
+log.setLevel(settings.loadOr(opts.LOG_LEVEL, 'debug'));
 
 keyboard.init();
 joystick.init();

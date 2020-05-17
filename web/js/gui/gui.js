@@ -9,7 +9,7 @@ const gui = (() => {
 
     const _option = (text = '', selected = false) => {
         const el = _create('option');
-        el.innerText = text;
+        el.textContent = text;
         if (selected) el.selected = true;
 
         return el;
@@ -31,11 +31,11 @@ const gui = (() => {
     }
 
     const _bind = (callback = function () {
-    }, name = '') => {
+    }, name = '', oldValue) => {
         const el = _create('button');
-        el.onclick = () => callback(name, 'lol');
+        el.onclick = () => callback(name, oldValue);
 
-        el.innerText = name;
+        el.textContent = name;
 
         return el;
     }
@@ -45,14 +45,13 @@ const gui = (() => {
         const el = _create();
         el.setAttribute('class', 'binding-element');
 
-        const k = _bind(callback, key);
+        const k = _bind(callback, key, value);
 
         el.append(k);
 
         const v = _create();
-        v.innerText = value;
+        v.textContent = value;
         el.append(v);
-
 
         return el;
     }

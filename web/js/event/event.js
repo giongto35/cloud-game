@@ -83,6 +83,7 @@ const MENU_RELEASED = 'menuReleased';
 const KEY_PRESSED = 'keyPressed';
 const KEY_RELEASED = 'keyReleased';
 const KEY_STATE_UPDATED = 'keyStateUpdated';
+const KEYBOARD_TOGGLE_FILTER_MODE = 'keyboardToggleFilterMode';
 
 const STATS_TOGGLE = 'statsToggle';
 const HELP_OVERLAY_TOGGLED = 'helpOverlayToggled';

@@ -4,6 +4,9 @@
  * @version 1
  */
 const keyboard = (() => {
+
+    let isKeysFilteredMode = true;
+
     const defaultMap = Object.freeze({
         37: KEY.LEFT,
         38: KEY.UP,
@@ -32,7 +35,7 @@ const keyboard = (() => {
         57: KEY.SETTINGS // 9
     });
 
-    const settingsKey = 'input.keyboard.map';
+    const settingsKey = opts.INPUT_KEYBOARD_MAP;
     let keyMap = {};
 
     const remap = (map = {}) => {
@@ -42,11 +45,22 @@ const keyboard = (() => {
 
     const onKey = (code, callback) => !keyMap[code] || callback(keyMap[code]);
 
+    event.sub(KEYBOARD_TOGGLE_FILTER_MODE, data => {
+        isKeysFilteredMode = data.mode !== undefined ? data.mode : !isKeysFilteredMode;
+        log.debug(`New keyboard filter mode: ${isKeysFilteredMode}`);
+    });
+
     return {
         init: () => {
             keyMap = settings.loadOr(settingsKey, defaultMap);
             const body = document.body;
-            body.addEventListener('keyup', e => onKey(e.keyCode, key => event.pub(KEY_RELEASED, {key: key})));
+            body.addEventListener('keyup', e => {
+                if (isKeysFilteredMode) {
+                    onKey(e.keyCode, key => event.pub(KEY_RELEASED, {key: key}));
+                } else {
+                    event.pub(KEY_RELEASED, {key: e.keyCode});
+                }
+            });
             body.addEventListener('keydown', e => onKey(e.keyCode, key => event.pub(KEY_PRESSED, {key: key})));
             log.info('[input] keyboard has been initialized');
         },
@@ -55,4 +69,4 @@ const keyboard = (() => {
         }
     }
 })
-(event, document, KEY, log, settings);
+(event, document, KEY, log, opts, settings);

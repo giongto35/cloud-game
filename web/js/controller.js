@@ -192,8 +192,10 @@
     };
 
     // pre-state key release handler
-    const onKeyRelease = (data) => {
+    const onKeyRelease = data => {
         const button = keyButtons[data.key];
+
+        if (!button) return;
 
         if (_dpadArrowKeys.includes(data.key)) {
             button.removeClass('dpad-pressed');

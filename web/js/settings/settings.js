@@ -17,6 +17,11 @@ const settings = (() => {
     // internal structure version
     const revision = 1;
 
+    // default settings
+    // keep them for revert to defaults option
+    const _defaults = Object.create(null);
+    _defaults[opts._VERSION] = revision;
+
     /**
      * The main store with settings passed around by reference
      * (because of that we need a wrapper object)
@@ -26,13 +31,10 @@ const settings = (() => {
      */
     let store = {
         settings: {
-            _version: revision
+            ..._defaults
         }
     };
     let provider;
-
-    // keep defaults after load to be able to reset
-    const defaults = {};
 
     /**
      * Enum for settings types (the explicit type of a key-value pair).
@@ -46,10 +48,10 @@ const settings = (() => {
 
     // ui references
     const ui = document.getElementById('app-settings'),
-        close = document.getElementById('settings__controls__close'),
-        load = document.getElementById('settings__controls__load'),
-        save = document.getElementById('settings__controls__save'),
-        reset = document.getElementById('settings__controls__reset');
+        closeEl = document.getElementById('settings__controls__close'),
+        loadEl = document.getElementById('settings__controls__load'),
+        saveEl = document.getElementById('settings__controls__save'),
+        resetEl = document.getElementById('settings__controls__reset');
 
     this._renderrer = this._renderrer || {
         render: () => {
@@ -68,6 +70,7 @@ const settings = (() => {
         return {
             get: key => store_.settings[key],
             set: nil,
+            remove: nil,
             save: nil,
             loadSettings: nil,
             reset: nil,
@@ -106,15 +109,20 @@ const settings = (() => {
 
         const set = (key, value) => save();
 
+        const remove = () => save();
+
         const loadSettings = () => {
             if (!localStorage.getItem(root)) save();
             store_.settings = JSON.parse(localStorage.getItem(root));
         }
 
         const reset = () => {
-            Object.keys(store_.settings).forEach(k => {
-                if (defaults.hasOwnProperty(k)) store.settings[k] = defaults[k];
-            });
+            const defaultKeys = Object.keys(_defaults);
+            for (let key of Object.keys(store_.settings)) {
+                if (defaultKeys.includes(key)) {
+                    settings.reset(key, _defaults[key]);
+                }
+            }
 
             localStorage.removeItem(root);
             localStorage.setItem(root, _serialize(store_.settings));
@@ -123,6 +131,7 @@ const settings = (() => {
         return {
             get,
             set,
+            remove,
             save,
             loadSettings,
             reset,
@@ -183,7 +192,7 @@ const settings = (() => {
      */
     const loadOr = (key, default_) => {
         // keep defaults no matter what
-        defaults[key] = default_;
+        _defaults[key] = default_;
 
         const isLoaded = store.settings.hasOwnProperty(key);
         if (!isLoaded) {
@@ -207,7 +216,7 @@ const settings = (() => {
                 break;
             case option.object:
                 for (const k of Object.keys(value)) {
-                    log.debug(`Change ${k}: ${store.settings[key][k]} -> ${value[k]}`);
+                    log.debug(`Change key [${k}] from ${store.settings[key][k]} to ${value[k]}`);
                     store.settings[key][k] = value[k];
                 }
                 break;
@@ -220,6 +229,29 @@ const settings = (() => {
 
         provider.set(key, value);
         event.pub(SETTINGS_CHANGED);
+    }
+
+    const reset = (key, value) => {
+        set(key, value);
+
+        const type = getType(value);
+        if (type === option.object) {
+            const valueKeys = Object.keys(value);
+            for (const k of Object.keys(store.settings[key])) {
+                if (!valueKeys.includes(k)) {
+                    const prev = store.settings[key][k];
+                    const isDeleted = delete store.settings[key][k];
+                    log.debug(`Non-default setting [${k}=${prev}] has been deleted (${isDeleted}) from the [${key}]`);
+                }
+            }
+        }
+    }
+
+    // !to fix on reset can't delete
+    const remove = (key, subKey) => {
+        const isRemoved = subKey !== undefined ? delete store.settings[key][subKey] : delete store.settings[key];
+        if (!isRemoved) log.warning(`The key: ${key + (subKey ? '.' + subKey : '')} wasn't deleted!`);
+        provider.remove(key, subKey);
     }
 
     const _render = () => settings._renderrer.render()
@@ -274,21 +306,22 @@ const settings = (() => {
         }
     }
 
-    const onClose = () => event.pub(SETTINGS_CLOSED);
-
-    const onSave = () => _export();
-
-    const onLoad = () => _fileReader.read(onFileLoad);
-
-    const onReset = () => {
-        if (window.confirm("Are you sure want to reset your settings?")) provider.reset();
-    }
+    event.sub(SETTINGS_CHANGED, _render);
 
     // internal init section
-    close.addEventListener('click', onClose);
-    save.addEventListener('click', onSave);
-    load.addEventListener('click', onLoad);
-    reset.addEventListener('click', onReset);
+    closeEl.addEventListener('click', () => {
+        event.pub(SETTINGS_CLOSED);
+        // to make sure it's disabled, but it's a tad verbose
+        event.pub(KEYBOARD_TOGGLE_FILTER_MODE, {mode: true});
+    });
+    saveEl.addEventListener('click', () => _export());
+    loadEl.addEventListener('click', () => _fileReader.read(onFileLoad));
+    resetEl.addEventListener('click', () => {
+        if (window.confirm("Are you sure want to reset your settings?")) {
+            provider.reset();
+            event.pub(SETTINGS_CHANGED);
+        }
+    });
 
     return {
         init,
@@ -296,6 +329,8 @@ const settings = (() => {
         getStore,
         get,
         set,
+        reset,
+        remove,
         import: _import,
         export: _export,
         ui: {
@@ -310,9 +345,17 @@ settings._renderrer = (() => {
     // i.e. ignored = {'_version': 1};
     const ignored = {};
 
+    // the main display data holder element
     const data = document.getElementById('settings-data');
 
-    const _option = () => {
+    /**
+     * A fast way to clear data holder for rendering.
+     */
+    const clearData = () => {
+        while (data.firstChild) data.removeChild(data.firstChild)
+    };
+
+    const _option = (holderEl) => {
         const wrapperEl = document.createElement('div');
         wrapperEl.classList.add('settings__option');
 
@@ -326,7 +369,7 @@ settings._renderrer = (() => {
 
         return {
             withName: function (name = '') {
-                nameEl.innerText = name;
+                nameEl.textContent = name;
                 return this;
             },
             withClass: function (name = '') {
@@ -334,6 +377,7 @@ settings._renderrer = (() => {
                 return this;
             },
             readOnly: function () {
+                // reserved
             },
             restartNeeded: function () {
                 nameEl.classList.add('restart-needed-asterisk');
@@ -343,8 +387,41 @@ settings._renderrer = (() => {
                 if (elements.length) for (let _el of elements.flat()) valueEl.append(_el);
                 return this;
             },
-            build: () => wrapperEl,
+            build: () => holderEl.append(wrapperEl),
         };
+    }
+
+    const onKeyChange = (key, oldValue, newValue, handler) => {
+        const _settings = settings.get()[opts.INPUT_KEYBOARD_MAP];
+
+        if (_settings[newValue] !== undefined) {
+            log.warning(`There are old settings for key: ${_settings[newValue]}, won't change!`);
+        } else {
+            settings.remove(opts.INPUT_KEYBOARD_MAP, oldValue);
+            settings.set(opts.INPUT_KEYBOARD_MAP, {[newValue]: key});
+        }
+
+        // !to check leaks
+        if (handler) {
+            handler.unsub();
+            handler = undefined;
+        }
+
+        // !to handle simple close
+        event.pub(KEYBOARD_TOGGLE_FILTER_MODE);
+        event.pub(SETTINGS_CHANGED);
+    }
+
+    const _keyChangeOverlay = (keyName, oldValue) => {
+        const wrapperEl = document.createElement('div');
+        wrapperEl.classList.add('settings__key-wait');
+        wrapperEl.textContent = `Let's choose a ${keyName} key...`;
+
+        let handler = event.sub(KEY_RELEASED, (key) => {
+            onKeyChange(keyName, oldValue, key.key, handler);
+        });
+
+        return wrapperEl;
     }
 
     /**
@@ -356,47 +433,45 @@ settings._renderrer = (() => {
      */
     const onChange = (key, newValue, oldValue) => settings.set(key, newValue);
 
-    const onKeyBindingChange = (key, newValue) => console.log('rebind', key, newValue);
+    const onKeyBindingChange = (key, oldValue) => {
+        clearData();
+        data.append(_keyChangeOverlay(key, oldValue));
+        event.pub(KEYBOARD_TOGGLE_FILTER_MODE);
+    }
 
-    const render = () => {
+    const render = function () {
         log.debug('Rendering the settings...');
 
         const _settings = settings.getStore();
-        const parent = document.createElement('div');
 
+        clearData();
         for (let k of Object.keys(_settings).sort()) {
             if (ignored[k]) continue;
 
             const value = _settings[k];
             switch (k) {
-                case '_version':
-                    parent.append(_option().withName('Format version').add(value).build());
+                case opts._VERSION:
+                    _option(data).withName('Format version').add(value).build();
                     break;
-                case 'log.level':
-                    parent.append(
-                        _option().withName('Log level')
-                            .restartNeeded()
-                            .add(gui.select(k, onChange, ['trace', 'debug', 'warning', 'info'], value))
-                            .build()
-                    );
+                case opts.LOG_LEVEL:
+                    _option(data).withName('Log level')
+                        .restartNeeded()
+                        .add(gui.select(k, onChange, ['trace', 'debug', 'warning', 'info'], value))
+                        .build();
                     break;
-                case 'input.keyboard.map':
-                    parent.append(
-                        _option().withName('Keyboard bindings')
-                            .withClass('keyboard-bindings')
-                            .add(Object.keys(value).map(k => gui.binding(value[k], k, onKeyBindingChange)))
-                            .build()
-                    );
+                case opts.INPUT_KEYBOARD_MAP:
+                    _option(data).withName('Keyboard bindings')
+                        .withClass('keyboard-bindings')
+                        .add(Object.keys(value).map(k => gui.binding(value[k], k, onKeyBindingChange)))
+                        .build();
                     break;
                 default:
-                    parent.append(_option().withName(k).add(value).build());
+                    _option(data).withName(k).add(value).build();
             }
         }
-
-        data.replaceWith(parent);
     }
 
     return {
         render,
     }
-})(document, log, settings);
+})(document, log, opts, settings);
