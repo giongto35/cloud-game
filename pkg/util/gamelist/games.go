@@ -17,7 +17,7 @@ type GameInfo struct {
 
 const gamePath = "assets/games"
 
-var excludeFiles = []string{"neogeo"}
+var excludeFiles = []string{"neogeo", "pgm"}
 
 var GameList []GameInfo
 

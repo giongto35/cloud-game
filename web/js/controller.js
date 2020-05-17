@@ -333,7 +333,7 @@
 
                             popup('Quit!');
 
-                            location.reload();
+                            window.location = window.location.pathname;
                             break;
 
                         case KEY.STATS:
