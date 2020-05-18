@@ -117,13 +117,6 @@ const settings = (() => {
         }
 
         const reset = () => {
-            const defaultKeys = Object.keys(_defaults);
-            for (let key of Object.keys(store_.settings)) {
-                if (defaultKeys.includes(key)) {
-                    settings.reset(key, _defaults[key]);
-                }
-            }
-
             localStorage.removeItem(root);
             localStorage.setItem(root, _serialize(store_.settings));
         }
@@ -153,8 +146,7 @@ const settings = (() => {
             log.error(`Your import file is broken!`);
         }
 
-        // !to call re-render
-        // _render();
+        _render();
     }
 
     const _export = () => {
@@ -183,6 +175,8 @@ const settings = (() => {
 
     const get = () => store.settings;
 
+    const _isLoaded = key => store.settings.hasOwnProperty(key);
+
     /**
      * Tries to load settings by some key.
      *
@@ -191,11 +185,10 @@ const settings = (() => {
      * @returns A slice of the settings with the given key or a copy of the value.
      */
     const loadOr = (key, default_) => {
-        // keep defaults no matter what
+        // preserve defaults
         _defaults[key] = default_;
 
-        const isLoaded = store.settings.hasOwnProperty(key);
-        if (!isLoaded) {
+        if (!_isLoaded(key)) {
             store.settings[key] = {};
             set(key, default_);
         } else {
@@ -206,8 +199,8 @@ const settings = (() => {
         return store.settings[key];
     }
 
-    const set = (key, value) => {
-        const type = getType(value);
+    const set = (key, value, updateProvider = true) => {
+        const type = _getType(value);
 
         // mutate settings w/o changing the reference
         switch (type) {
@@ -215,9 +208,9 @@ const settings = (() => {
                 store.settings[key].splice(0, Infinity, ...value);
                 break;
             case option.object:
-                for (const k of Object.keys(value)) {
-                    log.debug(`Change key [${k}] from ${store.settings[key][k]} to ${value[k]}`);
-                    store.settings[key][k] = value[k];
+                for (let option of Object.keys(value)) {
+                    log.debug(`Change key [${option}] from ${store.settings[key][option]} to ${value[option]}`);
+                    store.settings[key][option] = value[option];
                 }
                 break;
             case option.string:
@@ -227,27 +220,32 @@ const settings = (() => {
                 store.settings[key] = value;
         }
 
-        provider.set(key, value);
-        event.pub(SETTINGS_CHANGED);
-    }
-
-    const reset = (key, value) => {
-        set(key, value);
-
-        const type = getType(value);
-        if (type === option.object) {
-            const valueKeys = Object.keys(value);
-            for (const k of Object.keys(store.settings[key])) {
-                if (!valueKeys.includes(k)) {
-                    const prev = store.settings[key][k];
-                    const isDeleted = delete store.settings[key][k];
-                    log.debug(`Non-default setting [${k}=${prev}] has been deleted (${isDeleted}) from the [${key}]`);
-                }
-            }
+        if (updateProvider) {
+            provider.set(key, value);
+            event.pub(SETTINGS_CHANGED);
         }
     }
 
-    // !to fix on reset can't delete
+    const _reset = () => {
+        for (let _option of Object.keys(_defaults)) {
+            const value = _defaults[_option];
+
+            // delete all sub-options not in defaults
+            if (_getType(value) === option.object) {
+                for (let opt of Object.keys(store.settings[_option])) {
+                    const prev = store.settings[_option][opt];
+                    const isDeleted = delete store.settings[_option][opt];
+                    log.debug(`User option [${opt}=${prev}] has been deleted (${isDeleted}) from the [${_option}]`);
+                }
+            }
+
+            set(_option, value, false);
+        }
+
+        provider.reset();
+        event.pub(SETTINGS_CHANGED);
+    }
+
     const remove = (key, subKey) => {
         const isRemoved = subKey !== undefined ? delete store.settings[key][subKey] : delete store.settings[key];
         if (!isRemoved) log.warning(`The key: ${key + (subKey ? '.' + subKey : '')} wasn't deleted!`);
@@ -263,7 +261,7 @@ const settings = (() => {
     const toggle = () => ui.classList.toggle('modal-visible') && !_render();
 
     // !to handle undefineds and nulls
-    function getType(value) {
+    function _getType(value) {
         if (value === undefined) return option.undefined
         else if (Array.isArray(value)) return option.list
         else if (typeof value === 'object' && value !== null) return option.object
@@ -318,7 +316,7 @@ const settings = (() => {
     loadEl.addEventListener('click', () => _fileReader.read(onFileLoad));
     resetEl.addEventListener('click', () => {
         if (window.confirm("Are you sure want to reset your settings?")) {
-            provider.reset();
+            _reset();
             event.pub(SETTINGS_CHANGED);
         }
     });
@@ -329,7 +327,6 @@ const settings = (() => {
         getStore,
         get,
         set,
-        reset,
         remove,
         import: _import,
         export: _export,
@@ -341,16 +338,13 @@ const settings = (() => {
 
 // hardcoded ui stuff
 settings._renderrer = (() => {
-    // options to ignore
-    // i.e. ignored = {'_version': 1};
+    // options to ignore (i.e. ignored = {'_version': 1})
     const ignored = {};
 
     // the main display data holder element
     const data = document.getElementById('settings-data');
 
-    /**
-     * A fast way to clear data holder for rendering.
-     */
+    // a fast way to clear data holder.
     const clearData = () => {
         while (data.firstChild) data.removeChild(data.firstChild)
     };
@@ -407,7 +401,6 @@ settings._renderrer = (() => {
             handler = undefined;
         }
 
-        // !to handle simple close
         event.pub(KEYBOARD_TOGGLE_FILTER_MODE);
         event.pub(SETTINGS_CHANGED);
     }
@@ -417,9 +410,7 @@ settings._renderrer = (() => {
         wrapperEl.classList.add('settings__key-wait');
         wrapperEl.textContent = `Let's choose a ${keyName} key...`;
 
-        let handler = event.sub(KEY_RELEASED, (key) => {
-            onKeyChange(keyName, oldValue, key.key, handler);
-        });
+        let handler = event.sub(KEYBOARD_KEY_PRESSED, button => onKeyChange(keyName, oldValue, button.key, handler));
 
         return wrapperEl;
     }
@@ -440,8 +431,6 @@ settings._renderrer = (() => {
     }
 
     const render = function () {
-        log.debug('Rendering the settings...');
-
         const _settings = settings.getStore();
 
         clearData();

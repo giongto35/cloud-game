@@ -4,42 +4,40 @@
  * @version 1
  */
 const keyboard = (() => {
-
-    let isKeysFilteredMode = true;
-
+    // default keyboard bindings
     const defaultMap = Object.freeze({
-        37: KEY.LEFT,
-        38: KEY.UP,
-        39: KEY.RIGHT,
-        40: KEY.DOWN,
-        90: KEY.A, // z
-        88: KEY.B, // x
-        67: KEY.X, // c
-        86: KEY.Y, // v
-        65: KEY.L, // a
-        83: KEY.R, // s
-        13: KEY.START, // enter
-        16: KEY.SELECT, // shift
+        ArrowLeft: KEY.LEFT,
+        ArrowUp: KEY.UP,
+        ArrowRight: KEY.RIGHT,
+        ArrowDown: KEY.DOWN,
+        KeyZ: KEY.A,
+        KeyX: KEY.B,
+        KeyC: KEY.X,
+        KeyV: KEY.Y,
+        KeyA: KEY.L,
+        KeyS: KEY.R,
+        Enter: KEY.START,
+        ShiftLeft: KEY.SELECT,
         // non-game
-        81: KEY.QUIT, // q
-        87: KEY.JOIN, // w
-        75: KEY.SAVE, // k
-        76: KEY.LOAD, // l
-        49: KEY.PAD1, // 1
-        50: KEY.PAD2, // 2
-        51: KEY.PAD3, // 3
-        52: KEY.PAD4, // 4
-        70: KEY.FULL, // f
-        72: KEY.HELP, // h
-        220: KEY.STATS, // \
-        57: KEY.SETTINGS // 9
+        KeyQ: KEY.QUIT,
+        KeyW: KEY.JOIN,
+        KeyK: KEY.SAVE,
+        KeyL: KEY.LOAD,
+        Digit1: KEY.PAD1,
+        Digit2: KEY.PAD2,
+        Digit3: KEY.PAD3,
+        Digit4: KEY.PAD4,
+        KeyF: KEY.FULL,
+        KeyH: KEY.HELP,
+        Backslash: KEY.STATS,
+        Digit9: KEY.SETTINGS
     });
 
-    const settingsKey = opts.INPUT_KEYBOARD_MAP;
     let keyMap = {};
+    let isKeysFilteredMode = true;
 
     const remap = (map = {}) => {
-        settings.set(settingsKey, map);
+        settings.set(opts.INPUT_KEYBOARD_MAP, map);
         log.info('Keyboard keys have been remapped')
     }
 
@@ -52,16 +50,17 @@ const keyboard = (() => {
 
     return {
         init: () => {
-            keyMap = settings.loadOr(settingsKey, defaultMap);
+            keyMap = settings.loadOr(opts.INPUT_KEYBOARD_MAP, defaultMap);
             const body = document.body;
+            // !to use prevent default as everyone
             body.addEventListener('keyup', e => {
                 if (isKeysFilteredMode) {
-                    onKey(e.keyCode, key => event.pub(KEY_RELEASED, {key: key}));
+                    onKey(e.code, key => event.pub(KEY_RELEASED, {key: key}));
                 } else {
-                    event.pub(KEY_RELEASED, {key: e.keyCode});
+                    event.pub(KEYBOARD_KEY_PRESSED, {key: e.code});
                 }
             });
-            body.addEventListener('keydown', e => onKey(e.keyCode, key => event.pub(KEY_PRESSED, {key: key})));
+            body.addEventListener('keydown', e => onKey(e.code, key => event.pub(KEY_PRESSED, {key: key})));
             log.info('[input] keyboard has been initialized');
         },
         settings: {
