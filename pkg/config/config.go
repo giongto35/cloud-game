@@ -2,6 +2,7 @@ package config
 
 import (
 	"flag"
+	"github.com/giongto35/cloud-game/pkg/emulator/libretro/image"
 	"time"
 )
 
@@ -50,6 +51,7 @@ type EmulatorMeta struct {
 	BaseWidth       int
 	BaseHeight      int
 	Ratio           float64
+	Rotation        image.Rotate
 }
 
 var EmulatorConfig = map[string]EmulatorMeta{

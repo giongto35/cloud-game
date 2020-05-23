@@ -15,7 +15,7 @@ const (
 
 type Format func(data []byte, index int) color.RGBA
 
-func rgb565(data []byte, index int) color.RGBA {
+func Rgb565(data []byte, index int) color.RGBA {
 	pixel := (int)(data[index]) + ((int)(data[index+1]) << 8)
 
 	return color.RGBA{
@@ -26,7 +26,7 @@ func rgb565(data []byte, index int) color.RGBA {
 	}
 }
 
-func rgba8888(data []byte, index int) color.RGBA {
+func Rgba8888(data []byte, index int) color.RGBA {
 	return color.RGBA{
 		R: data[index+2],
 		G: data[index+1],
