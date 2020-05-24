@@ -2,7 +2,7 @@
 // Pi/2 step rotation of points in a 2-dimensional space.
 package image
 
-type Angle uint8
+type Angle uint
 
 const (
 	Angle0 Angle = iota
@@ -12,7 +12,7 @@ const (
 )
 
 // A helper to choose appropriate rotation by its angle
-var Angles = map[Angle]Rotate{
+var Angles = [4]Rotate{
 	Angle0:   {Call: Rotate0, IsEven: false},
 	Angle90:  {Call: Rotate90, IsEven: true},
 	Angle180: {Call: Rotate180, IsEven: false},
