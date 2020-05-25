@@ -68,7 +68,7 @@ jobs:
       with:
         msystem: MINGW64
         path-type: inherit
-        update: true
+#        update: true
 
     - name: Load Go modules maybe?
       uses: actions/cache@v1
