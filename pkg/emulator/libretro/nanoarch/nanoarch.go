@@ -55,19 +55,23 @@ import "C"
 var mu sync.Mutex
 
 var video struct {
-	program uint32
-	vao     uint32
-	pitch   uint32
-	pixFmt  uint32
-	pixType uint32
-	bpp     uint32
+	program  uint32
+	vao      uint32
+	pitch    uint32
+	pixFmt   uint32
+	pixType  uint32
+	bpp      uint32
+	rotation image.Angle
 }
+
+// default core pix format converter
+var pixelFormatConverterFn = image.Rgb565
+var rotationFn = image.GetRotation(image.Angle(0))
 
 const bufSize = 1024 * 4
 const joypadNumKeys = int(C.RETRO_DEVICE_ID_JOYPAD_R3 + 1)
 
 var joy [joypadNumKeys]bool
-var ewidth, eheight int
 
 var bindKeysMap = map[int]int{
 	C.RETRO_DEVICE_ID_JOYPAD_A:      0,
@@ -106,10 +110,18 @@ func coreVideoRefresh(data unsafe.Pointer, width C.unsigned, height C.unsigned, 
 	bytes := int(height) * packedWidth * int(video.bpp)
 	data_ := (*[1 << 30]byte)(data)[:bytes:bytes]
 
-	// image is resized here and push to channel. On the other side, images will be fan out
-	image.DrawRgbaImage(int(video.pixFmt), image.ScaleNearestNeighbour, int(width), int(height),
-		packedWidth, ewidth, eheight, int(video.bpp), data_, outputImg)
+	// the image is being resized and de-rotated
+	image.DrawRgbaImage(
+		pixelFormatConverterFn,
+		rotationFn,
+		image.ScaleNearestNeighbour,
+		int(width), int(height), packedWidth, int(video.bpp),
+		data_,
+		outputImg,
+	)
 
+	// the image is pushed into a channel
+	// where it will be distributed with fan-out
 	NAEmulator.imageChannel <- outputImg
 }
 
@@ -208,10 +220,14 @@ func coreEnvironment(cmd C.unsigned, data unsafe.Pointer) C.bool {
 	case C.RETRO_ENVIRONMENT_SHUTDOWN:
 		//window.SetShouldClose(true)
 		return true
-	case C.RETRO_ENVIRONMENT_GET_VARIABLE:
-		variable := (*C.struct_retro_variable)(data)
-		fmt.Println("[Env]: get variable:", C.GoString(variable.key))
-		return false
+		/*
+			Sets screen rotation of graphics.
+			Valid values are 0, 1, 2, 3, which rotates screen by 0, 90, 180, 270 degrees
+			ccw respectively.
+		*/
+	case C.RETRO_ENVIRONMENT_SET_ROTATION:
+		setRotation(*(*int)(data) % 4)
+		return true
 	default:
 		//fmt.Println("[Env]: command not implemented", cmd)
 		return false
@@ -421,6 +437,8 @@ func unserialize(bytes []byte, size uint) error {
 func nanoarchShutdown() {
 	C.bridge_retro_unload_game(retroUnloadGame)
 	C.bridge_retro_deinit(retroDeinit)
+
+	setRotation(0)
 }
 
 func nanoarchRun() {
@@ -432,14 +450,18 @@ func videoSetPixelFormat(format uint32) C.bool {
 	case C.RETRO_PIXEL_FORMAT_0RGB1555:
 		video.pixFmt = image.BIT_FORMAT_SHORT_5_5_5_1
 		video.bpp = 2
+		// format is not implemented
+		pixelFormatConverterFn = nil
 		break
 	case C.RETRO_PIXEL_FORMAT_XRGB8888:
 		video.pixFmt = image.BIT_FORMAT_INT_8_8_8_8_REV
 		video.bpp = 4
+		pixelFormatConverterFn = image.Rgba8888
 		break
 	case C.RETRO_PIXEL_FORMAT_RGB565:
 		video.pixFmt = image.BIT_FORMAT_SHORT_5_6_5
 		video.bpp = 2
+		pixelFormatConverterFn = image.Rgb565
 		break
 	default:
 		log.Fatalf("Unknown pixel type %v", format)
@@ -447,4 +469,11 @@ func videoSetPixelFormat(format uint32) C.bool {
 
 	fmt.Printf("Video pixel: %v %v %v %v %v", video, format, C.RETRO_PIXEL_FORMAT_0RGB1555, C.RETRO_PIXEL_FORMAT_XRGB8888, C.RETRO_PIXEL_FORMAT_RGB565)
 	return true
+}
+
+func setRotation(rotation int) {
+	video.rotation = image.Angle(rotation)
+	rotationFn = image.GetRotation(video.rotation)
+	NAEmulator.meta.Rotation = rotationFn
+		log.Printf("[Env]: the game video is rotated %v°", map[int]int{0: 0, 1: 90, 2: 180, 3: 270}[rotation])
 }

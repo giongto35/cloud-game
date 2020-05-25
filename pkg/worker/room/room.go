@@ -131,12 +131,19 @@ func NewRoom(roomID string, gameName string, videoEncoderType string, onlineStor
 			log.Printf("Viewport size has scaled to %dx%d", nwidth, nheight)
 		}
 
-		room.director.SetViewport(nwidth, nheight)
-
 		log.Println("meta: ", gameMeta)
 
+		// set resulting game frame size considering
+		// its orientation
+		encoderW, encoderH := nwidth, nheight
+		if gameMeta.Rotation.IsEven {
+			encoderW, encoderH = nheight, nwidth
+		}
+
+		room.director.SetViewport(encoderW, encoderH)
+
 		// Spawn video and audio encoding for webRTC
-		go room.startVideo(nwidth, nheight, videoEncoderType)
+		go room.startVideo(encoderW, encoderH, videoEncoderType)
 		go room.startAudio(gameMeta.AudioSampleRate)
 		go room.startVoice()
 		room.director.Start()
