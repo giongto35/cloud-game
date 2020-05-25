@@ -60,6 +60,14 @@ func (sm *ServerMonitoring) Run() error {
 			monitoringServerMux.Handle(pprofPath+"/profile", http.HandlerFunc(pprof.Profile))
 			monitoringServerMux.Handle(pprofPath+"/symbol", http.HandlerFunc(pprof.Symbol))
 			monitoringServerMux.Handle(pprofPath+"/trace", http.HandlerFunc(pprof.Trace))
+			// pprof handler for custom pprof path needs to be explicitly specified, according to: https://github.com/gin-contrib/pprof/issues/8 . Don't know why this is not fired as ticket
+			// https://golang.org/src/net/http/pprof/pprof.go?s=7411:7461#L305 only render index page
+			monitoringServerMux.Handle(pprofPath+"/allocs", pprof.Handler("allocs"))
+			monitoringServerMux.Handle(pprofPath+"/block", pprof.Handler("block"))
+			monitoringServerMux.Handle(pprofPath+"/goroutine", pprof.Handler("goroutine"))
+			monitoringServerMux.Handle(pprofPath+"/heap", pprof.Handler("heap"))
+			monitoringServerMux.Handle(pprofPath+"/mutex", pprof.Handler("mutex"))
+			monitoringServerMux.Handle(pprofPath+"/threadcreate", pprof.Handler("threadcreate"))
 		}
 
 		if sm.cfg.MetricEnabled {
