@@ -88,14 +88,12 @@ dev.run-docker:
 #
 # Folder structure:
 # release
-#   - coordinator/
-#     - web/
-#     - coordinator
-#   - worker/
-#     - assets/
-#       - emulator/libretro/cores/ (filtered by extension)
-#       - games/
-#     - worker
+#   - assets/
+#   - games/ (shared between both executables)
+#   - emulator/libretro/cores/ (filtered by extension)
+#   - web/
+#   - coordinator
+#   - worker
 #
 # params:
 # - RELEASE_DIR: the name of the output folder (default: _release).
@@ -115,15 +113,15 @@ DLIB_TOOL ?= ldd
 DLIB_SEARCH_PATTERN ?= .*so
 DLIB_ALTER ?= false
 CORE_EXT ?= *
-COORDINATOR_DIR = ./$(RELEASE_DIR)/coordinator
-WORKER_DIR = ./$(RELEASE_DIR)/worker
+COORDINATOR_DIR = ./$(RELEASE_DIR)
+WORKER_DIR = ./$(RELEASE_DIR)
 CORES_DIR = assets/emulator/libretro/cores
 GAMES_DIR = assets/games
 .PHONY: release
 .SILENT: release
 release: clean build
 	rm -rf ./$(RELEASE_DIR) && mkdir ./$(RELEASE_DIR)
-	mkdir $(COORDINATOR_DIR) && mkdir $(WORKER_DIR)
+	mkdir -p $(COORDINATOR_DIR) && mkdir -p $(WORKER_DIR)
 	cp ./bin/coordinator $(COORDINATOR_DIR) && cp ./bin/worker $(WORKER_DIR)
 	chmod +x $(COORDINATOR_DIR)/coordinator $(WORKER_DIR)/worker
     ifeq ($(DLIB_ALTER),false)
