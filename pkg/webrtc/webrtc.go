@@ -202,6 +202,11 @@ func (w *WebRTC) StartClient(isMobile bool, iceCB OnIceCallback) (string, error)
 
 		log.Println("Received Voice from Client")
 		for {
+			if w.RoomID == "" {
+				// skip sending voice when game is not running
+				continue
+			}
+
 			i, err := remoteTrack.Read(rtpBuf)
 			// TODO: can receive track but the voice doesn't work
 			if err == nil {
@@ -290,6 +295,8 @@ func (w *WebRTC) StopClient() {
 	// NOTE: ImageChannel is waiting for input. Close in writer is not correct for this
 	close(w.ImageChannel)
 	close(w.AudioChannel)
+	close(w.VoiceInChannel)
+	close(w.VoiceOutChannel)
 }
 
 // IsConnected comment

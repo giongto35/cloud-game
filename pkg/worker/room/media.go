@@ -49,12 +49,22 @@ func (r *Room) startVoice() {
 	// broadcast voice
 	go func() {
 		for sample := range r.voiceInChannel {
+			r.voiceOutChannel <- sample
+		}
+	}()
+
+	// fanout voice
+	go func() {
+		for sample := range r.voiceOutChannel {
 			for _, webRTC := range r.rtcSessions {
 				if webRTC.IsConnected() {
 					// NOTE: can block here
 					webRTC.VoiceOutChannel <- sample
 				}
 			}
+		}
+		for _, webRTC := range r.rtcSessions {
+			close(webRTC.VoiceOutChannel)
 		}
 	}()
 }
