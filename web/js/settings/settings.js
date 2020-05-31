@@ -260,7 +260,6 @@ const settings = (() => {
      */
     const toggle = () => ui.classList.toggle('modal-visible') && !_render();
 
-    // !to handle undefineds and nulls
     function _getType(value) {
         if (value === undefined) return option.undefined
         else if (Array.isArray(value)) return option.list
@@ -386,13 +385,16 @@ settings._renderrer = (() => {
     }
 
     const onKeyChange = (key, oldValue, newValue, handler) => {
-        const _settings = settings.get()[opts.INPUT_KEYBOARD_MAP];
 
-        if (_settings[newValue] !== undefined) {
-            log.warning(`There are old settings for key: ${_settings[newValue]}, won't change!`);
-        } else {
-            settings.remove(opts.INPUT_KEYBOARD_MAP, oldValue);
-            settings.set(opts.INPUT_KEYBOARD_MAP, {[newValue]: key});
+        if (newValue !== 'Escape') {
+            const _settings = settings.get()[opts.INPUT_KEYBOARD_MAP];
+
+            if (_settings[newValue] !== undefined) {
+                log.warning(`There are old settings for key: ${_settings[newValue]}, won't change!`);
+            } else {
+                settings.remove(opts.INPUT_KEYBOARD_MAP, oldValue);
+                settings.set(opts.INPUT_KEYBOARD_MAP, {[newValue]: key});
+            }
         }
 
         // !to check leaks
