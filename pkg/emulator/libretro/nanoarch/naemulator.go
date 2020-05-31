@@ -1,8 +1,10 @@
 package nanoarch
 
 import (
+	"fmt"
 	"image"
 	"log"
+	"net"
 	"sync"
 	"time"
 
@@ -48,9 +50,10 @@ import "C"
 
 // naEmulator implements CloudEmulator
 type naEmulator struct {
-	imageChannel chan<- *image.RGBA
-	audioChannel chan<- []int16
-	inputChannel <-chan InputEvent
+	imageChannel  chan<- *image.RGBA
+	audioChannel  chan<- []int16
+	inputChannel  <-chan InputEvent
+	videoExporter *VideoExporter
 
 	meta            config.EmulatorMeta
 	gamePath        string
@@ -65,6 +68,11 @@ type naEmulator struct {
 	lock *sync.Mutex
 }
 
+type VideoExporter struct {
+	sock         net.Conn
+	imageChannel chan<- *image.RGBA
+}
+
 type InputEvent struct {
 	KeyState  int
 	PlayerIdx int
@@ -75,6 +83,8 @@ var NAEmulator *naEmulator
 var outputImg *image.RGBA
 
 const maxPort = 8
+
+const SocketAddrTmpl = "/tmp/cloudretro-retro-%s.sock"
 
 // NAEmulator implements CloudEmulator interface based on NanoArch(golang RetroArch)
 func NewNAEmulator(etype string, roomID string, inputChannel <-chan InputEvent) (*naEmulator, chan *image.RGBA, chan []int16) {
@@ -94,14 +104,40 @@ func NewNAEmulator(etype string, roomID string, inputChannel <-chan InputEvent) 
 	}, imageChannel, audioChannel
 }
 
+func NewVideoExporter(roomID string, imgChannel chan *image.RGBA) *VideoExporter {
+	sockAddr := fmt.Sprintf(SocketAddrTmpl, roomID)
+
+	go func(sockAddr string) {
+		log.Println("Dialing to ", sockAddr)
+		conn, err := net.Dial("unix", sockAddr)
+		if err != nil {
+			log.Fatal("accept error: ", err)
+		}
+
+		defer conn.Close()
+
+		for img := range imgChannel {
+			fmt.Printf("%+v %+v %+v \n", img.Stride, img.Rect.Max.X, len(img.Pix))
+			conn.Write(img.Pix)
+		}
+	}(sockAddr)
+
+	return &VideoExporter{
+		imageChannel: imgChannel,
+	}
+
+}
+
 // Init initialize new RetroArch cloud emulator
-func Init(etype string, roomID string, inputChannel <-chan InputEvent) (*naEmulator, chan *image.RGBA, chan []int16) {
+func Init(etype string, roomID string, inputChannel <-chan InputEvent) (*naEmulator, chan []int16) {
 	emulator, imageChannel, audioChannel := NewNAEmulator(etype, roomID, inputChannel)
 	// Set to global NAEmulator
 	NAEmulator = emulator
+	NAEmulator.videoExporter = NewVideoExporter(roomID, imageChannel)
 
 	go NAEmulator.listenInput()
-	return emulator, imageChannel, audioChannel
+
+	return emulator, audioChannel
 }
 
 func (na *naEmulator) listenInput() {

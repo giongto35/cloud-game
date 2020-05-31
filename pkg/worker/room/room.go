@@ -1,11 +1,14 @@
 package room
 
 import (
+	"fmt"
 	"image"
+	"io"
 	"io/ioutil"
 	"log"
 	"math"
 	"math/rand"
+	"net"
 	"os"
 	"runtime"
 	"strconv"
@@ -63,6 +66,61 @@ const separator = "___"
 // TODO: Remove after fully migrate
 const oldSeparator = "|"
 
+const SocketAddrTmpl = "/tmp/cloudretro-retro-%s.sock"
+
+// NewVideoImporter return image Channel from stream
+func NewVideoImporter(roomID string) chan *image.RGBA {
+	sockAddr := fmt.Sprintf(SocketAddrTmpl, roomID)
+	imgChan := make(chan *image.RGBA)
+
+	go func() {
+		l, err := net.Listen("unix", sockAddr)
+		if err != nil {
+			log.Fatal("listen error:", err)
+		}
+		defer l.Close()
+
+		for {
+			log.Println("Creating uds server", sockAddr)
+			conn, err := l.Accept()
+			if err != nil {
+				log.Fatal("Accept error: ", err)
+			}
+
+			go func() {
+				defer conn.Close()
+				log.Println("Received new conn")
+				log.Println("Spawn Importer")
+
+				for {
+					// TODO: Not reallocate
+					buf := make([]byte, 240*256*4)
+					l, err := conn.Read(buf)
+					if err != nil {
+						if err != io.EOF {
+							log.Println("error: %v", err)
+						}
+						continue
+					}
+
+					buf = buf[:l]
+					fmt.Println("len:", l)
+					imgChan <- &image.RGBA{
+						Pix:    buf,
+						Stride: 1024,
+						Rect: image.Rectangle{
+							image.Point{0, 0},
+							image.Point{240, 256},
+						},
+					}
+				}
+			}()
+		}
+	}()
+
+	return imgChan
+}
+
 // NewRoom creates a new room
 func NewRoom(roomID string, gameName string, videoEncoderType string, onlineStorage *storage.Client, cfg worker.Config) *Room {
 	// If no roomID is given, generate it from gameName
@@ -77,11 +135,13 @@ func NewRoom(roomID string, gameName string, videoEncoderType string, onlineStor
 
 	log.Println("Init new room: ", roomID, gameName, gameInfo)
 	inputChannel := make(chan nanoarch.InputEvent, 100)
+	imageChannel := NewVideoImporter(roomID)
 
 	room := &Room{
 		ID: roomID,
 
 		inputChannel:    inputChannel,
+		imageChannel:    imageChannel,
 		voiceInChannel:  make(chan []byte, 1),
 		voiceOutChannel: make(chan []byte, 1),
 		rtcSessions:     []*webrtc.WebRTC{},
@@ -107,7 +167,7 @@ func NewRoom(roomID string, gameName string, videoEncoderType string, onlineStor
 		// Spawn new emulator based on gameName and plug-in all channels
 		emuName, _ := config.FileTypeToEmulator[game.Type]
 
-		director, imageChannel, audioChannel := nanoarch.Init(emuName, roomID, inputChannel)
+		director, audioChannel := nanoarch.Init(emuName, roomID, inputChannel)
 		room.director = director
 		room.imageChannel = imageChannel
 		room.audioChannel = audioChannel
