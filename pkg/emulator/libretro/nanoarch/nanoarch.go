@@ -153,7 +153,7 @@ func coreInputState(port C.unsigned, device C.unsigned, index C.unsigned, id C.u
 func audioWrite2(buf unsafe.Pointer, frames C.size_t) C.size_t {
 	// !to make it mono/stereo independent
 	samples := int(frames) * 2
-	pcm := (*[1 << 30]int16)(buf)[:samples:samples]
+	pcm := (*[(1 << 30) - 1]int16)(buf)[:samples:samples]
 
 	p := make([]int16, samples)
 	// copy because pcm slice refer to buf underlying pointer, and buf pointer is the same in continuos frames

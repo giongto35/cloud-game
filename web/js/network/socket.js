@@ -33,7 +33,7 @@ const socket = (() => {
         const paramString = new URLSearchParams({room_id: roomId, zone: zone})
 
         // if localhost, local LAN connection
-        if (location.hostname === "localhost" || location.hostname === "127.0.0.1" || location.hostname.startsWith("192.168")) {
+        if (location.hostname === "raspberrypi" || location.hostname === "localhost" || location.hostname === "127.0.0.1" || location.hostname.startsWith("192.168")) {
             scheme = "ws"
         } else {
             scheme = "wss"
