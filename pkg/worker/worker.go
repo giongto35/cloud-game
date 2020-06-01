@@ -94,26 +94,32 @@ func (o *Worker) spawnServer(port int) {
 	var httpsSrv *http.Server
 
 	if *config.Mode == config.ProdEnv || *config.Mode == config.StagingEnv {
-		var leurl string
-		if *config.Mode == config.StagingEnv {
-			leurl = stagingLEURL
-		} else {
-			leurl = acme.LetsEncryptURL
-		}
-
-		certManager = &autocert.Manager{
-			Prompt: autocert.AcceptTOS,
-			Cache:  autocert.DirCache("assets/cache"),
-			Client: &acme.Client{DirectoryURL: leurl},
-		}
-
 		httpsSrv = makeHTTPServer()
-		httpsSrv.Addr = ":443"
-		httpsSrv.TLSConfig = &tls.Config{GetCertificate: certManager.GetCertificate}
+		httpsSrv.Addr = fmt.Sprintf(":%d", *config.HttpsPort)
+
+		if *config.HttpsChain == "" || *config.HttpsKey == "" {
+			*config.HttpsChain = ""
+			*config.HttpsKey = ""
+
+			var leurl string
+			if *config.Mode == config.StagingEnv {
+				leurl = stagingLEURL
+			} else {
+				leurl = acme.LetsEncryptURL
+			}
+
+			certManager = &autocert.Manager{
+				Prompt:     autocert.AcceptTOS,
+				Cache:      autocert.DirCache("assets/cache"),
+				Client:     &acme.Client{DirectoryURL: leurl},
+			}
+
+			httpsSrv.TLSConfig = &tls.Config{GetCertificate: certManager.GetCertificate}
+		}
 
 		go func() {
 			fmt.Printf("Starting HTTPS server on %s\n", httpsSrv.Addr)
-			err := httpsSrv.ListenAndServeTLS("", "")
+			err := httpsSrv.ListenAndServeTLS(*config.HttpsChain, *config.HttpsKey)
 			if err != nil {
 				log.Printf("httpsSrv.ListendAndServeTLS() failed with %s", err)
 			}
