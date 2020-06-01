@@ -67,6 +67,7 @@ const separator = "___"
 const oldSeparator = "|"
 
 const SocketAddrTmpl = "/tmp/cloudretro-retro-%s.sock"
+const imgSize = 240 * 256 * 4
 
 // NewVideoImporter return image Channel from stream
 func NewVideoImporter(roomID string) chan *image.RGBA {
@@ -92,26 +93,32 @@ func NewVideoImporter(roomID string) chan *image.RGBA {
 				log.Println("Received new conn")
 				log.Println("Spawn Importer")
 
+				img := make([]byte, imgSize)
+				img = img[:0]
+
 				for {
 					// TODO: Not reallocate
 					buf := make([]byte, 240*256*4)
 					l, err := conn.Read(buf)
 					if err != nil {
 						if err != io.EOF {
-							log.Println("error: %v", err)
+							log.Printf("error: %v", err)
 						}
 						continue
 					}
 
 					buf = buf[:l]
-					fmt.Println("len:", l)
-					imgChan <- &image.RGBA{
-						Pix:    buf,
-						Stride: 1024,
-						Rect: image.Rectangle{
-							image.Point{0, 0},
-							image.Point{240, 256},
-						},
+					img = append(img, buf...)
+					if len(img) >= imgSize {
+						imgChan <- &image.RGBA{
+							Pix:    img[:imgSize],
+							Stride: 1024,
+							Rect: image.Rectangle{
+								image.Point{0, 0},
+								image.Point{240, 256},
+							},
+						}
+						img = img[:len(img)-imgSize]
 					}
 				}
 			}()
