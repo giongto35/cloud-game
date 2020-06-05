@@ -19,3 +19,5 @@ RUN go install ./cmd/coordinator && \
 
 EXPOSE 8000
 EXPOSE 9000
+
+# to add some light runtime image
