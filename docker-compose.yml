@@ -1,9 +1,9 @@
 version: '3'
 services:
   cloud-retro:
-#    build: .
+    build: .
 #    network: host
-    image: "cloud-game_cloud-retro:latest"
+#    image: "cloud-game_cloud-retro:latest"
     command: bash -c "coordinator --v=5 & worker"
     ports:
       - "8000:8000"
