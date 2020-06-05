@@ -1,0 +1,13 @@
+version: '3'
+services:
+  cloud-retro:
+#    build: .
+#    network: host
+    image: "cloud-game_cloud-retro:latest"
+    command: bash -c "coordinator --v=5 & worker"
+    ports:
+      - "8000:8000"
+      - "9000:9000"
+#      - "59000-65000:59000-65000/udp"
+    volumes:
+      - ./assets:/go/src/github.com/giongto35/cloud-game/assets

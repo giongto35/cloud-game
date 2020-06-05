@@ -1,15 +1,21 @@
-From golang:1.12
+#
+FROM golang:1.14 AS builder
 
-RUN apt-get update
 
-RUN apt-get install pkg-config libvpx-dev libopus-dev libopusfile-dev -y
+WORKDIR /go/src/github.com/giongto35/cloud-game/
 
-RUN mkdir -p /cloud-game
-COPY . /cloud-game/
-WORKDIR /cloud-game
+# system libs layer
+RUN apt-get update && \
+    apt-get install pkg-config libvpx-dev libopus-dev libopusfile-dev -y
 
-# Install server dependencies
-RUN go install ./cmd/coordinator
-RUN go install ./cmd/worker
+# go deps layer
+COPY go.mod go.sum ./
+RUN go mod download
+
+# app build layer
+COPY ./ ./
+RUN go install ./cmd/coordinator && \
+    go install ./cmd/worker
 
 EXPOSE 8000
+EXPOSE 9000
