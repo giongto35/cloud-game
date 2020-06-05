@@ -198,21 +198,22 @@ func (w *WebRTC) StartClient(isMobile bool, iceCB OnIceCallback) (string, error)
 	})
 
 	w.connection.OnTrack(func(remoteTrack *webrtc.Track, receiver *webrtc.RTPReceiver) {
-		rtpBuf := make([]byte, 1400)
+		//NOTE: High CPU due to constantly for loop. Turn it off first, Fix it later.
+		//rtpBuf := make([]byte, 1400)
 
-		log.Println("Received Voice from Client")
-		for {
-			if w.RoomID == "" {
-				// skip sending voice when game is not running
-				continue
-			}
+		//log.Println("Received Voice from Client")
+		//for {
+		//if w.RoomID == "" {
+		//// skip sending voice when game is not running
+		//continue
+		//}
 
-			i, err := remoteTrack.Read(rtpBuf)
-			// TODO: can receive track but the voice doesn't work
-			if err == nil {
-				w.VoiceInChannel <- rtpBuf[:i]
-			}
-		}
+		//i, err := remoteTrack.Read(rtpBuf)
+		//// TODO: can receive track but the voice doesn't work
+		//if err == nil {
+		//w.VoiceInChannel <- rtpBuf[:i]
+		//}
+		//}
 
 	})
 
