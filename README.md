@@ -75,9 +75,8 @@ Because the coordinator and workers need to run simultaneously. Workers connect 
 ## Run with Docker
 
 In case if you want to run the app as a Docker container:
-- use `make dev.run-docker`
-- or use `docker-compose up` (`CLOUD_GAME_GAMES_PATH` is env variable with your host games path)
-Both will spawn a docker environment and you can access the service on `localhost:8000`.
+- use `docker-compose up` (`CLOUD_GAME_GAMES_PATH` is env variable with your host games path)
+It will spawn a docker environment and you can access the service on `localhost:8000`.
 
 ## Technical Document
 - [webrtchacks Blog: Open Source Cloud Gaming with WebRTC](https://webrtchacks.com/open-source-cloud-gaming-with-webrtc/)

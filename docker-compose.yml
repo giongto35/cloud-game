@@ -3,7 +3,7 @@ services:
 
   cloud-game:
     build: .
-    image: "cloud-game"
+    image: "cloud-game-local"
     privileged: true
     command: >
       bash -c "/usr/local/share/cloud-game/coordinator --v=5 &
