@@ -3,7 +3,6 @@ services:
 
   cloud-game:
     build: .
-    container_name: "cloud-game-local"
     image: "cloud-game-local"
     privileged: true
     command: >
