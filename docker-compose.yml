@@ -1,13 +1,13 @@
 version: '3'
 services:
-  cloud-retro:
+
+  cloud-game:
     build: .
-#    network: host
-#    image: "cloud-game_cloud-retro:latest"
-    command: bash -c "./coordinator --v=5 & ./worker"
+    image: "cloud-game"
+    privileged: true
+    command: bash -c "./coordinator --v=5 & ./worker --coordinatorhost localhost:8000"
     ports:
       - "8000:8000"
       - "9000:9000"
-#      - "59000-65000:59000-65000/udp"
     volumes:
       - ./assets:/assets

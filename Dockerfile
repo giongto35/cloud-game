@@ -19,10 +19,9 @@ RUN go install ./cmd/coordinator && \
 # base image
 FROM debian:10-slim
 RUN apt-get update && \
-    apt-get install libvpx-dev libopus-dev libopusfile-dev -y && \
+    apt-get install libvpx5 libopus0 libopusfile0 -y && \
     rm -rf /var/lib/apt/lists/*
 COPY --from=build /go/bin/ /
 COPY ./web /web
 
 EXPOSE 8000
-EXPOSE 9000
