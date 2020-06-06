@@ -36,5 +36,6 @@ RUN apt-get update && apt-get install -y \
 
 COPY --from=build ${BUILD_PATH}/bin/ ./
 COPY web ./web
+COPY assets/emulator/libretro/cores/*.so ./assets/emulator/libretro/cores/
 
 EXPOSE 8000 9000

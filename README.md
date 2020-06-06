@@ -32,10 +32,6 @@ Direct play an existing game: **[Pokemon Emerald](http://cloudretro.io/?id=652e4
 5. **Horizontally scaled**: The infrastructure is designed to be able to scale under high traffic by adding more instances.
 6. **Cloud storage**: Game state is storing on online storage, so you can come back and continue playing your incomplete game later.
 
-## Run on local by Docker
-
-You try running the server directly by `make dev.run-docker`. It will spawn a docker environment and you can access the service on `localhost:8000`.
-
 ## Development environment
 
 Install Golang https://golang.org/doc/install . Because the project uses GoModule, so it requires Go1.11 version.
@@ -75,6 +71,13 @@ Because the coordinator and workers need to run simultaneously. Workers connect 
   * Need to run coordinator and worker separately in two session
   * `go run cmd/coordinator/main.go` - spawn coordinator
   * `go run cmd/worker/main.go --coordinatorhost localhost:8000` - spawn workers connecting to coordinator
+
+## Run with Docker
+
+In case if you want to run the app as a Docker container:
+- use `make dev.run-docker`
+- or use `docker-compose up` (`CLOUD_GAME_GAMES_PATH` is env variable with your host games path)
+Both will spawn a docker environment and you can access the service on `localhost:8000`.
 
 ## Technical Document
 - [webrtchacks Blog: Open Source Cloud Gaming with WebRTC](https://webrtchacks.com/open-source-cloud-gaming-with-webrtc/)

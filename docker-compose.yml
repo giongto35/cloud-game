@@ -12,4 +12,4 @@ services:
       - "8000:8000"
       - "9000:9000"
     volumes:
-      - ./assets:/assets
+      - ${CLOUD_GAME_GAMES_PATH}:/usr/local/share/cloud-game/assets/games

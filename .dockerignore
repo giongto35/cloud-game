@@ -3,6 +3,7 @@
 .github/
 .idea/
 
+.env
 Dockerfile
 docker-compose.yml
 
@@ -12,4 +13,4 @@ README.md
 bin/
 docs/
 
-assets/
+assets/games/

@@ -81,7 +81,7 @@ dev.run-docker:
 	docker stop cloud-game-local || true
 	docker rm cloud-game-local || true
 	# Coordinator and worker should be run separately.
-	docker run --privileged -v $(pwd)/games:/cloud-game/games -d --name cloud-game-local -p 8000:8000 -p 9000:9000 cloud-game-local bash -c "coordinator --v=5 & worker --coordinatorhost localhost:8000"
+	docker run --privileged -v $(pwd)/games:/usr/local/share/cloud-game/games -d --name cloud-game-local -p 8000:8000 -p 9000:9000 cloud-game-local bash -c "coordinator --v=5 & worker --coordinatorhost localhost:8000"
 
 # RELEASE
 # Builds the app for new release.
