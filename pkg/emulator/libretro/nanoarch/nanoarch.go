@@ -243,6 +243,7 @@ func coreEnvironment(cmd C.unsigned, data unsafe.Pointer) C.bool {
 func init() {
 }
 
+var retroHandle unsafe.Pointer
 var retroInit unsafe.Pointer
 var retroDeinit unsafe.Pointer
 var retroAPIVersion unsafe.Pointer
@@ -273,42 +274,38 @@ func loadFunction(handle unsafe.Pointer, name string) unsafe.Pointer {
 func coreLoad(pathNoExt string) {
 	mu.Lock()
 	// Different OS requires different library, bruteforce till it finish
-	csPath := C.CString(pathNoExt+".so")
-	h := C.dlopen(csPath, C.RTLD_LAZY)
-	C.free(unsafe.Pointer(csPath))
-
 	for _, ext := range config.EmulatorExtension {
 		pathWithExt := pathNoExt + ext
 		cs := C.CString(pathWithExt)
-		h = C.dlopen(cs, C.RTLD_LAZY)
+		retroHandle = C.dlopen(cs, C.RTLD_LAZY)
 		C.free(unsafe.Pointer(cs))
-		if h != nil {
+		if retroHandle != nil {
 			break
 		}
 	}
 
-	if h == nil {
+	if retroHandle == nil {
 		err := C.dlerror()
 		log.Fatalf("error loading %s, err %+v", pathNoExt, *err)
 	}
 
-	retroInit = loadFunction(h, "retro_init")
-	retroDeinit = loadFunction(h, "retro_deinit")
-	retroAPIVersion = loadFunction(h, "retro_api_version")
-	retroGetSystemInfo = loadFunction(h, "retro_get_system_info")
-	retroGetSystemAVInfo = loadFunction(h, "retro_get_system_av_info")
-	retroSetEnvironment = loadFunction(h, "retro_set_environment")
-	retroSetVideoRefresh = loadFunction(h, "retro_set_video_refresh")
-	retroSetInputPoll = loadFunction(h, "retro_set_input_poll")
-	retroSetInputState = loadFunction(h, "retro_set_input_state")
-	retroSetAudioSample = loadFunction(h, "retro_set_audio_sample")
-	retroSetAudioSampleBatch = loadFunction(h, "retro_set_audio_sample_batch")
-	retroRun = loadFunction(h, "retro_run")
-	retroLoadGame = loadFunction(h, "retro_load_game")
-	retroUnloadGame = loadFunction(h, "retro_unload_game")
-	retroSerializeSize = loadFunction(h, "retro_serialize_size")
-	retroSerialize = loadFunction(h, "retro_serialize")
-	retroUnserialize = loadFunction(h, "retro_unserialize")
+	retroInit = loadFunction(retroHandle, "retro_init")
+	retroDeinit = loadFunction(retroHandle, "retro_deinit")
+	retroAPIVersion = loadFunction(retroHandle, "retro_api_version")
+	retroGetSystemInfo = loadFunction(retroHandle, "retro_get_system_info")
+	retroGetSystemAVInfo = loadFunction(retroHandle, "retro_get_system_av_info")
+	retroSetEnvironment = loadFunction(retroHandle, "retro_set_environment")
+	retroSetVideoRefresh = loadFunction(retroHandle, "retro_set_video_refresh")
+	retroSetInputPoll = loadFunction(retroHandle, "retro_set_input_poll")
+	retroSetInputState = loadFunction(retroHandle, "retro_set_input_state")
+	retroSetAudioSample = loadFunction(retroHandle, "retro_set_audio_sample")
+	retroSetAudioSampleBatch = loadFunction(retroHandle, "retro_set_audio_sample_batch")
+	retroRun = loadFunction(retroHandle, "retro_run")
+	retroLoadGame = loadFunction(retroHandle, "retro_load_game")
+	retroUnloadGame = loadFunction(retroHandle, "retro_unload_game")
+	retroSerializeSize = loadFunction(retroHandle, "retro_serialize_size")
+	retroSerialize = loadFunction(retroHandle, "retro_serialize")
+	retroUnserialize = loadFunction(retroHandle, "retro_unserialize")
 
 	mu.Unlock()
 
@@ -457,6 +454,9 @@ func nanoarchShutdown() {
 	C.bridge_retro_deinit(retroDeinit)
 
 	setRotation(0)
+	if r := C.dlclose(retroHandle); r != 0 {
+		fmt.Println("error closing core")
+	}
 }
 
 func nanoarchRun() {
