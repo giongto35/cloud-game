@@ -41,12 +41,16 @@ var FileTypeToEmulator = map[string]string{
 	"swc": "snes",
 	"fig": "snes",
 	"bs":  "snes",
+	"n64": "n64",
+	"v64": "n64",
+	"z64": "n64",
 }
 
 // There is no good way to determine main width and height of the emulator.
 // When game run, frame width and height can scale abnormally.
 type EmulatorMeta struct {
 	Path            string
+	Config          string
 	Width           int
 	Height          int
 	AudioSampleRate int
@@ -55,6 +59,8 @@ type EmulatorMeta struct {
 	BaseHeight      int
 	Ratio           float64
 	Rotation        image.Rotate
+	IsGlAllowed     bool
+	UsesLibCo       bool
 }
 
 var EmulatorConfig = map[string]EmulatorMeta{
@@ -82,6 +88,14 @@ var EmulatorConfig = map[string]EmulatorMeta{
 		Path:   "assets/emulator/libretro/cores/fbneo_libretro",
 		Width:  240,
 		Height: 160,
+	},
+	"n64": {
+		Path:   "assets/emulator/libretro/cores/mupen64plus_next_libretro",
+		Config:   "assets/emulator/libretro/cores/mupen64plus_next_libretro.cfg",
+		Width:  320,
+		Height: 240,
+		IsGlAllowed: true,
+		UsesLibCo: true,
 	},
 }
 
