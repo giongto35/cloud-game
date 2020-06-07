@@ -55,8 +55,6 @@ import "C"
 var mu sync.Mutex
 
 var video struct {
-	program  uint32
-	vao      uint32
 	pitch    uint32
 	pixFmt   uint32
 	pixType  uint32
@@ -72,6 +70,10 @@ const bufSize = 1024 * 4
 const joypadNumKeys = int(C.RETRO_DEVICE_ID_JOYPAD_R3 + 1)
 
 var joy [joypadNumKeys]bool
+
+var systemDirectory = C.CString("./pkg/emulator/libretro/system")
+var saveDirectory = C.CString(".")
+var currentUser *C.char
 
 var bindKeysMap = map[int]int{
 	C.RETRO_DEVICE_ID_JOYPAD_A:      0,
@@ -188,12 +190,15 @@ func coreEnvironment(cmd C.unsigned, data unsafe.Pointer) C.bool {
 	switch cmd {
 	case C.RETRO_ENVIRONMENT_GET_USERNAME:
 		username := (**C.char)(data)
-		currentUser, err := user.Current()
-		if err != nil {
-			*username = C.CString("")
-		} else {
-			*username = C.CString(currentUser.Username)
+		if currentUser == nil {
+			currentUserGo, err := user.Current()
+			if err != nil {
+				currentUser = C.CString("")
+			} else {
+				currentUser = C.CString(currentUserGo.Username)
+			}
 		}
+		*username = currentUser
 		break
 	case C.RETRO_ENVIRONMENT_GET_LOG_INTERFACE:
 		cb := (*C.struct_retro_log_callback)(data)
@@ -211,11 +216,11 @@ func coreEnvironment(cmd C.unsigned, data unsafe.Pointer) C.bool {
 		return videoSetPixelFormat(*format)
 	case C.RETRO_ENVIRONMENT_GET_SYSTEM_DIRECTORY:
 		path := (**C.char)(data)
-		*path = C.CString("./pkg/emulator/libretro/system")
+		*path = systemDirectory
 		return true
 	case C.RETRO_ENVIRONMENT_GET_SAVE_DIRECTORY:
 		path := (**C.char)(data)
-		*path = C.CString(".")
+		*path = saveDirectory
 		return true
 	case C.RETRO_ENVIRONMENT_SHUTDOWN:
 		//window.SetShouldClose(true)
@@ -258,14 +263,25 @@ var retroSerializeSize unsafe.Pointer
 var retroSerialize unsafe.Pointer
 var retroUnserialize unsafe.Pointer
 
+func loadFunction(handle unsafe.Pointer, name string) unsafe.Pointer {
+	cs := C.CString(name)
+	pointer := C.dlsym(handle, cs)
+	C.free(unsafe.Pointer(cs))
+	return pointer
+}
+
 func coreLoad(pathNoExt string) {
 	mu.Lock()
 	// Different OS requires different library, bruteforce till it finish
-	h := C.dlopen(C.CString(pathNoExt+".so"), C.RTLD_LAZY)
+	csPath := C.CString(pathNoExt+".so")
+	h := C.dlopen(csPath, C.RTLD_LAZY)
+	C.free(unsafe.Pointer(csPath))
 
 	for _, ext := range config.EmulatorExtension {
 		pathWithExt := pathNoExt + ext
-		h = C.dlopen(C.CString(pathWithExt), C.RTLD_LAZY)
+		cs := C.CString(pathWithExt)
+		h = C.dlopen(cs, C.RTLD_LAZY)
+		C.free(unsafe.Pointer(cs))
 		if h != nil {
 			break
 		}
@@ -276,23 +292,23 @@ func coreLoad(pathNoExt string) {
 		log.Fatalf("error loading %s, err %+v", pathNoExt, *err)
 	}
 
-	retroInit = C.dlsym(h, C.CString("retro_init"))
-	retroDeinit = C.dlsym(h, C.CString("retro_deinit"))
-	retroAPIVersion = C.dlsym(h, C.CString("retro_api_version"))
-	retroGetSystemInfo = C.dlsym(h, C.CString("retro_get_system_info"))
-	retroGetSystemAVInfo = C.dlsym(h, C.CString("retro_get_system_av_info"))
-	retroSetEnvironment = C.dlsym(h, C.CString("retro_set_environment"))
-	retroSetVideoRefresh = C.dlsym(h, C.CString("retro_set_video_refresh"))
-	retroSetInputPoll = C.dlsym(h, C.CString("retro_set_input_poll"))
-	retroSetInputState = C.dlsym(h, C.CString("retro_set_input_state"))
-	retroSetAudioSample = C.dlsym(h, C.CString("retro_set_audio_sample"))
-	retroSetAudioSampleBatch = C.dlsym(h, C.CString("retro_set_audio_sample_batch"))
-	retroRun = C.dlsym(h, C.CString("retro_run"))
-	retroLoadGame = C.dlsym(h, C.CString("retro_load_game"))
-	retroUnloadGame = C.dlsym(h, C.CString("retro_unload_game"))
-	retroSerializeSize = C.dlsym(h, C.CString("retro_serialize_size"))
-	retroSerialize = C.dlsym(h, C.CString("retro_serialize"))
-	retroUnserialize = C.dlsym(h, C.CString("retro_unserialize"))
+	retroInit = loadFunction(h, "retro_init")
+	retroDeinit = loadFunction(h, "retro_deinit")
+	retroAPIVersion = loadFunction(h, "retro_api_version")
+	retroGetSystemInfo = loadFunction(h, "retro_get_system_info")
+	retroGetSystemAVInfo = loadFunction(h, "retro_get_system_av_info")
+	retroSetEnvironment = loadFunction(h, "retro_set_environment")
+	retroSetVideoRefresh = loadFunction(h, "retro_set_video_refresh")
+	retroSetInputPoll = loadFunction(h, "retro_set_input_poll")
+	retroSetInputState = loadFunction(h, "retro_set_input_state")
+	retroSetAudioSample = loadFunction(h, "retro_set_audio_sample")
+	retroSetAudioSampleBatch = loadFunction(h, "retro_set_audio_sample_batch")
+	retroRun = loadFunction(h, "retro_run")
+	retroLoadGame = loadFunction(h, "retro_load_game")
+	retroUnloadGame = loadFunction(h, "retro_unload_game")
+	retroSerializeSize = loadFunction(h, "retro_serialize_size")
+	retroSerialize = loadFunction(h, "retro_serialize")
+	retroUnserialize = loadFunction(h, "retro_unserialize")
 
 	mu.Unlock()
 
@@ -339,8 +355,10 @@ func coreLoadGame(filename string) {
 
 	fmt.Println("ROM size:", size)
 
+	csFilename := C.CString(filename)
+	defer C.free(unsafe.Pointer(csFilename))
 	gi := C.struct_retro_game_info{
-		path: C.CString(filename),
+		path: csFilename,
 		size: C.size_t(size),
 	}
 
@@ -361,8 +379,8 @@ func coreLoadGame(filename string) {
 			panic(err)
 		}
 		cstr := C.CString(string(bytes))
+		defer C.free(unsafe.Pointer(cstr))
 		gi.data = unsafe.Pointer(cstr)
-
 	}
 
 	ok := C.bridge_retro_load_game(retroLoadGame, &gi)
@@ -467,7 +485,7 @@ func videoSetPixelFormat(format uint32) C.bool {
 		log.Fatalf("Unknown pixel type %v", format)
 	}
 
-	fmt.Printf("Video pixel: %v %v %v %v %v", video, format, C.RETRO_PIXEL_FORMAT_0RGB1555, C.RETRO_PIXEL_FORMAT_XRGB8888, C.RETRO_PIXEL_FORMAT_RGB565)
+	fmt.Printf("Video pixel: %v %v %v %v %v\n", video, format, C.RETRO_PIXEL_FORMAT_0RGB1555, C.RETRO_PIXEL_FORMAT_XRGB8888, C.RETRO_PIXEL_FORMAT_RGB565)
 	return true
 }
 
