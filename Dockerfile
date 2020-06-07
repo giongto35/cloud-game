@@ -35,6 +35,8 @@ RUN apt-get update && apt-get install -y \
   && rm -rf /var/lib/apt/lists/*
 
 COPY --from=build ${BUILD_PATH}/bin/ ./
+# it assumed there are only binary files yet
+RUN cp -s $(pwd)/* /usr/local/bin
 COPY web ./web
 COPY assets/emulator/libretro/cores/*.so ./assets/emulator/libretro/cores/
 

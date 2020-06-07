@@ -6,8 +6,7 @@ services:
     image: "cloud-game-local"
     privileged: true
     command: >
-      bash -c "/usr/local/share/cloud-game/coordinator --v=5 &
-               /usr/local/share/cloud-game/worker --coordinatorhost localhost:8000"
+      bash -c "coordinator --v=5 & worker --coordinatorhost localhost:8000"
     ports:
       - "8000:8000"
       - "9000:9000"
