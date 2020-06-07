@@ -82,7 +82,8 @@ const MENU_RELEASED = 'menuReleased';
 
 const KEY_PRESSED = 'keyPressed';
 const KEY_RELEASED = 'keyReleased';
-const KEY_STATE_UPDATED = 'keyStateUpdated';
+const AXIS_CHANGED = 'axisChanged';
+const CONTROLLER_UPDATED = 'controllerUpdated';
 
 const STATS_TOGGLE = 'statsToggle';
 const HELP_OVERLAY_TOGGLED = 'helpOverlayToggled';

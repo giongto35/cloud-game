@@ -46,6 +46,13 @@ void coreLog_cgo(enum retro_log_level level, const char *msg);
 */
 import "C"
 
+const numAxes = 4
+
+type constrollerState struct {
+	keyState  uint16
+	axes      [numAxes]int16
+}
+
 // naEmulator implements CloudEmulator
 type naEmulator struct {
 	imageChannel chan<- *image.RGBA
@@ -58,15 +65,15 @@ type naEmulator struct {
 	gameName        string
 	isSavingLoading bool
 
-	keysMap map[string][]int
-	done    chan struct{}
+	controllersMap  map[string][]constrollerState
+	done            chan struct{}
 
 	// lock to lock uninteruptable operation
 	lock *sync.Mutex
 }
 
 type InputEvent struct {
-	KeyState  int
+	RawState  []byte
 	PlayerIdx int
 	ConnID    string
 }
@@ -83,14 +90,14 @@ func NewNAEmulator(etype string, roomID string, inputChannel <-chan InputEvent) 
 	audioChannel := make(chan []int16, 30)
 
 	return &naEmulator{
-		meta:         meta,
-		imageChannel: imageChannel,
-		audioChannel: audioChannel,
-		inputChannel: inputChannel,
-		keysMap:      map[string][]int{},
-		roomID:       roomID,
-		done:         make(chan struct{}, 1),
-		lock:         &sync.Mutex{},
+		meta:           meta,
+		imageChannel:   imageChannel,
+		audioChannel:   audioChannel,
+		inputChannel:   inputChannel,
+		controllersMap: map[string][]constrollerState{},
+		roomID:         roomID,
+		done:           make(chan struct{}, 1),
+		lock:           &sync.Mutex{},
 	}, imageChannel, audioChannel
 }
 
@@ -108,19 +115,22 @@ func (na *naEmulator) listenInput() {
 	// input from javascript follows bitmap. Ex: 00110101
 	// we decode the bitmap and send to channel
 	for inpEvent := range NAEmulator.inputChannel {
-		inpBitmap := inpEvent.KeyState
+		inpBitmap := uint16(inpEvent.RawState[1])<<8 + uint16(inpEvent.RawState[0])
 
-		if inpBitmap == -1 {
+		if inpBitmap == 0xFFFF {
 			// terminated
-			delete(na.keysMap, inpEvent.ConnID)
+			delete(na.controllersMap, inpEvent.ConnID)
 			continue
 		}
 
-		if _, ok := na.keysMap[inpEvent.ConnID]; !ok {
-			na.keysMap[inpEvent.ConnID] = make([]int, maxPort)
+		if _, ok := na.controllersMap[inpEvent.ConnID]; !ok {
+			na.controllersMap[inpEvent.ConnID] = make([]constrollerState, maxPort)
 		}
 
-		na.keysMap[inpEvent.ConnID][inpEvent.PlayerIdx] = inpBitmap
+		na.controllersMap[inpEvent.ConnID][inpEvent.PlayerIdx].keyState = inpBitmap
+		for i := 0; i < numAxes && (i+1)*2+1 < len(inpEvent.RawState); i++ {
+			na.controllersMap[inpEvent.ConnID][inpEvent.PlayerIdx].axes[i] = int16(inpEvent.RawState[(i+1)*2+1])<<8 + int16(inpEvent.RawState[(i+1)*2])
+		}
 	}
 }
 

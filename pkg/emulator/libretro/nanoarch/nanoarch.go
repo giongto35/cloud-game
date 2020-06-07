@@ -114,18 +114,10 @@ var bindKeysMap = map[int]int{
 	C.RETRO_DEVICE_ID_JOYPAD_DOWN:   9,
 	C.RETRO_DEVICE_ID_JOYPAD_LEFT:   10,
 	C.RETRO_DEVICE_ID_JOYPAD_RIGHT:  11,
-}
-
-// TODO: remove temporary hack
-var bindKeysMapN64 = map[int]int{
-	C.RETRO_DEVICE_ID_JOYPAD_B:      0,
-	C.RETRO_DEVICE_ID_JOYPAD_Y:      1,
-	C.RETRO_DEVICE_ID_JOYPAD_X:      2,
-	C.RETRO_DEVICE_ID_JOYPAD_A:      3,
-	C.RETRO_DEVICE_ID_JOYPAD_L2:     4,
-	C.RETRO_DEVICE_ID_JOYPAD_R:      5,
-	C.RETRO_DEVICE_ID_JOYPAD_R2:     6,
-	C.RETRO_DEVICE_ID_JOYPAD_START:  7,
+	C.RETRO_DEVICE_ID_JOYPAD_R2:     12,
+	C.RETRO_DEVICE_ID_JOYPAD_L2:     13,
+	C.RETRO_DEVICE_ID_JOYPAD_R3:     14,
+	C.RETRO_DEVICE_ID_JOYPAD_L3:     15,
 }
 
 type CloudEmulator interface {
@@ -186,27 +178,41 @@ func coreInputPoll() {
 
 //export coreInputState
 func coreInputState(port C.unsigned, device C.unsigned, index C.unsigned, id C.unsigned) C.int16_t {
-	if device == C.RETRO_DEVICE_ANALOG && index == C.RETRO_DEVICE_INDEX_ANALOG_LEFT {
-		// TODO: remove temporary hack
-		u, d, l, r := 0, 0, 0, 0
-		for k := range NAEmulator.keysMap {
-			if ((NAEmulator.keysMap[k][port] >> uint(8)) & 1) == 1 {
-				u = 1
-			}
-			if ((NAEmulator.keysMap[k][port] >> uint(9)) & 1) == 1 {
-				d = 1
-			}
-			if ((NAEmulator.keysMap[k][port] >> uint(10)) & 1) == 1 {
-				l = 1
-			}
-			if ((NAEmulator.keysMap[k][port] >> uint(11)) & 1) == 1 {
-				r = 1
+	if device == C.RETRO_DEVICE_ANALOG {
+		if index > C.RETRO_DEVICE_INDEX_ANALOG_RIGHT || id > C.RETRO_DEVICE_ID_ANALOG_Y {
+			return 0
+		}
+		axis := index * 2 + id
+		for k := range NAEmulator.controllersMap {
+			value := NAEmulator.controllersMap[k][port].axes[axis]
+			if value != 0 {
+				return (C.int16_t)(value)
 			}
 		}
-		if id == C.RETRO_DEVICE_ID_ANALOG_Y {
-			return (C.int16_t)(32767 * (d-u))
-		} else if id == C.RETRO_DEVICE_ID_ANALOG_X {
-			return (C.int16_t)(32767 * (r-l))
+		// TODO: remove temporary hack
+		// This logic should really be on the client and it should be mutually
+		// exclusive with respect to the dpad in order not to confuse certain games.
+		if index == C.RETRO_DEVICE_INDEX_ANALOG_LEFT {
+			u, d, l, r := 0, 0, 0, 0
+			for k := range NAEmulator.controllersMap {
+				if ((NAEmulator.controllersMap[k][port].keyState >> uint(8)) & 1) == 1 {
+					u = 1
+				}
+				if ((NAEmulator.controllersMap[k][port].keyState >> uint(9)) & 1) == 1 {
+					d = 1
+				}
+				if ((NAEmulator.controllersMap[k][port].keyState >> uint(10)) & 1) == 1 {
+					l = 1
+				}
+				if ((NAEmulator.controllersMap[k][port].keyState >> uint(11)) & 1) == 1 {
+					r = 1
+				}
+			}
+			if id == C.RETRO_DEVICE_ID_ANALOG_Y {
+				return (C.int16_t)(32767 * (d-u))
+			} else if id == C.RETRO_DEVICE_ID_ANALOG_X {
+				return (C.int16_t)(32767 * (r-l))
+			}
 		}
 	}
 
@@ -216,17 +222,13 @@ func coreInputState(port C.unsigned, device C.unsigned, index C.unsigned, id C.u
 
 	// map from id to controll key
 	key, ok := bindKeysMap[int(id)]
-	// TODO: remove temporary hack
-	if (isGlAllowed) {
-		key, ok = bindKeysMapN64[int(id)]
-	}
 	if !ok {
 		return 0
 	}
 
 	// check if any player is pressing that key
-	for k := range NAEmulator.keysMap {
-		if ((NAEmulator.keysMap[k][port] >> uint(key)) & 1) == 1 {
+	for k := range NAEmulator.controllersMap {
+		if ((NAEmulator.controllersMap[k][port].keyState >> uint(key)) & 1) == 1 {
 			return 1
 		}
 	}

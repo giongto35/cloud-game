@@ -12,6 +12,15 @@
     // used for mute/unmute
     let interacted = false;
 
+    const DIR = (() => {
+        return {
+            IDLE: 'idle',
+            UP: 'up',
+            DOWN: 'down',
+        }
+    })();
+    let prevDir = DIR.IDLE;
+
     // UI elements
     // use $element[0] for DOM element
     const gameScreen = $('#game-screen');
@@ -201,6 +210,17 @@
         state.keyRelease(data.key);
     };
 
+    const onAxisChanged = (data) => {
+        // maybe move it somewhere
+        if (!interacted) {
+            // unmute when there is user interaction
+            gameScreen[0].muted = false;
+            interacted = true;
+        }
+
+        state.axisChanged(data.id, data.value);
+    };
+
     const updatePlayerIndex = (idx) => {
         var slider = document.getElementById('playeridx');
         slider.value = idx + 1;
@@ -212,6 +232,8 @@
         state: {
             eden: {
                 name: 'eden',
+                axisChanged: () => {
+                },
                 keyPress: () => {
                 },
                 keyRelease: () => {
@@ -223,6 +245,8 @@
 
             help: {
                 name: 'help',
+                axisChanged: () => {
+                },
                 keyPress: () => {
                 },
                 keyRelease: () => {
@@ -242,6 +266,27 @@
 
             menu: {
                 name: 'menu',
+                axisChanged: (id, value) => {
+                    if (id === 1) { // Left Stick, Y Axis
+                        let dir = DIR.IDLE;
+                        if (value < -0.5) dir = DIR.UP;
+                        if (value > 0.5) dir = DIR.DOWN;
+                        if (dir !== prevDir) {
+                            prevDir = dir;
+                            switch (dir) {
+                                case DIR.IDLE:
+                                    gameList.stopGamePickerTimer();
+                                    break;
+                                case DIR.UP:
+                                    gameList.startGamePickerTimer(true);
+                                    break;
+                                case DIR.DOWN:
+                                    gameList.startGamePickerTimer(false);
+                                    break;
+                            }
+                        }
+                    }
+                },
                 keyPress: (key) => {
                     switch (key) {
                         case KEY.UP:
@@ -285,6 +330,9 @@
 
             game: {
                 name: 'game',
+                axisChanged: (id, value) => {
+                    input.setAxisChanged(id, value);
+                },
                 keyPress: (key) => {
                     input.setKeyState(key, true);
                 },
@@ -373,7 +421,8 @@
     });
     event.sub(KEY_PRESSED, onKeyPress);
     event.sub(KEY_RELEASED, onKeyRelease);
-    event.sub(KEY_STATE_UPDATED, data => rtcp.input(data));
+    event.sub(AXIS_CHANGED, onAxisChanged);
+    event.sub(CONTROLLER_UPDATED, data => rtcp.input(data));
 
     // game screen stuff
     gameScreen.on('loadstart', () => {

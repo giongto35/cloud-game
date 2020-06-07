@@ -19,6 +19,7 @@
 const joystick = (() => {
     let joystickMap;
     let joystickState;
+    let joystickAxes;
     let joystickIdx;
     let joystickTimer = null;
 
@@ -34,13 +35,21 @@ const joystick = (() => {
     function checkJoystickState() {
         let gamepad = navigator.getGamepads()[joystickIdx];
         if (gamepad) {
-            // axis -> dpad
-            let corX = gamepad.axes[0]; // -1 -> 1, left -> right
-            let corY = gamepad.axes[1]; // -1 -> 1, up -> down
-            checkJoystickAxisState(KEY.LEFT, corX <= -0.5);
-            checkJoystickAxisState(KEY.RIGHT, corX >= 0.5);
-            checkJoystickAxisState(KEY.UP, corY <= -0.5);
-            checkJoystickAxisState(KEY.DOWN, corY >= 0.5);
+            // Could reuse this logic with a toggle or with key remapping
+            // // axis -> dpad
+            // let corX = gamepad.axes[0]; // -1 -> 1, left -> right
+            // let corY = gamepad.axes[1]; // -1 -> 1, up -> down
+            // checkJoystickAxisState(KEY.LEFT, corX <= -0.5);
+            // checkJoystickAxisState(KEY.RIGHT, corX >= 0.5);
+            // checkJoystickAxisState(KEY.UP, corY <= -0.5);
+            // checkJoystickAxisState(KEY.DOWN, corY >= 0.5);
+            gamepad.axes.forEach(function (value, index) {
+                if (-0.1 < value && value < 0.1) value = 0;
+                if (joystickAxes[index] !== value) {
+                    joystickAxes[index] = value;
+                    event.pub(AXIS_CHANGED, {id: index, value: value});
+                }
+            });
 
             // normal button map
             Object.keys(joystickMap).forEach(function (btnIdx) {
@@ -58,8 +67,8 @@ const joystick = (() => {
     }
 
     // we only capture the last plugged joystick
-    const onGamepadConnected = (event) => {
-        let gamepad = event.gamepad;
+    const onGamepadConnected = (e) => {
+        let gamepad = e.gamepad;
         log.info(`Gamepad connected at index ${gamepad.index}: ${gamepad.id}. ${gamepad.buttons.length} buttons, ${gamepad.axes.length} axes.`);
 
         joystickIdx = gamepad.index;
@@ -167,11 +176,29 @@ const joystick = (() => {
             };
         }
 
+        // https://bugs.chromium.org/p/chromium/issues/detail?id=1076272
+        if (browser === 'chrome' && gamepad.id.includes('PLAYSTATION(R)3')) {
+            joystickMap = {
+                0: KEY.A,
+                1: KEY.B,
+                2: KEY.Y,
+                3: KEY.X,
+                4: KEY.L,
+                5: KEY.R,
+                8: KEY.SELECT,
+                9: KEY.START,
+                10: KEY.L3,
+                11: KEY.R3,
+            };
+        }
+
         // reset state
         joystickState = {[KEY.LEFT]: false, [KEY.RIGHT]: false, [KEY.UP]: false, [KEY.DOWN]: false};
         Object.keys(joystickMap).forEach(function (btnIdx) {
             joystickState[btnIdx] = false;
         });
+
+        joystickAxes = new Array(gamepad.axes.length).fill(0);
 
         // looper, too intense?
         if (joystickTimer !== null) {
