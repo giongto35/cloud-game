@@ -1,4 +1,4 @@
-#
+# The base cloud-game image
 ARG BUILD_PATH=/go/src/github.com/giongto35/cloud-game
 
 # build image
@@ -40,4 +40,4 @@ RUN cp -s $(pwd)/* /usr/local/bin
 COPY web ./web
 COPY assets/emulator/libretro/cores/*.so ./assets/emulator/libretro/cores/
 
-EXPOSE 8000 9000
+EXPOSE 8000 9000 3478/tcp 3478/udp
