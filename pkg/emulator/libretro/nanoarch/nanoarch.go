@@ -189,31 +189,6 @@ func coreInputState(port C.unsigned, device C.unsigned, index C.unsigned, id C.u
 				return (C.int16_t)(value)
 			}
 		}
-		// TODO: remove temporary hack
-		// This logic should really be on the client and it should be mutually
-		// exclusive with respect to the dpad in order not to confuse certain games.
-		if index == C.RETRO_DEVICE_INDEX_ANALOG_LEFT {
-			u, d, l, r := 0, 0, 0, 0
-			for k := range NAEmulator.controllersMap {
-				if ((NAEmulator.controllersMap[k][port].keyState >> uint(8)) & 1) == 1 {
-					u = 1
-				}
-				if ((NAEmulator.controllersMap[k][port].keyState >> uint(9)) & 1) == 1 {
-					d = 1
-				}
-				if ((NAEmulator.controllersMap[k][port].keyState >> uint(10)) & 1) == 1 {
-					l = 1
-				}
-				if ((NAEmulator.controllersMap[k][port].keyState >> uint(11)) & 1) == 1 {
-					r = 1
-				}
-			}
-			if id == C.RETRO_DEVICE_ID_ANALOG_Y {
-				return (C.int16_t)(32767 * (d-u))
-			} else if id == C.RETRO_DEVICE_ID_ANALOG_X {
-				return (C.int16_t)(32767 * (r-l))
-			}
-		}
 	}
 
 	if id >= 255 || index > 0 || device != C.RETRO_DEVICE_JOYPAD {

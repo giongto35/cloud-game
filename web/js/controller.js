@@ -227,6 +227,11 @@
         socket.updatePlayerIndex(idx);
     };
 
+    const handleToggle = () => {
+        var toggle = document.getElementById('dpad-toggle');
+        toggle.checked = !toggle.checked;
+        event.pub(DPAD_TOGGLE, {checked: toggle.checked});
+    };
 
     const app = {
         state: {
@@ -322,6 +327,9 @@
                         case KEY.STATS:
                             event.pub(STATS_TOGGLE);
                             break;
+                        case KEY.DTOGGLE:
+                            handleToggle();
+                            break;
                     }
                 },
                 menuReady: () => {
@@ -386,6 +394,9 @@
 
                         case KEY.STATS:
                             event.pub(STATS_TOGGLE);
+                            break;
+                        case KEY.DTOGGLE:
+                            handleToggle();
                             break;
                     }
 

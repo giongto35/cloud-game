@@ -17,11 +17,33 @@
  * @version 1
  */
 const joystick = (() => {
+    const deadZone = 0.1;
     let joystickMap;
-    let joystickState;
-    let joystickAxes;
+    let joystickState = {};
+    let joystickAxes = [];
     let joystickIdx;
     let joystickTimer = null;
+    let dpadMode = true;
+
+    function onDpadToggle(checked) {
+        if (dpadMode === checked) {
+            return //error?
+        }
+        if (dpadMode) {
+            dpadMode = false;
+            // reset dpad keys pressed before moving to analog stick mode
+            checkJoystickAxisState(KEY.LEFT, false);
+            checkJoystickAxisState(KEY.RIGHT, false);
+            checkJoystickAxisState(KEY.UP, false);
+            checkJoystickAxisState(KEY.DOWN, false);
+        } else {
+            dpadMode = true;
+            // reset analog stick axes before moving to dpad mode
+            joystickAxes.forEach(function (value, index) {
+                checkJoystickAxis(index, 0);
+            });
+        }
+    }
 
     // check state for each axis -> dpad
     function checkJoystickAxisState(name, state) {
@@ -31,25 +53,31 @@ const joystick = (() => {
         }
     }
 
+    function checkJoystickAxis(axis, value) {
+        if (-deadZone < value && value < deadZone) value = 0;
+        if (joystickAxes[axis] !== value) {
+            joystickAxes[axis] = value;
+            event.pub(AXIS_CHANGED, {id: axis, value: value});
+        }
+    }
+
     // loop timer for checking joystick state
     function checkJoystickState() {
         let gamepad = navigator.getGamepads()[joystickIdx];
         if (gamepad) {
-            // Could reuse this logic with a toggle or with key remapping
-            // // axis -> dpad
-            // let corX = gamepad.axes[0]; // -1 -> 1, left -> right
-            // let corY = gamepad.axes[1]; // -1 -> 1, up -> down
-            // checkJoystickAxisState(KEY.LEFT, corX <= -0.5);
-            // checkJoystickAxisState(KEY.RIGHT, corX >= 0.5);
-            // checkJoystickAxisState(KEY.UP, corY <= -0.5);
-            // checkJoystickAxisState(KEY.DOWN, corY >= 0.5);
-            gamepad.axes.forEach(function (value, index) {
-                if (-0.1 < value && value < 0.1) value = 0;
-                if (joystickAxes[index] !== value) {
-                    joystickAxes[index] = value;
-                    event.pub(AXIS_CHANGED, {id: index, value: value});
-                }
-            });
+            if (dpadMode) {
+                // axis -> dpad
+                let corX = gamepad.axes[0]; // -1 -> 1, left -> right
+                let corY = gamepad.axes[1]; // -1 -> 1, up -> down
+                checkJoystickAxisState(KEY.LEFT, corX <= -0.5);
+                checkJoystickAxisState(KEY.RIGHT, corX >= 0.5);
+                checkJoystickAxisState(KEY.UP, corY <= -0.5);
+                checkJoystickAxisState(KEY.DOWN, corY >= 0.5);
+            } else {
+                gamepad.axes.forEach(function (value, index) {
+                    checkJoystickAxis(index, value);
+                });
+            }
 
             // normal button map
             Object.keys(joystickMap).forEach(function (btnIdx) {
@@ -187,7 +215,7 @@ const joystick = (() => {
                 5: KEY.R,
                 8: KEY.SELECT,
                 9: KEY.START,
-                10: KEY.L3,
+                10: KEY.DTOGGLE,
                 11: KEY.R3,
             };
         }
@@ -208,6 +236,8 @@ const joystick = (() => {
         joystickTimer = setInterval(checkJoystickState, 10); // miliseconds per hit
         event.pub(GAMEPAD_CONNECTED);
     };
+
+    event.sub(DPAD_TOGGLE, (data) => onDpadToggle(data.checked));
 
     return {
         init: () => {

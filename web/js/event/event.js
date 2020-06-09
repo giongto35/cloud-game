@@ -85,5 +85,6 @@ const KEY_RELEASED = 'keyReleased';
 const AXIS_CHANGED = 'axisChanged';
 const CONTROLLER_UPDATED = 'controllerUpdated';
 
+const DPAD_TOGGLE = 'dpadToggle';
 const STATS_TOGGLE = 'statsToggle';
 const HELP_OVERLAY_TOGGLED = 'helpOverlayToggled';
