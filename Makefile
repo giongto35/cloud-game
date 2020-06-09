@@ -76,27 +76,19 @@ dev.run: dev.build-local
 	./bin/coordinator --v=5 &
 	./bin/worker --coordinatorhost localhost:8000
 
-dev.run-docker:
-	docker build . -t cloud-game-local
-	docker stop cloud-game-local || true
-	docker rm cloud-game-local || true
-	# Coordinator and worker should be run separately.
-	docker run --privileged -v $(pwd)/games:/cloud-game/games -d --name cloud-game-local -p 8000:8000 -p 9000:9000 cloud-game-local bash -c "coordinator --v=5 & worker --coordinatorhost localhost:8000"
-
 # RELEASE
 # Builds the app for new release.
 #
 # Folder structure:
-# release
 #   - assets/
-#   - games/ (shared between both executables)
-#   - emulator/libretro/cores/ (filtered by extension)
+#   	- games/ (shared between both executables)
+#   	- emulator/libretro/cores/ (filtered by extension)
 #   - web/
 #   - coordinator
 #   - worker
 #
-# params:
-# - RELEASE_DIR: the name of the output folder (default: _release).
+# Config params:
+# - RELEASE_DIR: the name of the output folder (default: release).
 # - DLIB_TOOL: the name of a dynamic lib copy tool (with params) (e.g., ldd -x -y; defalut: ldd).
 # - DLIB_SEARCH_PATTERN: a grep filter of the output of the DLIB_TOOL (e.g., mylib.so; default: .*so).
 #   Be aware that this search pattern will return only matched regular expression part and not the whole line.
@@ -105,7 +97,7 @@ dev.run-docker:
 # - DLIB_ALTER: a special flag to use altered dynamic copy lib tool for macOS only.
 # - CORE_EXT: a file extension of the cores to copy into the release.
 #
-# example:
+# Example:
 #   make release DLIB_TOOL="ldd -x" DLIB_SEARCH_PATTERN=/usr/lib.*\\\\s LIB_EXT=so
 #
 RELEASE_DIR ?= release
