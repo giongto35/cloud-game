@@ -99,4 +99,4 @@ var EmulatorConfig = map[string]EmulatorMeta{
 	},
 }
 
-var EmulatorExtension = []string{".so", ".dylib", ".dll"}
+var EmulatorExtension = []string{".so", ".armv7-neon-hf.so", ".dylib", ".dll"}
