@@ -438,6 +438,7 @@ func deinitVideo() {
 	gl.DeleteTextures(1, &video.tex)
 	sdl.GLDeleteContext(video.context)
 	video.window.Destroy()
+	video.isGl = false
 }
 
 var retroHandle unsafe.Pointer
