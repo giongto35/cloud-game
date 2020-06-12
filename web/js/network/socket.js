@@ -30,15 +30,10 @@ const socket = (() => {
     let curPacketId = '';
 
     const init = (roomId, zone) => {
-        const paramString = new URLSearchParams({room_id: roomId, zone: zone})
-
-        // if localhost, local LAN connection
-        if (location.hostname === "localhost" || location.hostname === "127.0.0.1" || location.hostname.startsWith("192.168")) {
-            scheme = "ws"
-        } else {
-            scheme = "wss"
-        }
-        conn = new WebSocket(`${scheme}://${location.host}/ws?${paramString.toString()}`);
+        const params = new URLSearchParams({room_id: roomId, zone: zone}).toString()
+        const address = `${location.protocol !== 'https:' ? 'ws' : 'wss'}://${location.host}/ws?${params}`;
+        console.info(`[ws] connecting to ${address}`);
+        conn = new WebSocket(address);
 
         // Clear old roomID
         conn.onopen = () => {
