@@ -10,6 +10,9 @@ on:
       - master
     tags-ignore:
       - 'v*'
+  pull_request:
+    branches:
+      - master
 env:
   go-version: 1.13
 jobs:

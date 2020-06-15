@@ -75,6 +75,10 @@ dev.build-local:
 dev.run: dev.build-local
 	./bin/coordinator --v=5 &
 	./bin/worker --coordinatorhost localhost:8000
+	
+dev.run-docker:
+	docker rm cloud-game-local -f || true
+	CLOUD_GAME_GAMES_PATH=$(PWD)/assets/games docker-compose up --build
 
 # RELEASE
 # Builds the app for new release.
