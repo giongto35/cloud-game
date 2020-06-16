@@ -84,3 +84,13 @@ jobs:
         if: matrix.os == 'macos-latest'
         run: |
           make build
+
+  docker_build_check:
+    name: Build (docker)
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request'
+    steps:
+      - name: Get the source
+        uses: actions/checkout@v2
+      - name: Try to build Docker image
+        run: docker build .
