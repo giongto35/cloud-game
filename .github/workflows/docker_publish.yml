@@ -25,4 +25,4 @@ jobs:
           username: ${{ github.ACTOR }}
           password: ${{ secrets.GITHUB_TOKEN }}
           registry: docker.pkg.github.com
-          repository: giongto35/cloud-game/cloud-game
+          repository: ${{ github.REPOSITORY }}/cloud-game
