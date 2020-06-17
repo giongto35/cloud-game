@@ -34,6 +34,7 @@ RUN apt-get update && apt-get install -y \
     libopus0 \
     libopusfile0 \
     libsdl2-2.0-0 \
+    libgl1-mesa-glx \
   && rm -rf /var/lib/apt/lists/*
 
 COPY --from=build ${BUILD_PATH}/bin/ ./
