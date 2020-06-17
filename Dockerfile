@@ -13,6 +13,7 @@ RUN apt-get update && apt-get install -y \
     libvpx-dev \
     libopus-dev \
     libopusfile-dev \
+    libsdl2-dev \
  && rm -rf /var/lib/apt/lists/*
 
 # go deps layer
@@ -32,6 +33,7 @@ RUN apt-get update && apt-get install -y \
     libvpx5 \
     libopus0 \
     libopusfile0 \
+    libsdl2-2.0-0 \
   && rm -rf /var/lib/apt/lists/*
 
 COPY --from=build ${BUILD_PATH}/bin/ ./

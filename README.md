@@ -36,31 +36,18 @@ Direct play an existing game: **[Pokemon Emerald](http://cloudretro.io/?id=652e4
 
 Install Golang https://golang.org/doc/install . Because the project uses GoModule, so it requires Go1.11 version.
 
-### (Window only) Extra setup
-Setup MSYS2 (MinGW) environment if you are using Windows:
-  * Please refer to the Libretro [doc](https://docs.libretro.com/development/retroarch/compilation/windows/#environment-configuration) for initial environment setup
-  * Add Golang installation path into your .bashrc
-    ```
-    $ echo 'export PATH=/c/Go/bin:$PATH' >> ~/.bashrc
-    ```
-  * Install dependencies as described down bellow
-  * Copy required [Libretro Core DLLs](http://buildbot.libretro.com/nightly/windows/x86_64/latest/) into the `cloud-game\assets\emulator\libretro\cores` folder and replace existing Linux SOs in the `cloud-game\pkg\config\config.go` EmulatorConfig object.
-  * Use `C:\msys64\mingw64.exe` for building
-  * To run the app use either MinGw terminal or copy: libdl.dll, libogg-0.dll, libopenal-1.dll, libopus-0.dll, libopusfile-0.dll, libvpx-1.dll
-    files from `C:\msys64\mingw64\bin` into the `./bin` folder and then run.
-
 ### (All) Install Dependencies
 
-  * Install [libvpx](https://www.webmproject.org/code/), [libopus](http://opus-codec.org/), [pkg-config](https://www.freedesktop.org/wiki/Software/pkg-config/)
+  * Install [libvpx](https://www.webmproject.org/code/), [libopus](http://opus-codec.org/), [pkg-config](https://www.freedesktop.org/wiki/Software/pkg-config/), [sdl2](https://wiki.libsdl.org/Installation)
 ```
 # Ubuntu / Windows (WSL2)
-apt-get install -y pkg-config libvpx-dev libopus-dev libopusfile-dev
+apt-get install -y pkg-config libvpx-dev libopus-dev libopusfile-dev libsdl2-dev
 
 # MacOS
-brew install libvpx pkg-config opus opusfile
+brew install libvpx pkg-config opus opusfile sdl2
 
 # Windows (MSYS2)
-pacman -Sy --noconfirm --needed git make mingw-w64-x86_64-{gcc,pkg-config,dlfcn,libvpx,opusfile}
+pacman -Sy --noconfirm --needed git make mingw-w64-x86_64-{gcc,pkg-config,dlfcn,libvpx,opusfile,SDL2}
 ```
 
 Because the coordinator and workers need to run simultaneously. Workers connect to the coordinator.
@@ -107,9 +94,11 @@ Synchronize a game session on multiple devices
 </p>
 
 ## Contribution
-- The project cannot be possible without the contribution with those amazing people:
-- [sergystepanov](https://github.com/sergystepanov/) for Front end refactor; Audio re-implementation; bilinear, nearest neighbor interpolation scaling; Window setup document; build workflow on multi-os.
-- [sadlil](https://github.com/sadlil) for massive code structure reogranization; log and monitor server introduction.
+We are very much thankful to everyone who contributes to the project:
+
+- [88hcsif](https://github.com/88hcsif)
+- [sadlil](https://github.com/sadlil)
+- [sergystepanov](https://github.com/sergystepanov/)
 
 ## Credits
 

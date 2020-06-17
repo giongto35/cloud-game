@@ -40,12 +40,12 @@ jobs:
         if: matrix.os == 'ubuntu-latest'
         run: |
           sudo apt-get update
-          sudo apt-get install -y make pkg-config libvpx-dev libopus-dev libopusfile-dev
+          sudo apt-get install -y make pkg-config libvpx-dev libopus-dev libopusfile-dev libsdl2-dev
 
       - name: Get MacOS dev libraries and tools
         if: matrix.os == 'macos-latest'
         run: |
-          brew install libvpx pkg-config opus opusfile
+          brew install libvpx pkg-config opus opusfile sdl2
 
       - name: Get Windows dev libraries and tools
         if: matrix.os == 'windows-latest'
@@ -72,6 +72,7 @@ jobs:
           mingw-w64-x86_64-dlfcn
           mingw-w64-x86_64-libvpx
           mingw-w64-x86_64-opusfile
+          mingw-w64-x86_64-SDL2
 
           msys2do make build
 
