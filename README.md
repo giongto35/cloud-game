@@ -14,7 +14,7 @@ Theoretically, in cloud gaming, games are run on remote servers and media are st
 
 ## Try the service at
 Single play: **[http://cloudretro.io](http://cloudretro.io)**  
-Direct play an existing game: **[Pokemon Emerald](http://cloudretro.io/?id=652e45d78d2b91cd%7CPokemon%20-%20Emerald%20Version%20%28U%29)**
+Direct play an existing game: **[Pokemon Emerald](https://cloudretro.io/?id=4a5073a4b05ad0fe___Pokemon%20-%20Emerald%20Version%20(U))**
 
 \*In ideal network condition and less resource contention on servers, the game will run smoothly as in the video demo. Because I only hosted the platform on limited servers in US East, US West, Eu, Singapore, you may experience some latency issues + connection problem. You can try hosting the service following the instruction the next section to have a better sense of performance.
 
