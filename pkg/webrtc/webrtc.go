@@ -37,7 +37,7 @@ type WebRTC struct {
 	AudioChannel    chan []byte
 	VoiceInChannel  chan []byte
 	VoiceOutChannel chan []byte
-	InputChannel    chan int
+	InputChannel    chan []byte
 
 	Done     bool
 	lastTime time.Time
@@ -90,7 +90,7 @@ func NewWebRTC() *WebRTC {
 		AudioChannel:    make(chan []byte, 1),
 		VoiceInChannel:  make(chan []byte, 1),
 		VoiceOutChannel: make(chan []byte, 1),
-		InputChannel:    make(chan int, 100),
+		InputChannel:    make(chan []byte, 100),
 	}
 	return w
 }
@@ -156,8 +156,8 @@ func (w *WebRTC) StartClient(isMobile bool, iceCB OnIceCallback) (string, error)
 
 	// Register text message handling
 	inputTrack.OnMessage(func(msg webrtc.DataChannelMessage) {
-		// TODO: Can add recover here + generalize
-		w.InputChannel <- int(msg.Data[1])<<8 + int(msg.Data[0])
+		// TODO: Can add recover here
+		w.InputChannel <- msg.Data
 	})
 
 	inputTrack.OnClose(func() {

@@ -74,6 +74,10 @@ func (o *Server) GetWeb(w http.ResponseWriter, r *http.Request) {
 
 // getPingServer returns the server for latency check of a zone. In latency check to find best worker step, we use this server to find the closest worker.
 func (o *Server) getPingServer(zone string) string {
+	if o.cfg.PingServer != "" {
+		return fmt.Sprintf("%s/echo", o.cfg.PingServer)
+	}
+
 	if *config.Mode == config.ProdEnv || *config.Mode == config.StagingEnv {
 		return fmt.Sprintf(pingServerTemp, zone, o.cfg.PublicDomain)
 	}
