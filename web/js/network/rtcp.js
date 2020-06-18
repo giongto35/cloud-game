@@ -51,14 +51,14 @@ const rtcp = (() => {
         let stream = null;
 
         try {
-            stream = await navigator.mediaDevices.getUserMedia({video:false, audio:true});
+            stream = await navigator.mediaDevices.getUserMedia({video: false, audio: true});
 
-            stream.getTracks().forEach(function(track) {
+            stream.getTracks().forEach(function (track) {
                 log.info("Added voice track")
                 connection.addTrack(track);
             });
 
-        } catch(e) {
+        } catch (e) {
             log.info("Error getting audio stream from getUserMedia")
             log.info(e)
 
@@ -140,24 +140,24 @@ const rtcp = (() => {
     return {
         start: start,
         setRemoteDescription: async (data, media) => {
-            offer = new RTCSessionDescription(JSON.parse(atob(data)));
+            const offer = new RTCSessionDescription(JSON.parse(atob(data)));
             await connection.setRemoteDescription(offer);
-            
-            answer = await connection.createAnswer({});
+
+            const answer = await connection.createAnswer();
+            // Chrome bug https://bugs.chromium.org/p/chromium/issues/detail?id=818180 workaround
+            // force stereo params for Opus tracks (a=fmtp:111 ...)
+            answer.sdp = answer.sdp.replace(/(a=fmtp:111 .*)/g, '$1;stereo=1;sprop-stereo=1');
             await connection.setLocalDescription(answer);
 
             isAnswered = true;
             event.pub(MEDIA_STREAM_CANDIDATE_FLUSH);
 
-            socket.send({
-                'id': 'answer',
-                'data': btoa(JSON.stringify(answer)),
-            });
+            socket.send({'id': 'answer', 'data': btoa(JSON.stringify(answer))});
 
             media.srcObject = mediaStream;
         },
         addCandidate: (data) => {
-            if (data == '') {
+            if (data === '') {
                 event.pub(MEDIA_STREAM_CANDIDATE_FLUSH);
             } else {
                 candidates.push(data);
