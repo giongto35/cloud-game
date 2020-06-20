@@ -176,6 +176,7 @@ const rtcp = (() => {
         },
         input: (data) => inputChannel.send(data),
         isConnected: () => connected,
-        isInputReady: () => inputReady
+        isInputReady: () => inputReady,
+        getConnection: () => connection,
     }
 })(event, socket, env, log);
