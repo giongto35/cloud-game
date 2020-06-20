@@ -7,15 +7,15 @@ import (
 	"os/signal"
 	"time"
 
+	"github.com/faiface/mainthread"
 	config "github.com/giongto35/cloud-game/pkg/config/worker"
-
 	"github.com/giongto35/cloud-game/pkg/util/logging"
 	"github.com/giongto35/cloud-game/pkg/worker"
 	"github.com/golang/glog"
 	"github.com/spf13/pflag"
 )
 
-func main() {
+func run() {
 	rand.Seed(time.Now().UTC().UnixNano())
 
 	cfg := config.NewDefaultConfig()
@@ -42,4 +42,9 @@ func main() {
 		o.Shutdown()
 		cancelCtx()
 	}
+}
+
+func main() {
+	// enables mainthread package and runs run in a separate goroutine
+	mainthread.Run(run)
 }
