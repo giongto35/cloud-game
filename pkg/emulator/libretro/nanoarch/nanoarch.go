@@ -13,6 +13,7 @@ import (
 	"unsafe"
 
 	"github.com/disintegration/imaging"
+	"github.com/faiface/mainthread"
 	"github.com/giongto35/cloud-game/pkg/config"
 	"github.com/giongto35/cloud-game/pkg/emulator/libretro/image"
 	"github.com/go-gl/gl/v4.1-core/gl"
@@ -367,15 +368,20 @@ func initVideo() {
 		fmt.Println("Unsupported hw context:", video.hw.context_type)
 	}
 
-	video.window, err = sdl.CreateWindow(winTitle, sdl.WINDOWPOS_UNDEFINED, sdl.WINDOWPOS_UNDEFINED, winWidth, winHeight, sdl.WINDOW_OPENGL)
-	if err != nil {
-		panic(err)
-	}
+	// In OSX 10.14+ window creation and context creation must happen in the main thread
+	mainthread.Call(func() {
+		video.window, err = sdl.CreateWindow(winTitle, sdl.WINDOWPOS_UNDEFINED, sdl.WINDOWPOS_UNDEFINED, winWidth, winHeight, sdl.WINDOW_OPENGL)
+		if err != nil {
+			panic(err)
+		}
 
-	video.context, err = video.window.GLCreateContext()
-	if err != nil {
-		panic(err)
-	}
+		video.context, err = video.window.GLCreateContext()
+		if err != nil {
+			panic(err)
+		}
+	})
+	// Bind context to current thread
+	video.window.GLMakeCurrent(video.context)
 
 	if err = gl.InitWithProcAddrFunc(sdl.GLGetProcAddress); err != nil {
 		panic(err)
@@ -431,13 +437,18 @@ func initVideo() {
 
 //export deinitVideo
 func deinitVideo() {
+	C.bridge_context_reset(video.hw.context_destroy)
 	if video.hw.depth {
 		gl.DeleteRenderbuffers(1, &video.rbo);
 	}
 	gl.DeleteFramebuffers(1, &video.fbo)
 	gl.DeleteTextures(1, &video.tex)
-	sdl.GLDeleteContext(video.context)
-	video.window.Destroy()
+	// In OSX 10.14+ window deletion must happen in the main thread
+	mainthread.Call(func() {
+		video.window.GLMakeCurrent(video.context)
+		sdl.GLDeleteContext(video.context)
+		video.window.Destroy()
+	})
 	video.isGl = false
 }
 
@@ -626,7 +637,9 @@ func coreLoadGame(filename string) {
 		if usesLibCo {
 			C.bridge_execute(C.initVideo_cgo)
 		} else {
+			runtime.LockOSThread()
 			initVideo()
+			runtime.UnlockOSThread()
 		}
 	}
 }
