@@ -121,6 +121,8 @@ func (o *Server) WSO(w http.ResponseWriter, r *http.Request) {
 
 	pingServer := o.getPingServer(zone)
 
+	wc.Printf("Set ping server address: %s", pingServer)
+
 	// In case worker and coordinator in the same host
 	if !util.IsPublicIP(address) && *config.Mode == config.ProdEnv {
 		// Don't accept private IP for worker's address in prod mode
