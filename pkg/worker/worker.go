@@ -157,14 +157,16 @@ func (o *Worker) initializeWorker() {
 	port := o.cfg.HttpPort
 	// It's recommend to run one worker on one instance.
 	// This logic is to make sure more than 1 workers still work
+	portsNum := 100
 	for {
+		portsNum--
 		l, err := net.Listen("tcp", ":"+strconv.Itoa(port))
 		if err != nil {
 			port++
 			continue
 		}
 
-		if l == nil {
+		if portsNum < 1 {
 			log.Printf("Couldn't find an open port in range %v-%v\n", o.cfg.HttpPort, port)
 			// Cannot find port
 			return
