@@ -146,7 +146,7 @@ func (o *Coordinator) initializeCoordinator() {
 		httpSrv.Handler = certManager.HTTPHandler(httpSrv.Handler)
 	}
 
-	httpSrv.Addr = ":8000"
+	httpSrv.Addr = ":" + *config.HttpPort
 	err := httpSrv.ListenAndServe()
 	if err != nil {
 		log.Fatalf("httpSrv.ListenAndServe() failed with %s", err)

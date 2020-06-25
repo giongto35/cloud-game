@@ -109,9 +109,9 @@ func (o *Worker) spawnServer(port int) {
 			}
 
 			certManager = &autocert.Manager{
-				Prompt:     autocert.AcceptTOS,
-				Cache:      autocert.DirCache("assets/cache"),
-				Client:     &acme.Client{DirectoryURL: leurl},
+				Prompt: autocert.AcceptTOS,
+				Cache:  autocert.DirCache("assets/cache"),
+				Client: &acme.Client{DirectoryURL: leurl},
 			}
 
 			httpsSrv.TLSConfig = &tls.Config{GetCertificate: certManager.GetCertificate}
@@ -154,22 +154,25 @@ func (o *Worker) initializeWorker() {
 	}()
 
 	go worker.Run()
-	port := 9000
-	// It's recommend to run one worker on one instance. This logic is to make sure more than 1 workers still work
+	port := o.cfg.HttpPort
+	// It's recommend to run one worker on one instance.
+	// This logic is to make sure more than 1 workers still work
+	portsNum := 100
 	for {
-		log.Println("Listening at port: localhost:", port)
-		// err := http.ListenAndServe(":"+strconv.Itoa(port), nil)
+		portsNum--
 		l, err := net.Listen("tcp", ":"+strconv.Itoa(port))
 		if err != nil {
 			port++
 			continue
 		}
-		if port == 9100 {
+
+		if portsNum < 1 {
+			log.Printf("Couldn't find an open port in range %v-%v\n", o.cfg.HttpPort, port)
 			// Cannot find port
 			return
 		}
 
-		l.Close()
+		_ = l.Close()
 
 		o.spawnServer(port)
 	}
