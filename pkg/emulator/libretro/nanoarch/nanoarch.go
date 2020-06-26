@@ -653,13 +653,16 @@ func serializeSize() uint {
 	return uint(C.bridge_retro_serialize_size(retroSerializeSize))
 }
 
-// serialize serializes internal state and returns the state as a byte slice.
+// Serializes internal state and returns the state as a byte slice.
 func serialize(size uint) ([]byte, error) {
 	data := C.malloc(C.size_t(size))
+	defer C.free(data)
+
 	ok := bool(C.bridge_retro_serialize(retroSerialize, data, C.size_t(size)))
 	if !ok {
 		return nil, errors.New("retro_serialize failed")
 	}
+
 	bytes := C.GoBytes(data, C.int(size))
 	return bytes, nil
 }
