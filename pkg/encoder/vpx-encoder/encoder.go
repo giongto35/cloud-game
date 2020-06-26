@@ -2,7 +2,6 @@ package vpxencoder
 
 import (
 	"fmt"
-	"image"
 	"log"
 	"unsafe"
 
@@ -46,8 +45,8 @@ const chanSize = 2
 
 // VpxEncoder yuvI420 image to vp8 video
 type VpxEncoder struct {
-	Output chan []byte      // frame
-	Input  chan *image.RGBA // yuvI420
+	Output chan encoder.OutFrame
+	Input  chan encoder.InFrame
 
 	width  int
 	height int
@@ -64,8 +63,8 @@ type VpxEncoder struct {
 // NewVpxEncoder create vp8 encoder
 func NewVpxEncoder(w, h, fps, bitrate, keyframe int) (encoder.Encoder, error) {
 	v := &VpxEncoder{
-		Output: make(chan []byte, 5*chanSize),
-		Input:  make(chan *image.RGBA, chanSize),
+		Output: make(chan encoder.OutFrame, 5*chanSize),
+		Input:  make(chan encoder.InFrame,    chanSize),
 
 		// C
 		width:            w,
@@ -126,7 +125,7 @@ func (v *VpxEncoder) startLooping() {
 	yuv := make([]byte, size, size)
 
 	for img := range v.Input {
-		util.RgbaToYuvInplace(img, yuv, v.width, v.height)
+		util.RgbaToYuvInplace(img.Image, yuv, v.width, v.height)
 
 		// Add Image
 		v.vpxCodexIter = nil
@@ -151,7 +150,7 @@ func (v *VpxEncoder) startLooping() {
 		if len(v.Output) >= cap(v.Output) {
 			continue
 		}
-		v.Output <- bs
+		v.Output <- encoder.OutFrame{ Data: bs, Timestamp: img.Timestamp }
 	}
 }
 
@@ -168,12 +167,12 @@ func (v *VpxEncoder) release() {
 }
 
 // GetInputChan returns input channel
-func (v *VpxEncoder) GetInputChan() chan *image.RGBA {
+func (v *VpxEncoder) GetInputChan() chan encoder.InFrame {
 	return v.Input
 }
 
 // GetInputChan returns output channel
-func (v *VpxEncoder) GetOutputChan() chan []byte {
+func (v *VpxEncoder) GetOutputChan() chan encoder.OutFrame {
 	return v.Output
 }
 

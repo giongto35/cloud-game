@@ -6,10 +6,12 @@ import (
 	"fmt"
 	stdimage "image"
 	"log"
+	"math/rand"
 	"os"
 	"os/user"
 	"runtime"
 	"sync"
+	"time"
 	"unsafe"
 
 	"github.com/disintegration/imaging"
@@ -102,6 +104,8 @@ var systemDirectory = C.CString("./pkg/emulator/libretro/system")
 var saveDirectory = C.CString(".")
 var currentUser *C.char
 
+var seed = rand.New(rand.NewSource(time.Now().UnixNano())).Uint32()
+
 var bindKeysMap = map[int]int{
 	C.RETRO_DEVICE_ID_JOYPAD_A:      0,
 	C.RETRO_DEVICE_ID_JOYPAD_B:      1,
@@ -135,6 +139,8 @@ func coreVideoRefresh(data unsafe.Pointer, width C.unsigned, height C.unsigned, 
 	if data == nil {
 		return
 	}
+	// divide by 8333 to give us the equivalent of a 120fps resolution
+	timestamp := uint32(time.Now().UnixNano() / 8333) + seed
 
 	if (data == C.RETRO_HW_FRAME_BUFFER_VALID) {
 		im := stdimage.NewNRGBA(stdimage.Rect(0, 0, int(width), int(height)))
@@ -147,7 +153,7 @@ func coreVideoRefresh(data unsafe.Pointer, width C.unsigned, height C.unsigned, 
 			Stride: im.Stride,
 			Rect:   im.Rect,
 		}
-		NAEmulator.imageChannel <- rgba
+		NAEmulator.imageChannel <- GameFrame{ Image: rgba, Timestamp: timestamp }
 		return
 	}
 
@@ -170,7 +176,7 @@ func coreVideoRefresh(data unsafe.Pointer, width C.unsigned, height C.unsigned, 
 
 	// the image is pushed into a channel
 	// where it will be distributed with fan-out
-	NAEmulator.imageChannel <- outputImg
+	NAEmulator.imageChannel <- GameFrame{ Image: outputImg, Timestamp: timestamp }
 }
 
 //export coreInputPoll

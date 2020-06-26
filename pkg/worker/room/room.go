@@ -1,7 +1,6 @@
 package room
 
 import (
-	"image"
 	"io/ioutil"
 	"log"
 	"math"
@@ -29,7 +28,7 @@ type Room struct {
 	ID string
 
 	// imageChannel is image stream received from director
-	imageChannel <-chan *image.RGBA
+	imageChannel <-chan nanoarch.GameFrame
 	// audioChannel is audio stream received from director
 	audioChannel <-chan []int16
 	// inputChannel is input stream send to director. This inputChannel is combined
@@ -169,7 +168,7 @@ func resizeToAspect(ratio float64, sw int, sh int) (dw int, dh int) {
 }
 
 // getEmulator creates new emulator and run it
-func getEmulator(emuName string, roomID string, imageChannel chan<- *image.RGBA, audioChannel chan<- []int16, inputChannel <-chan int) emulator.CloudEmulator {
+func getEmulator(emuName string, roomID string, imageChannel chan<- nanoarch.GameFrame, audioChannel chan<- []int16, inputChannel <-chan int) emulator.CloudEmulator {
 
 	return nanoarch.NAEmulator
 }
