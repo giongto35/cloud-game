@@ -49,6 +49,7 @@ void* bridge_retro_get_memory_data(void *f, unsigned id);
 bool bridge_retro_serialize(void *f, void *data, size_t size);
 bool bridge_retro_unserialize(void *f, void *data, size_t size);
 size_t bridge_retro_serialize_size(void *f);
+void bridge_retro_set_controller_port_device(void *f, unsigned port, unsigned device);
 
 bool coreEnvironment_cgo(unsigned cmd, void *data);
 void coreVideoRefresh_cgo(void *data, unsigned width, unsigned height, size_t pitch);
@@ -100,6 +101,12 @@ var isGlAllowed bool
 var usesLibCo bool
 var coreConfig ConfigProperties
 
+var multitap struct {
+	supported bool
+	enabled   bool
+	value     C.unsigned
+}
+
 var systemDirectory = C.CString("./pkg/emulator/libretro/system")
 var saveDirectory = C.CString(".")
 var currentUser *C.char
@@ -131,6 +138,7 @@ type CloudEmulator interface {
 	LoadGame() error
 	GetHashPath() string
 	Close()
+	ToggleMultitap() error
 }
 
 //export coreVideoRefresh
@@ -328,6 +336,22 @@ func coreEnvironment(cmd C.unsigned, data unsafe.Pointer) C.bool {
 			return true
 		}
 		return false
+	case C.RETRO_ENVIRONMENT_SET_CONTROLLER_INFO:
+		if (multitap.supported) {
+			info := (*[100]C.struct_retro_controller_info)(data)
+			var i C.unsigned
+			for i = 0; unsafe.Pointer(info[i].types) != nil; i++ {
+				var j C.unsigned
+				types := (*[100]C.struct_retro_controller_description)(unsafe.Pointer(info[i].types))
+				for j = 0; j < info[i].num_types; j++ {
+					if (C.GoString(types[j].desc) == "Multitap") {
+						multitap.value = types[j].id
+						return true
+					}
+				}
+			}
+		}
+		return false
 	default:
 		//fmt.Println("[Env]: command not implemented", cmd)
 		return false
@@ -478,6 +502,7 @@ var retroGetMemoryData unsafe.Pointer
 var retroSerializeSize unsafe.Pointer
 var retroSerialize unsafe.Pointer
 var retroUnserialize unsafe.Pointer
+var retroSetControllerPortDevice unsafe.Pointer
 
 func loadFunction(handle unsafe.Pointer, name string) unsafe.Pointer {
 	cs := C.CString(name)
@@ -486,15 +511,19 @@ func loadFunction(handle unsafe.Pointer, name string) unsafe.Pointer {
 	return pointer
 }
 
-func coreLoad(pathNoExt string, isGlAllowedParam bool, usesLibCoParam bool, pathToCfg string) {
-	isGlAllowed = isGlAllowedParam
-	usesLibCo = usesLibCoParam
-	coreConfig = ScanConfigFile(pathToCfg)
+func coreLoad(meta config.EmulatorMeta) {
+	isGlAllowed = meta.IsGlAllowed
+	usesLibCo = meta.UsesLibCo
+	coreConfig = ScanConfigFile(meta.Config)
+
+	multitap.supported = meta.HasMultitap
+	multitap.enabled = false
+	multitap.value = 0
 
 	mu.Lock()
 	// Different OS requires different library, bruteforce till it finish
 	for _, ext := range config.EmulatorExtension {
-		pathWithExt := pathNoExt + ext
+		pathWithExt := meta.Path + ext
 		cs := C.CString(pathWithExt)
 		retroHandle = C.dlopen(cs, C.RTLD_LAZY)
 		C.free(unsafe.Pointer(cs))
@@ -505,7 +534,7 @@ func coreLoad(pathNoExt string, isGlAllowedParam bool, usesLibCoParam bool, path
 
 	if retroHandle == nil {
 		err := C.dlerror()
-		log.Fatalf("error loading %s, err %+v", pathNoExt, *err)
+		log.Fatalf("error loading %s, err %+v", meta.Path, *err)
 	}
 
 	retroInit = loadFunction(retroHandle, "retro_init")
@@ -525,6 +554,7 @@ func coreLoad(pathNoExt string, isGlAllowedParam bool, usesLibCoParam bool, path
 	retroSerializeSize = loadFunction(retroHandle, "retro_serialize_size")
 	retroSerialize = loadFunction(retroHandle, "retro_serialize")
 	retroUnserialize = loadFunction(retroHandle, "retro_unserialize")
+	retroSetControllerPortDevice = loadFunction(retroHandle, "retro_set_controller_port_device")
 
 	mu.Unlock()
 
@@ -647,6 +677,21 @@ func coreLoadGame(filename string) {
 			initVideo()
 			runtime.UnlockOSThread()
 		}
+	}
+}
+
+func toggleMultitap() {
+	if (multitap.supported && multitap.value != 0) {
+		// Official SNES games only support a single multitap device
+		// Most require it to be plugged in player 2 port
+		// And Snes9X requires it to be "plugged" after the game is loaded
+		// Control this from the browser since player 2 will stop working in some games if multitap is "plugged" in
+		if (multitap.enabled) {
+			C.bridge_retro_set_controller_port_device(retroSetControllerPortDevice, 1, C.RETRO_DEVICE_JOYPAD)
+		} else {
+			C.bridge_retro_set_controller_port_device(retroSetControllerPortDevice, 1, multitap.value)
+		}
+		multitap.enabled = !multitap.enabled
 	}
 }
 

@@ -31,6 +31,7 @@ const keyboard = (() => {
         72: KEY.HELP, // h
         220: KEY.STATS, // backslash
         84: KEY.DTOGGLE, // t
+        77: KEY.MULTITAP, // m
     };
 
     let dpadMode = true;

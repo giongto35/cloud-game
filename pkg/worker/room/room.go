@@ -375,6 +375,12 @@ func (r *Room) LoadGame() error {
 	return err
 }
 
+func (r *Room) ToggleMultitap() error {
+	err := r.director.ToggleMultitap()
+
+	return err
+}
+
 func (r *Room) EmptySessions() bool {
 	return len(r.rtcSessions) == 0
 }

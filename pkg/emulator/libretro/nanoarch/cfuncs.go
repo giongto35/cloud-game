@@ -83,6 +83,10 @@ bool bridge_retro_unserialize(void *f, void *data, size_t size) {
   return ((bool (*)(void*, size_t))f)(data, size);
 }
 
+void bridge_retro_set_controller_port_device(void *f, unsigned port, unsigned device) {
+  return ((void (*)(unsigned, unsigned))f)(port, device);
+}
+
 bool coreEnvironment_cgo(unsigned cmd, void *data) {
 	bool coreEnvironment(unsigned, void*);
 	return coreEnvironment(cmd, data);
