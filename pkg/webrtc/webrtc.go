@@ -25,6 +25,11 @@ type InputDataPair struct {
 	time time.Time
 }
 
+type WebFrame struct {
+	Data      []byte
+	Timestamp uint32
+}
+
 // WebRTC connection
 type WebRTC struct {
 	ID string
@@ -33,7 +38,7 @@ type WebRTC struct {
 	isConnected bool
 	isClosed    bool
 	// for yuvI420 image
-	ImageChannel    chan []byte
+	ImageChannel    chan WebFrame
 	AudioChannel    chan []byte
 	VoiceInChannel  chan []byte
 	VoiceOutChannel chan []byte
@@ -86,7 +91,7 @@ func NewWebRTC() *WebRTC {
 	w := &WebRTC{
 		ID: uuid.Must(uuid.NewV4()).String(),
 
-		ImageChannel:    make(chan []byte, 30),
+		ImageChannel:    make(chan WebFrame, 30),
 		AudioChannel:    make(chan []byte, 1),
 		VoiceInChannel:  make(chan []byte, 1),
 		VoiceOutChannel: make(chan []byte, 1),
@@ -317,9 +322,14 @@ func (w *WebRTC) startStreaming(vp8Track *webrtc.Track, opusTrack *webrtc.Track)
 		}()
 
 		for data := range w.ImageChannel {
-			err := vp8Track.WriteSample(media.Sample{Data: data, Samples: 1})
-			if err != nil {
-				log.Println("Warn: Err write sample: ", err)
+			packets := vp8Track.Packetizer().Packetize(data.Data, 1)
+			for _, p := range packets {
+				p.Header.Timestamp = data.Timestamp
+				err := vp8Track.WriteRTP(p)
+				if err != nil {
+					log.Println("Warn: Err write sample: ", err)
+					break
+				}
 			}
 		}
 	}()

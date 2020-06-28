@@ -55,7 +55,7 @@ type constrollerState struct {
 
 // naEmulator implements CloudEmulator
 type naEmulator struct {
-	imageChannel chan<- *image.RGBA
+	imageChannel chan<- GameFrame
 	audioChannel chan<- []int16
 	inputChannel <-chan InputEvent
 
@@ -78,15 +78,20 @@ type InputEvent struct {
 	ConnID    string
 }
 
+type GameFrame struct {
+	Image     *image.RGBA
+	Timestamp uint32
+}
+
 var NAEmulator *naEmulator
 var outputImg *image.RGBA
 
 const maxPort = 8
 
 // NAEmulator implements CloudEmulator interface based on NanoArch(golang RetroArch)
-func NewNAEmulator(etype string, roomID string, inputChannel <-chan InputEvent) (*naEmulator, chan *image.RGBA, chan []int16) {
+func NewNAEmulator(etype string, roomID string, inputChannel <-chan InputEvent) (*naEmulator, chan GameFrame, chan []int16) {
 	meta := config.EmulatorConfig[etype]
-	imageChannel := make(chan *image.RGBA, 30)
+	imageChannel := make(chan GameFrame, 30)
 	audioChannel := make(chan []int16, 30)
 
 	return &naEmulator{
@@ -102,7 +107,7 @@ func NewNAEmulator(etype string, roomID string, inputChannel <-chan InputEvent) 
 }
 
 // Init initialize new RetroArch cloud emulator
-func Init(etype string, roomID string, inputChannel <-chan InputEvent) (*naEmulator, chan *image.RGBA, chan []int16) {
+func Init(etype string, roomID string, inputChannel <-chan InputEvent) (*naEmulator, chan GameFrame, chan []int16) {
 	emulator, imageChannel, audioChannel := NewNAEmulator(etype, roomID, inputChannel)
 	// Set to global NAEmulator
 	NAEmulator = emulator
