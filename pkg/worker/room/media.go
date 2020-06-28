@@ -39,13 +39,6 @@ func resample(pcm []int16, targetSize int, srcSampleRate int, dstSampleRate int)
 	return newPCM
 }
 
-func min(x int, y int) int {
-	if x < y {
-		return x
-	}
-	return y
-}
-
 func (r *Room) startVoice() {
 	// broadcast voice
 	go func() {
@@ -79,9 +72,9 @@ func (r *Room) startAudio(sampleRate int) {
 		log.Println("[!] Cannot create audio encoder", err)
 	}
 
-	enc.SetMaxBandwidth(opus.Fullband)
-	enc.SetBitrateToAuto()
-	enc.SetComplexity(10)
+	_ = enc.SetMaxBandwidth(opus.Fullband)
+	_ = enc.SetBitrateToAuto()
+	_ = enc.SetComplexity(10)
 
 	dstBufferSize := config.AUDIO_FRAME
 	srcBufferSize := dstBufferSize * srcSampleRate / config.AUDIO_RATE
@@ -151,6 +144,9 @@ func (r *Room) startVideo(width, height int, videoEncoderType string) {
 		fmt.Println("error create new encoder", err)
 		return
 	}
+
+	r.encoder = enc
+
 	einput := enc.GetInputChan()
 	eoutput := enc.GetOutputChan()
 
@@ -170,7 +166,7 @@ func (r *Room) startVideo(width, height int, videoEncoderType string) {
 				// fanout imageChannel
 				if webRTC.IsConnected() {
 					// NOTE: can block here
-					webRTC.ImageChannel <- webrtc.WebFrame{ Data: data.Data, Timestamp: data.Timestamp }
+					webRTC.ImageChannel <- webrtc.WebFrame{Data: data.Data, Timestamp: data.Timestamp}
 				}
 			}
 		}
@@ -182,7 +178,7 @@ func (r *Room) startVideo(width, height int, videoEncoderType string) {
 			return
 		}
 		if len(einput) < cap(einput) {
-			einput <- encoder.InFrame{ Image: image.Image, Timestamp: image.Timestamp }
+			einput <- encoder.InFrame{Image: image.Image, Timestamp: image.Timestamp}
 		}
 	}
 }

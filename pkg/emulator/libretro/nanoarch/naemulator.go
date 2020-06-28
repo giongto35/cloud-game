@@ -48,9 +48,9 @@ import "C"
 
 const numAxes = 4
 
-type constrollerState struct {
-	keyState  uint16
-	axes      [numAxes]int16
+type controllerState struct {
+	keyState uint16
+	axes     [numAxes]int16
 }
 
 // naEmulator implements CloudEmulator
@@ -65,10 +65,9 @@ type naEmulator struct {
 	gameName        string
 	isSavingLoading bool
 
-	controllersMap  map[string][]constrollerState
-	done            chan struct{}
+	controllersMap map[string][]controllerState
+	done           chan struct{}
 
-	// lock to lock uninteruptable operation
 	lock *sync.Mutex
 }
 
@@ -99,7 +98,7 @@ func NewNAEmulator(etype string, roomID string, inputChannel <-chan InputEvent) 
 		imageChannel:   imageChannel,
 		audioChannel:   audioChannel,
 		inputChannel:   inputChannel,
-		controllersMap: map[string][]constrollerState{},
+		controllersMap: map[string][]controllerState{},
 		roomID:         roomID,
 		done:           make(chan struct{}, 1),
 		lock:           &sync.Mutex{},
@@ -129,7 +128,7 @@ func (na *naEmulator) listenInput() {
 		}
 
 		if _, ok := na.controllersMap[inpEvent.ConnID]; !ok {
-			na.controllersMap[inpEvent.ConnID] = make([]constrollerState, maxPort)
+			na.controllersMap[inpEvent.ConnID] = make([]controllerState, maxPort)
 		}
 
 		na.controllersMap[inpEvent.ConnID][inpEvent.PlayerIdx].keyState = inpBitmap
@@ -206,11 +205,23 @@ func (na *naEmulator) LoadGame() error {
 	return nil
 }
 
+// Returns a system path that will be used for
+// the emulator states persistence.
 func (na *naEmulator) GetHashPath() string {
 	return util.GetSavePath(na.roomID)
 }
 
+// Tear-downs the core.
 func (na *naEmulator) Close() {
-	// Unload and deinit in the core.
 	close(na.done)
+}
+
+// Makes the emulator exclusively locked.
+func (na *naEmulator) GetLock() {
+	na.lock.Lock()
+}
+
+// Removes an exclusive lock from the emulator.
+func (na *naEmulator) ReleaseLock() {
+	na.lock.Unlock()
 }

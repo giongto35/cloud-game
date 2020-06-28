@@ -22,7 +22,7 @@ var excludeFiles = []string{"neogeo", "pgm"}
 var GameList []GameInfo
 
 func init() {
-	GameList = getAllGames(gamePath)
+	GameList = GetAllGames(gamePath)
 }
 
 // GetGameInfoFromName returns game info from a gameName
@@ -38,7 +38,7 @@ func GetGameInfoFromName(name string) GameInfo {
 
 // getAllGames returns list of games stored in games. This call should be called when server start (package init)
 // TODO: Maybe later we need to make realtime update without server restart
-func getAllGames(gamePath string) []GameInfo {
+func GetAllGames(gamePath string) []GameInfo {
 	var games []GameInfo
 
 	filepath.Walk(gamePath, func(path string, info os.FileInfo, err error) error {

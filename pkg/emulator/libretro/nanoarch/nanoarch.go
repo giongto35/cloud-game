@@ -140,9 +140,9 @@ func coreVideoRefresh(data unsafe.Pointer, width C.unsigned, height C.unsigned, 
 		return
 	}
 	// divide by 8333 to give us the equivalent of a 120fps resolution
-	timestamp := uint32(time.Now().UnixNano() / 8333) + seed
+	timestamp := uint32(time.Now().UnixNano()/8333) + seed
 
-	if (data == C.RETRO_HW_FRAME_BUFFER_VALID) {
+	if data == C.RETRO_HW_FRAME_BUFFER_VALID {
 		im := stdimage.NewNRGBA(stdimage.Rect(0, 0, int(width), int(height)))
 		gl.BindFramebuffer(gl.FRAMEBUFFER, video.fbo)
 		gl.ReadPixels(0, 0, int32(width), int32(height), gl.RGBA, gl.UNSIGNED_BYTE, gl.Ptr(im.Pix))
@@ -153,7 +153,7 @@ func coreVideoRefresh(data unsafe.Pointer, width C.unsigned, height C.unsigned, 
 			Stride: im.Stride,
 			Rect:   im.Rect,
 		}
-		NAEmulator.imageChannel <- GameFrame{ Image: rgba, Timestamp: timestamp }
+		NAEmulator.imageChannel <- GameFrame{Image: rgba, Timestamp: timestamp}
 		return
 	}
 
@@ -176,7 +176,7 @@ func coreVideoRefresh(data unsafe.Pointer, width C.unsigned, height C.unsigned, 
 
 	// the image is pushed into a channel
 	// where it will be distributed with fan-out
-	NAEmulator.imageChannel <- GameFrame{ Image: outputImg, Timestamp: timestamp }
+	NAEmulator.imageChannel <- GameFrame{Image: outputImg, Timestamp: timestamp}
 }
 
 //export coreInputPoll
@@ -189,7 +189,7 @@ func coreInputState(port C.unsigned, device C.unsigned, index C.unsigned, id C.u
 		if index > C.RETRO_DEVICE_INDEX_ANALOG_RIGHT || id > C.RETRO_DEVICE_ID_ANALOG_Y {
 			return 0
 		}
-		axis := index * 2 + id
+		axis := index*2 + id
 		for k := range NAEmulator.controllersMap {
 			value := NAEmulator.controllersMap[k][port].axes[axis]
 			if value != 0 {
@@ -257,7 +257,7 @@ func coreGetCurrentFramebuffer() C.uintptr_t {
 
 //export coreGetProcAddress
 func coreGetProcAddress(sym *C.char) C.retro_proc_address_t {
-	return (C.retro_proc_address_t) (sdl.GLGetProcAddress(C.GoString(sym)))
+	return (C.retro_proc_address_t)(sdl.GLGetProcAddress(C.GoString(sym)))
 }
 
 //export coreEnvironment
@@ -319,7 +319,7 @@ func coreEnvironment(cmd C.unsigned, data unsafe.Pointer) C.bool {
 		// fmt.Printf("[Env]: get variable: key:%v not found\n", key)
 		return false
 	case C.RETRO_ENVIRONMENT_SET_HW_RENDER:
-		if (isGlAllowed) {
+		if isGlAllowed {
 			video.isGl = true
 			// runtime.LockOSThread()
 			video.hw = (*C.struct_retro_hw_render_callback)(data)
@@ -339,6 +339,7 @@ func init() {
 }
 
 var sdlInitialized = false
+
 //export initVideo
 func initVideo() {
 	// create_window()
@@ -418,14 +419,14 @@ func initVideo() {
 	gl.FramebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, video.tex, 0)
 
 	if video.hw.depth {
-		gl.GenRenderbuffers(1, &video.rbo);
+		gl.GenRenderbuffers(1, &video.rbo)
 		gl.BindRenderbuffer(gl.RENDERBUFFER, video.rbo)
 		if video.hw.stencil {
-			gl.RenderbufferStorage(gl.RENDERBUFFER, gl.DEPTH24_STENCIL8, video.base_width, video.base_height);
-			gl.FramebufferRenderbuffer(gl.FRAMEBUFFER, gl.DEPTH_STENCIL_ATTACHMENT, gl.RENDERBUFFER, video.rbo);
+			gl.RenderbufferStorage(gl.RENDERBUFFER, gl.DEPTH24_STENCIL8, video.base_width, video.base_height)
+			gl.FramebufferRenderbuffer(gl.FRAMEBUFFER, gl.DEPTH_STENCIL_ATTACHMENT, gl.RENDERBUFFER, video.rbo)
 		} else {
-			gl.RenderbufferStorage(gl.RENDERBUFFER, gl.DEPTH_COMPONENT24, video.base_width, video.base_height);
-			gl.FramebufferRenderbuffer(gl.FRAMEBUFFER, gl.DEPTH_ATTACHMENT, gl.RENDERBUFFER, video.rbo);
+			gl.RenderbufferStorage(gl.RENDERBUFFER, gl.DEPTH_COMPONENT24, video.base_width, video.base_height)
+			gl.FramebufferRenderbuffer(gl.FRAMEBUFFER, gl.DEPTH_ATTACHMENT, gl.RENDERBUFFER, video.rbo)
 		}
 		gl.BindRenderbuffer(gl.RENDERBUFFER, 0)
 	}
@@ -445,7 +446,7 @@ func initVideo() {
 func deinitVideo() {
 	C.bridge_context_reset(video.hw.context_destroy)
 	if video.hw.depth {
-		gl.DeleteRenderbuffers(1, &video.rbo);
+		gl.DeleteRenderbuffers(1, &video.rbo)
 	}
 	gl.DeleteFramebuffers(1, &video.fbo)
 	gl.DeleteTextures(1, &video.tex)
@@ -635,9 +636,9 @@ func coreLoadGame(filename string) {
 	fmt.Println("  FPS: ", avi.timing.fps)                   /* FPS of video content. */
 	fmt.Println("-----------------------------------")
 
-	video.max_width   = int32(avi.geometry.max_width)
-	video.max_height  = int32(avi.geometry.max_height)
-	video.base_width  = int32(avi.geometry.base_width)
+	video.max_width = int32(avi.geometry.max_width)
+	video.max_height = int32(avi.geometry.max_height)
+	video.base_width = int32(avi.geometry.base_width)
 	video.base_height = int32(avi.geometry.base_height)
 	if video.isGl {
 		if usesLibCo {
@@ -761,5 +762,5 @@ func setRotation(rotation int) {
 	video.rotation = image.Angle(rotation)
 	rotationFn = image.GetRotation(video.rotation)
 	NAEmulator.meta.Rotation = rotationFn
-		log.Printf("[Env]: the game video is rotated %v°", map[int]int{0: 0, 1: 90, 2: 180, 3: 270}[rotation])
+	log.Printf("[Env]: the game video is rotated %v°", map[int]int{0: 0, 1: 90, 2: 180, 3: 270}[rotation])
 }

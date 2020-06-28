@@ -1,67 +1,63 @@
-// Package savestates takes care of serializing and unserializing the game RAM
-// to the host filesystem.
+// Package savestates enables emulator state manipulation.
 package nanoarch
-
-/*
-#include "libretro.h"
-#cgo LDFLAGS: -ldl
-#include <stdlib.h>
-#include <stdio.h>
-#include <dlfcn.h>
-#include <string.h>
-
-bool bridge_retro_serialize(void *f, void *data, size_t size);
-bool bridge_retro_unserialize(void *f, void *data, size_t size);
-size_t bridge_retro_serialize_size(void *f);
-*/
-import "C"
 
 import (
 	"io/ioutil"
 )
 
-func (na *naEmulator) GetLock() {
-	//atomic.CompareAndSwapInt32(&na.saveLock, 0, 1)
-	na.lock.Lock()
-}
+type state []byte
 
-func (na *naEmulator) ReleaseLock() {
-	//atomic.CompareAndSwapInt32(&na.saveLock, 1, 0)
-	na.lock.Unlock()
-}
-
-// Save the current state to the filesystem. name is the name of the
-// savestate file to save to, without extension.
+// Saves the current state to the filesystem.
+// Deadlock warning: locks the emulator.
 func (na *naEmulator) Save() error {
-	path := na.GetHashPath()
-
 	na.GetLock()
 	defer na.ReleaseLock()
 
-	s := serializeSize()
-	bytes, err := serialize(s)
-	if err != nil {
+	if state, err := getState(); err == nil {
+		return state.toFile(na.GetHashPath())
+	} else {
 		return err
 	}
-	if err != nil {
-		return err
-	}
-
-	return ioutil.WriteFile(path, bytes, 0644)
 }
 
-// Load the state from the filesystem
+// Load the state from the filesystem.
+// Deadlock warning: locks the emulator.
 func (na *naEmulator) Load() error {
-	path := na.GetHashPath()
-
 	na.GetLock()
 	defer na.ReleaseLock()
 
-	s := serializeSize()
-	bytes, err := ioutil.ReadFile(path)
-	if err != nil {
+	path := na.GetHashPath()
+	if state, err := fromFile(path); err == nil {
+		return restoreState(state)
+	} else {
 		return err
 	}
-	err = unserialize(bytes, s)
-	return err
+}
+
+// Returns the current emulator state.
+func getState() (state, error) {
+	if dat, err := serialize(serializeSize()); err == nil {
+		return dat, nil
+	} else {
+		return state{}, err
+	}
+}
+
+// Restores an emulator state.
+func restoreState(dat state) error {
+	return unserialize(dat, serializeSize())
+}
+
+// Writes the state to a file with the path.
+func (st state) toFile(path string) error {
+	return ioutil.WriteFile(path, st, 0644)
+}
+
+// Reads the state from a file with the path.
+func fromFile(path string) (state, error) {
+	if bytes, err := ioutil.ReadFile(path); err == nil {
+		return bytes, nil
+	} else {
+		return state{}, err
+	}
 }

@@ -77,11 +77,7 @@ func init() {
 
 // GetSavePath returns save location of game based on roomID
 func GetSavePath(roomID string) string {
-	return savePath(roomID)
-}
-
-func savePath(hash string) string {
-	return homeDir + "/.cr/save/" + hash + ".dat"
+	return homeDir + "/.cr/save/" + roomID + ".dat"
 }
 
 // GetVideoEncoder returns video encoder based on some qualification.
