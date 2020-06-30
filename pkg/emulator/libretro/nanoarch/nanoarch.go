@@ -610,7 +610,7 @@ func coreLoadGame(filename string) {
 
 	// Append the library name to the window title.
 	NAEmulator.meta.AudioSampleRate = int(avi.timing.sample_rate)
-	NAEmulator.meta.Fps = int(avi.timing.fps)
+	NAEmulator.meta.Fps = float64(avi.timing.fps)
 	NAEmulator.meta.BaseWidth = int(avi.geometry.base_width)
 	NAEmulator.meta.BaseHeight = int(avi.geometry.base_height)
 	// set aspect ratio

@@ -154,7 +154,7 @@ func (na *naEmulator) SetViewport(width int, height int) {
 
 func (na *naEmulator) Start() {
 	na.playGame(na.gamePath)
-	ticker := time.NewTicker(time.Second / 60)
+	ticker := time.NewTicker(time.Second / time.Duration(na.meta.Fps))
 
 	for range ticker.C {
 		select {

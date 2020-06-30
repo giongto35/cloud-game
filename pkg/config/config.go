@@ -54,7 +54,7 @@ type EmulatorMeta struct {
 	Width           int
 	Height          int
 	AudioSampleRate int
-	Fps             int
+	Fps             float64
 	BaseWidth       int
 	BaseHeight      int
 	Ratio           float64
