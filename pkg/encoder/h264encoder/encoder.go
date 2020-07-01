@@ -4,19 +4,18 @@ import (
 	"bytes"
 	"log"
 	"runtime/debug"
-	"sync"
 
 	"github.com/gen2brain/x264-go"
 	"github.com/giongto35/cloud-game/pkg/encoder"
 )
 
 const chanSize = 2
-var mu sync.Mutex
 
 // H264Encoder yuvI420 image to vp8 video
 type H264Encoder struct {
 	Output chan encoder.OutFrame
 	Input  chan encoder.InFrame
+	done   chan struct{}
 
 	buf *bytes.Buffer
 	enc *x264.Encoder
@@ -32,6 +31,7 @@ func NewH264Encoder(width, height, fps int) (encoder.Encoder, error) {
 	v := &H264Encoder{
 		Output: make(chan encoder.OutFrame, 5*chanSize),
 		Input:  make(chan encoder.InFrame,    chanSize),
+		done:   make(chan struct{}),
 
 		buf:    bytes.NewBuffer(make([]byte, 0)),
 		width:  width,
@@ -75,9 +75,6 @@ func (v *H264Encoder) startLooping() {
 		}
 	}()
 
-	mu.Lock()
-	defer mu.Unlock()
-
 	for img := range v.Input {
 		err := v.enc.Encode(img.Image)
 		if err != nil {
@@ -87,12 +84,14 @@ func (v *H264Encoder) startLooping() {
 		v.buf.Reset()
 	}
 	close(v.Output)
+	close(v.done)
 }
 
 // Release release memory and stop loop
 func (v *H264Encoder) release() {
-	mu.Lock()
-	defer mu.Unlock()
+	close(v.Input)
+	// Wait for loop to stop
+	<-v.done
 	log.Println("Releasing encoder")
 	err := v.enc.Close()
 	if err != nil {

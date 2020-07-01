@@ -138,6 +138,10 @@ func (r *Room) startVideo(width, height int, videoEncoderType string) {
 		enc, err = vpxencoder.NewVpxEncoder(width, height, 20, 1200, 5)
 	}
 
+	defer func() {
+		enc.Stop()
+	}()
+
 	if err != nil {
 		fmt.Println("error create new encoder", err)
 		return
@@ -173,7 +177,4 @@ func (r *Room) startVideo(width, height int, videoEncoderType string) {
 		}
 	}
 	log.Println("Room ", r.ID, " video channel closed")
-	// Order is very important here, the other way around would cause a deadlock
-	close(einput)
-	enc.Stop()
 }
