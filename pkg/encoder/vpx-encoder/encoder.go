@@ -3,6 +3,7 @@ package vpxencoder
 import (
 	"fmt"
 	"log"
+	"sync"
 	"unsafe"
 
 	"github.com/giongto35/cloud-game/pkg/encoder"
@@ -42,6 +43,7 @@ GoBytesType get_frame_buffer(vpx_codec_ctx_t *codec, vpx_codec_iter_t *iter) {
 import "C"
 
 const chanSize = 2
+var mu sync.Mutex
 
 // VpxEncoder yuvI420 image to vp8 video
 type VpxEncoder struct {
@@ -120,6 +122,9 @@ func (v *VpxEncoder) startLooping() {
 			log.Println("Warn: Recovered panic in encoding ", r)
 		}
 	}()
+	
+	mu.Lock()
+	defer mu.Unlock()
 
 	size := int(float32(v.width*v.height) * 1.5)
 	yuv := make([]byte, size, size)
@@ -152,18 +157,16 @@ func (v *VpxEncoder) startLooping() {
 		}
 		v.Output <- encoder.OutFrame{ Data: bs, Timestamp: img.Timestamp }
 	}
+	close(v.Output)
 }
 
 // Release release memory and stop loop
 func (v *VpxEncoder) release() {
+	mu.Lock()
+	defer mu.Unlock()
 	log.Println("Releasing encoder")
 	C.vpx_img_free(&v.vpxImage)
 	C.vpx_codec_destroy(&v.vpxCodexCtx)
-	// TODO: Bug here, after close it will signal
-	close(v.Output)
-	if v.Input != nil {
-		close(v.Input)
-	}
 }
 
 // GetInputChan returns input channel

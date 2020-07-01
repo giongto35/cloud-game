@@ -4,12 +4,14 @@ import (
 	"bytes"
 	"log"
 	"runtime/debug"
+	"sync"
 
 	"github.com/gen2brain/x264-go"
 	"github.com/giongto35/cloud-game/pkg/encoder"
 )
 
 const chanSize = 2
+var mu sync.Mutex
 
 // H264Encoder yuvI420 image to vp8 video
 type H264Encoder struct {
@@ -73,6 +75,9 @@ func (v *H264Encoder) startLooping() {
 		}
 	}()
 
+	mu.Lock()
+	defer mu.Unlock()
+
 	for img := range v.Input {
 		err := v.enc.Encode(img.Image)
 		if err != nil {
@@ -81,13 +86,14 @@ func (v *H264Encoder) startLooping() {
 		v.Output <- encoder.OutFrame{ Data: v.buf.Bytes(), Timestamp: img.Timestamp }
 		v.buf.Reset()
 	}
+	close(v.Output)
 }
 
 // Release release memory and stop loop
 func (v *H264Encoder) release() {
+	mu.Lock()
+	defer mu.Unlock()
 	log.Println("Releasing encoder")
-	// TODO: Bug here, after close it will signal
-	close(v.Output)
 	err := v.enc.Close()
 	if err != nil {
 		log.Println("Failed to close H264 encoder")

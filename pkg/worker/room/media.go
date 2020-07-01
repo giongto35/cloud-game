@@ -89,13 +89,7 @@ func (r *Room) startAudio(sampleRate int) {
 	idx := 0
 
 	// fanout Audio
-	fmt.Println("listening audio channel", r.IsRunning)
 	for sample := range r.audioChannel {
-		if !r.IsRunning {
-			log.Println("Room ", r.ID, " audio channel closed")
-			return
-		}
-
 		for i := 0; i < len(sample); {
 			rem := util.MinInt(len(sample)-i, len(pcm)-idx)
 			copy(pcm[idx:idx+rem], sample[i:i+rem])
@@ -129,6 +123,7 @@ func (r *Room) startAudio(sampleRate int) {
 		}
 
 	}
+	log.Println("Room ", r.ID, " audio channel closed")
 }
 
 // startVideo listen from imageChannel and push to Encoder. The output of encoder will be pushed to webRTC
@@ -142,10 +137,6 @@ func (r *Room) startVideo(width, height int, videoEncoderType string) {
 	} else {
 		enc, err = vpxencoder.NewVpxEncoder(width, height, 20, 1200, 5)
 	}
-
-	defer func() {
-		enc.Stop()
-	}()
 
 	if err != nil {
 		fmt.Println("error create new encoder", err)
@@ -177,12 +168,12 @@ func (r *Room) startVideo(width, height int, videoEncoderType string) {
 	}()
 
 	for image := range r.imageChannel {
-		if !r.IsRunning {
-			log.Println("Room ", r.ID, " video channel closed")
-			return
-		}
 		if len(einput) < cap(einput) {
 			einput <- encoder.InFrame{ Image: image.Image, Timestamp: image.Timestamp }
 		}
 	}
+	log.Println("Room ", r.ID, " video channel closed")
+	// Order is very important here, the other way around would cause a deadlock
+	close(einput)
+	enc.Stop()
 }
