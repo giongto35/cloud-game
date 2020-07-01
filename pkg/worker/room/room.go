@@ -362,8 +362,11 @@ func (r *Room) saveOnlineRoomToLocal(roomID string, savepath string) error {
 	if err != nil {
 		return err
 	}
+
 	// Save the data fetched from gcloud to local server
-	_ = ioutil.WriteFile(savepath, data, 0644)
+	if data != nil {
+		_ = ioutil.WriteFile(savepath, data, 0644)
+	}
 
 	return nil
 }

@@ -52,19 +52,16 @@ func TestRoom(t *testing.T) {
 
 		go func() {
 			for range room.encoder.GetOutputChan() {
-				t.Logf("image\n")
 				waitCounter.Done()
 			}
 		}()
 
 		waitCounter.Wait()
 		room.Close()
-
-		// TODO add save delete
 	}
 }
 
-func getRoomMock(cfg roomMockConfig) *roomMock {
+func getRoomMock(cfg roomMockConfig) roomMock {
 	roomStorage := storage.NewInitClient()
 	workerConfig := worker.NewDefaultConfig()
 
@@ -91,7 +88,7 @@ func getRoomMock(cfg roomMockConfig) *roomMock {
 	}()
 	waitCounter.Wait()
 
-	return &roomMock{Room: *room}
+	return roomMock{*room}
 }
 
 // Returns absolute path to the assets directory.

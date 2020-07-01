@@ -131,8 +131,6 @@ func TestLoad(t *testing.T) {
 func TestStateConcurrency(t *testing.T) {
 	tests := []struct {
 		run testRun
-		// emulation frame cap
-		fps int
 		// determine random
 		seed int
 	}{
@@ -143,7 +141,6 @@ func TestStateConcurrency(t *testing.T) {
 				rom:            "Sushi The Cat.gba",
 				emulationTicks: 120,
 			},
-			fps:  60,
 			seed: 42,
 		},
 		{
@@ -153,7 +150,6 @@ func TestStateConcurrency(t *testing.T) {
 				rom:            "anguna.gba",
 				emulationTicks: 300,
 			},
-			fps:  60,
 			seed: 42 + 42,
 		},
 	}
@@ -177,13 +173,14 @@ func TestStateConcurrency(t *testing.T) {
 		go mock.handleInput(func(_ InputEvent) {})
 
 		rand.Seed(int64(test.seed))
-		t.Logf("'Random' seed is [%v]\n", test.seed)
+		t.Logf("Random seed is [%v]\n", test.seed)
 		t.Logf("Save path is [%v]\n", mock.paths.save)
 
 		_ = mock.Save()
 
-		// 60 fps emulation cap
-		ticker := time.NewTicker(time.Second / time.Duration(test.fps))
+		// emulation fps ROM cap
+		ticker := time.NewTicker(time.Second / time.Duration(mock.meta.Fps))
+		t.Logf("FPS limit is [%v]\n", mock.meta.Fps)
 
 		for range ticker.C {
 			select {
@@ -233,6 +230,7 @@ func TestStateConcurrency(t *testing.T) {
 		}
 
 		ops.Wait()
+		ticker.Stop()
 	}
 }
 

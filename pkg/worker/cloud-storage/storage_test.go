@@ -3,14 +3,28 @@ package storage
 import (
 	"io/ioutil"
 	"log"
+	"os"
 	"testing"
 )
 
 func TestSaveGame(t *testing.T) {
 	client := NewInitClient()
+	if client == nil {
+		t.Skip("Cloud storage is not initialized")
+	}
 	data := []byte("Test Hello")
-	ioutil.WriteFile("/tmp/TempFile", data, 0644)
-	err := client.SaveFile("Test", "/tmp/TempFile")
+
+	file, err := ioutil.TempFile("", "test_cloud_save")
+	if err != nil {
+		t.Errorf("Temp dir is not accessable %v", err)
+	}
+	defer os.Remove(file.Name())
+
+	if err = ioutil.WriteFile(file.Name(), data, 0644); err !=nil {
+		t.Errorf("File is not writable %v", err)
+	}
+
+	err = client.SaveFile("Test", file.Name())
 	if err != nil {
 		log.Panic(err)
 	}
