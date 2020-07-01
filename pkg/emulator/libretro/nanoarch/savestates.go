@@ -7,7 +7,7 @@ import (
 
 type state []byte
 
-// Saves the current state to the filesystem.
+// Save writes the current state to the filesystem.
 // Deadlock warning: locks the emulator.
 func (na *naEmulator) Save() error {
 	na.GetLock()
@@ -20,7 +20,7 @@ func (na *naEmulator) Save() error {
 	}
 }
 
-// Load the state from the filesystem.
+// Load restores the state from the filesystem.
 // Deadlock warning: locks the emulator.
 func (na *naEmulator) Load() error {
 	na.GetLock()
@@ -34,7 +34,7 @@ func (na *naEmulator) Load() error {
 	}
 }
 
-// Returns the current emulator state.
+// getState returns the current emulator state.
 func getState() (state, error) {
 	if dat, err := serialize(serializeSize()); err == nil {
 		return dat, nil
@@ -43,17 +43,17 @@ func getState() (state, error) {
 	}
 }
 
-// Restores an emulator state.
+// restoreState restores an emulator state.
 func restoreState(dat state) error {
 	return unserialize(dat, serializeSize())
 }
 
-// Writes the state to a file with the path.
+// toFile writes the state to a file with the path.
 func (st state) toFile(path string) error {
 	return ioutil.WriteFile(path, st, 0644)
 }
 
-// Reads the state from a file with the path.
+// fromFile reads the state from a file with the path.
 func fromFile(path string) (state, error) {
 	if bytes, err := ioutil.ReadFile(path); err == nil {
 		return bytes, nil

@@ -17,7 +17,7 @@ import (
 	"github.com/giongto35/cloud-game/pkg/config"
 )
 
-// Emulator data mock.
+// EmulatorMock contains naEmulator mocking data.
 type EmulatorMock struct {
 	naEmulator
 
@@ -34,7 +34,7 @@ type EmulatorMock struct {
 	inputOutCh chan<- InputEvent
 }
 
-// Defines various emulator file paths.
+// EmulatorPaths defines various emulator file paths.
 type EmulatorPaths struct {
 	assets string
 	cores  string
@@ -42,7 +42,7 @@ type EmulatorPaths struct {
 	save   string
 }
 
-// Returns a properly stubbed emulator instance.
+// GetEmulatorMock returns a properly stubbed emulator instance.
 // Due to extensive use of globals -- one mock instance is allowed per a test run.
 // Don't forget to init one image channel consumer, it will lock-out otherwise.
 // Make sure you call shutdownEmulator().
@@ -91,7 +91,7 @@ func GetEmulatorMock(room string, system string) *EmulatorMock {
 	return emu
 }
 
-// Returns initialized emulator mock with default params.
+// GetDefaultEmulatorMock returns initialized emulator mock with default params.
 // Spawns audio/image channels consumers.
 // Don't forget to close emulator mock with shutdownEmulator().
 func GetDefaultEmulatorMock(room string, system string, rom string) *EmulatorMock {
@@ -103,7 +103,7 @@ func GetDefaultEmulatorMock(room string, system string, rom string) *EmulatorMoc
 	return mock
 }
 
-// Load a rom into the emulator.
+// loadRom loads a rom into the emulator.
 // The rom will be loaded from emulators' games path.
 func (emu *EmulatorMock) loadRom(game string) {
 	fmt.Printf("%v %v\n", emu.paths.cores, emu.core)
@@ -111,7 +111,7 @@ func (emu *EmulatorMock) loadRom(game string) {
 	coreLoadGame(emu.paths.games + game)
 }
 
-// Close the emulator and cleanup its resources.
+// shutdownEmulator closes the emulator and cleans its resources.
 func (emu *EmulatorMock) shutdownEmulator() {
 	_ = os.Remove(emu.GetHashPath())
 
@@ -122,7 +122,7 @@ func (emu *EmulatorMock) shutdownEmulator() {
 	nanoarchShutdown()
 }
 
-// Emulate one frame with exclusive lock.
+// emulateOneFrame emulates one frame with exclusive lock.
 func (emu *EmulatorMock) emulateOneFrame() {
 	emu.GetLock()
 	nanoarchRun()
@@ -130,33 +130,33 @@ func (emu *EmulatorMock) emulateOneFrame() {
 }
 
 // Who needs generics anyway?
-// Custom handler for the video channel.
+// handleVideo is a custom message handler for the video channel.
 func (emu *EmulatorMock) handleVideo(handler func(image GameFrame)) {
 	for frame := range emu.imageInCh {
 		handler(frame)
 	}
 }
 
-// Custom handler for the audio channel.
+// handleAudio is a custom message handler for the audio channel.
 func (emu *EmulatorMock) handleAudio(handler func(sample []int16)) {
 	for frame := range emu.audioInCh {
 		handler(frame)
 	}
 }
 
-// Custom handler for the input channel.
+// handleInput is a custom message handler for the input channel.
 func (emu *EmulatorMock) handleInput(handler func(event InputEvent)) {
 	for event := range emu.inputChannel {
 		handler(event)
 	}
 }
 
-// Returns the full path to the emulator latest save.
+// getSavePath returns the full path to the emulator latest save.
 func (emu *EmulatorMock) getSavePath() string {
 	return cleanPath(emu.GetHashPath())
 }
 
-// Returns the current emulator state and
+// dumpState returns the current emulator state and
 // the latest saved state for its session.
 // Locks the emulator.
 func (emu *EmulatorMock) dumpState() (string, string) {
@@ -170,7 +170,7 @@ func (emu *EmulatorMock) dumpState() (string, string) {
 	return stateHash, persistedStateHash
 }
 
-// Returns the current emulator state hash.
+// getStateHash returns the current emulator state hash.
 // Locks the emulator.
 func (emu *EmulatorMock) getStateHash() string {
 	emu.GetLock()
@@ -180,7 +180,7 @@ func (emu *EmulatorMock) getStateHash() string {
 	return getHash(state)
 }
 
-// Returns absolute path to the assets directory.
+// getAssetsPath returns absolute path to the assets directory.
 func getAssetsPath() string {
 	appName := "cloud-game"
 	// get app path at runtime
@@ -188,17 +188,18 @@ func getAssetsPath() string {
 	return filepath.Dir(strings.SplitAfter(b, appName)[0]) + "/" + appName + "/assets/"
 }
 
-// Returns MD5 hash.
+// getHash returns MD5 hash.
 func getHash(bytes []byte) string {
 	return fmt.Sprintf("%x", md5.Sum(bytes))
 }
 
-// Returns a proper file path for current OS.
+// cleanPath returns a proper file path for current OS.
 func cleanPath(path string) string {
 	return filepath.FromSlash(path)
 }
 
-// Measure emulator performance for one emulation frame.
+// benchmarkEmulator is a generic function for
+// measuring emulator performance for one emulation frame.
 func benchmarkEmulator(system string, rom string, b *testing.B) {
 	log.SetOutput(ioutil.Discard)
 	os.Stdout, _ = os.Open(os.DevNull)

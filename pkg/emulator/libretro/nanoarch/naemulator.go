@@ -205,23 +205,23 @@ func (na *naEmulator) LoadGame() error {
 	return nil
 }
 
-// Returns a system path that will be used for
-// the emulator states persistence.
+// GetHashPath returns a system path
+// that will be used for storing emulator states.
 func (na *naEmulator) GetHashPath() string {
 	return util.GetSavePath(na.roomID)
 }
 
-// Tear-downs the core.
+// Close signals that the core is shutting down.
 func (na *naEmulator) Close() {
 	close(na.done)
 }
 
-// Makes the emulator exclusively locked.
+// GetLock makes the emulator exclusively locked.
 func (na *naEmulator) GetLock() {
 	na.lock.Lock()
 }
 
-// Removes an exclusive lock from the emulator.
+// ReleaseLock removes an exclusive lock from the emulator.
 func (na *naEmulator) ReleaseLock() {
 	na.lock.Unlock()
 }

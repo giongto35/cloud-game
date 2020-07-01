@@ -28,6 +28,8 @@ type roomMockConfig struct {
 	codec    string
 }
 
+// Restricts a re-config call
+// to only one invocation.
 var configOnce sync.Once
 
 func TestRoom(t *testing.T) {
@@ -67,6 +69,7 @@ func TestRoom(t *testing.T) {
 	}
 }
 
+// getRoomMock returns mocked Room struct.
 func getRoomMock(cfg roomMockConfig) roomMock {
 	roomStorage := storage.NewInitClient()
 	workerConfig := worker.NewDefaultConfig()
@@ -100,7 +103,7 @@ func fixEmulatorPaths() {
 	}
 }
 
-// Returns absolute path to the assets directory.
+// getAppPath returns absolute path to the assets directory.
 func getAppPath() string {
 	appName := "cloud-game"
 	_, b, _, _ := runtime.Caller(0)
@@ -136,6 +139,8 @@ func benchmarkRoom(rom string, codec string, frames int, suppressOutput bool, b 
 	}
 }
 
+// Measures emulation performance of various
+// emulators and encoding options.
 func BenchmarkRoom(b *testing.B) {
 	benches := []struct {
 		system string

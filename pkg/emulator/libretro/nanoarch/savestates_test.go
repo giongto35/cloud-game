@@ -234,7 +234,7 @@ func TestStateConcurrency(t *testing.T) {
 	}
 }
 
-// Returns random boolean.
+// lucky returns random boolean.
 func lucky() bool {
 	return rand.Intn(2) == 1
 }
