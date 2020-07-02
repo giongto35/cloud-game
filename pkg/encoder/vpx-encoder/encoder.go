@@ -47,6 +47,7 @@ const chanSize = 2
 type VpxEncoder struct {
 	Output chan encoder.OutFrame
 	Input  chan encoder.InFrame
+	done   chan struct{}
 
 	width  int
 	height int
@@ -65,6 +66,7 @@ func NewVpxEncoder(w, h, fps, bitrate, keyframe int) (encoder.Encoder, error) {
 	v := &VpxEncoder{
 		Output: make(chan encoder.OutFrame, 5*chanSize),
 		Input:  make(chan encoder.InFrame,    chanSize),
+		done:   make(chan struct{}),
 
 		// C
 		width:            w,
@@ -152,18 +154,18 @@ func (v *VpxEncoder) startLooping() {
 		}
 		v.Output <- encoder.OutFrame{ Data: bs, Timestamp: img.Timestamp }
 	}
+	close(v.Output)
+	close(v.done)
 }
 
 // Release release memory and stop loop
 func (v *VpxEncoder) release() {
+	close(v.Input)
+	// Wait for loop to stop
+	<-v.done
 	log.Println("Releasing encoder")
 	C.vpx_img_free(&v.vpxImage)
 	C.vpx_codec_destroy(&v.vpxCodexCtx)
-	// TODO: Bug here, after close it will signal
-	close(v.Output)
-	if v.Input != nil {
-		close(v.Input)
-	}
 }
 
 // GetInputChan returns input channel

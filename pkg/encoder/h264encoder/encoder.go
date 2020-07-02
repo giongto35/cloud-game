@@ -15,6 +15,7 @@ const chanSize = 2
 type H264Encoder struct {
 	Output chan encoder.OutFrame
 	Input  chan encoder.InFrame
+	done   chan struct{}
 
 	buf *bytes.Buffer
 	enc *x264.Encoder
@@ -30,6 +31,7 @@ func NewH264Encoder(width, height, fps int) (encoder.Encoder, error) {
 	v := &H264Encoder{
 		Output: make(chan encoder.OutFrame, 5*chanSize),
 		Input:  make(chan encoder.InFrame,    chanSize),
+		done:   make(chan struct{}),
 
 		buf:    bytes.NewBuffer(make([]byte, 0)),
 		width:  width,
@@ -81,13 +83,16 @@ func (v *H264Encoder) startLooping() {
 		v.Output <- encoder.OutFrame{ Data: v.buf.Bytes(), Timestamp: img.Timestamp }
 		v.buf.Reset()
 	}
+	close(v.Output)
+	close(v.done)
 }
 
 // Release release memory and stop loop
 func (v *H264Encoder) release() {
+	close(v.Input)
+	// Wait for loop to stop
+	<-v.done
 	log.Println("Releasing encoder")
-	// TODO: Bug here, after close it will signal
-	close(v.Output)
 	err := v.enc.Close()
 	if err != nil {
 		log.Println("Failed to close H264 encoder")
