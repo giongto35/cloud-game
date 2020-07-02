@@ -89,12 +89,12 @@ jobs:
         mingw-w64-x86_64-opusfile
         mingw-w64-x86_64-SDL2
 
-        msys2do make release RELEASE_DIR=${{ env.release-dir }} DLIB_SEARCH_PATTERN=/mingw.*dll CORE_EXT=dll
+        msys2do make release RELEASE_DIR=${{ env.release-dir }} DLIB_SEARCH_PATTERN=/mingw.*dll CORE_EXT=*.dll
 
     - name: Build Linux app
       if: matrix.os == 'ubuntu-latest'
       run: |
-        make release RELEASE_DIR=${{ env.release-dir }} DLIB_SEARCH_PATTERN=/usr/lib.*\\\\s CORE_EXT=so
+        make release RELEASE_DIR=${{ env.release-dir }} DLIB_SEARCH_PATTERN=/usr/lib.*\\\\s CORE_EXT=*_libretro.so
 
     - name: Build macOS app
       if: matrix.os == 'macos-latest'
@@ -103,7 +103,7 @@ jobs:
         # should be recursive + paths rewritten to @executable_path
         # lddx seems to be working ok
         go get github.com/jtanx/lddx
-        make release RELEASE_DIR=${{ env.release-dir }} DLIB_ALTER=true DLIB_TOOL="lddx -r -c" CORE_EXT=dylib
+        make release RELEASE_DIR=${{ env.release-dir }} DLIB_ALTER=true DLIB_TOOL="lddx -r -c" CORE_EXT=*.dylib
 
     - name: Save built app for upload
       uses: actions/upload-artifact@v1

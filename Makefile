@@ -99,16 +99,16 @@ dev.run-docker:
 #   de. -> abc def ghj -> def
 #   Makefile special symbols should be escaped with \.
 # - DLIB_ALTER: a special flag to use altered dynamic copy lib tool for macOS only.
-# - CORE_EXT: a file extension of the cores to copy into the release.
+# - CORE_EXT: a glob pattern to filter the cores that are copied into the release.
 #
 # Example:
-#   make release DLIB_TOOL="ldd -x" DLIB_SEARCH_PATTERN=/usr/lib.*\\\\s LIB_EXT=so
+#   make release DLIB_TOOL="ldd -x" DLIB_SEARCH_PATTERN=/usr/lib.*\\\\s CORE_EXT=*.so
 #
 RELEASE_DIR ?= release
 DLIB_TOOL ?= ldd
 DLIB_SEARCH_PATTERN ?= .*so
 DLIB_ALTER ?= false
-CORE_EXT ?= *
+CORE_EXT ?= *_libretro.so
 COORDINATOR_DIR = ./$(RELEASE_DIR)
 WORKER_DIR = ./$(RELEASE_DIR)
 CORES_DIR = assets/emulator/libretro/cores
@@ -133,6 +133,6 @@ release: clean build
 		cp -R ./$(GAMES_DIR) $(WORKER_DIR)/assets
     endif
 	mkdir -p $(WORKER_DIR)/$(CORES_DIR)
-    ifneq (,$(wildcard ./$(CORES_DIR)/*.$(CORE_EXT)))
-		cp -R ./$(CORES_DIR)/*.$(CORE_EXT) $(WORKER_DIR)/$(CORES_DIR)
+    ifneq (,$(wildcard ./$(CORES_DIR)/$(CORE_EXT)))
+		cp -R ./$(CORES_DIR)/$(CORE_EXT) $(WORKER_DIR)/$(CORES_DIR)
     endif
