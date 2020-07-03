@@ -2,6 +2,7 @@ package nanoarch
 
 /*
 #include "libretro.h"
+#include <pthread.h>
 #include <stdbool.h>
 #include <stdarg.h>
 #include <stdio.h>
@@ -123,5 +124,72 @@ void coreLog_cgo(enum retro_log_level level, const char *fmt, ...) {
 	coreLog(level, msg);
 }
 
+uintptr_t coreGetCurrentFramebuffer_cgo() {
+	uintptr_t coreGetCurrentFramebuffer();
+	return coreGetCurrentFramebuffer();
+}
+
+retro_proc_address_t coreGetProcAddress_cgo(const char *sym) {
+	retro_proc_address_t coreGetProcAddress(const char *sym);
+	return coreGetProcAddress(sym);
+}
+
+void bridge_context_reset(retro_hw_context_reset_t f) {
+	f();
+}
+
+void initVideo_cgo() {
+	void initVideo();
+	return initVideo();
+}
+
+void deinitVideo_cgo() {
+	void deinitVideo();
+	return deinitVideo();
+}
+
+void* function;
+pthread_t thread;
+int initialized = 0;
+pthread_mutex_t run_mutex;
+pthread_cond_t run_cv;
+pthread_mutex_t done_mutex;
+pthread_cond_t done_cv;
+
+void *run_loop(void *unused) {
+	pthread_mutex_lock(&done_mutex);
+	pthread_mutex_lock(&run_mutex);
+	pthread_cond_signal(&done_cv);
+	pthread_mutex_unlock(&done_mutex);
+	while(1) {
+		pthread_cond_wait(&run_cv, &run_mutex);
+		((void (*)(void))function)();
+		pthread_mutex_lock(&done_mutex);
+		pthread_cond_signal(&done_cv);
+		pthread_mutex_unlock(&done_mutex);
+	}
+	pthread_mutex_unlock(&run_mutex);
+}
+
+void bridge_execute(void *f) {
+	if (!initialized) {
+		initialized = 1;
+		pthread_mutex_init(&run_mutex, NULL);
+		pthread_cond_init(&run_cv, NULL);
+		pthread_mutex_init(&done_mutex, NULL);
+		pthread_cond_init(&done_cv, NULL);
+		pthread_mutex_lock(&done_mutex);
+		pthread_create(&thread, NULL, run_loop, NULL);
+		pthread_cond_wait(&done_cv, &done_mutex);
+		pthread_mutex_unlock(&done_mutex);
+	}
+	pthread_mutex_lock(&run_mutex);
+	pthread_mutex_lock(&done_mutex);
+	function = f;
+	pthread_cond_signal(&run_cv);
+	pthread_mutex_unlock(&run_mutex);
+	pthread_cond_wait(&done_cv, &done_mutex);
+	pthread_mutex_unlock(&done_mutex);
+}
 */
 import "C"

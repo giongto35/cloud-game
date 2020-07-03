@@ -137,7 +137,7 @@ func (h *Handler) detachPeerConn(pc *webrtc.WebRTC) {
 			room.Close()
 			// Signal end of input Channel
 			log.Println("Signal input chan")
-			pc.InputChannel <- -1
+			pc.InputChannel <- []byte{0xFF, 0xFF}
 			close(pc.InputChannel)
 		}
 	}

@@ -262,6 +262,57 @@ const stats = (() => {
         return {get, enable, disable, render}
     })(moduleUi, performance, window);
 
+    /**
+     * User agent frame stats.
+     *
+     * ?Interface:
+     *  HTMLElement get()
+     *  void enable()
+     *  void disable()
+     *  void render()
+     *
+     * @version 1
+     */
+    const webRTCStats = (() => {
+        let value = 0;
+        let interval = null
+
+        let browser = env.getBrowser();
+        let label = 'FrameDelay'
+        if (browser === 'firefox') {
+            label = 'FramerateMean'
+        }
+        const ui = moduleUi(label, false, () => '');
+
+        const get = () => ui.el;
+
+        const enable = () => {
+            interval = window.setInterval(getStats, 1000);
+        }
+
+        const disable = () => {
+            window.clearInterval(interval);
+            value = 0;
+        }
+
+        const render = () => ui.update(value);
+
+        function getStats() {
+            if (!active || !rtcp.isConnected()) return;
+            rtcp.getConnection().getStats(null).then(stats => {
+                stats.forEach(report => {
+                    if (report["framesReceived"] !== undefined && report["framesDecoded"] !== undefined && report["framesDropped"] !== undefined) {
+                        value = report["framesReceived"] - report["framesDecoded"] - report["framesDropped"];
+                    } else if (report["framerateMean"] !== undefined) {
+                        value = Math.round(report["framerateMean"]*100)/100;
+                    }
+                });
+            });
+        }
+
+        return {get, enable, disable, render}
+    })(moduleUi, window);
+
     const enable = () => {
         active = true;
         modules.forEach(m => m.enable());
@@ -320,7 +371,8 @@ const stats = (() => {
     // add submodules
     modules.push(
         latency,
-        clientMemory
+        clientMemory,
+        webRTCStats
     );
     modules.forEach(m => statsOverlayEl.append(m.get()));
 
@@ -328,4 +380,4 @@ const stats = (() => {
     event.sub(HELP_OVERLAY_TOGGLED, onHelpOverlayToggle)
 
     return {enable, disable}
-})(document, event, log, window);
+})(document, env, event, log, window);

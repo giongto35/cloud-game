@@ -85,7 +85,10 @@ const KEY_RELEASED = 'keyReleased';
 const KEY_STATE_UPDATED = 'keyStateUpdated';
 const KEYBOARD_TOGGLE_FILTER_MODE = 'keyboardToggleFilterMode';
 const KEYBOARD_KEY_PRESSED = 'keyboardKeyPressed';
+const AXIS_CHANGED = 'axisChanged';
+const CONTROLLER_UPDATED = 'controllerUpdated';
 
+const DPAD_TOGGLE = 'dpadToggle';
 const STATS_TOGGLE = 'statsToggle';
 const HELP_OVERLAY_TOGGLED = 'helpOverlayToggled';
 

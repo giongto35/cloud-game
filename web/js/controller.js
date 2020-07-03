@@ -11,6 +11,15 @@
     // first user interaction
     let interacted = false;
 
+    const DIR = (() => {
+        return {
+            IDLE: 'idle',
+            UP: 'up',
+            DOWN: 'down',
+        }
+    })();
+    let prevDir = DIR.IDLE;
+
     // UI elements
     // use $element[0] for DOM element
     const gameScreen = $('#game-screen');
@@ -229,10 +238,28 @@
     const _nil = () => {
     }
 
+    const onAxisChanged = (data) => {
+        // maybe move it somewhere
+        if (!interacted) {
+            // unmute when there is user interaction
+            gameScreen[0].muted = false;
+            interacted = true;
+        }
+
+        state.axisChanged(data.id, data.value);
+    };
+
+    const handleToggle = () => {
+        var toggle = document.getElementById('dpad-toggle');
+        toggle.checked = !toggle.checked;
+        event.pub(DPAD_TOGGLE, {checked: toggle.checked});
+    };
+
     const app = {
         state: {
             eden: {
                 name: 'eden',
+                axisChanged: _nil,
                 keyPress: _nil,
                 keyRelease: _nil,
                 menuReady: showMenuScreen
@@ -241,6 +268,7 @@
             settings: {
                 _uber: true,
                 name: 'settings',
+                axisChanged: _nil,
                 keyPress: _nil,
                 keyRelease: key => {
                     if (key === KEY.SETTINGS) {
@@ -253,6 +281,27 @@
 
             menu: {
                 name: 'menu',
+                axisChanged: (id, value) => {
+                    if (id === 1) { // Left Stick, Y Axis
+                        let dir = DIR.IDLE;
+                        if (value < -0.5) dir = DIR.UP;
+                        if (value > 0.5) dir = DIR.DOWN;
+                        if (dir !== prevDir) {
+                            prevDir = dir;
+                            switch (dir) {
+                                case DIR.IDLE:
+                                    gameList.stopGamePickerTimer();
+                                    break;
+                                case DIR.UP:
+                                    gameList.startGamePickerTimer(true);
+                                    break;
+                                case DIR.DOWN:
+                                    gameList.startGamePickerTimer(false);
+                                    break;
+                            }
+                        }
+                    }
+                },
                 keyPress: (key) => {
                     switch (key) {
                         case KEY.UP:
@@ -290,6 +339,9 @@
                             break;
                         case KEY.SETTINGS:
                             break;
+                        case KEY.DTOGGLE:
+                            handleToggle();
+                            break;
                     }
                 },
                 menuReady: _nil
@@ -297,6 +349,9 @@
 
             game: {
                 name: 'game',
+                axisChanged: (id, value) => {
+                    input.setAxisChanged(id, value);
+                },
                 keyPress: key => {
                     input.setKeyState(key, true);
                 },
@@ -343,11 +398,14 @@
 
                             popup('Quit!');
 
-                            location.reload();
+                            window.location = window.location.pathname;
                             break;
 
                         case KEY.STATS:
                             event.pub(STATS_TOGGLE);
+                            break;
+                        case KEY.DTOGGLE:
+                            handleToggle();
                             break;
                     }
                 },
@@ -386,6 +444,8 @@
     event.sub(SETTINGS_CLOSED, () => {
         state.keyRelease(KEY.SETTINGS);
     });
+    event.sub(AXIS_CHANGED, onAxisChanged);
+    event.sub(CONTROLLER_UPDATED, data => rtcp.input(data));
 
     // game screen stuff
     gameScreen.on('loadstart', () => {

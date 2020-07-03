@@ -24,5 +24,10 @@ const KEY = (() => {
         PAD4: 'pad4',
         STATS: 'stats',
         SETTINGS: 'settings',
+        DTOGGLE: 'dtoggle',
+        L2: 'l2',
+        R2: 'r2',
+        L3: 'l3',
+        R3: 'r3',
     }
 })();

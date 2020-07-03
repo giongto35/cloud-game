@@ -1,7 +1,6 @@
 package room
 
 import (
-	"image"
 	"io/ioutil"
 	"log"
 	"math"
@@ -29,12 +28,17 @@ type Room struct {
 	ID string
 
 	// imageChannel is image stream received from director
-	imageChannel <-chan *image.RGBA
+	imageChannel <-chan nanoarch.GameFrame
 	// audioChannel is audio stream received from director
 	audioChannel <-chan []int16
 	// inputChannel is input stream send to director. This inputChannel is combined
 	// input from webRTC + connection info (player indexc)
 	inputChannel chan<- nanoarch.InputEvent
+	// voiceInChannel is voice stream received from users
+	voiceInChannel chan []byte
+	// voiceOutChannel is voice stream broadcasted to all users
+	voiceOutChannel chan []byte
+	voiceSample     [][]byte
 	// State of room
 	IsRunning bool
 	// Done channel is to fire exit event when room is closed
@@ -76,11 +80,13 @@ func NewRoom(roomID string, gameName string, videoEncoderType string, onlineStor
 	room := &Room{
 		ID: roomID,
 
-		inputChannel:  inputChannel,
-		rtcSessions:   []*webrtc.WebRTC{},
-		sessionsLock:  &sync.Mutex{},
-		IsRunning:     true,
-		onlineStorage: onlineStorage,
+		inputChannel:    inputChannel,
+		voiceInChannel:  make(chan []byte, 1),
+		voiceOutChannel: make(chan []byte, 1),
+		rtcSessions:     []*webrtc.WebRTC{},
+		sessionsLock:    &sync.Mutex{},
+		IsRunning:       true,
+		onlineStorage:   onlineStorage,
 
 		Done: make(chan struct{}, 1),
 	}
@@ -124,13 +130,21 @@ func NewRoom(roomID string, gameName string, videoEncoderType string, onlineStor
 			log.Printf("Viewport size has scaled to %dx%d", nwidth, nheight)
 		}
 
-		room.director.SetViewport(nwidth, nheight)
-
 		log.Println("meta: ", gameMeta)
 
+		// set resulting game frame size considering
+		// its orientation
+		encoderW, encoderH := nwidth, nheight
+		if gameMeta.Rotation.IsEven {
+			encoderW, encoderH = nheight, nwidth
+		}
+
+		room.director.SetViewport(encoderW, encoderH)
+
 		// Spawn video and audio encoding for webRTC
-		go room.startVideo(nwidth, nheight, videoEncoderType)
+		go room.startVideo(encoderW, encoderH, videoEncoderType)
 		go room.startAudio(gameMeta.AudioSampleRate)
+		go room.startVoice()
 		room.director.Start()
 
 		log.Printf("Room %s ended", roomID)
@@ -154,7 +168,7 @@ func resizeToAspect(ratio float64, sw int, sh int) (dw int, dh int) {
 }
 
 // getEmulator creates new emulator and run it
-func getEmulator(emuName string, roomID string, imageChannel chan<- *image.RGBA, audioChannel chan<- []int16, inputChannel <-chan int) emulator.CloudEmulator {
+func getEmulator(emuName string, roomID string, imageChannel chan<- nanoarch.GameFrame, audioChannel chan<- []int16, inputChannel <-chan int) emulator.CloudEmulator {
 
 	return nanoarch.NAEmulator
 }
@@ -205,6 +219,23 @@ func (r *Room) startWebRTCSession(peerconnection *webrtc.WebRTC) {
 		}
 	}()
 
+	log.Println("Start WebRTC session")
+	go func() {
+
+		// set up voice input and output. A room has multiple voice input and only one combined voice output.
+		for voiceInput := range peerconnection.VoiceInChannel {
+			// NOTE: when room is no longer running. InputChannel needs to have extra event to go inside the loop
+			if peerconnection.Done || !peerconnection.IsConnected() || !r.IsRunning {
+				break
+			}
+
+			if peerconnection.IsConnected() {
+				r.voiceInChannel <- voiceInput
+			}
+
+		}
+	}()
+
 	// bug: when inputchannel here = nil , skip and finish
 	for input := range peerconnection.InputChannel {
 		// NOTE: when room is no longer running. InputChannel needs to have extra event to go inside the loop
@@ -214,7 +245,7 @@ func (r *Room) startWebRTCSession(peerconnection *webrtc.WebRTC) {
 
 		if peerconnection.IsConnected() {
 			select {
-			case r.inputChannel <- nanoarch.InputEvent{KeyState: input, PlayerIdx: peerconnection.GameMeta.PlayerIndex, ConnID: peerconnection.ID}:
+			case r.inputChannel <- nanoarch.InputEvent{RawState: input, PlayerIdx: peerconnection.GameMeta.PlayerIndex, ConnID: peerconnection.ID}:
 			default:
 			}
 		}
@@ -231,13 +262,14 @@ func (r *Room) RemoveSession(w *webrtc.WebRTC) {
 		log.Println("found session: ", w.ID)
 		if s.ID == w.ID {
 			r.rtcSessions = append(r.rtcSessions[:i], r.rtcSessions[i+1:]...)
+			s.RoomID = ""
 			log.Println("Removed session ", s.ID, " from room: ", r.ID)
 			break
 		}
 	}
 	// Detach input. Send end signal
 	select {
-	case r.inputChannel <- nanoarch.InputEvent{KeyState: -1, ConnID: w.ID}:
+	case r.inputChannel <- nanoarch.InputEvent{RawState: []byte{0xFF, 0xFF}, ConnID: w.ID}:
 	default:
 	}
 }
@@ -278,6 +310,8 @@ func (r *Room) Close() {
 	}
 	log.Println("Closing input of room ", r.ID)
 	close(r.inputChannel)
+	close(r.voiceOutChannel)
+	close(r.voiceInChannel)
 	close(r.Done)
 	// Close here is a bit wrong because this read channel
 	// Just dont close it, let it be gc

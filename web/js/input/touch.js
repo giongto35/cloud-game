@@ -12,6 +12,7 @@ const touch = (() => {
 
     // vpad state, use for mouse button down
     let vpadState = {[KEY.UP]: false, [KEY.DOWN]: false, [KEY.LEFT]: false, [KEY.RIGHT]: false};
+    let analogState = [0, 0];
 
     let vpadTouchIdx = null;
     let vpadTouchDrag = null;
@@ -23,12 +24,42 @@ const touch = (() => {
     const playerSlider = $("#playeridx")
     const dpad = $(".dpad");
 
+    const dpadToggle = document.getElementById('dpad-toggle')
+    dpadToggle.addEventListener('change', (e) => {
+      event.pub(DPAD_TOGGLE, {checked: e.target.checked});
+    });
+
+    let dpadMode = true;
+    const deadZone = 0.1;
+
+    function onDpadToggle(checked) {
+      if (dpadMode === checked) {
+        return //error?
+      }
+      if (dpadMode) {
+        dpadMode = false;
+        vpadHolder.addClass('dpad-empty');
+        vpadCircle.addClass('bong-full');
+        // reset dpad keys pressed before moving to analog stick mode
+        resetVpadState()
+      } else {
+        dpadMode = true;
+        vpadHolder.removeClass('dpad-empty');
+        vpadCircle.removeClass('bong-full');
+      }
+    }
+
     function resetVpadState() {
-        // trigger up event?
-        checkVpadState(KEY.UP, false);
-        checkVpadState(KEY.DOWN, false);
-        checkVpadState(KEY.LEFT, false);
-        checkVpadState(KEY.RIGHT, false);
+        if (dpadMode) {
+            // trigger up event?
+            checkVpadState(KEY.UP, false);
+            checkVpadState(KEY.DOWN, false);
+            checkVpadState(KEY.LEFT, false);
+            checkVpadState(KEY.RIGHT, false);
+        } else {
+            checkAnalogState(0, 0);
+            checkAnalogState(1, 0);
+        }
 
         vpadTouchDrag = null;
         vpadTouchIdx = null;
@@ -39,6 +70,14 @@ const touch = (() => {
         if (state !== vpadState[axis]) {
             vpadState[axis] = state;
             event.pub(state ? KEY_PRESSED : KEY_RELEASED, {key: axis});
+        }
+    }
+
+    function checkAnalogState(axis, value) {
+        if (-deadZone < value && value < deadZone) value = 0;
+        if (analogState[axis] !== value) {
+            analogState[axis] = value;
+            event.pub(AXIS_CHANGED, {id: axis, value: value});
         }
     }
 
@@ -105,10 +144,16 @@ const touch = (() => {
 
         let xRatio = xNew / MAX_DIFF;
         let yRatio = yNew / MAX_DIFF;
-        checkVpadState(KEY.LEFT, xRatio <= -0.5);
-        checkVpadState(KEY.RIGHT, xRatio >= 0.5);
-        checkVpadState(KEY.UP, yRatio <= -0.5);
-        checkVpadState(KEY.DOWN, yRatio >= 0.5);
+
+        if (dpadMode) {
+            checkVpadState(KEY.LEFT, xRatio <= -0.5);
+            checkVpadState(KEY.RIGHT, xRatio >= 0.5);
+            checkVpadState(KEY.UP, yRatio <= -0.5);
+            checkVpadState(KEY.DOWN, yRatio >= 0.5);
+        } else {
+            checkAnalogState(0, xRatio);
+            checkAnalogState(1, yRatio);
+        }
     }
 
     /*
@@ -246,6 +291,8 @@ const touch = (() => {
     event.pub(MENU_HANDLER_ATTACHED, {event: 'mousedown', handler: handleMenuDown});
     event.pub(MENU_HANDLER_ATTACHED, {event: 'touchstart', handler: handleMenuDown});
     event.pub(MENU_HANDLER_ATTACHED, {event: 'touchend', handler: handleMenuUp});
+
+    event.sub(DPAD_TOGGLE, (data) => onDpadToggle(data.checked));
 
     return {
         init: () => {

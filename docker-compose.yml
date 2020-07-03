@@ -1,0 +1,17 @@
+version: '3'
+services:
+
+  cloud-game:
+    build: .
+    image: cloud-game-local
+    container_name: cloud-game-local
+    privileged: true
+    command: >
+      bash -c "coordinator --v=5 & worker --coordinatorhost localhost:8000"
+    ports:
+      - "8000:8000"
+      - "9000:9000"
+      - "3478:3478/tcp"
+      - "3478:3478/udp"
+    volumes:
+      - ${CLOUD_GAME_GAMES_PATH}:/usr/local/share/cloud-game/assets/games
