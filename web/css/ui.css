@@ -1,0 +1,135 @@
+
+.hidden {
+    display: none;
+}
+
+#btn-settings {
+    position: relative;
+    top: 14px;
+    left: 62px;
+}
+
+.modal-window {
+    position: fixed;
+
+    top: 0;
+    right: 0;
+    bottom: 0;
+    left: 0;
+
+    background-color: rgba(0, 0, 0, 0.7);
+
+    z-index: 9999;
+    visibility: hidden;
+    opacity: 0;
+    pointer-events: none;
+
+    -webkit-transition: all 0.2s;
+    transition: all 0.2s;
+}
+
+.modal-visible {
+    visibility: visible;
+    opacity: 1;
+    pointer-events: auto;
+}
+
+
+.modal-window > div {
+    width: 42vw;
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    -webkit-transform: translate(-50%, -50%);
+    transform: translate(-50%, -50%);
+    padding: 2em;
+    background: #ffffff;
+}
+
+.modal-window header {
+    font-weight: bold;
+}
+
+.modal-window h1 {
+    font-size: 150%;
+    margin: 0 0 15px;
+}
+
+.semi-button {
+    cursor: pointer;
+}
+
+
+#app-settings {
+    font-family: monospace;
+}
+
+#settings-data {
+    overflow-y: auto;
+    height: 50vh;
+}
+
+.container {
+    display: grid;
+    -webkit-box-pack: center;
+    justify-content: center;
+    -webkit-box-align: center;
+    align-items: center;
+    height: 100vh;
+}
+
+.modal-window div:not(:last-of-type) {
+    margin-bottom: 15px;
+}
+
+.btn2 {
+    font-size: 80%;
+    padding: .2em .4em;
+    border-radius: 3px;
+    text-decoration: none;
+    background-color: #515151;
+    color: #2c3234;
+
+    height: 1rem;
+}
+
+.settings__controls {
+    color: #aaa;
+    font-size: 80%;
+    text-align: center;
+    text-decoration: none;
+}
+
+.settings__controls span:hover {
+    color: black;
+}
+
+#settings-data > div {
+    display: grid;
+    grid-template-rows: auto;
+}
+
+.settings__option-name {
+    background-color: beige;
+    padding: 1em;
+}
+
+.restart-needed-asterisk:after {
+    content: '*';
+    color: red;
+}
+
+.settings__option-value {
+
+}
+
+.keyboard-bindings .settings__option-value {
+    display: grid;
+    grid-template-columns: 25% 25% auto auto;
+}
+
+.binding-element {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}

@@ -16,6 +16,7 @@
 
     <link href="/static/css/font-awesome.css?2" rel="stylesheet">
     <link href="/static/css/main.css?4" rel="stylesheet">
+    <link href="/static/css/ui.css?v=1" rel="stylesheet">
 </head>
 
 <body>
@@ -77,6 +78,25 @@
         </div>
         <div id="btn-help" unselectable="on" class="btn unselectable" value="help"></div>
 
+        <div id="btn-settings" class="btn btn2 unselectable" value="settings">
+            Settings
+        </div>
+    </div>
+
+    <div id="app-settings" class="modal-window">
+        <div>
+            <div class="settings__controls">
+                <span title="Save" id="settings__controls__save" class="semi-button">↑</span>
+                <span title="Load" id="settings__controls__load" class="semi-button">↓</span>
+                <span title="Reset" id="settings__controls__reset" class="semi-button">⟲</span>
+                <span title="Close" id="settings__controls__close" class="semi-button">X</span>
+            </div>
+            <h1>Settings</h1>
+            <div id="settings-data"></div>
+            <div>
+                * -- applied after application restart
+            </div>
+        </div>
         <label class="dpad-toggle-label">
           <input type="checkbox" id="dpad-toggle" checked>
           <span class="dpad-toggle-slider"></span>
@@ -93,23 +113,26 @@
 
     <script src="/static/js/lib/jquery-3.4.1.min.js"></script>
 
-    <script src="/static/js/log.js?v=3"></script>
-    <script src="/static/js/env.js?v=5"></script>
-    <script src="/static/js/event/event.js?v=4"></script>
+    <script src="/static/js/gui/gui.js?v=1"></script>
+    <script src="/static/js/log.js?v=5"></script>
+    <script src="/static/js/event/event.js?v=5"></script>
     <script src="/static/js/input/keys.js?v=3"></script>
+    <script src="/static/js/settings/opts.js?v=1"></script>
+    <script src="/static/js/settings/settings.js?v=2"></script>
+    <script src="/static/js/env.js?v=5"></script>
     <script src="/static/js/input/input.js?v=3"></script>
     <script src="/static/js/gameList.js?v=3"></script>
     <script src="/static/js/room.js?v=3"></script>
     <script src="/static/js/stats/stats.js?v=1"></script>
-    <script src="/static/js/controller.js?v=4"></script>
-    <script src="/static/js/input/keyboard.js?v=3"></script>
+    <script src="/static/js/controller.js?v=5"></script>
+    <script src="/static/js/input/keyboard.js?v=5"></script>
     <script src="/static/js/input/touch.js?v=3"></script>
     <script src="/static/js/input/joystick.js?v=3"></script>
     <script src="/static/js/network/ajax.js?v=3"></script>
     <script src="/static/js/network/socket.js?v=4"></script>
     <script src="/static/js/network/rtcp.js?v=3"></script>
 
-    <script src="/static/js/init.js?v=3"></script>
+    <script src="/static/js/init.js?v=5"></script>
 
     <!-- Global site tag (gtag.js) - Google Analytics -->
     <script async src="https://www.googletagmanager.com/gtag/js?id=UA-145078282-1"></script>
