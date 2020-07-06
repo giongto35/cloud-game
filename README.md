@@ -14,7 +14,7 @@ Theoretically, in cloud gaming, games are run on remote servers and media are st
 
 ## Try the service at
 Single play: **[http://cloudretro.io](http://cloudretro.io)**  
-Direct play an existing game: **[Pokemon Emerald](http://cloudretro.io/?id=652e45d78d2b91cd%7CPokemon%20-%20Emerald%20Version%20%28U%29)**  
+Direct play an existing game: **[Pokemon Emerald](https://cloudretro.io/?id=4a5073a4b05ad0fe___Pokemon%20-%20Emerald%20Version%20(U))**
 
 \*In ideal network condition and less resource contention on servers, the game will run smoothly as in the video demo. Because I only hosted the platform on limited servers in US East, US West, Eu, Singapore, you may experience some latency issues + connection problem. You can try hosting the service following the instruction the next section to have a better sense of performance.
 
@@ -25,46 +25,29 @@ Direct play an existing game: **[Pokemon Emerald](http://cloudretro.io/?id=652e4
 
 ## Feature
 1. **Cloud gaming**: Game logic and storage is hosted on cloud service. It reduces the cumbersome of game initialization. Images and audio are streamed to user in the most optimal way using advanced encoding technology.
-2. **Cross-platform compatibility**: The game is run on web browser, the most universal built-in app. No console, plugin, external app or devices are needed. 
+2. **Cross-platform compatibility**: The game is run on web browser, the most universal built-in app. No console, plugin, external app or devices are needed.
 3. **Emulator agnostic**: The game can be played directly without any extra effort to set up the gaming emulator or platform.
 4. **Collaborate gameplay**: Follow the idea of crowdplay([TwitchPlaysPokemon](https://en.wikipedia.org/wiki/Twitch_Plays_Pok%C3%A9mon)), multiple players can play the same game together by addressing the same deeplink. The game experience is powered by cloud-gaming, so the game is much smoother. [Check CrowdPlay section](#crowd-play-play-game-together)
 5. **Online multiplayer**: The first time in history, you can play multiplayer on Retro games online. You can try Samurai Showndown with 2 players for fighting game example.
 5. **Horizontally scaled**: The infrastructure is designed to be able to scale under high traffic by adding more instances.
 6. **Cloud storage**: Game state is storing on online storage, so you can come back and continue playing your incomplete game later.
 
-## Run on local by Docker
-
-You try running the server directly by `make dev.run-docker`. It will spawn a docker environment and you can access the service on `localhost:8000`.
-
 ## Development environment
 
 Install Golang https://golang.org/doc/install . Because the project uses GoModule, so it requires Go1.11 version.
 
-### (Window only) Extra setup
-Setup MSYS2 (MinGW) environment if you are using Windows:
-  * Please refer to the Libretro [doc](https://docs.libretro.com/development/retroarch/compilation/windows/#environment-configuration) for initial environment setup
-  * Add Golang installation path into your .bashrc
-    ```
-    $ echo 'export PATH=/c/Go/bin:$PATH' >> ~/.bashrc
-    ```
-  * Install dependencies as described down bellow
-  * Copy required [Libretro Core DLLs](http://buildbot.libretro.com/nightly/windows/x86_64/latest/) into the `cloud-game\assets\emulator\libretro\cores` folder and replace existing Linux SOs in the `cloud-game\pkg\config\config.go` EmulatorConfig object.
-  * Use `C:\msys64\mingw64.exe` for building
-  * To run the app use either MinGw terminal or copy: libdl.dll, libogg-0.dll, libopenal-1.dll, libopus-0.dll, libopusfile-0.dll, libvpx-1.dll
-    files from `C:\msys64\mingw64\bin` into the `./bin` folder and then run.
-
 ### (All) Install Dependencies
 
-  * Install [libvpx](https://www.webmproject.org/code/), [libopus](http://opus-codec.org/), [pkg-config](https://www.freedesktop.org/wiki/Software/pkg-config/)
+  * Install [libvpx](https://www.webmproject.org/code/), [libopus](http://opus-codec.org/), [pkg-config](https://www.freedesktop.org/wiki/Software/pkg-config/), [sdl2](https://wiki.libsdl.org/Installation)
 ```
-# Ubuntu
-apt-get install -y pkg-config libvpx-dev libopus-dev libopusfile-dev
+# Ubuntu / Windows (WSL2)
+apt-get install -y pkg-config libvpx-dev libopus-dev libopusfile-dev libsdl2-dev
 
 # MacOS
-brew install libvpx pkg-config opus opusfile
+brew install libvpx pkg-config opus opusfile sdl2
 
 # Windows (MSYS2)
-pacman -Sy --noconfirm --needed git make mingw-w64-x86_64-{gcc,pkg-config,dlfcn,libvpx,opusfile}
+pacman -Sy --noconfirm --needed git make mingw-w64-x86_64-{gcc,pkg-config,dlfcn,libvpx,opusfile,SDL2}
 ```
 
 Because the coordinator and workers need to run simultaneously. Workers connect to the coordinator.
@@ -75,6 +58,15 @@ Because the coordinator and workers need to run simultaneously. Workers connect 
   * Need to run coordinator and worker separately in two session
   * `go run cmd/coordinator/main.go` - spawn coordinator
   * `go run cmd/worker/main.go --coordinatorhost localhost:8000` - spawn workers connecting to coordinator
+
+## Run with Docker
+
+In case if you want to run the app as a Docker container,
+use `docker-compose up --build` (`CLOUD_GAME_GAMES_PATH` is env variable for games on your host).
+It will spawn a docker environment and you can access the service on `localhost:8000`.
+
+*Note.*
+Docker for Windows is not supposed to work with provided configuration, use WSL2 instead.
 
 ## Technical Document
 - [webrtchacks Blog: Open Source Cloud Gaming with WebRTC](https://webrtchacks.com/open-source-cloud-gaming-with-webrtc/)
@@ -102,9 +94,11 @@ Synchronize a game session on multiple devices
 </p>
 
 ## Contribution
-- The project cannot be possible without the contribution with those amazing people:
-- [sergystepanov](https://github.com/sergystepanov/) for Front end refactor; Audio re-implementation; bilinear, nearest neighbor interpolation scaling; Window setup document; build workflow on multi-os.
-- [sadlil](https://github.com/sadlil) for massive code structure reogranization; log and monitor server introduction.
+We are very much thankful to everyone who contributes to the project:
+
+- [88hcsif](https://github.com/88hcsif)
+- [sadlil](https://github.com/sadlil)
+- [sergystepanov](https://github.com/sergystepanov/)
 
 ## Credits
 

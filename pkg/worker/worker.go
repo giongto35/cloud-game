@@ -94,26 +94,32 @@ func (o *Worker) spawnServer(port int) {
 	var httpsSrv *http.Server
 
 	if *config.Mode == config.ProdEnv || *config.Mode == config.StagingEnv {
-		var leurl string
-		if *config.Mode == config.StagingEnv {
-			leurl = stagingLEURL
-		} else {
-			leurl = acme.LetsEncryptURL
-		}
-
-		certManager = &autocert.Manager{
-			Prompt: autocert.AcceptTOS,
-			Cache:  autocert.DirCache("assets/cache"),
-			Client: &acme.Client{DirectoryURL: leurl},
-		}
-
 		httpsSrv = makeHTTPServer()
-		httpsSrv.Addr = ":443"
-		httpsSrv.TLSConfig = &tls.Config{GetCertificate: certManager.GetCertificate}
+		httpsSrv.Addr = fmt.Sprintf(":%d", *config.HttpsPort)
+
+		if *config.HttpsChain == "" || *config.HttpsKey == "" {
+			*config.HttpsChain = ""
+			*config.HttpsKey = ""
+
+			var leurl string
+			if *config.Mode == config.StagingEnv {
+				leurl = stagingLEURL
+			} else {
+				leurl = acme.LetsEncryptURL
+			}
+
+			certManager = &autocert.Manager{
+				Prompt: autocert.AcceptTOS,
+				Cache:  autocert.DirCache("assets/cache"),
+				Client: &acme.Client{DirectoryURL: leurl},
+			}
+
+			httpsSrv.TLSConfig = &tls.Config{GetCertificate: certManager.GetCertificate}
+		}
 
 		go func() {
 			fmt.Printf("Starting HTTPS server on %s\n", httpsSrv.Addr)
-			err := httpsSrv.ListenAndServeTLS("", "")
+			err := httpsSrv.ListenAndServeTLS(*config.HttpsChain, *config.HttpsKey)
 			if err != nil {
 				log.Printf("httpsSrv.ListendAndServeTLS() failed with %s", err)
 			}
@@ -148,22 +154,25 @@ func (o *Worker) initializeWorker() {
 	}()
 
 	go worker.Run()
-	port := 9000
-	// It's recommend to run one worker on one instance. This logic is to make sure more than 1 workers still work
+	port := o.cfg.HttpPort
+	// It's recommend to run one worker on one instance.
+	// This logic is to make sure more than 1 workers still work
+	portsNum := 100
 	for {
-		log.Println("Listening at port: localhost:", port)
-		// err := http.ListenAndServe(":"+strconv.Itoa(port), nil)
+		portsNum--
 		l, err := net.Listen("tcp", ":"+strconv.Itoa(port))
 		if err != nil {
 			port++
 			continue
 		}
-		if port == 9100 {
+
+		if portsNum < 1 {
+			log.Printf("Couldn't find an open port in range %v-%v\n", o.cfg.HttpPort, port)
 			// Cannot find port
 			return
 		}
 
-		l.Close()
+		_ = l.Close()
 
 		o.spawnServer(port)
 	}

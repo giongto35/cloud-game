@@ -102,27 +102,33 @@ func (o *Coordinator) initializeCoordinator() {
 
 	log.Println("Initializing Coordinator Server")
 	if *config.Mode == config.ProdEnv || *config.Mode == config.StagingEnv {
-		var leurl string
-		if *config.Mode == config.StagingEnv {
-			leurl = stagingLEURL
-		} else {
-			leurl = acme.LetsEncryptURL
-		}
-
-		certManager = &autocert.Manager{
-			Prompt:     autocert.AcceptTOS,
-			HostPolicy: autocert.HostWhitelist(o.cfg.PublicDomain),
-			Cache:      autocert.DirCache("assets/cache"),
-			Client:     &acme.Client{DirectoryURL: leurl},
-		}
-
 		httpsSrv = makeHTTPServer(coordinator)
-		httpsSrv.Addr = ":443"
-		httpsSrv.TLSConfig = &tls.Config{GetCertificate: certManager.GetCertificate}
+		httpsSrv.Addr = fmt.Sprintf(":%d", *config.HttpsPort)
+
+		if *config.HttpsChain == "" || *config.HttpsKey == "" {
+			*config.HttpsChain = ""
+			*config.HttpsKey = ""
+
+			var leurl string
+			if *config.Mode == config.StagingEnv {
+				leurl = stagingLEURL
+			} else {
+				leurl = acme.LetsEncryptURL
+			}
+
+			certManager = &autocert.Manager{
+				Prompt:     autocert.AcceptTOS,
+				HostPolicy: autocert.HostWhitelist(o.cfg.PublicDomain),
+				Cache:      autocert.DirCache("assets/cache"),
+				Client:     &acme.Client{DirectoryURL: leurl},
+			}
+
+			httpsSrv.TLSConfig = &tls.Config{GetCertificate: certManager.GetCertificate}
+		}
 
 		go func() {
 			fmt.Printf("Starting HTTPS server on %s\n", httpsSrv.Addr)
-			err := httpsSrv.ListenAndServeTLS("", "")
+			err := httpsSrv.ListenAndServeTLS(*config.HttpsChain, *config.HttpsKey)
 			if err != nil {
 				log.Fatalf("httpsSrv.ListendAndServeTLS() failed with %s", err)
 			}
@@ -140,7 +146,7 @@ func (o *Coordinator) initializeCoordinator() {
 		httpSrv.Handler = certManager.HTTPHandler(httpSrv.Handler)
 	}
 
-	httpSrv.Addr = ":8000"
+	httpSrv.Addr = ":" + *config.HttpPort
 	err := httpSrv.ListenAndServe()
 	if err != nil {
 		log.Fatalf("httpSrv.ListenAndServe() failed with %s", err)

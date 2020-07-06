@@ -75,55 +75,49 @@ dev.build-local:
 dev.run: dev.build-local
 	./bin/coordinator --v=5 &
 	./bin/worker --coordinatorhost localhost:8000
-
+	
 dev.run-docker:
-	docker build . -t cloud-game-local
-	docker stop cloud-game-local || true
-	docker rm cloud-game-local || true
-	# Coordinator and worker should be run separately.
-	docker run --privileged -v $(pwd)/games:/cloud-game/games -d --name cloud-game-local -p 8000:8000 -p 9000:9000 cloud-game-local bash -c "coordinator --v=5 & worker --coordinatorhost localhost:8000"
+	docker rm cloud-game-local -f || true
+	CLOUD_GAME_GAMES_PATH=$(PWD)/assets/games docker-compose up --build
 
 # RELEASE
 # Builds the app for new release.
 #
 # Folder structure:
-# release
-#   - coordinator/
-#     - web/
-#     - coordinator
-#   - worker/
-#     - assets/
-#       - emulator/libretro/cores/ (filtered by extension)
-#       - games/
-#     - worker
+#   - assets/
+#   	- games/ (shared between both executables)
+#   	- emulator/libretro/cores/ (filtered by extension)
+#   - web/
+#   - coordinator
+#   - worker
 #
-# params:
-# - RELEASE_DIR: the name of the output folder (default: _release).
+# Config params:
+# - RELEASE_DIR: the name of the output folder (default: release).
 # - DLIB_TOOL: the name of a dynamic lib copy tool (with params) (e.g., ldd -x -y; defalut: ldd).
 # - DLIB_SEARCH_PATTERN: a grep filter of the output of the DLIB_TOOL (e.g., mylib.so; default: .*so).
 #   Be aware that this search pattern will return only matched regular expression part and not the whole line.
 #   de. -> abc def ghj -> def
 #   Makefile special symbols should be escaped with \.
 # - DLIB_ALTER: a special flag to use altered dynamic copy lib tool for macOS only.
-# - CORE_EXT: a file extension of the cores to copy into the release.
+# - CORE_EXT: a glob pattern to filter the cores that are copied into the release.
 #
-# example:
-#   make release DLIB_TOOL="ldd -x" DLIB_SEARCH_PATTERN=/usr/lib.*\\\\s LIB_EXT=so
+# Example:
+#   make release DLIB_TOOL="ldd -x" DLIB_SEARCH_PATTERN=/usr/lib.*\\\\s CORE_EXT=*.so
 #
 RELEASE_DIR ?= release
 DLIB_TOOL ?= ldd
 DLIB_SEARCH_PATTERN ?= .*so
 DLIB_ALTER ?= false
-CORE_EXT ?= *
-COORDINATOR_DIR = ./$(RELEASE_DIR)/coordinator
-WORKER_DIR = ./$(RELEASE_DIR)/worker
+CORE_EXT ?= *_libretro.so
+COORDINATOR_DIR = ./$(RELEASE_DIR)
+WORKER_DIR = ./$(RELEASE_DIR)
 CORES_DIR = assets/emulator/libretro/cores
 GAMES_DIR = assets/games
 .PHONY: release
 .SILENT: release
 release: clean build
 	rm -rf ./$(RELEASE_DIR) && mkdir ./$(RELEASE_DIR)
-	mkdir $(COORDINATOR_DIR) && mkdir $(WORKER_DIR)
+	mkdir -p $(COORDINATOR_DIR) && mkdir -p $(WORKER_DIR)
 	cp ./bin/coordinator $(COORDINATOR_DIR) && cp ./bin/worker $(WORKER_DIR)
 	chmod +x $(COORDINATOR_DIR)/coordinator $(WORKER_DIR)/worker
     ifeq ($(DLIB_ALTER),false)
@@ -139,6 +133,6 @@ release: clean build
 		cp -R ./$(GAMES_DIR) $(WORKER_DIR)/assets
     endif
 	mkdir -p $(WORKER_DIR)/$(CORES_DIR)
-    ifneq (,$(wildcard ./$(CORES_DIR)/*.$(CORE_EXT)))
-		cp -R ./$(CORES_DIR)/*.$(CORE_EXT) $(WORKER_DIR)/$(CORES_DIR)
+    ifneq (,$(wildcard ./$(CORES_DIR)/$(CORE_EXT)))
+		cp -R ./$(CORES_DIR)/$(CORE_EXT) $(WORKER_DIR)/$(CORES_DIR)
     endif

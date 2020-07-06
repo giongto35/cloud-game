@@ -1,8 +1,9 @@
 package room
 
 import (
+	"bytes"
+	"encoding/gob"
 	"fmt"
-	"image"
 	"io"
 	"io/ioutil"
 	"log"
@@ -32,7 +33,7 @@ type Room struct {
 	ID string
 
 	// imageChannel is image stream received from director
-	imageChannel <-chan *image.RGBA
+	imageChannel <-chan nanoarch.GameFrame
 	// audioChannel is audio stream received from director
 	audioChannel <-chan []int16
 	// inputChannel is input stream send to director. This inputChannel is combined
@@ -67,63 +68,61 @@ const separator = "___"
 const oldSeparator = "|"
 
 const SocketAddrTmpl = "/tmp/cloudretro-retro-%s.sock"
-const imgSize = 240 * 256 * 4
+const bufSize = 245969
 
 // NewVideoImporter return image Channel from stream
-func NewVideoImporter(roomID string) chan *image.RGBA {
+func NewVideoImporter(roomID string) chan nanoarch.GameFrame {
 	sockAddr := fmt.Sprintf(SocketAddrTmpl, roomID)
-	imgChan := make(chan *image.RGBA)
+	imgChan := make(chan nanoarch.GameFrame)
 
-	go func() {
-		l, err := net.Listen("unix", sockAddr)
-		if err != nil {
-			log.Fatal("listen error:", err)
-		}
+	l, err := net.Listen("unix", sockAddr)
+	if err != nil {
+		log.Fatal("listen error:", err)
+	}
+
+	log.Println("Creating uds server", sockAddr)
+	go func(l net.Listener) {
 		defer l.Close()
 
+		conn, err := l.Accept()
+		if err != nil {
+			log.Fatal("Accept error: ", err)
+		}
+		defer conn.Close()
+
+		log.Println("Received new conn")
+		log.Println("Spawn Importer")
+
+		fullbuf := make([]byte, bufSize*2)
+		fullbuf = fullbuf[:0]
+
 		for {
-			log.Println("Creating uds server", sockAddr)
-			conn, err := l.Accept()
+			// TODO: Not reallocate
+			buf := make([]byte, bufSize)
+			l, err := conn.Read(buf)
 			if err != nil {
-				log.Fatal("Accept error: ", err)
+				if err != io.EOF {
+					log.Printf("error: %v", err)
+				}
+				continue
 			}
 
-			go func() {
-				defer conn.Close()
-				log.Println("Received new conn")
-				log.Println("Spawn Importer")
+			buf = buf[:l]
+			fullbuf = append(fullbuf, buf...)
+			if len(fullbuf) >= bufSize {
+				bufs := bytes.NewBuffer(fullbuf)
+				dec := gob.NewDecoder(bufs)
 
-				img := make([]byte, imgSize)
-				img = img[:0]
-
-				for {
-					// TODO: Not reallocate
-					buf := make([]byte, 240*256*4)
-					l, err := conn.Read(buf)
-					if err != nil {
-						if err != io.EOF {
-							log.Printf("error: %v", err)
-						}
-						continue
-					}
-
-					buf = buf[:l]
-					img = append(img, buf...)
-					if len(img) >= imgSize {
-						imgChan <- &image.RGBA{
-							Pix:    img[:imgSize],
-							Stride: 1024,
-							Rect: image.Rectangle{
-								image.Point{0, 0},
-								image.Point{240, 256},
-							},
-						}
-						img = img[:len(img)-imgSize]
-					}
+				frame := nanoarch.GameFrame{}
+				err := dec.Decode(&frame)
+				if err != nil {
+					log.Fatalf("%v", err)
 				}
-			}()
+				imgChan <- frame
+				fullbuf = fullbuf[bufSize:len(fullbuf)]
+			}
 		}
-	}()
+	}(l)
 
 	return imgChan
 }
@@ -142,13 +141,12 @@ func NewRoom(roomID string, gameName string, videoEncoderType string, onlineStor
 
 	log.Println("Init new room: ", roomID, gameName, gameInfo)
 	inputChannel := make(chan nanoarch.InputEvent, 100)
-	imageChannel := NewVideoImporter(roomID)
 
 	room := &Room{
 		ID: roomID,
 
 		inputChannel:    inputChannel,
-		imageChannel:    imageChannel,
+		imageChannel:    nil,
 		voiceInChannel:  make(chan []byte, 1),
 		voiceOutChannel: make(chan []byte, 1),
 		rtcSessions:     []*webrtc.WebRTC{},
@@ -169,15 +167,25 @@ func NewRoom(roomID string, gameName string, videoEncoderType string, onlineStor
 		}
 
 		// If not then load room or create room from local.
-		log.Printf("Room %s started. GamePath: %s, GameName: %s", roomID, game.Path, game.Name)
+		log.Printf("Room %s started. GamePath: %s, GameName: %s, WithGame: %t", roomID, game.Path, game.Name, cfg.WithoutGame)
 
 		// Spawn new emulator based on gameName and plug-in all channels
 		emuName, _ := config.FileTypeToEmulator[game.Type]
 
-		director, audioChannel := nanoarch.Init(emuName, roomID, inputChannel)
-		room.director = director
-		room.imageChannel = imageChannel
-		room.audioChannel = audioChannel
+		if cfg.WithoutGame {
+			// Run without game, image stream is communicated over unixsocket
+			imageChannel := NewVideoImporter(roomID)
+			director, _, audioChannel := nanoarch.Init(emuName, roomID, false, inputChannel)
+			room.imageChannel = imageChannel
+			room.director = director
+			room.audioChannel = audioChannel
+		} else {
+			// Run without game, image stream is communicated over image channel
+			director, imageChannel, audioChannel := nanoarch.Init(emuName, roomID, true, inputChannel)
+			room.imageChannel = imageChannel
+			room.director = director
+			room.audioChannel = audioChannel
+		}
 
 		gameMeta := room.director.LoadMeta(game.Path)
 
@@ -236,7 +244,7 @@ func resizeToAspect(ratio float64, sw int, sh int) (dw int, dh int) {
 }
 
 // getEmulator creates new emulator and run it
-func getEmulator(emuName string, roomID string, imageChannel chan<- *image.RGBA, audioChannel chan<- []int16, inputChannel <-chan int) emulator.CloudEmulator {
+func getEmulator(emuName string, roomID string, imageChannel chan<- nanoarch.GameFrame, audioChannel chan<- []int16, inputChannel <-chan int) emulator.CloudEmulator {
 
 	return nanoarch.NAEmulator
 }
@@ -313,7 +321,7 @@ func (r *Room) startWebRTCSession(peerconnection *webrtc.WebRTC) {
 
 		if peerconnection.IsConnected() {
 			select {
-			case r.inputChannel <- nanoarch.InputEvent{KeyState: input, PlayerIdx: peerconnection.GameMeta.PlayerIndex, ConnID: peerconnection.ID}:
+			case r.inputChannel <- nanoarch.InputEvent{RawState: input, PlayerIdx: peerconnection.GameMeta.PlayerIndex, ConnID: peerconnection.ID}:
 			default:
 			}
 		}
@@ -337,7 +345,7 @@ func (r *Room) RemoveSession(w *webrtc.WebRTC) {
 	}
 	// Detach input. Send end signal
 	select {
-	case r.inputChannel <- nanoarch.InputEvent{KeyState: -1, ConnID: w.ID}:
+	case r.inputChannel <- nanoarch.InputEvent{RawState: []byte{0xFF, 0xFF}, ConnID: w.ID}:
 	default:
 	}
 }

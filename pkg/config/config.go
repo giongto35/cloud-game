@@ -15,10 +15,13 @@ const AUDIO_CHANNELS = 2
 const AUDIO_MS = 20
 const AUDIO_FRAME = AUDIO_RATE * AUDIO_MS / 1000 * AUDIO_CHANNELS
 
-var Port = flag.String("port", "8000", "Port of the game")
 var FrontendSTUNTURN = flag.String("stunturn", DefaultSTUNTURN, "Frontend STUN TURN servers")
 var Mode = flag.String("mode", "dev", "Environment")
 var StunTurnTemplate = `[{"urls":"stun:stun.l.google.com:19302"},{"urls":"stun:%s:3478"},{"urls":"turn:%s:3478","username":"root","credential":"root"}]`
+var HttpPort = flag.String("httpPort", "8000", "User agent port of the app")
+var HttpsPort = flag.Int("httpsPort", 443, "Https Port")
+var HttpsKey = flag.String("httpsKey", "", "Https Key")
+var HttpsChain = flag.String("httpsChain", "", "Https Chain")
 
 var WSWait = 20 * time.Second
 var MatchWorkerRandom = false
@@ -38,20 +41,26 @@ var FileTypeToEmulator = map[string]string{
 	"swc": "snes",
 	"fig": "snes",
 	"bs":  "snes",
+	"n64": "n64",
+	"v64": "n64",
+	"z64": "n64",
 }
 
 // There is no good way to determine main width and height of the emulator.
 // When game run, frame width and height can scale abnormally.
 type EmulatorMeta struct {
 	Path            string
+	Config          string
 	Width           int
 	Height          int
 	AudioSampleRate int
-	Fps             int
+	Fps             float64
 	BaseWidth       int
 	BaseHeight      int
 	Ratio           float64
 	Rotation        image.Rotate
+	IsGlAllowed     bool
+	UsesLibCo       bool
 }
 
 var EmulatorConfig = map[string]EmulatorMeta{
@@ -80,6 +89,14 @@ var EmulatorConfig = map[string]EmulatorMeta{
 		Width:  240,
 		Height: 160,
 	},
+	"n64": {
+		Path:   "assets/emulator/libretro/cores/mupen64plus_next_libretro",
+		Config:   "assets/emulator/libretro/cores/mupen64plus_next_libretro.cfg",
+		Width:  320,
+		Height: 240,
+		IsGlAllowed: true,
+		UsesLibCo: true,
+	},
 }
 
-var EmulatorExtension = []string{".so", ".dylib", ".dll"}
+var EmulatorExtension = []string{".so", ".armv7-neon-hf.so", ".dylib", ".dll"}

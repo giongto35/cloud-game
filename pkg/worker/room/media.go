@@ -9,6 +9,7 @@ import (
 	"github.com/giongto35/cloud-game/pkg/encoder/h264encoder"
 	vpxencoder "github.com/giongto35/cloud-game/pkg/encoder/vpx-encoder"
 	"github.com/giongto35/cloud-game/pkg/util"
+	"github.com/giongto35/cloud-game/pkg/webrtc"
 	"gopkg.in/hraban/opus.v2"
 )
 
@@ -88,13 +89,7 @@ func (r *Room) startAudio(sampleRate int) {
 	idx := 0
 
 	// fanout Audio
-	fmt.Println("listening audio channel", r.IsRunning)
 	for sample := range r.audioChannel {
-		if !r.IsRunning {
-			log.Println("Room ", r.ID, " audio channel closed")
-			return
-		}
-
 		for i := 0; i < len(sample); {
 			rem := util.MinInt(len(sample)-i, len(pcm)-idx)
 			copy(pcm[idx:idx+rem], sample[i:i+rem])
@@ -128,30 +123,31 @@ func (r *Room) startAudio(sampleRate int) {
 		}
 
 	}
+	log.Println("Room ", r.ID, " audio channel closed")
 }
 
 // startVideo listen from imageChannel and push to Encoder. The output of encoder will be pushed to webRTC
 func (r *Room) startVideo(width, height int, videoEncoderType string) {
-	var encoder encoder.Encoder
+	var enc encoder.Encoder
 	var err error
 
 	log.Println("Video Encoder: ", videoEncoderType)
 	if videoEncoderType == config.CODEC_H264 {
-		encoder, err = h264encoder.NewH264Encoder(width, height, 1)
+		enc, err = h264encoder.NewH264Encoder(width, height, 1)
 	} else {
-		encoder, err = vpxencoder.NewVpxEncoder(width, height, 20, 1200, 5)
+		enc, err = vpxencoder.NewVpxEncoder(width, height, 20, 1200, 5)
 	}
 
 	defer func() {
-		encoder.Stop()
+		enc.Stop()
 	}()
 
 	if err != nil {
 		fmt.Println("error create new encoder", err)
 		return
 	}
-	einput := encoder.GetInputChan()
-	eoutput := encoder.GetOutputChan()
+	einput := enc.GetInputChan()
+	eoutput := enc.GetOutputChan()
 
 	// send screenshot
 	go func() {
@@ -169,19 +165,16 @@ func (r *Room) startVideo(width, height int, videoEncoderType string) {
 				// fanout imageChannel
 				if webRTC.IsConnected() {
 					// NOTE: can block here
-					webRTC.ImageChannel <- data
+					webRTC.ImageChannel <- webrtc.WebFrame{ Data: data.Data, Timestamp: data.Timestamp }
 				}
 			}
 		}
 	}()
 
 	for image := range r.imageChannel {
-		if !r.IsRunning {
-			log.Println("Room ", r.ID, " video channel closed")
-			return
-		}
 		if len(einput) < cap(einput) {
-			einput <- image
+			einput <- encoder.InFrame{ Image: image.Image, Timestamp: image.Timestamp }
 		}
 	}
+	log.Println("Room ", r.ID, " video channel closed")
 }

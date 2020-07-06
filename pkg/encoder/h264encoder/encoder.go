@@ -2,7 +2,6 @@ package h264encoder
 
 import (
 	"bytes"
-	"image"
 	"log"
 	"runtime/debug"
 
@@ -14,8 +13,9 @@ const chanSize = 2
 
 // H264Encoder yuvI420 image to vp8 video
 type H264Encoder struct {
-	Output chan []byte      // frame
-	Input  chan *image.RGBA // yuvI420
+	Output chan encoder.OutFrame
+	Input  chan encoder.InFrame
+	done   chan struct{}
 
 	buf *bytes.Buffer
 	enc *x264.Encoder
@@ -29,8 +29,9 @@ type H264Encoder struct {
 // NewH264Encoder create h264 encoder
 func NewH264Encoder(width, height, fps int) (encoder.Encoder, error) {
 	v := &H264Encoder{
-		Output: make(chan []byte, 5*chanSize),
-		Input:  make(chan *image.RGBA, chanSize),
+		Output: make(chan encoder.OutFrame, 5*chanSize),
+		Input:  make(chan encoder.InFrame,    chanSize),
+		done:   make(chan struct{}),
 
 		buf:    bytes.NewBuffer(make([]byte, 0)),
 		width:  width,
@@ -75,20 +76,23 @@ func (v *H264Encoder) startLooping() {
 	}()
 
 	for img := range v.Input {
-		err := v.enc.Encode(img)
+		err := v.enc.Encode(img.Image)
 		if err != nil {
-			log.Println("err encoding ", img, " using h264")
+			log.Println("err encoding ", img.Image, " using h264")
 		}
-		v.Output <- v.buf.Bytes()
+		v.Output <- encoder.OutFrame{ Data: v.buf.Bytes(), Timestamp: img.Timestamp }
 		v.buf.Reset()
 	}
+	close(v.Output)
+	close(v.done)
 }
 
 // Release release memory and stop loop
 func (v *H264Encoder) release() {
+	close(v.Input)
+	// Wait for loop to stop
+	<-v.done
 	log.Println("Releasing encoder")
-	// TODO: Bug here, after close it will signal
-	close(v.Output)
 	err := v.enc.Close()
 	if err != nil {
 		log.Println("Failed to close H264 encoder")
@@ -96,12 +100,12 @@ func (v *H264Encoder) release() {
 }
 
 // GetInputChan returns input channel
-func (v *H264Encoder) GetInputChan() chan *image.RGBA {
+func (v *H264Encoder) GetInputChan() chan encoder.InFrame {
 	return v.Input
 }
 
 // GetInputChan returns output channel
-func (v *H264Encoder) GetOutputChan() chan []byte {
+func (v *H264Encoder) GetOutputChan() chan encoder.OutFrame {
 	return v.Output
 }
 

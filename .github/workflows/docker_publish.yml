@@ -1,0 +1,28 @@
+# ------------------------------------------------------------------------
+#  Publish Docker image from the current snapshot into Github repository
+# ------------------------------------------------------------------------
+
+name: publish
+# run only when pushing into the master, tagged with a v-prefix
+on:
+  push:
+    branches:
+      - master
+    tags:
+      - 'v*'
+jobs:
+  docker-publish:
+    name: Publish Docker image
+    runs-on: ubuntu-latest
+    steps:
+      - name: Get the source
+        uses: actions/checkout@v2
+      - name: Publish to GitHub Packages
+        uses: docker/build-push-action@v1
+        with:
+          add_git_labels: true
+          tag_with_ref: true
+          username: ${{ github.ACTOR }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+          registry: docker.pkg.github.com
+          repository: ${{ github.REPOSITORY }}/cloud-game
