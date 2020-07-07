@@ -19,5 +19,6 @@ require (
 	golang.org/x/crypto v0.0.0-20200128174031-69ecbb4d6d5d
 	golang.org/x/image v0.0.0-20191009234506-e7c1f5e7dbb8
 	golang.org/x/sys v0.0.0-20191218084908-4a24b4065292 // indirect
+	golang.org/x/tools/gopls v0.4.2 // indirect
 	gopkg.in/hraban/opus.v2 v2.0.0-20180426093920-0f2e0b4fc6cd
 )

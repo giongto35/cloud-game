@@ -17,6 +17,9 @@ type Config struct {
 	Height            int
 	Zone              string
 
+	// WithoutGame to launch encoding with Game
+	WithoutGame bool
+
 	MonitoringConfig monitoring.ServerMonitoringConfig
 }
 
@@ -29,6 +32,7 @@ func NewDefaultConfig() Config {
 		EnableAspectRatio:  false,
 		Width:              320,
 		Height:             240,
+		WithoutGame:        false,
 		Zone:               "",
 		MonitoringConfig: monitoring.ServerMonitoringConfig{
 			Port:          6601,
@@ -48,6 +52,7 @@ func (c *Config) AddFlags(fs *pflag.FlagSet) *Config {
 	fs.BoolVarP(&c.EnableAspectRatio, "ar", "", c.EnableAspectRatio, "Enable Aspect Ratio")
 	fs.IntVarP(&c.Width, "width", "w", c.Width, "Set custom viewport width")
 	fs.IntVarP(&c.Height, "height", "h", c.Height, "Set custom viewport height")
+	fs.BoolVarP(&c.WithoutGame, "wogame", "", c.WithoutGame, "launch worker with game")
 
 	fs.BoolVarP(&c.MonitoringConfig.MetricEnabled, "monitoring.metric", "m", c.MonitoringConfig.MetricEnabled, "Enable prometheus metric for server")
 	fs.BoolVarP(&c.MonitoringConfig.ProfilingEnabled, "monitoring.pprof", "p", c.MonitoringConfig.ProfilingEnabled, "Enable golang pprof for server")

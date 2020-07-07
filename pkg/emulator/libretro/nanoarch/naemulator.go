@@ -1,8 +1,12 @@
 package nanoarch
 
 import (
+	"bytes"
+	"encoding/gob"
+	"fmt"
 	"image"
 	"log"
+	"net"
 	"sync"
 	"time"
 
@@ -49,15 +53,16 @@ import "C"
 const numAxes = 4
 
 type constrollerState struct {
-	keyState  uint16
-	axes      [numAxes]int16
+	keyState uint16
+	axes     [numAxes]int16
 }
 
 // naEmulator implements CloudEmulator
 type naEmulator struct {
-	imageChannel chan<- GameFrame
-	audioChannel chan<- []int16
-	inputChannel <-chan InputEvent
+	imageChannel  chan<- GameFrame
+	audioChannel  chan<- []int16
+	inputChannel  <-chan InputEvent
+	videoExporter *VideoExporter
 
 	meta            config.EmulatorMeta
 	gamePath        string
@@ -65,11 +70,17 @@ type naEmulator struct {
 	gameName        string
 	isSavingLoading bool
 
-	controllersMap  map[string][]constrollerState
-	done            chan struct{}
+	controllersMap map[string][]constrollerState
+	done           chan struct{}
 
 	// lock to lock uninteruptable operation
 	lock *sync.Mutex
+}
+
+// VideoExporter produces image frame to unix socket
+type VideoExporter struct {
+	sock         net.Conn
+	imageChannel chan<- GameFrame
 }
 
 type InputEvent struct {
@@ -78,6 +89,7 @@ type InputEvent struct {
 	ConnID    string
 }
 
+// GameFrame contains image and timeframe
 type GameFrame struct {
 	Image     *image.RGBA
 	Timestamp uint32
@@ -87,6 +99,8 @@ var NAEmulator *naEmulator
 var outputImg *image.RGBA
 
 const maxPort = 8
+
+const SocketAddrTmpl = "/tmp/cloudretro-retro-%s.sock"
 
 // NAEmulator implements CloudEmulator interface based on NanoArch(golang RetroArch)
 func NewNAEmulator(etype string, roomID string, inputChannel <-chan InputEvent) (*naEmulator, chan GameFrame, chan []int16) {
@@ -106,13 +120,48 @@ func NewNAEmulator(etype string, roomID string, inputChannel <-chan InputEvent) 
 	}, imageChannel, audioChannel
 }
 
+// NewVideoExporter creates new video Exporter that produces to unix socket
+func NewVideoExporter(roomID string, imgChannel chan GameFrame) *VideoExporter {
+	sockAddr := fmt.Sprintf(SocketAddrTmpl, roomID)
+
+	go func(sockAddr string) {
+		log.Println("Dialing to ", sockAddr)
+		conn, err := net.Dial("unix", sockAddr)
+		if err != nil {
+			log.Fatal("accept error: ", err)
+		}
+
+		defer conn.Close()
+
+		for img := range imgChannel {
+			reqBodyBytes := new(bytes.Buffer)
+			gob.NewEncoder(reqBodyBytes).Encode(img)
+			//fmt.Printf("%+v %+v %+v \n", img.Image.Stride, img.Image.Rect.Max.X, len(img.Image.Pix))
+			// conn.Write(img.Image.Pix)
+			b := reqBodyBytes.Bytes()
+			fmt.Printf("Bytes %d\n", len(b))
+			conn.Write(b)
+		}
+	}(sockAddr)
+
+	return &VideoExporter{
+		imageChannel: imgChannel,
+	}
+
+}
+
 // Init initialize new RetroArch cloud emulator
-func Init(etype string, roomID string, inputChannel <-chan InputEvent) (*naEmulator, chan GameFrame, chan []int16) {
+// withImageChan returns an image stream as Channel for output else it will write to unix socket
+func Init(etype string, roomID string, withImageChannel bool, inputChannel <-chan InputEvent) (*naEmulator, chan GameFrame, chan []int16) {
 	emulator, imageChannel, audioChannel := NewNAEmulator(etype, roomID, inputChannel)
 	// Set to global NAEmulator
 	NAEmulator = emulator
+	if !withImageChannel {
+		NAEmulator.videoExporter = NewVideoExporter(roomID, imageChannel)
+	}
 
 	go NAEmulator.listenInput()
+
 	return emulator, imageChannel, audioChannel
 }
 
