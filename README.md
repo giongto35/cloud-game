@@ -5,12 +5,16 @@
 
 **Open-source Cloud Gaming Service For Retro Games**  
 **Video demo**: https://www.youtube.com/watch?v=GUBrJGAxZZg  
-**Technical wrapup**: https://webrtchacks.com/open-source-cloud-gaming-with-webrtc/
+**Technical wrapup**: https://webrtchacks.com/open-source-cloud-gaming-with-webrtc/  
+**CloudMorph**: [https://github.com/giongto35/cloud-morph](https://github.com/giongto35/cloud-morph): My current focus on generic solution for cloudgaming
 
 ## Introduction
 CloudRetro provides an open-source cloud gaming platform for retro games. It started as an experiment for testing cloud gaming performance with [WebRTC](https://github.com/pion/webrtc/) and [libretro](https://www.libretro.com/), and now it aims to deliver the most modern and convenient gaming experience through the technology.
 
 Theoretically, in cloud gaming, games are run on remote servers and media are streamed to the player optimally to ensure the most comfortable user interaction. It opens the ability to play any retro games on web-browser directly, which are fully compatible with multi-platform like Desktop, Android, ~~IOS~~.
+
+## Announcement
+**(Currently, I'm working on [CloudMorph](https://github.com/giongto35/cloud-morph): It offers more generic solution to run any offline games/application on browser in Cloud Gaming approach: [https://github.com/giongto35/cloud-morph](https://github.com/giongto35/cloud-morph))**
 
 ## Try the service at
 Single play: **[http://cloudretro.io](http://cloudretro.io)**  
@@ -21,7 +25,7 @@ Direct play an existing game: **[Pokemon Emerald](https://cloudretro.io/?id=4a50
 |                   Screenshot                   |                   Screenshot                   |
 | :--------------------------------------------: | :--------------------------------------------: |
 | ![screenshot](docs/img/landing-page-ps-hm.png) | ![screenshot](docs/img/landing-page-ps-x4.png) |
-| ![screenshot](docs/img/landing-page-gb.png)    | ![screenshot](docs/img/landing-page-front.png) |
+|  ![screenshot](docs/img/landing-page-gb.png)   | ![screenshot](docs/img/landing-page-front.png) |
 
 ## Feature
 1. **Cloud gaming**: Game logic and storage is hosted on cloud service. It reduces the cumbersome of game initialization. Images and audio are streamed to user in the most optimal way using advanced encoding technology.
@@ -72,9 +76,9 @@ Docker for Windows is not supposed to work with provided configuration, use WSL2
 - [webrtchacks Blog: Open Source Cloud Gaming with WebRTC](https://webrtchacks.com/open-source-cloud-gaming-with-webrtc/)
 - [Wiki (outdated)](https://github.com/giongto35/cloud-game/wiki)
 
-|                   High level                   |                   Worker internal              |
-| :--------------------------------------------: | :--------------------------------------------: |
-| ![screenshot](docs/img/overview.png)           | ![screenshot](docs/img/worker-internal.png)    |
+|              High level              |               Worker internal               |
+| :----------------------------------: | :-----------------------------------------: |
+| ![screenshot](docs/img/overview.png) | ![screenshot](docs/img/worker-internal.png) |
 
 ## FAQ
 - [FAQ](https://github.com/giongto35/cloud-game/wiki/FAQ)
