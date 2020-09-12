@@ -61,6 +61,7 @@ type EmulatorMeta struct {
 	Rotation        image.Rotate
 	IsGlAllowed     bool
 	UsesLibCo       bool
+	HasMultitap     bool
 }
 
 var EmulatorConfig = map[string]EmulatorMeta{
@@ -80,9 +81,10 @@ var EmulatorConfig = map[string]EmulatorMeta{
 		Height: 240,
 	},
 	"snes": {
-		Path:   "assets/emulator/libretro/cores/mednafen_snes_libretro",
+		Path:   "assets/emulator/libretro/cores/snes9x_libretro",
 		Width:  256,
 		Height: 224,
+		HasMultitap: true,
 	},
 	"mame": {
 		Path:   "assets/emulator/libretro/cores/fbneo_libretro",

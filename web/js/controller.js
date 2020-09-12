@@ -389,6 +389,12 @@
                             updatePlayerIndex(3);
                             break;
 
+                        // toggle multitap
+                        case KEY.MULTITAP:
+                            socket.toggleMultitap();
+                            break;
+
+                        // quit
                         case KEY.QUIT:
                             input.poll().disable();
 

@@ -19,4 +19,6 @@ type CloudEmulator interface {
 	GetHashPath() string
 	// Close will be called when the game is done
 	Close()
+
+	ToggleMultitap() error
 }

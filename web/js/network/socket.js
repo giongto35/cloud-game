@@ -114,6 +114,7 @@ const socket = (() => {
         "player_index": playerIndex
     });
     const quitGame = (roomId) => send({"id": "quit", "data": "", "room_id": roomId});
+    const toggleMultitap = () => send({"id": "multitap", "data": ""});
 
     return {
         init: init,
@@ -123,6 +124,7 @@ const socket = (() => {
         loadGame: loadGame,
         updatePlayerIndex: updatePlayerIndex,
         startGame: startGame,
-        quitGame: quitGame
+        quitGame: quitGame,
+        toggleMultitap: toggleMultitap,
     }
 })($, event, log);

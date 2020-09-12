@@ -265,6 +265,26 @@ func (h *Handler) RouteCoordinator() {
 			return req
 		})
 
+		oClient.Receive(
+			"multitap",
+			func(resp cws.WSPacket) (req cws.WSPacket) {
+				log.Println("Received a multitap toggle from coordinator")
+				req.ID = "multitap"
+				req.Data = "ok"
+				if resp.RoomID != "" {
+					room := h.getRoom(resp.RoomID)
+					err := room.ToggleMultitap()
+					if err != nil {
+						log.Println("[!] Could not toggle multitap state: ", err)
+						req.Data = "error"
+					}
+				} else {
+					req.Data = "error"
+				}
+
+				return req
+			})
+
 	oClient.Receive(
 		"terminateSession",
 		func(resp cws.WSPacket) (req cws.WSPacket) {
