@@ -171,4 +171,19 @@ func (o *Server) RouteBrowser(client *BrowserClient) {
 
 		return resp
 	})
+
+	client.Receive("multitap", func(resp cws.WSPacket) (req cws.WSPacket) {
+		client.Println("Received multitap request from a browser -> relay to worker")
+
+		// TODO: Async
+		resp.SessionID = client.SessionID
+		resp.RoomID = client.RoomID
+		wc, ok := o.workerClients[client.WorkerID]
+		if !ok {
+			return cws.EmptyPacket
+		}
+		resp = wc.SyncSend(resp)
+
+		return resp
+	})
 }

@@ -30,7 +30,8 @@ const keyboard = (() => {
         KeyF: KEY.FULL,
         KeyH: KEY.HELP,
         Backslash: KEY.STATS,
-        Digit9: KEY.SETTINGS
+        Digit9: KEY.SETTINGS,
+        KeyM: KEY.MULTITAP
     });
 
     let keyMap = {};

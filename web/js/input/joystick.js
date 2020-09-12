@@ -205,19 +205,40 @@ const joystick = (() => {
         }
 
         // https://bugs.chromium.org/p/chromium/issues/detail?id=1076272
-        if (browser === 'chrome' && gamepad.id.includes('PLAYSTATION(R)3')) {
-            joystickMap = {
-                0: KEY.A,
-                1: KEY.B,
-                2: KEY.Y,
-                3: KEY.X,
-                4: KEY.L,
-                5: KEY.R,
-                8: KEY.SELECT,
-                9: KEY.START,
-                10: KEY.DTOGGLE,
-                11: KEY.R3,
-            };
+        if (gamepad.id.includes('PLAYSTATION(R)3')) {
+            if (browser === 'chrome') {
+                joystickMap = {
+                    1: KEY.A,
+                    0: KEY.B,
+                    2: KEY.Y,
+                    3: KEY.X,
+                    4: KEY.L,
+                    5: KEY.R,
+                    8: KEY.SELECT,
+                    9: KEY.START,
+                    10: KEY.DTOGGLE,
+                    11: KEY.R3,
+                };
+            } else {
+                joystickMap = {
+                    13: KEY.A,
+                    14: KEY.B,
+                    12: KEY.X,
+                    15: KEY.Y,
+                    3:  KEY.START,
+                    0:  KEY.SELECT,
+                    4:  KEY.UP,
+                    6:  KEY.DOWN,
+                    7:  KEY.LEFT,
+                    5:  KEY.RIGHT,
+                    10: KEY.L,
+                    11: KEY.R,
+                    8:  KEY.L2,
+                    9:  KEY.R2,
+                    1:  KEY.DTOGGLE,
+                    2:  KEY.R3,
+                };
+            }
         }
 
         // reset state

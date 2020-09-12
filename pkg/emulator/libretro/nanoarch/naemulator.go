@@ -189,7 +189,7 @@ func (na *naEmulator) listenInput() {
 }
 
 func (na *naEmulator) LoadMeta(path string) config.EmulatorMeta {
-	coreLoad(na.meta.Path, na.meta.IsGlAllowed, na.meta.UsesLibCo, na.meta.Config)
+	coreLoad(na.meta)
 	coreLoadGame(path)
 	na.gamePath = path
 
@@ -250,6 +250,14 @@ func (na *naEmulator) LoadGame() error {
 			log.Println("Error: Cannot load", err)
 			return err
 		}
+	}
+
+	return nil
+}
+
+func (na *naEmulator) ToggleMultitap() error {
+	if na.roomID != "" {
+		toggleMultitap()
 	}
 
 	return nil
