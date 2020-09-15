@@ -35,12 +35,15 @@ RUN apt-get update && apt-get install -y \
     libopusfile0 \
     libsdl2-2.0-0 \
     libgl1-mesa-glx \
+    xvfb \
   && rm -rf /var/lib/apt/lists/*
 
 COPY --from=build ${BUILD_PATH}/bin/ ./
 # it assumed there are only binary files yet
 RUN cp -s $(pwd)/* /usr/local/bin
 COPY web ./web
-COPY assets/emulator/libretro/cores/*.so ./assets/emulator/libretro/cores/
+COPY assets/emulator/libretro/cores/*.so \
+     assets/emulator/libretro/cores/*.cfg \
+     ./assets/emulator/libretro/cores/
 
 EXPOSE 8000 9000 3478/tcp 3478/udp
