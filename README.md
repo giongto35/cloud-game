@@ -3,9 +3,9 @@
 [![Build](https://github.com/giongto35/cloud-game/workflows/build/badge.svg)](https://github.com/giongto35/cloud-game/actions?query=workflow:build)
 [![Latest release](https://img.shields.io/github/v/release/giongto35/cloud-game.svg)](https://github.com/giongto35/cloud-game/releases/latest)
 
-**Open-source Cloud Gaming Service For Retro Games**  
-**Video demo**: https://www.youtube.com/watch?v=GUBrJGAxZZg  
-**Technical wrapup**: https://webrtchacks.com/open-source-cloud-gaming-with-webrtc/  
+**Open-source Cloud Gaming Service For Retro Games**
+**Video demo**: https://www.youtube.com/watch?v=GUBrJGAxZZg
+**Technical wrapup**: https://webrtchacks.com/open-source-cloud-gaming-with-webrtc/
 **CloudMorph**: [https://github.com/giongto35/cloud-morph](https://github.com/giongto35/cloud-morph): My current focus on generic solution for cloudgaming
 
 ## Introduction
@@ -17,7 +17,7 @@ Theoretically, in cloud gaming, games are run on remote servers and media are st
 **(Currently, I'm working on [CloudMorph](https://github.com/giongto35/cloud-morph): It offers more generic solution to run any offline games/application on browser in Cloud Gaming approach: [https://github.com/giongto35/cloud-morph](https://github.com/giongto35/cloud-morph))**
 
 ## Try the service at
-Single play: **[http://cloudretro.io](http://cloudretro.io)**  
+Single play: **[http://cloudretro.io](http://cloudretro.io)**
 Direct play an existing game: **[Pokemon Emerald](https://cloudretro.io/?id=4a5073a4b05ad0fe___Pokemon%20-%20Emerald%20Version%20(U))**
 
 \*In ideal network condition and less resource contention on servers, the game will run smoothly as in the video demo. Because I only hosted the platform on limited servers in US East, US West, Eu, Singapore, you may experience some latency issues + connection problem. You can try hosting the service following the instruction the next section to have a better sense of performance.
@@ -62,6 +62,8 @@ Because the coordinator and workers need to run simultaneously. Workers connect 
   * Need to run coordinator and worker separately in two session
   * `go run cmd/coordinator/main.go` - spawn coordinator
   * `go run cmd/worker/main.go --coordinatorhost localhost:8000` - spawn workers connecting to coordinator
+
+__Additionally, you may install and configure an `X Server` display in order to be able to run OpenGL cores.__
 
 ## Run with Docker
 
@@ -114,9 +116,9 @@ We are very much thankful to everyone who contributes to the project:
 
 ## Author
 
-Nguyen Huu Thanh  
+Nguyen Huu Thanh
 https://www.linkedin.com/in/huuthanhnguyen/
 
-Tri Dang Minh  
+Tri Dang Minh
 https://trich.im
 

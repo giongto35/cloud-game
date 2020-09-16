@@ -6,8 +6,11 @@ services:
     image: cloud-game-local
     container_name: cloud-game-local
     privileged: true
+    environment:
+      - DISPLAY=:0
+    # network_mode: "host"
     command: >
-      bash -c "coordinator --v=5 & worker --coordinatorhost localhost:8000"
+      bash -c "coordinator --v=5 & xvfb-run -s '-screen 0 1x1x24' worker --coordinatorhost localhost:8000"
     ports:
       - "8000:8000"
       - "9000:9000"
