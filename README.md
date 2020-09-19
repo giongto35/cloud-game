@@ -40,7 +40,7 @@ Direct play an existing game: **[Pokemon Emerald](https://cloudretro.io/?id=4a50
 
 Install Golang https://golang.org/doc/install . Because the project uses GoModule, so it requires Go1.11 version.
 
-### (All) Install Dependencies
+### Install Dependencies
 
   * Install [libvpx](https://www.webmproject.org/code/), [libopus](http://opus-codec.org/), [pkg-config](https://www.freedesktop.org/wiki/Software/pkg-config/), [sdl2](https://wiki.libsdl.org/Installation)
 ```
@@ -64,6 +64,7 @@ Because the coordinator and workers need to run simultaneously. Workers connect 
   * `go run cmd/worker/main.go --coordinatorhost localhost:8000` - spawn workers connecting to coordinator
 
 __Additionally, you may install and configure an `X Server` display in order to be able to run OpenGL cores.__
+__See the `docker-compose.yml` file for Xvfb example config.__
 
 ## Run with Docker
 
