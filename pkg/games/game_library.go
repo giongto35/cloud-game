@@ -124,6 +124,7 @@ func (lib *library) FindGameByName(name string) GameMetadata {
 func (lib *library) Scan() {
 	if !lib.hasSource {
 		log.Printf("[lib] scan... skipped (no source)\n")
+		return
 	}
 
 	// scan throttling
