@@ -342,14 +342,18 @@ func (o *Server) findBestServerFromBrowser(workerClients map[string]*WorkerClien
 
 // getLatencyMapFromBrowser get all latencies from worker to user
 func (o *Server) getLatencyMapFromBrowser(workerClients map[string]*WorkerClient, client *BrowserClient) map[*WorkerClient]int64 {
-	workersList := []*WorkerClient{}
-	addressList := []string{}
+	var workersList []*WorkerClient
+	var addressList []string
+	uniqueAddresses := map[string]bool{}
 	latencyMap := map[*WorkerClient]int64{}
 
 	// addressList is the list of worker addresses
 	for _, workerClient := range workerClients {
+		if _, ok := uniqueAddresses[workerClient.PingServer]; !ok {
+			addressList = append(addressList, workerClient.PingServer)
+		}
+		uniqueAddresses[workerClient.PingServer] = true
 		workersList = append(workersList, workerClient)
-		addressList = append(addressList, workerClient.PingServer)
 	}
 
 	// send this address to user and get back latency

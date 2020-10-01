@@ -77,21 +77,22 @@
         }
     };
 
-    const onLatencyCheckRequest = (data) => {
-        popup('Ping check...');
-        const timeoutMs = 2000;
+    const onLatencyCheck = (data) => {
+        popup('Connecting to fastest server...');
+        const timeoutMs = 1111;
+        // deduplicate
+        const addresses = [...new Set(data.addresses || [])];
 
-        Promise.all((data.addresses || [])
-            .map(ip => {
-                const requestTime = Date.now();
-                return ajax.fetch(`${ip}?_=${requestTime}`, {method: "GET", redirect: "follow"}, timeoutMs)
-                    .then(() => ({[ip]: Date.now() - requestTime}), () => ({[ip]: timeoutMs}));
-            }))
-            .then(results => {
-                const latencies = Object.assign({}, ...results);
-                log.info('[ping] <->', latencies);
-                socket.latency(latencies, data.packetId);
-            });
+        Promise.all(addresses.map(address => {
+            const start = Date.now();
+            return ajax.fetch(`${address}?_=${start}`, {method: "GET", redirect: "follow"}, timeoutMs)
+                .then(() => ({[address]: Date.now() - start}))
+                .catch(() => ({[address]: 9999}));
+        })).then(servers => {
+            const latencies = Object.assign({}, ...servers);
+            log.info('[ping] <->', latencies);
+            socket.latency(latencies, data.packetId);
+        });
     };
 
     const helpScreen = {
@@ -436,7 +437,7 @@
     event.sub(MEDIA_STREAM_READY, () => rtcp.start());
     event.sub(CONNECTION_READY, onConnectionReady);
     event.sub(CONNECTION_CLOSED, () => input.poll().disable());
-    event.sub(LATENCY_CHECK_REQUESTED, onLatencyCheckRequest);
+    event.sub(LATENCY_CHECK_REQUESTED, onLatencyCheck);
     event.sub(GAMEPAD_CONNECTED, () => popup('Gamepad connected'));
     event.sub(GAMEPAD_DISCONNECTED, () => popup('Gamepad disconnected'));
     // touch stuff
