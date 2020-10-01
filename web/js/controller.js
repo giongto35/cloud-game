@@ -175,11 +175,11 @@
         input.poll().enable();
     };
 
-    // !to add debounce
-    const popup = (msg) => {
-        popupBox.html(msg);
-        popupBox.fadeIn().delay(0).fadeOut();
-    };
+    const saveGame = utils.debounce(socket.saveGame, 1000);
+    const loadGame = utils.debounce(socket.loadGame, 1000);
+
+    const _popup = (message) => popupBox.html(message).fadeIn().fadeOut();
+    const popup = utils.throttle(_popup, 1000);
 
     const _dpadArrowKeys = [KEY.UP, KEY.DOWN, KEY.LEFT, KEY.RIGHT];
 
@@ -329,10 +329,10 @@
                             popup('You are already in menu screen!');
                             break;
                         case KEY.LOAD:
-                            popup('Lets play to load game!');
+                            popup('Loading the game.');
                             break;
                         case KEY.SAVE:
-                            popup('Lets play to save game!');
+                            popup('Saving the game.');
                             break;
                         case KEY.STATS:
                             event.pub(STATS_TOGGLE);
@@ -366,10 +366,10 @@
                             popup('Copy link to clipboard!');
                             break;
                         case KEY.SAVE:
-                            socket.saveGame();
+                            saveGame();
                             break;
                         case KEY.LOAD:
-                            socket.loadGame();
+                            loadGame();
                             break;
                         case KEY.FULL:
                             env.display().toggleFullscreen(gameScreen.height() !== window.innerHeight, gameScreen[0]);
@@ -464,4 +464,4 @@
 
     // initial app state
     setState(app.state.eden);
-})($, document, event, env, gameList, input, KEY, log, room, settings, stats);
+})($, document, event, env, gameList, input, KEY, log, room, settings, socket, stats, utils);
