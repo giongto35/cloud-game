@@ -10,10 +10,10 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/giongto35/cloud-game/pkg/config"
-	"github.com/giongto35/cloud-game/pkg/cws"
-	"github.com/giongto35/cloud-game/pkg/util"
-	"github.com/giongto35/cloud-game/pkg/util/gamelist"
+	"github.com/giongto35/cloud-game/v2/pkg/config"
+	"github.com/giongto35/cloud-game/v2/pkg/cws"
+	"github.com/giongto35/cloud-game/v2/pkg/util"
+	"github.com/giongto35/cloud-game/v2/pkg/util/gamelist"
 	"github.com/gofrs/uuid"
 	"github.com/gorilla/websocket"
 )

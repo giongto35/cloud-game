@@ -1,7 +1,7 @@
 package worker
 
 import (
-	"github.com/giongto35/cloud-game/pkg/monitoring"
+	"github.com/giongto35/cloud-game/v2/pkg/monitoring"
 	"github.com/spf13/pflag"
 )
 

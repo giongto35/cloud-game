@@ -7,7 +7,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/giongto35/cloud-game/pkg/config"
+	"github.com/giongto35/cloud-game/v2/pkg/config"
 	"github.com/gofrs/uuid"
 	"github.com/gorilla/websocket"
 )

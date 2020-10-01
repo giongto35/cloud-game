@@ -16,15 +16,15 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/giongto35/cloud-game/pkg/config/worker"
+	"github.com/giongto35/cloud-game/v2/pkg/config/worker"
 
-	"github.com/giongto35/cloud-game/pkg/config"
-	"github.com/giongto35/cloud-game/pkg/emulator"
-	"github.com/giongto35/cloud-game/pkg/emulator/libretro/nanoarch"
-	"github.com/giongto35/cloud-game/pkg/util"
-	"github.com/giongto35/cloud-game/pkg/util/gamelist"
-	"github.com/giongto35/cloud-game/pkg/webrtc"
-	storage "github.com/giongto35/cloud-game/pkg/worker/cloud-storage"
+	"github.com/giongto35/cloud-game/v2/pkg/config"
+	"github.com/giongto35/cloud-game/v2/pkg/emulator"
+	"github.com/giongto35/cloud-game/v2/pkg/emulator/libretro/nanoarch"
+	"github.com/giongto35/cloud-game/v2/pkg/util"
+	"github.com/giongto35/cloud-game/v2/pkg/util/gamelist"
+	"github.com/giongto35/cloud-game/v2/pkg/webrtc"
+	storage "github.com/giongto35/cloud-game/v2/pkg/worker/cloud-storage"
 )
 
 // Room is a game session. multi webRTC sessions can connect to a same game.

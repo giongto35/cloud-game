@@ -8,8 +8,8 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/giongto35/cloud-game/pkg/config"
-	"github.com/giongto35/cloud-game/pkg/monitoring"
+	"github.com/giongto35/cloud-game/v2/pkg/config"
+	"github.com/giongto35/cloud-game/v2/pkg/monitoring"
 	"github.com/golang/glog"
 	"github.com/gorilla/mux"
 

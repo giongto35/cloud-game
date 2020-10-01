@@ -1,6 +1,6 @@
 package worker
 
-import "github.com/giongto35/cloud-game/pkg/webrtc"
+import "github.com/giongto35/cloud-game/v2/pkg/webrtc"
 
 // Session represents a session connected from the browser to the current server
 // It requires one connection to browser and one connection to the coordinator

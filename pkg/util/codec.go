@@ -7,7 +7,7 @@ import (
 	"os/user"
 	"unsafe"
 
-	"github.com/giongto35/cloud-game/pkg/config"
+	"github.com/giongto35/cloud-game/v2/pkg/config"
 )
 
 // https://stackoverflow.com/questions/9465815/rgb-to-yuv420-algorithm-efficiency

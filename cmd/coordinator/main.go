@@ -7,8 +7,8 @@ import (
 	"os/signal"
 	"time"
 
-	"github.com/giongto35/cloud-game/pkg/coordinator"
-	"github.com/giongto35/cloud-game/pkg/util/logging"
+	"github.com/giongto35/cloud-game/v2/pkg/coordinator"
+	"github.com/giongto35/cloud-game/v2/pkg/util/logging"
 	"github.com/golang/glog"
 	"github.com/spf13/pflag"
 )

@@ -10,12 +10,12 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/giongto35/cloud-game/pkg/config"
-	"github.com/giongto35/cloud-game/pkg/config/worker"
+	"github.com/giongto35/cloud-game/v2/pkg/config"
+	"github.com/giongto35/cloud-game/v2/pkg/config/worker"
 	"golang.org/x/crypto/acme"
 	"golang.org/x/crypto/acme/autocert"
 
-	"github.com/giongto35/cloud-game/pkg/monitoring"
+	"github.com/giongto35/cloud-game/v2/pkg/monitoring"
 	"github.com/golang/glog"
 )
 

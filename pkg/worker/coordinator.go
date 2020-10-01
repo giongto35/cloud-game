@@ -5,10 +5,10 @@ import (
 	"log"
 	"strconv"
 
-	"github.com/giongto35/cloud-game/pkg/cws"
-	"github.com/giongto35/cloud-game/pkg/util"
-	"github.com/giongto35/cloud-game/pkg/webrtc"
-	"github.com/giongto35/cloud-game/pkg/worker/room"
+	"github.com/giongto35/cloud-game/v2/pkg/cws"
+	"github.com/giongto35/cloud-game/v2/pkg/util"
+	"github.com/giongto35/cloud-game/v2/pkg/webrtc"
+	"github.com/giongto35/cloud-game/v2/pkg/worker/room"
 	"github.com/gorilla/websocket"
 )
 
@@ -265,25 +265,25 @@ func (h *Handler) RouteCoordinator() {
 			return req
 		})
 
-		oClient.Receive(
-			"multitap",
-			func(resp cws.WSPacket) (req cws.WSPacket) {
-				log.Println("Received a multitap toggle from coordinator")
-				req.ID = "multitap"
-				req.Data = "ok"
-				if resp.RoomID != "" {
-					room := h.getRoom(resp.RoomID)
-					err := room.ToggleMultitap()
-					if err != nil {
-						log.Println("[!] Could not toggle multitap state: ", err)
-						req.Data = "error"
-					}
-				} else {
+	oClient.Receive(
+		"multitap",
+		func(resp cws.WSPacket) (req cws.WSPacket) {
+			log.Println("Received a multitap toggle from coordinator")
+			req.ID = "multitap"
+			req.Data = "ok"
+			if resp.RoomID != "" {
+				room := h.getRoom(resp.RoomID)
+				err := room.ToggleMultitap()
+				if err != nil {
+					log.Println("[!] Could not toggle multitap state: ", err)
 					req.Data = "error"
 				}
+			} else {
+				req.Data = "error"
+			}
 
-				return req
-			})
+			return req
+		})
 
 	oClient.Receive(
 		"terminateSession",

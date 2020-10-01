@@ -251,4 +251,3 @@ func BenchmarkNewMapDirect(b *testing.B) {
 		p1, p2 = p2, p1
 	}
 }
-

@@ -8,9 +8,9 @@ import (
 	"time"
 
 	"github.com/faiface/mainthread"
-	config "github.com/giongto35/cloud-game/pkg/config/worker"
-	"github.com/giongto35/cloud-game/pkg/util/logging"
-	"github.com/giongto35/cloud-game/pkg/worker"
+	config "github.com/giongto35/cloud-game/v2/pkg/config/worker"
+	"github.com/giongto35/cloud-game/v2/pkg/util/logging"
+	"github.com/giongto35/cloud-game/v2/pkg/worker"
 	"github.com/golang/glog"
 	"github.com/spf13/pflag"
 )

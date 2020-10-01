@@ -8,13 +8,13 @@ import (
 	"path"
 	"time"
 
-	"github.com/giongto35/cloud-game/pkg/config"
-	"github.com/giongto35/cloud-game/pkg/config/worker"
+	"github.com/giongto35/cloud-game/v2/pkg/config"
+	"github.com/giongto35/cloud-game/v2/pkg/config/worker"
 
-	"github.com/giongto35/cloud-game/pkg/util"
-	"github.com/giongto35/cloud-game/pkg/webrtc"
-	storage "github.com/giongto35/cloud-game/pkg/worker/cloud-storage"
-	"github.com/giongto35/cloud-game/pkg/worker/room"
+	"github.com/giongto35/cloud-game/v2/pkg/util"
+	"github.com/giongto35/cloud-game/v2/pkg/webrtc"
+	storage "github.com/giongto35/cloud-game/v2/pkg/worker/cloud-storage"
+	"github.com/giongto35/cloud-game/v2/pkg/worker/room"
 	"github.com/gorilla/websocket"
 )
 

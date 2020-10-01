@@ -6,8 +6,8 @@ import (
 
 type imageCache struct {
 	image *image.RGBA
-	w int
-	h int
+	w     int
+	h     int
 }
 
 var canvas = imageCache{
@@ -57,4 +57,3 @@ func getCanvas(w, h int) *image.RGBA {
 
 	return canvas.image
 }
-
