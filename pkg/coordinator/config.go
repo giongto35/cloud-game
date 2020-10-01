@@ -6,20 +6,22 @@ import (
 )
 
 type Config struct {
-	Port         int
-	PublicDomain string
-	PingServer   string
-	URLPrefix    string
-	DebugHost    string
+	Port              int
+	PublicDomain      string
+	PingServer        string
+	URLPrefix         string
+	DebugHost         string
+	LibraryMonitoring bool
 
 	MonitoringConfig monitoring.ServerMonitoringConfig
 }
 
 func NewDefaultConfig() Config {
 	return Config{
-		Port:         8800,
-		PublicDomain: "http://localhost:8000",
-		PingServer:   "",
+		Port:              8800,
+		PublicDomain:      "http://localhost:8000",
+		PingServer:        "",
+		LibraryMonitoring: false,
 
 		MonitoringConfig: monitoring.ServerMonitoringConfig{
 			Port:             6601,
@@ -40,6 +42,7 @@ func (c *Config) AddFlags(fs *pflag.FlagSet) *Config {
 	fs.StringVarP(&c.DebugHost, "debughost", "d", "", "Specify the server want to connect directly to debug")
 	fs.StringVarP(&c.PublicDomain, "domain", "n", c.PublicDomain, "Specify the public domain of the coordinator")
 	fs.StringVarP(&c.PingServer, "pingServer", "", c.PingServer, "Specify the worker address that the client can ping (with protocol and port)")
+	fs.BoolVarP(&c.LibraryMonitoring, "libMonitor", "", c.LibraryMonitoring, "Enable ROM library monitoring")
 
 	return c
 }

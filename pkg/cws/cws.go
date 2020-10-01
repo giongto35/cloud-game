@@ -131,6 +131,23 @@ func (c *Client) SyncSend(request WSPacket) (response WSPacket) {
 	return <-res
 }
 
+// SendAwait sends some packet while waiting for a tile-limited response
+//func (c *Client) SendAwait(packet WSPacket) WSPacket {
+//	ch := make(chan WSPacket)
+//	defer close(ch)
+//	c.Send(packet, func(response WSPacket) { ch <- response })
+//
+//	for {
+//		select {
+//		case packet := <-ch:
+//			return packet
+//		case <-time.After(config.WsIpcTimeout):
+//			log.Printf("Packet receive timeout!")
+//			return EmptyPacket
+//		}
+//	}
+//}
+
 // Heartbeat maintains connection to server
 func (c *Client) Heartbeat() {
 	// send heartbeat every 1s
