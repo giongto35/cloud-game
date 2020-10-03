@@ -64,11 +64,11 @@ jobs:
 
     - name: Get Windows dev libraries and tools
       if: matrix.os == 'windows-latest'
-      uses: numworks/setup-msys2@v1
+      uses: msys2/setup-msys2@v2
       with:
         msystem: MINGW64
         path-type: inherit
-#        update: true
+        update: true
 
     - name: Load Go modules maybe?
       uses: actions/cache@v1
@@ -80,8 +80,9 @@ jobs:
 
     - name: Build Windows app
       if: matrix.os == 'windows-latest'
+      shell: msys2 {0}
       run: >
-        msys2do pacman -S --noconfirm --needed make
+        pacman -S --noconfirm --needed make
         mingw-w64-x86_64-gcc
         mingw-w64-x86_64-pkg-config
         mingw-w64-x86_64-dlfcn
@@ -89,7 +90,7 @@ jobs:
         mingw-w64-x86_64-opusfile
         mingw-w64-x86_64-SDL2
 
-        msys2do make release RELEASE_DIR=${{ env.release-dir }} DLIB_SEARCH_PATTERN=/mingw.*dll CORE_EXT=*.dll
+        make release RELEASE_DIR=${{ env.release-dir }} DLIB_SEARCH_PATTERN=/mingw.*dll CORE_EXT=*.dll
 
     - name: Build Linux app
       if: matrix.os == 'ubuntu-latest'
