@@ -2,15 +2,16 @@ package worker
 
 import (
 	"encoding/json"
-	"github.com/giongto35/cloud-game/pkg/api"
-	"github.com/giongto35/cloud-game/pkg/cws"
+	"log"
+	"strconv"
+
+	"github.com/giongto35/cloud-game/v2/pkg/api"
+	"github.com/giongto35/cloud-game/v2/pkg/cws"
 	"github.com/giongto35/cloud-game/v2/pkg/games"
 	"github.com/giongto35/cloud-game/v2/pkg/util"
 	"github.com/giongto35/cloud-game/v2/pkg/webrtc"
 	"github.com/giongto35/cloud-game/v2/pkg/worker/room"
 	"github.com/gorilla/websocket"
-	"log"
-	"strconv"
 )
 
 // CoordinatorClient maintans connection to coordinator

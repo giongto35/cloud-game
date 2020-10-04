@@ -12,11 +12,10 @@ import (
 
 	"github.com/giongto35/cloud-game/v2/pkg/config"
 	"github.com/giongto35/cloud-game/v2/pkg/config/worker"
-	"golang.org/x/crypto/acme"
-	"golang.org/x/crypto/acme/autocert"
-
 	"github.com/giongto35/cloud-game/v2/pkg/monitoring"
 	"github.com/golang/glog"
+	"golang.org/x/crypto/acme"
+	"golang.org/x/crypto/acme/autocert"
 )
 
 type Worker struct {
