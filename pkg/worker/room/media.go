@@ -4,12 +4,12 @@ import (
 	"fmt"
 	"log"
 
-	"github.com/giongto35/cloud-game/pkg/config"
-	"github.com/giongto35/cloud-game/pkg/encoder"
-	"github.com/giongto35/cloud-game/pkg/encoder/h264encoder"
-	vpxencoder "github.com/giongto35/cloud-game/pkg/encoder/vpx-encoder"
-	"github.com/giongto35/cloud-game/pkg/util"
-	"github.com/giongto35/cloud-game/pkg/webrtc"
+	"github.com/giongto35/cloud-game/v2/pkg/config"
+	"github.com/giongto35/cloud-game/v2/pkg/encoder"
+	"github.com/giongto35/cloud-game/v2/pkg/encoder/h264encoder"
+	vpxencoder "github.com/giongto35/cloud-game/v2/pkg/encoder/vpx-encoder"
+	"github.com/giongto35/cloud-game/v2/pkg/util"
+	"github.com/giongto35/cloud-game/v2/pkg/webrtc"
 	"gopkg.in/hraban/opus.v2"
 )
 
@@ -165,7 +165,7 @@ func (r *Room) startVideo(width, height int, videoEncoderType string) {
 				// fanout imageChannel
 				if webRTC.IsConnected() {
 					// NOTE: can block here
-					webRTC.ImageChannel <- webrtc.WebFrame{ Data: data.Data, Timestamp: data.Timestamp }
+					webRTC.ImageChannel <- webrtc.WebFrame{Data: data.Data, Timestamp: data.Timestamp}
 				}
 			}
 		}
@@ -173,7 +173,7 @@ func (r *Room) startVideo(width, height int, videoEncoderType string) {
 
 	for image := range r.imageChannel {
 		if len(einput) < cap(einput) {
-			einput <- encoder.InFrame{ Image: image.Image, Timestamp: image.Timestamp }
+			einput <- encoder.InFrame{Image: image.Image, Timestamp: image.Timestamp}
 		}
 	}
 	log.Println("Room ", r.ID, " video channel closed")

@@ -6,7 +6,7 @@ import (
 	"runtime/debug"
 
 	"github.com/gen2brain/x264-go"
-	"github.com/giongto35/cloud-game/pkg/encoder"
+	"github.com/giongto35/cloud-game/v2/pkg/encoder"
 )
 
 const chanSize = 2
@@ -30,7 +30,7 @@ type H264Encoder struct {
 func NewH264Encoder(width, height, fps int) (encoder.Encoder, error) {
 	v := &H264Encoder{
 		Output: make(chan encoder.OutFrame, 5*chanSize),
-		Input:  make(chan encoder.InFrame,    chanSize),
+		Input:  make(chan encoder.InFrame, chanSize),
 		done:   make(chan struct{}),
 
 		buf:    bytes.NewBuffer(make([]byte, 0)),
@@ -80,7 +80,7 @@ func (v *H264Encoder) startLooping() {
 		if err != nil {
 			log.Println("err encoding ", img.Image, " using h264")
 		}
-		v.Output <- encoder.OutFrame{ Data: v.buf.Bytes(), Timestamp: img.Timestamp }
+		v.Output <- encoder.OutFrame{Data: v.buf.Bytes(), Timestamp: img.Timestamp}
 		v.buf.Reset()
 	}
 	close(v.Output)

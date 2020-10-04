@@ -2,8 +2,9 @@ package config
 
 import (
 	"flag"
-	"github.com/giongto35/cloud-game/pkg/emulator/libretro/image"
 	"time"
+
+	"github.com/giongto35/cloud-game/v2/pkg/emulator/libretro/image"
 )
 
 const DefaultSTUNTURN = `[{"urls":"stun:stun-turn.webgame2d.com:3478"},{"urls":"turn:stun-turn.webgame2d.com:3478","username":"root","credential":"root"}]`
@@ -81,9 +82,9 @@ var EmulatorConfig = map[string]EmulatorMeta{
 		Height: 240,
 	},
 	"snes": {
-		Path:   "assets/emulator/libretro/cores/snes9x_libretro",
-		Width:  256,
-		Height: 224,
+		Path:        "assets/emulator/libretro/cores/snes9x_libretro",
+		Width:       256,
+		Height:      224,
 		HasMultitap: true,
 	},
 	"mame": {
@@ -92,12 +93,12 @@ var EmulatorConfig = map[string]EmulatorMeta{
 		Height: 160,
 	},
 	"n64": {
-		Path:   "assets/emulator/libretro/cores/mupen64plus_next_libretro",
-		Config:   "assets/emulator/libretro/cores/mupen64plus_next_libretro.cfg",
-		Width:  320,
-		Height: 240,
+		Path:        "assets/emulator/libretro/cores/mupen64plus_next_libretro",
+		Config:      "assets/emulator/libretro/cores/mupen64plus_next_libretro.cfg",
+		Width:       320,
+		Height:      240,
 		IsGlAllowed: true,
-		UsesLibCo: true,
+		UsesLibCo:   true,
 	},
 }
 

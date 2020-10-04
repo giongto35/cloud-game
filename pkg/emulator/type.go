@@ -1,6 +1,6 @@
 package emulator
 
-import "github.com/giongto35/cloud-game/pkg/config"
+import "github.com/giongto35/cloud-game/v2/pkg/config"
 
 // CloudEmulator is the interface of cloud emulator. Currently NES emulator and RetroArch implements this in codebase
 type CloudEmulator interface {

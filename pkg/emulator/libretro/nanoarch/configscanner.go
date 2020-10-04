@@ -2,9 +2,9 @@ package nanoarch
 
 import (
 	"bufio"
+	"log"
 	"os"
 	"strings"
-	"log"
 )
 
 import "C"

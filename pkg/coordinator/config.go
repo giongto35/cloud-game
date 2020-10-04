@@ -1,7 +1,7 @@
 package coordinator
 
 import (
-	"github.com/giongto35/cloud-game/pkg/monitoring"
+	"github.com/giongto35/cloud-game/v2/pkg/monitoring"
 	"github.com/spf13/pflag"
 )
 
@@ -19,7 +19,7 @@ func NewDefaultConfig() Config {
 	return Config{
 		Port:         8800,
 		PublicDomain: "http://localhost:8000",
-		PingServer: "",
+		PingServer:   "",
 
 		MonitoringConfig: monitoring.ServerMonitoringConfig{
 			Port:             6601,

@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"log"
 
-	"github.com/giongto35/cloud-game/pkg/cws"
+	"github.com/giongto35/cloud-game/v2/pkg/cws"
 	"github.com/gorilla/websocket"
 )
 

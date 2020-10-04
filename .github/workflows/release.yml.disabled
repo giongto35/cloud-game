@@ -24,7 +24,7 @@ on:
     tags:
       - 'v*'
 env:
-  go-version: 1.13
+  go-version: 1.14
   app-name: cloud-game
   app-arch: x86_64
 jobs:

@@ -13,7 +13,7 @@ type OutFrame struct {
 }
 
 type Encoder interface {
-	GetInputChan()  chan InFrame
+	GetInputChan() chan InFrame
 	GetOutputChan() chan OutFrame
 	Stop()
 }

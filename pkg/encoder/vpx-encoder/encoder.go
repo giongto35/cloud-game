@@ -5,8 +5,8 @@ import (
 	"log"
 	"unsafe"
 
-	"github.com/giongto35/cloud-game/pkg/encoder"
-	"github.com/giongto35/cloud-game/pkg/util"
+	"github.com/giongto35/cloud-game/v2/pkg/encoder"
+	"github.com/giongto35/cloud-game/v2/pkg/util"
 )
 
 // https://chromium.googlesource.com/webm/libvpx/+/master/examples/simple_encoder.c
@@ -65,7 +65,7 @@ type VpxEncoder struct {
 func NewVpxEncoder(w, h, fps, bitrate, keyframe int) (encoder.Encoder, error) {
 	v := &VpxEncoder{
 		Output: make(chan encoder.OutFrame, 5*chanSize),
-		Input:  make(chan encoder.InFrame,    chanSize),
+		Input:  make(chan encoder.InFrame, chanSize),
 		done:   make(chan struct{}),
 
 		// C
@@ -152,7 +152,7 @@ func (v *VpxEncoder) startLooping() {
 		if len(v.Output) >= cap(v.Output) {
 			continue
 		}
-		v.Output <- encoder.OutFrame{ Data: bs, Timestamp: img.Timestamp }
+		v.Output <- encoder.OutFrame{Data: bs, Timestamp: img.Timestamp}
 	}
 	close(v.Output)
 	close(v.done)
