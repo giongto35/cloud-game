@@ -26,11 +26,10 @@ require (
 	github.com/prometheus/procfs v0.2.0 // indirect
 	github.com/spf13/pflag v1.0.5
 	github.com/veandco/go-sdl2 v0.4.4
-	golang.org/x/crypto v0.0.0-20200930160638-afb6bcd081ae
+	golang.org/x/crypto v0.0.0-20201002170205-7f63de1d35b0
 	golang.org/x/image v0.0.0-20200927104501-e162460cd6b5
-	golang.org/x/net v0.0.0-20200930145003-4acb6c075d10 // indirect
-	golang.org/x/sys v0.0.0-20200930185726-fdedc70b468f // indirect
-	golang.org/x/tools v0.0.0-20200930213115-e57f6d466a48 // indirect
-	google.golang.org/genproto v0.0.0-20200930140634-01fc692af84b // indirect
+	golang.org/x/net v0.0.0-20201002202402-0a1ea396d57c // indirect
+	golang.org/x/tools v0.0.0-20201002184944-ecd9fd270d5d // indirect
+	google.golang.org/genproto v0.0.0-20201002142447-3860012362da // indirect
 	gopkg.in/hraban/opus.v2 v2.0.0-20200710132758-e28f8214483b
 )
