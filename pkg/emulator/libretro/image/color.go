@@ -6,11 +6,11 @@ import (
 
 const (
 	// BIT_FORMAT_SHORT_5_5_5_1 has 5 bits R, 5 bits G, 5 bits B, 1 bit alpha
-	BIT_FORMAT_SHORT_5_5_5_1 = iota
+	BitFormatShort5551 = iota
 	// BIT_FORMAT_INT_8_8_8_8_REV has 8 bits R, 8 bits G, 8 bits B, 8 bit alpha
-	BIT_FORMAT_INT_8_8_8_8_REV
+	BitFormatInt8888Rev
 	// BIT_FORMAT_SHORT_5_6_5 has 5 bits R, 6 bits G, 5 bits
-	BIT_FORMAT_SHORT_5_6_5
+	BitFormatShort565
 )
 
 type Format func(data []byte, index int) color.RGBA
