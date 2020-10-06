@@ -780,18 +780,18 @@ func nanoarchRun() {
 func videoSetPixelFormat(format uint32) C.bool {
 	switch format {
 	case C.RETRO_PIXEL_FORMAT_0RGB1555:
-		video.pixFmt = image.BIT_FORMAT_SHORT_5_5_5_1
+		video.pixFmt = image.BitFormatShort5551
 		video.bpp = 2
 		// format is not implemented
 		pixelFormatConverterFn = nil
 		break
 	case C.RETRO_PIXEL_FORMAT_XRGB8888:
-		video.pixFmt = image.BIT_FORMAT_INT_8_8_8_8_REV
+		video.pixFmt = image.BitFormatInt8888Rev
 		video.bpp = 4
 		pixelFormatConverterFn = image.Rgba8888
 		break
 	case C.RETRO_PIXEL_FORMAT_RGB565:
-		video.pixFmt = image.BIT_FORMAT_SHORT_5_6_5
+		video.pixFmt = image.BitFormatShort565
 		video.bpp = 2
 		pixelFormatConverterFn = image.Rgb565
 		break
