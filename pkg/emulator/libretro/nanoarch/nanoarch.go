@@ -104,6 +104,7 @@ var multitap struct {
 	value     C.unsigned
 }
 
+var isMacos = runtime.GOOS == "darwin"
 var systemDirectory = C.CString("./pkg/emulator/libretro/system")
 var saveDirectory = C.CString(".")
 var currentUser *C.char
@@ -365,7 +366,6 @@ func initVideo() {
 	// create_window()
 	var winTitle = "CloudRetro dummy window"
 	var winWidth, winHeight int32 = 1, 1
-	var err error
 
 	switch video.hw.context_type {
 	case C.RETRO_HW_CONTEXT_OPENGL_CORE:
@@ -390,27 +390,21 @@ func initVideo() {
 
 	if !sdlInitialized {
 		sdlInitialized = true
-		if err = sdl.Init(sdl.INIT_EVERYTHING); err != nil {
+		if err := sdl.Init(sdl.INIT_EVERYTHING); err != nil {
 			panic(err)
 		}
 	}
 
 	// In OSX 10.14+ window creation and context creation must happen in the main thread
-	mainthread.Call(func() {
-		video.window, err = sdl.CreateWindow(winTitle, sdl.WINDOWPOS_UNDEFINED, sdl.WINDOWPOS_UNDEFINED, winWidth, winHeight, sdl.WINDOW_OPENGL)
-		if err != nil {
-			panic(err)
-		}
-
-		video.context, err = video.window.GLCreateContext()
-		if err != nil {
-			panic(err)
-		}
-	})
+	if isMacos {
+		mainthread.Call(func() { createWindow(winTitle, winWidth, winHeight) })
+	} else {
+		createWindow(winTitle, winWidth, winHeight)
+	}
 	// Bind context to current thread
 	video.window.GLMakeCurrent(video.context)
 
-	if err = gl.InitWithProcAddrFunc(sdl.GLGetProcAddress); err != nil {
+	if err := gl.InitWithProcAddrFunc(sdl.GLGetProcAddress); err != nil {
 		panic(err)
 	}
 
@@ -462,6 +456,24 @@ func initVideo() {
 	C.bridge_context_reset(video.hw.context_reset)
 }
 
+func createWindow(winTitle string, winWidth int32, winHeight int32) {
+	var err error
+	video.window, err = sdl.CreateWindow(winTitle, sdl.WINDOWPOS_UNDEFINED, sdl.WINDOWPOS_UNDEFINED, winWidth, winHeight, sdl.WINDOW_OPENGL)
+	if err != nil {
+		panic(err)
+	}
+	video.context, err = video.window.GLCreateContext()
+	if err != nil {
+		panic(err)
+	}
+}
+
+func destroyWindow() {
+	video.window.GLMakeCurrent(video.context)
+	sdl.GLDeleteContext(video.context)
+	video.window.Destroy()
+}
+
 //export deinitVideo
 func deinitVideo() {
 	C.bridge_context_reset(video.hw.context_destroy)
@@ -471,11 +483,11 @@ func deinitVideo() {
 	gl.DeleteFramebuffers(1, &video.fbo)
 	gl.DeleteTextures(1, &video.tex)
 	// In OSX 10.14+ window deletion must happen in the main thread
-	mainthread.Call(func() {
-		video.window.GLMakeCurrent(video.context)
-		sdl.GLDeleteContext(video.context)
-		video.window.Destroy()
-	})
+	if isMacos {
+		mainthread.Call(func() { destroyWindow() })
+	} else {
+		destroyWindow()
+	}
 	video.isGl = false
 }
 
