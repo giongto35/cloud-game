@@ -3,7 +3,6 @@ package nanoarch
 import (
 	"bufio"
 	"errors"
-	"fmt"
 	"log"
 	"math/rand"
 	"os"
@@ -254,7 +253,7 @@ func coreAudioSampleBatch(data unsafe.Pointer, frames C.size_t) C.size_t {
 
 //export coreLog
 func coreLog(_ C.enum_retro_log_level, msg *C.char) {
-	fmt.Print("[Log]: ", C.GoString(msg))
+	log.Printf("[Log] %v", C.GoString(msg))
 }
 
 //export coreGetCurrentFramebuffer
@@ -319,7 +318,7 @@ func coreEnvironment(cmd C.unsigned, data unsafe.Pointer) C.bool {
 		variable := (*C.struct_retro_variable)(data)
 		key := C.GoString(variable.key)
 		if val, ok := coreConfig[key]; ok {
-			fmt.Printf("[Env]: get variable: key:%v value:%v\n", key, C.GoString(val))
+			log.Printf("[Env]: get variable: key:%v value:%v", key, C.GoString(val))
 			variable.value = val
 			return true
 		}
@@ -371,23 +370,23 @@ func initVideo() {
 
 	switch video.hw.context_type {
 	case C.RETRO_HW_CONTEXT_OPENGL_CORE:
-		fmt.Println("RETRO_HW_CONTEXT_OPENGL_CORE")
+		log.Printf("RETRO_HW_CONTEXT_OPENGL_CORE")
 		sdl.GLSetAttribute(sdl.GL_CONTEXT_PROFILE_MASK, sdl.GL_CONTEXT_PROFILE_CORE)
 		break
 	case C.RETRO_HW_CONTEXT_OPENGLES2:
-		fmt.Println("RETRO_HW_CONTEXT_OPENGLES2")
+		log.Printf("RETRO_HW_CONTEXT_OPENGLES2")
 		sdl.GLSetAttribute(sdl.GL_CONTEXT_PROFILE_MASK, sdl.GL_CONTEXT_PROFILE_ES)
 		sdl.GLSetAttribute(sdl.GL_CONTEXT_MAJOR_VERSION, 3)
 		sdl.GLSetAttribute(sdl.GL_CONTEXT_MINOR_VERSION, 0)
 		break
 	case C.RETRO_HW_CONTEXT_OPENGL:
-		fmt.Println("RETRO_HW_CONTEXT_OPENGL")
+		log.Printf("RETRO_HW_CONTEXT_OPENGL")
 		if video.hw.version_major >= 3 {
 			sdl.GLSetAttribute(sdl.GL_CONTEXT_PROFILE_MASK, sdl.GL_CONTEXT_PROFILE_COMPATIBILITY)
 		}
 		break
 	default:
-		fmt.Println("Unsupported hw context:", video.hw.context_type)
+		log.Printf("Unsupported hw context: %v", video.hw.context_type)
 	}
 
 	if !sdlInitialized {
@@ -411,12 +410,13 @@ func initVideo() {
 	}
 
 	version := gl.GoStr(gl.GetString(gl.VERSION))
-	fmt.Println("OpenGL version: ", version)
+	log.Printf("OpenGL version: %v", version)
 
 	// init_texture()
 	gl.GenTextures(1, &video.tex)
 	if video.tex < 0 {
-		panic(fmt.Sprintf("GenTextures: 0x%X", video.tex))
+		log.Printf("GenTextures: 0x%X", video.tex)
+		panic("texture init failed")
 	}
 
 	gl.BindTexture(gl.TEXTURE_2D, video.tex)
@@ -449,9 +449,11 @@ func initVideo() {
 	status := gl.CheckFramebufferStatus(gl.FRAMEBUFFER)
 	if status != gl.FRAMEBUFFER_COMPLETE {
 		if e := gl.GetError(); e != gl.NO_ERROR {
-			panic(fmt.Sprintf("GL error: 0x%X, Frame status: 0x%X", e, status))
+			log.Printf("GL error: 0x%X, Frame status: 0x%X", e, status)
+			panic("OpenGL error")
 		}
-		panic(fmt.Sprintf("Frame status: 0x%X", status))
+		log.Printf("Frame status: 0x%X", status)
+		panic("OpenGL framebuffer is invalid")
 	}
 
 	C.bridge_context_reset(video.hw.context_reset)
@@ -578,7 +580,7 @@ func coreLoad(meta config.EmulatorMeta) {
 	C.bridge_retro_init(retroInit)
 
 	v := C.bridge_retro_api_version(retroAPIVersion)
-	fmt.Println("Libretro API version:", v)
+	log.Printf("Libretro API version: %v", v)
 }
 
 func slurp(path string, size int64) ([]byte, error) {
@@ -609,7 +611,7 @@ func coreLoadGame(filename string) {
 
 	size := fi.Size()
 
-	fmt.Println("ROM size:", size)
+	log.Printf("ROM size: %v", size)
 
 	csFilename := C.CString(filename)
 	defer C.free(unsafe.Pointer(csFilename))
@@ -623,11 +625,11 @@ func coreLoadGame(filename string) {
 	C.bridge_retro_get_system_info(retroGetSystemInfo, &si)
 
 	var libName = C.GoString(si.library_name)
-	fmt.Println("  library_name:", libName)
-	fmt.Println("  library_version:", C.GoString(si.library_version))
-	fmt.Println("  valid_extensions:", C.GoString(si.valid_extensions))
-	fmt.Println("  need_fullpath:", si.need_fullpath)
-	fmt.Println("  block_extract:", si.block_extract)
+	log.Printf("  library_name: %v", libName)
+	log.Printf("  library_version: %v", C.GoString(si.library_version))
+	log.Printf("  valid_extensions: %v", C.GoString(si.valid_extensions))
+	log.Printf("  need_fullpath: %v", si.need_fullpath)
+	log.Printf("  block_extract: %v", si.block_extract)
 
 	if !si.need_fullpath {
 		bytes, err := slurp(filename, size)
@@ -663,17 +665,17 @@ func coreLoadGame(filename string) {
 	}
 	NAEmulator.meta.Ratio = ratio
 
-	fmt.Println("-----------------------------------")
-	fmt.Println("--- System audio and video info ---")
-	fmt.Println("-----------------------------------")
-	fmt.Println("  Aspect ratio: ", ratio)
-	fmt.Println("  Base width: ", avi.geometry.base_width)   /* Nominal video width of game. */
-	fmt.Println("  Base height: ", avi.geometry.base_height) /* Nominal video height of game. */
-	fmt.Println("  Max width: ", avi.geometry.max_width)     /* Maximum possible width of game. */
-	fmt.Println("  Max height: ", avi.geometry.max_height)   /* Maximum possible height of game. */
-	fmt.Println("  Sample rate: ", avi.timing.sample_rate)   /* Sampling rate of audio. */
-	fmt.Println("  FPS: ", avi.timing.fps)                   /* FPS of video content. */
-	fmt.Println("-----------------------------------")
+	log.Println("-----------------------------------")
+	log.Println("--- System audio and video info ---")
+	log.Println("-----------------------------------")
+	log.Println("  Aspect ratio: ", ratio)
+	log.Println("  Base width: ", avi.geometry.base_width)   /* Nominal video width of game. */
+	log.Println("  Base height: ", avi.geometry.base_height) /* Nominal video height of game. */
+	log.Println("  Max width: ", avi.geometry.max_width)     /* Maximum possible width of game. */
+	log.Println("  Max height: ", avi.geometry.max_height)   /* Maximum possible height of game. */
+	log.Println("  Sample rate: ", avi.timing.sample_rate)   /* Sampling rate of audio. */
+	log.Println("  FPS: ", avi.timing.fps)                   /* FPS of video content. */
+	log.Println("-----------------------------------")
 
 	video.max_width = int32(avi.geometry.max_width)
 	video.max_height = int32(avi.geometry.max_height)
@@ -763,7 +765,7 @@ func nanoarchShutdown() {
 
 	setRotation(0)
 	if r := C.dlclose(retroHandle); r != 0 {
-		fmt.Println("error closing core")
+		log.Printf("couldn't close the core")
 	}
 	for _, element := range coreConfig {
 		C.free(unsafe.Pointer(element))
