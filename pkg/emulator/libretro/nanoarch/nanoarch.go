@@ -18,7 +18,7 @@ import (
 	"github.com/faiface/mainthread"
 	"github.com/giongto35/cloud-game/v2/pkg/config"
 	"github.com/giongto35/cloud-game/v2/pkg/emulator/libretro/image"
-	"github.com/go-gl/gl/v4.1-core/gl"
+	"github.com/go-gl/gl/v2.1/gl"
 	"github.com/veandco/go-sdl2/sdl"
 )
 
