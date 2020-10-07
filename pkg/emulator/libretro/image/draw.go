@@ -16,7 +16,7 @@ var canvas = imageCache{
 	0,
 }
 
-func DrawRgbaImage(pixFormat Format, rotationFn Rotate, scaleType, w, h, packedW, bpp int, data []byte, dest *image.RGBA) {
+func DrawRgbaImage(pixFormat Format, rotationFn Rotate, scaleType int, flipV bool, w, h, packedW, bpp int, data []byte, dest *image.RGBA) {
 	if pixFormat == nil {
 		dest = nil
 	}
@@ -28,15 +28,19 @@ func DrawRgbaImage(pixFormat Format, rotationFn Rotate, scaleType, w, h, packedW
 	}
 	src := getCanvas(ww, hh)
 
-	drawImage(pixFormat, w, h, packedW, bpp, rotationFn, data, src)
+	drawImage(pixFormat, w, h, packedW, bpp, flipV, rotationFn, data, src)
 	Resize(scaleType, src, dest)
 }
 
-func drawImage(toRGBA Format, w, h, packedW, bpp int, rotationFn Rotate, data []byte, image *image.RGBA) {
+func drawImage(toRGBA Format, w, h, packedW, bpp int, flipV bool, rotationFn Rotate, data []byte, image *image.RGBA) {
 	for y := 0; y < h; y++ {
+		yy := y
+		if flipV {
+			yy = (h - 1) - y
+		}
 		for x := 0; x < w; x++ {
 			src := toRGBA(data, (x+y*packedW)*bpp)
-			dx, dy := rotationFn.Call(x, y, w, h)
+			dx, dy := rotationFn.Call(x, yy, w, h)
 			i := dx*4 + dy*image.Stride
 			dst := image.Pix[i : i+4 : i+4]
 			dst[0] = src.R

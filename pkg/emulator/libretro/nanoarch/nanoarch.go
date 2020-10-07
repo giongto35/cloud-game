@@ -4,7 +4,6 @@ import (
 	"bufio"
 	"errors"
 	"fmt"
-	stdimage "image"
 	"log"
 	"math/rand"
 	"os"
@@ -14,7 +13,6 @@ import (
 	"time"
 	"unsafe"
 
-	"github.com/disintegration/imaging"
 	"github.com/faiface/mainthread"
 	"github.com/giongto35/cloud-game/v2/pkg/config"
 	"github.com/giongto35/cloud-game/v2/pkg/emulator/libretro/image"
@@ -148,34 +146,33 @@ func coreVideoRefresh(data unsafe.Pointer, width C.unsigned, height C.unsigned, 
 	}
 	// divide by 8333 to give us the equivalent of a 120fps resolution
 	timestamp := uint32(time.Now().UnixNano()/8333) + seed
-
-	if data == C.RETRO_HW_FRAME_BUFFER_VALID {
-		im := stdimage.NewNRGBA(stdimage.Rect(0, 0, int(width), int(height)))
-		gl.BindFramebuffer(gl.FRAMEBUFFER, video.fbo)
-		gl.ReadPixels(0, 0, int32(width), int32(height), gl.RGBA, gl.UNSIGNED_BYTE, gl.Ptr(im.Pix))
-		gl.BindFramebuffer(gl.FRAMEBUFFER, 0)
-		im = imaging.FlipV(im)
-		rgba := &stdimage.RGBA{
-			Pix:    im.Pix,
-			Stride: im.Stride,
-			Rect:   im.Rect,
-		}
-		NAEmulator.imageChannel <- GameFrame{Image: rgba, Timestamp: timestamp}
-		return
-	}
+	// if Libretro renders frame with OpenGL context
+	isOpenGLRender := data == C.RETRO_HW_FRAME_BUFFER_VALID
 
 	// calculate real frame width in pixels from packed data (realWidth >= width)
 	packedWidth := int(uint32(pitch) / video.bpp)
-
-	// convert data from C
+	if packedWidth < 1 {
+		packedWidth = int(width)
+	}
+	// calculate space for the video frame
 	bytes := int(height) * packedWidth * int(video.bpp)
-	data_ := (*[1 << 30]byte)(data)[:bytes:bytes]
+
+	var data_ []byte
+	if isOpenGLRender {
+		data_ = make([]byte, bytes)
+		gl.BindFramebuffer(gl.FRAMEBUFFER, video.fbo)
+		gl.ReadPixels(0, 0, int32(width), int32(height), gl.BGRA, gl.UNSIGNED_BYTE, gl.Ptr(&data_[0]))
+		gl.BindFramebuffer(gl.FRAMEBUFFER, 0)
+	} else {
+		data_ = (*[1 << 30]byte)(data)[:bytes:bytes]
+	}
 
 	// the image is being resized and de-rotated
 	image.DrawRgbaImage(
 		pixelFormatConverterFn,
 		rotationFn,
 		image.ScaleNearestNeighbour,
+		isOpenGLRender,
 		int(width), int(height), packedWidth, int(video.bpp),
 		data_,
 		outputImg,
@@ -431,7 +428,7 @@ func initVideo() {
 	gl.TexParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST)
 	gl.TexParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST)
 
-	gl.TexImage2D(gl.TEXTURE_2D, 0, gl.RGBA, video.max_width, video.max_height, 0, gl.RGBA, gl.UNSIGNED_BYTE, nil)
+	gl.TexImage2D(gl.TEXTURE_2D, 0, gl.RGBA8, video.max_width, video.max_height, 0, gl.BGRA, gl.UNSIGNED_INT_8_8_8_8_REV, nil)
 
 	gl.BindTexture(gl.TEXTURE_2D, 0)
 
