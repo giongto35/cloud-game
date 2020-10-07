@@ -93,7 +93,6 @@ var video struct {
 var pixelFormatConverterFn = image.Rgb565
 var rotationFn = image.GetRotation(image.Angle(0))
 
-const bufSize = 1024 * 4
 const joypadNumKeys = int(C.RETRO_DEVICE_ID_JOYPAD_R3 + 1)
 
 var joy [joypadNumKeys]bool
@@ -254,7 +253,7 @@ func coreAudioSampleBatch(data unsafe.Pointer, frames C.size_t) C.size_t {
 }
 
 //export coreLog
-func coreLog(level C.enum_retro_log_level, msg *C.char) {
+func coreLog(_ C.enum_retro_log_level, msg *C.char) {
 	fmt.Print("[Log]: ", C.GoString(msg))
 }
 
@@ -367,7 +366,7 @@ var sdlInitialized = false
 //export initVideo
 func initVideo() {
 	// create_window()
-	var winTitle string = "CloudRetro"
+	var winTitle = "CloudRetro dummy window"
 	var winWidth, winHeight int32 = 1, 1
 	var err error
 
@@ -798,8 +797,6 @@ func videoSetPixelFormat(format uint32) C.bool {
 	default:
 		log.Fatalf("Unknown pixel type %v", format)
 	}
-
-	fmt.Printf("Video pixel: %v %v %v %v %v\n", video, format, C.RETRO_PIXEL_FORMAT_0RGB1555, C.RETRO_PIXEL_FORMAT_XRGB8888, C.RETRO_PIXEL_FORMAT_RGB565)
 	return true
 }
 
