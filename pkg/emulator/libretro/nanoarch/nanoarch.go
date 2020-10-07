@@ -223,13 +223,14 @@ func coreInputState(port C.unsigned, device C.unsigned, index C.unsigned, id C.u
 	return 0
 }
 
-func audioWrite2(buf unsafe.Pointer, frames C.size_t) C.size_t {
+func audioWrite(buf unsafe.Pointer, frames C.size_t) C.size_t {
 	// !to make it mono/stereo independent
 	samples := int(frames) * 2
 	pcm := (*[(1 << 30) - 1]int16)(buf)[:samples:samples]
 
 	p := make([]int16, samples)
-	// copy because pcm slice refer to buf underlying pointer, and buf pointer is the same in continuos frames
+	// copy because pcm slice refer to buf underlying pointer,
+	// and buf pointer is the same in continuous frames
 	copy(p, pcm)
 
 	select {
@@ -243,12 +244,12 @@ func audioWrite2(buf unsafe.Pointer, frames C.size_t) C.size_t {
 //export coreAudioSample
 func coreAudioSample(left C.int16_t, right C.int16_t) {
 	buf := []C.int16_t{left, right}
-	audioWrite2(unsafe.Pointer(&buf), 1)
+	audioWrite(unsafe.Pointer(&buf), 1)
 }
 
 //export coreAudioSampleBatch
 func coreAudioSampleBatch(data unsafe.Pointer, frames C.size_t) C.size_t {
-	return audioWrite2(data, frames)
+	return audioWrite(data, frames)
 }
 
 //export coreLog
@@ -509,8 +510,6 @@ var retroSetAudioSampleBatch unsafe.Pointer
 var retroRun unsafe.Pointer
 var retroLoadGame unsafe.Pointer
 var retroUnloadGame unsafe.Pointer
-var retroGetMemorySize unsafe.Pointer
-var retroGetMemoryData unsafe.Pointer
 var retroSerializeSize unsafe.Pointer
 var retroSerialize unsafe.Pointer
 var retroUnserialize unsafe.Pointer
