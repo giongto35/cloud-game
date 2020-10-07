@@ -72,6 +72,8 @@ var mu sync.Mutex
 var video struct {
 	pitch       uint32
 	pixFmt      uint32
+	glPixFmt    uint32
+	glPixType   uint32
 	bpp         uint32
 	rotation    image.Angle
 	fbo         uint32
@@ -162,7 +164,7 @@ func coreVideoRefresh(data unsafe.Pointer, width C.unsigned, height C.unsigned, 
 	if isOpenGLRender {
 		data_ = make([]byte, bytes)
 		gl.BindFramebuffer(gl.FRAMEBUFFER, video.fbo)
-		gl.ReadPixels(0, 0, int32(width), int32(height), gl.BGRA, gl.UNSIGNED_BYTE, gl.Ptr(&data_[0]))
+		gl.ReadPixels(0, 0, int32(width), int32(height), video.glPixType, video.glPixFmt, gl.Ptr(&data_[0]))
 		gl.BindFramebuffer(gl.FRAMEBUFFER, 0)
 	} else {
 		data_ = (*[1 << 30]byte)(data)[:bytes:bytes]
@@ -422,8 +424,7 @@ func initVideo() {
 	gl.TexParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST)
 	gl.TexParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST)
 
-	gl.TexImage2D(gl.TEXTURE_2D, 0, gl.RGBA8, video.max_width, video.max_height, 0, gl.BGRA, gl.UNSIGNED_INT_8_8_8_8_REV, nil)
-
+	gl.TexImage2D(gl.TEXTURE_2D, 0, gl.RGBA8, video.max_width, video.max_height, 0, video.glPixType, video.glPixFmt, nil)
 	gl.BindTexture(gl.TEXTURE_2D, 0)
 
 	//init_framebuffer()
@@ -789,17 +790,23 @@ func videoSetPixelFormat(format uint32) C.bool {
 	switch format {
 	case C.RETRO_PIXEL_FORMAT_0RGB1555:
 		video.pixFmt = image.BitFormatShort5551
+		video.glPixFmt = gl.UNSIGNED_SHORT_5_5_5_1
+		video.glPixType = gl.BGRA
 		video.bpp = 2
 		// format is not implemented
 		pixelFormatConverterFn = nil
 		break
 	case C.RETRO_PIXEL_FORMAT_XRGB8888:
 		video.pixFmt = image.BitFormatInt8888Rev
+		video.glPixFmt = gl.UNSIGNED_INT_8_8_8_8_REV
+		video.glPixType = gl.BGRA
 		video.bpp = 4
 		pixelFormatConverterFn = image.Rgba8888
 		break
 	case C.RETRO_PIXEL_FORMAT_RGB565:
 		video.pixFmt = image.BitFormatShort565
+		video.glPixFmt = gl.UNSIGNED_SHORT_5_6_5
+		video.glPixType = gl.RGB
 		video.bpp = 2
 		pixelFormatConverterFn = image.Rgb565
 		break
