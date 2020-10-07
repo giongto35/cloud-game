@@ -370,13 +370,6 @@ func initVideo() {
 	var winWidth, winHeight int32 = 1, 1
 	var err error
 
-	if !sdlInitialized {
-		sdlInitialized = true
-		if err = sdl.Init(sdl.INIT_EVERYTHING); err != nil {
-			panic(err)
-		}
-	}
-
 	switch video.hw.context_type {
 	case C.RETRO_HW_CONTEXT_OPENGL_CORE:
 		fmt.Println("RETRO_HW_CONTEXT_OPENGL_CORE")
@@ -396,6 +389,13 @@ func initVideo() {
 		break
 	default:
 		fmt.Println("Unsupported hw context:", video.hw.context_type)
+	}
+
+	if !sdlInitialized {
+		sdlInitialized = true
+		if err = sdl.Init(sdl.INIT_EVERYTHING); err != nil {
+			panic(err)
+		}
 	}
 
 	// In OSX 10.14+ window creation and context creation must happen in the main thread
