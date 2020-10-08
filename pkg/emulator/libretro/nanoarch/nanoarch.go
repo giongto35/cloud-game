@@ -361,10 +361,13 @@ func coreEnvironment(cmd C.unsigned, data unsafe.Pointer) C.bool {
 func init() {
 }
 
-var sdlInitialized = false
-
 //export initVideo
 func initVideo() {
+	if err := sdl.Init(sdl.INIT_EVERYTHING); err != nil {
+		log.Printf("SDL error: %v", err)
+		panic("SDL initialization failed")
+	}
+
 	// create_window()
 	var winTitle = "CloudRetro dummy window"
 	var winWidth, winHeight int32 = 1, 1
@@ -388,13 +391,6 @@ func initVideo() {
 		break
 	default:
 		log.Printf("Unsupported hw context: %v", video.hw.context_type)
-	}
-
-	if !sdlInitialized {
-		sdlInitialized = true
-		if err := sdl.Init(sdl.INIT_EVERYTHING); err != nil {
-			panic(err)
-		}
 	}
 
 	// In OSX 10.14+ window creation and context creation must happen in the main thread
@@ -493,6 +489,7 @@ func deinitVideo() {
 		destroyWindow()
 	}
 	video.isGl = false
+	sdl.Quit()
 }
 
 var retroHandle unsafe.Pointer
