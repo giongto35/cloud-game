@@ -92,9 +92,9 @@ var video struct {
 var pixelFormatConverterFn = image.Rgb565
 var rotationFn = image.GetRotation(image.Angle(0))
 
-const joypadNumKeys = int(C.RETRO_DEVICE_ID_JOYPAD_R3 + 1)
+//const joypadNumKeys = int(C.RETRO_DEVICE_ID_JOYPAD_R3 + 1)
+//var joy [joypadNumKeys]bool
 
-var joy [joypadNumKeys]bool
 var isGlAllowed bool
 var usesLibCo bool
 var coreConfig ConfigProperties
@@ -363,8 +363,9 @@ func init() {
 
 //export initVideo
 func initVideo() {
-	if err := sdl.Init(sdl.INIT_EVERYTHING); err != nil {
-		log.Printf("SDL error: %v", err)
+	log.Printf("[SDL] [OpenGL] initialization...")
+	if err := sdl.Init(sdl.INIT_VIDEO); err != nil {
+		log.Printf("[SDL] error: %v", err)
 		panic("SDL initialization failed")
 	}
 
@@ -374,20 +375,30 @@ func initVideo() {
 
 	switch video.hw.context_type {
 	case C.RETRO_HW_CONTEXT_OPENGL_CORE:
-		log.Printf("RETRO_HW_CONTEXT_OPENGL_CORE")
-		sdl.GLSetAttribute(sdl.GL_CONTEXT_PROFILE_MASK, sdl.GL_CONTEXT_PROFILE_CORE)
+		if err := sdl.GLSetAttribute(sdl.GL_CONTEXT_PROFILE_MASK, sdl.GL_CONTEXT_PROFILE_CORE); err != nil {
+			log.Printf("[SDL] error: %v", err)
+		}
+		log.Printf("[OpenGL] CONTEXT_PROFILE_CORE")
 		break
 	case C.RETRO_HW_CONTEXT_OPENGLES2:
-		log.Printf("RETRO_HW_CONTEXT_OPENGLES2")
-		sdl.GLSetAttribute(sdl.GL_CONTEXT_PROFILE_MASK, sdl.GL_CONTEXT_PROFILE_ES)
-		sdl.GLSetAttribute(sdl.GL_CONTEXT_MAJOR_VERSION, 3)
-		sdl.GLSetAttribute(sdl.GL_CONTEXT_MINOR_VERSION, 0)
+		if err := sdl.GLSetAttribute(sdl.GL_CONTEXT_PROFILE_MASK, sdl.GL_CONTEXT_PROFILE_ES); err != nil {
+			log.Printf("[SDL] attribute error: %v", err)
+		}
+		if err := sdl.GLSetAttribute(sdl.GL_CONTEXT_MAJOR_VERSION, 3); err != nil {
+			log.Printf("[SDL] attribute error: %v", err)
+		}
+		if err := sdl.GLSetAttribute(sdl.GL_CONTEXT_MINOR_VERSION, 0); err != nil {
+			log.Printf("[SDL] attribute error: %v", err)
+		}
+		log.Printf("[OpenGL] CONTEXT_PROFILE_ES 3.0")
 		break
 	case C.RETRO_HW_CONTEXT_OPENGL:
-		log.Printf("RETRO_HW_CONTEXT_OPENGL")
 		if video.hw.version_major >= 3 {
-			sdl.GLSetAttribute(sdl.GL_CONTEXT_PROFILE_MASK, sdl.GL_CONTEXT_PROFILE_COMPATIBILITY)
+			if err := sdl.GLSetAttribute(sdl.GL_CONTEXT_PROFILE_MASK, sdl.GL_CONTEXT_PROFILE_COMPATIBILITY); err != nil {
+				log.Printf("[SDL] attribute error: %v", err)
+			}
 		}
+		log.Printf("[OpenGL] CONTEXT_PROFILE_COMPATIBILITY")
 		break
 	default:
 		log.Printf("Unsupported hw context: %v", video.hw.context_type)
@@ -400,20 +411,22 @@ func initVideo() {
 		createWindow(winTitle, winWidth, winHeight)
 	}
 	// Bind context to current thread
-	video.window.GLMakeCurrent(video.context)
+	if err := video.window.GLMakeCurrent(video.context); err != nil {
+		log.Printf("[SDL] error: %v", err)
+	}
 
 	if err := gl.InitWithProcAddrFunc(sdl.GLGetProcAddress); err != nil {
 		panic(err)
 	}
 
 	version := gl.GoStr(gl.GetString(gl.VERSION))
-	log.Printf("OpenGL version: %v", version)
+	log.Printf("[OpenGL] Driver: %v", version)
 
 	// init_texture()
 	gl.GenTextures(1, &video.tex)
 	if video.tex < 0 {
-		log.Printf("GenTextures: 0x%X", video.tex)
-		panic("texture init failed")
+		log.Printf("[OpenGL] GenTextures: 0x%X", video.tex)
+		panic("OpenGL texture initialization has failed")
 	}
 
 	gl.BindTexture(gl.TEXTURE_2D, video.tex)
@@ -446,10 +459,10 @@ func initVideo() {
 	status := gl.CheckFramebufferStatus(gl.FRAMEBUFFER)
 	if status != gl.FRAMEBUFFER_COMPLETE {
 		if e := gl.GetError(); e != gl.NO_ERROR {
-			log.Printf("GL error: 0x%X, Frame status: 0x%X", e, status)
+			log.Printf("[OpenGL] GL error: 0x%X, Frame status: 0x%X", e, status)
 			panic("OpenGL error")
 		}
-		log.Printf("Frame status: 0x%X", status)
+		log.Printf("[OpenGL] frame status: 0x%X", status)
 		panic("OpenGL framebuffer is invalid")
 	}
 
@@ -458,24 +471,27 @@ func initVideo() {
 
 func createWindow(winTitle string, winWidth int32, winHeight int32) {
 	var err error
-	video.window, err = sdl.CreateWindow(winTitle, sdl.WINDOWPOS_UNDEFINED, sdl.WINDOWPOS_UNDEFINED, winWidth, winHeight, sdl.WINDOW_OPENGL)
-	if err != nil {
+	if video.window, err = sdl.CreateWindow(winTitle, sdl.WINDOWPOS_UNDEFINED, sdl.WINDOWPOS_UNDEFINED, winWidth, winHeight, sdl.WINDOW_OPENGL); err != nil {
 		panic(err)
 	}
-	video.context, err = video.window.GLCreateContext()
-	if err != nil {
+	if video.context, err = video.window.GLCreateContext(); err != nil {
 		panic(err)
 	}
 }
 
 func destroyWindow() {
-	video.window.GLMakeCurrent(video.context)
+	if err := video.window.GLMakeCurrent(video.context); err != nil {
+		log.Printf("[SDL] context to window error: %v", err)
+	}
 	sdl.GLDeleteContext(video.context)
-	video.window.Destroy()
+	if err := video.window.Destroy(); err != nil {
+		log.Printf("[SDL] couldn't destroy the window, error: %v", err)
+	}
 }
 
 //export deinitVideo
 func deinitVideo() {
+	log.Printf("[SDL] [OpenGL] deinitialization...")
 	C.bridge_context_reset(video.hw.context_destroy)
 	if video.hw.depth {
 		gl.DeleteRenderbuffers(1, &video.rbo)
@@ -490,6 +506,7 @@ func deinitVideo() {
 	}
 	video.isGl = false
 	sdl.Quit()
+	log.Printf("[SDL] [OpenGL] deinitialized (%v, %v)", sdl.GetError(), gl.GetError())
 }
 
 var retroHandle unsafe.Pointer
@@ -749,7 +766,9 @@ func nanoarchShutdown() {
 		if video.isGl {
 			// running inside a go routine, lock the thread to make sure the OpenGL context stays current
 			runtime.LockOSThread()
-			video.window.GLMakeCurrent(video.context)
+			if err := video.window.GLMakeCurrent(video.context); err != nil {
+				log.Printf("[SDL] context to window error: %v", err)
+			}
 		}
 		C.bridge_retro_unload_game(retroUnloadGame)
 		C.bridge_retro_deinit(retroDeinit)
@@ -775,7 +794,9 @@ func nanoarchRun() {
 		if video.isGl {
 			// running inside a go routine, lock the thread to make sure the OpenGL context stays current
 			runtime.LockOSThread()
-			video.window.GLMakeCurrent(video.context)
+			if err := video.window.GLMakeCurrent(video.context); err != nil {
+				log.Printf("[SDL] context to window error: %v", err)
+			}
 		}
 		C.bridge_retro_run(retroRun)
 		if video.isGl {
