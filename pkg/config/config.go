@@ -47,6 +47,8 @@ var FileTypeToEmulator = map[string]string{
 	"z64": "n64",
 }
 
+var SupportedRomExtensions = listSupportedRomExtensions()
+
 // There is no good way to determine main width and height of the emulator.
 // When game run, frame width and height can scale abnormally.
 type EmulatorMeta struct {
@@ -103,3 +105,11 @@ var EmulatorConfig = map[string]EmulatorMeta{
 }
 
 var EmulatorExtension = []string{".so", ".armv7-neon-hf.so", ".dylib", ".dll"}
+
+func listSupportedRomExtensions() []string {
+	m := make([]string, 0, len(FileTypeToEmulator))
+	for k := range FileTypeToEmulator {
+		m = append(m, k)
+	}
+	return m
+}

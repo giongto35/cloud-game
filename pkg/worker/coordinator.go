@@ -5,7 +5,9 @@ import (
 	"log"
 	"strconv"
 
+	"github.com/giongto35/cloud-game/v2/pkg/api"
 	"github.com/giongto35/cloud-game/v2/pkg/cws"
+	"github.com/giongto35/cloud-game/v2/pkg/games"
 	"github.com/giongto35/cloud-game/v2/pkg/util"
 	"github.com/giongto35/cloud-game/v2/pkg/webrtc"
 	"github.com/giongto35/cloud-game/v2/pkg/worker/room"
@@ -156,18 +158,17 @@ func (h *Handler) RouteCoordinator() {
 
 			peerconnection := session.peerconnection
 			// TODO: Standardize for all types of packet. Make WSPacket generic
-			var startPacket struct {
-				GameName string `json:"game_name"`
-				IsMobile bool   `json:"is_mobile"`
-			}
-
-			err := json.Unmarshal([]byte(resp.Data), &startPacket)
-			if err != nil {
-				log.Println("Error: Cannot decode json:", err)
+			startPacket := api.GameStartCall{}
+			if err := startPacket.From(resp.Data); err != nil {
 				return cws.EmptyPacket
 			}
+			gameMeta := games.GameMetadata{
+				Name: startPacket.Name,
+				Type: startPacket.Type,
+				Path: startPacket.Path,
+			}
 
-			room := h.startGameHandler(startPacket.GameName, resp.RoomID, resp.PlayerIndex, peerconnection, util.GetVideoEncoder(startPacket.IsMobile))
+			room := h.startGameHandler(gameMeta, resp.RoomID, resp.PlayerIndex, peerconnection, util.GetVideoEncoder(false))
 			session.RoomID = room.ID
 			// TODO: can data race
 			h.rooms[room.ID] = room
@@ -317,8 +318,8 @@ func getServerIDOfRoom(oc *CoordinatorClient, roomID string) string {
 }
 
 // startGameHandler starts a game if roomID is given, if not create new room
-func (h *Handler) startGameHandler(gameName, existedRoomID string, playerIndex int, peerconnection *webrtc.WebRTC, videoEncoderType string) *room.Room {
-	log.Println("Starting game", gameName)
+func (h *Handler) startGameHandler(game games.GameMetadata, existedRoomID string, playerIndex int, peerconnection *webrtc.WebRTC, videoEncoderType string) *room.Room {
+	log.Printf("Loading game: %v\n", game.Name)
 	// If we are connecting to coordinator, request corresponding serverID based on roomID
 	// TODO: check if existedRoomID is in the current server
 	room := h.getRoom(existedRoomID)
@@ -326,7 +327,7 @@ func (h *Handler) startGameHandler(gameName, existedRoomID string, playerIndex i
 	if room == nil {
 		log.Println("Got Room from local ", room, " ID: ", existedRoomID)
 		// Create new room and update player index
-		room = h.createNewRoom(gameName, existedRoomID, videoEncoderType)
+		room = h.createNewRoom(game, existedRoomID, videoEncoderType)
 		room.UpdatePlayerIndex(peerconnection, playerIndex)
 
 		// Wait for done signal from room

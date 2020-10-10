@@ -1,10 +1,14 @@
 package coordinator
 
 import (
+	"errors"
 	"fmt"
 	"log"
 
+	"github.com/giongto35/cloud-game/v2/pkg/api"
 	"github.com/giongto35/cloud-game/v2/pkg/cws"
+	"github.com/giongto35/cloud-game/v2/pkg/games"
+	"github.com/giongto35/cloud-game/v2/pkg/worker/room"
 	"github.com/gorilla/websocket"
 )
 
@@ -118,6 +122,17 @@ func (o *Server) RouteBrowser(client *BrowserClient) {
 		if !ok {
 			return cws.EmptyPacket
 		}
+
+		// +injects game data into the original game request
+		gameStartCall, err := newGameStartCall(resp.RoomID, resp.Data, o.library)
+		if err != nil {
+			return cws.EmptyPacket
+		}
+		if packet, err := gameStartCall.To(); err != nil {
+			return cws.EmptyPacket
+		} else {
+			resp.Data = packet
+		}
 		workerResp := wc.SyncSend(resp)
 
 		// Response from worker contains initialized roomID. Set roomID to the session
@@ -186,4 +201,35 @@ func (o *Server) RouteBrowser(client *BrowserClient) {
 
 		return resp
 	})
+}
+
+// newGameStartCall gathers data for a new game start call of the worker
+func newGameStartCall(roomId string, data string, library games.GameLibrary) (api.GameStartCall, error) {
+	request := api.GameStartRequest{}
+	if err := request.From(data); err != nil {
+		return api.GameStartCall{}, errors.New("invalid request")
+	}
+
+	// the name of the game either in the `room id` field or
+	// it's in the initial request
+	game := request.GameName
+	if roomId != "" {
+		// ! should be moved into coordinator
+		name := room.GetGameNameFromRoomID(roomId)
+		if name == "" {
+			return api.GameStartCall{}, errors.New("couldn't decode game name from the room id")
+		}
+		game = name
+	}
+
+	gameInfo := library.FindGameByName(game)
+	if gameInfo.Path == "" {
+		return api.GameStartCall{}, fmt.Errorf("couldn't find game info for the game %v", game)
+	}
+
+	return api.GameStartCall{
+		Name: gameInfo.Name,
+		Path: gameInfo.Path,
+		Type: gameInfo.Type,
+	}, nil
 }

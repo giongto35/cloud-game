@@ -10,7 +10,7 @@ import (
 
 	"github.com/giongto35/cloud-game/v2/pkg/config"
 	"github.com/giongto35/cloud-game/v2/pkg/config/worker"
-
+	"github.com/giongto35/cloud-game/v2/pkg/games"
 	"github.com/giongto35/cloud-game/v2/pkg/util"
 	"github.com/giongto35/cloud-game/v2/pkg/webrtc"
 	storage "github.com/giongto35/cloud-game/v2/pkg/worker/cloud-storage"
@@ -170,12 +170,12 @@ func (h *Handler) detachRoom(roomID string) {
 
 // createNewRoom creates a new room
 // Return nil in case of room is existed
-func (h *Handler) createNewRoom(gameName string, roomID string, videoEncoderType string) *room.Room {
+func (h *Handler) createNewRoom(game games.GameMetadata, roomID string, videoEncoderType string) *room.Room {
 	// If the roomID is empty,
 	// or the roomID doesn't have any running sessions (room was closed)
 	// we spawn a new room
 	if roomID == "" || !h.isRoomRunning(roomID) {
-		room := room.NewRoom(roomID, gameName, videoEncoderType, h.onlineStorage, h.cfg)
+		room := room.NewRoom(roomID, game, videoEncoderType, h.onlineStorage, h.cfg)
 		// TODO: Might have race condition
 		h.rooms[room.ID] = room
 		return room

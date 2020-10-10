@@ -9,10 +9,10 @@ import (
 	"time"
 
 	"github.com/giongto35/cloud-game/v2/pkg/config"
+	"github.com/giongto35/cloud-game/v2/pkg/games"
 	"github.com/giongto35/cloud-game/v2/pkg/monitoring"
 	"github.com/golang/glog"
 	"github.com/gorilla/mux"
-
 	"golang.org/x/crypto/acme"
 	"golang.org/x/crypto/acme/autocert"
 )
@@ -95,7 +95,17 @@ func makeHTTPToHTTPSRedirectServer(server *Server) *http.Server {
 
 // initializeCoordinator setup an coordinator server
 func (o *Coordinator) initializeCoordinator() {
-	coordinator := NewServer(o.cfg)
+	// init games library
+	lib := games.NewLibrary(games.Config{
+		BasePath:  "assets/games",
+		Supported: config.SupportedRomExtensions,
+		Ignored:   []string{"neogeo", "pgm"},
+		Verbose:   true,
+		WatchMode: o.cfg.LibraryMonitoring,
+	})
+	lib.Scan()
+
+	coordinator := NewServer(o.cfg, lib)
 
 	var certManager *autocert.Manager
 	var httpsSrv *http.Server
