@@ -7,11 +7,15 @@ package nanoarch
 #include <stdarg.h>
 #include <stdio.h>
 
+void coreLog(enum retro_log_level level, const char *msg);
+
 void bridge_retro_init(void *f) {
+	coreLog(RETRO_LOG_INFO, "[Libretro] Initialization...\n");
 	return ((void (*)(void))f)();
 }
 
 void bridge_retro_deinit(void *f) {
+	coreLog(RETRO_LOG_INFO, "[Libretro] Deinitialiazation...\n");
 	return ((void (*)(void))f)();
 }
 
@@ -52,10 +56,12 @@ void bridge_retro_set_audio_sample_batch(void *f, void *callback) {
 }
 
 bool bridge_retro_load_game(void *f, struct retro_game_info *gi) {
+  coreLog(RETRO_LOG_INFO, "[Libretro] Loading the game...\n");
   return ((bool (*)(struct retro_game_info *))f)(gi);
 }
 
 void bridge_retro_unload_game(void *f) {
+	coreLog(RETRO_LOG_INFO, "[Libretro] Unloading the game...\n");
 	return ((void (*)(void))f)();
 }
 
@@ -124,7 +130,6 @@ void coreLog_cgo(enum retro_log_level level, const char *fmt, ...) {
 	vsnprintf(msg, sizeof(msg), fmt, va);
 	va_end(va);
 
-	void coreLog(enum retro_log_level level, const char *msg);
 	coreLog(level, msg);
 }
 
