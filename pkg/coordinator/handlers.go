@@ -12,8 +12,8 @@ import (
 
 	"github.com/giongto35/cloud-game/v2/pkg/config"
 	"github.com/giongto35/cloud-game/v2/pkg/cws"
+	"github.com/giongto35/cloud-game/v2/pkg/games"
 	"github.com/giongto35/cloud-game/v2/pkg/util"
-	"github.com/giongto35/cloud-game/v2/pkg/util/gamelist"
 	"github.com/gofrs/uuid"
 	"github.com/gorilla/websocket"
 )
@@ -24,6 +24,8 @@ const (
 
 type Server struct {
 	cfg Config
+	// games library
+	library games.GameLibrary
 	// roomToWorker map roomID to workerID
 	roomToWorker map[string]string
 	// workerClients are the map workerID to worker Client
@@ -38,9 +40,10 @@ const devPingServer = "http://localhost:9000/echo"
 var upgrader = websocket.Upgrader{}
 var errNotFound = errors.New("Not found")
 
-func NewServer(cfg Config) *Server {
+func NewServer(cfg Config, library games.GameLibrary) *Server {
 	return &Server{
-		cfg: cfg,
+		cfg:     cfg,
+		library: library,
 		// Mapping roomID to server
 		roomToWorker: map[string]string{},
 		// Mapping workerID to worker
@@ -245,7 +248,7 @@ func (o *Server) WS(w http.ResponseWriter, r *http.Request) {
 
 	bc.Send(cws.WSPacket{
 		ID:   "init",
-		Data: createInitPackage(wc.StunTurnServer),
+		Data: createInitPackage(wc.StunTurnServer, o.library.GetAll()),
 	}, nil)
 
 	// If peerconnection is done (client.Done is signalled), we close peerconnection
@@ -404,9 +407,9 @@ func (o *Server) cleanWorker(wc *WorkerClient, workerID string) {
 
 // createInitPackage returns serverhost + game list in encoded wspacket format
 // This package will be sent to initialize
-func createInitPackage(stunturn string) string {
+func createInitPackage(stunturn string, games []games.GameMetadata) string {
 	var gameName []string
-	for _, game := range gamelist.GameList {
+	for _, game := range games {
 		gameName = append(gameName, game.Name)
 	}
 

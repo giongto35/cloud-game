@@ -16,13 +16,12 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/giongto35/cloud-game/v2/pkg/config/worker"
-
 	"github.com/giongto35/cloud-game/v2/pkg/config"
+	"github.com/giongto35/cloud-game/v2/pkg/config/worker"
 	"github.com/giongto35/cloud-game/v2/pkg/emulator"
 	"github.com/giongto35/cloud-game/v2/pkg/emulator/libretro/nanoarch"
+	"github.com/giongto35/cloud-game/v2/pkg/games"
 	"github.com/giongto35/cloud-game/v2/pkg/util"
-	"github.com/giongto35/cloud-game/v2/pkg/util/gamelist"
 	"github.com/giongto35/cloud-game/v2/pkg/webrtc"
 	storage "github.com/giongto35/cloud-game/v2/pkg/worker/cloud-storage"
 )
@@ -128,18 +127,12 @@ func NewVideoImporter(roomID string) chan nanoarch.GameFrame {
 }
 
 // NewRoom creates a new room
-func NewRoom(roomID string, gameName string, videoEncoderType string, onlineStorage *storage.Client, cfg worker.Config) *Room {
-	// If no roomID is given, generate it from gameName
-	// If the is roomID, get gameName from roomID
+func NewRoom(roomID string, game games.GameMetadata, videoEncoderType string, onlineStorage *storage.Client, cfg worker.Config) *Room {
 	if roomID == "" {
-		roomID = generateRoomID(gameName)
-	} else {
-		gameName = getGameNameFromRoomID(roomID)
-		log.Println("Get Gamename from RoomID", gameName)
+		roomID = generateRoomID(game.Name)
 	}
-	gameInfo := gamelist.GetGameInfoFromName(gameName)
 
-	log.Println("Init new room: ", roomID, gameName, gameInfo)
+	log.Println("Init new room: ", roomID, game)
 	inputChannel := make(chan nanoarch.InputEvent, 100)
 
 	room := &Room{
@@ -158,7 +151,7 @@ func NewRoom(roomID string, gameName string, videoEncoderType string, onlineStor
 	}
 
 	// Check if room is on local storage, if not, pull from GCS to local storage
-	go func(game gamelist.GameInfo, roomID string) {
+	go func(game games.GameMetadata, roomID string) {
 		// Check room is on local or fetch from server
 		savepath := util.GetSavePath(roomID)
 		log.Println("Check ", savepath, " on online storage : ", room.isGameOnLocal(savepath))
@@ -167,7 +160,7 @@ func NewRoom(roomID string, gameName string, videoEncoderType string, onlineStor
 		}
 
 		// If not then load room or create room from local.
-		log.Printf("Room %s started. GamePath: %s, GameName: %s, WithGame: %t", roomID, game.Path, game.Name, cfg.WithoutGame)
+		log.Printf("Room %s started. GameName: %s, WithGame: %t", roomID, game.Name, cfg.WithoutGame)
 
 		// Spawn new emulator based on gameName and plug-in all channels
 		emuName, _ := config.FileTypeToEmulator[game.Type]
@@ -227,7 +220,7 @@ func NewRoom(roomID string, gameName string, videoEncoderType string, onlineStor
 
 		// TODO: do we need GC, we can remove it
 		runtime.GC()
-	}(gameInfo, roomID)
+	}(game, roomID)
 
 	return room
 }
@@ -250,7 +243,7 @@ func getEmulator(emuName string, roomID string, imageChannel chan<- nanoarch.Gam
 }
 
 // getGameNameFromRoomID parse roomID to get roomID and gameName
-func getGameNameFromRoomID(roomID string) string {
+func GetGameNameFromRoomID(roomID string) string {
 	parts := strings.Split(roomID, separator)
 	if len(parts) > 1 {
 		return parts[1]
