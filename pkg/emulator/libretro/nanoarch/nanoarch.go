@@ -105,7 +105,6 @@ var multitap struct {
 	value     C.unsigned
 }
 
-var isMacos = runtime.GOOS == "darwin"
 var systemDirectory = C.CString("./pkg/emulator/libretro/system")
 var saveDirectory = C.CString(".")
 var currentUser *C.char
@@ -493,11 +492,7 @@ func deinitVideo() {
 	gl.DeleteFramebuffers(1, &video.fbo)
 	gl.DeleteTextures(1, &video.tex)
 	// In OSX 10.14+ window deletion must happen in the main thread
-	if isMacos {
-		mainthread.Call(func() { destroyWindow() })
-	} else {
-		destroyWindow()
-	}
+	destroyWindow()
 	video.isGl = false
 	sdl.Quit()
 	log.Printf("[SDL] [OpenGL] deinitialized (%v, %v)", sdl.GetError(), gl.GetError())
