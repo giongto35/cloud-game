@@ -358,9 +358,6 @@ func coreEnvironment(cmd C.unsigned, data unsafe.Pointer) C.bool {
 	return true
 }
 
-func init() {
-}
-
 //export initVideo
 func initVideo() {
 	log.Printf("[SDL] [OpenGL] initialization...")
@@ -405,11 +402,8 @@ func initVideo() {
 	}
 
 	// In OSX 10.14+ window creation and context creation must happen in the main thread
-	if isMacos {
-		mainthread.Call(func() { createWindow(winTitle, winWidth, winHeight) })
-	} else {
-		createWindow(winTitle, winWidth, winHeight)
-	}
+	createWindow(winTitle, winWidth, winHeight)
+
 	// Bind context to current thread
 	if err := video.window.GLMakeCurrent(video.context); err != nil {
 		log.Printf("[SDL] error: %v", err)
@@ -695,13 +689,15 @@ func coreLoadGame(filename string) {
 	video.base_width = int32(avi.geometry.base_width)
 	video.base_height = int32(avi.geometry.base_height)
 	if video.isGl {
-		if usesLibCo {
-			C.bridge_execute(C.initVideo_cgo)
-		} else {
-			runtime.LockOSThread()
-			initVideo()
-			runtime.UnlockOSThread()
-		}
+		mainthread.Call(func() {
+			if usesLibCo {
+				C.bridge_execute(C.initVideo_cgo)
+			} else {
+				runtime.LockOSThread()
+				initVideo()
+				runtime.UnlockOSThread()
+			}
+		})
 	}
 }
 
@@ -757,24 +753,30 @@ func unserialize(bytes []byte, size uint) error {
 
 func nanoarchShutdown() {
 	if usesLibCo {
-		C.bridge_execute(retroUnloadGame)
-		C.bridge_execute(retroDeinit)
-		if video.isGl {
-			C.bridge_execute(C.deinitVideo_cgo)
-		}
+		mainthread.Call(func() {
+			C.bridge_execute(retroUnloadGame)
+			C.bridge_execute(retroDeinit)
+			if video.isGl {
+				C.bridge_execute(C.deinitVideo_cgo)
+			}
+		})
 	} else {
 		if video.isGl {
-			// running inside a go routine, lock the thread to make sure the OpenGL context stays current
-			runtime.LockOSThread()
-			if err := video.window.GLMakeCurrent(video.context); err != nil {
-				log.Printf("[SDL] context to window error: %v", err)
-			}
+			mainthread.Call(func() {
+				// running inside a go routine, lock the thread to make sure the OpenGL context stays current
+				runtime.LockOSThread()
+				if err := video.window.GLMakeCurrent(video.context); err != nil {
+					log.Printf("[SDL] context to window error: %v", err)
+				}
+			})
 		}
 		C.bridge_retro_unload_game(retroUnloadGame)
 		C.bridge_retro_deinit(retroDeinit)
 		if video.isGl {
-			deinitVideo()
-			runtime.UnlockOSThread()
+			mainthread.Call(func() {
+				deinitVideo()
+				runtime.UnlockOSThread()
+			})
 		}
 	}
 
