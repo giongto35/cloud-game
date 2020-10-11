@@ -673,17 +673,16 @@ func coreLoadGame(filename string) {
 	}
 	NAEmulator.meta.Ratio = ratio
 
-	log.Println("-----------------------------------")
-	log.Println("--- System audio and video info ---")
-	log.Println("-----------------------------------")
-	log.Println("  Aspect ratio: ", ratio)
-	log.Println("  Base width: ", avi.geometry.base_width)   /* Nominal video width of game. */
-	log.Println("  Base height: ", avi.geometry.base_height) /* Nominal video height of game. */
-	log.Println("  Max width: ", avi.geometry.max_width)     /* Maximum possible width of game. */
-	log.Println("  Max height: ", avi.geometry.max_height)   /* Maximum possible height of game. */
-	log.Println("  Sample rate: ", avi.timing.sample_rate)   /* Sampling rate of audio. */
-	log.Println("  FPS: ", avi.timing.fps)                   /* FPS of video content. */
-	log.Println("-----------------------------------")
+	log.Printf("-----------------------------------")
+	log.Printf("---  Core audio and video info  ---")
+	log.Printf("-----------------------------------")
+	log.Printf("  Frame: %vx%v (%vx%v)",
+		avi.geometry.base_width, avi.geometry.base_height,
+		avi.geometry.max_width, avi.geometry.max_height)
+	log.Printf("  AR:    %v", ratio)
+	log.Printf("  FPS:   %v", avi.timing.fps)
+	log.Printf("  Audio: %vHz", avi.timing.sample_rate)
+	log.Printf("-----------------------------------")
 
 	video.max_width = int32(avi.geometry.max_width)
 	video.max_height = int32(avi.geometry.max_height)
