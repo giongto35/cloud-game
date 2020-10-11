@@ -412,8 +412,14 @@ func initVideo() {
 		panic(err)
 	}
 
-	version := gl.GoStr(gl.GetString(gl.VERSION))
-	log.Printf("[OpenGL] Driver: %v", version)
+	// OpenGL info
+	log.Printf("[OpenGL] Version: %v", gl.GoStr(gl.GetString(gl.VERSION)))
+	log.Printf("[OpenGL] Vendor: %v", gl.GoStr(gl.GetString(gl.VENDOR)))
+	// This string is often the name of the GPU.
+	// In the case of Mesa3d, it would be i.e "Gallium 0.4 on NVA8".
+	// It might even say "Direct3D" if the Windows Direct3D wrapper is being used.
+	log.Printf("[OpenGL] Renderer: %v", gl.GoStr(gl.GetString(gl.RENDERER)))
+	log.Printf("[OpenGL] GLSL Version: %v", gl.GoStr(gl.GetString(gl.SHADING_LANGUAGE_VERSION)))
 
 	// init_texture()
 	gl.GenTextures(1, &video.tex)
