@@ -2,6 +2,7 @@ package room
 
 import (
 	"fmt"
+	"github.com/faiface/mainthread"
 	"github.com/giongto35/cloud-game/v2/pkg/games"
 	"io/ioutil"
 	"log"
@@ -75,6 +76,53 @@ func TestRoom(t *testing.T) {
 	}
 }
 
+func TestRoomWithGL(t *testing.T) {
+	run := func() {
+		appPath := getAppPath() + "assets/games/"
+
+		tests := []struct {
+			roomName string
+			game     games.GameMetadata
+			codec    string
+			frames   int
+		}{
+			{
+				roomName: "",
+				game: games.GameMetadata{
+					Name: "Sample Demo by Florian (PD)",
+					Type: "n64",
+					Path: appPath + "Sample Demo by Florian (PD).z64",
+				},
+				codec:  config.CODEC_VP8,
+				frames: 100,
+			},
+		}
+
+		for _, test := range tests {
+			room := getRoomMock(roomMockConfig{
+				roomName: test.roomName,
+				game:     test.game,
+				codec:    test.codec,
+			})
+			t.Logf("The game [%v] has been loaded\n", test.game.Name)
+
+			var waitCounter sync.WaitGroup
+			waitCounter.Add(test.frames)
+
+			go func() {
+				for range room.encoder.GetOutputChan() {
+					waitCounter.Done()
+				}
+			}()
+
+			waitCounter.Wait()
+			room.Close()
+		}
+	}
+
+	mainthread.Run(run)
+}
+
 // getRoomMock returns mocked Room struct.
 func getRoomMock(cfg roomMockConfig) roomMock {
 	roomStorage := storage.NewInitClient()
@@ -101,10 +149,10 @@ func getRoomMock(cfg roomMockConfig) roomMock {
 // fixEmulatorPaths makes absolute game paths in global GameList.
 func fixEmulatorPaths() {
 	appPath := getAppPath()
-	//gamelist.GameList = gamelist.GetAllGames(appPath + "/assets")
 
 	for k, conf := range config.EmulatorConfig {
 		conf.Path = appPath + conf.Path
+		conf.Config = appPath + conf.Config
 		config.EmulatorConfig[k] = conf
 	}
 }
