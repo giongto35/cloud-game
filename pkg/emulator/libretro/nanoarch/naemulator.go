@@ -52,7 +52,7 @@ import "C"
 
 const numAxes = 4
 
-type constrollerState struct {
+type controllerState struct {
 	keyState uint16
 	axes     [numAxes]int16
 }
@@ -70,7 +70,7 @@ type naEmulator struct {
 	gameName        string
 	isSavingLoading bool
 
-	controllersMap map[string][]constrollerState
+	controllersMap map[string][]controllerState
 	done           chan struct{}
 
 	// lock to lock uninteruptable operation
@@ -113,7 +113,7 @@ func NewNAEmulator(etype string, roomID string, inputChannel <-chan InputEvent) 
 		imageChannel:   imageChannel,
 		audioChannel:   audioChannel,
 		inputChannel:   inputChannel,
-		controllersMap: map[string][]constrollerState{},
+		controllersMap: map[string][]controllerState{},
 		roomID:         roomID,
 		done:           make(chan struct{}, 1),
 		lock:           &sync.Mutex{},
@@ -178,7 +178,7 @@ func (na *naEmulator) listenInput() {
 		}
 
 		if _, ok := na.controllersMap[inpEvent.ConnID]; !ok {
-			na.controllersMap[inpEvent.ConnID] = make([]constrollerState, maxPort)
+			na.controllersMap[inpEvent.ConnID] = make([]controllerState, maxPort)
 		}
 
 		na.controllersMap[inpEvent.ConnID][inpEvent.PlayerIdx].keyState = inpBitmap
@@ -270,4 +270,14 @@ func (na *naEmulator) GetHashPath() string {
 func (na *naEmulator) Close() {
 	// Unload and deinit in the core.
 	close(na.done)
+}
+
+// GetLock makes the emulator exclusively locked.
+func (na *naEmulator) GetLock() {
+	na.lock.Lock()
+}
+
+// ReleaseLock removes an exclusive lock from the emulator.
+func (na *naEmulator) ReleaseLock() {
+	na.lock.Unlock()
 }

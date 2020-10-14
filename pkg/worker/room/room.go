@@ -20,6 +20,7 @@ import (
 	"github.com/giongto35/cloud-game/v2/pkg/config/worker"
 	"github.com/giongto35/cloud-game/v2/pkg/emulator"
 	"github.com/giongto35/cloud-game/v2/pkg/emulator/libretro/nanoarch"
+	"github.com/giongto35/cloud-game/v2/pkg/encoder"
 	"github.com/giongto35/cloud-game/v2/pkg/games"
 	"github.com/giongto35/cloud-game/v2/pkg/util"
 	"github.com/giongto35/cloud-game/v2/pkg/webrtc"
@@ -57,8 +58,8 @@ type Room struct {
 	onlineStorage *storage.Client
 	// GameName
 	gameName string
-	// Meta of game
-	//meta emulator.Meta
+
+	encoder encoder.Encoder
 }
 
 const separator = "___"
@@ -236,12 +237,6 @@ func resizeToAspect(ratio float64, sw int, sh int) (dw int, dh int) {
 	return
 }
 
-// getEmulator creates new emulator and run it
-func getEmulator(emuName string, roomID string, imageChannel chan<- nanoarch.GameFrame, audioChannel chan<- []int16, inputChannel <-chan int) emulator.CloudEmulator {
-
-	return nanoarch.NAEmulator
-}
-
 // getGameNameFromRoomID parse roomID to get roomID and gameName
 func GetGameNameFromRoomID(roomID string) string {
 	parts := strings.Split(roomID, separator)
@@ -371,7 +366,9 @@ func (r *Room) Close() {
 		// the lock is holding before coming to close, so it will cause deadlock if SaveGame is synchronous
 		go func() {
 			// Save before close, so save can have correct state (Not sure) may again cause deadlock
-			r.SaveGame()
+			if err := r.SaveGame(); err != nil {
+				log.Println("[error] couldn't save the game during closing")
+			}
 			r.director.Close()
 		}()
 	} else {
@@ -432,8 +429,11 @@ func (r *Room) saveOnlineRoomToLocal(roomID string, savepath string) error {
 	if err != nil {
 		return err
 	}
+
 	// Save the data fetched from gcloud to local server
-	ioutil.WriteFile(savepath, data, 0644)
+	if data != nil {
+		_ = ioutil.WriteFile(savepath, data, 0644)
+	}
 
 	return nil
 }
