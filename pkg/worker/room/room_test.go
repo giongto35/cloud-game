@@ -2,8 +2,7 @@ package room
 
 import (
 	"fmt"
-	"github.com/faiface/mainthread"
-	"github.com/giongto35/cloud-game/v2/pkg/games"
+	"github.com/giongto35/cloud-game/v2/pkg/encoder"
 	"io/ioutil"
 	"log"
 	"os"
@@ -14,8 +13,10 @@ import (
 	"testing"
 	"time"
 
+	"github.com/faiface/mainthread"
 	"github.com/giongto35/cloud-game/v2/pkg/config"
 	"github.com/giongto35/cloud-game/v2/pkg/config/worker"
+	"github.com/giongto35/cloud-game/v2/pkg/games"
 	storage "github.com/giongto35/cloud-game/v2/pkg/worker/cloud-storage"
 )
 
@@ -24,18 +25,20 @@ type roomMock struct {
 }
 
 type roomMockConfig struct {
-	roomName string
-	game     games.GameMetadata
-	codec    string
+	roomName  string
+	gamesPath string
+	game      games.GameMetadata
+	codec     string
 }
 
 // Restricts a re-config call
 // to only one invocation.
 var configOnce sync.Once
 
-func TestRoom(t *testing.T) {
-	appPath := getAppPath() + "/assets/games/"
+// Store absolute path to test games
+var whereIsGames = getAppPath() + "assets/games/"
 
+func TestRoom(t *testing.T) {
 	tests := []struct {
 		roomName string
 		game     games.GameMetadata
@@ -43,11 +46,10 @@ func TestRoom(t *testing.T) {
 		frames   int
 	}{
 		{
-			roomName: "",
 			game: games.GameMetadata{
 				Name: "Super Mario Bros",
 				Type: "nes",
-				Path: appPath + "Super Mario Bros.nes",
+				Path: "Super Mario Bros.nes",
 			},
 			codec:  config.CODEC_VP8,
 			frames: 5,
@@ -56,30 +58,19 @@ func TestRoom(t *testing.T) {
 
 	for _, test := range tests {
 		room := getRoomMock(roomMockConfig{
-			roomName: test.roomName,
-			game:     test.game,
-			codec:    test.codec,
+			roomName:  test.roomName,
+			gamesPath: whereIsGames,
+			game:      test.game,
+			codec:     test.codec,
 		})
 		t.Logf("The game [%v] has been loaded\n", test.game.Name)
-
-		var waitCounter sync.WaitGroup
-		waitCounter.Add(test.frames)
-
-		go func() {
-			for range room.encoder.GetOutputChan() {
-				waitCounter.Done()
-			}
-		}()
-
-		waitCounter.Wait()
+		waitUntilRenderedFrames(test.frames, room.encoder.GetOutputChan())
 		room.Close()
 	}
 }
 
 func TestRoomWithGL(t *testing.T) {
 	run := func() {
-		appPath := getAppPath() + "assets/games/"
-
 		tests := []struct {
 			roomName string
 			game     games.GameMetadata
@@ -87,11 +78,10 @@ func TestRoomWithGL(t *testing.T) {
 			frames   int
 		}{
 			{
-				roomName: "",
 				game: games.GameMetadata{
 					Name: "Sample Demo by Florian (PD)",
 					Type: "n64",
-					Path: appPath + "Sample Demo by Florian (PD).z64",
+					Path: "Sample Demo by Florian (PD).z64",
 				},
 				codec:  config.CODEC_VP8,
 				frames: 100,
@@ -100,22 +90,13 @@ func TestRoomWithGL(t *testing.T) {
 
 		for _, test := range tests {
 			room := getRoomMock(roomMockConfig{
-				roomName: test.roomName,
-				game:     test.game,
-				codec:    test.codec,
+				roomName:  test.roomName,
+				gamesPath: whereIsGames,
+				game:      test.game,
+				codec:     test.codec,
 			})
 			t.Logf("The game [%v] has been loaded\n", test.game.Name)
-
-			var waitCounter sync.WaitGroup
-			waitCounter.Add(test.frames)
-
-			go func() {
-				for range room.encoder.GetOutputChan() {
-					waitCounter.Done()
-				}
-			}()
-
-			waitCounter.Wait()
+			waitUntilRenderedFrames(test.frames, room.encoder.GetOutputChan())
 			room.Close()
 		}
 	}
@@ -125,11 +106,11 @@ func TestRoomWithGL(t *testing.T) {
 
 // getRoomMock returns mocked Room struct.
 func getRoomMock(cfg roomMockConfig) roomMock {
-	roomStorage := storage.NewInitClient()
-	workerConfig := worker.NewDefaultConfig()
 	configOnce.Do(fixEmulatorPaths)
-	room := NewRoom(cfg.roomName, cfg.game, cfg.codec, roomStorage, workerConfig)
+	cfg.game.Path = cfg.gamesPath + cfg.game.Path
+	room := NewRoom(cfg.roomName, cfg.game, cfg.codec, storage.NewInitClient(), worker.NewDefaultConfig())
 
+	// loop-wait the room initialization
 	var waitCounter sync.WaitGroup
 	waitCounter.Add(1)
 	wasted := 0
@@ -152,7 +133,9 @@ func fixEmulatorPaths() {
 
 	for k, conf := range config.EmulatorConfig {
 		conf.Path = appPath + conf.Path
-		conf.Config = appPath + conf.Config
+		if len(conf.Config) > 0 {
+			conf.Config = appPath + conf.Config
+		}
 		config.EmulatorConfig[k] = conf
 	}
 }
@@ -162,6 +145,19 @@ func getAppPath() string {
 	appName := "cloud-game"
 	_, b, _, _ := runtime.Caller(0)
 	return filepath.Dir(strings.SplitAfter(b, appName)[0]) + "/" + appName + "/"
+}
+
+func waitUntilRenderedFrames(n int, ch chan encoder.OutFrame) {
+	var waitCounter sync.WaitGroup
+	waitCounter.Add(n)
+
+	go func() {
+		for range ch {
+			waitCounter.Done()
+		}
+	}()
+
+	waitCounter.Wait()
 }
 
 // benchmarkRoom measures app performance for n emulation frames.
@@ -174,21 +170,11 @@ func benchmarkRoom(rom games.GameMetadata, codec string, frames int, suppressOut
 
 	for i := 0; i < b.N; i++ {
 		room := getRoomMock(roomMockConfig{
-			roomName: "",
-			game:     rom,
-			codec:    codec,
+			gamesPath: whereIsGames,
+			game:      rom,
+			codec:     codec,
 		})
-
-		var waitCounter sync.WaitGroup
-		waitCounter.Add(frames)
-
-		go func() {
-			for range room.encoder.GetOutputChan() {
-				waitCounter.Done()
-			}
-		}()
-
-		waitCounter.Wait()
+		waitUntilRenderedFrames(frames, room.encoder.GetOutputChan())
 		room.Close()
 	}
 }
@@ -196,8 +182,6 @@ func benchmarkRoom(rom games.GameMetadata, codec string, frames int, suppressOut
 // Measures emulation performance of various
 // emulators and encoding options.
 func BenchmarkRoom(b *testing.B) {
-	appPath := getAppPath() + "/assets/games/"
-
 	benches := []struct {
 		system string
 		game   games.GameMetadata
@@ -210,7 +194,7 @@ func BenchmarkRoom(b *testing.B) {
 			game: games.GameMetadata{
 				Name: "Sushi The Cat",
 				Type: "gba",
-				Path: appPath + "Sushi The Cat.gba",
+				Path: "Sushi The Cat.gba",
 			},
 			codecs: []string{"vp8"},
 			frames: 50,
@@ -220,7 +204,7 @@ func BenchmarkRoom(b *testing.B) {
 			game: games.GameMetadata{
 				Name: "Sushi The Cat",
 				Type: "gba",
-				Path: appPath + "Sushi The Cat.gba",
+				Path: "Sushi The Cat.gba",
 			},
 			codecs: []string{"vp8", "x264"},
 			frames: 100,
@@ -230,7 +214,7 @@ func BenchmarkRoom(b *testing.B) {
 			game: games.GameMetadata{
 				Name: "Super Mario Bros",
 				Type: "nes",
-				Path: appPath + "Super Mario Bros.nes",
+				Path: "Super Mario Bros.nes",
 			},
 			codecs: []string{"vp8", "x264"},
 			frames: 100,
