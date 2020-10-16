@@ -17,6 +17,16 @@ import (
 	"github.com/giongto35/cloud-game/v2/pkg/config"
 )
 
+type testRun struct {
+	room           string
+	system         string
+	rom            string
+	emulationTicks int
+
+	gl    bool
+	libCo bool
+}
+
 // EmulatorMock contains naEmulator mocking data.
 type EmulatorMock struct {
 	naEmulator
@@ -103,7 +113,7 @@ func GetDefaultEmulatorMock(room string, system string, rom string) *EmulatorMoc
 	return mock
 }
 
-// loadRom loads a rom into the emulator.
+// loadRom loads a ROM into the emulator.
 // The rom will be loaded from emulators' games path.
 func (emu *EmulatorMock) loadRom(game string) {
 	fmt.Printf("%v %v\n", emu.paths.cores, emu.core)

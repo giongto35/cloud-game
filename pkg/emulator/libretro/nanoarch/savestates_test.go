@@ -8,13 +8,6 @@ import (
 	"time"
 )
 
-type testRun struct {
-	room           string
-	system         string
-	rom            string
-	emulationTicks int
-}
-
 // Tests a successful emulator state save.
 func TestSave(t *testing.T) {
 	tests := []testRun{

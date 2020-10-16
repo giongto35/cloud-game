@@ -267,6 +267,10 @@ func (na *naEmulator) GetHashPath() string {
 	return util.GetSavePath(na.roomID)
 }
 
+func (*naEmulator) GetViewport() interface{} {
+	return outputImg
+}
+
 func (na *naEmulator) Close() {
 	// Unload and deinit in the core.
 	close(na.done)

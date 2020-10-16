@@ -2,7 +2,10 @@ package room
 
 import (
 	"fmt"
-	"github.com/giongto35/cloud-game/v2/pkg/encoder"
+	"hash/crc32"
+	"image"
+	"image/color"
+	"image/png"
 	"io/ioutil"
 	"log"
 	"os"
@@ -16,8 +19,12 @@ import (
 	"github.com/faiface/mainthread"
 	"github.com/giongto35/cloud-game/v2/pkg/config"
 	"github.com/giongto35/cloud-game/v2/pkg/config/worker"
+	"github.com/giongto35/cloud-game/v2/pkg/encoder"
 	"github.com/giongto35/cloud-game/v2/pkg/games"
 	storage "github.com/giongto35/cloud-game/v2/pkg/worker/cloud-storage"
+	"golang.org/x/image/font"
+	"golang.org/x/image/font/basicfont"
+	"golang.org/x/image/math/fixed"
 )
 
 type roomMock struct {
@@ -70,27 +77,25 @@ func TestRoom(t *testing.T) {
 }
 
 func TestRoomWithGL(t *testing.T) {
-	run := func() {
-		tests := []struct {
-			roomName string
-			game     games.GameMetadata
-			codec    string
-			frames   int
-		}{
-			{
-				game: games.GameMetadata{
-					Name: "Sample Demo by Florian (PD)",
-					Type: "n64",
-					Path: "Sample Demo by Florian (PD).z64",
-				},
-				codec:  config.CODEC_VP8,
-				frames: 100,
+	tests := []struct {
+		game   games.GameMetadata
+		codec  string
+		frames int
+	}{
+		{
+			game: games.GameMetadata{
+				Name: "Sample Demo by Florian (PD)",
+				Type: "n64",
+				Path: "Sample Demo by Florian (PD).z64",
 			},
-		}
+			codec:  config.CODEC_VP8,
+			frames: 50,
+		},
+	}
 
+	run := func() {
 		for _, test := range tests {
 			room := getRoomMock(roomMockConfig{
-				roomName:  test.roomName,
 				gamesPath: whereIsGames,
 				game:      test.game,
 				codec:     test.codec,
@@ -102,6 +107,100 @@ func TestRoomWithGL(t *testing.T) {
 	}
 
 	mainthread.Run(run)
+}
+
+func TestAllEmulatorRooms(t *testing.T) {
+	tests := []struct {
+		game   games.GameMetadata
+		codec  string
+		frames int
+	}{
+		{
+			game: games.GameMetadata{
+				Name: "Sushi The Cat",
+				Type: "gba",
+				Path: "Sushi The Cat.gba",
+			},
+			codec:  config.CODEC_VP8,
+			frames: 100,
+		},
+		{
+			game: games.GameMetadata{
+				Name: "Super Mario Bros",
+				Type: "nes",
+				Path: "Super Mario Bros.nes",
+			},
+			codec:  config.CODEC_VP8,
+			frames: 200,
+		},
+		{
+			game: games.GameMetadata{
+				Name: "Sample Demo by Florian (PD)",
+				Type: "n64",
+				Path: "Sample Demo by Florian (PD).z64",
+			},
+			codec:  config.CODEC_VP8,
+			frames: 50,
+		},
+	}
+	crc32q := crc32.MakeTable(0xD5828281)
+
+	run := func() {
+		for _, test := range tests {
+			room := getRoomMock(roomMockConfig{
+				gamesPath: whereIsGames,
+				game:      test.game,
+				codec:     test.codec,
+			})
+			t.Logf("The game [%v] has been loaded\n", test.game.Name)
+			waitUntilRenderedFrames(test.frames, room.encoder.GetOutputChan())
+
+			img := room.director.GetViewport().(*image.RGBA)
+
+			hash := fmt.Sprintf("%08x", crc32.Checksum(img.Pix, crc32q))
+			addLabel(img, 10, 20,
+				fmt.Sprintf("%v-%v-0x%v [%v]", runtime.GOOS, test.game.Type, hash, test.frames))
+			dumpCanvas(img, fmt.Sprintf("D:/%v-%v.png", runtime.GOOS, test.game.Type))
+
+			room.Close()
+			// hack: wait room destruction
+			time.Sleep(3 * time.Second)
+		}
+	}
+
+	mainthread.Run(run)
+}
+
+func addLabel(img *image.RGBA, x, y int, label string) {
+	(&font.Drawer{
+		Dst:  img,
+		Src:  image.NewUniform(color.RGBA{R: 255, G: 255, B: 255, A: 255}),
+		Face: basicfont.Face7x13,
+		Dot:  fixed.Point26_6{X: fixed.Int26_6(x * 64), Y: fixed.Int26_6(y * 64)},
+	}).DrawString(label)
+}
+
+// enforce image.RGBA to remove alpha channel when encoding PNGs
+type opaqueRGBA struct {
+	*image.RGBA
+}
+
+func (*opaqueRGBA) Opaque() bool {
+	return true
+}
+
+func dumpCanvas(frame *image.RGBA, name string) {
+	f, err := os.Create(name)
+	if err != nil {
+		// Handle error
+	}
+	defer f.Close()
+
+	err = png.Encode(f, &opaqueRGBA{frame})
+	if err != nil {
+		log.Printf("Errr: %v", err)
+		// Handle error
+	}
 }
 
 // getRoomMock returns mocked Room struct.
@@ -151,13 +250,18 @@ func waitUntilRenderedFrames(n int, ch chan encoder.OutFrame) {
 	var waitCounter sync.WaitGroup
 	waitCounter.Add(n)
 
+	done := false
 	go func() {
 		for range ch {
+			if done {
+				break
+			}
 			waitCounter.Done()
 		}
 	}()
 
 	waitCounter.Wait()
+	done = true
 }
 
 // benchmarkRoom measures app performance for n emulation frames.
