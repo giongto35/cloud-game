@@ -1,10 +1,12 @@
 package room
 
 import (
+	"flag"
 	"fmt"
 	"hash/crc32"
 	"image"
 	"image/color"
+	"image/draw"
 	"image/png"
 	"io/ioutil"
 	"log"
@@ -27,6 +29,12 @@ import (
 	"golang.org/x/image/math/fixed"
 )
 
+var renderFrames bool
+
+func init() {
+	flag.BoolVar(&renderFrames, "renderFrames", false, "Render frames for eye testing purposes")
+}
+
 type roomMock struct {
 	Room
 }
@@ -44,6 +52,7 @@ var configOnce sync.Once
 
 // Store absolute path to test games
 var whereIsGames = getAppPath() + "assets/games/"
+var testTempDir = filepath.Join(os.TempDir(), "cloud-game-core-tests")
 
 func TestRoom(t *testing.T) {
 	tests := []struct {
@@ -70,8 +79,8 @@ func TestRoom(t *testing.T) {
 			game:      test.game,
 			codec:     test.codec,
 		})
-		t.Logf("The game [%v] has been loaded\n", test.game.Name)
-		waitUntilRenderedFrames(test.frames, room.encoder.GetOutputChan())
+		t.Logf("The game [%v] has been loaded", test.game.Name)
+		waitNFrames(test.frames, room.encoder.GetOutputChan())
 		room.Close()
 	}
 }
@@ -100,8 +109,8 @@ func TestRoomWithGL(t *testing.T) {
 				game:      test.game,
 				codec:     test.codec,
 			})
-			t.Logf("The game [%v] has been loaded\n", test.game.Name)
-			waitUntilRenderedFrames(test.frames, room.encoder.GetOutputChan())
+			t.Logf("The game [%v] has been loaded", test.game.Name)
+			waitNFrames(test.frames, room.encoder.GetOutputChan())
 			room.Close()
 		}
 	}
@@ -112,37 +121,22 @@ func TestRoomWithGL(t *testing.T) {
 func TestAllEmulatorRooms(t *testing.T) {
 	tests := []struct {
 		game   games.GameMetadata
-		codec  string
 		frames int
 	}{
 		{
-			game: games.GameMetadata{
-				Name: "Sushi The Cat",
-				Type: "gba",
-				Path: "Sushi The Cat.gba",
-			},
-			codec:  config.CODEC_VP8,
+			game:   games.GameMetadata{Name: "Sushi", Type: "gba", Path: "Sushi The Cat.gba"},
 			frames: 100,
 		},
 		{
-			game: games.GameMetadata{
-				Name: "Super Mario Bros",
-				Type: "nes",
-				Path: "Super Mario Bros.nes",
-			},
-			codec:  config.CODEC_VP8,
+			game:   games.GameMetadata{Name: "Mario", Type: "nes", Path: "Super Mario Bros.nes"},
 			frames: 200,
 		},
 		{
-			game: games.GameMetadata{
-				Name: "Sample Demo by Florian (PD)",
-				Type: "n64",
-				Path: "Sample Demo by Florian (PD).z64",
-			},
-			codec:  config.CODEC_VP8,
+			game:   games.GameMetadata{Name: "Florian Demo", Type: "n64", Path: "Sample Demo by Florian (PD).z64"},
 			frames: 50,
 		},
 	}
+
 	crc32q := crc32.MakeTable(0xD5828281)
 
 	run := func() {
@@ -150,17 +144,21 @@ func TestAllEmulatorRooms(t *testing.T) {
 			room := getRoomMock(roomMockConfig{
 				gamesPath: whereIsGames,
 				game:      test.game,
-				codec:     test.codec,
+				codec:     config.CODEC_VP8,
 			})
-			t.Logf("The game [%v] has been loaded\n", test.game.Name)
-			waitUntilRenderedFrames(test.frames, room.encoder.GetOutputChan())
+			t.Logf("The game [%v] has been loaded", test.game.Name)
+			waitNFrames(test.frames, room.encoder.GetOutputChan())
 
-			img := room.director.GetViewport().(*image.RGBA)
+			if renderFrames {
+				img := room.director.GetViewport().(*image.RGBA)
 
-			hash := fmt.Sprintf("%08x", crc32.Checksum(img.Pix, crc32q))
-			addLabel(img, 10, 20,
-				fmt.Sprintf("%v-%v-0x%v [%v]", runtime.GOOS, test.game.Type, hash, test.frames))
-			dumpCanvas(img, fmt.Sprintf("D:/%v-%v.png", runtime.GOOS, test.game.Type))
+				hash := fmt.Sprintf("%08x", crc32.Checksum(img.Pix, crc32q))
+				dumpCanvas(
+					img,
+					fmt.Sprintf("%v-%v-%v", runtime.GOOS, test.game.Type, hash),
+					fmt.Sprintf("%v-%v-0x%v [%v]", runtime.GOOS, test.game.Type, hash, test.frames),
+				)
+			}
 
 			room.Close()
 			// hack: wait room destruction
@@ -169,15 +167,6 @@ func TestAllEmulatorRooms(t *testing.T) {
 	}
 
 	mainthread.Run(run)
-}
-
-func addLabel(img *image.RGBA, x, y int, label string) {
-	(&font.Drawer{
-		Dst:  img,
-		Src:  image.NewUniform(color.RGBA{R: 255, G: 255, B: 255, A: 255}),
-		Face: basicfont.Face7x13,
-		Dot:  fixed.Point26_6{X: fixed.Int26_6(x * 64), Y: fixed.Int26_6(y * 64)},
-	}).DrawString(label)
 }
 
 // enforce image.RGBA to remove alpha channel when encoding PNGs
@@ -189,17 +178,33 @@ func (*opaqueRGBA) Opaque() bool {
 	return true
 }
 
-func dumpCanvas(frame *image.RGBA, name string) {
-	f, err := os.Create(name)
-	if err != nil {
-		// Handle error
-	}
-	defer f.Close()
+func dumpCanvas(f *image.RGBA, name string, caption string) {
+	frame := *f
 
-	err = png.Encode(f, &opaqueRGBA{frame})
-	if err != nil {
-		log.Printf("Errr: %v", err)
-		// Handle error
+	// slap 'em caption
+	if len(caption) > 0 {
+		draw.Draw(&frame, image.Rect(8, 8, 8+len(caption)*7+3, 24), &image.Uniform{C: color.RGBA{}}, image.Point{}, draw.Src)
+		(&font.Drawer{
+			Dst:  &frame,
+			Src:  image.NewUniform(color.RGBA{R: 255, G: 255, B: 255, A: 255}),
+			Face: basicfont.Face7x13,
+			Dot:  fixed.Point26_6{X: fixed.Int26_6(10 * 64), Y: fixed.Int26_6(20 * 64)},
+		}).DrawString(caption)
+	}
+
+	// really like Go's error handling
+	if err := os.MkdirAll(testTempDir, 0770); err != nil {
+		log.Printf("Couldn't create target dir for the output images, %v", err)
+		return
+	}
+
+	if f, err := os.Create(filepath.Join(testTempDir, name+".png")); err == nil {
+		if err = png.Encode(f, &opaqueRGBA{&frame}); err != nil {
+			log.Printf("Couldn't encode the image, %v", err)
+		}
+		_ = f.Close()
+	} else {
+		log.Printf("Couldn't create the image, %v", err)
 	}
 }
 
@@ -210,18 +215,21 @@ func getRoomMock(cfg roomMockConfig) roomMock {
 	room := NewRoom(cfg.roomName, cfg.game, cfg.codec, storage.NewInitClient(), worker.NewDefaultConfig())
 
 	// loop-wait the room initialization
-	var waitCounter sync.WaitGroup
-	waitCounter.Add(1)
+	var init sync.WaitGroup
+	init.Add(1)
 	wasted := 0
 	go func() {
 		sleepDeltaMs := 10
 		for room.director == nil || room.encoder == nil {
 			time.Sleep(time.Duration(sleepDeltaMs) * time.Millisecond)
 			wasted++
+			if wasted > 1000 {
+				break
+			}
 		}
-		waitCounter.Done()
+		init.Done()
 	}()
-	waitCounter.Wait()
+	init.Wait()
 
 	return roomMock{*room}
 }
@@ -246,9 +254,9 @@ func getAppPath() string {
 	return filepath.Dir(strings.SplitAfter(b, appName)[0]) + "/" + appName + "/"
 }
 
-func waitUntilRenderedFrames(n int, ch chan encoder.OutFrame) {
-	var waitCounter sync.WaitGroup
-	waitCounter.Add(n)
+func waitNFrames(n int, ch chan encoder.OutFrame) {
+	var frames sync.WaitGroup
+	frames.Add(n)
 
 	done := false
 	go func() {
@@ -256,11 +264,11 @@ func waitUntilRenderedFrames(n int, ch chan encoder.OutFrame) {
 			if done {
 				break
 			}
-			waitCounter.Done()
+			frames.Done()
 		}
 	}()
 
-	waitCounter.Wait()
+	frames.Wait()
 	done = true
 }
 
@@ -278,7 +286,7 @@ func benchmarkRoom(rom games.GameMetadata, codec string, frames int, suppressOut
 			game:      rom,
 			codec:     codec,
 		})
-		waitUntilRenderedFrames(frames, room.encoder.GetOutputChan())
+		waitNFrames(frames, room.encoder.GetOutputChan())
 		room.Close()
 	}
 }
