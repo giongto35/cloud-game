@@ -2,6 +2,7 @@ package storage
 
 import (
 	"context"
+	"errors"
 	"io"
 	"io/ioutil"
 	"log"
@@ -79,7 +80,7 @@ func (c *Client) SaveFile(name string, srcFile string) (err error) {
 func (c *Client) LoadFile(name string) (data []byte, err error) {
 	// Bypass if client is nil
 	if c == nil {
-		return
+		return nil, errors.New("cloud storage was not initialized")
 	}
 
 	rc, err := c.bucket.Object(name).NewReader(context.Background())
