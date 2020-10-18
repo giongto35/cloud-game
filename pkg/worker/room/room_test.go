@@ -129,7 +129,7 @@ func TestAllEmulatorRooms(t *testing.T) {
 		},
 		{
 			game:   games.GameMetadata{Name: "Mario", Type: "nes", Path: "Super Mario Bros.nes"},
-			frames: 200,
+			frames: 50,
 		},
 		{
 			game:   games.GameMetadata{Name: "Florian Demo", Type: "n64", Path: "Sample Demo by Florian (PD).z64"},
@@ -151,18 +151,13 @@ func TestAllEmulatorRooms(t *testing.T) {
 
 			if renderFrames {
 				img := room.director.GetViewport().(*image.RGBA)
-
-				hash := fmt.Sprintf("%08x", crc32.Checksum(img.Pix, crc32q))
-				dumpCanvas(
-					img,
-					fmt.Sprintf("%v-%v-%v", runtime.GOOS, test.game.Type, hash),
-					fmt.Sprintf("%v-%v-0x%v [%v]", runtime.GOOS, test.game.Type, hash, test.frames),
-				)
+				tag := fmt.Sprintf("%v-%v-0x%08x", runtime.GOOS, test.game.Type, crc32.Checksum(img.Pix, crc32q))
+				dumpCanvas(img, tag, fmt.Sprintf("%v [%v]", tag, test.frames))
 			}
 
 			room.Close()
 			// hack: wait room destruction
-			time.Sleep(3 * time.Second)
+			time.Sleep(2 * time.Second)
 		}
 	}
 
