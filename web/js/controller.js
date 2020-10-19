@@ -362,9 +362,9 @@
                     switch (key) {
                         case KEY.JOIN: // or SHARE
                             // save when click share
-                            event.pub(KEY_PRESSED, {key: KEY.SAVE})
+                            saveGame();
                             room.copyToClipboard();
-                            popup('Copy link to clipboard!');
+                            popup('Shared link copied to the clipboard!');
                             break;
                         case KEY.SAVE:
                             saveGame();

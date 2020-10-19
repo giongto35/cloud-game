@@ -546,7 +546,7 @@ body {
 
 #slider-playeridx {
     display: block;
-    padding-top: 10px;
+    margin-top: 10px;
     text-align: center;
     font-family: 'Roboto';
     font-size: 15px;
