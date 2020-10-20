@@ -1,4 +1,3 @@
-# Today is my birthday :D 17/10. Wish me and everyone the best.
 # CloudRetro
 
 [![Build](https://github.com/giongto35/cloud-game/workflows/build/badge.svg)](https://github.com/giongto35/cloud-game/actions?query=workflow:build)
