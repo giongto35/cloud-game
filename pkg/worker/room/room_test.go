@@ -13,7 +13,6 @@ import (
 	"os"
 	"path/filepath"
 	"runtime"
-	"strings"
 	"sync"
 	"testing"
 	"time"
@@ -29,10 +28,14 @@ import (
 	"golang.org/x/image/math/fixed"
 )
 
-var renderFrames bool
+var (
+	renderFrames bool
+	outputPath   string
+)
 
 func init() {
 	flag.BoolVar(&renderFrames, "renderFrames", false, "Render frames for eye testing purposes")
+	flag.StringVar(&outputPath, "outputPath", "", "Output path for generated files")
 }
 
 type roomMock struct {
@@ -131,10 +134,11 @@ func TestAllEmulatorRooms(t *testing.T) {
 			game:   games.GameMetadata{Name: "Mario", Type: "nes", Path: "Super Mario Bros.nes"},
 			frames: 50,
 		},
-		{
-			game:   games.GameMetadata{Name: "Florian Demo", Type: "n64", Path: "Sample Demo by Florian (PD).z64"},
-			frames: 50,
-		},
+		// skip because Github CI OpenGL support is broken
+		//{
+		//	game:   games.GameMetadata{Name: "Florian Demo", Type: "n64", Path: "Sample Demo by Florian (PD).z64"},
+		//	frames: 50,
+		//},
 	}
 
 	crc32q := crc32.MakeTable(0xD5828281)
@@ -152,7 +156,7 @@ func TestAllEmulatorRooms(t *testing.T) {
 			if renderFrames {
 				img := room.director.GetViewport().(*image.RGBA)
 				tag := fmt.Sprintf("%v-%v-0x%08x", runtime.GOOS, test.game.Type, crc32.Checksum(img.Pix, crc32q))
-				dumpCanvas(img, tag, fmt.Sprintf("%v [%v]", tag, test.frames))
+				dumpCanvas(img, tag, fmt.Sprintf("%v [%v]", tag, test.frames), outputPath)
 			}
 
 			room.Close()
@@ -173,7 +177,7 @@ func (*opaqueRGBA) Opaque() bool {
 	return true
 }
 
-func dumpCanvas(f *image.RGBA, name string, caption string) {
+func dumpCanvas(f *image.RGBA, name string, caption string, path string) {
 	frame := *f
 
 	// slap 'em caption
@@ -187,13 +191,20 @@ func dumpCanvas(f *image.RGBA, name string, caption string) {
 		}).DrawString(caption)
 	}
 
+	var outPath string
+	if len(path) > 0 {
+		outPath = path
+	} else {
+		outPath = testTempDir
+	}
+
 	// really like Go's error handling
-	if err := os.MkdirAll(testTempDir, 0770); err != nil {
+	if err := os.MkdirAll(outPath, 0770); err != nil {
 		log.Printf("Couldn't create target dir for the output images, %v", err)
 		return
 	}
 
-	if f, err := os.Create(filepath.Join(testTempDir, name+".png")); err == nil {
+	if f, err := os.Create(filepath.Join(outPath, name+".png")); err == nil {
 		if err = png.Encode(f, &opaqueRGBA{&frame}); err != nil {
 			log.Printf("Couldn't encode the image, %v", err)
 		}
@@ -244,9 +255,8 @@ func fixEmulatorPaths() {
 
 // getAppPath returns absolute path to the assets directory.
 func getAppPath() string {
-	appName := "cloud-game"
-	_, b, _, _ := runtime.Caller(0)
-	return filepath.Dir(strings.SplitAfter(b, appName)[0]) + "/" + appName + "/"
+	p, _ := filepath.Abs("../../../")
+	return p + string(filepath.Separator)
 }
 
 func waitNFrames(n int, ch chan encoder.OutFrame) {

@@ -554,7 +554,9 @@ func coreLoad(meta config.EmulatorMeta) {
 
 	if retroHandle == nil {
 		err := C.dlerror()
-		log.Fatalf("error loading %s, err %+v", meta.Path, *err)
+		if err != nil {
+			log.Fatalf("error core load: %s, %v", meta.Path, C.GoString(err))
+		}
 	}
 
 	retroInit = loadFunction(retroHandle, "retro_init")

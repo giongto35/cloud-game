@@ -14,7 +14,7 @@ on:
     branches:
       - master
 env:
-  go-version: 1.14
+  go-version: 1.15
 jobs:
   build:
     name: Build
@@ -26,15 +26,9 @@ jobs:
       - name: Get the source
         uses: actions/checkout@v2
       - name: Set up Go
-        uses: actions/setup-go@v1
+        uses: actions/setup-go@v2
         with:
           go-version: ${{ env.go-version }}
-      - name: Set up Go environment
-        shell: bash
-        # add Go's bin folder into environment (to be able to call its tools)
-        run: |
-          echo "::set-env name=GOPATH::$(go env GOPATH)"
-          echo "::add-path::$(go env GOPATH)/bin"
 
       - name: Get Linux dev libraries and tools
         if: matrix.os == 'ubuntu-latest'
@@ -56,7 +50,7 @@ jobs:
           update: true
 
       - name: Load Go modules maybe?
-        uses: actions/cache@v1
+        uses: actions/cache@v2
         with:
           path: ~/go/pkg/mod
           key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
@@ -86,6 +80,21 @@ jobs:
         if: matrix.os == 'macos-latest'
         run: |
           make build
+
+      - name: Verify core rendering (windows-latest)
+        if: matrix.os == 'windows-latest'
+        shell: msys2 {0}
+        run: |
+          go test -run TestAllEmulatorRooms ./pkg/worker/room -v -renderFrames -outputPath "../../../_rendered"
+
+      - name: Verify core rendering (not-windows-latest)
+        if: matrix.os != 'windows-latest'
+        run: |
+          go test -run TestAllEmulatorRooms ./pkg/worker/room -v -renderFrames -outputPath "../../../_rendered"
+
+      - uses: actions/upload-artifact@v2
+        with:
+          path: _rendered/*.png
 
   docker_build_check:
     name: Build (docker)
