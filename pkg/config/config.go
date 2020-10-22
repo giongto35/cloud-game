@@ -64,6 +64,7 @@ type EmulatorMeta struct {
 	Rotation        image.Rotate
 	IsGlAllowed     bool
 	UsesLibCo       bool
+	AutoGlContext   bool
 	HasMultitap     bool
 }
 

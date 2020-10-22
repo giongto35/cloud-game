@@ -29,13 +29,15 @@ import (
 )
 
 var (
-	renderFrames bool
-	outputPath   string
+	renderFrames  bool
+	outputPath    string
+	autoGlContext bool
 )
 
 func init() {
 	flag.BoolVar(&renderFrames, "renderFrames", false, "Render frames for eye testing purposes")
 	flag.StringVar(&outputPath, "outputPath", "", "Output path for generated files")
+	flag.BoolVar(&autoGlContext, "autoGlContext", false, "Set auto GL context choose for headless machines")
 }
 
 type roomMock struct {
@@ -43,10 +45,11 @@ type roomMock struct {
 }
 
 type roomMockConfig struct {
-	roomName  string
-	gamesPath string
-	game      games.GameMetadata
-	codec     string
+	roomName      string
+	gamesPath     string
+	game          games.GameMetadata
+	codec         string
+	autoGlContext bool
 }
 
 // Restricts a re-config call
@@ -146,9 +149,10 @@ func TestAllEmulatorRooms(t *testing.T) {
 	run := func() {
 		for _, test := range tests {
 			room := getRoomMock(roomMockConfig{
-				gamesPath: whereIsGames,
-				game:      test.game,
-				codec:     config.CODEC_VP8,
+				gamesPath:     whereIsGames,
+				game:          test.game,
+				codec:         config.CODEC_VP8,
+				autoGlContext: autoGlContext,
 			})
 			t.Logf("The game [%v] has been loaded", test.game.Name)
 			waitNFrames(test.frames, room.encoder.GetOutputChan())
@@ -216,7 +220,7 @@ func dumpCanvas(f *image.RGBA, name string, caption string, path string) {
 
 // getRoomMock returns mocked Room struct.
 func getRoomMock(cfg roomMockConfig) roomMock {
-	configOnce.Do(fixEmulatorPaths)
+	configOnce.Do(func() { fixEmulators(cfg.autoGlContext) })
 	cfg.game.Path = cfg.gamesPath + cfg.game.Path
 	room := NewRoom(cfg.roomName, cfg.game, cfg.codec, storage.NewInitClient(), worker.NewDefaultConfig())
 
@@ -240,14 +244,18 @@ func getRoomMock(cfg roomMockConfig) roomMock {
 	return roomMock{*room}
 }
 
-// fixEmulatorPaths makes absolute game paths in global GameList.
-func fixEmulatorPaths() {
+// fixEmulators makes absolute game paths in global GameList and passes GL context config.
+func fixEmulators(autoGlContext bool) {
 	appPath := getAppPath()
 
 	for k, conf := range config.EmulatorConfig {
 		conf.Path = appPath + conf.Path
 		if len(conf.Config) > 0 {
 			conf.Config = appPath + conf.Config
+		}
+
+		if conf.IsGlAllowed && autoGlContext {
+			conf.AutoGlContext = true
 		}
 		config.EmulatorConfig[k] = conf
 	}

@@ -69,23 +69,24 @@ import "C"
 var mu sync.Mutex
 
 var video struct {
-	pitch       uint32
-	pixFmt      uint32
-	glPixFmt    uint32
-	glPixType   uint32
-	bpp         uint32
-	rotation    image.Angle
-	fbo         uint32
-	rbo         uint32
-	tex         uint32
-	hw          *C.struct_retro_hw_render_callback
-	window      *sdl.Window
-	context     sdl.GLContext
-	isGl        bool
-	max_width   int32
-	max_height  int32
-	base_width  int32
-	base_height int32
+	pitch         uint32
+	pixFmt        uint32
+	glPixFmt      uint32
+	glPixType     uint32
+	bpp           uint32
+	rotation      image.Angle
+	fbo           uint32
+	rbo           uint32
+	tex           uint32
+	hw            *C.struct_retro_hw_render_callback
+	window        *sdl.Window
+	context       sdl.GLContext
+	isGl          bool
+	autoGlContext bool
+	max_width     int32
+	max_height    int32
+	base_width    int32
+	base_height   int32
 }
 
 // default core pix format converter
@@ -369,35 +370,40 @@ func initVideo() {
 	var winTitle = "CloudRetro dummy window"
 	var winWidth, winHeight int32 = 1, 1
 
-	switch video.hw.context_type {
-	case C.RETRO_HW_CONTEXT_OPENGL_CORE:
-		if err := sdl.GLSetAttribute(sdl.GL_CONTEXT_PROFILE_MASK, sdl.GL_CONTEXT_PROFILE_CORE); err != nil {
-			log.Printf("[SDL] error: %v", err)
-		}
-		log.Printf("[OpenGL] CONTEXT_PROFILE_CORE")
-		break
-	case C.RETRO_HW_CONTEXT_OPENGLES2:
-		if err := sdl.GLSetAttribute(sdl.GL_CONTEXT_PROFILE_MASK, sdl.GL_CONTEXT_PROFILE_ES); err != nil {
-			log.Printf("[SDL] attribute error: %v", err)
-		}
-		if err := sdl.GLSetAttribute(sdl.GL_CONTEXT_MAJOR_VERSION, 3); err != nil {
-			log.Printf("[SDL] attribute error: %v", err)
-		}
-		if err := sdl.GLSetAttribute(sdl.GL_CONTEXT_MINOR_VERSION, 0); err != nil {
-			log.Printf("[SDL] attribute error: %v", err)
-		}
-		log.Printf("[OpenGL] CONTEXT_PROFILE_ES 3.0")
-		break
-	case C.RETRO_HW_CONTEXT_OPENGL:
-		if video.hw.version_major >= 3 {
-			if err := sdl.GLSetAttribute(sdl.GL_CONTEXT_PROFILE_MASK, sdl.GL_CONTEXT_PROFILE_COMPATIBILITY); err != nil {
+	if video.autoGlContext {
+		log.Printf("[OpenGL] AUTO_CONTEXT (type: %v v%v.%v)",
+			video.hw.context_type, video.hw.version_major, video.hw.version_minor)
+	} else {
+		switch video.hw.context_type {
+		case C.RETRO_HW_CONTEXT_OPENGL_CORE:
+			if err := sdl.GLSetAttribute(sdl.GL_CONTEXT_PROFILE_MASK, sdl.GL_CONTEXT_PROFILE_CORE); err != nil {
+				log.Printf("[SDL] error: %v", err)
+			}
+			log.Printf("[OpenGL] CONTEXT_PROFILE_CORE")
+			break
+		case C.RETRO_HW_CONTEXT_OPENGLES2:
+			if err := sdl.GLSetAttribute(sdl.GL_CONTEXT_PROFILE_MASK, sdl.GL_CONTEXT_PROFILE_ES); err != nil {
 				log.Printf("[SDL] attribute error: %v", err)
 			}
+			if err := sdl.GLSetAttribute(sdl.GL_CONTEXT_MAJOR_VERSION, 3); err != nil {
+				log.Printf("[SDL] attribute error: %v", err)
+			}
+			if err := sdl.GLSetAttribute(sdl.GL_CONTEXT_MINOR_VERSION, 0); err != nil {
+				log.Printf("[SDL] attribute error: %v", err)
+			}
+			log.Printf("[OpenGL] CONTEXT_PROFILE_ES 3.0")
+			break
+		case C.RETRO_HW_CONTEXT_OPENGL:
+			if video.hw.version_major >= 3 {
+				if err := sdl.GLSetAttribute(sdl.GL_CONTEXT_PROFILE_MASK, sdl.GL_CONTEXT_PROFILE_COMPATIBILITY); err != nil {
+					log.Printf("[SDL] attribute error: %v", err)
+				}
+			}
+			log.Printf("[OpenGL] CONTEXT_PROFILE_COMPATIBILITY")
+			break
+		default:
+			log.Printf("Unsupported hw context: %v", video.hw.context_type)
 		}
-		log.Printf("[OpenGL] CONTEXT_PROFILE_COMPATIBILITY")
-		break
-	default:
-		log.Printf("Unsupported hw context: %v", video.hw.context_type)
 	}
 
 	// In OSX 10.14+ window creation and context creation must happen in the main thread
@@ -500,6 +506,7 @@ func deinitVideo() {
 	// In OSX 10.14+ window deletion must happen in the main thread
 	destroyWindow()
 	video.isGl = false
+	video.autoGlContext = false
 	sdl.Quit()
 	log.Printf("[SDL] [OpenGL] deinitialized (%v, %v)", sdl.GetError(), gl.GetError())
 }
@@ -534,6 +541,7 @@ func loadFunction(handle unsafe.Pointer, name string) unsafe.Pointer {
 func coreLoad(meta config.EmulatorMeta) {
 	isGlAllowed = meta.IsGlAllowed
 	usesLibCo = meta.UsesLibCo
+	video.autoGlContext = meta.AutoGlContext
 	coreConfig = ScanConfigFile(meta.Config)
 
 	multitap.supported = meta.HasMultitap
