@@ -1,9 +1,8 @@
-# ------------------------------------------------------------------------
-#  Build workflow for multiple OSes (Linux x64, macOS x64, Windows x64)
-# ------------------------------------------------------------------------
+# ------------------------------------------------------------
+#  Build workflow (Linux x64, macOS x64, Windows x64)
+# ------------------------------------------------------------
 
 name: build
-# run only when pushing into the master only
 on:
   push:
     branches:
@@ -13,9 +12,9 @@ on:
   pull_request:
     branches:
       - master
-env:
-  go-version: 1.15
+
 jobs:
+
   build:
     name: Build
     strategy:
@@ -23,12 +22,11 @@ jobs:
         os: [ubuntu-latest, macos-latest, windows-latest]
     runs-on: ${{ matrix.os }}
     steps:
-      - name: Get the source
-        uses: actions/checkout@v2
-      - name: Set up Go
-        uses: actions/setup-go@v2
+      - uses: actions/checkout@v2
+
+      - uses: actions/setup-go@v2
         with:
-          go-version: ${{ env.go-version }}
+          go-version: ^1.15
 
       - name: Get Linux dev libraries and tools
         if: matrix.os == 'ubuntu-latest'
@@ -48,6 +46,13 @@ jobs:
           msystem: MINGW64
           path-type: inherit
           update: true
+          install: >
+            mingw-w64-x86_64-gcc
+            mingw-w64-x86_64-pkg-config
+            mingw-w64-x86_64-dlfcn
+            mingw-w64-x86_64-libvpx
+            mingw-w64-x86_64-opusfile
+            mingw-w64-x86_64-SDL2
 
       - name: Load Go modules maybe?
         uses: actions/cache@v2
@@ -60,14 +65,11 @@ jobs:
       - name: Build Windows app
         if: matrix.os == 'windows-latest'
         shell: msys2 {0}
-        run: >
-          pacman -S --noconfirm --needed make
-          mingw-w64-x86_64-gcc
-          mingw-w64-x86_64-pkg-config
-          mingw-w64-x86_64-dlfcn
-          mingw-w64-x86_64-libvpx
-          mingw-w64-x86_64-opusfile
-          mingw-w64-x86_64-SDL2
+        run: |
+          wget https://github.com/pal1000/mesa-dist-win/releases/download/20.2.1/mesa3d-20.2.1-release-mingw.7z
+          "/c/Program Files/7-Zip/7z.exe" x mesa3d-20.2.1-release-mingw.7z -omesa
+          echo -e " 2\r\n 8\r\n " >> commands
+          ./mesa/systemwidedeploy.cmd < ./commands
 
           make build
 
@@ -84,6 +86,8 @@ jobs:
       - name: Verify core rendering (windows-latest)
         if: matrix.os == 'windows-latest'
         shell: msys2 {0}
+        env:
+          MESA_GL_VERSION_OVERRIDE: 3.3COMPAT
         run: |
           go test -run TestAllEmulatorRooms ./pkg/worker/room -v -renderFrames -outputPath "../../../_rendered"
 
