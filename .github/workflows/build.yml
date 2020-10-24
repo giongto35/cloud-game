@@ -32,7 +32,7 @@ jobs:
         if: matrix.os == 'ubuntu-latest'
         run: |
           sudo apt-get update
-          sudo apt-get install -y make pkg-config libvpx-dev libopus-dev libopusfile-dev libsdl2-dev
+          sudo apt-get install -y make pkg-config libvpx-dev libopus-dev libopusfile-dev libsdl2-dev libgl1-mesa-glx
 
       - name: Get MacOS dev libraries and tools
         if: matrix.os == 'macos-latest'
