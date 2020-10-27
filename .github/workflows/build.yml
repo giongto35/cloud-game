@@ -19,7 +19,7 @@ jobs:
     name: Build
     strategy:
       matrix:
-        os: [ubuntu-latest, macos-latest, windows-latest]
+        os: [ ubuntu-latest, macos-latest, windows-latest ]
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v2
@@ -66,7 +66,7 @@ jobs:
         if: matrix.os == 'windows-latest'
         shell: msys2 {0}
         run: |
-          wget https://github.com/pal1000/mesa-dist-win/releases/download/20.2.1/mesa3d-20.2.1-release-mingw.7z
+          wget -q https://github.com/pal1000/mesa-dist-win/releases/download/20.2.1/mesa3d-20.2.1-release-mingw.7z
           "/c/Program Files/7-Zip/7z.exe" x mesa3d-20.2.1-release-mingw.7z -omesa
           echo -e " 2\r\n 8\r\n " >> commands
           ./mesa/systemwidedeploy.cmd < ./commands
@@ -87,15 +87,22 @@ jobs:
           make build
 
       - name: Verify core rendering (windows-latest)
-        if: matrix.os == 'windows-latest'
+        if: matrix.os == 'windows-latest' && always()
         shell: msys2 {0}
         env:
           MESA_GL_VERSION_OVERRIDE: 3.3COMPAT
         run: |
-          go test -run TestAllEmulatorRooms ./pkg/worker/room -v -renderFrames -outputPath "../../../_rendered"
+          go test -run TestAllEmulatorRooms ./pkg/worker/room -v -renderFrames -autoGlContext -outputPath "../../../_rendered"
 
-      - name: Verify core rendering (not-windows-latest)
-        if: matrix.os != 'windows-latest'
+      - name: Verify core rendering (ubuntu-latest)
+        if: matrix.os == 'ubuntu-latest' && always()
+        env:
+          MESA_GL_VERSION_OVERRIDE: 3.3COMPAT
+        run: |
+          xvfb-run --auto-servernum go test -run TestAllEmulatorRooms ./pkg/worker/room -v -renderFrames -autoGlContext -outputPath "../../../_rendered"
+
+      - name: Verify core rendering (macos-latest)
+        if: matrix.os == 'macos-latest' && always()
         run: |
           go test -run TestAllEmulatorRooms ./pkg/worker/room -v -renderFrames -outputPath "../../../_rendered"
 

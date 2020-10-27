@@ -12,9 +12,9 @@ import (
 	"time"
 	"unsafe"
 
-	"github.com/faiface/mainthread"
 	"github.com/giongto35/cloud-game/v2/pkg/config"
 	"github.com/giongto35/cloud-game/v2/pkg/emulator/libretro/image"
+	"github.com/giongto35/cloud-game/v2/pkg/thread"
 	"github.com/go-gl/gl/v2.1/gl"
 	"github.com/veandco/go-sdl2/sdl"
 )
@@ -366,10 +366,6 @@ func initVideo() {
 		panic("SDL initialization failed")
 	}
 
-	// create_window()
-	var winTitle = "CloudRetro dummy window"
-	var winWidth, winHeight int32 = 1, 1
-
 	if video.autoGlContext {
 		log.Printf("[OpenGL] AUTO_CONTEXT (type: %v v%v.%v)",
 			video.hw.context_type, video.hw.version_major, video.hw.version_minor)
@@ -407,7 +403,7 @@ func initVideo() {
 	}
 
 	// In OSX 10.14+ window creation and context creation must happen in the main thread
-	createWindow(winTitle, winWidth, winHeight)
+	thread.MainMaybe(createWindow)
 
 	// Bind context to current thread
 	if err := video.window.GLMakeCurrent(video.context); err != nil {
@@ -474,9 +470,17 @@ func initVideo() {
 	C.bridge_context_reset(video.hw.context_reset)
 }
 
-func createWindow(winTitle string, winWidth int32, winHeight int32) {
+func createWindow() {
+	var winTitle = "CloudRetro dummy window"
+	var winWidth, winHeight int32 = 1, 1
+
 	var err error
-	if video.window, err = sdl.CreateWindow(winTitle, sdl.WINDOWPOS_UNDEFINED, sdl.WINDOWPOS_UNDEFINED, winWidth, winHeight, sdl.WINDOW_OPENGL); err != nil {
+	if video.window, err = sdl.CreateWindow(
+		winTitle,
+		sdl.WINDOWPOS_UNDEFINED, sdl.WINDOWPOS_UNDEFINED,
+		winWidth, winHeight,
+		sdl.WINDOW_OPENGL|sdl.WINDOW_HIDDEN,
+	); err != nil {
 		panic(err)
 	}
 	if video.context, err = video.window.GLCreateContext(); err != nil {
@@ -504,7 +508,7 @@ func deinitVideo() {
 	gl.DeleteFramebuffers(1, &video.fbo)
 	gl.DeleteTextures(1, &video.tex)
 	// In OSX 10.14+ window deletion must happen in the main thread
-	destroyWindow()
+	thread.MainMaybe(destroyWindow)
 	video.isGl = false
 	video.autoGlContext = false
 	sdl.Quit()
@@ -699,15 +703,13 @@ func coreLoadGame(filename string) {
 	video.base_width = int32(avi.geometry.base_width)
 	video.base_height = int32(avi.geometry.base_height)
 	if video.isGl {
-		mainthread.Call(func() {
-			if usesLibCo {
-				C.bridge_execute(C.initVideo_cgo)
-			} else {
-				runtime.LockOSThread()
-				initVideo()
-				runtime.UnlockOSThread()
-			}
-		})
+		if usesLibCo {
+			C.bridge_execute(C.initVideo_cgo)
+		} else {
+			runtime.LockOSThread()
+			initVideo()
+			runtime.UnlockOSThread()
+		}
 	}
 }
 
@@ -763,7 +765,7 @@ func unserialize(bytes []byte, size uint) error {
 
 func nanoarchShutdown() {
 	if usesLibCo {
-		mainthread.Call(func() {
+		thread.MainMaybe(func() {
 			C.bridge_execute(retroUnloadGame)
 			C.bridge_execute(retroDeinit)
 			if video.isGl {
@@ -772,7 +774,7 @@ func nanoarchShutdown() {
 		})
 	} else {
 		if video.isGl {
-			mainthread.Call(func() {
+			thread.MainMaybe(func() {
 				// running inside a go routine, lock the thread to make sure the OpenGL context stays current
 				runtime.LockOSThread()
 				if err := video.window.GLMakeCurrent(video.context); err != nil {
@@ -783,7 +785,7 @@ func nanoarchShutdown() {
 		C.bridge_retro_unload_game(retroUnloadGame)
 		C.bridge_retro_deinit(retroDeinit)
 		if video.isGl {
-			mainthread.Call(func() {
+			thread.MainMaybe(func() {
 				deinitVideo()
 				runtime.UnlockOSThread()
 			})

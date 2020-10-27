@@ -17,11 +17,11 @@ import (
 	"testing"
 	"time"
 
-	"github.com/faiface/mainthread"
 	"github.com/giongto35/cloud-game/v2/pkg/config"
 	"github.com/giongto35/cloud-game/v2/pkg/config/worker"
 	"github.com/giongto35/cloud-game/v2/pkg/encoder"
 	"github.com/giongto35/cloud-game/v2/pkg/games"
+	"github.com/giongto35/cloud-game/v2/pkg/thread"
 	storage "github.com/giongto35/cloud-game/v2/pkg/worker/cloud-storage"
 	"golang.org/x/image/font"
 	"golang.org/x/image/font/basicfont"
@@ -33,12 +33,6 @@ var (
 	outputPath    string
 	autoGlContext bool
 )
-
-func init() {
-	flag.BoolVar(&renderFrames, "renderFrames", false, "Render frames for eye testing purposes")
-	flag.StringVar(&outputPath, "outputPath", "", "Output path for generated files")
-	flag.BoolVar(&autoGlContext, "autoGlContext", false, "Set auto GL context choose for headless machines")
-}
 
 type roomMock struct {
 	Room
@@ -59,6 +53,18 @@ var configOnce sync.Once
 // Store absolute path to test games
 var whereIsGames = getAppPath() + "assets/games/"
 var testTempDir = filepath.Join(os.TempDir(), "cloud-game-core-tests")
+
+func init() {
+	runtime.LockOSThread()
+}
+
+func TestMain(m *testing.M) {
+	flag.BoolVar(&renderFrames, "renderFrames", false, "Render frames for eye testing purposes")
+	flag.StringVar(&outputPath, "outputPath", "./", "Output path for generated files")
+	flag.BoolVar(&autoGlContext, "autoGlContext", false, "Set auto GL context choose for headless machines")
+
+	thread.MainWrapMaybe(func() { os.Exit(m.Run()) })
+}
 
 func TestRoom(t *testing.T) {
 	tests := []struct {
@@ -121,7 +127,7 @@ func TestRoomWithGL(t *testing.T) {
 		}
 	}
 
-	mainthread.Run(run)
+	thread.MainMaybe(run)
 }
 
 func TestAllEmulatorRooms(t *testing.T) {
@@ -137,39 +143,34 @@ func TestAllEmulatorRooms(t *testing.T) {
 			game:   games.GameMetadata{Name: "Mario", Type: "nes", Path: "Super Mario Bros.nes"},
 			frames: 50,
 		},
-		// skip because Github CI OpenGL support is broken
-		//{
-		//	game:   games.GameMetadata{Name: "Florian Demo", Type: "n64", Path: "Sample Demo by Florian (PD).z64"},
-		//	frames: 50,
-		//},
+		{
+			game:   games.GameMetadata{Name: "Florian Demo", Type: "n64", Path: "Sample Demo by Florian (PD).z64"},
+			frames: 50,
+		},
 	}
 
 	crc32q := crc32.MakeTable(0xD5828281)
 
-	run := func() {
-		for _, test := range tests {
-			room := getRoomMock(roomMockConfig{
-				gamesPath:     whereIsGames,
-				game:          test.game,
-				codec:         config.CODEC_VP8,
-				autoGlContext: autoGlContext,
-			})
-			t.Logf("The game [%v] has been loaded", test.game.Name)
-			waitNFrames(test.frames, room.encoder.GetOutputChan())
+	for _, test := range tests {
+		room := getRoomMock(roomMockConfig{
+			gamesPath:     whereIsGames,
+			game:          test.game,
+			codec:         config.CODEC_VP8,
+			autoGlContext: autoGlContext,
+		})
+		t.Logf("The game [%v] has been loaded", test.game.Name)
+		waitNFrames(test.frames, room.encoder.GetOutputChan())
 
-			if renderFrames {
-				img := room.director.GetViewport().(*image.RGBA)
-				tag := fmt.Sprintf("%v-%v-0x%08x", runtime.GOOS, test.game.Type, crc32.Checksum(img.Pix, crc32q))
-				dumpCanvas(img, tag, fmt.Sprintf("%v [%v]", tag, test.frames), outputPath)
-			}
-
-			room.Close()
-			// hack: wait room destruction
-			time.Sleep(2 * time.Second)
+		if renderFrames {
+			img := room.director.GetViewport().(*image.RGBA)
+			tag := fmt.Sprintf("%v-%v-0x%08x", runtime.GOOS, test.game.Type, crc32.Checksum(img.Pix, crc32q))
+			dumpCanvas(img, tag, fmt.Sprintf("%v [%v]", tag, test.frames), outputPath)
 		}
-	}
 
-	mainthread.Run(run)
+		room.Close()
+		// hack: wait room destruction
+		time.Sleep(2 * time.Second)
+	}
 }
 
 // enforce image.RGBA to remove alpha channel when encoding PNGs
