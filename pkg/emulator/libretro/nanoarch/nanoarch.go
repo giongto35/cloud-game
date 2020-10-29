@@ -13,9 +13,9 @@ import (
 	"unsafe"
 
 	"github.com/giongto35/cloud-game/v2/pkg/config"
-	"github.com/giongto35/cloud-game/v2/pkg/emulator/libretro/image"
+	"github.com/giongto35/cloud-game/v2/pkg/emulator/image"
+	"github.com/giongto35/cloud-game/v2/pkg/emulator/opengl"
 	"github.com/giongto35/cloud-game/v2/pkg/thread"
-	"github.com/go-gl/gl/v2.1/gl"
 	"github.com/veandco/go-sdl2/sdl"
 )
 
@@ -69,24 +69,21 @@ import "C"
 var mu sync.Mutex
 
 var video struct {
-	pitch         uint32
-	pixFmt        uint32
-	glPixFmt      uint32
-	glPixType     uint32
-	bpp           uint32
-	rotation      image.Angle
-	fbo           uint32
-	rbo           uint32
-	tex           uint32
+	pitch    uint32
+	pixFmt   uint32
+	bpp      uint32
+	rotation image.Angle
+
+	maxWidth   int32
+	maxHeight  int32
+	baseWidth  int32
+	baseHeight int32
+
 	hw            *C.struct_retro_hw_render_callback
 	window        *sdl.Window
 	context       sdl.GLContext
 	isGl          bool
 	autoGlContext bool
-	max_width     int32
-	max_height    int32
-	base_width    int32
-	base_height   int32
 }
 
 // default core pix format converter
@@ -143,9 +140,11 @@ type CloudEmulator interface {
 //export coreVideoRefresh
 func coreVideoRefresh(data unsafe.Pointer, width C.unsigned, height C.unsigned, pitch C.size_t) {
 	// some cores can return nothing
+	// !to add duplicate if can dup
 	if data == nil {
 		return
 	}
+
 	// divide by 8333 to give us the equivalent of a 120fps resolution
 	timestamp := uint32(time.Now().UnixNano()/8333) + seed
 	// if Libretro renders frame with OpenGL context
@@ -161,10 +160,7 @@ func coreVideoRefresh(data unsafe.Pointer, width C.unsigned, height C.unsigned, 
 
 	var data_ []byte
 	if isOpenGLRender {
-		data_ = make([]byte, bytes)
-		gl.BindFramebuffer(gl.FRAMEBUFFER, video.fbo)
-		gl.ReadPixels(0, 0, int32(width), int32(height), video.glPixType, video.glPixFmt, gl.Ptr(&data_[0]))
-		gl.BindFramebuffer(gl.FRAMEBUFFER, 0)
+		data_ = opengl.ReadFramebuffer(bytes, int(width), int(height))
 	} else {
 		data_ = (*[1 << 30]byte)(data)[:bytes:bytes]
 	}
@@ -208,7 +204,7 @@ func coreInputState(port C.unsigned, device C.unsigned, index C.unsigned, id C.u
 		return 0
 	}
 
-	// map from id to controll key
+	// map from id to control key
 	key, ok := bindKeysMap[int(id)]
 	if !ok {
 		return 0
@@ -259,7 +255,7 @@ func coreLog(_ C.enum_retro_log_level, msg *C.char) {
 
 //export coreGetCurrentFramebuffer
 func coreGetCurrentFramebuffer() C.uintptr_t {
-	return (C.uintptr_t)(video.fbo)
+	return (C.uintptr_t)(opengl.GetFbo())
 }
 
 //export coreGetProcAddress
@@ -410,62 +406,9 @@ func initVideo() {
 		log.Printf("[SDL] error: %v", err)
 	}
 
-	if err := gl.InitWithProcAddrFunc(sdl.GLGetProcAddress); err != nil {
-		panic(err)
-	}
-
-	// OpenGL info
-	log.Printf("[OpenGL] Version: %v", gl.GoStr(gl.GetString(gl.VERSION)))
-	log.Printf("[OpenGL] Vendor: %v", gl.GoStr(gl.GetString(gl.VENDOR)))
-	// This string is often the name of the GPU.
-	// In the case of Mesa3d, it would be i.e "Gallium 0.4 on NVA8".
-	// It might even say "Direct3D" if the Windows Direct3D wrapper is being used.
-	log.Printf("[OpenGL] Renderer: %v", gl.GoStr(gl.GetString(gl.RENDERER)))
-	log.Printf("[OpenGL] GLSL Version: %v", gl.GoStr(gl.GetString(gl.SHADING_LANGUAGE_VERSION)))
-
-	// init_texture()
-	gl.GenTextures(1, &video.tex)
-	if video.tex < 0 {
-		log.Printf("[OpenGL] GenTextures: 0x%X", video.tex)
-		panic("OpenGL texture initialization has failed")
-	}
-
-	gl.BindTexture(gl.TEXTURE_2D, video.tex)
-
-	gl.TexParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST)
-	gl.TexParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST)
-
-	gl.TexImage2D(gl.TEXTURE_2D, 0, gl.RGBA8, video.max_width, video.max_height, 0, video.glPixType, video.glPixFmt, nil)
-	gl.BindTexture(gl.TEXTURE_2D, 0)
-
-	//init_framebuffer()
-	gl.GenFramebuffers(1, &video.fbo)
-	gl.BindFramebuffer(gl.FRAMEBUFFER, video.fbo)
-
-	gl.FramebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, video.tex, 0)
-
-	if video.hw.depth {
-		gl.GenRenderbuffers(1, &video.rbo)
-		gl.BindRenderbuffer(gl.RENDERBUFFER, video.rbo)
-		if video.hw.stencil {
-			gl.RenderbufferStorage(gl.RENDERBUFFER, gl.DEPTH24_STENCIL8, video.base_width, video.base_height)
-			gl.FramebufferRenderbuffer(gl.FRAMEBUFFER, gl.DEPTH_STENCIL_ATTACHMENT, gl.RENDERBUFFER, video.rbo)
-		} else {
-			gl.RenderbufferStorage(gl.RENDERBUFFER, gl.DEPTH_COMPONENT24, video.base_width, video.base_height)
-			gl.FramebufferRenderbuffer(gl.FRAMEBUFFER, gl.DEPTH_ATTACHMENT, gl.RENDERBUFFER, video.rbo)
-		}
-		gl.BindRenderbuffer(gl.RENDERBUFFER, 0)
-	}
-
-	status := gl.CheckFramebufferStatus(gl.FRAMEBUFFER)
-	if status != gl.FRAMEBUFFER_COMPLETE {
-		if e := gl.GetError(); e != gl.NO_ERROR {
-			log.Printf("[OpenGL] GL error: 0x%X, Frame status: 0x%X", e, status)
-			panic("OpenGL error")
-		}
-		log.Printf("[OpenGL] frame status: 0x%X", status)
-		panic("OpenGL framebuffer is invalid")
-	}
+	opengl.InitContext(sdl.GLGetProcAddress)
+	opengl.PrintDriverInfo()
+	opengl.InitFramebuffer(int(video.maxWidth), int(video.maxHeight), bool(video.hw.depth), bool(video.hw.stencil))
 
 	C.bridge_context_reset(video.hw.context_reset)
 }
@@ -502,17 +445,13 @@ func destroyWindow() {
 func deinitVideo() {
 	log.Printf("[SDL] [OpenGL] deinitialization...")
 	C.bridge_context_reset(video.hw.context_destroy)
-	if video.hw.depth {
-		gl.DeleteRenderbuffers(1, &video.rbo)
-	}
-	gl.DeleteFramebuffers(1, &video.fbo)
-	gl.DeleteTextures(1, &video.tex)
+	opengl.DestroyFramebuffer()
 	// In OSX 10.14+ window deletion must happen in the main thread
 	thread.MainMaybe(destroyWindow)
 	video.isGl = false
 	video.autoGlContext = false
 	sdl.Quit()
-	log.Printf("[SDL] [OpenGL] deinitialized (%v, %v)", sdl.GetError(), gl.GetError())
+	log.Printf("[SDL] [OpenGL] deinitialized (%v, %v)", sdl.GetError(), opengl.GetError())
 }
 
 var retroHandle unsafe.Pointer
@@ -698,10 +637,10 @@ func coreLoadGame(filename string) {
 	log.Printf("  Audio: %vHz", avi.timing.sample_rate)
 	log.Printf("-----------------------------------")
 
-	video.max_width = int32(avi.geometry.max_width)
-	video.max_height = int32(avi.geometry.max_height)
-	video.base_width = int32(avi.geometry.base_width)
-	video.base_height = int32(avi.geometry.base_height)
+	video.maxWidth = int32(avi.geometry.max_width)
+	video.maxHeight = int32(avi.geometry.max_height)
+	video.baseWidth = int32(avi.geometry.base_width)
+	video.baseHeight = int32(avi.geometry.base_height)
 	if video.isGl {
 		if usesLibCo {
 			C.bridge_execute(C.initVideo_cgo)
@@ -823,23 +762,20 @@ func videoSetPixelFormat(format uint32) C.bool {
 	switch format {
 	case C.RETRO_PIXEL_FORMAT_0RGB1555:
 		video.pixFmt = image.BitFormatShort5551
-		video.glPixFmt = gl.UNSIGNED_SHORT_5_5_5_1
-		video.glPixType = gl.BGRA
+		opengl.SetPixelFormat(opengl.UnsignedShort5551)
 		video.bpp = 2
 		// format is not implemented
 		pixelFormatConverterFn = nil
 		break
 	case C.RETRO_PIXEL_FORMAT_XRGB8888:
 		video.pixFmt = image.BitFormatInt8888Rev
-		video.glPixFmt = gl.UNSIGNED_INT_8_8_8_8_REV
-		video.glPixType = gl.BGRA
+		opengl.SetPixelFormat(opengl.UnsignedInt8888Rev)
 		video.bpp = 4
 		pixelFormatConverterFn = image.Rgba8888
 		break
 	case C.RETRO_PIXEL_FORMAT_RGB565:
 		video.pixFmt = image.BitFormatShort565
-		video.glPixFmt = gl.UNSIGNED_SHORT_5_6_5
-		video.glPixType = gl.RGB
+		opengl.SetPixelFormat(opengl.UnsignedShort565)
 		video.bpp = 2
 		pixelFormatConverterFn = image.Rgb565
 		break
