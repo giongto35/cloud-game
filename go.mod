@@ -1,6 +1,6 @@
 module github.com/giongto35/cloud-game/v2
 
-go 1.12
+go 1.13
 
 require (
 	cloud.google.com/go v0.67.0 // indirect
