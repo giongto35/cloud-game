@@ -45,7 +45,7 @@ Install Golang https://golang.org/doc/install . Because the project uses GoModul
   * Install [libvpx](https://www.webmproject.org/code/), [libopus](http://opus-codec.org/), [pkg-config](https://www.freedesktop.org/wiki/Software/pkg-config/), [sdl2](https://wiki.libsdl.org/Installation)
 ```
 # Ubuntu / Windows (WSL2)
-apt-get install -y pkg-config libvpx-dev libopus-dev libopusfile-dev libsdl2-dev
+apt-get install -y make gcc pkg-config libvpx-dev libopus-dev libopusfile-dev libsdl2-dev
 
 # MacOS
 brew install libvpx pkg-config opus opusfile sdl2
