@@ -292,11 +292,7 @@ func coreEnvironment(cmd C.unsigned, data unsafe.Pointer) C.bool {
 		*bval = C.bool(true)
 		break
 	case C.RETRO_ENVIRONMENT_SET_PIXEL_FORMAT:
-		format := (*C.enum_retro_pixel_format)(data)
-		if *format > C.RETRO_PIXEL_FORMAT_RGB565 {
-			return false
-		}
-		return videoSetPixelFormat(*format)
+		return videoSetPixelFormat(*(*C.enum_retro_pixel_format)(data))
 	case C.RETRO_ENVIRONMENT_GET_SYSTEM_DIRECTORY:
 		path := (**C.char)(data)
 		*path = systemDirectory
@@ -798,8 +794,6 @@ func videoSetPixelFormat(format uint32) C.bool {
 	default:
 		log.Fatalf("Unknown pixel type %v", format)
 	}
-
-	fmt.Printf("Video pixel: %v %v %v %v %v\n", video, format, C.RETRO_PIXEL_FORMAT_0RGB1555, C.RETRO_PIXEL_FORMAT_XRGB8888, C.RETRO_PIXEL_FORMAT_RGB565)
 	return true
 }
 
