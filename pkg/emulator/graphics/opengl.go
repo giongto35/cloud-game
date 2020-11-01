@@ -1,4 +1,4 @@
-package opengl
+package graphics
 
 import (
 	"log"
@@ -7,7 +7,7 @@ import (
 	"github.com/go-gl/gl/v2.1/gl"
 )
 
-type OffscreenSetup struct {
+type offscreenSetup struct {
 	tex uint32
 	fbo uint32
 	rbo uint32
@@ -22,7 +22,7 @@ type OffscreenSetup struct {
 	hasStencil bool
 }
 
-var opt = OffscreenSetup{}
+var opt = offscreenSetup{}
 
 // OpenGL pixel format
 type PixelFormat int
@@ -33,13 +33,13 @@ const (
 	UnsignedInt8888Rev
 )
 
-func InitContext(getProcAddr func(name string) unsafe.Pointer) {
+func initContext(getProcAddr func(name string) unsafe.Pointer) {
 	if err := gl.InitWithProcAddrFunc(getProcAddr); err != nil {
 		panic(err)
 	}
 }
 
-func InitFramebuffer(w int, h int, hasDepth bool, hasStencil bool) {
+func initFramebuffer(w int, h int, hasDepth bool, hasStencil bool) {
 	opt.width = int32(w)
 	opt.height = int32(h)
 	opt.hasDepth = hasDepth
@@ -91,7 +91,7 @@ func InitFramebuffer(w int, h int, hasDepth bool, hasStencil bool) {
 	}
 }
 
-func DestroyFramebuffer() {
+func destroyFramebuffer() {
 	if opt.hasDepth {
 		gl.DeleteRenderbuffers(1, &opt.rbo)
 	}
@@ -107,7 +107,7 @@ func ReadFramebuffer(bytes int, w int, h int) []byte {
 	return data
 }
 
-func GetFbo() uint32 {
+func getFbo() uint32 {
 	return opt.fbo
 }
 
@@ -142,7 +142,7 @@ func PrintDriverInfo() {
 	log.Printf("[OpenGL] GLSL Version: %v", get(gl.SHADING_LANGUAGE_VERSION))
 }
 
-func GetError() uint32 {
+func getDriverError() uint32 {
 	return gl.GetError()
 }
 

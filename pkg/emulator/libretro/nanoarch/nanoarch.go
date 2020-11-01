@@ -13,10 +13,9 @@ import (
 	"unsafe"
 
 	"github.com/giongto35/cloud-game/v2/pkg/config"
+	"github.com/giongto35/cloud-game/v2/pkg/emulator/graphics"
 	"github.com/giongto35/cloud-game/v2/pkg/emulator/image"
-	"github.com/giongto35/cloud-game/v2/pkg/emulator/opengl"
 	"github.com/giongto35/cloud-game/v2/pkg/thread"
-	"github.com/veandco/go-sdl2/sdl"
 )
 
 /*
@@ -74,14 +73,12 @@ var video struct {
 	bpp      uint32
 	rotation image.Angle
 
-	maxWidth   int32
-	maxHeight  int32
 	baseWidth  int32
 	baseHeight int32
+	maxWidth   int32
+	maxHeight  int32
 
 	hw            *C.struct_retro_hw_render_callback
-	window        *sdl.Window
-	context       sdl.GLContext
 	isGl          bool
 	autoGlContext bool
 }
@@ -160,7 +157,7 @@ func coreVideoRefresh(data unsafe.Pointer, width C.unsigned, height C.unsigned, 
 
 	var data_ []byte
 	if isOpenGLRender {
-		data_ = opengl.ReadFramebuffer(bytes, int(width), int(height))
+		data_ = graphics.ReadFramebuffer(bytes, int(width), int(height))
 	} else {
 		data_ = (*[1 << 30]byte)(data)[:bytes:bytes]
 	}
@@ -255,12 +252,12 @@ func coreLog(_ C.enum_retro_log_level, msg *C.char) {
 
 //export coreGetCurrentFramebuffer
 func coreGetCurrentFramebuffer() C.uintptr_t {
-	return (C.uintptr_t)(opengl.GetFbo())
+	return (C.uintptr_t)(graphics.GetGlFbo())
 }
 
 //export coreGetProcAddress
 func coreGetProcAddress(sym *C.char) C.retro_proc_address_t {
-	return (C.retro_proc_address_t)(sdl.GLGetProcAddress(C.GoString(sym)))
+	return (C.retro_proc_address_t)(graphics.GetGlProcAddress(C.GoString(sym)))
 }
 
 //export coreEnvironment
@@ -322,9 +319,8 @@ func coreEnvironment(cmd C.unsigned, data unsafe.Pointer) C.bool {
 		// fmt.Printf("[Env]: get variable: key:%v not found\n", key)
 		return false
 	case C.RETRO_ENVIRONMENT_SET_HW_RENDER:
+		video.isGl = isGlAllowed
 		if isGlAllowed {
-			video.isGl = true
-			// runtime.LockOSThread()
 			video.hw = (*C.struct_retro_hw_render_callback)(data)
 			video.hw.get_current_framebuffer = (C.retro_hw_get_current_framebuffer_t)(C.coreGetCurrentFramebuffer_cgo)
 			video.hw.get_proc_address = (C.retro_hw_get_proc_address_t)(C.coreGetProcAddress_cgo)
@@ -356,102 +352,49 @@ func coreEnvironment(cmd C.unsigned, data unsafe.Pointer) C.bool {
 
 //export initVideo
 func initVideo() {
-	log.Printf("[SDL] [OpenGL] initialization...")
-	if err := sdl.Init(sdl.INIT_VIDEO); err != nil {
-		log.Printf("[SDL] error: %v", err)
-		panic("SDL initialization failed")
+	var context graphics.Context
+	switch video.hw.context_type {
+	case C.RETRO_HW_CONTEXT_NONE:
+		context = graphics.CtxNone
+	case C.RETRO_HW_CONTEXT_OPENGL:
+		context = graphics.CtxOpenGl
+	case C.RETRO_HW_CONTEXT_OPENGLES2:
+		context = graphics.CtxOpenGlEs2
+	case C.RETRO_HW_CONTEXT_OPENGL_CORE:
+		context = graphics.CtxOpenGlCore
+	case C.RETRO_HW_CONTEXT_OPENGLES3:
+		context = graphics.CtxOpenGlEs3
+	case C.RETRO_HW_CONTEXT_OPENGLES_VERSION:
+		context = graphics.CtxOpenGlEsVersion
+	case C.RETRO_HW_CONTEXT_VULKAN:
+		context = graphics.CtxVulkan
+	case C.RETRO_HW_CONTEXT_DUMMY:
+		context = graphics.CtxDummy
+	default:
+		context = graphics.CtxUnknown
 	}
 
-	if video.autoGlContext {
-		log.Printf("[OpenGL] AUTO_CONTEXT (type: %v v%v.%v)",
-			video.hw.context_type, video.hw.version_major, video.hw.version_minor)
-	} else {
-		switch video.hw.context_type {
-		case C.RETRO_HW_CONTEXT_OPENGL_CORE:
-			if err := sdl.GLSetAttribute(sdl.GL_CONTEXT_PROFILE_MASK, sdl.GL_CONTEXT_PROFILE_CORE); err != nil {
-				log.Printf("[SDL] error: %v", err)
-			}
-			log.Printf("[OpenGL] CONTEXT_PROFILE_CORE")
-			break
-		case C.RETRO_HW_CONTEXT_OPENGLES2:
-			if err := sdl.GLSetAttribute(sdl.GL_CONTEXT_PROFILE_MASK, sdl.GL_CONTEXT_PROFILE_ES); err != nil {
-				log.Printf("[SDL] attribute error: %v", err)
-			}
-			if err := sdl.GLSetAttribute(sdl.GL_CONTEXT_MAJOR_VERSION, 3); err != nil {
-				log.Printf("[SDL] attribute error: %v", err)
-			}
-			if err := sdl.GLSetAttribute(sdl.GL_CONTEXT_MINOR_VERSION, 0); err != nil {
-				log.Printf("[SDL] attribute error: %v", err)
-			}
-			log.Printf("[OpenGL] CONTEXT_PROFILE_ES 3.0")
-			break
-		case C.RETRO_HW_CONTEXT_OPENGL:
-			if video.hw.version_major >= 3 {
-				if err := sdl.GLSetAttribute(sdl.GL_CONTEXT_PROFILE_MASK, sdl.GL_CONTEXT_PROFILE_COMPATIBILITY); err != nil {
-					log.Printf("[SDL] attribute error: %v", err)
-				}
-			}
-			log.Printf("[OpenGL] CONTEXT_PROFILE_COMPATIBILITY")
-			break
-		default:
-			log.Printf("Unsupported hw context: %v", video.hw.context_type)
-		}
-	}
-
-	// In OSX 10.14+ window creation and context creation must happen in the main thread
-	thread.MainMaybe(createWindow)
-
-	// Bind context to current thread
-	if err := video.window.GLMakeCurrent(video.context); err != nil {
-		log.Printf("[SDL] error: %v", err)
-	}
-
-	opengl.InitContext(sdl.GLGetProcAddress)
-	opengl.PrintDriverInfo()
-	opengl.InitFramebuffer(int(video.maxWidth), int(video.maxHeight), bool(video.hw.depth), bool(video.hw.stencil))
-
+	graphics.Init(graphics.Config{
+		Ctx: context,
+		W:   int(video.maxWidth),
+		H:   int(video.maxHeight),
+		Gl: graphics.GlConfig{
+			AutoContext:  video.autoGlContext,
+			VersionMajor: uint(video.hw.version_major),
+			VersionMinor: uint(video.hw.version_minor),
+			HasDepth:     bool(video.hw.depth),
+			HasStencil:   bool(video.hw.stencil),
+		},
+	})
 	C.bridge_context_reset(video.hw.context_reset)
-}
-
-func createWindow() {
-	var winTitle = "CloudRetro dummy window"
-	var winWidth, winHeight int32 = 1, 1
-
-	var err error
-	if video.window, err = sdl.CreateWindow(
-		winTitle,
-		sdl.WINDOWPOS_UNDEFINED, sdl.WINDOWPOS_UNDEFINED,
-		winWidth, winHeight,
-		sdl.WINDOW_OPENGL|sdl.WINDOW_HIDDEN,
-	); err != nil {
-		panic(err)
-	}
-	if video.context, err = video.window.GLCreateContext(); err != nil {
-		panic(err)
-	}
-}
-
-func destroyWindow() {
-	if err := video.window.GLMakeCurrent(video.context); err != nil {
-		log.Printf("[SDL] context to window error: %v", err)
-	}
-	sdl.GLDeleteContext(video.context)
-	if err := video.window.Destroy(); err != nil {
-		log.Printf("[SDL] couldn't destroy the window, error: %v", err)
-	}
 }
 
 //export deinitVideo
 func deinitVideo() {
-	log.Printf("[SDL] [OpenGL] deinitialization...")
 	C.bridge_context_reset(video.hw.context_destroy)
-	opengl.DestroyFramebuffer()
-	// In OSX 10.14+ window deletion must happen in the main thread
-	thread.MainMaybe(destroyWindow)
+	graphics.Deinit()
 	video.isGl = false
 	video.autoGlContext = false
-	sdl.Quit()
-	log.Printf("[SDL] [OpenGL] deinitialized (%v, %v)", sdl.GetError(), opengl.GetError())
 }
 
 var retroHandle unsafe.Pointer
@@ -690,7 +633,7 @@ func serialize(size uint) ([]byte, error) {
 	return bytes, nil
 }
 
-// unserialize unserializes internal state from a byte slice.
+// unserialize deserializes internal state from a byte slice.
 func unserialize(bytes []byte, size uint) error {
 	if len(bytes) == 0 {
 		return nil
@@ -716,9 +659,7 @@ func nanoarchShutdown() {
 			thread.MainMaybe(func() {
 				// running inside a go routine, lock the thread to make sure the OpenGL context stays current
 				runtime.LockOSThread()
-				if err := video.window.GLMakeCurrent(video.context); err != nil {
-					log.Printf("[SDL] context to window error: %v", err)
-				}
+				graphics.BindContext()
 			})
 		}
 		C.bridge_retro_unload_game(retroUnloadGame)
@@ -747,9 +688,7 @@ func nanoarchRun() {
 		if video.isGl {
 			// running inside a go routine, lock the thread to make sure the OpenGL context stays current
 			runtime.LockOSThread()
-			if err := video.window.GLMakeCurrent(video.context); err != nil {
-				log.Printf("[SDL] context to window error: %v", err)
-			}
+			graphics.BindContext()
 		}
 		C.bridge_retro_run(retroRun)
 		if video.isGl {
@@ -762,20 +701,20 @@ func videoSetPixelFormat(format uint32) C.bool {
 	switch format {
 	case C.RETRO_PIXEL_FORMAT_0RGB1555:
 		video.pixFmt = image.BitFormatShort5551
-		opengl.SetPixelFormat(opengl.UnsignedShort5551)
+		graphics.SetPixelFormat(graphics.UnsignedShort5551)
 		video.bpp = 2
 		// format is not implemented
 		pixelFormatConverterFn = nil
 		break
 	case C.RETRO_PIXEL_FORMAT_XRGB8888:
 		video.pixFmt = image.BitFormatInt8888Rev
-		opengl.SetPixelFormat(opengl.UnsignedInt8888Rev)
+		graphics.SetPixelFormat(graphics.UnsignedInt8888Rev)
 		video.bpp = 4
 		pixelFormatConverterFn = image.Rgba8888
 		break
 	case C.RETRO_PIXEL_FORMAT_RGB565:
 		video.pixFmt = image.BitFormatShort565
-		opengl.SetPixelFormat(opengl.UnsignedShort565)
+		graphics.SetPixelFormat(graphics.UnsignedShort565)
 		video.bpp = 2
 		pixelFormatConverterFn = image.Rgb565
 		break
