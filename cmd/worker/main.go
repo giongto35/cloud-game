@@ -7,8 +7,8 @@ import (
 	"os/signal"
 	"time"
 
-	"github.com/faiface/mainthread"
 	config "github.com/giongto35/cloud-game/v2/pkg/config/worker"
+	"github.com/giongto35/cloud-game/v2/pkg/thread"
 	"github.com/giongto35/cloud-game/v2/pkg/util/logging"
 	"github.com/giongto35/cloud-game/v2/pkg/worker"
 	"github.com/golang/glog"
@@ -45,6 +45,5 @@ func run() {
 }
 
 func main() {
-	// enables mainthread package and runs run in a separate goroutine
-	mainthread.Run(run)
+	thread.MainWrapMaybe(run)
 }

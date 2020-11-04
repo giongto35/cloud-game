@@ -4,7 +4,7 @@ import (
 	"flag"
 	"time"
 
-	"github.com/giongto35/cloud-game/v2/pkg/emulator/libretro/image"
+	"github.com/giongto35/cloud-game/v2/pkg/emulator/image"
 )
 
 const DefaultSTUNTURN = `[{"urls":"stun:stun-turn.webgame2d.com:3478"},{"urls":"turn:stun-turn.webgame2d.com:3478","username":"root","credential":"root"}]`
@@ -25,11 +25,8 @@ var HttpsKey = flag.String("httpsKey", "", "Https Key")
 var HttpsChain = flag.String("httpsChain", "", "Https Chain")
 
 var WSWait = 20 * time.Second
-var MatchWorkerRandom = false
 var ProdEnv = "prod"
 var StagingEnv = "staging"
-
-const NumKeys = 10
 
 var FileTypeToEmulator = map[string]string{
 	"gba": "gba",
@@ -64,6 +61,7 @@ type EmulatorMeta struct {
 	Rotation        image.Rotate
 	IsGlAllowed     bool
 	UsesLibCo       bool
+	AutoGlContext   bool
 	HasMultitap     bool
 }
 

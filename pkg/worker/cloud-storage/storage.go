@@ -76,7 +76,7 @@ func (c *Client) SaveFile(name string, srcFile string) (err error) {
 	return nil
 }
 
-// Loadfile load file from GCP
+// Loadfile loads file from GCP
 func (c *Client) LoadFile(name string) (data []byte, err error) {
 	// Bypass if client is nil
 	if c == nil {

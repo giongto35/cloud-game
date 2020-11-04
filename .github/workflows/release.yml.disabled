@@ -24,7 +24,7 @@ on:
     tags:
       - 'v*'
 env:
-  go-version: 1.14
+  go-version: 1.15
   app-name: cloud-game
   app-arch: x86_64
 jobs:
@@ -41,15 +41,9 @@ jobs:
     - name: Get the source
       uses: actions/checkout@v2
     - name: Set up Go
-      uses: actions/setup-go@v1
+      uses: actions/setup-go@v2
       with:
         go-version: ${{ env.go-version }}
-    - name: Set up Go environment
-      shell: bash
-      # add Go's bin folder into environment (to be able to call its tools)
-      run: |
-        echo "::set-env name=GOPATH::$(go env GOPATH)"
-        echo "::add-path::$(go env GOPATH)/bin"
 
     - name: Get Linux dev libraries and tools
       if: matrix.os == 'ubuntu-latest'
@@ -71,7 +65,7 @@ jobs:
         update: true
 
     - name: Load Go modules maybe?
-      uses: actions/cache@v1
+      uses: actions/cache@v2
       with:
         path: ~/go/pkg/mod
         key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}

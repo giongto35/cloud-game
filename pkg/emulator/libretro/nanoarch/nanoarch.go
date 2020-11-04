@@ -3,8 +3,6 @@ package nanoarch
 import (
 	"bufio"
 	"errors"
-	"fmt"
-	stdimage "image"
 	"log"
 	"math/rand"
 	"os"
@@ -14,12 +12,10 @@ import (
 	"time"
 	"unsafe"
 
-	"github.com/disintegration/imaging"
-	"github.com/faiface/mainthread"
 	"github.com/giongto35/cloud-game/v2/pkg/config"
-	"github.com/giongto35/cloud-game/v2/pkg/emulator/libretro/image"
-	"github.com/go-gl/gl/v4.1-core/gl"
-	"github.com/veandco/go-sdl2/sdl"
+	"github.com/giongto35/cloud-game/v2/pkg/emulator/graphics"
+	"github.com/giongto35/cloud-game/v2/pkg/emulator/image"
+	"github.com/giongto35/cloud-game/v2/pkg/thread"
 )
 
 /*
@@ -72,31 +68,28 @@ import "C"
 var mu sync.Mutex
 
 var video struct {
-	pitch       uint32
-	pixFmt      uint32
-	bpp         uint32
-	rotation    image.Angle
-	fbo         uint32
-	rbo         uint32
-	tex         uint32
-	hw          *C.struct_retro_hw_render_callback
-	window      *sdl.Window
-	context     sdl.GLContext
-	isGl        bool
-	max_width   int32
-	max_height  int32
-	base_width  int32
-	base_height int32
+	pitch    uint32
+	pixFmt   uint32
+	bpp      uint32
+	rotation image.Angle
+
+	baseWidth  int32
+	baseHeight int32
+	maxWidth   int32
+	maxHeight  int32
+
+	hw            *C.struct_retro_hw_render_callback
+	isGl          bool
+	autoGlContext bool
 }
 
 // default core pix format converter
 var pixelFormatConverterFn = image.Rgb565
 var rotationFn = image.GetRotation(image.Angle(0))
 
-const bufSize = 1024 * 4
-const joypadNumKeys = int(C.RETRO_DEVICE_ID_JOYPAD_R3 + 1)
+//const joypadNumKeys = int(C.RETRO_DEVICE_ID_JOYPAD_R3 + 1)
+//var joy [joypadNumKeys]bool
 
-var joy [joypadNumKeys]bool
 var isGlAllowed bool
 var usesLibCo bool
 var coreConfig ConfigProperties
@@ -144,39 +137,37 @@ type CloudEmulator interface {
 //export coreVideoRefresh
 func coreVideoRefresh(data unsafe.Pointer, width C.unsigned, height C.unsigned, pitch C.size_t) {
 	// some cores can return nothing
+	// !to add duplicate if can dup
 	if data == nil {
 		return
 	}
+
 	// divide by 8333 to give us the equivalent of a 120fps resolution
 	timestamp := uint32(time.Now().UnixNano()/8333) + seed
-
-	if data == C.RETRO_HW_FRAME_BUFFER_VALID {
-		im := stdimage.NewNRGBA(stdimage.Rect(0, 0, int(width), int(height)))
-		gl.BindFramebuffer(gl.FRAMEBUFFER, video.fbo)
-		gl.ReadPixels(0, 0, int32(width), int32(height), gl.RGBA, gl.UNSIGNED_BYTE, gl.Ptr(im.Pix))
-		gl.BindFramebuffer(gl.FRAMEBUFFER, 0)
-		im = imaging.FlipV(im)
-		rgba := &stdimage.RGBA{
-			Pix:    im.Pix,
-			Stride: im.Stride,
-			Rect:   im.Rect,
-		}
-		NAEmulator.imageChannel <- GameFrame{Image: rgba, Timestamp: timestamp}
-		return
-	}
+	// if Libretro renders frame with OpenGL context
+	isOpenGLRender := data == C.RETRO_HW_FRAME_BUFFER_VALID
 
 	// calculate real frame width in pixels from packed data (realWidth >= width)
 	packedWidth := int(uint32(pitch) / video.bpp)
-
-	// convert data from C
+	if packedWidth < 1 {
+		packedWidth = int(width)
+	}
+	// calculate space for the video frame
 	bytes := int(height) * packedWidth * int(video.bpp)
-	data_ := (*[1 << 30]byte)(data)[:bytes:bytes]
+
+	var data_ []byte
+	if isOpenGLRender {
+		data_ = graphics.ReadFramebuffer(bytes, int(width), int(height))
+	} else {
+		data_ = (*[1 << 30]byte)(data)[:bytes:bytes]
+	}
 
 	// the image is being resized and de-rotated
 	image.DrawRgbaImage(
 		pixelFormatConverterFn,
 		rotationFn,
 		image.ScaleNearestNeighbour,
+		isOpenGLRender,
 		int(width), int(height), packedWidth, int(video.bpp),
 		data_,
 		outputImg,
@@ -210,7 +201,7 @@ func coreInputState(port C.unsigned, device C.unsigned, index C.unsigned, id C.u
 		return 0
 	}
 
-	// map from id to controll key
+	// map from id to control key
 	key, ok := bindKeysMap[int(id)]
 	if !ok {
 		return 0
@@ -225,13 +216,14 @@ func coreInputState(port C.unsigned, device C.unsigned, index C.unsigned, id C.u
 	return 0
 }
 
-func audioWrite2(buf unsafe.Pointer, frames C.size_t) C.size_t {
+func audioWrite(buf unsafe.Pointer, frames C.size_t) C.size_t {
 	// !to make it mono/stereo independent
 	samples := int(frames) * 2
 	pcm := (*[(1 << 30) - 1]int16)(buf)[:samples:samples]
 
 	p := make([]int16, samples)
-	// copy because pcm slice refer to buf underlying pointer, and buf pointer is the same in continuos frames
+	// copy because pcm slice refer to buf underlying pointer,
+	// and buf pointer is the same in continuous frames
 	copy(p, pcm)
 
 	select {
@@ -245,27 +237,27 @@ func audioWrite2(buf unsafe.Pointer, frames C.size_t) C.size_t {
 //export coreAudioSample
 func coreAudioSample(left C.int16_t, right C.int16_t) {
 	buf := []C.int16_t{left, right}
-	audioWrite2(unsafe.Pointer(&buf), 1)
+	audioWrite(unsafe.Pointer(&buf), 1)
 }
 
 //export coreAudioSampleBatch
 func coreAudioSampleBatch(data unsafe.Pointer, frames C.size_t) C.size_t {
-	return audioWrite2(data, frames)
+	return audioWrite(data, frames)
 }
 
 //export coreLog
-func coreLog(level C.enum_retro_log_level, msg *C.char) {
-	fmt.Print("[Log]: ", C.GoString(msg))
+func coreLog(_ C.enum_retro_log_level, msg *C.char) {
+	log.Printf("[Log] %v", C.GoString(msg))
 }
 
 //export coreGetCurrentFramebuffer
 func coreGetCurrentFramebuffer() C.uintptr_t {
-	return (C.uintptr_t)(video.fbo)
+	return (C.uintptr_t)(graphics.GetGlFbo())
 }
 
 //export coreGetProcAddress
 func coreGetProcAddress(sym *C.char) C.retro_proc_address_t {
-	return (C.retro_proc_address_t)(sdl.GLGetProcAddress(C.GoString(sym)))
+	return (C.retro_proc_address_t)(graphics.GetGlProcAddress(C.GoString(sym)))
 }
 
 //export coreEnvironment
@@ -316,16 +308,15 @@ func coreEnvironment(cmd C.unsigned, data unsafe.Pointer) C.bool {
 		variable := (*C.struct_retro_variable)(data)
 		key := C.GoString(variable.key)
 		if val, ok := coreConfig[key]; ok {
-			fmt.Printf("[Env]: get variable: key:%v value:%v\n", key, C.GoString(val))
+			log.Printf("[Env]: get variable: key:%v value:%v", key, C.GoString(val))
 			variable.value = val
 			return true
 		}
 		// fmt.Printf("[Env]: get variable: key:%v not found\n", key)
 		return false
 	case C.RETRO_ENVIRONMENT_SET_HW_RENDER:
+		video.isGl = isGlAllowed
 		if isGlAllowed {
-			video.isGl = true
-			// runtime.LockOSThread()
 			video.hw = (*C.struct_retro_hw_render_callback)(data)
 			video.hw.get_current_framebuffer = (C.retro_hw_get_current_framebuffer_t)(C.coreGetCurrentFramebuffer_cgo)
 			video.hw.get_proc_address = (C.retro_hw_get_proc_address_t)(C.coreGetProcAddress_cgo)
@@ -355,128 +346,51 @@ func coreEnvironment(cmd C.unsigned, data unsafe.Pointer) C.bool {
 	return true
 }
 
-func init() {
-}
-
-var sdlInitialized = false
-
 //export initVideo
 func initVideo() {
-	// create_window()
-	var winTitle string = "CloudRetro"
-	var winWidth, winHeight int32 = 1, 1
-	var err error
-
-	if !sdlInitialized {
-		sdlInitialized = true
-		if err = sdl.Init(sdl.INIT_EVERYTHING); err != nil {
-			panic(err)
-		}
-	}
-
+	var context graphics.Context
 	switch video.hw.context_type {
-	case C.RETRO_HW_CONTEXT_OPENGL_CORE:
-		fmt.Println("RETRO_HW_CONTEXT_OPENGL_CORE")
-		sdl.GLSetAttribute(sdl.GL_CONTEXT_PROFILE_MASK, sdl.GL_CONTEXT_PROFILE_CORE)
-		break
-	case C.RETRO_HW_CONTEXT_OPENGLES2:
-		fmt.Println("RETRO_HW_CONTEXT_OPENGLES2")
-		sdl.GLSetAttribute(sdl.GL_CONTEXT_PROFILE_MASK, sdl.GL_CONTEXT_PROFILE_ES)
-		sdl.GLSetAttribute(sdl.GL_CONTEXT_MAJOR_VERSION, 3)
-		sdl.GLSetAttribute(sdl.GL_CONTEXT_MINOR_VERSION, 0)
-		break
+	case C.RETRO_HW_CONTEXT_NONE:
+		context = graphics.CtxNone
 	case C.RETRO_HW_CONTEXT_OPENGL:
-		fmt.Println("RETRO_HW_CONTEXT_OPENGL")
-		if video.hw.version_major >= 3 {
-			sdl.GLSetAttribute(sdl.GL_CONTEXT_PROFILE_MASK, sdl.GL_CONTEXT_PROFILE_COMPATIBILITY)
-		}
-		break
+		context = graphics.CtxOpenGl
+	case C.RETRO_HW_CONTEXT_OPENGLES2:
+		context = graphics.CtxOpenGlEs2
+	case C.RETRO_HW_CONTEXT_OPENGL_CORE:
+		context = graphics.CtxOpenGlCore
+	case C.RETRO_HW_CONTEXT_OPENGLES3:
+		context = graphics.CtxOpenGlEs3
+	case C.RETRO_HW_CONTEXT_OPENGLES_VERSION:
+		context = graphics.CtxOpenGlEsVersion
+	case C.RETRO_HW_CONTEXT_VULKAN:
+		context = graphics.CtxVulkan
+	case C.RETRO_HW_CONTEXT_DUMMY:
+		context = graphics.CtxDummy
 	default:
-		fmt.Println("Unsupported hw context:", video.hw.context_type)
+		context = graphics.CtxUnknown
 	}
 
-	// In OSX 10.14+ window creation and context creation must happen in the main thread
-	mainthread.Call(func() {
-		video.window, err = sdl.CreateWindow(winTitle, sdl.WINDOWPOS_UNDEFINED, sdl.WINDOWPOS_UNDEFINED, winWidth, winHeight, sdl.WINDOW_OPENGL)
-		if err != nil {
-			panic(err)
-		}
-
-		video.context, err = video.window.GLCreateContext()
-		if err != nil {
-			panic(err)
-		}
+	graphics.Init(graphics.Config{
+		Ctx: context,
+		W:   int(video.maxWidth),
+		H:   int(video.maxHeight),
+		Gl: graphics.GlConfig{
+			AutoContext:  video.autoGlContext,
+			VersionMajor: uint(video.hw.version_major),
+			VersionMinor: uint(video.hw.version_minor),
+			HasDepth:     bool(video.hw.depth),
+			HasStencil:   bool(video.hw.stencil),
+		},
 	})
-	// Bind context to current thread
-	video.window.GLMakeCurrent(video.context)
-
-	if err = gl.InitWithProcAddrFunc(sdl.GLGetProcAddress); err != nil {
-		panic(err)
-	}
-
-	version := gl.GoStr(gl.GetString(gl.VERSION))
-	fmt.Println("OpenGL version: ", version)
-
-	// init_texture()
-	gl.GenTextures(1, &video.tex)
-	if video.tex < 0 {
-		panic(fmt.Sprintf("GenTextures: 0x%X", video.tex))
-	}
-
-	gl.BindTexture(gl.TEXTURE_2D, video.tex)
-
-	gl.TexParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST)
-	gl.TexParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST)
-
-	gl.TexImage2D(gl.TEXTURE_2D, 0, gl.RGBA, video.max_width, video.max_height, 0, gl.RGBA, gl.UNSIGNED_BYTE, nil)
-
-	gl.BindTexture(gl.TEXTURE_2D, 0)
-
-	//init_framebuffer()
-	gl.GenFramebuffers(1, &video.fbo)
-	gl.BindFramebuffer(gl.FRAMEBUFFER, video.fbo)
-
-	gl.FramebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, video.tex, 0)
-
-	if video.hw.depth {
-		gl.GenRenderbuffers(1, &video.rbo)
-		gl.BindRenderbuffer(gl.RENDERBUFFER, video.rbo)
-		if video.hw.stencil {
-			gl.RenderbufferStorage(gl.RENDERBUFFER, gl.DEPTH24_STENCIL8, video.base_width, video.base_height)
-			gl.FramebufferRenderbuffer(gl.FRAMEBUFFER, gl.DEPTH_STENCIL_ATTACHMENT, gl.RENDERBUFFER, video.rbo)
-		} else {
-			gl.RenderbufferStorage(gl.RENDERBUFFER, gl.DEPTH_COMPONENT24, video.base_width, video.base_height)
-			gl.FramebufferRenderbuffer(gl.FRAMEBUFFER, gl.DEPTH_ATTACHMENT, gl.RENDERBUFFER, video.rbo)
-		}
-		gl.BindRenderbuffer(gl.RENDERBUFFER, 0)
-	}
-
-	status := gl.CheckFramebufferStatus(gl.FRAMEBUFFER)
-	if status != gl.FRAMEBUFFER_COMPLETE {
-		if e := gl.GetError(); e != gl.NO_ERROR {
-			panic(fmt.Sprintf("GL error: 0x%X, Frame status: 0x%X", e, status))
-		}
-		panic(fmt.Sprintf("Frame status: 0x%X", status))
-	}
-
 	C.bridge_context_reset(video.hw.context_reset)
 }
 
 //export deinitVideo
 func deinitVideo() {
 	C.bridge_context_reset(video.hw.context_destroy)
-	if video.hw.depth {
-		gl.DeleteRenderbuffers(1, &video.rbo)
-	}
-	gl.DeleteFramebuffers(1, &video.fbo)
-	gl.DeleteTextures(1, &video.tex)
-	// In OSX 10.14+ window deletion must happen in the main thread
-	mainthread.Call(func() {
-		video.window.GLMakeCurrent(video.context)
-		sdl.GLDeleteContext(video.context)
-		video.window.Destroy()
-	})
+	graphics.Deinit()
 	video.isGl = false
+	video.autoGlContext = false
 }
 
 var retroHandle unsafe.Pointer
@@ -494,8 +408,6 @@ var retroSetAudioSampleBatch unsafe.Pointer
 var retroRun unsafe.Pointer
 var retroLoadGame unsafe.Pointer
 var retroUnloadGame unsafe.Pointer
-var retroGetMemorySize unsafe.Pointer
-var retroGetMemoryData unsafe.Pointer
 var retroSerializeSize unsafe.Pointer
 var retroSerialize unsafe.Pointer
 var retroUnserialize unsafe.Pointer
@@ -511,6 +423,7 @@ func loadFunction(handle unsafe.Pointer, name string) unsafe.Pointer {
 func coreLoad(meta config.EmulatorMeta) {
 	isGlAllowed = meta.IsGlAllowed
 	usesLibCo = meta.UsesLibCo
+	video.autoGlContext = meta.AutoGlContext
 	coreConfig = ScanConfigFile(meta.Config)
 
 	multitap.supported = meta.HasMultitap
@@ -531,7 +444,9 @@ func coreLoad(meta config.EmulatorMeta) {
 
 	if retroHandle == nil {
 		err := C.dlerror()
-		log.Fatalf("error loading %s, err %+v", meta.Path, *err)
+		if err != nil {
+			log.Fatalf("error core load: %s, %v", meta.Path, C.GoString(err))
+		}
 	}
 
 	retroInit = loadFunction(retroHandle, "retro_init")
@@ -565,7 +480,7 @@ func coreLoad(meta config.EmulatorMeta) {
 	C.bridge_retro_init(retroInit)
 
 	v := C.bridge_retro_api_version(retroAPIVersion)
-	fmt.Println("Libretro API version:", v)
+	log.Printf("Libretro API version: %v", v)
 }
 
 func slurp(path string, size int64) ([]byte, error) {
@@ -596,7 +511,7 @@ func coreLoadGame(filename string) {
 
 	size := fi.Size()
 
-	fmt.Println("ROM size:", size)
+	log.Printf("ROM size: %v", size)
 
 	csFilename := C.CString(filename)
 	defer C.free(unsafe.Pointer(csFilename))
@@ -610,11 +525,11 @@ func coreLoadGame(filename string) {
 	C.bridge_retro_get_system_info(retroGetSystemInfo, &si)
 
 	var libName = C.GoString(si.library_name)
-	fmt.Println("  library_name:", libName)
-	fmt.Println("  library_version:", C.GoString(si.library_version))
-	fmt.Println("  valid_extensions:", C.GoString(si.valid_extensions))
-	fmt.Println("  need_fullpath:", si.need_fullpath)
-	fmt.Println("  block_extract:", si.block_extract)
+	log.Printf("  library_name: %v", libName)
+	log.Printf("  library_version: %v", C.GoString(si.library_version))
+	log.Printf("  valid_extensions: %v", C.GoString(si.valid_extensions))
+	log.Printf("  need_fullpath: %v", si.need_fullpath)
+	log.Printf("  block_extract: %v", si.block_extract)
 
 	if !si.need_fullpath {
 		bytes, err := slurp(filename, size)
@@ -650,22 +565,21 @@ func coreLoadGame(filename string) {
 	}
 	NAEmulator.meta.Ratio = ratio
 
-	fmt.Println("-----------------------------------")
-	fmt.Println("--- System audio and video info ---")
-	fmt.Println("-----------------------------------")
-	fmt.Println("  Aspect ratio: ", ratio)
-	fmt.Println("  Base width: ", avi.geometry.base_width)   /* Nominal video width of game. */
-	fmt.Println("  Base height: ", avi.geometry.base_height) /* Nominal video height of game. */
-	fmt.Println("  Max width: ", avi.geometry.max_width)     /* Maximum possible width of game. */
-	fmt.Println("  Max height: ", avi.geometry.max_height)   /* Maximum possible height of game. */
-	fmt.Println("  Sample rate: ", avi.timing.sample_rate)   /* Sampling rate of audio. */
-	fmt.Println("  FPS: ", avi.timing.fps)                   /* FPS of video content. */
-	fmt.Println("-----------------------------------")
+	log.Printf("-----------------------------------")
+	log.Printf("---  Core audio and video info  ---")
+	log.Printf("-----------------------------------")
+	log.Printf("  Frame: %vx%v (%vx%v)",
+		avi.geometry.base_width, avi.geometry.base_height,
+		avi.geometry.max_width, avi.geometry.max_height)
+	log.Printf("  AR:    %v", ratio)
+	log.Printf("  FPS:   %v", avi.timing.fps)
+	log.Printf("  Audio: %vHz", avi.timing.sample_rate)
+	log.Printf("-----------------------------------")
 
-	video.max_width = int32(avi.geometry.max_width)
-	video.max_height = int32(avi.geometry.max_height)
-	video.base_width = int32(avi.geometry.base_width)
-	video.base_height = int32(avi.geometry.base_height)
+	video.maxWidth = int32(avi.geometry.max_width)
+	video.maxHeight = int32(avi.geometry.max_height)
+	video.baseWidth = int32(avi.geometry.base_width)
+	video.baseHeight = int32(avi.geometry.base_height)
 	if video.isGl {
 		if usesLibCo {
 			C.bridge_execute(C.initVideo_cgo)
@@ -715,7 +629,7 @@ func serialize(size uint) ([]byte, error) {
 	return bytes, nil
 }
 
-// unserialize unserializes internal state from a byte slice.
+// unserialize deserializes internal state from a byte slice.
 func unserialize(bytes []byte, size uint) error {
 	if len(bytes) == 0 {
 		return nil
@@ -729,28 +643,34 @@ func unserialize(bytes []byte, size uint) error {
 
 func nanoarchShutdown() {
 	if usesLibCo {
-		C.bridge_execute(retroUnloadGame)
-		C.bridge_execute(retroDeinit)
-		if video.isGl {
-			C.bridge_execute(C.deinitVideo_cgo)
-		}
+		thread.MainMaybe(func() {
+			C.bridge_execute(retroUnloadGame)
+			C.bridge_execute(retroDeinit)
+			if video.isGl {
+				C.bridge_execute(C.deinitVideo_cgo)
+			}
+		})
 	} else {
 		if video.isGl {
-			// running inside a go routine, lock the thread to make sure the OpenGL context stays current
-			runtime.LockOSThread()
-			video.window.GLMakeCurrent(video.context)
+			thread.MainMaybe(func() {
+				// running inside a go routine, lock the thread to make sure the OpenGL context stays current
+				runtime.LockOSThread()
+				graphics.BindContext()
+			})
 		}
 		C.bridge_retro_unload_game(retroUnloadGame)
 		C.bridge_retro_deinit(retroDeinit)
 		if video.isGl {
-			deinitVideo()
-			runtime.UnlockOSThread()
+			thread.MainMaybe(func() {
+				deinitVideo()
+				runtime.UnlockOSThread()
+			})
 		}
 	}
 
 	setRotation(0)
 	if r := C.dlclose(retroHandle); r != 0 {
-		fmt.Println("error closing core")
+		log.Printf("couldn't close the core")
 	}
 	for _, element := range coreConfig {
 		C.free(unsafe.Pointer(element))
@@ -764,7 +684,7 @@ func nanoarchRun() {
 		if video.isGl {
 			// running inside a go routine, lock the thread to make sure the OpenGL context stays current
 			runtime.LockOSThread()
-			video.window.GLMakeCurrent(video.context)
+			graphics.BindContext()
 		}
 		C.bridge_retro_run(retroRun)
 		if video.isGl {
@@ -776,18 +696,21 @@ func nanoarchRun() {
 func videoSetPixelFormat(format uint32) C.bool {
 	switch format {
 	case C.RETRO_PIXEL_FORMAT_0RGB1555:
-		video.pixFmt = image.BIT_FORMAT_SHORT_5_5_5_1
+		video.pixFmt = image.BitFormatShort5551
+		graphics.SetPixelFormat(graphics.UnsignedShort5551)
 		video.bpp = 2
 		// format is not implemented
 		pixelFormatConverterFn = nil
 		break
 	case C.RETRO_PIXEL_FORMAT_XRGB8888:
-		video.pixFmt = image.BIT_FORMAT_INT_8_8_8_8_REV
+		video.pixFmt = image.BitFormatInt8888Rev
+		graphics.SetPixelFormat(graphics.UnsignedInt8888Rev)
 		video.bpp = 4
 		pixelFormatConverterFn = image.Rgba8888
 		break
 	case C.RETRO_PIXEL_FORMAT_RGB565:
-		video.pixFmt = image.BIT_FORMAT_SHORT_5_6_5
+		video.pixFmt = image.BitFormatShort565
+		graphics.SetPixelFormat(graphics.UnsignedShort565)
 		video.bpp = 2
 		pixelFormatConverterFn = image.Rgb565
 		break

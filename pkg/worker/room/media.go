@@ -146,6 +146,9 @@ func (r *Room) startVideo(width, height int, videoEncoderType string) {
 		fmt.Println("error create new encoder", err)
 		return
 	}
+
+	r.encoder = enc
+
 	einput := enc.GetInputChan()
 	eoutput := enc.GetOutputChan()
 

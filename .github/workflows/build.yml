@@ -1,9 +1,8 @@
-# ------------------------------------------------------------------------
-#  Build workflow for multiple OSes (Linux x64, macOS x64, Windows x64)
-# ------------------------------------------------------------------------
+# ------------------------------------------------------------
+#  Build workflow (Linux x64, macOS x64, Windows x64)
+# ------------------------------------------------------------
 
 name: build
-# run only when pushing into the master only
 on:
   push:
     branches:
@@ -13,34 +12,27 @@ on:
   pull_request:
     branches:
       - master
-env:
-  go-version: 1.14
+
 jobs:
+
   build:
     name: Build
     strategy:
       matrix:
-        os: [ubuntu-latest, macos-latest, windows-latest]
+        os: [ ubuntu-latest, macos-latest, windows-latest ]
     runs-on: ${{ matrix.os }}
     steps:
-      - name: Get the source
-        uses: actions/checkout@v2
-      - name: Set up Go
-        uses: actions/setup-go@v1
+      - uses: actions/checkout@v2
+
+      - uses: actions/setup-go@v2
         with:
-          go-version: ${{ env.go-version }}
-      - name: Set up Go environment
-        shell: bash
-        # add Go's bin folder into environment (to be able to call its tools)
-        run: |
-          echo "::set-env name=GOPATH::$(go env GOPATH)"
-          echo "::add-path::$(go env GOPATH)/bin"
+          go-version: ^1.15
 
       - name: Get Linux dev libraries and tools
         if: matrix.os == 'ubuntu-latest'
         run: |
           sudo apt-get update
-          sudo apt-get install -y make pkg-config libvpx-dev libopus-dev libopusfile-dev libsdl2-dev
+          sudo apt-get install -y make pkg-config libvpx-dev libopus-dev libopusfile-dev libsdl2-dev libgl1-mesa-glx
 
       - name: Get MacOS dev libraries and tools
         if: matrix.os == 'macos-latest'
@@ -54,9 +46,16 @@ jobs:
           msystem: MINGW64
           path-type: inherit
           update: true
+          install: >
+            mingw-w64-x86_64-gcc
+            mingw-w64-x86_64-pkg-config
+            mingw-w64-x86_64-dlfcn
+            mingw-w64-x86_64-libvpx
+            mingw-w64-x86_64-opusfile
+            mingw-w64-x86_64-SDL2
 
       - name: Load Go modules maybe?
-        uses: actions/cache@v1
+        uses: actions/cache@v2
         with:
           path: ~/go/pkg/mod
           key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
@@ -66,14 +65,14 @@ jobs:
       - name: Build Windows app
         if: matrix.os == 'windows-latest'
         shell: msys2 {0}
-        run: >
-          pacman -S --noconfirm --needed make
-          mingw-w64-x86_64-gcc
-          mingw-w64-x86_64-pkg-config
-          mingw-w64-x86_64-dlfcn
-          mingw-w64-x86_64-libvpx
-          mingw-w64-x86_64-opusfile
-          mingw-w64-x86_64-SDL2
+        run: |
+          wget -q https://github.com/pal1000/mesa-dist-win/releases/download/20.2.1/mesa3d-20.2.1-release-mingw.7z
+          "/c/Program Files/7-Zip/7z.exe" x mesa3d-20.2.1-release-mingw.7z -omesa
+          echo -e " 2\r\n 8\r\n " >> commands
+          ./mesa/systemwidedeploy.cmd < ./commands
+
+          wget -q https://buildbot.libretro.com/nightly/windows/x86_64/latest/mupen64plus_next_libretro.dll.zip
+          "/c/Program Files/7-Zip/7z.exe" x mupen64plus_next_libretro.dll.zip -oassets/emulator/libretro/cores
 
           make build
 
@@ -86,6 +85,30 @@ jobs:
         if: matrix.os == 'macos-latest'
         run: |
           make build
+
+      - name: Verify core rendering (windows-latest)
+        if: matrix.os == 'windows-latest' && always()
+        shell: msys2 {0}
+        env:
+          MESA_GL_VERSION_OVERRIDE: 3.3COMPAT
+        run: |
+          go test -run TestAllEmulatorRooms ./pkg/worker/room -v -renderFrames -autoGlContext -outputPath "../../../_rendered"
+
+      - name: Verify core rendering (ubuntu-latest)
+        if: matrix.os == 'ubuntu-latest' && always()
+        env:
+          MESA_GL_VERSION_OVERRIDE: 3.3COMPAT
+        run: |
+          xvfb-run --auto-servernum go test -run TestAllEmulatorRooms ./pkg/worker/room -v -renderFrames -autoGlContext -outputPath "../../../_rendered"
+
+      - name: Verify core rendering (macos-latest)
+        if: matrix.os == 'macos-latest' && always()
+        run: |
+          go test -run TestAllEmulatorRooms ./pkg/worker/room -v -renderFrames -outputPath "../../../_rendered"
+
+      - uses: actions/upload-artifact@v2
+        with:
+          path: _rendered/*.png
 
   docker_build_check:
     name: Build (docker)
