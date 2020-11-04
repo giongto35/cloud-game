@@ -1,7 +1,5 @@
 package config
 
-const ()
-
 type Opus struct {
 	Hz      int
 	Ch      int
