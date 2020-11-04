@@ -1,75 +1,53 @@
 package audio
 
 import (
-	"math/rand"
+	"math"
 	"testing"
 )
 
-type testRun struct {
-	srcFq int
-	dstFq int
-
-	frameDurationMs int
-
-	in  []int16
-	out []int16
-}
-
-func TestResampling(t *testing.T) {
-	//rand.Seed(time.Now().Unix())
-	//
-	//n := 20
-	//input := randPCM(n)
-	//
-	//p := NewAudioProcessor(NewOpusEncoder(config.DefaultOpusCfg()))
-	//
-	//k := GetSampleCount(20000, 2, 2)
-	//
-	//a := resample(input, k, 13231, 48000)
-	//
-	//if !reflect.DeepEqual(a, b) {
-	//	t.Errorf("\n%v\n%v-%v\n%v\n\n%v", input, len(a), len(b), a, b)
-	//}
-}
-
-func randPCM(n int) []int16 {
-	result := make([]int16, n)
-	i := 0
-	for i < n {
-		result[i] = int16(rand.Int31n(255))
-		i++
+func TestSampleCount(t *testing.T) {
+	tests := []struct {
+		sr      int
+		ch      int
+		time    float64
+		samples int
+	}{
+		{sr: 48000, ch: 2, time: 2.5, samples: 240},
+		{sr: 48000, ch: 2, time: 5, samples: 480},
+		{sr: 48000, ch: 2, time: 10, samples: 960},
+		{sr: 48000, ch: 2, time: 20, samples: 1920},
+		{sr: 48000, ch: 2, time: 40, samples: 3840},
+		{sr: 48000, ch: 2, time: 60, samples: 5760},
 	}
-	return result
+
+	for _, test := range tests {
+		samples := GetSampleCount(test.sr, test.ch, test.time)
+		if samples != test.samples {
+			t.Errorf("Sample count mismatch for %v %v != %v", test, samples, test.samples)
+		}
+	}
 }
 
-func TestEncoder(t *testing.T) {
-	//tests := []testRun{
-	//	{
-	//		frameDurationMs: 4,
-	//		srcFq:           1000,
-	//		dstFq:           3100,
-	//		in: []int16{
-	//			0, 0,
-	//			1, 1,
-	//			3, 3,
-	//			0, 0,
-	//		},
-	//		out: []int16{
-	//			0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-	//		},
-	//	},
-	//	//{
-	//	//	target: 0,
-	//	//	srcFq:  0,
-	//	//	dstFq:  0,
-	//	//},
-	//}
+func TestDefaultResampling(t *testing.T) {
+	// 10ms 100Hz 10KHz stereo sine
+	wave10k := makeSinWave(100, 10000, 2, 10)
+	// 10ms 100Hz 21KHz stereo sine
+	wave21k := makeSinWave(100, 21000, 2, 10)
+	// resampled 10kHz -> 21kHz
+	waveUp := resample(wave10k, GetSampleCount(21000, 2, 10), 10000, 21000)
 
-	//for _, test := range tests {
-	//frame := test.dstFq / 1000 * test.frameDurationMs * 2
-	//result := Resample(test.in, frame, test.srcFq, test.dstFq)
-	//if !reflect.DeepEqual(result, test.out) {
-	//	t.Errorf("%v != %v", test.out, result)
-	//}
-	//}
+	t.Logf("\n%v\n%v", wave21k, waveUp)
+}
+
+// makeSinWave creates a 16Bit PCM sine wave of given duration in milliseconds.
+func makeSinWave(frequency int, sampleRate int, channels int, duration int) []int16 {
+	samples := make([]int16, sampleRate*duration/1000*channels)
+	for i, end := 0, len(samples); i < end; i += channels {
+		sample := math.Sin(2.0 * math.Pi * float64(i) / float64(sampleRate/frequency))
+		samples[i] = int16(sample * math.MaxInt16)
+		for c := channels - 1; c > 0; c-- {
+			samples[i+c] = samples[i]
+		}
+	}
+	return samples
 }

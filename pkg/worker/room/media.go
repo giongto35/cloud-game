@@ -5,7 +5,6 @@ import (
 	"log"
 
 	"github.com/giongto35/cloud-game/v2/pkg/audio"
-
 	"github.com/giongto35/cloud-game/v2/pkg/config"
 	"github.com/giongto35/cloud-game/v2/pkg/encoder"
 	"github.com/giongto35/cloud-game/v2/pkg/encoder/h264encoder"
@@ -42,12 +41,11 @@ func (r *Room) startAudio(sampleRate int) {
 	conf := config.DefaultOpusCfg()
 	processor := audio.NewAudioProcessor(audio.NewOpusEncoder(conf))
 
-	srcSampleCount := processor.GetSampleCount(sampleRate, conf.Ch, conf.FrameMs)
-	pcm := make([]int16, srcSampleCount)
-	idx := 0
-
 	log.Printf("Audio (out): %v %vHz -> %v %vHz %vCh %vms", "PCM", sampleRate, "Opus", conf.Hz, conf.Ch, conf.FrameMs)
 
+	samples := audio.GetSampleCount(sampleRate, conf.Ch, conf.FrameMs)
+	pcm := make([]int16, samples)
+	idx := 0
 	// audio fan-out
 	for sample := range r.audioChannel {
 		// some strange way to do it
