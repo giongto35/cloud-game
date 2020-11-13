@@ -115,6 +115,11 @@ We are very much thankful to everyone who contributes to the project:
 * *poi5305* for the video encoding https://github.com/poi5305/go-yuv2webRTC.
 * *fogleman* for the NES emulator https://github.com/fogleman/nes.
 
+## Main Contributor
+
+Sergy Stepanov
+https://github.com/sergystepanov/
+
 ## Author
 
 Nguyen Huu Thanh  
@@ -122,4 +127,3 @@ https://www.linkedin.com/in/huuthanhnguyen/
 
 Tri Dang Minh  
 https://trich.im
-
