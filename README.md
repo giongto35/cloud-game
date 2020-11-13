@@ -117,7 +117,7 @@ We are very much thankful to everyone who contributes to the project:
 
 ## Main Contributor
 
-Sergy Stepanov
+Sergy Stepanov  
 https://github.com/sergystepanov/
 
 ## Author
