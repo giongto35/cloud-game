@@ -2,7 +2,7 @@
 ARG BUILD_PATH=/go/src/github.com/giongto35/cloud-game
 
 # build image
-FROM golang:1.14 AS build
+FROM golang:1.15 AS build
 ARG BUILD_PATH
 WORKDIR ${BUILD_PATH}
 
@@ -39,7 +39,6 @@ RUN apt-get update && apt-get install -y \
   && rm -rf /var/lib/apt/lists/*
 
 COPY --from=build ${BUILD_PATH}/bin/ ./
-# it assumed there are only binary files yet
 RUN cp -s $(pwd)/* /usr/local/bin
 COPY web ./web
 COPY assets/emulator/libretro/cores/*.so \
