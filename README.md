@@ -115,9 +115,14 @@ We are very much thankful to everyone who contributes to the project:
 * *poi5305* for the video encoding https://github.com/poi5305/go-yuv2webRTC.
 * *fogleman* for the NES emulator https://github.com/fogleman/nes.
 
+#### Art
+* [October 2nd - Gameboy poltergeist](https://www.deviantart.com/wanyo/art/October-2nd-Gameboy-poltergeist-707754217) by [Wayne Kubiak (wanyo)](https://www.deviantart.com/wanyo)
+* [1978](http://simoncpage.co.uk/blog/2009/01/retro-art-wallpaper/) by [Simon C Page](http://simoncpage.co.uk/)
+* [Linear Video game controller background Gadgets seamless pattern](https://stock.adobe.com/ru/images/linear-video-game-controller-background-gadgets-seamless-pattern/241143639) by [Anna](https://stock.adobe.com/contributor/208277224/anna)
+
 ## Main Contributor
 
-Sergy Stepanov  
+Sergey Stepanov  
 https://github.com/sergystepanov/
 
 ## Author
