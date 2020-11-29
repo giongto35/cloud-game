@@ -188,8 +188,8 @@ func NewRoom(roomID string, game games.GameMetadata, videoEncoderType string, on
 		// nwidth, nheight are the webRTC output size.
 		var nwidth, nheight int
 		emu := cfg.Emulator
-		if emu.EnableAspectRatio {
-			baseAspectRatio := float64(gameMeta.BaseWidth) / float64(gameMeta.BaseHeight)
+		if emu.AspectRatio.Keep {
+			baseAspectRatio := float64(gameMeta.BaseWidth) / float64(emu.AspectRatio.Height)
 			nwidth, nheight = resizeToAspect(baseAspectRatio, emu.Width, emu.Height)
 			log.Printf("Viewport size will be changed from %dx%d (%f) -> %dx%d", emu.Width, emu.Height,
 				baseAspectRatio, nwidth, nheight)

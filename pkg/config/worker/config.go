@@ -15,11 +15,15 @@ type Config struct {
 	}
 
 	Emulator struct {
-		Scale             int
-		EnableAspectRatio bool `fig:"aspectRatio"`
-		Width             int
-		Height            int
-		Libretro          map[string]LibretroConfig
+		Scale       int
+		AspectRatio struct {
+			Keep   bool
+			Width  int
+			Height int
+		}
+		Width    int
+		Height   int
+		Libretro map[string]LibretroConfig
 	}
 
 	Encoder struct {

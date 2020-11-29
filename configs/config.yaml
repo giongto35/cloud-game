@@ -2,8 +2,14 @@
 emulator:
   # set output viewport scale factor
   scale: 1
-  # enable aspect ratio support
-  aspectRatio: false
+
+  # enable aspect ratio changing
+  # (experimental)
+  aspectRatio:
+    keep: false
+    # recalculate emulator game frame size to the given WxH
+    width: 320
+    height: 240
 
   # !to check proper params for changing
   # Libretro cores configuration
@@ -49,6 +55,7 @@ emulator:
 
 encoder:
   # run without a game
+  # (experimental)
   withoutGame: false
 
 monitoring:
