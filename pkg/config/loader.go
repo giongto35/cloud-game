@@ -15,7 +15,7 @@ func LoadConfig(config interface{}, path string) interface{} {
 	} else {
 		err = fig.Load(
 			config,
-			fig.File(path),
+			fig.Dirs(path),
 		)
 	}
 	if err != nil {

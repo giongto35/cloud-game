@@ -48,7 +48,7 @@ type roomMockConfig struct {
 
 // Store absolute path to test games
 var whereIsGames = getRootPath() + "assets/games/"
-var whereIsConfig = getRootPath() + "configs/config.yaml"
+var whereIsConfigs = getRootPath() + "configs/"
 var testTempDir = filepath.Join(os.TempDir(), "cloud-game-core-tests")
 
 func init() {
@@ -221,7 +221,7 @@ func getRoomMock(cfg roomMockConfig) roomMock {
 	cfg.game.Path = cfg.gamesPath + cfg.game.Path
 
 	var conf worker.Config
-	config.LoadConfig(&conf, whereIsConfig)
+	config.LoadConfig(&conf, whereIsConfigs)
 	fixEmulators(&conf, cfg.autoGlContext)
 
 	room := NewRoom(cfg.roomName, cfg.game, cfg.codec, storage.NewInitClient(), conf)

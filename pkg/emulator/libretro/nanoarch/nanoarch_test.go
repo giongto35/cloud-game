@@ -58,10 +58,10 @@ type EmulatorPaths struct {
 // Make sure you call shutdownEmulator().
 func GetEmulatorMock(room string, system string) *EmulatorMock {
 	rootPath := getRootPath()
-	configFilePath := cleanPath(rootPath + "/configs/config.yaml")
+	configPath := rootPath + "configs/"
 
 	var conf worker.Config
-	config.LoadConfig(&conf, configFilePath)
+	config.LoadConfig(&conf, configPath)
 
 	meta := conf.Emulator.Libretro[system]
 
