@@ -8,15 +8,9 @@ func LoadConfig(config interface{}, path string) interface{} {
 	var err error
 
 	if path == "" {
-		err = fig.Load(
-			config,
-			fig.Dirs(".", "configs", "../../../configs"),
-		)
+		err = fig.Load(config, fig.Dirs(".", "configs", "../../../configs"))
 	} else {
-		err = fig.Load(
-			config,
-			fig.Dirs(path),
-		)
+		err = fig.Load(config, fig.Dirs(path))
 	}
 	if err != nil {
 		panic(err)
