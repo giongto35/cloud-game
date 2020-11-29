@@ -13,6 +13,7 @@ require (
 	github.com/golang/glog v0.0.0-20160126235308-23def4e6c14b
 	github.com/gorilla/mux v1.8.0
 	github.com/gorilla/websocket v1.4.2
+	github.com/kkyr/fig v0.2.0
 	github.com/lucas-clemente/quic-go v0.18.1 // indirect
 	github.com/marten-seemann/qtls-go1-15 v0.1.1 // indirect
 	github.com/pion/dtls/v2 v2.0.3 // indirect

@@ -46,12 +46,9 @@ type roomMockConfig struct {
 	autoGlContext bool
 }
 
-// Restricts a re-config call
-// to only one invocation.
-var configOnce sync.Once
-
 // Store absolute path to test games
-var whereIsGames = getAppPath() + "assets/games/"
+var whereIsGames = getRootPath() + "assets/games/"
+var whereIsConfig = getRootPath() + "configs/config.yaml"
 var testTempDir = filepath.Join(os.TempDir(), "cloud-game-core-tests")
 
 func init() {
@@ -221,9 +218,13 @@ func dumpCanvas(f *image.RGBA, name string, caption string, path string) {
 
 // getRoomMock returns mocked Room struct.
 func getRoomMock(cfg roomMockConfig) roomMock {
-	configOnce.Do(func() { fixEmulators(cfg.autoGlContext) })
 	cfg.game.Path = cfg.gamesPath + cfg.game.Path
-	room := NewRoom(cfg.roomName, cfg.game, cfg.codec, storage.NewInitClient(), worker.NewDefaultConfig())
+
+	var conf worker.Config
+	config.LoadConfig(&conf, whereIsConfig)
+	fixEmulators(&conf, cfg.autoGlContext)
+
+	room := NewRoom(cfg.roomName, cfg.game, cfg.codec, storage.NewInitClient(), conf)
 
 	// loop-wait the room initialization
 	var init sync.WaitGroup
@@ -246,24 +247,25 @@ func getRoomMock(cfg roomMockConfig) roomMock {
 }
 
 // fixEmulators makes absolute game paths in global GameList and passes GL context config.
-func fixEmulators(autoGlContext bool) {
-	appPath := getAppPath()
+// hack: emulator paths should be absolute and visible to the tests.
+func fixEmulators(config *worker.Config, autoGlContext bool) {
+	rootPath := getRootPath()
 
-	for k, conf := range config.EmulatorConfig {
-		conf.Path = appPath + conf.Path
+	for k, conf := range config.Emulator.Libretro {
+		conf.Path = rootPath + conf.Path
 		if len(conf.Config) > 0 {
-			conf.Config = appPath + conf.Config
+			conf.Config = rootPath + conf.Config
 		}
 
 		if conf.IsGlAllowed && autoGlContext {
 			conf.AutoGlContext = true
 		}
-		config.EmulatorConfig[k] = conf
+		config.Emulator.Libretro[k] = conf
 	}
 }
 
-// getAppPath returns absolute path to the assets directory.
-func getAppPath() string {
+// getRootPath returns absolute path to the assets directory.
+func getRootPath() string {
 	p, _ := filepath.Abs("../../../")
 	return p + string(filepath.Separator)
 }

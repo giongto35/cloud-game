@@ -1,11 +1,13 @@
 package emulator
 
-import "github.com/giongto35/cloud-game/v2/pkg/config"
+import (
+	"github.com/giongto35/cloud-game/v2/pkg/emulator/image"
+)
 
 // CloudEmulator is the interface of cloud emulator. Currently NES emulator and RetroArch implements this in codebase
 type CloudEmulator interface {
 	// LoadMeta returns meta data of emulator. Refer below
-	LoadMeta(path string) config.EmulatorMeta
+	LoadMeta(path string) Metadata
 	// Start is called after LoadGame
 	Start()
 	// SetViewport sets viewport size
@@ -22,4 +24,19 @@ type CloudEmulator interface {
 	Close()
 
 	ToggleMultitap() error
+}
+
+type Metadata struct {
+	Path            string
+	Config          string
+	AudioSampleRate int
+	Fps             float64
+	BaseWidth       int
+	BaseHeight      int
+	Ratio           float64
+	Rotation        image.Rotate
+	IsGlAllowed     bool
+	UsesLibCo       bool
+	AutoGlContext   bool
+	HasMultitap     bool
 }

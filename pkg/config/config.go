@@ -3,8 +3,6 @@ package config
 import (
 	"flag"
 	"time"
-
-	"github.com/giongto35/cloud-game/v2/pkg/emulator/image"
 )
 
 const DefaultSTUNTURN = `[{"urls":"stun:stun-turn.webgame2d.com:3478"},{"urls":"turn:stun-turn.webgame2d.com:3478","username":"root","credential":"root"}]`
@@ -45,62 +43,6 @@ var FileTypeToEmulator = map[string]string{
 }
 
 var SupportedRomExtensions = listSupportedRomExtensions()
-
-// There is no good way to determine main width and height of the emulator.
-// When game run, frame width and height can scale abnormally.
-type EmulatorMeta struct {
-	Path            string
-	Config          string
-	Width           int
-	Height          int
-	AudioSampleRate int
-	Fps             float64
-	BaseWidth       int
-	BaseHeight      int
-	Ratio           float64
-	Rotation        image.Rotate
-	IsGlAllowed     bool
-	UsesLibCo       bool
-	AutoGlContext   bool
-	HasMultitap     bool
-}
-
-var EmulatorConfig = map[string]EmulatorMeta{
-	"gba": {
-		Path:   "assets/emulator/libretro/cores/mgba_libretro",
-		Width:  240,
-		Height: 160,
-	},
-	"pcsx": {
-		Path:   "assets/emulator/libretro/cores/pcsx_rearmed_libretro",
-		Width:  350,
-		Height: 240,
-	},
-	"nes": {
-		Path:   "assets/emulator/libretro/cores/nestopia_libretro",
-		Width:  256,
-		Height: 240,
-	},
-	"snes": {
-		Path:        "assets/emulator/libretro/cores/snes9x_libretro",
-		Width:       256,
-		Height:      224,
-		HasMultitap: true,
-	},
-	"mame": {
-		Path:   "assets/emulator/libretro/cores/fbneo_libretro",
-		Width:  240,
-		Height: 160,
-	},
-	"n64": {
-		Path:        "assets/emulator/libretro/cores/mupen64plus_next_libretro",
-		Config:      "assets/emulator/libretro/cores/mupen64plus_next_libretro.cfg",
-		Width:       320,
-		Height:      240,
-		IsGlAllowed: true,
-		UsesLibCo:   true,
-	},
-}
 
 var EmulatorExtension = []string{".so", ".armv7-neon-hf.so", ".dylib", ".dll"}
 

@@ -52,7 +52,7 @@ func NewHandler(cfg worker.Config) *Handler {
 	return &Handler{
 		rooms:           map[string]*room.Room{},
 		sessions:        map[string]*Session{},
-		coordinatorHost: cfg.CoordinatorAddress,
+		coordinatorHost: cfg.Network.CoordinatorAddress,
 		cfg:             cfg,
 		onlineStorage:   onlineStorage,
 	}
@@ -61,7 +61,7 @@ func NewHandler(cfg worker.Config) *Handler {
 // Run starts a Handler running logic
 func (h *Handler) Run() {
 	for {
-		oClient, err := setupCoordinatorConnection(h.coordinatorHost, h.cfg.Zone)
+		oClient, err := setupCoordinatorConnection(h.coordinatorHost, h.cfg.Network.Zone)
 		if err != nil {
 			log.Printf("Cannot connect to coordinator. %v Retrying...", err)
 			time.Sleep(time.Second)

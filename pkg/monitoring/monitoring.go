@@ -13,9 +13,9 @@ import (
 
 type ServerMonitoringConfig struct {
 	Port             int
-	URLPrefix        string
-	MetricEnabled    bool `json:"metric_enabled"`
-	ProfilingEnabled bool `json:"profiling_enabled"`
+	URLPrefix        string `fig:"urlPrefix"`
+	MetricEnabled    bool   `json:"metric_enabled" fig:"metric" default:"true"`
+	ProfilingEnabled bool   `json:"profiling_enabled" fig:"profiler"`
 }
 
 type ServerMonitoring struct {

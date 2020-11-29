@@ -13,6 +13,7 @@ import (
 	"unsafe"
 
 	"github.com/giongto35/cloud-game/v2/pkg/config"
+	"github.com/giongto35/cloud-game/v2/pkg/emulator"
 	"github.com/giongto35/cloud-game/v2/pkg/emulator/graphics"
 	"github.com/giongto35/cloud-game/v2/pkg/emulator/image"
 	"github.com/giongto35/cloud-game/v2/pkg/thread"
@@ -420,7 +421,7 @@ func loadFunction(handle unsafe.Pointer, name string) unsafe.Pointer {
 	return pointer
 }
 
-func coreLoad(meta config.EmulatorMeta) {
+func coreLoad(meta emulator.Metadata) {
 	isGlAllowed = meta.IsGlAllowed
 	usesLibCo = meta.UsesLibCo
 	video.autoGlContext = meta.AutoGlContext

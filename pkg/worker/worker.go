@@ -32,7 +32,7 @@ func New(ctx context.Context, cfg worker.Config) *Worker {
 		ctx: ctx,
 		cfg: cfg,
 
-		monitoringServer: monitoring.NewServerMonitoring(cfg.MonitoringConfig),
+		monitoringServer: monitoring.NewServerMonitoring(cfg.Monitoring),
 	}
 }
 
@@ -153,7 +153,7 @@ func (o *Worker) initializeWorker() {
 	}()
 
 	go worker.Run()
-	port := o.cfg.HttpPort
+	port := o.cfg.Network.HttpPort
 	// It's recommend to run one worker on one instance.
 	// This logic is to make sure more than 1 workers still work
 	portsNum := 100
@@ -166,7 +166,7 @@ func (o *Worker) initializeWorker() {
 		}
 
 		if portsNum < 1 {
-			log.Printf("Couldn't find an open port in range %v-%v\n", o.cfg.HttpPort, port)
+			log.Printf("Couldn't find an open port in range %v-%v\n", o.cfg.Network.HttpPort, port)
 			// Cannot find port
 			return
 		}
