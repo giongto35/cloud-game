@@ -63,7 +63,7 @@ func GetEmulatorMock(room string, system string) *EmulatorMock {
 	var conf worker.Config
 	config.LoadConfig(&conf, configPath)
 
-	meta := conf.Emulator.Libretro[system]
+	meta := conf.GetLibretroCoreConfig(system)
 
 	images := make(chan GameFrame, 30)
 	audio := make(chan []int16, 30)
@@ -77,8 +77,8 @@ func GetEmulatorMock(room string, system string) *EmulatorMock {
 			inputChannel: inputs,
 
 			meta: emulator.Metadata{
-				Path:        meta.Path,
-				Config:      meta.Config,
+				LibPath:     meta.Lib,
+				ConfigPath:  meta.Config,
 				Ratio:       meta.Ratio,
 				IsGlAllowed: meta.IsGlAllowed,
 				UsesLibCo:   meta.UsesLibCo,
@@ -91,12 +91,12 @@ func GetEmulatorMock(room string, system string) *EmulatorMock {
 		},
 
 		canvas: image.NewRGBA(image.Rect(0, 0, meta.Width, meta.Height)),
-		core:   path.Base(meta.Path),
+		core:   path.Base(meta.Lib),
 
 		paths: EmulatorPaths{
 			assets: cleanPath(rootPath),
-			cores:  cleanPath(rootPath + "emulator/libretro/cores/"),
-			games:  cleanPath(rootPath + "games/"),
+			cores:  cleanPath(rootPath + "assets/emulator/libretro/cores/"),
+			games:  cleanPath(rootPath + "assets/games/"),
 		},
 
 		imageInCh:  images,
@@ -130,7 +130,7 @@ func GetDefaultEmulatorMock(room string, system string, rom string) *EmulatorMoc
 func (emu *EmulatorMock) loadRom(game string) {
 	fmt.Printf("%v %v\n", emu.paths.cores, emu.core)
 	coreLoad(emulator.Metadata{
-		Path: emu.paths.cores + emu.core,
+		LibPath: emu.paths.cores + emu.core,
 	})
 	coreLoadGame(emu.paths.games + game)
 }

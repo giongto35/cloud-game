@@ -12,46 +12,52 @@ emulator:
     height: 240
 
   # !to check proper params for changing
-  # Libretro cores configuration
-  #
-  # Available config params:
-  #   - path (string)
-  #   - config (string)
-  #   - width (int)
-  #   - height (int)
-  #   - ratio (float)
-  #   - isGlAllowed (bool)
-  #   - usesLibCo (bool)
-  #   - hasMultitap (bool)
+
   libretro:
-    gba:
-      path: assets/emulator/libretro/cores/mgba_libretro
-      width: 240
-      height: 160
-    pcsx:
-      path: assets/emulator/libretro/cores/pcsx_rearmed_libretro
-      width: 350
-      height: 240
-    nes:
-      path: assets/emulator/libretro/cores/nestopia_libretro
-      width: 256
-      height: 240
-    snes:
-      path: assets/emulator/libretro/cores/snes9x_libretro
-      width: 256
-      height: 224
-      hasMultitap: true
-    mame:
-      path: assets/emulator/libretro/cores/fbneo_libretro
-      width: 240
-      height: 160
-    n64:
-      path: assets/emulator/libretro/cores/mupen64plus_next_libretro
-      config: assets/emulator/libretro/cores/mupen64plus_next_libretro.cfg
-      width: 320
-      height: 240
-      isGlAllowed: true
-      usesLibCo: true
+    cores:
+      paths:
+        libs: assets/emulator/libretro/cores
+        configs: assets/emulator/libretro/cores
+      # Libretro core configuration
+      #
+      # Available config params:
+      #   - lib (string)
+      #   - config (string)
+      #   - width (int)
+      #   - height (int)
+      #   - ratio (float)
+      #   - isGlAllowed (bool)
+      #   - usesLibCo (bool)
+      #   - hasMultitap (bool)
+      list:
+        gba:
+          lib: mgba_libretro
+          width: 240
+          height: 160
+        pcsx:
+          lib: pcsx_rearmed_libretro
+          width: 350
+          height: 240
+        nes:
+          lib: nestopia_libretro
+          width: 256
+          height: 240
+        snes:
+          lib: snes9x_libretro
+          width: 256
+          height: 224
+          hasMultitap: true
+        mame:
+          lib: fbneo_libretro
+          width: 240
+          height: 160
+        n64:
+          lib: mupen64plus_next_libretro
+          config: mupen64plus_next_libretro.cfg
+          width: 320
+          height: 240
+          isGlAllowed: true
+          usesLibCo: true
 
 encoder:
   # run without a game

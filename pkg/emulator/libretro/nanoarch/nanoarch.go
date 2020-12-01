@@ -425,7 +425,7 @@ func coreLoad(meta emulator.Metadata) {
 	isGlAllowed = meta.IsGlAllowed
 	usesLibCo = meta.UsesLibCo
 	video.autoGlContext = meta.AutoGlContext
-	coreConfig = ScanConfigFile(meta.Config)
+	coreConfig = ScanConfigFile(meta.ConfigPath)
 
 	multitap.supported = meta.HasMultitap
 	multitap.enabled = false
@@ -434,7 +434,7 @@ func coreLoad(meta emulator.Metadata) {
 	mu.Lock()
 	// Different OS requires different library, bruteforce till it finish
 	for _, ext := range config.EmulatorExtension {
-		pathWithExt := meta.Path + ext
+		pathWithExt := meta.LibPath + ext
 		cs := C.CString(pathWithExt)
 		retroHandle = C.dlopen(cs, C.RTLD_LAZY)
 		C.free(unsafe.Pointer(cs))
@@ -446,7 +446,7 @@ func coreLoad(meta emulator.Metadata) {
 	if retroHandle == nil {
 		err := C.dlerror()
 		if err != nil {
-			log.Fatalf("error core load: %s, %v", meta.Path, C.GoString(err))
+			log.Fatalf("error core load: %s, %v", meta.LibPath, C.GoString(err))
 		}
 	}
 

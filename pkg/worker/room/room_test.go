@@ -92,6 +92,8 @@ func TestRoom(t *testing.T) {
 		waitNFrames(test.frames, room.encoder.GetOutputChan())
 		room.Close()
 	}
+	// hack: wait room destruction
+	time.Sleep(2 * time.Second)
 }
 
 func TestRoomWithGL(t *testing.T) {
@@ -122,6 +124,8 @@ func TestRoomWithGL(t *testing.T) {
 			waitNFrames(test.frames, room.encoder.GetOutputChan())
 			room.Close()
 		}
+		// hack: wait room destruction
+		time.Sleep(2 * time.Second)
 	}
 
 	thread.MainMaybe(run)
@@ -251,16 +255,16 @@ func getRoomMock(cfg roomMockConfig) roomMock {
 func fixEmulators(config *worker.Config, autoGlContext bool) {
 	rootPath := getRootPath()
 
-	for k, conf := range config.Emulator.Libretro {
-		conf.Path = rootPath + conf.Path
-		if len(conf.Config) > 0 {
-			conf.Config = rootPath + conf.Config
-		}
+	config.Emulator.Libretro.Cores.Paths.Libs =
+		filepath.FromSlash(rootPath + config.Emulator.Libretro.Cores.Paths.Libs)
+	config.Emulator.Libretro.Cores.Paths.Configs =
+		filepath.FromSlash(rootPath + config.Emulator.Libretro.Cores.Paths.Configs)
 
+	for k, conf := range config.Emulator.Libretro.Cores.List {
 		if conf.IsGlAllowed && autoGlContext {
 			conf.AutoGlContext = true
 		}
-		config.Emulator.Libretro[k] = conf
+		config.Emulator.Libretro.Cores.List[k] = conf
 	}
 }
 

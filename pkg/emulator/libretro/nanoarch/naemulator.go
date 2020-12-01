@@ -104,14 +104,14 @@ const maxPort = 8
 const SocketAddrTmpl = "/tmp/cloudretro-retro-%s.sock"
 
 // NAEmulator implements CloudEmulator interface based on NanoArch(golang RetroArch)
-func NewNAEmulator(roomID string, inputChannel <-chan InputEvent, conf worker.LibretroConfig) (*naEmulator, chan GameFrame, chan []int16) {
+func NewNAEmulator(roomID string, inputChannel <-chan InputEvent, conf worker.LibretroCoreConfig) (*naEmulator, chan GameFrame, chan []int16) {
 	imageChannel := make(chan GameFrame, 30)
 	audioChannel := make(chan []int16, 30)
 
 	return &naEmulator{
 		meta: emulator.Metadata{
-			Path:          conf.Path,
-			Config:        conf.Config,
+			LibPath:       conf.Lib,
+			ConfigPath:    conf.Config,
 			Ratio:         conf.Ratio,
 			IsGlAllowed:   conf.IsGlAllowed,
 			UsesLibCo:     conf.UsesLibCo,
@@ -160,7 +160,7 @@ func NewVideoExporter(roomID string, imgChannel chan GameFrame) *VideoExporter {
 
 // Init initialize new RetroArch cloud emulator
 // withImageChan returns an image stream as Channel for output else it will write to unix socket
-func Init(roomID string, withImageChannel bool, inputChannel <-chan InputEvent, config worker.LibretroConfig) (*naEmulator, chan GameFrame, chan []int16) {
+func Init(roomID string, withImageChannel bool, inputChannel <-chan InputEvent, config worker.LibretroCoreConfig) (*naEmulator, chan GameFrame, chan []int16) {
 	emulator, imageChannel, audioChannel := NewNAEmulator(roomID, inputChannel, config)
 	// Set to global NAEmulator
 	NAEmulator = emulator

@@ -166,7 +166,7 @@ func NewRoom(roomID string, game games.GameMetadata, videoEncoderType string, on
 		// Spawn new emulator based on gameName and plug-in all channels
 		emuName, _ := config.FileTypeToEmulator[game.Type]
 
-		libretroConfig := cfg.Emulator.Libretro[emuName]
+		libretroConfig := cfg.GetLibretroCoreConfig(emuName)
 
 		if cfg.Encoder.WithoutGame {
 			// Run without game, image stream is communicated over unixsocket

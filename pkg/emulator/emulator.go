@@ -25,8 +25,11 @@ type CloudEmulator interface {
 }
 
 type Metadata struct {
-	Path            string
-	Config          string
+	// the full path to some emulator lib
+	LibPath string
+	// the full path to the emulator config
+	ConfigPath string
+
 	AudioSampleRate int
 	Fps             float64
 	BaseWidth       int

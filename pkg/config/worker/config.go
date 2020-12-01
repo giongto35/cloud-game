@@ -4,6 +4,7 @@ import (
 	"github.com/giongto35/cloud-game/v2/pkg/config"
 	"github.com/giongto35/cloud-game/v2/pkg/monitoring"
 	"github.com/spf13/pflag"
+	"path"
 )
 
 type Config struct {
@@ -23,7 +24,15 @@ type Config struct {
 		}
 		Width    int
 		Height   int
-		Libretro map[string]LibretroConfig
+		Libretro struct {
+			Cores struct {
+				Paths struct {
+					Libs    string
+					Configs string
+				}
+				List map[string]LibretroCoreConfig
+			}
+		}
 	}
 
 	Encoder struct {
@@ -33,8 +42,8 @@ type Config struct {
 	Monitoring monitoring.ServerMonitoringConfig
 }
 
-type LibretroConfig struct {
-	Path        string
+type LibretroCoreConfig struct {
+	Lib         string
 	Config      string
 	Width       int
 	Height      int
@@ -64,4 +73,15 @@ func (c *Config) AddFlags(fs *pflag.FlagSet) *Config {
 
 	fs.IntVarP(&c.Monitoring.Port, "monitoring.port", "", c.Monitoring.Port, "Monitoring server port")
 	return c
+}
+
+// GetLibretroCoreConfig returns a core config with expanded paths.
+func (c *Config) GetLibretroCoreConfig(emulator string) LibretroCoreConfig {
+	cores := c.Emulator.Libretro.Cores
+	conf := cores.List[emulator]
+	conf.Lib = path.Join(cores.Paths.Libs, conf.Lib)
+	if conf.Config != "" {
+		conf.Config = path.Join(cores.Paths.Configs, conf.Config)
+	}
+	return conf
 }
