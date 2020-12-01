@@ -44,5 +44,6 @@ COPY web ./web
 COPY assets/emulator/libretro/cores/*.so \
      assets/emulator/libretro/cores/*.cfg \
      ./assets/emulator/libretro/cores/
+COPY configs ./configs
 
 EXPOSE 8000 9000 3478/tcp 3478/udp
