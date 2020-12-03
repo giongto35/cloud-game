@@ -16,7 +16,6 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/giongto35/cloud-game/v2/pkg/config"
 	"github.com/giongto35/cloud-game/v2/pkg/config/worker"
 	"github.com/giongto35/cloud-game/v2/pkg/emulator"
 	"github.com/giongto35/cloud-game/v2/pkg/emulator/libretro/nanoarch"
@@ -164,8 +163,7 @@ func NewRoom(roomID string, game games.GameMetadata, videoEncoderType string, on
 		log.Printf("Room %s started. GameName: %s, WithGame: %t", roomID, game.Name, cfg.Encoder.WithoutGame)
 
 		// Spawn new emulator based on gameName and plug-in all channels
-		emuName, _ := config.FileTypeToEmulator[game.Type]
-
+		emuName := cfg.GetEmulatorByRom(game.Type)
 		libretroConfig := cfg.GetLibretroCoreConfig(emuName)
 
 		if cfg.Encoder.WithoutGame {

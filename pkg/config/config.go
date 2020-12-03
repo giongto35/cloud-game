@@ -26,30 +26,8 @@ var WSWait = 20 * time.Second
 var ProdEnv = "prod"
 var StagingEnv = "staging"
 
-var FileTypeToEmulator = map[string]string{
-	"gba": "gba",
-	"gbc": "gba",
-	"cue": "pcsx",
-	"zip": "mame",
-	"nes": "nes",
-	"smc": "snes",
-	"sfc": "snes",
-	"swc": "snes",
-	"fig": "snes",
-	"bs":  "snes",
-	"n64": "n64",
-	"v64": "n64",
-	"z64": "n64",
-}
-
-var SupportedRomExtensions = listSupportedRomExtensions()
-
 var EmulatorExtension = []string{".so", ".armv7-neon-hf.so", ".dylib", ".dll"}
 
-func listSupportedRomExtensions() []string {
-	m := make([]string, 0, len(FileTypeToEmulator))
-	for k := range FileTypeToEmulator {
-		m = append(m, k)
-	}
-	return m
+var SupportedRomExtensions = []string{
+	"gba", "gbc", "cue", "zip", "nes", "smc", "sfc", "swc", "fig", "bs", "n64", "v64", "z64",
 }

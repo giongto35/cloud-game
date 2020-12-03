@@ -45,6 +45,7 @@ type Config struct {
 type LibretroCoreConfig struct {
 	Lib         string
 	Config      string
+	Roms        []string
 	Width       int
 	Height      int
 	Ratio       float64
@@ -84,4 +85,17 @@ func (c *Config) GetLibretroCoreConfig(emulator string) LibretroCoreConfig {
 		conf.Config = path.Join(cores.Paths.Configs, conf.Config)
 	}
 	return conf
+}
+
+// GetEmulatorByRom returns emulator name by its supported ROM name.
+// !to cache into an optimized data structure
+func (c *Config) GetEmulatorByRom(rom string) string {
+	for emu, core := range c.Emulator.Libretro.Cores.List {
+		for _, romName := range core.Roms {
+			if rom == romName {
+				return emu
+			}
+		}
+	}
+	return ""
 }
