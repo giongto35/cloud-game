@@ -10,7 +10,7 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/giongto35/cloud-game/v2/pkg/config"
+	"github.com/giongto35/cloud-game/v2/pkg/config/coordinator"
 	"github.com/giongto35/cloud-game/v2/pkg/cws"
 	"github.com/giongto35/cloud-game/v2/pkg/games"
 	"github.com/giongto35/cloud-game/v2/pkg/util"
@@ -59,9 +59,9 @@ type RenderData struct {
 
 // GetWeb returns web frontend
 func (o *Server) GetWeb(w http.ResponseWriter, r *http.Request) {
-	stunturn := *config.FrontendSTUNTURN
+	stunturn := *coordinator.FrontendSTUNTURN
 	if stunturn == "" {
-		stunturn = config.DefaultSTUNTURN
+		stunturn = coordinator.DefaultSTUNTURN
 	}
 	data := RenderData{
 		STUNTURN: stunturn,
@@ -81,7 +81,7 @@ func (o *Server) getPingServer(zone string) string {
 		return fmt.Sprintf("%s/echo", o.cfg.PingServer)
 	}
 
-	if *config.Mode == config.ProdEnv || *config.Mode == config.StagingEnv {
+	if *coordinator.Mode == coordinator.ProdEnv || *coordinator.Mode == coordinator.StagingEnv {
 		return fmt.Sprintf(pingServerTemp, zone, o.cfg.PublicDomain)
 	}
 
@@ -127,7 +127,7 @@ func (o *Server) WSO(w http.ResponseWriter, r *http.Request) {
 	wc.Printf("Set ping server address: %s", pingServer)
 
 	// In case worker and coordinator in the same host
-	if !util.IsPublicIP(address) && *config.Mode == config.ProdEnv {
+	if !util.IsPublicIP(address) && *coordinator.Mode == coordinator.ProdEnv {
 		// Don't accept private IP for worker's address in prod mode
 		// However, if the worker in the same host with coordinator, we can get public IP of worker
 		wc.Printf("[!] Address %s is invalid", address)
@@ -144,7 +144,7 @@ func (o *Server) WSO(w http.ResponseWriter, r *http.Request) {
 
 	// Create a workerClient instance
 	wc.Address = address
-	wc.StunTurnServer = fmt.Sprintf(config.StunTurnTemplate, address, address)
+	wc.StunTurnServer = fmt.Sprintf(coordinator.StunTurnTemplate, address, address)
 	wc.Zone = zone
 	wc.PingServer = pingServer
 

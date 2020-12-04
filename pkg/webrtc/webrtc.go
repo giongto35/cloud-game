@@ -10,7 +10,8 @@ import (
 	"runtime/debug"
 	"time"
 
-	"github.com/giongto35/cloud-game/v2/pkg/config"
+	"github.com/giongto35/cloud-game/v2/pkg/config/coordinator"
+	"github.com/giongto35/cloud-game/v2/pkg/encoder"
 	"github.com/giongto35/cloud-game/v2/pkg/util"
 	"github.com/gofrs/uuid"
 	"github.com/pion/webrtc/v2"
@@ -124,7 +125,7 @@ func (w *WebRTC) StartClient(isMobile bool, iceCB OnIceCallback) (string, error)
 	}
 
 	// add video track
-	if util.GetVideoEncoder(isMobile) == config.CODEC_H264 {
+	if util.GetVideoEncoder(isMobile) == encoder.H264 {
 		videoTrack, err = w.connection.NewTrack(webrtc.DefaultPayloadTypeH264, rand.Uint32(), "video", "game-video")
 	} else {
 		videoTrack, err = w.connection.NewTrack(webrtc.DefaultPayloadTypeVP8, rand.Uint32(), "video", "game-video")
@@ -349,7 +350,7 @@ func (w *WebRTC) startStreaming(vp8Track *webrtc.Track, opusTrack *webrtc.Track)
 			}
 			err := opusTrack.WriteSample(media.Sample{
 				Data:    data,
-				Samples: uint32(config.AUDIO_FRAME / config.AUDIO_CHANNELS),
+				Samples: uint32(coordinator.AUDIO_FRAME / coordinator.AUDIO_CHANNELS),
 			})
 			if err != nil {
 				log.Println("Warn: Err write sample: ", err)

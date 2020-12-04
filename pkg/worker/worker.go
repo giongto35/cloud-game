@@ -10,7 +10,7 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/giongto35/cloud-game/v2/pkg/config"
+	"github.com/giongto35/cloud-game/v2/pkg/config/coordinator"
 	"github.com/giongto35/cloud-game/v2/pkg/config/worker"
 	"github.com/giongto35/cloud-game/v2/pkg/monitoring"
 	"github.com/golang/glog"
@@ -92,16 +92,16 @@ func (o *Worker) spawnServer(port int) {
 	var certManager *autocert.Manager
 	var httpsSrv *http.Server
 
-	if *config.Mode == config.ProdEnv || *config.Mode == config.StagingEnv {
+	if *coordinator.Mode == coordinator.ProdEnv || *coordinator.Mode == coordinator.StagingEnv {
 		httpsSrv = makeHTTPServer()
-		httpsSrv.Addr = fmt.Sprintf(":%d", *config.HttpsPort)
+		httpsSrv.Addr = fmt.Sprintf(":%d", *coordinator.HttpsPort)
 
-		if *config.HttpsChain == "" || *config.HttpsKey == "" {
-			*config.HttpsChain = ""
-			*config.HttpsKey = ""
+		if *coordinator.HttpsChain == "" || *coordinator.HttpsKey == "" {
+			*coordinator.HttpsChain = ""
+			*coordinator.HttpsKey = ""
 
 			var leurl string
-			if *config.Mode == config.StagingEnv {
+			if *coordinator.Mode == coordinator.StagingEnv {
 				leurl = stagingLEURL
 			} else {
 				leurl = acme.LetsEncryptURL
@@ -118,7 +118,7 @@ func (o *Worker) spawnServer(port int) {
 
 		go func() {
 			fmt.Printf("Starting HTTPS server on %s\n", httpsSrv.Addr)
-			err := httpsSrv.ListenAndServeTLS(*config.HttpsChain, *config.HttpsKey)
+			err := httpsSrv.ListenAndServeTLS(*coordinator.HttpsChain, *coordinator.HttpsKey)
 			if err != nil {
 				log.Printf("httpsSrv.ListendAndServeTLS() failed with %s", err)
 			}
@@ -126,7 +126,7 @@ func (o *Worker) spawnServer(port int) {
 	}
 
 	var httpSrv *http.Server
-	if *config.Mode == config.ProdEnv || *config.Mode == config.StagingEnv {
+	if *coordinator.Mode == coordinator.ProdEnv || *coordinator.Mode == coordinator.StagingEnv {
 		httpSrv = makeHTTPToHTTPSRedirectServer()
 	} else {
 		httpSrv = makeHTTPServer()

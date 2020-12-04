@@ -127,7 +127,7 @@ func NewVideoImporter(roomID string) chan nanoarch.GameFrame {
 }
 
 // NewRoom creates a new room
-func NewRoom(roomID string, game games.GameMetadata, videoEncoderType string, onlineStorage *storage.Client, cfg worker.Config) *Room {
+func NewRoom(roomID string, game games.GameMetadata, videoCodec encoder.VideoCodec, onlineStorage *storage.Client, cfg worker.Config) *Room {
 	if roomID == "" {
 		roomID = generateRoomID(game.Name)
 	}
@@ -212,7 +212,7 @@ func NewRoom(roomID string, game games.GameMetadata, videoEncoderType string, on
 		room.director.SetViewport(encoderW, encoderH)
 
 		// Spawn video and audio encoding for webRTC
-		go room.startVideo(encoderW, encoderH, videoEncoderType)
+		go room.startVideo(encoderW, encoderH, videoCodec)
 		go room.startAudio(gameMeta.AudioSampleRate)
 		go room.startVoice()
 		room.director.Start()

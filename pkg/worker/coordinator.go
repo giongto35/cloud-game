@@ -7,6 +7,7 @@ import (
 
 	"github.com/giongto35/cloud-game/v2/pkg/api"
 	"github.com/giongto35/cloud-game/v2/pkg/cws"
+	"github.com/giongto35/cloud-game/v2/pkg/encoder"
 	"github.com/giongto35/cloud-game/v2/pkg/games"
 	"github.com/giongto35/cloud-game/v2/pkg/util"
 	"github.com/giongto35/cloud-game/v2/pkg/webrtc"
@@ -318,7 +319,7 @@ func getServerIDOfRoom(oc *CoordinatorClient, roomID string) string {
 }
 
 // startGameHandler starts a game if roomID is given, if not create new room
-func (h *Handler) startGameHandler(game games.GameMetadata, existedRoomID string, playerIndex int, peerconnection *webrtc.WebRTC, videoEncoderType string) *room.Room {
+func (h *Handler) startGameHandler(game games.GameMetadata, existedRoomID string, playerIndex int, peerconnection *webrtc.WebRTC, videoCodec encoder.VideoCodec) *room.Room {
 	log.Printf("Loading game: %v\n", game.Name)
 	// If we are connecting to coordinator, request corresponding serverID based on roomID
 	// TODO: check if existedRoomID is in the current server
@@ -327,7 +328,7 @@ func (h *Handler) startGameHandler(game games.GameMetadata, existedRoomID string
 	if room == nil {
 		log.Println("Got Room from local ", room, " ID: ", existedRoomID)
 		// Create new room and update player index
-		room = h.createNewRoom(game, existedRoomID, videoEncoderType)
+		room = h.createNewRoom(game, existedRoomID, videoCodec)
 		room.UpdatePlayerIndex(peerconnection, playerIndex)
 
 		// Wait for done signal from room

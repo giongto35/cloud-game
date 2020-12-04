@@ -12,7 +12,7 @@ import (
 	"time"
 	"unsafe"
 
-	"github.com/giongto35/cloud-game/v2/pkg/config"
+	"github.com/giongto35/cloud-game/v2/pkg/config/coordinator"
 	"github.com/giongto35/cloud-game/v2/pkg/emulator"
 	"github.com/giongto35/cloud-game/v2/pkg/emulator/graphics"
 	"github.com/giongto35/cloud-game/v2/pkg/emulator/image"
@@ -433,7 +433,7 @@ func coreLoad(meta emulator.Metadata) {
 
 	mu.Lock()
 	// Different OS requires different library, bruteforce till it finish
-	for _, ext := range config.EmulatorExtension {
+	for _, ext := range coordinator.EmulatorExtension {
 		pathWithExt := meta.LibPath + ext
 		cs := C.CString(pathWithExt)
 		retroHandle = C.dlopen(cs, C.RTLD_LAZY)

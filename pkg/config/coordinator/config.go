@@ -1,4 +1,4 @@
-package config
+package coordinator
 
 import (
 	"flag"
@@ -6,8 +6,6 @@ import (
 )
 
 const DefaultSTUNTURN = `[{"urls":"stun:stun-turn.webgame2d.com:3478"},{"urls":"turn:stun-turn.webgame2d.com:3478","username":"root","credential":"root"}]`
-const CODEC_VP8 = "VP8"
-const CODEC_H264 = "H264"
 
 const AUDIO_RATE = 48000
 const AUDIO_CHANNELS = 2
