@@ -8,20 +8,15 @@ import (
 	"path"
 	"time"
 
-	"github.com/giongto35/cloud-game/v2/pkg/config/coordinator"
 	"github.com/giongto35/cloud-game/v2/pkg/config/worker"
 	"github.com/giongto35/cloud-game/v2/pkg/encoder"
+	"github.com/giongto35/cloud-game/v2/pkg/environment"
 	"github.com/giongto35/cloud-game/v2/pkg/games"
 	"github.com/giongto35/cloud-game/v2/pkg/util"
 	"github.com/giongto35/cloud-game/v2/pkg/webrtc"
 	storage "github.com/giongto35/cloud-game/v2/pkg/worker/cloud-storage"
 	"github.com/giongto35/cloud-game/v2/pkg/worker/room"
 	"github.com/gorilla/websocket"
-)
-
-const (
-	gameboyIndex = "./static/game.html"
-	debugIndex   = "./static/game.html"
 )
 
 // Flag to determine if the server is coordinator or not
@@ -62,7 +57,7 @@ func NewHandler(cfg worker.Config) *Handler {
 // Run starts a Handler running logic
 func (h *Handler) Run() {
 	for {
-		oClient, err := setupCoordinatorConnection(h.coordinatorHost, h.cfg.Network.Zone)
+		oClient, err := setupCoordinatorConnection(h.coordinatorHost, h.cfg.Network.Zone, h.cfg)
 		if err != nil {
 			log.Printf("Cannot connect to coordinator. %v Retrying...", err)
 			time.Sleep(time.Second)
@@ -78,10 +73,9 @@ func (h *Handler) Run() {
 	}
 }
 
-func setupCoordinatorConnection(ohost string, zone string) (*CoordinatorClient, error) {
+func setupCoordinatorConnection(ohost string, zone string, cfg worker.Config) (*CoordinatorClient, error) {
 	var scheme string
-
-	if *coordinator.Mode == coordinator.ProdEnv || *coordinator.Mode == coordinator.StagingEnv {
+	if cfg.Environment.Mode.AnyOf(environment.Production, environment.Staging) {
 		scheme = "wss"
 	} else {
 		scheme = "ws"

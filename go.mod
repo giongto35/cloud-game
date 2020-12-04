@@ -11,6 +11,7 @@ require (
 	github.com/go-gl/gl v0.0.0-20190320180904-bf2b1f2f34d7
 	github.com/gofrs/uuid v3.3.0+incompatible
 	github.com/golang/glog v0.0.0-20160126235308-23def4e6c14b
+	github.com/google/martian v2.1.0+incompatible
 	github.com/gorilla/mux v1.8.0
 	github.com/gorilla/websocket v1.4.2
 	github.com/kkyr/fig v0.2.0

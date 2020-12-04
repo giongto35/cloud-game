@@ -12,6 +12,7 @@ import (
 
 	"github.com/giongto35/cloud-game/v2/pkg/config/coordinator"
 	"github.com/giongto35/cloud-game/v2/pkg/cws"
+	"github.com/giongto35/cloud-game/v2/pkg/environment"
 	"github.com/giongto35/cloud-game/v2/pkg/games"
 	"github.com/giongto35/cloud-game/v2/pkg/util"
 	"github.com/gofrs/uuid"
@@ -23,7 +24,7 @@ const (
 )
 
 type Server struct {
-	cfg Config
+	cfg coordinator.Config
 	// games library
 	library games.GameLibrary
 	// roomToWorker map roomID to workerID
@@ -40,7 +41,7 @@ const devPingServer = "http://localhost:9000/echo"
 var upgrader = websocket.Upgrader{}
 var errNotFound = errors.New("Not found")
 
-func NewServer(cfg Config, library games.GameLibrary) *Server {
+func NewServer(cfg coordinator.Config, library games.GameLibrary) *Server {
 	return &Server{
 		cfg:     cfg,
 		library: library,
@@ -59,7 +60,7 @@ type RenderData struct {
 
 // GetWeb returns web frontend
 func (o *Server) GetWeb(w http.ResponseWriter, r *http.Request) {
-	stunturn := *coordinator.FrontendSTUNTURN
+	stunturn := coordinator.FrontendSTUNTURN
 	if stunturn == "" {
 		stunturn = coordinator.DefaultSTUNTURN
 	}
@@ -81,7 +82,8 @@ func (o *Server) getPingServer(zone string) string {
 		return fmt.Sprintf("%s/echo", o.cfg.PingServer)
 	}
 
-	if *coordinator.Mode == coordinator.ProdEnv || *coordinator.Mode == coordinator.StagingEnv {
+	mode := o.cfg.Environment.Mode
+	if mode.AnyOf(environment.Production, environment.Staging) {
 		return fmt.Sprintf(pingServerTemp, zone, o.cfg.PublicDomain)
 	}
 
@@ -127,7 +129,7 @@ func (o *Server) WSO(w http.ResponseWriter, r *http.Request) {
 	wc.Printf("Set ping server address: %s", pingServer)
 
 	// In case worker and coordinator in the same host
-	if !util.IsPublicIP(address) && *coordinator.Mode == coordinator.ProdEnv {
+	if !util.IsPublicIP(address) && o.cfg.Environment.Mode == environment.Production {
 		// Don't accept private IP for worker's address in prod mode
 		// However, if the worker in the same host with coordinator, we can get public IP of worker
 		wc.Printf("[!] Address %s is invalid", address)

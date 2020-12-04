@@ -1,17 +1,20 @@
 package worker
 
 import (
+	"github.com/google/martian/log"
+	"path"
+
 	"github.com/giongto35/cloud-game/v2/pkg/config"
+	"github.com/giongto35/cloud-game/v2/pkg/config/shared"
 	"github.com/giongto35/cloud-game/v2/pkg/monitoring"
 	"github.com/spf13/pflag"
-	"path"
 )
 
 type Config struct {
+	shared.Config
+
 	Network struct {
-		Port               int
 		CoordinatorAddress string
-		HttpPort           int
 		Zone               string
 	}
 
@@ -67,9 +70,12 @@ func NewDefaultConfig() Config {
 }
 
 func (c *Config) AddFlags(fs *pflag.FlagSet) *Config {
-	fs.IntVarP(&c.Network.Port, "port", "", 8800, "Worker server port")
+	c.Config.AddFlags(fs)
+
+	if err := fs.Set("port", "9000"); err != nil {
+		log.Errorf("couldn't override default port value", err)
+	}
 	fs.StringVarP(&c.Network.CoordinatorAddress, "coordinatorhost", "", c.Network.CoordinatorAddress, "Worker URL to connect")
-	fs.IntVarP(&c.Network.HttpPort, "httpPort", "", c.Network.HttpPort, "Set external HTTP port")
 	fs.StringVarP(&configPath, "conf", "c", "", "Set custom configuration file path")
 
 	fs.IntVarP(&c.Monitoring.Port, "monitoring.port", "", c.Monitoring.Port, "Monitoring server port")

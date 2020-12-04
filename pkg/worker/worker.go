@@ -10,8 +10,8 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/giongto35/cloud-game/v2/pkg/config/coordinator"
 	"github.com/giongto35/cloud-game/v2/pkg/config/worker"
+	"github.com/giongto35/cloud-game/v2/pkg/environment"
 	"github.com/giongto35/cloud-game/v2/pkg/monitoring"
 	"github.com/golang/glog"
 	"golang.org/x/crypto/acme"
@@ -92,16 +92,18 @@ func (o *Worker) spawnServer(port int) {
 	var certManager *autocert.Manager
 	var httpsSrv *http.Server
 
-	if *coordinator.Mode == coordinator.ProdEnv || *coordinator.Mode == coordinator.StagingEnv {
+	mode := o.cfg.Environment.Mode
+	if mode.AnyOf(environment.Production, environment.Staging) {
+		serverConfig := o.cfg.Server
 		httpsSrv = makeHTTPServer()
-		httpsSrv.Addr = fmt.Sprintf(":%d", *coordinator.HttpsPort)
+		httpsSrv.Addr = fmt.Sprintf(":%d", serverConfig.HttpsPort)
 
-		if *coordinator.HttpsChain == "" || *coordinator.HttpsKey == "" {
-			*coordinator.HttpsChain = ""
-			*coordinator.HttpsKey = ""
+		if serverConfig.HttpsChain == "" || serverConfig.HttpsKey == "" {
+			serverConfig.HttpsChain = ""
+			serverConfig.HttpsKey = ""
 
 			var leurl string
-			if *coordinator.Mode == coordinator.StagingEnv {
+			if mode == environment.Staging {
 				leurl = stagingLEURL
 			} else {
 				leurl = acme.LetsEncryptURL
@@ -116,17 +118,17 @@ func (o *Worker) spawnServer(port int) {
 			httpsSrv.TLSConfig = &tls.Config{GetCertificate: certManager.GetCertificate}
 		}
 
-		go func() {
+		go func(chain string, key string) {
 			fmt.Printf("Starting HTTPS server on %s\n", httpsSrv.Addr)
-			err := httpsSrv.ListenAndServeTLS(*coordinator.HttpsChain, *coordinator.HttpsKey)
+			err := httpsSrv.ListenAndServeTLS(chain, key)
 			if err != nil {
 				log.Printf("httpsSrv.ListendAndServeTLS() failed with %s", err)
 			}
-		}()
+		}(serverConfig.HttpsChain, serverConfig.HttpsKey)
 	}
 
 	var httpSrv *http.Server
-	if *coordinator.Mode == coordinator.ProdEnv || *coordinator.Mode == coordinator.StagingEnv {
+	if mode.AnyOf(environment.Production, environment.Staging) {
 		httpSrv = makeHTTPToHTTPSRedirectServer()
 	} else {
 		httpSrv = makeHTTPServer()
@@ -153,7 +155,7 @@ func (o *Worker) initializeWorker() {
 	}()
 
 	go worker.Run()
-	port := o.cfg.Network.HttpPort
+	port := o.cfg.Server.Port
 	// It's recommend to run one worker on one instance.
 	// This logic is to make sure more than 1 workers still work
 	portsNum := 100
@@ -166,12 +168,14 @@ func (o *Worker) initializeWorker() {
 		}
 
 		if portsNum < 1 {
-			log.Printf("Couldn't find an open port in range %v-%v\n", o.cfg.Network.HttpPort, port)
+			log.Printf("Couldn't find an open port in range %v-%v\n", o.cfg.Server.Port, port)
 			// Cannot find port
 			return
 		}
 
 		_ = l.Close()
+
+		log.Printf("Worker port is %v", port)
 
 		o.spawnServer(port)
 	}

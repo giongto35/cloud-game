@@ -6,9 +6,11 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"strconv"
 	"time"
 
 	"github.com/giongto35/cloud-game/v2/pkg/config/coordinator"
+	"github.com/giongto35/cloud-game/v2/pkg/environment"
 	"github.com/giongto35/cloud-game/v2/pkg/games"
 	"github.com/giongto35/cloud-game/v2/pkg/monitoring"
 	"github.com/golang/glog"
@@ -21,12 +23,12 @@ const stagingLEURL = "https://acme-staging-v02.api.letsencrypt.org/directory"
 
 type Coordinator struct {
 	ctx context.Context
-	cfg Config
+	cfg coordinator.Config
 
 	monitoringServer *monitoring.ServerMonitoring
 }
 
-func New(ctx context.Context, cfg Config) *Coordinator {
+func New(ctx context.Context, cfg coordinator.Config) *Coordinator {
 	return &Coordinator{
 		ctx: ctx,
 		cfg: cfg,
@@ -111,16 +113,18 @@ func (o *Coordinator) initializeCoordinator() {
 	var httpsSrv *http.Server
 
 	log.Println("Initializing Coordinator Server")
-	if *coordinator.Mode == coordinator.ProdEnv || *coordinator.Mode == coordinator.StagingEnv {
+	mode := o.cfg.Environment.Mode
+	if mode.AnyOf(environment.Production, environment.Staging) {
+		serverConfig := o.cfg.Server
 		httpsSrv = makeHTTPServer(server)
-		httpsSrv.Addr = fmt.Sprintf(":%d", *coordinator.HttpsPort)
+		httpsSrv.Addr = fmt.Sprintf(":%d", serverConfig.HttpsPort)
 
-		if *coordinator.HttpsChain == "" || *coordinator.HttpsKey == "" {
-			*coordinator.HttpsChain = ""
-			*coordinator.HttpsKey = ""
+		if serverConfig.HttpsChain == "" || serverConfig.HttpsKey == "" {
+			serverConfig.HttpsChain = ""
+			serverConfig.HttpsKey = ""
 
 			var leurl string
-			if *coordinator.Mode == coordinator.StagingEnv {
+			if mode == environment.Staging {
 				leurl = stagingLEURL
 			} else {
 				leurl = acme.LetsEncryptURL
@@ -136,17 +140,17 @@ func (o *Coordinator) initializeCoordinator() {
 			httpsSrv.TLSConfig = &tls.Config{GetCertificate: certManager.GetCertificate}
 		}
 
-		go func() {
+		go func(chain string, key string) {
 			fmt.Printf("Starting HTTPS server on %s\n", httpsSrv.Addr)
-			err := httpsSrv.ListenAndServeTLS(*coordinator.HttpsChain, *coordinator.HttpsKey)
+			err := httpsSrv.ListenAndServeTLS(chain, key)
 			if err != nil {
 				log.Fatalf("httpsSrv.ListendAndServeTLS() failed with %s", err)
 			}
-		}()
+		}(serverConfig.HttpsChain, serverConfig.HttpsKey)
 	}
 
 	var httpSrv *http.Server
-	if *coordinator.Mode == coordinator.ProdEnv || *coordinator.Mode == coordinator.StagingEnv {
+	if mode.AnyOf(environment.Production, environment.Staging) {
 		httpSrv = makeHTTPToHTTPSRedirectServer(server)
 	} else {
 		httpSrv = makeHTTPServer(server)
@@ -156,7 +160,7 @@ func (o *Coordinator) initializeCoordinator() {
 		httpSrv.Handler = certManager.HTTPHandler(httpSrv.Handler)
 	}
 
-	httpSrv.Addr = ":" + *coordinator.HttpPort
+	httpSrv.Addr = ":" + strconv.Itoa(o.cfg.Server.Port)
 	err := httpSrv.ListenAndServe()
 	if err != nil {
 		log.Fatalf("httpSrv.ListenAndServe() failed with %s", err)
