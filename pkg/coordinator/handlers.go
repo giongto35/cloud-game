@@ -82,7 +82,7 @@ func (o *Server) getPingServer(zone string) string {
 		return fmt.Sprintf("%s/echo", o.cfg.PingServer)
 	}
 
-	mode := o.cfg.Environment.Mode
+	mode := o.cfg.Shared.Environment.Mode
 	if mode.AnyOf(environment.Production, environment.Staging) {
 		return fmt.Sprintf(pingServerTemp, zone, o.cfg.PublicDomain)
 	}
@@ -129,7 +129,7 @@ func (o *Server) WSO(w http.ResponseWriter, r *http.Request) {
 	wc.Printf("Set ping server address: %s", pingServer)
 
 	// In case worker and coordinator in the same host
-	if !util.IsPublicIP(address) && o.cfg.Environment.Mode == environment.Production {
+	if !util.IsPublicIP(address) && o.cfg.Shared.Environment.Mode == environment.Production {
 		// Don't accept private IP for worker's address in prod mode
 		// However, if the worker in the same host with coordinator, we can get public IP of worker
 		wc.Printf("[!] Address %s is invalid", address)

@@ -7,30 +7,30 @@ import (
 )
 
 type Config struct {
-	shared.Config
+	Shared shared.Config
 
 	PublicDomain      string
 	PingServer        string
 	URLPrefix         string
 	DebugHost         string
 	LibraryMonitoring bool
-
-	MonitoringConfig monitoring.ServerMonitoringConfig
 }
 
 func NewDefaultConfig() Config {
-	return Config{
+	conf := Config{
 		PublicDomain:      "http://localhost:8000",
 		PingServer:        "",
 		LibraryMonitoring: false,
-
-		MonitoringConfig: monitoring.ServerMonitoringConfig{
-			Port:             6601,
-			URLPrefix:        "/coordinator",
-			MetricEnabled:    false,
-			ProfilingEnabled: false,
-		},
 	}
+
+	conf.Shared.Monitoring = monitoring.ServerMonitoringConfig{
+		Port:             6601,
+		URLPrefix:        "/coordinator",
+		MetricEnabled:    false,
+		ProfilingEnabled: false,
+	}
+
+	return conf
 }
 
 const DefaultSTUNTURN = `[{"urls":"stun:stun-turn.webgame2d.com:3478"},{"urls":"turn:stun-turn.webgame2d.com:3478","username":"root","credential":"root"}]`
@@ -50,13 +50,9 @@ var SupportedRomExtensions = []string{
 }
 
 func (c *Config) AddFlags(fs *pflag.FlagSet) *Config {
-	c.Config.AddFlags(fs)
+	c.Shared.AddFlags(fs)
 
 	fs.StringVarP(&FrontendSTUNTURN, "stunturn", "", DefaultSTUNTURN, "Frontend STUN TURN servers")
-	fs.BoolVarP(&c.MonitoringConfig.MetricEnabled, "monitoring.metric", "m", c.MonitoringConfig.MetricEnabled, "Enable prometheus metric for server")
-	fs.BoolVarP(&c.MonitoringConfig.ProfilingEnabled, "monitoring.pprof", "p", c.MonitoringConfig.ProfilingEnabled, "Enable golang pprof for server")
-	fs.IntVarP(&c.MonitoringConfig.Port, "monitoring.port", "", c.MonitoringConfig.Port, "Monitoring server port")
-	fs.StringVarP(&c.MonitoringConfig.URLPrefix, "monitoring.prefix", "", c.MonitoringConfig.URLPrefix, "Monitoring server url prefix")
 	fs.StringVarP(&c.DebugHost, "debughost", "d", "", "Specify the server want to connect directly to debug")
 	fs.StringVarP(&c.PublicDomain, "domain", "n", c.PublicDomain, "Specify the public domain of the coordinator")
 	fs.StringVarP(&c.PingServer, "pingServer", "", c.PingServer, "Specify the worker address that the client can ping (with protocol and port)")

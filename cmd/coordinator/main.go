@@ -2,12 +2,12 @@ package main
 
 import (
 	"context"
-	coordinator2 "github.com/giongto35/cloud-game/v2/pkg/config/coordinator"
 	"math/rand"
 	"os"
 	"os/signal"
 	"time"
 
+	config "github.com/giongto35/cloud-game/v2/pkg/config/coordinator"
 	"github.com/giongto35/cloud-game/v2/pkg/coordinator"
 	"github.com/giongto35/cloud-game/v2/pkg/util/logging"
 	"github.com/golang/glog"
@@ -17,7 +17,7 @@ import (
 func main() {
 	rand.Seed(time.Now().UTC().UnixNano())
 
-	cfg := coordinator2.NewDefaultConfig()
+	cfg := config.NewDefaultConfig()
 	cfg.AddFlags(pflag.CommandLine)
 
 	logging.Init()

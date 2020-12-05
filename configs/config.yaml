@@ -71,13 +71,14 @@ encoder:
   # (experimental)
   withoutGame: false
 
-monitoring:
-  # monitoring server port
-  port: 6601
-  # monitoring server URL prefix
-  urlPrefix: /worker
-  metric: true
-  profiler: false
+shared:
+  monitoring:
+    # monitoring server port
+    port: 6601
+    # monitoring server URL prefix
+    urlPrefix: /worker
+    metric: true
+    profiler: false
 
 network:
   port: 8800

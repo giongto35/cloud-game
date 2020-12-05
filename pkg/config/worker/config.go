@@ -1,17 +1,16 @@
 package worker
 
 import (
-	"github.com/google/martian/log"
+	"log"
 	"path"
 
 	"github.com/giongto35/cloud-game/v2/pkg/config"
 	"github.com/giongto35/cloud-game/v2/pkg/config/shared"
-	"github.com/giongto35/cloud-game/v2/pkg/monitoring"
 	"github.com/spf13/pflag"
 )
 
 type Config struct {
-	shared.Config
+	Shared shared.Config
 
 	Network struct {
 		CoordinatorAddress string
@@ -41,8 +40,8 @@ type Config struct {
 	Encoder struct {
 		WithoutGame bool
 	}
-
-	Monitoring monitoring.ServerMonitoringConfig
+	//
+	//Monitoring monitoring.ServerMonitoringConfig
 }
 
 type LibretroCoreConfig struct {
@@ -66,19 +65,20 @@ var configPath string
 func NewDefaultConfig() Config {
 	var conf Config
 	config.LoadConfig(&conf, configPath)
+
+	log.Printf("%+v", conf)
+
 	return conf
 }
 
 func (c *Config) AddFlags(fs *pflag.FlagSet) *Config {
-	c.Config.AddFlags(fs)
+	c.Shared.AddFlags(fs)
 
 	if err := fs.Set("port", "9000"); err != nil {
-		log.Errorf("couldn't override default port value", err)
+		log.Printf("error: couldn't override default port value, %v", err)
 	}
-	fs.StringVarP(&c.Network.CoordinatorAddress, "coordinatorhost", "", c.Network.CoordinatorAddress, "Worker URL to connect")
+	fs.StringVar(&c.Network.CoordinatorAddress, "coordinatorhost", c.Network.CoordinatorAddress, "Worker URL to connect")
 	fs.StringVarP(&configPath, "conf", "c", "", "Set custom configuration file path")
-
-	fs.IntVarP(&c.Monitoring.Port, "monitoring.port", "", c.Monitoring.Port, "Monitoring server port")
 	return c
 }
 
