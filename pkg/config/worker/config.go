@@ -40,8 +40,6 @@ type Config struct {
 	Encoder struct {
 		WithoutGame bool
 	}
-	//
-	//Monitoring monitoring.ServerMonitoringConfig
 }
 
 type LibretroCoreConfig struct {

@@ -1,0 +1,153 @@
+<html>
+
+<head>
+    <meta charset="utf-8"/>
+    <meta name="viewport" content="user-scalable=0">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+
+    <meta property="og:type" content="cloud-game"/>
+    <meta property="og:title" content="Web-based Cloud Gaming for Retro Games"/>
+    <meta property="og:description" content="Play and share cloud gaming experience with your friends"/>
+    <meta property="og:image" content="http://cloud.webgame2d.com/static/img/ogimage.jpg"/>
+    <meta property="og:url" content=""/>
+    <meta property="og:site_name" content="Cloud Retro"/>
+    <meta property="og:author" content="giongto35 trichimtrich"/>
+
+    <link href="/static/css/font-awesome.css?2" rel="stylesheet">
+    <link href="/static/css/main.css?4" rel="stylesheet">
+    <link href="/static/css/ui.css?v=1" rel="stylesheet">
+</head>
+
+<body>
+<div id="gamebody">
+    <!--<div id="ui-emulator-bg"></div>-->
+
+    <div id="circle-pad-holder">
+        <div id="btn-up" class="dpad" value="up"></div>
+        <div id="btn-down" class="dpad" value="down"></div>
+        <div id="btn-left" class="dpad" value="left"></div>
+        <div id="btn-right" class="dpad" value="right"></div>
+        <div id="circle-pad"></div>
+    </div>
+
+    <div id="bottom-screen">
+        <div id="stats-overlay" class="no-select" hidden></div>
+        <!--NOTE: New browser doesn't allow unmuted video player. So we muted here.
+            There is still audio because current audio flow is not from media but it is manually encoded (technical webRTC challenge). Later, when we can integrate audio to media, we can face the issue with mute again .
+            https://developers.google.com/web/updates/2017/09/autoplay-policy-changes
+        -->
+        <video id="game-screen" muted playinfullscreen="false" playsinline></video>
+
+        <div id="menu-screen">
+            <div id="menu-container">
+            </div>
+            <div id="menu-item-choice"></div>
+        </div>
+    </div>
+
+    <div id="guide-txt"><b>Arrows</b>(move),<b>ZXCVAS</b>(game ABXYLR),<b>1/2</b>(1st/2nd player),<b>Shift/Enter/K/L</b>(select/start/save/load),<b>F</b>(fullscreen),<b>share</b>(copy
+        sharelink to clipboard)
+    </div>
+    <div id="btn-load" unselectable="on" class="btn big unselectable" value="load"></div>
+    <div id="btn-save" unselectable="on" class="btn big unselectable" value="save"></div>
+    <div id="btn-join" unselectable="on" class="btn big unselectable" value="join"></div>
+    <div id="slider-playeridx" class="slidecontainer">
+        player choice
+        <input type="range" min="1" max="4" value="1" class="slider" id="playeridx" onkeydown="event.preventDefault()">
+    </div>
+
+    <div id="btn-quit" unselectable="on" class="btn big unselectable" value="quit"></div>
+    <div id="btn-select" unselectable="on" class="btn big unselectable" value="select"></div>
+    <div id="btn-start" unselectable="on" class="btn big unselectable" value="start"></div>
+
+
+    <div id="color-button-holder">
+        <div id="btn-a" unselectable="on" class="btn unselectable" value="a"></div>
+        <div id="btn-b" unselectable="on" class="btn unselectable" value="b"></div>
+        <div id="btn-x" unselectable="on" class="btn unselectable" value="x"></div>
+        <div id="btn-y" unselectable="on" class="btn unselectable" value="y"></div>
+    </div>
+
+    <!-- TODO: remove -->
+    <input id="room-txt" type="text" placeholder="room id..." unselectable="on" class=" unselectable" disabled>
+
+    <div id="noti-box" unselectable="on" class="unselectable">Oh my god</div>
+
+    <div id="help-overlay">
+        <div id="help-overlay-background"></div>
+        <div id="help-overlay-detail"></div>
+    </div>
+    <div id="btn-help" unselectable="on" class="btn unselectable" value="help"></div>
+
+    <div id="btn-settings" class="btn btn2 unselectable" value="settings">
+        Settings
+    </div>
+</div>
+
+<div id="app-settings" class="modal-window">
+    <div>
+        <div class="settings__controls">
+            <span title="Save" id="settings__controls__save" class="semi-button">↑</span>
+            <span title="Load" id="settings__controls__load" class="semi-button">↓</span>
+            <span title="Reset" id="settings__controls__reset" class="semi-button">⟲</span>
+            <span title="Close" id="settings__controls__close" class="semi-button">X</span>
+        </div>
+        <h1>Settings</h1>
+        <div id="settings-data"></div>
+        <div>
+            * -- applied after application restart
+        </div>
+    </div>
+    <label class="dpad-toggle-label">
+        <input type="checkbox" id="dpad-toggle" checked>
+        <span class="dpad-toggle-slider"></span>
+    </label>
+</div>
+
+<a id="ribbon" style="position: fixed; right: 0; top: 0;" href="https://github.com/giongto35/cloud-game"><img
+        width="149" height="149"
+        src="https://github.blog/wp-content/uploads/2008/12/forkme_right_gray_6d6d6d.png?resize=149%2C149"
+        class="attachment-full size-full" alt="Fork me on GitHub" data-recalc-dims="1"></a>
+
+<script src="/static/js/lib/jquery-3.4.1.min.js"></script>
+
+<script src="/static/js/gui/gui.js?v=1"></script>
+<script src="/static/js/log.js?v=5"></script>
+<script src="/static/js/utils.js?v1"></script>
+<script src="/static/js/event/event.js?v=5"></script>
+<script src="/static/js/input/keys.js?v=3"></script>
+<script src="/static/js/settings/opts.js?v=1"></script>
+<script src="/static/js/settings/settings.js?v=2"></script>
+<script src="/static/js/env.js?v=5"></script>
+<script src="/static/js/input/input.js?v=3"></script>
+<script src="/static/js/gameList.js?v=3"></script>
+<script src="/static/js/room.js?v=3"></script>
+<script src="/static/js/stats/stats.js?v=1"></script>
+<script src="/static/js/network/ajax.js?v=3"></script>
+<script src="/static/js/network/socket.js?v=4"></script>
+<script src="/static/js/network/rtcp.js?v=3"></script>
+<script src="/static/js/controller.js?v=6"></script>
+<script src="/static/js/input/keyboard.js?v=5"></script>
+<script src="/static/js/input/touch.js?v=3"></script>
+<script src="/static/js/input/joystick.js?v=3"></script>
+
+<script src="/static/js/init.js?v=5"></script>
+
+<!-- Global site tag (gtag.js) - Google Analytics -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=UA-145078282-1"></script>
+<script>
+    window.dataLayer = window.dataLayer || [];
+
+    function gtag() {
+        dataLayer.push(arguments);
+    }
+
+    gtag('js', new Date());
+
+    gtag('config', 'UA-145078282-1');
+</script>
+
+</body>
+
+</html>

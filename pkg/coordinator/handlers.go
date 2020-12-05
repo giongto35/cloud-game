@@ -19,9 +19,7 @@ import (
 	"github.com/gorilla/websocket"
 )
 
-const (
-	gameboyIndex = "./web/game.html"
-)
+const index = "./web/index.html"
 
 type Server struct {
 	cfg coordinator.Config
@@ -60,15 +58,11 @@ type RenderData struct {
 
 // GetWeb returns web frontend
 func (o *Server) GetWeb(w http.ResponseWriter, r *http.Request) {
-	stunturn := coordinator.FrontendSTUNTURN
-	if stunturn == "" {
-		stunturn = coordinator.DefaultSTUNTURN
-	}
 	data := RenderData{
-		STUNTURN: stunturn,
+		STUNTURN: coordinator.FrontendSTUNTURN,
 	}
 
-	tmpl, err := template.ParseFiles(gameboyIndex)
+	tmpl, err := template.ParseFiles(index)
 	if err != nil {
 		log.Fatal(err)
 	}

@@ -33,7 +33,6 @@ func NewDefaultConfig() Config {
 	return conf
 }
 
-const DefaultSTUNTURN = `[{"urls":"stun:stun-turn.webgame2d.com:3478"},{"urls":"turn:stun-turn.webgame2d.com:3478","username":"root","credential":"root"}]`
 const StunTurnTemplate = `[{"urls":"stun:stun.l.google.com:19302"},{"urls":"stun:%s:3478"},{"urls":"turn:%s:3478","username":"root","credential":"root"}]`
 
 var FrontendSTUNTURN string
@@ -52,7 +51,6 @@ var SupportedRomExtensions = []string{
 func (c *Config) AddFlags(fs *pflag.FlagSet) *Config {
 	c.Shared.AddFlags(fs)
 
-	fs.StringVarP(&FrontendSTUNTURN, "stunturn", "", DefaultSTUNTURN, "Frontend STUN TURN servers")
 	fs.StringVarP(&c.DebugHost, "debughost", "d", "", "Specify the server want to connect directly to debug")
 	fs.StringVarP(&c.PublicDomain, "domain", "n", c.PublicDomain, "Specify the public domain of the coordinator")
 	fs.StringVarP(&c.PingServer, "pingServer", "", c.PingServer, "Specify the worker address that the client can ping (with protocol and port)")
