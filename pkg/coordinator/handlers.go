@@ -15,6 +15,7 @@ import (
 	"github.com/giongto35/cloud-game/v2/pkg/environment"
 	"github.com/giongto35/cloud-game/v2/pkg/games"
 	"github.com/giongto35/cloud-game/v2/pkg/util"
+	"github.com/giongto35/cloud-game/v2/pkg/webrtc"
 	"github.com/gofrs/uuid"
 	"github.com/gorilla/websocket"
 )
@@ -52,22 +53,14 @@ func NewServer(cfg coordinator.Config, library games.GameLibrary) *Server {
 	}
 }
 
-type RenderData struct {
-	STUNTURN string
-}
-
 // GetWeb returns web frontend
 func (o *Server) GetWeb(w http.ResponseWriter, r *http.Request) {
-	data := RenderData{
-		STUNTURN: coordinator.FrontendSTUNTURN,
-	}
-
 	tmpl, err := template.ParseFiles(index)
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	tmpl.Execute(w, data)
+	tmpl.Execute(w, struct{}{})
 }
 
 // getPingServer returns the server for latency check of a zone. In latency check to find best worker step, we use this server to find the closest worker.
@@ -140,7 +133,7 @@ func (o *Server) WSO(w http.ResponseWriter, r *http.Request) {
 
 	// Create a workerClient instance
 	wc.Address = address
-	wc.StunTurnServer = fmt.Sprintf(coordinator.StunTurnTemplate, address, address)
+	wc.StunTurnServer = webrtc.ToJson(o.cfg.Webrtc.IceServers, webrtc.Replacement{From: "server-ip", To: address})
 	wc.Zone = zone
 	wc.PingServer = pingServer
 

@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"log"
 
-	"github.com/giongto35/cloud-game/v2/pkg/config/coordinator"
+	webrtcConfig "github.com/giongto35/cloud-game/v2/pkg/config/webrtc"
 	"github.com/giongto35/cloud-game/v2/pkg/encoder"
 	"github.com/giongto35/cloud-game/v2/pkg/encoder/h264encoder"
 	vpxencoder "github.com/giongto35/cloud-game/v2/pkg/encoder/vpx-encoder"
@@ -74,7 +74,7 @@ func (r *Room) startAudio(sampleRate int) {
 	log.Println("Enter fan audio")
 	srcSampleRate := sampleRate
 
-	enc, err := opus.NewEncoder(coordinator.AUDIO_RATE, 2, opus.AppAudio)
+	enc, err := opus.NewEncoder(webrtcConfig.AUDIO_RATE, 2, opus.AppAudio)
 	if err != nil {
 		log.Println("[!] Cannot create audio encoder", err)
 	}
@@ -83,8 +83,8 @@ func (r *Room) startAudio(sampleRate int) {
 	enc.SetBitrateToAuto()
 	enc.SetComplexity(10)
 
-	dstBufferSize := coordinator.AUDIO_FRAME
-	srcBufferSize := dstBufferSize * srcSampleRate / coordinator.AUDIO_RATE
+	dstBufferSize := webrtcConfig.AUDIO_FRAME
+	srcBufferSize := dstBufferSize * srcSampleRate / webrtcConfig.AUDIO_RATE
 	pcm := make([]int16, srcBufferSize) // 640 * 1000 / 16000 == 40 ms
 	idx := 0
 
@@ -98,7 +98,7 @@ func (r *Room) startAudio(sampleRate int) {
 
 			if idx == len(pcm) {
 				data := make([]byte, 1024*2)
-				dstpcm := resample(pcm, dstBufferSize, srcSampleRate, coordinator.AUDIO_RATE)
+				dstpcm := resample(pcm, dstBufferSize, srcSampleRate, webrtcConfig.AUDIO_RATE)
 				n, err := enc.Encode(dstpcm, data)
 
 				if err != nil {

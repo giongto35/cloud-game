@@ -10,7 +10,7 @@ import (
 	"runtime/debug"
 	"time"
 
-	"github.com/giongto35/cloud-game/v2/pkg/config/coordinator"
+	webrtcConfig "github.com/giongto35/cloud-game/v2/pkg/config/webrtc"
 	"github.com/giongto35/cloud-game/v2/pkg/encoder"
 	"github.com/giongto35/cloud-game/v2/pkg/util"
 	"github.com/gofrs/uuid"
@@ -350,7 +350,7 @@ func (w *WebRTC) startStreaming(vp8Track *webrtc.Track, opusTrack *webrtc.Track)
 			}
 			err := opusTrack.WriteSample(media.Sample{
 				Data:    data,
-				Samples: uint32(coordinator.AUDIO_FRAME / coordinator.AUDIO_CHANNELS),
+				Samples: uint32(webrtcConfig.AUDIO_FRAME / webrtcConfig.AUDIO_CHANNELS),
 			})
 			if err != nil {
 				log.Println("Warn: Err write sample: ", err)

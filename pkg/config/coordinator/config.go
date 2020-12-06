@@ -3,6 +3,7 @@ package coordinator
 import (
 	"github.com/giongto35/cloud-game/v2/pkg/config/shared"
 	"github.com/giongto35/cloud-game/v2/pkg/monitoring"
+	"github.com/giongto35/cloud-game/v2/pkg/webrtc"
 	"github.com/spf13/pflag"
 )
 
@@ -14,6 +15,10 @@ type Config struct {
 	URLPrefix         string
 	DebugHost         string
 	LibraryMonitoring bool
+
+	Webrtc struct {
+		IceServers []webrtc.IceServer
+	}
 }
 
 func NewDefaultConfig() Config {
@@ -30,17 +35,14 @@ func NewDefaultConfig() Config {
 		ProfilingEnabled: false,
 	}
 
+	conf.Webrtc.IceServers = []webrtc.IceServer{
+		{Url: "stun:stun.l.google.com:19302"},
+		{Url: "stun:{server-ip}:3478"},
+		{Url: "turn:{server-ip}:3478", Username: "root", Credential: "root"},
+	}
+
 	return conf
 }
-
-const StunTurnTemplate = `[{"urls":"stun:stun.l.google.com:19302"},{"urls":"stun:%s:3478"},{"urls":"turn:%s:3478","username":"root","credential":"root"}]`
-
-var FrontendSTUNTURN string
-
-const AUDIO_RATE = 48000
-const AUDIO_CHANNELS = 2
-const AUDIO_MS = 20
-const AUDIO_FRAME = AUDIO_RATE * AUDIO_MS / 1000 * AUDIO_CHANNELS
 
 var EmulatorExtension = []string{".so", ".armv7-neon-hf.so", ".dylib", ".dll"}
 
