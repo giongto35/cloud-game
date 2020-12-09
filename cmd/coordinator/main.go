@@ -17,8 +17,7 @@ import (
 func main() {
 	rand.Seed(time.Now().UTC().UnixNano())
 
-	cfg := config.NewDefaultConfig()
-	cfg.AddFlags(pflag.CommandLine)
+	conf := config.NewDefaultConfig().WithFlags(pflag.CommandLine)
 
 	logging.Init()
 	defer logging.Flush()
@@ -26,8 +25,8 @@ func main() {
 	ctx, cancelCtx := context.WithCancel(context.Background())
 
 	glog.Infof("Initializing coordinator server")
-	glog.V(4).Infof("Coordinator configs %v", cfg)
-	o := coordinator.New(ctx, cfg)
+	glog.V(4).Infof("Coordinator configs %v", conf)
+	o := coordinator.New(ctx, *conf)
 	if err := o.Run(); err != nil {
 		glog.Errorf("Failed to run coordinator server, reason %v", err)
 		os.Exit(1)

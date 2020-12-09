@@ -18,8 +18,7 @@ import (
 func run() {
 	rand.Seed(time.Now().UTC().UnixNano())
 
-	cfg := config.NewDefaultConfig()
-	cfg.AddFlags(pflag.CommandLine)
+	conf := config.NewDefaultConfig().WithFlags(pflag.CommandLine)
 
 	logging.Init()
 	defer logging.Flush()
@@ -27,8 +26,8 @@ func run() {
 	ctx, cancelCtx := context.WithCancel(context.Background())
 
 	glog.Infof("Initializing worker server")
-	glog.V(4).Infof("Worker configs %v", cfg)
-	o := worker.New(ctx, cfg)
+	glog.V(4).Infof("Worker configs %v", conf)
+	o := worker.New(ctx, *conf)
 	if err := o.Run(); err != nil {
 		glog.Errorf("Failed to run worker, reason %v", err)
 		os.Exit(1)

@@ -10,10 +10,10 @@ import (
 type Config struct {
 	Shared shared.Config
 
-	PublicDomain      string
-	PingServer        string
-	URLPrefix         string
-	DebugHost         string
+	PublicDomain string
+	PingServer   string
+	DebugHost    string
+
 	LibraryMonitoring bool
 
 	Webrtc struct {
@@ -21,7 +21,7 @@ type Config struct {
 	}
 }
 
-func NewDefaultConfig() Config {
+func NewDefaultConfig() *Config {
 	conf := Config{
 		PublicDomain:      "http://localhost:8000",
 		PingServer:        "",
@@ -41,7 +41,7 @@ func NewDefaultConfig() Config {
 		{Url: "turn:{server-ip}:3478", Username: "root", Credential: "root"},
 	}
 
-	return conf
+	return &conf
 }
 
 var EmulatorExtension = []string{".so", ".armv7-neon-hf.so", ".dylib", ".dll"}
@@ -50,12 +50,7 @@ var SupportedRomExtensions = []string{
 	"gba", "gbc", "cue", "zip", "nes", "smc", "sfc", "swc", "fig", "bs", "n64", "v64", "z64",
 }
 
-func (c *Config) AddFlags(fs *pflag.FlagSet) *Config {
+func (c *Config) WithFlags(fs *pflag.FlagSet) *Config {
 	c.Shared.AddFlags(fs)
-
-	fs.StringVarP(&c.DebugHost, "debughost", "d", "", "Specify the server want to connect directly to debug")
-	fs.StringVarP(&c.PublicDomain, "domain", "n", c.PublicDomain, "Specify the public domain of the coordinator")
-	fs.StringVarP(&c.PingServer, "pingServer", "", c.PingServer, "Specify the worker address that the client can ping (with protocol and port)")
-	fs.BoolVarP(&c.LibraryMonitoring, "libMonitor", "", c.LibraryMonitoring, "Enable ROM library monitoring")
 	return c
 }

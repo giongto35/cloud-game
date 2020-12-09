@@ -1,4 +1,32 @@
-# emulator config
+#
+# The default service configuration
+#
+
+coordinator:
+  # address if the server want to connect directly to debug
+  # debugHost:
+  # the public domain of the coordinator
+  # publicDomain:
+  # specify the worker address that the client can ping (with protocol and port)
+  # pingServer
+  # enable ROM library monitoring
+  libMonitor: false
+
+shared:
+  monitoring:
+    # monitoring server port
+    port: 6601
+    # monitoring server URL prefix
+    urlPrefix: /worker
+    metric: true
+    profiler: false
+
+network:
+  port: 8800
+  coordinatorAddress: localhost:8000
+  httpPort: 9000
+  zone:
+
 emulator:
   # set output viewport scale factor
   scale: 1
@@ -70,21 +98,6 @@ encoder:
   # run without a game
   # (experimental)
   withoutGame: false
-
-shared:
-  monitoring:
-    # monitoring server port
-    port: 6601
-    # monitoring server URL prefix
-    urlPrefix: /worker
-    metric: true
-    profiler: false
-
-network:
-  port: 8800
-  coordinatorAddress: localhost:8000
-  httpPort: 9000
-  zone:
 
 webrtc:
   iceServers:

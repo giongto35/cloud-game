@@ -60,16 +60,16 @@ type LibretroCoreConfig struct {
 // allows custom config path
 var configPath string
 
-func NewDefaultConfig() Config {
+func NewDefaultConfig() *Config {
 	var conf Config
 	config.LoadConfig(&conf, configPath)
 
 	log.Printf("%+v", conf)
 
-	return conf
+	return &conf
 }
 
-func (c *Config) AddFlags(fs *pflag.FlagSet) *Config {
+func (c *Config) WithFlags(fs *pflag.FlagSet) *Config {
 	c.Shared.AddFlags(fs)
 
 	if err := fs.Set("port", "9000"); err != nil {
