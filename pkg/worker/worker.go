@@ -94,7 +94,7 @@ func (o *Worker) spawnServer(port int) {
 
 	mode := o.cfg.Environment.Mode
 	if mode.AnyOf(environment.Production, environment.Staging) {
-		serverConfig := o.cfg.Server
+		serverConfig := o.cfg.Worker.Server
 		httpsSrv = makeHTTPServer()
 		httpsSrv.Addr = fmt.Sprintf(":%d", serverConfig.HttpsPort)
 
@@ -155,7 +155,7 @@ func (o *Worker) initializeWorker() {
 	}()
 
 	go wrk.Run()
-	port := o.cfg.Server.Port
+	port := o.cfg.Worker.Server.Port
 	// It's recommend to run one worker on one instance.
 	// This logic is to make sure more than 1 workers still work
 	portsNum := 100
@@ -168,7 +168,7 @@ func (o *Worker) initializeWorker() {
 		}
 
 		if portsNum < 1 {
-			log.Printf("Couldn't find an open port in range %v-%v\n", o.cfg.Server.Port, port)
+			log.Printf("Couldn't find an open port in range %v-%v\n", o.cfg.Worker.Server.Port, port)
 			// Cannot find port
 			return
 		}

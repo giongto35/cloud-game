@@ -8,8 +8,22 @@ environment:
 coordinator:
   # address if the server want to connect directly to debug
   debugHost:
-  # enable ROM library monitoring
-  libMonitor: false
+  # games library
+  library:
+    # some directory which is gonna be the root folder for the library
+    basePath: assets/games
+    # an explicit list of supported file extensions
+    # which overrides Libretro emulator ROMs configs
+    supported:
+    # a list of ignored words in the ROM filenames
+    ignored:
+      - neogeo
+      - pgm
+    # print some additional info
+    verbose: true
+    # enable library directory live reload
+    # (experimental)
+    watchMode: false
   monitoring:
     port: 6601
     profiler: false

@@ -16,13 +16,13 @@ type Config struct {
 	}
 	Emulator    emulator.Emulator
 	Environment shared.Environment
-	Server      shared.Server
 	Worker      struct {
 		Monitoring monitoring.ServerMonitoringConfig
 		Network    struct {
 			CoordinatorAddress string
 			Zone               string
 		}
+		Server shared.Server
 	}
 }
 
@@ -40,7 +40,7 @@ func NewConfig() *Config {
 
 func (c *Config) WithFlags(fs *pflag.FlagSet) *Config {
 	c.Environment.WithFlags(fs)
-	c.Server.WithFlags(fs)
+	c.Worker.Server.WithFlags(fs)
 	fs.IntVar(&c.Worker.Monitoring.Port, "monitoring.port", 0, "Monitoring server port")
 	fs.StringVar(&c.Worker.Network.CoordinatorAddress, "coordinatorhost", "", "Worker URL to connect")
 	fs.StringVarP(&configPath, "conf", "c", "", "Set custom configuration file path")

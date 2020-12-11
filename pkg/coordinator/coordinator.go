@@ -98,13 +98,11 @@ func makeHTTPToHTTPSRedirectServer(server *Server) *http.Server {
 // initializeCoordinator setup an coordinator server
 func (o *Coordinator) initializeCoordinator() {
 	// init games library
-	lib := games.NewLibrary(games.Config{
-		BasePath:  "assets/games",
-		Supported: o.cfg.Emulator.GetSupportedExtensions(),
-		Ignored:   []string{"neogeo", "pgm"},
-		Verbose:   true,
-		WatchMode: o.cfg.Coordinator.LibraryMonitoring,
-	})
+	libraryConf := o.cfg.Coordinator.Library
+	if len(libraryConf.Supported) == 0 {
+		libraryConf.Supported = o.cfg.Emulator.GetSupportedExtensions()
+	}
+	lib := games.NewLibrary(libraryConf)
 	lib.Scan()
 
 	server := NewServer(o.cfg, lib)
@@ -115,7 +113,7 @@ func (o *Coordinator) initializeCoordinator() {
 	log.Println("Initializing Coordinator Server")
 	mode := o.cfg.Environment.Mode
 	if mode.AnyOf(environment.Production, environment.Staging) {
-		serverConfig := o.cfg.Server
+		serverConfig := o.cfg.Coordinator.Server
 		httpsSrv = makeHTTPServer(server)
 		httpsSrv.Addr = fmt.Sprintf(":%d", serverConfig.HttpsPort)
 
@@ -160,7 +158,7 @@ func (o *Coordinator) initializeCoordinator() {
 		httpSrv.Handler = certManager.HTTPHandler(httpSrv.Handler)
 	}
 
-	httpSrv.Addr = ":" + strconv.Itoa(o.cfg.Server.Port)
+	httpSrv.Addr = ":" + strconv.Itoa(o.cfg.Coordinator.Server.Port)
 	err := httpSrv.ListenAndServe()
 	if err != nil {
 		log.Fatalf("httpSrv.ListenAndServe() failed with %s", err)
