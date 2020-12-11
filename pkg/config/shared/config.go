@@ -2,7 +2,6 @@ package shared
 
 import (
 	"github.com/giongto35/cloud-game/v2/pkg/environment"
-	"github.com/giongto35/cloud-game/v2/pkg/monitoring"
 	"github.com/spf13/pflag"
 )
 
@@ -17,8 +16,6 @@ type Config struct {
 		HttpsKey   string
 		HttpsChain string
 	}
-
-	Monitoring monitoring.ServerMonitoringConfig
 }
 
 func (c *Config) AddFlags(fs *pflag.FlagSet) *Config {
@@ -27,6 +24,5 @@ func (c *Config) AddFlags(fs *pflag.FlagSet) *Config {
 	fs.IntVar(&c.Server.HttpsPort, "httpsPort", 443, "HTTPS server port (just why?)")
 	fs.StringVar(&c.Server.HttpsKey, "httpsKey", "", "HTTPS key")
 	fs.StringVar(&c.Server.HttpsChain, "httpsChain", "", "HTTPS chain")
-	fs.IntVar(&c.Monitoring.Port, "monitoring.port", c.Monitoring.Port, "Monitoring server port")
 	return c
 }

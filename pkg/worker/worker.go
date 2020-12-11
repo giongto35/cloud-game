@@ -32,7 +32,7 @@ func New(ctx context.Context, cfg worker.Config) *Worker {
 		ctx: ctx,
 		cfg: cfg,
 
-		monitoringServer: monitoring.NewServerMonitoring(cfg.Shared.Monitoring),
+		monitoringServer: monitoring.NewServerMonitoring(cfg.Worker.Monitoring),
 	}
 }
 

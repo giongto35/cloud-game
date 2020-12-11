@@ -63,7 +63,7 @@ func GetEmulatorMock(room string, system string) *EmulatorMock {
 	var conf worker.Config
 	config.LoadConfig(&conf, configPath)
 
-	meta := conf.GetLibretroCoreConfig(system)
+	meta := conf.Emulator.GetLibretroCoreConfig(system)
 
 	images := make(chan GameFrame, 30)
 	audio := make(chan []int16, 30)

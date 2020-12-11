@@ -3,7 +3,6 @@ package nanoarch
 import (
 	"bufio"
 	"errors"
-	"github.com/giongto35/cloud-game/v2/pkg/emulator/libretro/core"
 	"log"
 	"math/rand"
 	"os"
@@ -13,6 +12,7 @@ import (
 	"time"
 	"unsafe"
 
+	"github.com/giongto35/cloud-game/v2/pkg/emulator/libretro/core"
 	"github.com/giongto35/cloud-game/v2/pkg/emulator"
 	"github.com/giongto35/cloud-game/v2/pkg/emulator/graphics"
 	"github.com/giongto35/cloud-game/v2/pkg/emulator/image"

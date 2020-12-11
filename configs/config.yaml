@@ -4,28 +4,39 @@
 
 coordinator:
   # address if the server want to connect directly to debug
-  # debugHost:
-  # the public domain of the coordinator
-  # publicDomain:
-  # specify the worker address that the client can ping (with protocol and port)
-  # pingServer
+  debugHost:
   # enable ROM library monitoring
   libMonitor: false
+  monitoring:
+    port: 6601
+    profiler: false
+    metric: false
+    urlPrefix: /coordinator
+  # the public domain of the coordinator
+  publicDomain: http://localhost:8000
+  # specify the worker address that the client can ping (with protocol and port)
+  pingServer:
 
-shared:
+worker:
+  network:
+    coordinatorAddress: localhost:8000
+    httpPort: 9000
+    port: 8800
+    zone:
   monitoring:
     # monitoring server port
     port: 6601
-    # monitoring server URL prefix
-    urlPrefix: /worker
-    metric: true
     profiler: false
+    # monitoring server URL prefix
+    metric: true
+    urlPrefix: /worker
 
-network:
-  port: 8800
-  coordinatorAddress: localhost:8000
-  httpPort: 9000
-  zone:
+shared:
+  server:
+    port: 8000
+    httpsPort: 9999
+    httpsKey:
+    httpsChain:
 
 emulator:
   # set output viewport scale factor

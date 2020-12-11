@@ -33,7 +33,7 @@ func New(ctx context.Context, cfg coordinator.Config) *Coordinator {
 		ctx: ctx,
 		cfg: cfg,
 
-		monitoringServer: monitoring.NewServerMonitoring(cfg.Shared.Monitoring),
+		monitoringServer: monitoring.NewServerMonitoring(cfg.Coordinator.Monitoring),
 	}
 }
 
@@ -100,10 +100,10 @@ func (o *Coordinator) initializeCoordinator() {
 	// init games library
 	lib := games.NewLibrary(games.Config{
 		BasePath:  "assets/games",
-		Supported: coordinator.SupportedRomExtensions,
+		Supported: o.cfg.Emulator.GetSupportedExtensions(),
 		Ignored:   []string{"neogeo", "pgm"},
 		Verbose:   true,
-		WatchMode: o.cfg.LibraryMonitoring,
+		WatchMode: o.cfg.Coordinator.LibraryMonitoring,
 	})
 	lib.Scan()
 
@@ -132,7 +132,7 @@ func (o *Coordinator) initializeCoordinator() {
 
 			certManager = &autocert.Manager{
 				Prompt:     autocert.AcceptTOS,
-				HostPolicy: autocert.HostWhitelist(o.cfg.PublicDomain),
+				HostPolicy: autocert.HostWhitelist(o.cfg.Coordinator.PublicDomain),
 				Cache:      autocert.DirCache("assets/cache"),
 				Client:     &acme.Client{DirectoryURL: leurl},
 			}

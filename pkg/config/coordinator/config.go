@@ -1,6 +1,10 @@
 package coordinator
 
 import (
+	"log"
+
+	"github.com/giongto35/cloud-game/v2/pkg/config"
+	"github.com/giongto35/cloud-game/v2/pkg/config/emulator"
 	"github.com/giongto35/cloud-game/v2/pkg/config/shared"
 	"github.com/giongto35/cloud-game/v2/pkg/monitoring"
 	"github.com/giongto35/cloud-game/v2/pkg/webrtc"
@@ -10,45 +14,32 @@ import (
 type Config struct {
 	Shared shared.Config
 
-	PublicDomain string
-	PingServer   string
-	DebugHost    string
-
-	LibraryMonitoring bool
-
-	Webrtc struct {
+	Coordinator struct {
+		PublicDomain      string
+		PingServer        string
+		DebugHost         string
+		LibraryMonitoring bool
+		Monitoring        monitoring.ServerMonitoringConfig
+	}
+	Emulator emulator.Emulator
+	Webrtc   struct {
 		IceServers []webrtc.IceServer
 	}
 }
 
+// allows custom config path
+var configPath string
+
 func NewDefaultConfig() *Config {
-	conf := Config{
-		PublicDomain:      "http://localhost:8000",
-		PingServer:        "",
-		LibraryMonitoring: false,
-	}
-
-	conf.Shared.Monitoring = monitoring.ServerMonitoringConfig{
-		Port:             6601,
-		URLPrefix:        "/coordinator",
-		MetricEnabled:    false,
-		ProfilingEnabled: false,
-	}
-
-	conf.Webrtc.IceServers = []webrtc.IceServer{
-		{Url: "stun:stun.l.google.com:19302"},
-		{Url: "stun:{server-ip}:3478"},
-		{Url: "turn:{server-ip}:3478", Username: "root", Credential: "root"},
-	}
-
+	var conf Config
+	config.LoadConfig(&conf, configPath)
+	log.Printf("%+v", conf)
 	return &conf
-}
-
-var SupportedRomExtensions = []string{
-	"gba", "gbc", "cue", "zip", "nes", "smc", "sfc", "swc", "fig", "bs", "n64", "v64", "z64",
 }
 
 func (c *Config) WithFlags(fs *pflag.FlagSet) *Config {
 	c.Shared.AddFlags(fs)
+	fs.IntVar(&c.Coordinator.Monitoring.Port, "monitoring.port", 0, "Monitoring server port")
+	fs.StringVarP(&configPath, "conf", "c", "", "Set custom configuration file path")
 	return c
 }

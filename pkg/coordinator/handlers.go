@@ -65,13 +65,13 @@ func (o *Server) GetWeb(w http.ResponseWriter, r *http.Request) {
 
 // getPingServer returns the server for latency check of a zone. In latency check to find best worker step, we use this server to find the closest worker.
 func (o *Server) getPingServer(zone string) string {
-	if o.cfg.PingServer != "" {
-		return fmt.Sprintf("%s/echo", o.cfg.PingServer)
+	if o.cfg.Coordinator.PingServer != "" {
+		return fmt.Sprintf("%s/echo", o.cfg.Coordinator.PingServer)
 	}
 
 	mode := o.cfg.Shared.Environment.Mode
 	if mode.AnyOf(environment.Production, environment.Staging) {
-		return fmt.Sprintf(pingServerTemp, zone, o.cfg.PublicDomain)
+		return fmt.Sprintf(pingServerTemp, zone, o.cfg.Coordinator.PublicDomain)
 	}
 
 	// If not Prod or Staging, return dev environment
@@ -254,9 +254,10 @@ func (o *Server) WS(w http.ResponseWriter, r *http.Request) {
 }
 
 func (o *Server) getBestWorkerClient(client *BrowserClient, zone string) (*WorkerClient, error) {
-	if o.cfg.DebugHost != "" {
-		client.Println("Connecting to debug host instead prod servers", o.cfg.DebugHost)
-		wc := o.getWorkerFromAddress(o.cfg.DebugHost)
+	conf := o.cfg.Coordinator
+	if conf.DebugHost != "" {
+		client.Println("Connecting to debug host instead prod servers", conf.DebugHost)
+		wc := o.getWorkerFromAddress(conf.DebugHost)
 		if wc != nil {
 			return wc, nil
 		}
