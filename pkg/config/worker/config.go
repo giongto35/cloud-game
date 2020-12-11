@@ -41,9 +41,6 @@ func NewConfig() *Config {
 func (c *Config) WithFlags(fs *pflag.FlagSet) *Config {
 	c.Environment.WithFlags(fs)
 	c.Server.WithFlags(fs)
-	if err := fs.Set("port", "9000"); err != nil {
-		log.Printf("error: couldn't override default port value, %v", err)
-	}
 	fs.IntVar(&c.Worker.Monitoring.Port, "monitoring.port", 0, "Monitoring server port")
 	fs.StringVar(&c.Worker.Network.CoordinatorAddress, "coordinatorhost", "", "Worker URL to connect")
 	fs.StringVarP(&configPath, "conf", "c", "", "Set custom configuration file path")

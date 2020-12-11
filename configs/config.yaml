@@ -2,6 +2,9 @@
 # The default service configuration
 #
 
+environment:
+  mode: dev
+
 coordinator:
   # address if the server want to connect directly to debug
   debugHost:
@@ -16,12 +19,15 @@ coordinator:
   publicDomain: http://localhost:8000
   # specify the worker address that the client can ping (with protocol and port)
   pingServer:
+  server:
+    port: 8000
+    httpsPort: 443
+    httpsKey:
+    httpsChain:
 
 worker:
   network:
     coordinatorAddress: localhost:8000
-    httpPort: 9000
-    port: 8800
     zone:
   monitoring:
     # monitoring server port
@@ -30,11 +36,9 @@ worker:
     # monitoring server URL prefix
     metric: true
     urlPrefix: /worker
-
-shared:
   server:
-    port: 8000
-    httpsPort: 9999
+    port: 9000
+    httpsPort: 443
     httpsKey:
     httpsChain:
 
