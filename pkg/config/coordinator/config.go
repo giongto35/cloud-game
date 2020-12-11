@@ -44,8 +44,6 @@ func NewDefaultConfig() *Config {
 	return &conf
 }
 
-var EmulatorExtension = []string{".so", ".armv7-neon-hf.so", ".dylib", ".dll"}
-
 var SupportedRomExtensions = []string{
 	"gba", "gbc", "cue", "zip", "nes", "smc", "sfc", "swc", "fig", "bs", "n64", "v64", "z64",
 }

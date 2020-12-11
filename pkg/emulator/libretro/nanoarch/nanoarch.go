@@ -3,6 +3,7 @@ package nanoarch
 import (
 	"bufio"
 	"errors"
+	"github.com/giongto35/cloud-game/v2/pkg/emulator/libretro/core"
 	"log"
 	"math/rand"
 	"os"
@@ -12,7 +13,6 @@ import (
 	"time"
 	"unsafe"
 
-	"github.com/giongto35/cloud-game/v2/pkg/config/coordinator"
 	"github.com/giongto35/cloud-game/v2/pkg/emulator"
 	"github.com/giongto35/cloud-game/v2/pkg/emulator/graphics"
 	"github.com/giongto35/cloud-game/v2/pkg/emulator/image"
@@ -431,17 +431,15 @@ func coreLoad(meta emulator.Metadata) {
 	multitap.enabled = false
 	multitap.value = 0
 
-	mu.Lock()
-	// Different OS requires different library, bruteforce till it finish
-	for _, ext := range coordinator.EmulatorExtension {
-		pathWithExt := meta.LibPath + ext
-		cs := C.CString(pathWithExt)
-		retroHandle = C.dlopen(cs, C.RTLD_LAZY)
-		C.free(unsafe.Pointer(cs))
-		if retroHandle != nil {
-			break
-		}
+	arch, err := core.GetCoreExt()
+	if err != nil {
+		log.Fatalf("error with core auto lib mapping, %v", err)
 	}
+
+	cs := C.CString(meta.LibPath + arch.Lib)
+	mu.Lock()
+	retroHandle = C.dlopen(cs, C.RTLD_LAZY)
+	C.free(unsafe.Pointer(cs))
 
 	if retroHandle == nil {
 		err := C.dlerror()
