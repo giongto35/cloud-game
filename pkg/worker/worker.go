@@ -92,9 +92,9 @@ func (o *Worker) spawnServer(port int) {
 	var certManager *autocert.Manager
 	var httpsSrv *http.Server
 
-	mode := o.cfg.Shared.Environment.Mode
+	mode := o.cfg.Environment.Mode
 	if mode.AnyOf(environment.Production, environment.Staging) {
-		serverConfig := o.cfg.Shared.Server
+		serverConfig := o.cfg.Server
 		httpsSrv = makeHTTPServer()
 		httpsSrv.Addr = fmt.Sprintf(":%d", serverConfig.HttpsPort)
 
@@ -147,15 +147,15 @@ func (o *Worker) spawnServer(port int) {
 
 // initializeWorker setup a worker
 func (o *Worker) initializeWorker() {
-	worker := NewHandler(o.cfg)
+	wrk := NewHandler(o.cfg)
 
 	defer func() {
 		log.Println("Close worker")
-		worker.Close()
+		wrk.Close()
 	}()
 
-	go worker.Run()
-	port := o.cfg.Shared.Server.Port
+	go wrk.Run()
+	port := o.cfg.Server.Port
 	// It's recommend to run one worker on one instance.
 	// This logic is to make sure more than 1 workers still work
 	portsNum := 100
@@ -168,7 +168,7 @@ func (o *Worker) initializeWorker() {
 		}
 
 		if portsNum < 1 {
-			log.Printf("Couldn't find an open port in range %v-%v\n", o.cfg.Shared.Server.Port, port)
+			log.Printf("Couldn't find an open port in range %v-%v\n", o.cfg.Server.Port, port)
 			// Cannot find port
 			return
 		}

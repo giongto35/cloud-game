@@ -2,6 +2,10 @@ package config
 
 import "github.com/kkyr/fig"
 
+type Loader interface {
+	LoadConfig(config interface{}, path string) interface{}
+}
+
 // LoadConfig loads a configuration file into the given struct.
 // The path param specifies a custom path to the configuration file.
 func LoadConfig(config interface{}, path string) interface{} {

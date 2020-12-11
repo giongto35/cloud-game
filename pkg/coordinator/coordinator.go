@@ -113,9 +113,9 @@ func (o *Coordinator) initializeCoordinator() {
 	var httpsSrv *http.Server
 
 	log.Println("Initializing Coordinator Server")
-	mode := o.cfg.Shared.Environment.Mode
+	mode := o.cfg.Environment.Mode
 	if mode.AnyOf(environment.Production, environment.Staging) {
-		serverConfig := o.cfg.Shared.Server
+		serverConfig := o.cfg.Server
 		httpsSrv = makeHTTPServer(server)
 		httpsSrv.Addr = fmt.Sprintf(":%d", serverConfig.HttpsPort)
 
@@ -160,7 +160,7 @@ func (o *Coordinator) initializeCoordinator() {
 		httpSrv.Handler = certManager.HTTPHandler(httpSrv.Handler)
 	}
 
-	httpSrv.Addr = ":" + strconv.Itoa(o.cfg.Shared.Server.Port)
+	httpSrv.Addr = ":" + strconv.Itoa(o.cfg.Server.Port)
 	err := httpSrv.ListenAndServe()
 	if err != nil {
 		log.Fatalf("httpSrv.ListenAndServe() failed with %s", err)

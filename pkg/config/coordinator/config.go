@@ -12,8 +12,6 @@ import (
 )
 
 type Config struct {
-	Shared shared.Config
-
 	Coordinator struct {
 		PublicDomain      string
 		PingServer        string
@@ -21,8 +19,10 @@ type Config struct {
 		LibraryMonitoring bool
 		Monitoring        monitoring.ServerMonitoringConfig
 	}
-	Emulator emulator.Emulator
-	Webrtc   struct {
+	Emulator    emulator.Emulator
+	Environment shared.Environment
+	Server      shared.Server
+	Webrtc      struct {
 		IceServers []webrtc.IceServer
 	}
 }
@@ -30,7 +30,7 @@ type Config struct {
 // allows custom config path
 var configPath string
 
-func NewDefaultConfig() *Config {
+func NewConfig() *Config {
 	var conf Config
 	config.LoadConfig(&conf, configPath)
 	log.Printf("%+v", conf)
@@ -38,7 +38,8 @@ func NewDefaultConfig() *Config {
 }
 
 func (c *Config) WithFlags(fs *pflag.FlagSet) *Config {
-	c.Shared.AddFlags(fs)
+	c.Environment.WithFlags(fs)
+	c.Server.WithFlags(fs)
 	fs.IntVar(&c.Coordinator.Monitoring.Port, "monitoring.port", 0, "Monitoring server port")
 	fs.StringVarP(&configPath, "conf", "c", "", "Set custom configuration file path")
 	return c

@@ -18,7 +18,7 @@ import (
 func run() {
 	rand.Seed(time.Now().UTC().UnixNano())
 
-	conf := config.NewDefaultConfig().WithFlags(pflag.CommandLine)
+	conf := config.NewConfig().WithFlags(pflag.CommandLine)
 
 	logging.Init()
 	defer logging.Flush()

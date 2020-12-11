@@ -11,13 +11,13 @@ import (
 )
 
 type Config struct {
-	Shared shared.Config
-
 	Encoder struct {
 		WithoutGame bool
 	}
-	Emulator emulator.Emulator
-	Worker   struct {
+	Emulator    emulator.Emulator
+	Environment shared.Environment
+	Server      shared.Server
+	Worker      struct {
 		Monitoring monitoring.ServerMonitoringConfig
 		Network    struct {
 			CoordinatorAddress string
@@ -29,7 +29,7 @@ type Config struct {
 // allows custom config path
 var configPath string
 
-func NewDefaultConfig() *Config {
+func NewConfig() *Config {
 	var conf Config
 	config.LoadConfig(&conf, configPath)
 
@@ -39,7 +39,8 @@ func NewDefaultConfig() *Config {
 }
 
 func (c *Config) WithFlags(fs *pflag.FlagSet) *Config {
-	c.Shared.AddFlags(fs)
+	c.Environment.WithFlags(fs)
+	c.Server.WithFlags(fs)
 	if err := fs.Set("port", "9000"); err != nil {
 		log.Printf("error: couldn't override default port value, %v", err)
 	}
