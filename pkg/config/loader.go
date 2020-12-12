@@ -1,6 +1,10 @@
 package config
 
-import "github.com/kkyr/fig"
+import (
+	"os"
+
+	"github.com/kkyr/fig"
+)
 
 type Loader interface {
 	LoadConfig(config interface{}, path string) interface{}
@@ -12,7 +16,11 @@ func LoadConfig(config interface{}, path string) interface{} {
 	var err error
 
 	if path == "" {
-		err = fig.Load(config, fig.Dirs(".", "configs", "../../../configs"))
+		dirs := []string{".", "configs", "../../../configs"}
+		if home, err := os.UserHomeDir(); err == nil {
+			dirs = append(dirs, home+"/.cr")
+		}
+		err = fig.Load(config, fig.Dirs(dirs...))
 	} else {
 		err = fig.Load(config, fig.Dirs(path))
 	}
