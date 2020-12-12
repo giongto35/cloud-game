@@ -124,6 +124,10 @@ emulator:
           usesLibCo: true
 
 encoder:
+  audio:
+    channels: 2
+    frame: 20
+    frequency: 48000
   # run without a game
   # (experimental)
   withoutGame: false

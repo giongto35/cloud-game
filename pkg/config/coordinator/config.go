@@ -6,9 +6,9 @@ import (
 	"github.com/giongto35/cloud-game/v2/pkg/config"
 	"github.com/giongto35/cloud-game/v2/pkg/config/emulator"
 	"github.com/giongto35/cloud-game/v2/pkg/config/shared"
+	webrtcConfig "github.com/giongto35/cloud-game/v2/pkg/config/webrtc"
 	"github.com/giongto35/cloud-game/v2/pkg/games"
 	"github.com/giongto35/cloud-game/v2/pkg/monitoring"
-	"github.com/giongto35/cloud-game/v2/pkg/webrtc"
 	"github.com/spf13/pflag"
 )
 
@@ -24,7 +24,7 @@ type Config struct {
 	Emulator    emulator.Emulator
 	Environment shared.Environment
 	Webrtc      struct {
-		IceServers []webrtc.IceServer
+		IceServers []webrtcConfig.IceServer
 	}
 }
 

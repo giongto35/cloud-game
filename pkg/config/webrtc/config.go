@@ -1,6 +1,18 @@
 package webrtc
 
-const AUDIO_RATE = 48000
-const AUDIO_CHANNELS = 2
-const AUDIO_MS = 20
-const AUDIO_FRAME = AUDIO_RATE * AUDIO_MS / 1000 * AUDIO_CHANNELS
+import "github.com/giongto35/cloud-game/v2/pkg/config/encoder"
+
+type Webrtc struct {
+	IceServers []IceServer
+}
+
+type IceServer struct {
+	Url        string
+	Username   string
+	Credential string
+}
+
+type Config struct {
+	Encoder encoder.Encoder
+	Webrtc  Webrtc
+}

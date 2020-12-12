@@ -5,15 +5,15 @@ import (
 
 	"github.com/giongto35/cloud-game/v2/pkg/config"
 	"github.com/giongto35/cloud-game/v2/pkg/config/emulator"
+	"github.com/giongto35/cloud-game/v2/pkg/config/encoder"
 	"github.com/giongto35/cloud-game/v2/pkg/config/shared"
+	webrtcConfig "github.com/giongto35/cloud-game/v2/pkg/config/webrtc"
 	"github.com/giongto35/cloud-game/v2/pkg/monitoring"
 	"github.com/spf13/pflag"
 )
 
 type Config struct {
-	Encoder struct {
-		WithoutGame bool
-	}
+	Encoder     encoder.Encoder
 	Emulator    emulator.Emulator
 	Environment shared.Environment
 	Worker      struct {
@@ -24,6 +24,7 @@ type Config struct {
 		}
 		Server shared.Server
 	}
+	Webrtc webrtcConfig.Webrtc
 }
 
 // allows custom config path

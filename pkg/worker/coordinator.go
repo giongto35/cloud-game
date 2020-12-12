@@ -2,6 +2,7 @@ package worker
 
 import (
 	"encoding/json"
+	webrtcConfig "github.com/giongto35/cloud-game/v2/pkg/config/webrtc"
 	"log"
 	"strconv"
 
@@ -59,7 +60,9 @@ func (h *Handler) RouteCoordinator() {
 		func(resp cws.WSPacket) (req cws.WSPacket) {
 			log.Println("Received a request to createOffer from browser via coordinator")
 
-			peerconnection := webrtc.NewWebRTC()
+			peerconnection := webrtc.NewWebRTC().WithConfig(
+				webrtcConfig.Config{Encoder: h.cfg.Encoder, Webrtc: h.cfg.Webrtc},
+			)
 			var initPacket struct {
 				IsMobile bool `json:"is_mobile"`
 			}

@@ -215,7 +215,7 @@ func NewRoom(roomID string, game games.GameMetadata, videoCodec encoder.VideoCod
 
 		// Spawn video and audio encoding for webRTC
 		go room.startVideo(encoderW, encoderH, videoCodec)
-		go room.startAudio(gameMeta.AudioSampleRate)
+		go room.startAudio(gameMeta.AudioSampleRate, cfg.Encoder.Audio)
 		go room.startVoice()
 		room.director.Start()
 

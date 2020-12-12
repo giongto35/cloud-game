@@ -1,33 +1,31 @@
 package webrtc
 
-import "strings"
+import (
+	"strings"
 
-type IceServer struct {
-	Url        string
-	Username   string
-	Credential string
-}
+	"github.com/giongto35/cloud-game/v2/pkg/config/webrtc"
+)
 
 type Replacement struct {
 	From string
 	To   string
 }
 
-func NewIceServer(url string) IceServer {
-	return IceServer{
+func NewIceServer(url string) webrtc.IceServer {
+	return webrtc.IceServer{
 		Url: url,
 	}
 }
 
-func NewIceServerCredentials(url string, user string, credential string) IceServer {
-	return IceServer{
+func NewIceServerCredentials(url string, user string, credential string) webrtc.IceServer {
+	return webrtc.IceServer{
 		Url:        url,
 		Username:   user,
 		Credential: credential,
 	}
 }
 
-func ToJson(iceServers []IceServer, replacements ...Replacement) string {
+func ToJson(iceServers []webrtc.IceServer, replacements ...Replacement) string {
 	var sb strings.Builder
 
 	n := len(replacements)

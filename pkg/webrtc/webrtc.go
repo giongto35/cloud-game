@@ -36,6 +36,7 @@ type WebRTC struct {
 	ID string
 
 	connection  *webrtc.PeerConnection
+	cfg         webrtcConfig.Config
 	isConnected bool
 	isClosed    bool
 	// for yuvI420 image
@@ -98,6 +99,11 @@ func NewWebRTC() *WebRTC {
 		VoiceOutChannel: make(chan []byte, 1),
 		InputChannel:    make(chan []byte, 100),
 	}
+	return w
+}
+
+func (w *WebRTC) WithConfig(conf webrtcConfig.Config) *WebRTC {
+	w.cfg = conf
 	return w
 }
 
@@ -344,14 +350,13 @@ func (w *WebRTC) startStreaming(vp8Track *webrtc.Track, opusTrack *webrtc.Track)
 			}
 		}()
 
+		opusSamples := uint32(w.cfg.Encoder.Audio.GetFrameDuration() / w.cfg.Encoder.Audio.Channels)
+
 		for data := range w.AudioChannel {
 			if !w.isConnected {
 				return
 			}
-			err := opusTrack.WriteSample(media.Sample{
-				Data:    data,
-				Samples: uint32(webrtcConfig.AUDIO_FRAME / webrtcConfig.AUDIO_CHANNELS),
-			})
+			err := opusTrack.WriteSample(media.Sample{Data: data, Samples: opusSamples})
 			if err != nil {
 				log.Println("Warn: Err write sample: ", err)
 			}
