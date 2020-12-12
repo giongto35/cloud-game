@@ -9,8 +9,6 @@ type Emulator struct {
 		Width  int
 		Height int
 	}
-	Width    int
-	Height   int
 	Libretro struct {
 		Cores struct {
 			Paths struct {

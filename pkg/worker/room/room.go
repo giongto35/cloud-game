@@ -183,18 +183,20 @@ func NewRoom(roomID string, game games.GameMetadata, videoCodec encoder.VideoCod
 
 		gameMeta := room.director.LoadMeta(game.Path)
 
-		// nwidth, nheight are the webRTC output size.
+		// nwidth, nheight are the WebRTC output size
 		var nwidth, nheight int
-		emu := cfg.Emulator
-		if emu.AspectRatio.Keep {
-			baseAspectRatio := float64(gameMeta.BaseWidth) / float64(emu.AspectRatio.Height)
-			nwidth, nheight = resizeToAspect(baseAspectRatio, emu.Width, emu.Height)
-			log.Printf("Viewport size will be changed from %dx%d (%f) -> %dx%d", emu.Width, emu.Height,
+		emu, ar := cfg.Emulator, cfg.Emulator.AspectRatio
+
+		if ar.Keep {
+			baseAspectRatio := float64(gameMeta.BaseWidth) / float64(ar.Height)
+			nwidth, nheight = resizeToAspect(baseAspectRatio, ar.Width, ar.Height)
+			log.Printf("Viewport size will be changed from %dx%d (%f) -> %dx%d", ar.Width, ar.Height,
 				baseAspectRatio, nwidth, nheight)
 		} else {
 			nwidth, nheight = gameMeta.BaseWidth, gameMeta.BaseHeight
 			log.Printf("Viewport custom size is disabled, base size will be used instead %dx%d", nwidth, nheight)
 		}
+
 		if emu.Scale > 1 {
 			nwidth, nheight = nwidth*emu.Scale, nheight*emu.Scale
 			log.Printf("Viewport size has scaled to %dx%d", nwidth, nheight)
