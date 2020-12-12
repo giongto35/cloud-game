@@ -92,7 +92,7 @@ func (o *Worker) spawnServer(port int) {
 	var certManager *autocert.Manager
 	var httpsSrv *http.Server
 
-	mode := o.cfg.Environment.Mode
+	mode := o.cfg.Environment.Get()
 	if mode.AnyOf(environment.Production, environment.Staging) {
 		serverConfig := o.cfg.Worker.Server
 		httpsSrv = makeHTTPServer()

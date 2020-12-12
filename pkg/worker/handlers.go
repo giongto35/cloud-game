@@ -76,7 +76,8 @@ func (h *Handler) Run() {
 
 func setupCoordinatorConnection(ohost string, zone string, cfg worker.Config) (*CoordinatorClient, error) {
 	var scheme string
-	if cfg.Environment.Mode.AnyOf(environment.Production, environment.Staging) {
+	env := cfg.Environment.Get()
+	if env.AnyOf(environment.Production, environment.Staging) {
 		scheme = "wss"
 	} else {
 		scheme = "ws"

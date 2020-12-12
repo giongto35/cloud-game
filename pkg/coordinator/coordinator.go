@@ -111,7 +111,7 @@ func (o *Coordinator) initializeCoordinator() {
 	var httpsSrv *http.Server
 
 	log.Println("Initializing Coordinator Server")
-	mode := o.cfg.Environment.Mode
+	mode := o.cfg.Environment.Get()
 	if mode.AnyOf(environment.Production, environment.Staging) {
 		serverConfig := o.cfg.Coordinator.Server
 		httpsSrv = makeHTTPServer(server)

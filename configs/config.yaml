@@ -1,9 +1,9 @@
 #
-# The default service configuration
+# Application configuration file
 #
 
-environment:
-  mode: dev
+# application environment (dev, staging, prod)
+environment: dev
 
 coordinator:
   # address if the server want to connect directly to debug
@@ -11,6 +11,7 @@ coordinator:
   # games library
   library:
     # some directory which is gonna be the root folder for the library
+    # where games are stored
     basePath: assets/games
     # an explicit list of supported file extensions
     # which overrides Libretro emulator ROMs configs
@@ -26,6 +27,7 @@ coordinator:
     watchMode: false
   monitoring:
     port: 6601
+    # enable Go profiler HTTP server
     profiler: false
     metric: false
     urlPrefix: /coordinator
@@ -33,6 +35,7 @@ coordinator:
   publicDomain: http://localhost:8000
   # specify the worker address that the client can ping (with protocol and port)
   pingServer:
+  # HTTP(S) server config
   server:
     port: 8000
     httpsPort: 443
@@ -41,7 +44,9 @@ coordinator:
 
 worker:
   network:
+    # a coordinator address to connect to
     coordinatorAddress: localhost:8000
+    # ISO Alpha-2 country code to group workers by zones
     zone:
   monitoring:
     # monitoring server port
@@ -60,15 +65,13 @@ emulator:
   # set output viewport scale factor
   scale: 1
 
-  # enable aspect ratio changing
-  # (experimental)
   aspectRatio:
+    # enable aspect ratio changing
+    # (experimental)
     keep: false
     # recalculate emulator game frame size to the given WxH
     width: 320
     height: 240
-
-  # !to check proper params for changing
 
   libretro:
     cores:
@@ -126,6 +129,7 @@ emulator:
 encoder:
   audio:
     channels: 2
+    # audio frame duration needed for WebRTC (Opus)
     frame: 20
     frequency: 48000
   # run without a game
@@ -133,6 +137,7 @@ encoder:
   withoutGame: false
 
 webrtc:
+  # a list of STUN/TURN servers for the client
   iceServers:
     - url: stun:stun.l.google.com:19302
     - url: stun:{server-ip}:3478

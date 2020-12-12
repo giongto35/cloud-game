@@ -5,9 +5,7 @@ import (
 	"github.com/spf13/pflag"
 )
 
-type Environment struct {
-	Mode environment.Env
-}
+type Environment environment.Env
 
 type Server struct {
 	Port       int
@@ -23,6 +21,11 @@ func (s *Server) WithFlags(fs *pflag.FlagSet) {
 	fs.StringVar(&s.HttpsChain, "httpsChain", "", "HTTPS chain")
 }
 
+func (env *Environment) Get() environment.Env {
+	return (environment.Env)(*env)
+}
+
 func (env *Environment) WithFlags(fs *pflag.FlagSet) {
-	fs.StringVar((*string)(&env.Mode), "mode", "dev", "Specify environment type: [dev, staging, prod]")
+	val := string(*env)
+	fs.StringVar(&val, "env", "dev", "Specify environment type: [dev, staging, prod]")
 }
