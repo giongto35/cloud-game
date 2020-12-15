@@ -3,7 +3,6 @@ package downloader
 import (
 	"log"
 	"os"
-	"time"
 
 	"github.com/cavaliercoder/grab"
 )
@@ -18,40 +17,29 @@ func NewGrabDownloader(conf Config) Downloader {
 	}
 }
 
-func (d *GrabDownloader) Download(url string, dest string) {
-	client := grab.NewClient()
-	req, _ := grab.NewRequest(dest, url)
-
-	log.Printf("Downloading %v...\n", req.URL())
-	resp := client.Do(req)
-	log.Printf("  %v\n", resp.HTTPResponse.Status)
-
-	// start UI loop
-	t := time.NewTicker(500 * time.Millisecond)
-	defer t.Stop()
-
-Loop:
-	for {
-		select {
-		case <-t.C:
-			log.Printf("  transferred %v / %v bytes (%.2f%%)\n",
-				resp.BytesComplete(),
-				resp.Size(),
-				100*resp.Progress())
-
-		case <-resp.Done:
-			// download is complete
-			break Loop
+func (d *GrabDownloader) Download(dest string, urls ...string) {
+	reqs := make([]*grab.Request, 0)
+	for _, url := range urls {
+		req, err := grab.NewRequest(dest, url)
+		if err != nil {
+			panic(err)
 		}
+		reqs = append(reqs, req)
 	}
 
-	// check for errors
-	if err := resp.Err(); err != nil {
-		log.SetOutput(os.Stderr)
-		log.Printf("Download failed: %v\n", err)
-		log.SetOutput(os.Stdout)
-		os.Exit(1)
-	}
+	client := grab.NewClient()
+	respch := client.DoBatch(4, reqs...)
 
-	log.Printf("Download saved to ./%v \n", resp.Filename)
+	// check each response
+	for resp := range respch {
+		if err := resp.Err(); err != nil {
+			log.SetOutput(os.Stderr)
+			log.Printf("Download failed: %v\n", err)
+			log.SetOutput(os.Stdout)
+			panic(err)
+		}
+
+		log.Printf("  %v\n", resp.HTTPResponse.Status)
+		log.Printf("Downloaded %s to %s\n", resp.Request.URL(), resp.Filename)
+	}
 }
