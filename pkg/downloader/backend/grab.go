@@ -1,4 +1,4 @@
-package downloader
+package backend
 
 import (
 	"log"
@@ -7,17 +7,9 @@ import (
 	"github.com/cavaliercoder/grab"
 )
 
-type GrabDownloader struct {
-	conf Config
-}
+type GrabDownloader struct{}
 
-func NewGrabDownloader(conf Config) Downloader {
-	return &GrabDownloader{
-		conf: conf,
-	}
-}
-
-func (d *GrabDownloader) Download(dest string, urls ...string) {
+func (d GrabDownloader) Download(dest string, urls ...string) []string {
 	reqs := make([]*grab.Request, 0)
 	for _, url := range urls {
 		req, err := grab.NewRequest(dest, url)
@@ -31,6 +23,7 @@ func (d *GrabDownloader) Download(dest string, urls ...string) {
 	respch := client.DoBatch(4, reqs...)
 
 	// check each response
+	var files []string
 	for resp := range respch {
 		if err := resp.Err(); err != nil {
 			log.SetOutput(os.Stderr)
@@ -41,5 +34,7 @@ func (d *GrabDownloader) Download(dest string, urls ...string) {
 
 		log.Printf("  %v\n", resp.HTTPResponse.Status)
 		log.Printf("Downloaded %s to %s\n", resp.Request.URL(), resp.Filename)
+		files = append(files, resp.Filename)
 	}
+	return files
 }

@@ -7,7 +7,7 @@ type BuildbotRepo struct {
 	compression CompressionType
 }
 
-func New(address string) *BuildbotRepo {
+func NewBuildbotRepo(address string) *BuildbotRepo {
 	return &BuildbotRepo{
 		address: address,
 	}
@@ -24,7 +24,7 @@ func (r *BuildbotRepo) GetCoreData(file string, info ArchInfo) Data {
 	if info.vendor != "" {
 		sb.WriteString(info.vendor + "/")
 	}
-	sb.WriteString(info.os + "/" + info.arch + "/latest/" + file + info.Lib)
+	sb.WriteString(info.os + "/" + info.arch + "/latest/" + file + "." + info.LibExt)
 	if r.compression != "" {
 		sb.WriteString("." + r.compression.GetExt())
 	}

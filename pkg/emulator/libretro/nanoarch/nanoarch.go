@@ -12,10 +12,10 @@ import (
 	"time"
 	"unsafe"
 
-	"github.com/giongto35/cloud-game/v2/pkg/emulator/libretro/core"
 	"github.com/giongto35/cloud-game/v2/pkg/emulator"
 	"github.com/giongto35/cloud-game/v2/pkg/emulator/graphics"
 	"github.com/giongto35/cloud-game/v2/pkg/emulator/image"
+	"github.com/giongto35/cloud-game/v2/pkg/emulator/libretro/core"
 	"github.com/giongto35/cloud-game/v2/pkg/thread"
 )
 
@@ -436,7 +436,7 @@ func coreLoad(meta emulator.Metadata) {
 		log.Fatalf("error with core auto lib mapping, %v", err)
 	}
 
-	cs := C.CString(meta.LibPath + arch.Lib)
+	cs := C.CString(meta.LibPath + "." + arch.LibExt)
 	mu.Lock()
 	retroHandle = C.dlopen(cs, C.RTLD_LAZY)
 	C.free(unsafe.Pointer(cs))
