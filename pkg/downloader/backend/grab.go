@@ -7,9 +7,17 @@ import (
 	"github.com/cavaliercoder/grab"
 )
 
-type GrabDownloader struct{}
+type GrabDownloader struct {
+	client *grab.Client
+}
 
-func (d GrabDownloader) Download(dest string, urls ...string) []string {
+func NewGrabDownloader() GrabDownloader {
+	return GrabDownloader{
+		client: grab.NewClient(),
+	}
+}
+
+func (d GrabDownloader) Request(dest string, urls ...string) []string {
 	reqs := make([]*grab.Request, 0)
 	for _, url := range urls {
 		req, err := grab.NewRequest(dest, url)
@@ -19,8 +27,7 @@ func (d GrabDownloader) Download(dest string, urls ...string) []string {
 		reqs = append(reqs, req)
 	}
 
-	client := grab.NewClient()
-	respch := client.DoBatch(4, reqs...)
+	respch := d.client.DoBatch(4, reqs...)
 
 	// check each response
 	var files []string

@@ -1,20 +1,12 @@
 package downloader
 
 import (
-	"github.com/giongto35/cloud-game/v2/pkg/downloader/pipe"
 	"path/filepath"
 	"testing"
-
-	"github.com/giongto35/cloud-game/v2/pkg/downloader/backend"
 )
 
 func TestDownloader(t *testing.T) {
-	down := Down{
-		backend: backend.GrabDownloader{},
-		pipe: []Process{
-			pipe.Unpack,
-			pipe.Delete,
-		}}
+	downloader := NewDefaultDownloader()
 	path, _ := filepath.Abs(".")
 
 	emus := []string{
@@ -30,5 +22,5 @@ func TestDownloader(t *testing.T) {
 			e+".dll.zip")
 	}
 
-	down.Down(path, urls...)
+	downloader.Download(path, urls...)
 }

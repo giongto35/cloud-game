@@ -1,27 +1,29 @@
 package pipe
 
 import (
-	"github.com/giongto35/cloud-game/v2/pkg/extractor"
 	"os"
+
+	"github.com/giongto35/cloud-game/v2/pkg/extractor"
 )
 
-func Unpack(dest string, strings []string) []string {
-	for _, file := range strings {
-		unpack := extractor.NewFromExt(file)
-		if unpack != nil {
-			unpack.Extract(file, dest)
+func Unpack(dest string, files []string) []string {
+	var res []string
+	for _, file := range files {
+		if unpack := extractor.NewFromExt(file); unpack != nil {
+			if _, err := unpack.Extract(file, dest); err == nil {
+				res = append(res, file)
+			}
 		}
 	}
-	return strings
+	return res
 }
 
-func Delete(_ string, strings []string) []string {
-	var files []string
-	for _, file := range strings {
-		e := os.Remove(file)
-		if e != nil {
-			files = append(files, file)
+func Delete(_ string, files []string) []string {
+	var res []string
+	for _, file := range files {
+		if e := os.Remove(file); e == nil {
+			res = append(res, file)
 		}
 	}
-	return files
+	return res
 }
