@@ -2,6 +2,7 @@ package worker
 
 import (
 	"crypto/tls"
+	"github.com/giongto35/cloud-game/v2/pkg/worker/libretro"
 	"log"
 	"net/url"
 	"os"
@@ -42,6 +43,8 @@ type Handler struct {
 func NewHandler(cfg worker.Config) *Handler {
 	// Create offline storage folder
 	createOfflineStorage()
+
+	libretro.SyncCores(cfg)
 
 	// Init online storage
 	onlineStorage := storage.NewInitClient()

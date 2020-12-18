@@ -66,3 +66,11 @@ func (e *Emulator) GetSupportedExtensions() []string {
 	}
 	return extensions
 }
+
+func (e *Emulator) GetCores() []string {
+	var cores []string
+	for _, core := range e.Libretro.Cores.List {
+		cores = append(cores, core.Lib)
+	}
+	return cores
+}
