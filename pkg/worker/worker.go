@@ -5,7 +5,6 @@ import (
 	"crypto/tls"
 	"fmt"
 	"log"
-	"net"
 	"net/http"
 	"strconv"
 	"time"
@@ -51,6 +50,7 @@ func (o *Worker) RunMonitoringServer() {
 }
 
 func (o *Worker) Shutdown() {
+	// !to add a proper HTTP(S) server shutdown (cws/handler bad loop)
 	if err := o.monitoringServer.Shutdown(o.ctx); err != nil {
 		glog.Errorln("Failed to shutdown monitoring server")
 	}
@@ -138,10 +138,26 @@ func (o *Worker) spawnServer(port int) {
 		httpSrv.Handler = certManager.HTTPHandler(httpSrv.Handler)
 	}
 
-	httpSrv.Addr = ":" + strconv.Itoa(port)
-	err := httpSrv.ListenAndServe()
-	if err != nil {
-		log.Printf("httpSrv.ListenAndServe() failed with %s", err)
+	startServer(httpSrv, port)
+}
+
+func startServer(serv *http.Server, startPort int) {
+	// It's recommend to run one worker on one instance.
+	// This logic is to make sure more than 1 workers still work
+	for port, n := startPort, startPort+100; port < n; port++ {
+		serv.Addr = ":" + strconv.Itoa(port)
+		err := serv.ListenAndServe()
+		switch err {
+		case http.ErrServerClosed:
+			log.Printf("HTTP(S) server was closed")
+			return
+		default:
+		}
+		port++
+
+		if port == n {
+			log.Printf("error: couldn't find an open port in range %v-%v\n", startPort, port)
+		}
 	}
 }
 
@@ -155,28 +171,8 @@ func (o *Worker) initializeWorker() {
 	}()
 
 	go wrk.Run()
-	port := o.cfg.Worker.Server.Port
-	// It's recommend to run one worker on one instance.
-	// This logic is to make sure more than 1 workers still work
-	portsNum := 100
-	for {
-		portsNum--
-		l, err := net.Listen("tcp", ":"+strconv.Itoa(port))
-		if err != nil {
-			port++
-			continue
-		}
+	// will block here
+	wrk.Prepare()
 
-		if portsNum < 1 {
-			log.Printf("Couldn't find an open port in range %v-%v\n", o.cfg.Worker.Server.Port, port)
-			// Cannot find port
-			return
-		}
-
-		_ = l.Close()
-
-		log.Printf("Worker port is %v", port)
-
-		o.spawnServer(port)
-	}
+	o.spawnServer(o.cfg.Worker.Server.Port)
 }

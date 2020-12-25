@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	goflag "flag"
 	"math/rand"
 	"os"
 	"os/signal"
@@ -12,13 +13,15 @@ import (
 	"github.com/giongto35/cloud-game/v2/pkg/util/logging"
 	"github.com/giongto35/cloud-game/v2/pkg/worker"
 	"github.com/golang/glog"
-	"github.com/spf13/pflag"
+	flag "github.com/spf13/pflag"
 )
 
 func run() {
 	rand.Seed(time.Now().UTC().UnixNano())
 
-	conf := config.NewConfig().WithFlags(pflag.CommandLine)
+	conf := config.NewConfig()
+	flag.CommandLine.AddGoFlagSet(goflag.CommandLine)
+	conf.ParseFlags()
 
 	logging.Init()
 	defer logging.Flush()
@@ -27,7 +30,7 @@ func run() {
 
 	glog.Infof("Initializing worker server")
 	glog.V(4).Infof("Worker configs %v", conf)
-	o := worker.New(ctx, *conf)
+	o := worker.New(ctx, conf)
 	if err := o.Run(); err != nil {
 		glog.Errorf("Failed to run worker, reason %v", err)
 		os.Exit(1)

@@ -19,7 +19,7 @@ func TestBuildbotRepo(t *testing.T) {
 			arch: core.ArchInfo{
 				Os:     "linux",
 				Arch:   "x86_64",
-				LibExt: "so",
+				LibExt: ".so",
 			},
 			resultUrl: testAddress + "/" + "linux/x86_64/latest/uber_core.so",
 		},
@@ -29,7 +29,7 @@ func TestBuildbotRepo(t *testing.T) {
 			arch: core.ArchInfo{
 				Os:     "linux",
 				Arch:   "x86_64",
-				LibExt: "so",
+				LibExt: ".so",
 			},
 			resultUrl: testAddress + "/" + "linux/x86_64/latest/uber_core.so.zip",
 		},
@@ -39,7 +39,7 @@ func TestBuildbotRepo(t *testing.T) {
 				Os:     "osx",
 				Arch:   "x86_64",
 				Vendor: "apple",
-				LibExt: "dylib",
+				LibExt: ".dylib",
 			},
 			resultUrl: testAddress + "/" + "apple/osx/x86_64/latest/uber_core.dylib",
 		},
@@ -49,7 +49,8 @@ func TestBuildbotRepo(t *testing.T) {
 		repo := NewBuildbotRepo(testAddress).WithCompression(test.compression)
 		data := repo.GetCoreData(test.file, test.arch)
 		if data.Url != test.resultUrl {
-			t.Errorf("seems that expected link address is incorrect for file %s %+v", test.file, test.arch)
+			t.Errorf("seems that expected link address is incorrect (%v) for file %s %+v",
+				data.Url, test.file, test.arch)
 		}
 	}
 }

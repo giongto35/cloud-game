@@ -2,7 +2,7 @@ package shared
 
 import (
 	"github.com/giongto35/cloud-game/v2/pkg/environment"
-	"github.com/spf13/pflag"
+	flag "github.com/spf13/pflag"
 )
 
 type Environment environment.Env
@@ -14,18 +14,18 @@ type Server struct {
 	HttpsChain string
 }
 
-func (s *Server) WithFlags(fs *pflag.FlagSet) {
-	fs.IntVar(&s.Port, "port", 8000, "HTTP server port")
-	fs.IntVar(&s.HttpsPort, "httpsPort", 443, "HTTPS server port (just why?)")
-	fs.StringVar(&s.HttpsKey, "httpsKey", "", "HTTPS key")
-	fs.StringVar(&s.HttpsChain, "httpsChain", "", "HTTPS chain")
+func (s *Server) WithFlags() {
+	flag.IntVar(&s.Port, "port", s.Port, "HTTP server port")
+	flag.IntVar(&s.HttpsPort, "httpsPort", s.HttpsPort, "HTTPS server port (just why?)")
+	flag.StringVar(&s.HttpsKey, "httpsKey", s.HttpsKey, "HTTPS key")
+	flag.StringVar(&s.HttpsChain, "httpsChain", s.HttpsChain, "HTTPS chain")
 }
 
 func (env *Environment) Get() environment.Env {
 	return (environment.Env)(*env)
 }
 
-func (env *Environment) WithFlags(fs *pflag.FlagSet) {
+func (env *Environment) WithFlags() {
 	val := string(*env)
-	fs.StringVar(&val, "env", "dev", "Specify environment type: [dev, staging, prod]")
+	flag.StringVar(&val, "env", val, "Specify environment type: [dev, staging, prod]")
 }

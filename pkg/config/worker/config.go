@@ -1,15 +1,13 @@
 package worker
 
 import (
-	"log"
-
 	"github.com/giongto35/cloud-game/v2/pkg/config"
 	"github.com/giongto35/cloud-game/v2/pkg/config/emulator"
 	"github.com/giongto35/cloud-game/v2/pkg/config/encoder"
 	"github.com/giongto35/cloud-game/v2/pkg/config/shared"
 	webrtcConfig "github.com/giongto35/cloud-game/v2/pkg/config/webrtc"
 	"github.com/giongto35/cloud-game/v2/pkg/monitoring"
-	"github.com/spf13/pflag"
+	flag "github.com/spf13/pflag"
 )
 
 type Config struct {
@@ -30,20 +28,19 @@ type Config struct {
 // allows custom config path
 var configPath string
 
-func NewConfig() *Config {
-	var conf Config
+func NewConfig() (conf Config) {
 	config.LoadConfig(&conf, configPath)
-
-	log.Printf("%+v", conf)
-
-	return &conf
+	return
 }
 
-func (c *Config) WithFlags(fs *pflag.FlagSet) *Config {
-	c.Environment.WithFlags(fs)
-	c.Worker.Server.WithFlags(fs)
-	fs.IntVar(&c.Worker.Monitoring.Port, "monitoring.port", 0, "Monitoring server port")
-	fs.StringVar(&c.Worker.Network.CoordinatorAddress, "coordinatorhost", "", "Worker URL to connect")
-	fs.StringVarP(&configPath, "conf", "c", "", "Set custom configuration file path")
-	return c
+// ParseFlags updates config values from passed runtime flags.
+// Define own flags with default value set to the current config param.
+// Don't forget to call flag.Parse().
+func (c *Config) ParseFlags() {
+	c.Environment.WithFlags()
+	c.Worker.Server.WithFlags()
+	flag.IntVar(&c.Worker.Monitoring.Port, "monitoring.port", c.Worker.Monitoring.Port, "Monitoring server port")
+	flag.StringVar(&c.Worker.Network.CoordinatorAddress, "coordinatorhost", c.Worker.Network.CoordinatorAddress, "Worker URL to connect")
+	flag.StringVarP(&configPath, "conf", "c", configPath, "Set custom configuration file path")
+	flag.Parse()
 }

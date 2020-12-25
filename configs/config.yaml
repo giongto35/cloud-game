@@ -78,6 +78,13 @@ emulator:
       paths:
         libs: assets/emulator/libretro/cores
         configs: assets/emulator/libretro/cores
+      repo:
+        # enable auto cores download
+        sync: true
+        type: buildbot
+        url: https://buildbot.libretro.com/nightly
+        # if repo has file compression
+        compression: zip
       # Libretro core configuration
       #
       # Available config params:
@@ -138,6 +145,8 @@ encoder:
 
 webrtc:
   # a list of STUN/TURN servers for the client
+  # {server-ip} placeholder will be replaced with
+  # the current server IP
   iceServers:
     - url: stun:stun.l.google.com:19302
     - url: stun:{server-ip}:3478

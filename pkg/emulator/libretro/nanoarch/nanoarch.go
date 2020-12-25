@@ -436,7 +436,7 @@ func coreLoad(meta emulator.Metadata) {
 		log.Fatalf("error with core auto lib mapping, %v", err)
 	}
 
-	cs := C.CString(meta.LibPath + "." + arch.LibExt)
+	cs := C.CString(meta.LibPath + arch.LibExt)
 	mu.Lock()
 	retroHandle = C.dlopen(cs, C.RTLD_LAZY)
 	C.free(unsafe.Pointer(cs))

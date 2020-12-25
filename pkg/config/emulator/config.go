@@ -1,6 +1,9 @@
 package emulator
 
-import "path"
+import (
+	"path"
+	"path/filepath"
+)
 
 type Emulator struct {
 	Scale       int
@@ -9,14 +12,22 @@ type Emulator struct {
 		Width  int
 		Height int
 	}
-	Libretro struct {
-		Cores struct {
-			Paths struct {
-				Libs    string
-				Configs string
-			}
-			List map[string]LibretroCoreConfig
+	Libretro LibretroConfig
+}
+
+type LibretroConfig struct {
+	Cores struct {
+		Paths struct {
+			Libs    string
+			Configs string
 		}
+		Repo struct {
+			Sync        bool
+			Type        string
+			Url         string
+			Compression string
+		}
+		List map[string]LibretroCoreConfig
 	}
 }
 
@@ -67,10 +78,18 @@ func (e *Emulator) GetSupportedExtensions() []string {
 	return extensions
 }
 
-func (e *Emulator) GetCores() []string {
+func (l *LibretroConfig) GetCores() []string {
 	var cores []string
-	for _, core := range e.Libretro.Cores.List {
+	for _, core := range l.Cores.List {
 		cores = append(cores, core.Lib)
 	}
 	return cores
+}
+
+func (l *LibretroConfig) GetCoresStorePath() string {
+	pth, err := filepath.Abs(l.Cores.Paths.Libs)
+	if err != nil {
+		return ""
+	}
+	return pth
 }

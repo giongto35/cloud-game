@@ -29,7 +29,7 @@ func (r *Repo) GetCoreData(file string, info core.ArchInfo) repo.Data {
 	if info.Vendor != "" {
 		sb.WriteString(info.Vendor + "/")
 	}
-	sb.WriteString(info.Os + "/" + info.Arch + "/latest/" + file + "." + info.LibExt)
+	sb.WriteString(info.Os + "/" + info.Arch + "/latest/" + file + info.LibExt)
 	if r.compression != "" {
 		sb.WriteString("." + r.compression.GetExt())
 	}

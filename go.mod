@@ -10,6 +10,7 @@ require (
 	github.com/fsnotify/fsnotify v1.4.9
 	github.com/gen2brain/x264-go v0.0.0-20200605131102-0523307cbe23
 	github.com/go-gl/gl v0.0.0-20190320180904-bf2b1f2f34d7
+	github.com/gofrs/flock v0.8.0
 	github.com/gofrs/uuid v3.3.0+incompatible
 	github.com/golang/glog v0.0.0-20160126235308-23def4e6c14b
 	github.com/gorilla/mux v1.8.0
@@ -37,4 +38,5 @@ require (
 	google.golang.org/genproto v0.0.0-20201030142918-24207fddd1c3 // indirect
 	google.golang.org/grpc v1.33.1 // indirect
 	gopkg.in/hraban/opus.v2 v2.0.0-20201025103112-d779bb1cc5a2
+	gopkg.in/yaml.v3 v3.0.0-20200313102051-9f266ea9e77c
 )

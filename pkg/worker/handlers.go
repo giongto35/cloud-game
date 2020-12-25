@@ -2,7 +2,6 @@ package worker
 
 import (
 	"crypto/tls"
-	"github.com/giongto35/cloud-game/v2/pkg/worker/libretro"
 	"log"
 	"net/url"
 	"os"
@@ -10,6 +9,7 @@ import (
 	"time"
 
 	"github.com/giongto35/cloud-game/v2/pkg/config/worker"
+	"github.com/giongto35/cloud-game/v2/pkg/emulator/libretro/manager/remotehttp"
 	"github.com/giongto35/cloud-game/v2/pkg/encoder"
 	"github.com/giongto35/cloud-game/v2/pkg/environment"
 	"github.com/giongto35/cloud-game/v2/pkg/games"
@@ -44,8 +44,6 @@ func NewHandler(cfg worker.Config) *Handler {
 	// Create offline storage folder
 	createOfflineStorage()
 
-	libretro.SyncCores(cfg)
-
 	// Init online storage
 	onlineStorage := storage.NewInitClient()
 	return &Handler{
@@ -74,6 +72,18 @@ func (h *Handler) Run() {
 		h.RouteCoordinator()
 		h.oClient.Listen()
 		// If cannot listen, reconnect to coordinator
+	}
+}
+
+func (h *Handler) Prepare() {
+	if !h.cfg.Emulator.Libretro.Cores.Repo.Sync {
+		return
+	}
+
+	log.Printf("Starting Libretro cores sync...")
+	coreManager := remotehttp.NewRemoteHttpManager(h.cfg.Emulator.Libretro)
+	if err := coreManager.Sync(); err != nil {
+		log.Printf("error: cores sync has failed, %v", err)
 	}
 }
 
