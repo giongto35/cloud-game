@@ -78,8 +78,13 @@ emulator:
       paths:
         libs: assets/emulator/libretro/cores
         configs: assets/emulator/libretro/cores
+      # Config params for Libretro cores repository,
+      # available types are:
+      #   - buildbot (the default Libretro nightly repository)
+      #   - github (GitHub raw repository with a similar structure to buildbot)
+      #   - raw (just a link to a zip file extracted as is)
       repo:
-        # enable auto cores download
+        # enable auto-download for the list of cores (list->lib)
         sync: true
         type: buildbot
         url: https://buildbot.libretro.com/nightly

@@ -11,6 +11,8 @@ import (
 	"github.com/giongto35/cloud-game/v2/pkg/emulator/libretro/manager"
 	"github.com/giongto35/cloud-game/v2/pkg/emulator/libretro/repo"
 	"github.com/giongto35/cloud-game/v2/pkg/emulator/libretro/repo/buildbot"
+	"github.com/giongto35/cloud-game/v2/pkg/emulator/libretro/repo/github"
+	"github.com/giongto35/cloud-game/v2/pkg/emulator/libretro/repo/raw"
 	"github.com/gofrs/flock"
 )
 
@@ -23,10 +25,20 @@ type Manager struct {
 }
 
 func NewRemoteHttpManager(conf emulator.LibretroConfig) Manager {
-	repository := buildbot.NewBuildbotRepo(conf.Cores.Repo.Url)
-	if conf.Cores.Repo.Compression != "" {
-		repository = repository.WithCompression(conf.Cores.Repo.Compression)
+	repoConf := conf.Cores.Repo
+
+	var repository repo.Repository
+	switch repoConf.Compression {
+	case "raw":
+		repository = raw.NewRawRepo(repoConf.Url)
+	case "github":
+		repository = github.NewGithubRepo()
+	case "buildbot":
+		buildbot.NewBuildbotRepo(repoConf.Url, repoConf.Compression)
+		fallthrough
+	default:
 	}
+
 	// used for synchronization of multiple process
 	fileLock := os.TempDir() + string(os.PathSeparator) + "cloud_game.lock"
 

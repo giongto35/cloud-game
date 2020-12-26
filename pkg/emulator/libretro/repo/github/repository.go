@@ -8,6 +8,10 @@ import (
 type Repo struct {
 }
 
-func (r *Repo) GetCoreData(file string, info core.ArchInfo) repo.Data {
+func NewGithubRepo() Repo {
+	return Repo{}
+}
+
+func (r Repo) GetCoreData(file string, info core.ArchInfo) repo.Data {
 	return repo.Data{}
 }

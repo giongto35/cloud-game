@@ -46,7 +46,7 @@ func TestBuildbotRepo(t *testing.T) {
 	}
 
 	for _, test := range tests {
-		repo := NewBuildbotRepo(testAddress).WithCompression(test.compression)
+		repo := NewBuildbotRepo(testAddress, test.compression)
 		data := repo.GetCoreData(test.file, test.arch)
 		if data.Url != test.resultUrl {
 			t.Errorf("seems that expected link address is incorrect (%v) for file %s %+v",

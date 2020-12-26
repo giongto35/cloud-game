@@ -12,18 +12,11 @@ type Repo struct {
 	compression repo.CompressionType
 }
 
-func NewBuildbotRepo(address string) *Repo {
-	return &Repo{
-		address: address,
-	}
+func NewBuildbotRepo(address string, compression string) Repo {
+	return Repo{address: address, compression: (repo.CompressionType)(compression)}
 }
 
-func (r *Repo) WithCompression(compression string) *Repo {
-	r.compression = (repo.CompressionType)(compression)
-	return r
-}
-
-func (r *Repo) GetCoreData(file string, info core.ArchInfo) repo.Data {
+func (r Repo) GetCoreData(file string, info core.ArchInfo) repo.Data {
 	var sb strings.Builder
 	sb.WriteString(r.address + "/")
 	if info.Vendor != "" {
