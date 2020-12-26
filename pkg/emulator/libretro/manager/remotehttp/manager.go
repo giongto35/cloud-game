@@ -28,15 +28,15 @@ func NewRemoteHttpManager(conf emulator.LibretroConfig) Manager {
 	repoConf := conf.Cores.Repo
 
 	var repository repo.Repository
-	switch repoConf.Compression {
+	switch repoConf.Type {
 	case "raw":
 		repository = raw.NewRawRepo(repoConf.Url)
 	case "github":
 		repository = github.NewGithubRepo()
 	case "buildbot":
-		buildbot.NewBuildbotRepo(repoConf.Url, repoConf.Compression)
 		fallthrough
 	default:
+		repository = buildbot.NewBuildbotRepo(repoConf.Url, repoConf.Compression)
 	}
 
 	// used for synchronization of multiple process
