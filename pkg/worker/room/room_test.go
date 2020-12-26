@@ -19,6 +19,7 @@ import (
 
 	"github.com/giongto35/cloud-game/v2/pkg/config"
 	"github.com/giongto35/cloud-game/v2/pkg/config/worker"
+	"github.com/giongto35/cloud-game/v2/pkg/emulator/libretro/manager/remotehttp"
 	"github.com/giongto35/cloud-game/v2/pkg/encoder"
 	"github.com/giongto35/cloud-game/v2/pkg/games"
 	"github.com/giongto35/cloud-game/v2/pkg/thread"
@@ -227,6 +228,11 @@ func getRoomMock(cfg roomMockConfig) roomMock {
 	var conf worker.Config
 	config.LoadConfig(&conf, whereIsConfigs)
 	fixEmulators(&conf, cfg.autoGlContext)
+	// sync cores
+	coreManager := remotehttp.NewRemoteHttpManager(conf.Emulator.Libretro)
+	if err := coreManager.Sync(); err != nil {
+		log.Printf("error: cores sync has failed, %v", err)
+	}
 
 	room := NewRoom(cfg.roomName, cfg.game, cfg.codec, storage.NewInitClient(), conf)
 
