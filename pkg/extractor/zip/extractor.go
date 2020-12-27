@@ -2,8 +2,8 @@ package zip
 
 import (
 	"archive/zip"
-	"fmt"
 	"io"
+	"log"
 	"os"
 	"path/filepath"
 	"strings"
@@ -13,57 +13,55 @@ type Extractor struct{}
 
 func New() Extractor { return Extractor{} }
 
-func (e Extractor) Extract(src string, dest string) ([]string, error) {
-	var filenames []string
-
+func (e Extractor) Extract(src string, dest string) (files []string, err error) {
 	r, err := zip.OpenReader(src)
 	if err != nil {
-		return filenames, err
+		return files, err
 	}
 	defer r.Close()
 
 	for _, f := range r.File {
+		path := filepath.Join(dest, f.Name)
 
-		// Store filename/path for returning and using later on
-		fpath := filepath.Join(dest, f.Name)
-
-		// Check for ZipSlip. More Info: http://bit.ly/2MsjAWE
-		if !strings.HasPrefix(fpath, filepath.Clean(dest)+string(os.PathSeparator)) {
-			return filenames, fmt.Errorf("%s: illegal file path", fpath)
+		// negate ZipSlip vulnerability (http://bit.ly/2MsjAWE)
+		if !strings.HasPrefix(path, filepath.Clean(dest)+string(os.PathSeparator)) {
+			log.Printf("warning: %s is illegal path", path)
+			continue
 		}
-
-		filenames = append(filenames, fpath)
-
+		// remake directory
 		if f.FileInfo().IsDir() {
-			// Make Folder
-			os.MkdirAll(fpath, os.ModePerm)
+			if err := os.MkdirAll(path, os.ModePerm); err != nil {
+				log.Printf("error: %v", err)
+			}
+			continue
+		}
+		// make file
+		if err := os.MkdirAll(filepath.Dir(path), os.ModePerm); err != nil {
+			log.Printf("error: %v", err)
+			continue
+		}
+		out, err := os.OpenFile(path, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, f.Mode())
+		if err != nil {
+			log.Printf("error: %v", err)
+			continue
+		}
+		rc, err := f.Open()
+		if err != nil {
+			log.Printf("error: %v", err)
 			continue
 		}
 
-		// Make File
-		if err = os.MkdirAll(filepath.Dir(fpath), os.ModePerm); err != nil {
-			return filenames, err
+		if _, err = io.Copy(out, rc); err != nil {
+			log.Printf("error: %v", err)
+			_ = out.Close()
+			_ = rc.Close()
+			continue
 		}
 
-		outFile, err := os.OpenFile(fpath, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, f.Mode())
-		if err != nil {
-			return filenames, err
-		}
+		_ = out.Close()
+		_ = rc.Close()
 
-		rc, err := f.Open()
-		if err != nil {
-			return filenames, err
-		}
-
-		_, err = io.Copy(outFile, rc)
-
-		// Close the file without defer to close before next iteration of loop
-		outFile.Close()
-		rc.Close()
-
-		if err != nil {
-			return filenames, err
-		}
+		files = append(files, path)
 	}
-	return filenames, nil
+	return files, nil
 }

@@ -15,8 +15,7 @@ const (
 )
 
 func NewFromExt(path string) Extractor {
-	ext := filepath.Ext(path)
-	switch ext {
+	switch filepath.Ext(path) {
 	case zipExt:
 		return zip.New()
 	default:
