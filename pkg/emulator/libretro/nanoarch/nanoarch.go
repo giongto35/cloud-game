@@ -21,10 +21,8 @@ import (
 
 /*
 #include "libretro.h"
-#cgo LDFLAGS: -ldl
 #include <stdlib.h>
 #include <stdio.h>
-#include <dlfcn.h>
 #include <string.h>
 
 void bridge_retro_init(void *f);
@@ -414,13 +412,6 @@ var retroSerialize unsafe.Pointer
 var retroUnserialize unsafe.Pointer
 var retroSetControllerPortDevice unsafe.Pointer
 
-func loadFunction(handle unsafe.Pointer, name string) unsafe.Pointer {
-	cs := C.CString(name)
-	pointer := C.dlsym(handle, cs)
-	C.free(unsafe.Pointer(cs))
-	return pointer
-}
-
 func coreLoad(meta emulator.Metadata) {
 	isGlAllowed = meta.IsGlAllowed
 	usesLibCo = meta.UsesLibCo
@@ -436,15 +427,13 @@ func coreLoad(meta emulator.Metadata) {
 		log.Fatalf("error with core auto lib mapping, %v", err)
 	}
 
-	cs := C.CString(meta.LibPath + arch.LibExt)
 	mu.Lock()
-	retroHandle = C.dlopen(cs, C.RTLD_LAZY)
-	C.free(unsafe.Pointer(cs))
-
-	if retroHandle == nil {
-		err := C.dlerror()
+	retroHandle, err := loadLib(meta.LibPath + arch.LibExt)
+	// fallback to sequential lib loader (first successfully loaded)
+	if err != nil {
+		retroHandle, err = loadLibRollingRollingRolling(meta.LibPath)
 		if err != nil {
-			log.Fatalf("error core load: %s, %v", meta.LibPath, C.GoString(err))
+			log.Fatalf("error core load: %s, %v", meta.LibPath, err)
 		}
 	}
 
@@ -668,8 +657,8 @@ func nanoarchShutdown() {
 	}
 
 	setRotation(0)
-	if r := C.dlclose(retroHandle); r != 0 {
-		log.Printf("couldn't close the core")
+	if err := closeLib(retroHandle); err != nil {
+		log.Printf("error when close: %v", err)
 	}
 	for _, element := range coreConfig {
 		C.free(unsafe.Pointer(element))
