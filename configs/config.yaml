@@ -110,6 +110,7 @@ emulator:
           height: 160
         pcsx:
           lib: pcsx_rearmed_libretro
+          config: pcsx_rearmed_libretro.cfg
           roms: [ "cue" ]
           width: 350
           height: 240
