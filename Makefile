@@ -75,7 +75,7 @@ dev.build-local:
 dev.run: dev.build-local
 	./bin/coordinator --v=5 &
 	./bin/worker --coordinatorhost localhost:8000
-	
+
 dev.run-docker:
 	docker rm cloud-game-local -f || true
 	CLOUD_GAME_GAMES_PATH=$(PWD)/assets/games docker-compose up --build
@@ -111,7 +111,7 @@ DLIB_ALTER ?= false
 CORE_EXT ?= *_libretro.so
 COORDINATOR_DIR = ./$(RELEASE_DIR)
 WORKER_DIR = ./$(RELEASE_DIR)
-CORES_DIR = assets/emulator/libretro/cores
+CORES_DIR = assets/cores
 GAMES_DIR = assets/games
 .PHONY: release
 .SILENT: release

@@ -95,7 +95,7 @@ func GetEmulatorMock(room string, system string) *EmulatorMock {
 
 		paths: EmulatorPaths{
 			assets: cleanPath(rootPath),
-			cores:  cleanPath(rootPath + "assets/emulator/libretro/cores/"),
+			cores:  cleanPath(rootPath + "assets/cores/"),
 			games:  cleanPath(rootPath + "assets/games/"),
 		},
 

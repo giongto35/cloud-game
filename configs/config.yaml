@@ -76,8 +76,8 @@ emulator:
   libretro:
     cores:
       paths:
-        libs: assets/emulator/libretro/cores
-        configs: assets/emulator/libretro/cores
+        libs: assets/cores
+        configs: assets/cores
       # Config params for Libretro cores repository,
       # available types are:
       #   - buildbot (the default Libretro nightly repository)
