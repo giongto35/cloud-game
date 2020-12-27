@@ -28,8 +28,8 @@ coordinator:
   monitoring:
     port: 6601
     # enable Go profiler HTTP server
-    profiler: false
-    metric: false
+    profilingEnabled: false
+    metricEnabled: false
     urlPrefix: /coordinator
   # the public domain of the coordinator
   publicDomain: http://localhost:8000
@@ -51,9 +51,9 @@ worker:
   monitoring:
     # monitoring server port
     port: 6601
-    profiler: false
+    profilingEnabled: false
     # monitoring server URL prefix
-    metric: true
+    metricEnabled: true
     urlPrefix: /worker
   server:
     port: 9000
