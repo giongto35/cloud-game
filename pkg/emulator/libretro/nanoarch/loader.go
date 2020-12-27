@@ -61,6 +61,10 @@ func loadLibRollingRollingRolling(filepath string) (handle unsafe.Pointer, err e
 }
 
 func closeLib(handle unsafe.Pointer) (err error) {
+	if handle == nil {
+		return
+	}
+
 	code := int(C.dlclose(handle))
 	if code != 0 {
 		return errors.New("couldn't close the lib (" + strconv.Itoa(code) + ")")

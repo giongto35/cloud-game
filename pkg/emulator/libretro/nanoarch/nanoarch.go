@@ -430,7 +430,8 @@ func coreLoad(meta emulator.Metadata) {
 	}
 
 	mu.Lock()
-	retroHandle, err := loadLib(filePath)
+	var err error
+	retroHandle, err = loadLib(filePath)
 	// fallback to sequential lib loader (first successfully loaded)
 	if err != nil {
 		retroHandle, err = loadLibRollingRollingRolling(filePath)
