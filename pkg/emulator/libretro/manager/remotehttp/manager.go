@@ -71,7 +71,10 @@ func (m Manager) Sync() error {
 }
 
 func (m Manager) getCoreUrls(names []string) (urls []string) {
-	arch, _ := core.GetCoreExt()
+	arch, err := core.GetCoreExt()
+	if err != nil {
+		return
+	}
 	for _, c := range names {
 		urls = append(urls, m.repo.GetCoreData(c, arch).Url)
 	}

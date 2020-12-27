@@ -422,18 +422,20 @@ func coreLoad(meta emulator.Metadata) {
 	multitap.enabled = false
 	multitap.value = 0
 
-	arch, err := core.GetCoreExt()
-	if err != nil {
-		log.Fatalf("error with core auto lib mapping, %v", err)
+	filePath := meta.LibPath
+	if arch, err := core.GetCoreExt(); err == nil {
+		filePath = filePath + arch.LibExt
+	} else {
+		log.Printf("warning: %v", err)
 	}
 
 	mu.Lock()
-	retroHandle, err := loadLib(meta.LibPath + arch.LibExt)
+	retroHandle, err := loadLib(filePath)
 	// fallback to sequential lib loader (first successfully loaded)
 	if err != nil {
-		retroHandle, err = loadLibRollingRollingRolling(meta.LibPath)
+		retroHandle, err = loadLibRollingRollingRolling(filePath)
 		if err != nil {
-			log.Fatalf("error core load: %s, %v", meta.LibPath, err)
+			log.Fatalf("error core load: %s, %v", filePath, err)
 		}
 	}
 

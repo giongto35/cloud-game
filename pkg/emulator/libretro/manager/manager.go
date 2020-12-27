@@ -20,7 +20,11 @@ type BasicManager struct {
 
 func (m BasicManager) GetInstalled() (installed []string) {
 	dir := m.Conf.GetCoresStorePath()
-	arch, _ := core.GetCoreExt()
+	arch, err := core.GetCoreExt()
+	if err != nil {
+		log.Printf("error: %v", err)
+		return
+	}
 
 	files, err := ioutil.ReadDir(dir)
 	if err != nil {
