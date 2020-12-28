@@ -32,7 +32,7 @@ func NewRemoteHttpManager(conf emulator.LibretroConfig) Manager {
 	case "raw":
 		repository = raw.NewRawRepo(repoConf.Url)
 	case "github":
-		repository = github.NewGithubRepo()
+		repository = github.NewGithubRepo(repoConf.Url, repoConf.Compression)
 	case "buildbot":
 		fallthrough
 	default:
@@ -64,7 +64,7 @@ func (m Manager) Sync() error {
 	download := diff(installed, declared)
 
 	if len(download) > 0 {
-		log.Printf("Start download Libretro cores: %v", strings.Join(download, ", "))
+		log.Printf("Starting Libretro cores download: %v", strings.Join(download, ", "))
 		m.client.Download(dir, m.getCoreUrls(download)...)
 	}
 	return nil
