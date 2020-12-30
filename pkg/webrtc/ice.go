@@ -27,36 +27,31 @@ func NewIceServerCredentials(url string, user string, credential string) webrtc.
 
 func ToJson(iceServers []webrtc.IceServer, replacements ...Replacement) string {
 	var sb strings.Builder
-
-	n := len(replacements)
-	serversN := len(iceServers)
+	sn, n := len(iceServers), len(replacements)
+	if sn > 0 {
+		sb.Grow(sn * 64)
+	}
 	sb.WriteString("[")
-	delim := ","
 	for i, ice := range iceServers {
-		sb.WriteString("{")
-
-		var params []string
-		url := ice.Url
+		if i > 0 {
+			sb.WriteString(",{")
+		} else {
+			sb.WriteString("{")
+		}
 		if n > 0 {
 			for _, replacement := range replacements {
-				url = strings.Replace(url, "{"+replacement.From+"}", replacement.To, -1)
+				ice.Url = strings.Replace(ice.Url, "{"+replacement.From+"}", replacement.To, -1)
 			}
 		}
-		params = append(params, "\"urls\":\""+url+"\"")
+		sb.WriteString("\"urls\":\"" + ice.Url + "\"")
 		if ice.Username != "" {
-			params = append(params, "\"username\":\""+ice.Username+"\"")
+			sb.WriteString(",\"username\":\"" + ice.Username + "\"")
 		}
 		if ice.Credential != "" {
-			params = append(params, "\"credential\":\""+ice.Credential+"\"")
+			sb.WriteString(",\"credential\":\"" + ice.Credential + "\"")
 		}
-		sb.WriteString(strings.Join(params, ","))
-
-		if i == serversN-1 {
-			delim = ""
-		}
-		sb.WriteString("}" + delim)
+		sb.WriteString("}")
 	}
 	sb.WriteString("]")
-
 	return sb.String()
 }
