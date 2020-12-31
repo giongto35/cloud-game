@@ -12,18 +12,17 @@ import (
 	"time"
 	"unsafe"
 
-	"github.com/giongto35/cloud-game/v2/pkg/config"
+	"github.com/giongto35/cloud-game/v2/pkg/emulator"
 	"github.com/giongto35/cloud-game/v2/pkg/emulator/graphics"
 	"github.com/giongto35/cloud-game/v2/pkg/emulator/image"
+	"github.com/giongto35/cloud-game/v2/pkg/emulator/libretro/core"
 	"github.com/giongto35/cloud-game/v2/pkg/thread"
 )
 
 /*
 #include "libretro.h"
-#cgo LDFLAGS: -ldl
 #include <stdlib.h>
 #include <stdio.h>
-#include <dlfcn.h>
 #include <string.h>
 
 void bridge_retro_init(void *f);
@@ -413,39 +412,31 @@ var retroSerialize unsafe.Pointer
 var retroUnserialize unsafe.Pointer
 var retroSetControllerPortDevice unsafe.Pointer
 
-func loadFunction(handle unsafe.Pointer, name string) unsafe.Pointer {
-	cs := C.CString(name)
-	pointer := C.dlsym(handle, cs)
-	C.free(unsafe.Pointer(cs))
-	return pointer
-}
-
-func coreLoad(meta config.EmulatorMeta) {
+func coreLoad(meta emulator.Metadata) {
 	isGlAllowed = meta.IsGlAllowed
 	usesLibCo = meta.UsesLibCo
 	video.autoGlContext = meta.AutoGlContext
-	coreConfig = ScanConfigFile(meta.Config)
+	coreConfig = ScanConfigFile(meta.ConfigPath)
 
 	multitap.supported = meta.HasMultitap
 	multitap.enabled = false
 	multitap.value = 0
 
-	mu.Lock()
-	// Different OS requires different library, bruteforce till it finish
-	for _, ext := range config.EmulatorExtension {
-		pathWithExt := meta.Path + ext
-		cs := C.CString(pathWithExt)
-		retroHandle = C.dlopen(cs, C.RTLD_LAZY)
-		C.free(unsafe.Pointer(cs))
-		if retroHandle != nil {
-			break
-		}
+	filePath := meta.LibPath
+	if arch, err := core.GetCoreExt(); err == nil {
+		filePath = filePath + arch.LibExt
+	} else {
+		log.Printf("warning: %v", err)
 	}
 
-	if retroHandle == nil {
-		err := C.dlerror()
+	mu.Lock()
+	var err error
+	retroHandle, err = loadLib(filePath)
+	// fallback to sequential lib loader (first successfully loaded)
+	if err != nil {
+		retroHandle, err = loadLibRollingRollingRolling(filePath)
 		if err != nil {
-			log.Fatalf("error core load: %s, %v", meta.Path, C.GoString(err))
+			log.Fatalf("error core load: %s, %v", filePath, err)
 		}
 	}
 
@@ -669,8 +660,8 @@ func nanoarchShutdown() {
 	}
 
 	setRotation(0)
-	if r := C.dlclose(retroHandle); r != 0 {
-		log.Printf("couldn't close the core")
+	if err := closeLib(retroHandle); err != nil {
+		log.Printf("error when close: %v", err)
 	}
 	for _, element := range coreConfig {
 		C.free(unsafe.Pointer(element))

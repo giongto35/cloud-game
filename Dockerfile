@@ -41,8 +41,9 @@ RUN apt-get update && apt-get install -y \
 COPY --from=build ${BUILD_PATH}/bin/ ./
 RUN cp -s $(pwd)/* /usr/local/bin
 COPY web ./web
-COPY assets/emulator/libretro/cores/*.so \
-     assets/emulator/libretro/cores/*.cfg \
-     ./assets/emulator/libretro/cores/
+COPY assets/cores/*.so \
+     assets/cores/*.cfg \
+     ./assets/cores/
+COPY configs ./configs
 
 EXPOSE 8000 9000 3478/tcp 3478/udp

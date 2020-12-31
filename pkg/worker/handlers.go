@@ -8,19 +8,16 @@ import (
 	"path"
 	"time"
 
-	"github.com/giongto35/cloud-game/v2/pkg/config"
 	"github.com/giongto35/cloud-game/v2/pkg/config/worker"
+	"github.com/giongto35/cloud-game/v2/pkg/emulator/libretro/manager/remotehttp"
+	"github.com/giongto35/cloud-game/v2/pkg/encoder"
+	"github.com/giongto35/cloud-game/v2/pkg/environment"
 	"github.com/giongto35/cloud-game/v2/pkg/games"
 	"github.com/giongto35/cloud-game/v2/pkg/util"
 	"github.com/giongto35/cloud-game/v2/pkg/webrtc"
 	storage "github.com/giongto35/cloud-game/v2/pkg/worker/cloud-storage"
 	"github.com/giongto35/cloud-game/v2/pkg/worker/room"
 	"github.com/gorilla/websocket"
-)
-
-const (
-	gameboyIndex = "./static/game.html"
-	debugIndex   = "./static/game.html"
 )
 
 // Flag to determine if the server is coordinator or not
@@ -52,7 +49,7 @@ func NewHandler(cfg worker.Config) *Handler {
 	return &Handler{
 		rooms:           map[string]*room.Room{},
 		sessions:        map[string]*Session{},
-		coordinatorHost: cfg.CoordinatorAddress,
+		coordinatorHost: cfg.Worker.Network.CoordinatorAddress,
 		cfg:             cfg,
 		onlineStorage:   onlineStorage,
 	}
@@ -61,7 +58,8 @@ func NewHandler(cfg worker.Config) *Handler {
 // Run starts a Handler running logic
 func (h *Handler) Run() {
 	for {
-		oClient, err := setupCoordinatorConnection(h.coordinatorHost, h.cfg.Zone)
+		conf := h.cfg.Worker.Network
+		oClient, err := setupCoordinatorConnection(conf.CoordinatorAddress, conf.Zone, h.cfg)
 		if err != nil {
 			log.Printf("Cannot connect to coordinator. %v Retrying...", err)
 			time.Sleep(time.Second)
@@ -77,10 +75,22 @@ func (h *Handler) Run() {
 	}
 }
 
-func setupCoordinatorConnection(ohost string, zone string) (*CoordinatorClient, error) {
-	var scheme string
+func (h *Handler) Prepare() {
+	if !h.cfg.Emulator.Libretro.Cores.Repo.Sync {
+		return
+	}
 
-	if *config.Mode == config.ProdEnv || *config.Mode == config.StagingEnv {
+	log.Printf("Starting Libretro cores sync...")
+	coreManager := remotehttp.NewRemoteHttpManager(h.cfg.Emulator.Libretro)
+	if err := coreManager.Sync(); err != nil {
+		log.Printf("error: cores sync has failed, %v", err)
+	}
+}
+
+func setupCoordinatorConnection(ohost string, zone string, cfg worker.Config) (*CoordinatorClient, error) {
+	var scheme string
+	env := cfg.Environment.Get()
+	if env.AnyOf(environment.Production, environment.Staging) {
 		scheme = "wss"
 	} else {
 		scheme = "ws"
@@ -170,12 +180,12 @@ func (h *Handler) detachRoom(roomID string) {
 
 // createNewRoom creates a new room
 // Return nil in case of room is existed
-func (h *Handler) createNewRoom(game games.GameMetadata, roomID string, videoEncoderType string) *room.Room {
+func (h *Handler) createNewRoom(game games.GameMetadata, roomID string, videoCodec encoder.VideoCodec) *room.Room {
 	// If the roomID is empty,
 	// or the roomID doesn't have any running sessions (room was closed)
 	// we spawn a new room
 	if roomID == "" || !h.isRoomRunning(roomID) {
-		room := room.NewRoom(roomID, game, videoEncoderType, h.onlineStorage, h.cfg)
+		room := room.NewRoom(roomID, game, videoCodec, h.onlineStorage, h.cfg)
 		// TODO: Might have race condition
 		h.rooms[room.ID] = room
 		return room

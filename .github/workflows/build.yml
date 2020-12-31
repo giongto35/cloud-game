@@ -72,7 +72,7 @@ jobs:
           ./mesa/systemwidedeploy.cmd < ./commands
 
           wget -q https://buildbot.libretro.com/nightly/windows/x86_64/latest/mupen64plus_next_libretro.dll.zip
-          "/c/Program Files/7-Zip/7z.exe" x mupen64plus_next_libretro.dll.zip -oassets/emulator/libretro/cores
+          "/c/Program Files/7-Zip/7z.exe" x mupen64plus_next_libretro.dll.zip -oassets/cores
 
           make build
 

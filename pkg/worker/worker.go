@@ -5,13 +5,12 @@ import (
 	"crypto/tls"
 	"fmt"
 	"log"
-	"net"
 	"net/http"
 	"strconv"
 	"time"
 
-	"github.com/giongto35/cloud-game/v2/pkg/config"
 	"github.com/giongto35/cloud-game/v2/pkg/config/worker"
+	"github.com/giongto35/cloud-game/v2/pkg/environment"
 	"github.com/giongto35/cloud-game/v2/pkg/monitoring"
 	"github.com/golang/glog"
 	"golang.org/x/crypto/acme"
@@ -32,7 +31,7 @@ func New(ctx context.Context, cfg worker.Config) *Worker {
 		ctx: ctx,
 		cfg: cfg,
 
-		monitoringServer: monitoring.NewServerMonitoring(cfg.MonitoringConfig),
+		monitoringServer: monitoring.NewServerMonitoring(cfg.Worker.Monitoring),
 	}
 }
 
@@ -51,6 +50,7 @@ func (o *Worker) RunMonitoringServer() {
 }
 
 func (o *Worker) Shutdown() {
+	// !to add a proper HTTP(S) server shutdown (cws/handler bad loop)
 	if err := o.monitoringServer.Shutdown(o.ctx); err != nil {
 		glog.Errorln("Failed to shutdown monitoring server")
 	}
@@ -92,16 +92,18 @@ func (o *Worker) spawnServer(port int) {
 	var certManager *autocert.Manager
 	var httpsSrv *http.Server
 
-	if *config.Mode == config.ProdEnv || *config.Mode == config.StagingEnv {
+	mode := o.cfg.Environment.Get()
+	if mode.AnyOf(environment.Production, environment.Staging) {
+		serverConfig := o.cfg.Worker.Server
 		httpsSrv = makeHTTPServer()
-		httpsSrv.Addr = fmt.Sprintf(":%d", *config.HttpsPort)
+		httpsSrv.Addr = fmt.Sprintf(":%d", serverConfig.HttpsPort)
 
-		if *config.HttpsChain == "" || *config.HttpsKey == "" {
-			*config.HttpsChain = ""
-			*config.HttpsKey = ""
+		if serverConfig.HttpsChain == "" || serverConfig.HttpsKey == "" {
+			serverConfig.HttpsChain = ""
+			serverConfig.HttpsKey = ""
 
 			var leurl string
-			if *config.Mode == config.StagingEnv {
+			if mode == environment.Staging {
 				leurl = stagingLEURL
 			} else {
 				leurl = acme.LetsEncryptURL
@@ -116,17 +118,17 @@ func (o *Worker) spawnServer(port int) {
 			httpsSrv.TLSConfig = &tls.Config{GetCertificate: certManager.GetCertificate}
 		}
 
-		go func() {
+		go func(chain string, key string) {
 			fmt.Printf("Starting HTTPS server on %s\n", httpsSrv.Addr)
-			err := httpsSrv.ListenAndServeTLS(*config.HttpsChain, *config.HttpsKey)
+			err := httpsSrv.ListenAndServeTLS(chain, key)
 			if err != nil {
 				log.Printf("httpsSrv.ListendAndServeTLS() failed with %s", err)
 			}
-		}()
+		}(serverConfig.HttpsChain, serverConfig.HttpsKey)
 	}
 
 	var httpSrv *http.Server
-	if *config.Mode == config.ProdEnv || *config.Mode == config.StagingEnv {
+	if mode.AnyOf(environment.Production, environment.Staging) {
 		httpSrv = makeHTTPToHTTPSRedirectServer()
 	} else {
 		httpSrv = makeHTTPServer()
@@ -136,43 +138,41 @@ func (o *Worker) spawnServer(port int) {
 		httpSrv.Handler = certManager.HTTPHandler(httpSrv.Handler)
 	}
 
-	httpSrv.Addr = ":" + strconv.Itoa(port)
-	err := httpSrv.ListenAndServe()
-	if err != nil {
-		log.Printf("httpSrv.ListenAndServe() failed with %s", err)
+	startServer(httpSrv, port)
+}
+
+func startServer(serv *http.Server, startPort int) {
+	// It's recommend to run one worker on one instance.
+	// This logic is to make sure more than 1 workers still work
+	for port, n := startPort, startPort+100; port < n; port++ {
+		serv.Addr = ":" + strconv.Itoa(port)
+		err := serv.ListenAndServe()
+		switch err {
+		case http.ErrServerClosed:
+			log.Printf("HTTP(S) server was closed")
+			return
+		default:
+		}
+		port++
+
+		if port == n {
+			log.Printf("error: couldn't find an open port in range %v-%v\n", startPort, port)
+		}
 	}
 }
 
 // initializeWorker setup a worker
 func (o *Worker) initializeWorker() {
-	worker := NewHandler(o.cfg)
+	wrk := NewHandler(o.cfg)
 
 	defer func() {
 		log.Println("Close worker")
-		worker.Close()
+		wrk.Close()
 	}()
 
-	go worker.Run()
-	port := o.cfg.HttpPort
-	// It's recommend to run one worker on one instance.
-	// This logic is to make sure more than 1 workers still work
-	portsNum := 100
-	for {
-		portsNum--
-		l, err := net.Listen("tcp", ":"+strconv.Itoa(port))
-		if err != nil {
-			port++
-			continue
-		}
+	go wrk.Run()
+	// will block here
+	wrk.Prepare()
 
-		if portsNum < 1 {
-			log.Printf("Couldn't find an open port in range %v-%v\n", o.cfg.HttpPort, port)
-			// Cannot find port
-			return
-		}
-
-		_ = l.Close()
-
-		o.spawnServer(port)
-	}
+	o.spawnServer(o.cfg.Worker.Server.Port)
 }
