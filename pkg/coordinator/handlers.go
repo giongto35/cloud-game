@@ -10,20 +10,20 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/giongto35/cloud-game/v2/pkg/config"
+	"github.com/giongto35/cloud-game/v2/pkg/config/coordinator"
 	"github.com/giongto35/cloud-game/v2/pkg/cws"
+	"github.com/giongto35/cloud-game/v2/pkg/environment"
 	"github.com/giongto35/cloud-game/v2/pkg/games"
 	"github.com/giongto35/cloud-game/v2/pkg/util"
+	"github.com/giongto35/cloud-game/v2/pkg/webrtc"
 	"github.com/gofrs/uuid"
 	"github.com/gorilla/websocket"
 )
 
-const (
-	gameboyIndex = "./web/game.html"
-)
+const index = "./web/index.html"
 
 type Server struct {
-	cfg Config
+	cfg coordinator.Config
 	// games library
 	library games.GameLibrary
 	// roomToWorker map roomID to workerID
@@ -40,7 +40,7 @@ const devPingServer = "http://localhost:9000/echo"
 var upgrader = websocket.Upgrader{}
 var errNotFound = errors.New("Not found")
 
-func NewServer(cfg Config, library games.GameLibrary) *Server {
+func NewServer(cfg coordinator.Config, library games.GameLibrary) *Server {
 	return &Server{
 		cfg:     cfg,
 		library: library,
@@ -53,36 +53,25 @@ func NewServer(cfg Config, library games.GameLibrary) *Server {
 	}
 }
 
-type RenderData struct {
-	STUNTURN string
-}
-
 // GetWeb returns web frontend
 func (o *Server) GetWeb(w http.ResponseWriter, r *http.Request) {
-	stunturn := *config.FrontendSTUNTURN
-	if stunturn == "" {
-		stunturn = config.DefaultSTUNTURN
-	}
-	data := RenderData{
-		STUNTURN: stunturn,
-	}
-
-	tmpl, err := template.ParseFiles(gameboyIndex)
+	tmpl, err := template.ParseFiles(index)
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	tmpl.Execute(w, data)
+	tmpl.Execute(w, struct{}{})
 }
 
 // getPingServer returns the server for latency check of a zone. In latency check to find best worker step, we use this server to find the closest worker.
 func (o *Server) getPingServer(zone string) string {
-	if o.cfg.PingServer != "" {
-		return fmt.Sprintf("%s/echo", o.cfg.PingServer)
+	if o.cfg.Coordinator.PingServer != "" {
+		return fmt.Sprintf("%s/echo", o.cfg.Coordinator.PingServer)
 	}
 
-	if *config.Mode == config.ProdEnv || *config.Mode == config.StagingEnv {
-		return fmt.Sprintf(pingServerTemp, zone, o.cfg.PublicDomain)
+	mode := o.cfg.Environment.Get()
+	if mode.AnyOf(environment.Production, environment.Staging) {
+		return fmt.Sprintf(pingServerTemp, zone, o.cfg.Coordinator.PublicDomain)
 	}
 
 	// If not Prod or Staging, return dev environment
@@ -127,7 +116,7 @@ func (o *Server) WSO(w http.ResponseWriter, r *http.Request) {
 	wc.Printf("Set ping server address: %s", pingServer)
 
 	// In case worker and coordinator in the same host
-	if !util.IsPublicIP(address) && *config.Mode == config.ProdEnv {
+	if !util.IsPublicIP(address) && o.cfg.Environment.Get() == environment.Production {
 		// Don't accept private IP for worker's address in prod mode
 		// However, if the worker in the same host with coordinator, we can get public IP of worker
 		wc.Printf("[!] Address %s is invalid", address)
@@ -144,7 +133,7 @@ func (o *Server) WSO(w http.ResponseWriter, r *http.Request) {
 
 	// Create a workerClient instance
 	wc.Address = address
-	wc.StunTurnServer = fmt.Sprintf(config.StunTurnTemplate, address, address)
+	wc.StunTurnServer = webrtc.ToJson(o.cfg.Webrtc.IceServers, webrtc.Replacement{From: "server-ip", To: address})
 	wc.Zone = zone
 	wc.PingServer = pingServer
 
@@ -265,9 +254,10 @@ func (o *Server) WS(w http.ResponseWriter, r *http.Request) {
 }
 
 func (o *Server) getBestWorkerClient(client *BrowserClient, zone string) (*WorkerClient, error) {
-	if o.cfg.DebugHost != "" {
-		client.Println("Connecting to debug host instead prod servers", o.cfg.DebugHost)
-		wc := o.getWorkerFromAddress(o.cfg.DebugHost)
+	conf := o.cfg.Coordinator
+	if conf.DebugHost != "" {
+		client.Println("Connecting to debug host instead prod servers", conf.DebugHost)
+		wc := o.getWorkerFromAddress(conf.DebugHost)
 		if wc != nil {
 			return wc, nil
 		}

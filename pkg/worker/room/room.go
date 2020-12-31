@@ -16,7 +16,6 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/giongto35/cloud-game/v2/pkg/config"
 	"github.com/giongto35/cloud-game/v2/pkg/config/worker"
 	"github.com/giongto35/cloud-game/v2/pkg/emulator"
 	"github.com/giongto35/cloud-game/v2/pkg/emulator/libretro/nanoarch"
@@ -128,7 +127,7 @@ func NewVideoImporter(roomID string) chan nanoarch.GameFrame {
 }
 
 // NewRoom creates a new room
-func NewRoom(roomID string, game games.GameMetadata, videoEncoderType string, onlineStorage *storage.Client, cfg worker.Config) *Room {
+func NewRoom(roomID string, game games.GameMetadata, videoCodec encoder.VideoCodec, onlineStorage *storage.Client, cfg worker.Config) *Room {
 	if roomID == "" {
 		roomID = generateRoomID(game.Name)
 	}
@@ -161,21 +160,22 @@ func NewRoom(roomID string, game games.GameMetadata, videoEncoderType string, on
 		}
 
 		// If not then load room or create room from local.
-		log.Printf("Room %s started. GameName: %s, WithGame: %t", roomID, game.Name, cfg.WithoutGame)
+		log.Printf("Room %s started. GameName: %s, WithGame: %t", roomID, game.Name, cfg.Encoder.WithoutGame)
 
 		// Spawn new emulator based on gameName and plug-in all channels
-		emuName, _ := config.FileTypeToEmulator[game.Type]
+		emuName := cfg.Emulator.GetEmulatorByRom(game.Type)
+		libretroConfig := cfg.Emulator.GetLibretroCoreConfig(emuName)
 
-		if cfg.WithoutGame {
+		if cfg.Encoder.WithoutGame {
 			// Run without game, image stream is communicated over unixsocket
 			imageChannel := NewVideoImporter(roomID)
-			director, _, audioChannel := nanoarch.Init(emuName, roomID, false, inputChannel)
+			director, _, audioChannel := nanoarch.Init(roomID, false, inputChannel, libretroConfig)
 			room.imageChannel = imageChannel
 			room.director = director
 			room.audioChannel = audioChannel
 		} else {
 			// Run without game, image stream is communicated over image channel
-			director, imageChannel, audioChannel := nanoarch.Init(emuName, roomID, true, inputChannel)
+			director, imageChannel, audioChannel := nanoarch.Init(roomID, true, inputChannel, libretroConfig)
 			room.imageChannel = imageChannel
 			room.director = director
 			room.audioChannel = audioChannel
@@ -183,20 +183,22 @@ func NewRoom(roomID string, game games.GameMetadata, videoEncoderType string, on
 
 		gameMeta := room.director.LoadMeta(game.Path)
 
-		// nwidth, nheight are the webRTC output size.
-		// There are currently two approach
+		// nwidth, nheight are the WebRTC output size
 		var nwidth, nheight int
-		if cfg.EnableAspectRatio {
-			baseAspectRatio := float64(gameMeta.BaseWidth) / float64(gameMeta.Height)
-			nwidth, nheight = resizeToAspect(baseAspectRatio, cfg.Width, cfg.Height)
-			log.Printf("Viewport size will be changed from %dx%d (%f) -> %dx%d", cfg.Width, cfg.Height,
+		emu, ar := cfg.Emulator, cfg.Emulator.AspectRatio
+
+		if ar.Keep {
+			baseAspectRatio := float64(gameMeta.BaseWidth) / float64(ar.Height)
+			nwidth, nheight = resizeToAspect(baseAspectRatio, ar.Width, ar.Height)
+			log.Printf("Viewport size will be changed from %dx%d (%f) -> %dx%d", ar.Width, ar.Height,
 				baseAspectRatio, nwidth, nheight)
 		} else {
 			nwidth, nheight = gameMeta.BaseWidth, gameMeta.BaseHeight
 			log.Printf("Viewport custom size is disabled, base size will be used instead %dx%d", nwidth, nheight)
 		}
-		if cfg.Scale > 1 {
-			nwidth, nheight = nwidth*cfg.Scale, nheight*cfg.Scale
+
+		if emu.Scale > 1 {
+			nwidth, nheight = nwidth*emu.Scale, nheight*emu.Scale
 			log.Printf("Viewport size has scaled to %dx%d", nwidth, nheight)
 		}
 
@@ -212,8 +214,8 @@ func NewRoom(roomID string, game games.GameMetadata, videoEncoderType string, on
 		room.director.SetViewport(encoderW, encoderH)
 
 		// Spawn video and audio encoding for webRTC
-		go room.startVideo(encoderW, encoderH, videoEncoderType)
-		go room.startAudio(gameMeta.AudioSampleRate)
+		go room.startVideo(encoderW, encoderH, videoCodec)
+		go room.startAudio(gameMeta.AudioSampleRate, cfg.Encoder.Audio)
 		go room.startVoice()
 		room.director.Start()
 

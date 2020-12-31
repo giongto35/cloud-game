@@ -19,6 +19,7 @@ import (
 
 	"github.com/giongto35/cloud-game/v2/pkg/config"
 	"github.com/giongto35/cloud-game/v2/pkg/config/worker"
+	"github.com/giongto35/cloud-game/v2/pkg/emulator/libretro/manager/remotehttp"
 	"github.com/giongto35/cloud-game/v2/pkg/encoder"
 	"github.com/giongto35/cloud-game/v2/pkg/games"
 	"github.com/giongto35/cloud-game/v2/pkg/thread"
@@ -42,16 +43,13 @@ type roomMockConfig struct {
 	roomName      string
 	gamesPath     string
 	game          games.GameMetadata
-	codec         string
+	codec         encoder.VideoCodec
 	autoGlContext bool
 }
 
-// Restricts a re-config call
-// to only one invocation.
-var configOnce sync.Once
-
 // Store absolute path to test games
-var whereIsGames = getAppPath() + "assets/games/"
+var whereIsGames = getRootPath() + "assets/games/"
+var whereIsConfigs = getRootPath() + "configs/"
 var testTempDir = filepath.Join(os.TempDir(), "cloud-game-core-tests")
 
 func init() {
@@ -70,7 +68,7 @@ func TestRoom(t *testing.T) {
 	tests := []struct {
 		roomName string
 		game     games.GameMetadata
-		codec    string
+		codec    encoder.VideoCodec
 		frames   int
 	}{
 		{
@@ -79,7 +77,7 @@ func TestRoom(t *testing.T) {
 				Type: "nes",
 				Path: "Super Mario Bros.nes",
 			},
-			codec:  config.CODEC_VP8,
+			codec:  encoder.VPX,
 			frames: 5,
 		},
 	}
@@ -95,12 +93,14 @@ func TestRoom(t *testing.T) {
 		waitNFrames(test.frames, room.encoder.GetOutputChan())
 		room.Close()
 	}
+	// hack: wait room destruction
+	time.Sleep(2 * time.Second)
 }
 
 func TestRoomWithGL(t *testing.T) {
 	tests := []struct {
 		game   games.GameMetadata
-		codec  string
+		codec  encoder.VideoCodec
 		frames int
 	}{
 		{
@@ -109,7 +109,7 @@ func TestRoomWithGL(t *testing.T) {
 				Type: "n64",
 				Path: "Sample Demo by Florian (PD).z64",
 			},
-			codec:  config.CODEC_VP8,
+			codec:  encoder.VPX,
 			frames: 50,
 		},
 	}
@@ -125,6 +125,8 @@ func TestRoomWithGL(t *testing.T) {
 			waitNFrames(test.frames, room.encoder.GetOutputChan())
 			room.Close()
 		}
+		// hack: wait room destruction
+		time.Sleep(2 * time.Second)
 	}
 
 	thread.MainMaybe(run)
@@ -155,7 +157,7 @@ func TestAllEmulatorRooms(t *testing.T) {
 		room := getRoomMock(roomMockConfig{
 			gamesPath:     whereIsGames,
 			game:          test.game,
-			codec:         config.CODEC_VP8,
+			codec:         encoder.VPX,
 			autoGlContext: autoGlContext,
 		})
 		t.Logf("The game [%v] has been loaded", test.game.Name)
@@ -221,9 +223,18 @@ func dumpCanvas(f *image.RGBA, name string, caption string, path string) {
 
 // getRoomMock returns mocked Room struct.
 func getRoomMock(cfg roomMockConfig) roomMock {
-	configOnce.Do(func() { fixEmulators(cfg.autoGlContext) })
 	cfg.game.Path = cfg.gamesPath + cfg.game.Path
-	room := NewRoom(cfg.roomName, cfg.game, cfg.codec, storage.NewInitClient(), worker.NewDefaultConfig())
+
+	var conf worker.Config
+	config.LoadConfig(&conf, whereIsConfigs)
+	fixEmulators(&conf, cfg.autoGlContext)
+	// sync cores
+	coreManager := remotehttp.NewRemoteHttpManager(conf.Emulator.Libretro)
+	if err := coreManager.Sync(); err != nil {
+		log.Printf("error: cores sync has failed, %v", err)
+	}
+
+	room := NewRoom(cfg.roomName, cfg.game, cfg.codec, storage.NewInitClient(), conf)
 
 	// loop-wait the room initialization
 	var init sync.WaitGroup
@@ -246,24 +257,25 @@ func getRoomMock(cfg roomMockConfig) roomMock {
 }
 
 // fixEmulators makes absolute game paths in global GameList and passes GL context config.
-func fixEmulators(autoGlContext bool) {
-	appPath := getAppPath()
+// hack: emulator paths should be absolute and visible to the tests.
+func fixEmulators(config *worker.Config, autoGlContext bool) {
+	rootPath := getRootPath()
 
-	for k, conf := range config.EmulatorConfig {
-		conf.Path = appPath + conf.Path
-		if len(conf.Config) > 0 {
-			conf.Config = appPath + conf.Config
-		}
+	config.Emulator.Libretro.Cores.Paths.Libs =
+		filepath.FromSlash(rootPath + config.Emulator.Libretro.Cores.Paths.Libs)
+	config.Emulator.Libretro.Cores.Paths.Configs =
+		filepath.FromSlash(rootPath + config.Emulator.Libretro.Cores.Paths.Configs)
 
+	for k, conf := range config.Emulator.Libretro.Cores.List {
 		if conf.IsGlAllowed && autoGlContext {
 			conf.AutoGlContext = true
 		}
-		config.EmulatorConfig[k] = conf
+		config.Emulator.Libretro.Cores.List[k] = conf
 	}
 }
 
-// getAppPath returns absolute path to the assets directory.
-func getAppPath() string {
+// getRootPath returns absolute path to the assets directory.
+func getRootPath() string {
 	p, _ := filepath.Abs("../../../")
 	return p + string(filepath.Separator)
 }
@@ -288,7 +300,7 @@ func waitNFrames(n int, ch chan encoder.OutFrame) {
 
 // benchmarkRoom measures app performance for n emulation frames.
 // Measure period: the room initialization, n emulated and encoded frames, the room shutdown.
-func benchmarkRoom(rom games.GameMetadata, codec string, frames int, suppressOutput bool, b *testing.B) {
+func benchmarkRoom(rom games.GameMetadata, codec encoder.VideoCodec, frames int, suppressOutput bool, b *testing.B) {
 	if suppressOutput {
 		log.SetOutput(ioutil.Discard)
 		os.Stdout, _ = os.Open(os.DevNull)
@@ -311,7 +323,7 @@ func BenchmarkRoom(b *testing.B) {
 	benches := []struct {
 		system string
 		game   games.GameMetadata
-		codecs []string
+		codecs []encoder.VideoCodec
 		frames int
 	}{
 		// warm up
@@ -322,7 +334,7 @@ func BenchmarkRoom(b *testing.B) {
 				Type: "gba",
 				Path: "Sushi The Cat.gba",
 			},
-			codecs: []string{"vp8"},
+			codecs: []encoder.VideoCodec{encoder.VPX},
 			frames: 50,
 		},
 		{
@@ -332,7 +344,7 @@ func BenchmarkRoom(b *testing.B) {
 				Type: "gba",
 				Path: "Sushi The Cat.gba",
 			},
-			codecs: []string{"vp8", "x264"},
+			codecs: []encoder.VideoCodec{encoder.VPX, encoder.H264},
 			frames: 100,
 		},
 		{
@@ -342,14 +354,14 @@ func BenchmarkRoom(b *testing.B) {
 				Type: "nes",
 				Path: "Super Mario Bros.nes",
 			},
-			codecs: []string{"vp8", "x264"},
+			codecs: []encoder.VideoCodec{encoder.VPX, encoder.H264},
 			frames: 100,
 		},
 	}
 
 	for _, bench := range benches {
 		for _, codec := range bench.codecs {
-			b.Run(fmt.Sprintf("%s-%s-%d", bench.system, codec, bench.frames), func(b *testing.B) {
+			b.Run(fmt.Sprintf("%s-%v-%d", bench.system, codec, bench.frames), func(b *testing.B) {
 				benchmarkRoom(bench.game, codec, bench.frames, true, b)
 			})
 			// hack: wait room destruction

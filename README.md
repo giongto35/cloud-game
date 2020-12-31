@@ -75,6 +75,13 @@ It will spawn a docker environment and you can access the service on `localhost:
 *Note.*
 Docker for Windows is not supposed to work with provided configuration, use WSL2 instead.
 
+## Configuration
+
+The configuration parameters are stored in the [`configs/config.yaml`](configs/config.yaml) file which is shared for
+all application instances on the same host system.
+It is possible to specify individual configuration files for each instance as well as override some parameters,
+for that purpose, please refer to the list of command-line options of the apps.
+
 ## Technical Document
 - [webrtchacks Blog: Open Source Cloud Gaming with WebRTC](https://webrtchacks.com/open-source-cloud-gaming-with-webrtc/)
 - [Wiki (outdated)](https://github.com/giongto35/cloud-game/wiki)

@@ -9,12 +9,12 @@ import (
 	"os"
 	"path"
 	"path/filepath"
-	"runtime"
-	"strings"
 	"sync"
 	"testing"
 
 	"github.com/giongto35/cloud-game/v2/pkg/config"
+	"github.com/giongto35/cloud-game/v2/pkg/config/worker"
+	"github.com/giongto35/cloud-game/v2/pkg/emulator"
 )
 
 type testRun struct {
@@ -57,8 +57,13 @@ type EmulatorPaths struct {
 // Don't forget to init one image channel consumer, it will lock-out otherwise.
 // Make sure you call shutdownEmulator().
 func GetEmulatorMock(room string, system string) *EmulatorMock {
-	assetsPath := getAssetsPath()
-	metadata := config.EmulatorConfig[system]
+	rootPath := getRootPath()
+	configPath := rootPath + "configs/"
+
+	var conf worker.Config
+	config.LoadConfig(&conf, configPath)
+
+	meta := conf.Emulator.GetLibretroCoreConfig(system)
 
 	images := make(chan GameFrame, 30)
 	audio := make(chan []int16, 30)
@@ -71,20 +76,27 @@ func GetEmulatorMock(room string, system string) *EmulatorMock {
 			audioChannel: audio,
 			inputChannel: inputs,
 
-			meta:           metadata,
+			meta: emulator.Metadata{
+				LibPath:     meta.Lib,
+				ConfigPath:  meta.Config,
+				Ratio:       meta.Ratio,
+				IsGlAllowed: meta.IsGlAllowed,
+				UsesLibCo:   meta.UsesLibCo,
+				HasMultitap: meta.HasMultitap,
+			},
 			controllersMap: map[string][]controllerState{},
 			roomID:         room,
 			done:           make(chan struct{}, 1),
 			lock:           &sync.Mutex{},
 		},
 
-		canvas: image.NewRGBA(image.Rect(0, 0, metadata.Width, metadata.Height)),
-		core:   path.Base(metadata.Path),
+		canvas: image.NewRGBA(image.Rect(0, 0, meta.Width, meta.Height)),
+		core:   path.Base(meta.Lib),
 
 		paths: EmulatorPaths{
-			assets: cleanPath(assetsPath),
-			cores:  cleanPath(assetsPath + "emulator/libretro/cores/"),
-			games:  cleanPath(assetsPath + "games/"),
+			assets: cleanPath(rootPath),
+			cores:  cleanPath(rootPath + "assets/cores/"),
+			games:  cleanPath(rootPath + "assets/games/"),
 		},
 
 		imageInCh:  images,
@@ -117,8 +129,8 @@ func GetDefaultEmulatorMock(room string, system string, rom string) *EmulatorMoc
 // The rom will be loaded from emulators' games path.
 func (emu *EmulatorMock) loadRom(game string) {
 	fmt.Printf("%v %v\n", emu.paths.cores, emu.core)
-	coreLoad(config.EmulatorMeta{
-		Path: emu.paths.cores + emu.core,
+	coreLoad(emulator.Metadata{
+		LibPath: emu.paths.cores + emu.core,
 	})
 	coreLoadGame(emu.paths.games + game)
 }
@@ -192,12 +204,10 @@ func (emu *EmulatorMock) getStateHash() string {
 	return getHash(state)
 }
 
-// getAssetsPath returns absolute path to the assets directory.
-func getAssetsPath() string {
-	appName := "cloud-game"
-	// get app path at runtime
-	_, b, _, _ := runtime.Caller(0)
-	return filepath.Dir(strings.SplitAfter(b, appName)[0]) + "/" + appName + "/assets/"
+// getRootPath returns absolute path to the root directory.
+func getRootPath() string {
+	p, _ := filepath.Abs("../../../../")
+	return p + string(filepath.Separator)
 }
 
 // getHash returns MD5 hash.

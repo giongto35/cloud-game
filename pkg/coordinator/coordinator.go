@@ -6,9 +6,11 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"strconv"
 	"time"
 
-	"github.com/giongto35/cloud-game/v2/pkg/config"
+	"github.com/giongto35/cloud-game/v2/pkg/config/coordinator"
+	"github.com/giongto35/cloud-game/v2/pkg/environment"
 	"github.com/giongto35/cloud-game/v2/pkg/games"
 	"github.com/giongto35/cloud-game/v2/pkg/monitoring"
 	"github.com/golang/glog"
@@ -21,17 +23,17 @@ const stagingLEURL = "https://acme-staging-v02.api.letsencrypt.org/directory"
 
 type Coordinator struct {
 	ctx context.Context
-	cfg Config
+	cfg coordinator.Config
 
 	monitoringServer *monitoring.ServerMonitoring
 }
 
-func New(ctx context.Context, cfg Config) *Coordinator {
+func New(ctx context.Context, cfg coordinator.Config) *Coordinator {
 	return &Coordinator{
 		ctx: ctx,
 		cfg: cfg,
 
-		monitoringServer: monitoring.NewServerMonitoring(cfg.MonitoringConfig),
+		monitoringServer: monitoring.NewServerMonitoring(cfg.Coordinator.Monitoring),
 	}
 }
 
@@ -96,31 +98,31 @@ func makeHTTPToHTTPSRedirectServer(server *Server) *http.Server {
 // initializeCoordinator setup an coordinator server
 func (o *Coordinator) initializeCoordinator() {
 	// init games library
-	lib := games.NewLibrary(games.Config{
-		BasePath:  "assets/games",
-		Supported: config.SupportedRomExtensions,
-		Ignored:   []string{"neogeo", "pgm"},
-		Verbose:   true,
-		WatchMode: o.cfg.LibraryMonitoring,
-	})
+	libraryConf := o.cfg.Coordinator.Library
+	if len(libraryConf.Supported) == 0 {
+		libraryConf.Supported = o.cfg.Emulator.GetSupportedExtensions()
+	}
+	lib := games.NewLibrary(libraryConf)
 	lib.Scan()
 
-	coordinator := NewServer(o.cfg, lib)
+	server := NewServer(o.cfg, lib)
 
 	var certManager *autocert.Manager
 	var httpsSrv *http.Server
 
 	log.Println("Initializing Coordinator Server")
-	if *config.Mode == config.ProdEnv || *config.Mode == config.StagingEnv {
-		httpsSrv = makeHTTPServer(coordinator)
-		httpsSrv.Addr = fmt.Sprintf(":%d", *config.HttpsPort)
+	mode := o.cfg.Environment.Get()
+	if mode.AnyOf(environment.Production, environment.Staging) {
+		serverConfig := o.cfg.Coordinator.Server
+		httpsSrv = makeHTTPServer(server)
+		httpsSrv.Addr = fmt.Sprintf(":%d", serverConfig.HttpsPort)
 
-		if *config.HttpsChain == "" || *config.HttpsKey == "" {
-			*config.HttpsChain = ""
-			*config.HttpsKey = ""
+		if serverConfig.HttpsChain == "" || serverConfig.HttpsKey == "" {
+			serverConfig.HttpsChain = ""
+			serverConfig.HttpsKey = ""
 
 			var leurl string
-			if *config.Mode == config.StagingEnv {
+			if mode == environment.Staging {
 				leurl = stagingLEURL
 			} else {
 				leurl = acme.LetsEncryptURL
@@ -128,7 +130,7 @@ func (o *Coordinator) initializeCoordinator() {
 
 			certManager = &autocert.Manager{
 				Prompt:     autocert.AcceptTOS,
-				HostPolicy: autocert.HostWhitelist(o.cfg.PublicDomain),
+				HostPolicy: autocert.HostWhitelist(o.cfg.Coordinator.PublicDomain),
 				Cache:      autocert.DirCache("assets/cache"),
 				Client:     &acme.Client{DirectoryURL: leurl},
 			}
@@ -136,27 +138,27 @@ func (o *Coordinator) initializeCoordinator() {
 			httpsSrv.TLSConfig = &tls.Config{GetCertificate: certManager.GetCertificate}
 		}
 
-		go func() {
+		go func(chain string, key string) {
 			fmt.Printf("Starting HTTPS server on %s\n", httpsSrv.Addr)
-			err := httpsSrv.ListenAndServeTLS(*config.HttpsChain, *config.HttpsKey)
+			err := httpsSrv.ListenAndServeTLS(chain, key)
 			if err != nil {
 				log.Fatalf("httpsSrv.ListendAndServeTLS() failed with %s", err)
 			}
-		}()
+		}(serverConfig.HttpsChain, serverConfig.HttpsKey)
 	}
 
 	var httpSrv *http.Server
-	if *config.Mode == config.ProdEnv || *config.Mode == config.StagingEnv {
-		httpSrv = makeHTTPToHTTPSRedirectServer(coordinator)
+	if mode.AnyOf(environment.Production, environment.Staging) {
+		httpSrv = makeHTTPToHTTPSRedirectServer(server)
 	} else {
-		httpSrv = makeHTTPServer(coordinator)
+		httpSrv = makeHTTPServer(server)
 	}
 
 	if certManager != nil {
 		httpSrv.Handler = certManager.HTTPHandler(httpSrv.Handler)
 	}
 
-	httpSrv.Addr = ":" + *config.HttpPort
+	httpSrv.Addr = ":" + strconv.Itoa(o.cfg.Coordinator.Server.Port)
 	err := httpSrv.ListenAndServe()
 	if err != nil {
 		log.Fatalf("httpSrv.ListenAndServe() failed with %s", err)
