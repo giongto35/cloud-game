@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"log"
 
-	"github.com/giongto35/cloud-game/v2/pkg/config"
+	encoderConfig "github.com/giongto35/cloud-game/v2/pkg/config/encoder"
 	"github.com/giongto35/cloud-game/v2/pkg/encoder"
 	"github.com/giongto35/cloud-game/v2/pkg/encoder/h264encoder"
 	vpxencoder "github.com/giongto35/cloud-game/v2/pkg/encoder/vpx-encoder"
@@ -39,13 +39,6 @@ func resample(pcm []int16, targetSize int, srcSampleRate int, dstSampleRate int)
 	return newPCM
 }
 
-func min(x int, y int) int {
-	if x < y {
-		return x
-	}
-	return y
-}
-
 func (r *Room) startVoice() {
 	// broadcast voice
 	go func() {
@@ -70,11 +63,11 @@ func (r *Room) startVoice() {
 	}()
 }
 
-func (r *Room) startAudio(sampleRate int) {
+func (r *Room) startAudio(sampleRate int, audio encoderConfig.Audio) {
 	log.Println("Enter fan audio")
-	srcSampleRate := sampleRate
 
-	enc, err := opus.NewEncoder(config.AUDIO_RATE, 2, opus.AppAudio)
+	srcSampleRate := sampleRate
+	enc, err := opus.NewEncoder(audio.Frequency, audio.Channels, opus.AppAudio)
 	if err != nil {
 		log.Println("[!] Cannot create audio encoder", err)
 	}
@@ -83,8 +76,8 @@ func (r *Room) startAudio(sampleRate int) {
 	enc.SetBitrateToAuto()
 	enc.SetComplexity(10)
 
-	dstBufferSize := config.AUDIO_FRAME
-	srcBufferSize := dstBufferSize * srcSampleRate / config.AUDIO_RATE
+	dstBufferSize := audio.GetFrameDuration()
+	srcBufferSize := dstBufferSize * srcSampleRate / audio.Frequency
 	pcm := make([]int16, srcBufferSize) // 640 * 1000 / 16000 == 40 ms
 	idx := 0
 
@@ -98,7 +91,7 @@ func (r *Room) startAudio(sampleRate int) {
 
 			if idx == len(pcm) {
 				data := make([]byte, 1024*2)
-				dstpcm := resample(pcm, dstBufferSize, srcSampleRate, config.AUDIO_RATE)
+				dstpcm := resample(pcm, dstBufferSize, srcSampleRate, audio.Frequency)
 				n, err := enc.Encode(dstpcm, data)
 
 				if err != nil {
@@ -126,13 +119,13 @@ func (r *Room) startAudio(sampleRate int) {
 	log.Println("Room ", r.ID, " audio channel closed")
 }
 
-// startVideo listen from imageChannel and push to Encoder. The output of encoder will be pushed to webRTC
-func (r *Room) startVideo(width, height int, videoEncoderType string) {
+// startVideo processes imageChannel images with an encoder (codec) then pushes the result to WebRTC.
+func (r *Room) startVideo(width, height int, videoCodec encoder.VideoCodec) {
 	var enc encoder.Encoder
 	var err error
 
-	log.Println("Video Encoder: ", videoEncoderType)
-	if videoEncoderType == config.CODEC_H264 {
+	log.Println("Video Encoder: ", videoCodec)
+	if videoCodec == encoder.H264 {
 		enc, err = h264encoder.NewH264Encoder(width, height, 1)
 	} else {
 		enc, err = vpxencoder.NewVpxEncoder(width, height, 20, 1200, 5)

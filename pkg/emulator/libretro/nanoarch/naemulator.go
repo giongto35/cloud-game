@@ -10,7 +10,8 @@ import (
 	"sync"
 	"time"
 
-	"github.com/giongto35/cloud-game/v2/pkg/config"
+	config "github.com/giongto35/cloud-game/v2/pkg/config/emulator"
+	"github.com/giongto35/cloud-game/v2/pkg/emulator"
 	"github.com/giongto35/cloud-game/v2/pkg/util"
 )
 
@@ -64,7 +65,7 @@ type naEmulator struct {
 	inputChannel  <-chan InputEvent
 	videoExporter *VideoExporter
 
-	meta            config.EmulatorMeta
+	meta            emulator.Metadata
 	gamePath        string
 	roomID          string
 	gameName        string
@@ -103,13 +104,20 @@ const maxPort = 8
 const SocketAddrTmpl = "/tmp/cloudretro-retro-%s.sock"
 
 // NAEmulator implements CloudEmulator interface based on NanoArch(golang RetroArch)
-func NewNAEmulator(etype string, roomID string, inputChannel <-chan InputEvent) (*naEmulator, chan GameFrame, chan []int16) {
-	meta := config.EmulatorConfig[etype]
+func NewNAEmulator(roomID string, inputChannel <-chan InputEvent, conf config.LibretroCoreConfig) (*naEmulator, chan GameFrame, chan []int16) {
 	imageChannel := make(chan GameFrame, 30)
 	audioChannel := make(chan []int16, 30)
 
 	return &naEmulator{
-		meta:           meta,
+		meta: emulator.Metadata{
+			LibPath:       conf.Lib,
+			ConfigPath:    conf.Config,
+			Ratio:         conf.Ratio,
+			IsGlAllowed:   conf.IsGlAllowed,
+			UsesLibCo:     conf.UsesLibCo,
+			HasMultitap:   conf.HasMultitap,
+			AutoGlContext: conf.AutoGlContext,
+		},
 		imageChannel:   imageChannel,
 		audioChannel:   audioChannel,
 		inputChannel:   inputChannel,
@@ -152,8 +160,8 @@ func NewVideoExporter(roomID string, imgChannel chan GameFrame) *VideoExporter {
 
 // Init initialize new RetroArch cloud emulator
 // withImageChan returns an image stream as Channel for output else it will write to unix socket
-func Init(etype string, roomID string, withImageChannel bool, inputChannel <-chan InputEvent) (*naEmulator, chan GameFrame, chan []int16) {
-	emulator, imageChannel, audioChannel := NewNAEmulator(etype, roomID, inputChannel)
+func Init(roomID string, withImageChannel bool, inputChannel <-chan InputEvent, config config.LibretroCoreConfig) (*naEmulator, chan GameFrame, chan []int16) {
+	emulator, imageChannel, audioChannel := NewNAEmulator(roomID, inputChannel, config)
 	// Set to global NAEmulator
 	NAEmulator = emulator
 	if !withImageChannel {
@@ -188,7 +196,7 @@ func (na *naEmulator) listenInput() {
 	}
 }
 
-func (na *naEmulator) LoadMeta(path string) config.EmulatorMeta {
+func (na *naEmulator) LoadMeta(path string) emulator.Metadata {
 	coreLoad(na.meta)
 	coreLoadGame(path)
 	na.gamePath = path

@@ -1,0 +1,161 @@
+#
+# Application configuration file
+#
+
+# application environment (dev, staging, prod)
+environment: dev
+
+coordinator:
+  # address if the server want to connect directly to debug
+  debugHost:
+  # games library
+  library:
+    # some directory which is gonna be the root folder for the library
+    # where games are stored
+    basePath: assets/games
+    # an explicit list of supported file extensions
+    # which overrides Libretro emulator ROMs configs
+    supported:
+    # a list of ignored words in the ROM filenames
+    ignored:
+      - neogeo
+      - pgm
+    # print some additional info
+    verbose: true
+    # enable library directory live reload
+    # (experimental)
+    watchMode: false
+  monitoring:
+    port: 6601
+    # enable Go profiler HTTP server
+    profilingEnabled: false
+    metricEnabled: false
+    urlPrefix: /coordinator
+  # the public domain of the coordinator
+  publicDomain: http://localhost:8000
+  # specify the worker address that the client can ping (with protocol and port)
+  pingServer:
+  # HTTP(S) server config
+  server:
+    port: 8000
+    httpsPort: 443
+    httpsKey:
+    httpsChain:
+
+worker:
+  network:
+    # a coordinator address to connect to
+    coordinatorAddress: localhost:8000
+    # ISO Alpha-2 country code to group workers by zones
+    zone:
+  monitoring:
+    # monitoring server port
+    port: 6601
+    profilingEnabled: false
+    # monitoring server URL prefix
+    metricEnabled: true
+    urlPrefix: /worker
+  server:
+    port: 9000
+    httpsPort: 443
+    httpsKey:
+    httpsChain:
+
+emulator:
+  # set output viewport scale factor
+  scale: 1
+
+  aspectRatio:
+    # enable aspect ratio changing
+    # (experimental)
+    keep: false
+    # recalculate emulator game frame size to the given WxH
+    width: 320
+    height: 240
+
+  libretro:
+    cores:
+      paths:
+        libs: assets/cores
+        configs: assets/cores
+      # Config params for Libretro cores repository,
+      # available types are:
+      #   - buildbot (the default Libretro nightly repository)
+      #   - github (GitHub raw repository with a similar structure to buildbot)
+      #   - raw (just a link to a zip file extracted as is)
+      repo:
+        # enable auto-download for the list of cores (list->lib)
+        sync: true
+        type: buildbot
+        url: https://buildbot.libretro.com/nightly
+        # if repo has file compression
+        compression: zip
+      # Libretro core configuration
+      #
+      # Available config params:
+      #   - lib (string)
+      #   - config (string)
+      #   - roms ([]string)
+      #   - width (int)
+      #   - height (int)
+      #   - ratio (float)
+      #   - isGlAllowed (bool)
+      #   - usesLibCo (bool)
+      #   - hasMultitap (bool)
+      list:
+        gba:
+          lib: mgba_libretro
+          roms: [ "gba", "gbc" ]
+          width: 240
+          height: 160
+        pcsx:
+          lib: pcsx_rearmed_libretro
+          config: pcsx_rearmed_libretro.cfg
+          roms: [ "cue" ]
+          width: 350
+          height: 240
+        nes:
+          lib: nestopia_libretro
+          roms: [ "nes" ]
+          width: 256
+          height: 240
+        snes:
+          lib: snes9x_libretro
+          roms: [ "smc", "sfc", "swc", "fig", "bs" ]
+          width: 256
+          height: 224
+          hasMultitap: true
+        mame:
+          lib: fbneo_libretro
+          roms: [ "zip" ]
+          width: 240
+          height: 160
+        n64:
+          lib: mupen64plus_next_libretro
+          config: mupen64plus_next_libretro.cfg
+          roms: [ "n64", "v64", "z64" ]
+          width: 320
+          height: 240
+          isGlAllowed: true
+          usesLibCo: true
+
+encoder:
+  audio:
+    channels: 2
+    # audio frame duration needed for WebRTC (Opus)
+    frame: 20
+    frequency: 48000
+  # run without a game
+  # (experimental)
+  withoutGame: false
+
+webrtc:
+  # a list of STUN/TURN servers for the client
+  # {server-ip} placeholder will be replaced with
+  # the current server IP
+  iceServers:
+    - url: stun:stun.l.google.com:19302
+    - url: stun:{server-ip}:3478
+    - url: turn:{server-ip}:3478
+      username: root
+      credential: root
