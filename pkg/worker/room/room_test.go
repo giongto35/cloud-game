@@ -226,7 +226,9 @@ func getRoomMock(cfg roomMockConfig) roomMock {
 	cfg.game.Path = cfg.gamesPath + cfg.game.Path
 
 	var conf worker.Config
-	config.LoadConfig(&conf, whereIsConfigs)
+	if err := config.LoadConfig(&conf, whereIsConfigs); err != nil {
+		panic(err)
+	}
 	fixEmulators(&conf, cfg.autoGlContext)
 	// sync cores
 	coreManager := remotehttp.NewRemoteHttpManager(conf.Emulator.Libretro)

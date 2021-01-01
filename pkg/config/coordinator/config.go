@@ -30,7 +30,10 @@ type Config struct {
 var configPath string
 
 func NewConfig() (conf Config) {
-	config.LoadConfig(&conf, configPath)
+	err := config.LoadConfig(&conf, configPath)
+	if err != nil {
+		panic(err)
+	}
 	return
 }
 

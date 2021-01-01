@@ -29,7 +29,7 @@ type Config struct {
 var configPath string
 
 func NewConfig() (conf Config) {
-	config.LoadConfig(&conf, configPath)
+	_ = config.LoadConfig(&conf, configPath)
 	return
 }
 
