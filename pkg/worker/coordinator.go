@@ -62,14 +62,8 @@ func (h *Handler) RouteCoordinator() {
 
 		localSession, err := peerconnection.StartClient(
 			initPacket.IsMobile,
-			func(candidate string) {
-				// send back candidate string to browser
-				oClient.Send(cws.WSPacket{
-					ID:        "candidate",
-					Data:      candidate,
-					SessionID: resp.SessionID,
-				}, nil)
-			},
+			// send back candidate string to browser
+			func(cd string) { oClient.Send(api.IceCandidatePacket(cd, resp.SessionID), nil) },
 		)
 
 		// localSession, err := peerconnection.StartClient(initPacket.IsMobile, iceCandidates[resp.SessionID])
@@ -111,7 +105,7 @@ func (h *Handler) RouteCoordinator() {
 		return cws.EmptyPacket
 	})
 
-	oClient.Receive("candidate", func(resp cws.WSPacket) (req cws.WSPacket) {
+	oClient.Receive(api.IceCandidate, func(resp cws.WSPacket) (req cws.WSPacket) {
 		log.Println("Received remote Ice Candidate from browser")
 		session := h.getSession(resp.SessionID)
 

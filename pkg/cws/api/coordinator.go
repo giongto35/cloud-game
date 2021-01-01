@@ -8,6 +8,8 @@ const (
 	CloseRoom     = "close_room"
 	RegisterRoom  = "register_room"
 
+	IceCandidate = "ice_candidate"
+
 	NoData = ""
 )
 
@@ -34,3 +36,6 @@ func ConfigPacket() cws.WSPacket                  { return cws.WSPacket{ID: Conf
 func RegisterRoomPacket(data string) cws.WSPacket { return cws.WSPacket{ID: RegisterRoom, Data: data} }
 func GetRoomPacket(data string) cws.WSPacket      { return cws.WSPacket{ID: GetRoom, Data: data} }
 func CloseRoomPacket(data string) cws.WSPacket    { return cws.WSPacket{ID: CloseRoom, Data: data} }
+func IceCandidatePacket(data string, sessionId string) cws.WSPacket {
+	return cws.WSPacket{ID: IceCandidate, Data: data, SessionID: sessionId}
+}

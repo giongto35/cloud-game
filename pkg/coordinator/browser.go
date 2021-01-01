@@ -82,7 +82,7 @@ func (o *Server) RouteBrowser(client *BrowserClient) {
 		return cws.EmptyPacket
 	})
 
-	client.Receive("candidate", func(resp cws.WSPacket) cws.WSPacket {
+	client.Receive(api.IceCandidate, func(resp cws.WSPacket) cws.WSPacket {
 		// contains ICE candidate of browser
 		// forward to worker
 		client.Println("Received IceCandidate from browser -> relay to worker")

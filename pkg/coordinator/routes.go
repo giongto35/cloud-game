@@ -13,5 +13,5 @@ func (o *Server) routes(wc *WorkerClient) {
 	wc.Receive(api.RegisterRoom, wc.handleRegisterRoom(o))
 	wc.Receive(api.GetRoom, wc.handleGetRoom(o))
 	wc.Receive(api.CloseRoom, wc.handleCloseRoom(o))
-	wc.Receive("candidate", wc.handleIceCandidate(o))
+	wc.Receive(api.IceCandidate, wc.handleIceCandidate(o))
 }
