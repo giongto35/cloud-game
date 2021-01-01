@@ -5,9 +5,9 @@ import (
 	"log"
 	"strconv"
 
-	"github.com/giongto35/cloud-game/v2/pkg/api"
 	webrtcConfig "github.com/giongto35/cloud-game/v2/pkg/config/webrtc"
 	"github.com/giongto35/cloud-game/v2/pkg/cws"
+	"github.com/giongto35/cloud-game/v2/pkg/cws/api"
 	"github.com/giongto35/cloud-game/v2/pkg/encoder"
 	"github.com/giongto35/cloud-game/v2/pkg/games"
 	"github.com/giongto35/cloud-game/v2/pkg/util"
@@ -41,14 +41,7 @@ func (h *Handler) RouteCoordinator() {
 
 	/* Coordinator */
 
-	// Received from coordinator the serverID
-	oClient.Receive("serverID", func(response cws.WSPacket) (request cws.WSPacket) {
-		// Stick session with serverID got from coordinator
-		log.Println("Received serverID ", response.Data)
-		h.serverID = response.Data
-
-		return cws.EmptyPacket
-	})
+	h.routes()
 
 	/* WebRTC Connection */
 
