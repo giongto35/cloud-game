@@ -44,6 +44,7 @@ func (c *Config) ParseFlags() {
 	c.Worker.Server.WithFlags()
 	flag.IntVar(&c.Worker.Monitoring.Port, "monitoring.port", c.Worker.Monitoring.Port, "Monitoring server port")
 	flag.StringVar(&c.Worker.Network.CoordinatorAddress, "coordinatorhost", c.Worker.Network.CoordinatorAddress, "Worker URL to connect")
+	flag.StringVar(&c.Worker.Network.Zone, "zone", c.Worker.Network.Zone, "Worker network zone (us, eu, etc.)")
 	flag.StringVarP(&configPath, "conf", "c", configPath, "Set custom configuration file path")
 	flag.Parse()
 }
