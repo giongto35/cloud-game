@@ -13,7 +13,17 @@ func TestDiff(t *testing.T) {
 	}{
 		{},
 		{
+			declared:  []string{"a", "b"},
+			installed: []string{},
+			diff:      []string{"a", "b"},
+		},
+		{
+			declared:  []string{},
 			installed: []string{"c"},
+		},
+		{
+			declared:  []string{"a", "b", "c"},
+			installed: []string{"c", "a", "b"},
 		},
 		{
 			declared:  []string{"a", "b", "c"},
