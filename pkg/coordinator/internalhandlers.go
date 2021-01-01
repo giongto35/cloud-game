@@ -35,7 +35,7 @@ func (wc *WorkerClient) handleGetRoom(s *Server) cws.PacketHandler {
 	return func(resp cws.WSPacket) cws.WSPacket {
 		log.Println("Coordinator: Received a get room request")
 		log.Println("Result: ", s.roomToWorker[resp.Data])
-		return cws.WSPacket{ID: "getRoom", Data: s.roomToWorker[resp.Data]}
+		return api.GetRoomPacket(s.roomToWorker[resp.Data])
 	}
 }
 

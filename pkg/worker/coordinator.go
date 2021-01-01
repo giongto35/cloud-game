@@ -272,19 +272,6 @@ func (h *Handler) RouteCoordinator() {
 	})
 }
 
-func getServerIDOfRoom(oc *CoordinatorClient, roomID string) string {
-	log.Println("Request coordinator roomID ", roomID)
-	packet := oc.SyncSend(
-		cws.WSPacket{
-			ID:   "getRoom",
-			Data: roomID,
-		},
-	)
-	log.Println("Received roomID from coordinator ", packet.Data)
-
-	return packet.Data
-}
-
 // startGameHandler starts a game if roomID is given, if not create new room
 func (h *Handler) startGameHandler(game games.GameMetadata, existedRoomID string, playerIndex int, peerconnection *webrtc.WebRTC, videoCodec encoder.VideoCodec) *room.Room {
 	log.Printf("Loading game: %v\n", game.Name)

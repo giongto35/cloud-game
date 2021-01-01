@@ -4,6 +4,7 @@ import "github.com/giongto35/cloud-game/v2/pkg/cws"
 
 const (
 	ConfigRequest = "config_request"
+	GetRoom       = "get_room"
 	CloseRoom     = "close_room"
 )
 
@@ -27,4 +28,5 @@ func (packet *GameStartCall) To() (string, error)    { return to(packet) }
 // *** packets ***
 //
 func ConfigPacket() cws.WSPacket               { return cws.WSPacket{ID: ConfigRequest} }
+func GetRoomPacket(data string) cws.WSPacket   { return cws.WSPacket{ID: GetRoom, Data: data} }
 func CloseRoomPacket(data string) cws.WSPacket { return cws.WSPacket{ID: CloseRoom, Data: data} }
