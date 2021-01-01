@@ -7,8 +7,8 @@ const (
 	GetRoom       = "get_room"
 	CloseRoom     = "close_room"
 	RegisterRoom  = "register_room"
-
-	IceCandidate = "ice_candidate"
+	Heartbeat     = "heartbeat"
+	IceCandidate  = "ice_candidate"
 
 	NoData = ""
 )

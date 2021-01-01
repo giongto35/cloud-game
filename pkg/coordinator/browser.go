@@ -43,7 +43,7 @@ func (bc *BrowserClient) Println(args ...interface{}) {
 // Register callbacks for connection from browser -> coordinator
 func (o *Server) RouteBrowser(client *BrowserClient) {
 	/* WebSocket */
-	client.Receive("heartbeat", func(resp cws.WSPacket) cws.WSPacket {
+	client.Receive(api.Heartbeat, func(resp cws.WSPacket) cws.WSPacket {
 		return resp
 	})
 

@@ -165,6 +165,7 @@ func (c *Client) Heartbeat() {
 			return
 		default:
 		}
+		// !to resolve cycle deps
 		c.Send(WSPacket{ID: "heartbeat"}, nil)
 	}
 }

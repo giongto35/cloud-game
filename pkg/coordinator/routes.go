@@ -9,7 +9,7 @@ func (o *Server) routes(wc *WorkerClient) {
 	}
 
 	wc.Receive(api.ConfigRequest, wc.handleConfigRequest())
-	wc.Receive("heartbeat", wc.handleHeartbeat())
+	wc.Receive(api.Heartbeat, wc.handleHeartbeat())
 	wc.Receive(api.RegisterRoom, wc.handleRegisterRoom(o))
 	wc.Receive(api.GetRoom, wc.handleGetRoom(o))
 	wc.Receive(api.CloseRoom, wc.handleCloseRoom(o))
