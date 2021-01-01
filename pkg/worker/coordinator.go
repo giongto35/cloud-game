@@ -303,10 +303,7 @@ func (h *Handler) startGameHandler(game games.GameMetadata, existedRoomID string
 
 	// Register room to coordinator if we are connecting to coordinator
 	if room != nil && h.oClient != nil {
-		h.oClient.Send(cws.WSPacket{
-			ID:   "registerRoom",
-			Data: room.ID,
-		}, nil)
+		h.oClient.Send(api.RegisterRoomPacket(room.ID), nil)
 	}
 
 	return room

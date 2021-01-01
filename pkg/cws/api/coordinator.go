@@ -6,6 +6,9 @@ const (
 	ConfigRequest = "config_request"
 	GetRoom       = "get_room"
 	CloseRoom     = "close_room"
+	RegisterRoom  = "register_room"
+
+	NoData = ""
 )
 
 type GameStartRequest struct {
@@ -27,6 +30,7 @@ func (packet *GameStartCall) To() (string, error)    { return to(packet) }
 //
 // *** packets ***
 //
-func ConfigPacket() cws.WSPacket               { return cws.WSPacket{ID: ConfigRequest} }
-func GetRoomPacket(data string) cws.WSPacket   { return cws.WSPacket{ID: GetRoom, Data: data} }
-func CloseRoomPacket(data string) cws.WSPacket { return cws.WSPacket{ID: CloseRoom, Data: data} }
+func ConfigPacket() cws.WSPacket                  { return cws.WSPacket{ID: ConfigRequest} }
+func RegisterRoomPacket(data string) cws.WSPacket { return cws.WSPacket{ID: RegisterRoom, Data: data} }
+func GetRoomPacket(data string) cws.WSPacket      { return cws.WSPacket{ID: GetRoom, Data: data} }
+func CloseRoomPacket(data string) cws.WSPacket    { return cws.WSPacket{ID: CloseRoom, Data: data} }
