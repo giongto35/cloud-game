@@ -61,7 +61,7 @@ func (m Manager) Sync() error {
 	defer m.fmu.Unlock()
 
 	installed := m.GetInstalled()
-	download := diff(installed, declared)
+	download := diff(declared, installed)
 
 	if len(download) > 0 {
 		log.Printf("Starting Libretro cores download: %v", strings.Join(download, ", "))
@@ -83,11 +83,19 @@ func (m Manager) getCoreUrls(names []string) (urls []string) {
 
 // diff returns a list of not installed cores.
 func diff(declared, installed []string) (diff []string) {
+	if len(declared) == 0 {
+		return
+	}
+
+	if len(installed) == 0 {
+		return declared
+	}
+
 	v := map[string]struct{}{}
-	for _, x := range declared {
+	for _, x := range installed {
 		v[x] = struct{}{}
 	}
-	for _, x := range installed {
+	for _, x := range declared {
 		if _, ok := v[x]; !ok {
 			diff = append(diff, x)
 		}
