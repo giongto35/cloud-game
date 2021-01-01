@@ -45,7 +45,7 @@ func (wc *WorkerClient) handleCloseRoom(s *Server) cws.PacketHandler {
 		log.Printf("Coordinator: Received closeRoom room %s from worker %s", resp.Data, wc.WorkerID)
 		delete(s.roomToWorker, resp.Data)
 		log.Printf("Coordinator: Current room list is: %+v", s.roomToWorker)
-		return cws.WSPacket{ID: "closeRoom"}
+		return api.CloseRoomPacket("")
 	}
 }
 

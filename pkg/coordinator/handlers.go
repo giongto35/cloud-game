@@ -64,7 +64,8 @@ func (o *Server) GetWeb(w http.ResponseWriter, r *http.Request) {
 	tmpl.Execute(w, struct{}{})
 }
 
-// getPingServer returns the server for latency check of a zone. In latency check to find best worker step, we use this server to find the closest worker.
+// getPingServer returns the server for latency check of a zone.
+// In latency check to find best worker step, we use this server to find the closest worker.
 func (o *Server) getPingServer(zone string) string {
 	if o.cfg.Coordinator.PingServer != "" {
 		return fmt.Sprintf("%s/echo", o.cfg.Coordinator.PingServer)
@@ -74,8 +75,6 @@ func (o *Server) getPingServer(zone string) string {
 	if mode.AnyOf(environment.Production, environment.Staging) {
 		return fmt.Sprintf(pingServerTemp, zone, o.cfg.Coordinator.PublicDomain)
 	}
-
-	// If not Prod or Staging, return dev environment
 	return devPingServer
 }
 

@@ -12,6 +12,6 @@ func (o *Server) routes(wc *WorkerClient) {
 	wc.Receive("heartbeat", wc.handleHeartbeat())
 	wc.Receive("registerRoom", wc.handleRegisterRoom(o))
 	wc.Receive("getRoom", wc.handleGetRoom(o))
-	wc.Receive("closeRoom", wc.handleCloseRoom(o))
+	wc.Receive(api.CloseRoom, wc.handleCloseRoom(o))
 	wc.Receive("candidate", wc.handleIceCandidate(o))
 }

@@ -303,10 +303,7 @@ func (h *Handler) startGameHandler(game games.GameMetadata, existedRoomID string
 			<-room.Done
 			h.detachRoom(room.ID)
 			// send signal to coordinator that the room is closed, coordinator will remove that room
-			h.oClient.Send(cws.WSPacket{
-				ID:   "closeRoom",
-				Data: room.ID,
-			}, nil)
+			h.oClient.Send(api.CloseRoomPacket(room.ID), nil)
 		}()
 	}
 
