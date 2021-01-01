@@ -23,13 +23,16 @@ type Config struct {
 		Server shared.Server
 	}
 	Webrtc webrtcConfig.Webrtc
+	Loaded bool
 }
 
 // allows custom config path
 var configPath string
 
 func NewConfig() (conf Config) {
-	_ = config.LoadConfig(&conf, configPath)
+	if err := config.LoadConfig(&conf, configPath); err == nil {
+		conf.Loaded = false
+	}
 	return
 }
 
