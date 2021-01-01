@@ -12,6 +12,7 @@ import (
 
 	"github.com/giongto35/cloud-game/v2/pkg/config/coordinator"
 	"github.com/giongto35/cloud-game/v2/pkg/cws"
+	"github.com/giongto35/cloud-game/v2/pkg/cws/api"
 	"github.com/giongto35/cloud-game/v2/pkg/environment"
 	"github.com/giongto35/cloud-game/v2/pkg/games"
 	"github.com/giongto35/cloud-game/v2/pkg/util"
@@ -137,17 +138,12 @@ func (o *Server) WSO(w http.ResponseWriter, r *http.Request) {
 	wc.Zone = zone
 	wc.PingServer = pingServer
 
-	// Eveything is cool
 	// Attach to Server instance with workerID, add defer
 	o.workerClients[workerID] = wc
 	defer o.cleanWorker(wc, workerID)
 
-	// Sendback the ID to worker
-	// TODO: do we need this packet?
-	wc.Send(cws.WSPacket{
-		ID:   "serverID",
-		Data: workerID,
-	}, nil)
+	// send generated ID to the worker
+	wc.Send(api.ServerIdPacket(workerID), nil)
 
 	// Add receiver callbacks, and listen
 	o.RouteWorker(wc)
