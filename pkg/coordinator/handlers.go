@@ -142,11 +142,9 @@ func (o *Server) WSO(w http.ResponseWriter, r *http.Request) {
 	o.workerClients[workerID] = wc
 	defer o.cleanWorker(wc, workerID)
 
-	// send generated ID to the worker
 	wc.Send(api.ServerIdPacket(workerID), nil)
 
-	// Add receiver callbacks, and listen
-	o.RouteWorker(wc)
+	o.routes(wc)
 	wc.Listen()
 }
 
