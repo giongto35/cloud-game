@@ -16,7 +16,7 @@ type Worker struct {
 	ctx     context.Context
 	conf    worker.Config
 	servers []server.Server
-
+	// to pause initialization
 	lock *lock.TimeLock
 }
 

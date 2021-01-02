@@ -10,6 +10,10 @@ func TestLock(t *testing.T) {
 	lock := NewLock()
 	wait := time.Millisecond * 1
 
+	lock.Unlock()
+	lock.Unlock()
+	lock.Unlock()
+
 	go func(timeLock *TimeLock) {
 		time.Sleep(time.Second * 4)
 		lock.Unlock()
