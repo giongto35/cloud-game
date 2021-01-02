@@ -27,9 +27,6 @@ func (tl *TimeLock) Lock() {
 // LockFor blocks the execution at most for
 // the given period of time.
 func (tl *TimeLock) LockFor(d time.Duration) {
-	if tl.isLocked() {
-		return
-	}
 	tl.lock()
 	select {
 	case <-tl.l:

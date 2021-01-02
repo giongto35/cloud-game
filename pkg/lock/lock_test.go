@@ -8,14 +8,14 @@ import (
 func TestLock(t *testing.T) {
 	a := 1
 	lock := NewLock()
-	wait := time.Millisecond * 1
+	wait := time.Millisecond * 10
 
 	lock.Unlock()
 	lock.Unlock()
 	lock.Unlock()
 
 	go func(timeLock *TimeLock) {
-		time.Sleep(time.Second * 4)
+		time.Sleep(time.Second * 1)
 		lock.Unlock()
 	}(lock)
 
