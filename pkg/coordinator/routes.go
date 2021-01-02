@@ -2,12 +2,11 @@ package coordinator
 
 import "github.com/giongto35/cloud-game/v2/pkg/cws/api"
 
-// routes adds all worker request routes
-func (o *Server) routes(wc *WorkerClient) {
+// workerRoutes adds all worker request routes.
+func (o *Server) workerRoutes(wc *WorkerClient) {
 	if o == nil {
 		return
 	}
-
 	wc.Receive(api.ConfigRequest, wc.handleConfigRequest())
 	wc.Receive(api.Heartbeat, wc.handleHeartbeat())
 	wc.Receive(api.RegisterRoom, wc.handleRegisterRoom(o))

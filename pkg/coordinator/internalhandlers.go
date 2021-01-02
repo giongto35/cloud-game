@@ -49,7 +49,7 @@ func (wc *WorkerClient) handleCloseRoom(s *Server) cws.PacketHandler {
 	}
 }
 
-// handleCandidate passes an ICE candidate (WebRTC) to the browser.
+// handleIceCandidate passes an ICE candidate (WebRTC) to the browser.
 func (wc *WorkerClient) handleIceCandidate(s *Server) cws.PacketHandler {
 	return func(resp cws.WSPacket) cws.WSPacket {
 		wc.Println("Received IceCandidate from worker -> relay to browser")

@@ -143,7 +143,7 @@ func (o *Server) WSO(w http.ResponseWriter, r *http.Request) {
 
 	wc.Send(api.ServerIdPacket(workerID), nil)
 
-	o.routes(wc)
+	o.workerRoutes(wc)
 	wc.Listen()
 }
 
