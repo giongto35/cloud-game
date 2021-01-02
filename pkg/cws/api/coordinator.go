@@ -11,6 +11,16 @@ const (
 	IceCandidate  = "ice_candidate"
 
 	NoData = ""
+
+	InitWebrtc = "init_webrtc"
+	Answer     = "answer"
+
+	GameStart        = "start"
+	GameQuit         = "quit"
+	GameSave         = "save"
+	GameLoad         = "load"
+	GamePlayerSelect = "player_index"
+	GameMultitap     = "multitap"
 )
 
 type GameStartRequest struct {

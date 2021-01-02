@@ -226,7 +226,7 @@ func (o *Server) WS(w http.ResponseWriter, r *http.Request) {
 	defer o.cleanBrowser(bc, sessionID)
 
 	// Routing browserClient message
-	o.RouteBrowser(bc)
+	o.useragentRoutes(bc)
 
 	bc.Send(cws.WSPacket{
 		ID:   "init",
@@ -237,10 +237,7 @@ func (o *Server) WS(w http.ResponseWriter, r *http.Request) {
 	<-bc.Done
 
 	// Notify worker to clean session
-	wc.Send(cws.WSPacket{
-		ID:        "terminateSession",
-		SessionID: sessionID,
-	}, nil)
+	wc.Send(api.TerminateSessionPacket(sessionID), nil)
 
 	// WorkerClient become available again
 	wc.IsAvailable = true

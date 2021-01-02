@@ -36,7 +36,7 @@ const rtcp = (() => {
             inputChannel.onclose = () => log.debug('[rtcp] the input channel has closed');
         }
 
-        addVoiceStream(connection)
+        // addVoiceStream(connection)
 
         connection.oniceconnectionstatechange = ice.onIceConnectionStateChange;
         connection.onicegatheringstatechange = ice.onIceStateChange;
@@ -45,6 +45,10 @@ const rtcp = (() => {
             mediaStream.addTrack(event.track);
         }
 
+        socket.send({
+            'id': 'init_webrtc',
+            'data': JSON.stringify({'is_mobile': env.isMobileDevice()}),
+        });
     };
 
     async function addVoiceStream(connection) {
@@ -64,16 +68,11 @@ const rtcp = (() => {
 
         } finally {
             socket.send({
-                'id': 'initwebrtc',
+                'id': 'init_webrtc',
                 'data': JSON.stringify({'is_mobile': env.isMobileDevice()}),
             });
         }
     }
-
-    const popup = (msg) => {
-        popupBox.html(msg);
-        popupBox.fadeIn().delay(0).fadeOut();
-    };
 
     const ice = (() => {
         let isGatheringDone = false;
@@ -89,7 +88,7 @@ const rtcp = (() => {
                     candidate = JSON.stringify(event.candidate);
                     log.info(`[rtcp] got ice candidate: ${candidate}`);
                     socket.send({
-                        'id': 'candidate',
+                        'id': 'ice_candidate',
                         'data': btoa(candidate),
                     })
                 }

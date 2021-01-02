@@ -73,7 +73,7 @@ func (h *Handler) Run() {
 
 		h.oClient = conn
 		go h.oClient.Heartbeat()
-		h.RouteCoordinator()
+		h.routes()
 		h.oClient.Listen()
 		// If cannot listen, reconnect to coordinator
 	}

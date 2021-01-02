@@ -3,9 +3,10 @@ package api
 import "github.com/giongto35/cloud-game/v2/pkg/cws"
 
 const (
-	ServerId      = "server_id"
-	SignalReady   = "signal_ready"
-	ConfPushRoute = "conf_push"
+	ServerId         = "server_id"
+	SignalReady      = "signal_ready"
+	ConfPushRoute    = "conf_push"
+	TerminateSession = "terminateSession"
 )
 
 type ConfPushCall struct {
@@ -17,3 +18,6 @@ func (packet *ConfPushCall) To() (string, error)    { return to(packet) }
 
 func ServerIdPacket(id string) cws.WSPacket        { return cws.WSPacket{ID: ServerId, Data: id} }
 func ConfigRequestPacket(conf string) cws.WSPacket { return cws.WSPacket{Data: conf} }
+func TerminateSessionPacket(sessionId string) cws.WSPacket {
+	return cws.WSPacket{ID: TerminateSession, SessionID: sessionId}
+}
