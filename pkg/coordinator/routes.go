@@ -1,8 +1,6 @@
 package coordinator
 
-import (
-	"github.com/giongto35/cloud-game/v2/pkg/cws/api"
-)
+import "github.com/giongto35/cloud-game/v2/pkg/cws/api"
 
 // workerRoutes adds all worker request routes.
 func (o *Server) workerRoutes(wc *WorkerClient) {

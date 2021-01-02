@@ -3,13 +3,16 @@ package coordinator
 import (
 	"log"
 
+	"github.com/giongto35/cloud-game/v2/pkg/config/worker"
 	"github.com/giongto35/cloud-game/v2/pkg/cws"
 	"github.com/giongto35/cloud-game/v2/pkg/cws/api"
 )
 
 func (wc *WorkerClient) handleConfigRequest() cws.PacketHandler {
 	return func(resp cws.WSPacket) cws.WSPacket {
-		return api.ConfigRequestPacket("lol")
+		// try to load worker config
+		conf := worker.NewConfig()
+		return api.ConfigRequestPacket(conf.Serialize())
 	}
 }
 

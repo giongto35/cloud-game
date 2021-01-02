@@ -69,7 +69,7 @@ func (h *Handler) Run() {
 			time.Sleep(time.Second)
 			continue
 		}
-		log.Printf("[worker] Connected to %v", conn)
+		log.Printf("[worker] connected to: %v", conf.CoordinatorAddress)
 
 		h.oClient = conn
 		go h.oClient.Heartbeat()
@@ -80,9 +80,11 @@ func (h *Handler) Run() {
 }
 
 func (h *Handler) RequestConfig() {
-	log.Printf("[worker] !!!!!")
+	log.Printf("[worker] asking for a config...")
 	response := h.oClient.SyncSend(api.ConfigPacket())
-	log.Printf("[worker] got %v", response.Data)
+	conf := worker.EmptyConfig()
+	conf.Deserialize([]byte(response.Data))
+	log.Printf("[worker] pulled config: %+v", conf)
 }
 
 func (h *Handler) Prepare() {

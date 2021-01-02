@@ -8,8 +8,6 @@ func (h *Handler) routes() {
 	}
 
 	h.oClient.Receive(api.ServerId, h.handleServerId())
-	h.oClient.Receive(api.SignalReady, h.handleSignalReady())
-	h.oClient.Receive(api.ConfPushRoute, h.handleConfPush())
 	h.oClient.Receive(api.TerminateSession, h.handleTerminateSession())
 	h.oClient.Receive(api.InitWebrtc, h.handleInitWebrtc())
 	h.oClient.Receive(api.Answer, h.handleAnswer())

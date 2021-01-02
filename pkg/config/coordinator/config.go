@@ -21,9 +21,7 @@ type Config struct {
 	}
 	Emulator    emulator.Emulator
 	Environment shared.Environment
-	Webrtc      struct {
-		IceServers []webrtcConfig.IceServer
-	}
+	Webrtc      webrtcConfig.Webrtc
 }
 
 // allows custom config path

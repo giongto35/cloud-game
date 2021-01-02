@@ -26,11 +26,9 @@ func NewBrowserClient(c *websocket.Conn, browserID string) *BrowserClient {
 
 // Register new log
 func (bc *BrowserClient) Printf(format string, args ...interface{}) {
-	newFmt := fmt.Sprintf("Browser %s] %s", bc.SessionID, format)
-	log.Printf(newFmt, args...)
+	log.Printf(fmt.Sprintf("Browser %s] %s", bc.SessionID, format), args...)
 }
 
 func (bc *BrowserClient) Println(args ...interface{}) {
-	msg := fmt.Sprintf("Browser %s] %s", bc.SessionID, fmt.Sprint(args...))
-	log.Println(msg)
+	log.Println(fmt.Sprintf("Browser %s] %s", bc.SessionID, fmt.Sprint(args...)))
 }

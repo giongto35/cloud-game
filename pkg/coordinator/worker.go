@@ -30,13 +30,10 @@ func NewWorkerClient(c *websocket.Conn, workerID string) *WorkerClient {
 	}
 }
 
-// Register new log
 func (wc *WorkerClient) Printf(format string, args ...interface{}) {
-	newFmt := fmt.Sprintf("Worker %s] %s", wc.WorkerID, format)
-	log.Printf(newFmt, args...)
+	log.Printf(fmt.Sprintf("Worker %s] %s", wc.WorkerID, format), args...)
 }
 
 func (wc *WorkerClient) Println(args ...interface{}) {
-	msg := fmt.Sprintf("Worker %s] %s", wc.WorkerID, fmt.Sprint(args...))
-	log.Println(msg)
+	log.Println(fmt.Sprintf("Worker %s] %s", wc.WorkerID, fmt.Sprint(args...)))
 }
