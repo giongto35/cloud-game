@@ -12,6 +12,7 @@ import (
 
 	"github.com/giongto35/cloud-game/v2/pkg/config/coordinator"
 	"github.com/giongto35/cloud-game/v2/pkg/cws"
+	"github.com/giongto35/cloud-game/v2/pkg/cws/api"
 	"github.com/giongto35/cloud-game/v2/pkg/environment"
 	"github.com/giongto35/cloud-game/v2/pkg/games"
 	"github.com/giongto35/cloud-game/v2/pkg/util"
@@ -63,7 +64,8 @@ func (o *Server) GetWeb(w http.ResponseWriter, r *http.Request) {
 	tmpl.Execute(w, struct{}{})
 }
 
-// getPingServer returns the server for latency check of a zone. In latency check to find best worker step, we use this server to find the closest worker.
+// getPingServer returns the server for latency check of a zone.
+// In latency check to find best worker step, we use this server to find the closest worker.
 func (o *Server) getPingServer(zone string) string {
 	if o.cfg.Coordinator.PingServer != "" {
 		return fmt.Sprintf("%s/echo", o.cfg.Coordinator.PingServer)
@@ -73,8 +75,6 @@ func (o *Server) getPingServer(zone string) string {
 	if mode.AnyOf(environment.Production, environment.Staging) {
 		return fmt.Sprintf(pingServerTemp, zone, o.cfg.Coordinator.PublicDomain)
 	}
-
-	// If not Prod or Staging, return dev environment
 	return devPingServer
 }
 
@@ -137,20 +137,13 @@ func (o *Server) WSO(w http.ResponseWriter, r *http.Request) {
 	wc.Zone = zone
 	wc.PingServer = pingServer
 
-	// Eveything is cool
 	// Attach to Server instance with workerID, add defer
 	o.workerClients[workerID] = wc
 	defer o.cleanWorker(wc, workerID)
 
-	// Sendback the ID to worker
-	// TODO: do we need this packet?
-	wc.Send(cws.WSPacket{
-		ID:   "serverID",
-		Data: workerID,
-	}, nil)
+	wc.Send(api.ServerIdPacket(workerID), nil)
 
-	// Add receiver callbacks, and listen
-	o.RouteWorker(wc)
+	o.workerRoutes(wc)
 	wc.Listen()
 }
 
@@ -233,7 +226,7 @@ func (o *Server) WS(w http.ResponseWriter, r *http.Request) {
 	defer o.cleanBrowser(bc, sessionID)
 
 	// Routing browserClient message
-	o.RouteBrowser(bc)
+	o.useragentRoutes(bc)
 
 	bc.Send(cws.WSPacket{
 		ID:   "init",
@@ -244,10 +237,7 @@ func (o *Server) WS(w http.ResponseWriter, r *http.Request) {
 	<-bc.Done
 
 	// Notify worker to clean session
-	wc.Send(cws.WSPacket{
-		ID:        "terminateSession",
-		SessionID: sessionID,
-	}, nil)
+	wc.Send(api.TerminateSessionPacket(sessionID), nil)
 
 	// WorkerClient become available again
 	wc.IsAvailable = true

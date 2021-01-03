@@ -61,7 +61,9 @@ func GetEmulatorMock(room string, system string) *EmulatorMock {
 	configPath := rootPath + "configs/"
 
 	var conf worker.Config
-	config.LoadConfig(&conf, configPath)
+	if err := config.LoadConfig(&conf, configPath); err != nil {
+		panic(err)
+	}
 
 	meta := conf.Emulator.GetLibretroCoreConfig(system)
 

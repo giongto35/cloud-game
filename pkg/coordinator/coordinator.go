@@ -33,7 +33,7 @@ func New(ctx context.Context, cfg coordinator.Config) *Coordinator {
 		ctx: ctx,
 		cfg: cfg,
 
-		monitoringServer: monitoring.NewServerMonitoring(cfg.Coordinator.Monitoring),
+		monitoringServer: monitoring.NewServerMonitoring(cfg.Coordinator.Monitoring, "cord"),
 	}
 }
 

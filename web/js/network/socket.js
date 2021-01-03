@@ -63,7 +63,7 @@ const socket = (() => {
                     // this is offer from worker
                     event.pub(MEDIA_STREAM_SDP_AVAILABLE, {sdp: data.data});
                     break;
-                case 'candidate':
+                case 'ice_candidate':
                     event.pub(MEDIA_STREAM_CANDIDATE_ADD, {candidate: data.data});
                     break;
                 case 'heartbeat':
@@ -78,7 +78,7 @@ const socket = (() => {
                 case 'load':
                     event.pub(GAME_LOADED);
                     break;
-                case 'playerIdx':
+                case 'player_index':
                     event.pub(GAME_PLAYER_IDX, data.data);
                     break;
                 case 'checkLatency':
@@ -103,7 +103,7 @@ const socket = (() => {
     });
     const saveGame = () => send({"id": "save", "data": ""});
     const loadGame = () => send({"id": "load", "data": ""});
-    const updatePlayerIndex = (idx) => send({"id": "playerIdx", "data": idx.toString()});
+    const updatePlayerIndex = (idx) => send({"id": "player_index", "data": idx.toString()});
     const startGame = (gameName, isMobile, roomId, playerIndex) => send({
         "id": "start",
         "data": JSON.stringify({
