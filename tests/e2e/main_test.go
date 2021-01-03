@@ -85,7 +85,7 @@ package e2e
 //
 // 	fmt.Println("Sending offer...")
 // 	client.Send(cws.WSPacket{
-// 		ID:   "initwebrtc",
+// 		ID:   "init_webrtc",
 // 		Data: gamertc.Encode(offer),
 // 	}, nil)
 // 	fmt.Println("Waiting sdp...")
@@ -127,7 +127,7 @@ package e2e
 // 		}
 // 		log.Println("return offer")
 // 		return cws.WSPacket{
-// 			ID:   "initwebrtc",
+// 			ID:   "init_webrtc",
 // 			Data: gamertc.Encode(offer),
 // 		}
 // 	})

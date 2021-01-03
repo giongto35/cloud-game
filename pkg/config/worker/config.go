@@ -1,12 +1,14 @@
 package worker
 
 import (
+	"encoding/json"
+
 	"github.com/giongto35/cloud-game/v2/pkg/config"
 	"github.com/giongto35/cloud-game/v2/pkg/config/emulator"
 	"github.com/giongto35/cloud-game/v2/pkg/config/encoder"
+	"github.com/giongto35/cloud-game/v2/pkg/config/monitoring"
 	"github.com/giongto35/cloud-game/v2/pkg/config/shared"
 	webrtcConfig "github.com/giongto35/cloud-game/v2/pkg/config/webrtc"
-	"github.com/giongto35/cloud-game/v2/pkg/monitoring"
 	flag "github.com/spf13/pflag"
 )
 
@@ -23,13 +25,21 @@ type Config struct {
 		Server shared.Server
 	}
 	Webrtc webrtcConfig.Webrtc
+	Loaded bool
 }
 
 // allows custom config path
 var configPath string
 
 func NewConfig() (conf Config) {
-	config.LoadConfig(&conf, configPath)
+	if err := config.LoadConfig(&conf, configPath); err == nil {
+		conf.Loaded = true
+	}
+	return
+}
+
+func EmptyConfig() (conf Config) {
+	conf.Loaded = false
 	return
 }
 
@@ -41,6 +51,18 @@ func (c *Config) ParseFlags() {
 	c.Worker.Server.WithFlags()
 	flag.IntVar(&c.Worker.Monitoring.Port, "monitoring.port", c.Worker.Monitoring.Port, "Monitoring server port")
 	flag.StringVar(&c.Worker.Network.CoordinatorAddress, "coordinatorhost", c.Worker.Network.CoordinatorAddress, "Worker URL to connect")
+	flag.StringVar(&c.Worker.Network.Zone, "zone", c.Worker.Network.Zone, "Worker network zone (us, eu, etc.)")
 	flag.StringVarP(&configPath, "conf", "c", configPath, "Set custom configuration file path")
 	flag.Parse()
+}
+
+func (c *Config) Serialize() []byte {
+	res, _ := json.Marshal(c)
+	return res
+}
+
+func (c *Config) Deserialize(data []byte) {
+	if err := json.Unmarshal(data, c); err == nil {
+		c.Loaded = true
+	}
 }

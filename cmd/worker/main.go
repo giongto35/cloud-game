@@ -16,9 +16,11 @@ import (
 	flag "github.com/spf13/pflag"
 )
 
-func run() {
+func init() {
 	rand.Seed(time.Now().UTC().UnixNano())
+}
 
+func run() {
 	conf := config.NewConfig()
 	flag.CommandLine.AddGoFlagSet(goflag.CommandLine)
 	conf.ParseFlags()
@@ -28,20 +30,17 @@ func run() {
 
 	ctx, cancelCtx := context.WithCancel(context.Background())
 
-	glog.Infof("Initializing worker server")
-	glog.V(4).Infof("Worker configs %v", conf)
-	o := worker.New(ctx, conf)
-	if err := o.Run(); err != nil {
-		glog.Errorf("Failed to run worker, reason %v", err)
-		os.Exit(1)
-	}
+	glog.V(4).Info("[worker] Initialization")
+	glog.V(4).Infof("[worker] Local configuration %+v", conf)
+	wrk := worker.New(ctx, conf)
+	wrk.Run()
 
 	stop := make(chan os.Signal, 1)
 	signal.Notify(stop, os.Interrupt)
 	select {
 	case <-stop:
-		glog.Infoln("Received SIGTERM, Quiting Worker")
-		o.Shutdown()
+		glog.V(4).Info("[worker] Shutting down")
+		wrk.Shutdown()
 		cancelCtx()
 	}
 }

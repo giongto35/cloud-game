@@ -3,10 +3,10 @@ package coordinator
 import (
 	"github.com/giongto35/cloud-game/v2/pkg/config"
 	"github.com/giongto35/cloud-game/v2/pkg/config/emulator"
+	"github.com/giongto35/cloud-game/v2/pkg/config/monitoring"
 	"github.com/giongto35/cloud-game/v2/pkg/config/shared"
 	webrtcConfig "github.com/giongto35/cloud-game/v2/pkg/config/webrtc"
 	"github.com/giongto35/cloud-game/v2/pkg/games"
-	"github.com/giongto35/cloud-game/v2/pkg/monitoring"
 	flag "github.com/spf13/pflag"
 )
 
@@ -21,16 +21,17 @@ type Config struct {
 	}
 	Emulator    emulator.Emulator
 	Environment shared.Environment
-	Webrtc      struct {
-		IceServers []webrtcConfig.IceServer
-	}
+	Webrtc      webrtcConfig.Webrtc
 }
 
 // allows custom config path
 var configPath string
 
 func NewConfig() (conf Config) {
-	config.LoadConfig(&conf, configPath)
+	err := config.LoadConfig(&conf, configPath)
+	if err != nil {
+		panic(err)
+	}
 	return
 }
 
