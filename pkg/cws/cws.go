@@ -11,33 +11,37 @@ import (
 	"github.com/gorilla/websocket"
 )
 
-type Client struct {
-	id string
+type (
+	Client struct {
+		id string
 
-	conn *websocket.Conn
+		conn *websocket.Conn
 
-	sendLock sync.Mutex
-	// sendCallback is callback based on packetID
-	sendCallback     map[string]func(req WSPacket)
-	sendCallbackLock sync.Mutex
-	// recvCallback is callback when receive based on ID of the packet
-	recvCallback map[string]func(req WSPacket)
+		sendLock sync.Mutex
+		// sendCallback is callback based on packetID
+		sendCallback     map[string]func(req WSPacket)
+		sendCallbackLock sync.Mutex
+		// recvCallback is callback when receive based on ID of the packet
+		recvCallback map[string]func(req WSPacket)
 
-	Done chan struct{}
-}
+		Done chan struct{}
+	}
 
-type WSPacket struct {
-	ID string `json:"id"`
-	// TODO: Make Data generic: map[string]interface{} for more usecases
-	Data string `json:"data"`
+	WSPacket struct {
+		ID string `json:"id"`
+		// TODO: Make Data generic: map[string]interface{} for more usecases
+		Data string `json:"data"`
 
-	RoomID      string `json:"room_id"`
-	PlayerIndex int    `json:"player_index"`
+		RoomID      string `json:"room_id"`
+		PlayerIndex int    `json:"player_index"`
 
-	PacketID string `json:"packet_id"`
-	// Globally ID of a browser session
-	SessionID string `json:"session_id"`
-}
+		PacketID string `json:"packet_id"`
+		// Globally ID of a browser session
+		SessionID string `json:"session_id"`
+	}
+
+	PacketHandler func(resp WSPacket) (req WSPacket)
+)
 
 var EmptyPacket = WSPacket{}
 
@@ -93,7 +97,7 @@ func (c *Client) Send(request WSPacket, callback func(response WSPacket)) {
 }
 
 // Receive receive and response back
-func (c *Client) Receive(id string, f func(response WSPacket) (request WSPacket)) {
+func (c *Client) Receive(id string, f PacketHandler) {
 	c.recvCallback[id] = func(response WSPacket) {
 		defer func() {
 			if err := recover(); err != nil {
@@ -161,6 +165,7 @@ func (c *Client) Heartbeat() {
 			return
 		default:
 		}
+		// !to resolve cycle deps
 		c.Send(WSPacket{ID: "heartbeat"}, nil)
 	}
 }

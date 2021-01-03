@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/giongto35/cloud-game/v2/pkg/config/worker"
+	"github.com/giongto35/cloud-game/v2/pkg/cws/api"
 	"github.com/giongto35/cloud-game/v2/pkg/emulator/libretro/manager/remotehttp"
 	"github.com/giongto35/cloud-game/v2/pkg/encoder"
 	"github.com/giongto35/cloud-game/v2/pkg/environment"
@@ -37,10 +38,12 @@ type Handler struct {
 	onlineStorage *storage.Client
 	// sessions handles all sessions server is handler (key is sessionID)
 	sessions map[string]*Session
+
+	w *Worker
 }
 
 // NewHandler returns a new server
-func NewHandler(cfg worker.Config) *Handler {
+func NewHandler(cfg worker.Config, wrk *Worker) *Handler {
 	// Create offline storage folder
 	createOfflineStorage()
 
@@ -52,27 +55,36 @@ func NewHandler(cfg worker.Config) *Handler {
 		coordinatorHost: cfg.Worker.Network.CoordinatorAddress,
 		cfg:             cfg,
 		onlineStorage:   onlineStorage,
+		w:               wrk,
 	}
 }
 
 // Run starts a Handler running logic
 func (h *Handler) Run() {
+	conf := h.cfg.Worker.Network
 	for {
-		conf := h.cfg.Worker.Network
-		oClient, err := setupCoordinatorConnection(conf.CoordinatorAddress, conf.Zone, h.cfg)
+		conn, err := setupCoordinatorConnection(conf.CoordinatorAddress, conf.Zone, h.cfg)
 		if err != nil {
 			log.Printf("Cannot connect to coordinator. %v Retrying...", err)
 			time.Sleep(time.Second)
 			continue
 		}
+		log.Printf("[worker] connected to: %v", conf.CoordinatorAddress)
 
-		h.oClient = oClient
-		log.Println("Connected to coordinator successfully.", oClient, err)
+		h.oClient = conn
 		go h.oClient.Heartbeat()
-		h.RouteCoordinator()
+		h.routes()
 		h.oClient.Listen()
 		// If cannot listen, reconnect to coordinator
 	}
+}
+
+func (h *Handler) RequestConfig() {
+	log.Printf("[worker] asking for a config...")
+	response := h.oClient.SyncSend(api.ConfigPacket())
+	conf := worker.EmptyConfig()
+	conf.Deserialize([]byte(response.Data))
+	log.Printf("[worker] pulled config: %+v", conf)
 }
 
 func (h *Handler) Prepare() {
