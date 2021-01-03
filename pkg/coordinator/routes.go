@@ -4,7 +4,7 @@ import "github.com/giongto35/cloud-game/v2/pkg/cws/api"
 
 // workerRoutes adds all worker request routes.
 func (o *Server) workerRoutes(wc *WorkerClient) {
-	if o == nil {
+	if wc == nil {
 		return
 	}
 	wc.Receive(api.ConfigRequest, wc.handleConfigRequest())
@@ -17,10 +17,9 @@ func (o *Server) workerRoutes(wc *WorkerClient) {
 
 // useragentRoutes adds all useragent (browser) request routes.
 func (o *Server) useragentRoutes(bc *BrowserClient) {
-	if o == nil {
+	if bc == nil {
 		return
 	}
-
 	bc.Receive(api.Heartbeat, bc.handleHeartbeat())
 	bc.Receive(api.InitWebrtc, bc.handleInitWebrtc(o))
 	bc.Receive(api.Answer, bc.handleAnswer(o))
