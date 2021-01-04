@@ -3,6 +3,7 @@ package room
 import (
 	"fmt"
 	"log"
+	"time"
 
 	encoderConfig "github.com/giongto35/cloud-game/v2/pkg/config/encoder"
 	"github.com/giongto35/cloud-game/v2/pkg/encoder"
@@ -120,7 +121,7 @@ func (r *Room) startAudio(sampleRate int, audio encoderConfig.Audio) {
 }
 
 // startVideo processes imageChannel images with an encoder (codec) then pushes the result to WebRTC.
-func (r *Room) startVideo(width, height int, videoCodec encoder.VideoCodec) {
+func (r *Room) startVideo(width, height int, videoCodec encoder.VideoCodec, fps float64) {
 	var enc encoder.Encoder
 	var err error
 
@@ -144,6 +145,7 @@ func (r *Room) startVideo(width, height int, videoCodec encoder.VideoCodec) {
 
 	einput := enc.GetInputChan()
 	eoutput := enc.GetOutputChan()
+	duration := time.Duration(float64(time.Second) / fps)
 
 	// send screenshot
 	go func() {
@@ -157,12 +159,13 @@ func (r *Room) startVideo(width, height int, videoCodec encoder.VideoCodec) {
 		for data := range eoutput {
 			// TODO: r.rtcSessions is rarely updated. Lock will hold down perf
 			for _, webRTC := range r.rtcSessions {
+				if !webRTC.IsConnected() {
+					continue
+				}
 				// encode frame
 				// fanout imageChannel
-				if webRTC.IsConnected() {
-					// NOTE: can block here
-					webRTC.ImageChannel <- webrtc.WebFrame{Data: data.Data, Timestamp: data.Timestamp}
-				}
+				// NOTE: can block here
+				webRTC.ImageChannel <- webrtc.WebFrame{Data: data.Data, Duration: duration, Timestamp: data.Timestamp}
 			}
 		}
 	}()

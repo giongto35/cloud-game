@@ -20,14 +20,10 @@ import (
 // TODO: double check if no need TURN server here
 var webrtcconfig = webrtc.Configuration{ICEServers: []webrtc.ICEServer{{URLs: []string{"stun:stun.l.google.com:19302"}}}}
 
-type InputDataPair struct {
-	data int
-	time time.Time
-}
-
 type WebFrame struct {
 	Data      []byte
 	Timestamp uint32
+	Duration  time.Duration
 }
 
 // WebRTC connection
@@ -58,6 +54,7 @@ type WebRTC struct {
 // Game Meta
 type GameMeta struct {
 	PlayerIndex int
+	Fps         float64
 }
 
 type OnIceCallback func(candidate string)
@@ -330,25 +327,15 @@ func (w *WebRTC) startStreaming(vp8Track *webrtc.TrackLocalStaticSample, opusTra
 		}()
 
 		for data := range w.ImageChannel {
-
 			err := vp8Track.WriteSample(media.Sample{
 				Data:      data.Data,
-				Duration: time.Second / 60,
+				Duration:  data.Duration,
 				Timestamp: time.Unix(int64(data.Timestamp), 0),
 			})
-				if err != nil {
-					log.Println("Warn: Err write sample: ", err)
-					break
-				}
-			//packets := vp8Track.Packetizer().Packetize(data.Data, 1)
-			//for _, p := range packets {
-			//	p.Header.Timestamp = data.Timestamp
-			//	err := vp8Track.WriteRTP(p)
-			//	if err != nil {
-			//		log.Println("Warn: Err write sample: ", err)
-			//		break
-			//	}
-			//}
+			if err != nil {
+				log.Println("Warn: Err write sample: ", err)
+				break
+			}
 		}
 	}()
 
@@ -362,13 +349,13 @@ func (w *WebRTC) startStreaming(vp8Track *webrtc.TrackLocalStaticSample, opusTra
 		}()
 
 		//opusSamples := uint32(w.cfg.Encoder.Audio.GetFrameDuration() / w.cfg.Encoder.Audio.Channels)
-		audioDuration := w.cfg.Encoder.Audio.Frame
+		audioDuration := time.Duration(w.cfg.Encoder.Audio.Frame) * time.Millisecond
 
 		for data := range w.AudioChannel {
 			if !w.isConnected {
 				return
 			}
-			err := opusTrack.WriteSample(media.Sample{Data: data, Duration: time.Duration(audioDuration) * time.Millisecond/*Samples: opusSamples*/})
+			err := opusTrack.WriteSample(media.Sample{Data: data, Duration: audioDuration})
 			if err != nil {
 				log.Println("Warn: Err write sample: ", err)
 			}
@@ -376,24 +363,25 @@ func (w *WebRTC) startStreaming(vp8Track *webrtc.TrackLocalStaticSample, opusTra
 	}()
 
 	// send voice
-	//go func() {
-	//	defer func() {
-	//		if r := recover(); r != nil {
-	//			fmt.Println("Recovered from err", r)
-	//			log.Println(debug.Stack())
-	//		}
-	//	}()
-	//
-	//	for data := range w.VoiceOutChannel {
-	//		if !w.isConnected {
-	//			return
-	//		}
-	//		_, err := opusTrack.Write(data)
-	//		if err != nil {
-	//			log.Println("Warn: Err write sample: ", err)
-	//		}
-	//	}
-	//}()
+	go func() {
+		defer func() {
+			if r := recover(); r != nil {
+				fmt.Println("Recovered from err", r)
+				log.Println(debug.Stack())
+			}
+		}()
+
+		for data := range w.VoiceOutChannel {
+			if !w.isConnected {
+				return
+			}
+			// !to pass duration from the input
+			err := opusTrack.WriteSample(media.Sample{Data: data})
+			if err != nil {
+				log.Println("Warn: Err write sample: ", err)
+			}
+		}
+	}()
 }
 
 func (w *WebRTC) calculateFPS() int {
