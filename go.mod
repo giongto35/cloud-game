@@ -20,15 +20,15 @@ require (
 	github.com/mitchellh/mapstructure v1.4.0 // indirect
 	github.com/pelletier/go-toml v1.8.1 // indirect
 	github.com/pion/rtp v1.6.2
-	github.com/pion/webrtc/v3 v3.0.2
+	github.com/pion/webrtc/v3 v3.0.3
 	github.com/prometheus/client_golang v1.9.0
 	github.com/spf13/pflag v1.0.5
-	github.com/veandco/go-sdl2 v0.4.4
+	github.com/veandco/go-sdl2 v0.4.5
 	golang.org/x/crypto v0.0.0-20201221181555-eec23a3978ad
 	golang.org/x/image v0.0.0-20201208152932-35266b937fa6
 	golang.org/x/net v0.0.0-20201224014010-6772e930b67b // indirect
 	golang.org/x/sys v0.0.0-20201231184435-2d18734c6014 // indirect
-	golang.org/x/tools v0.0.0-20210102185154-773b96fafca2 // indirect
+	golang.org/x/tools v0.0.0-20210104081019-d8d6ddbec6ee // indirect
 	google.golang.org/genproto v0.0.0-20201214200347-8c77b98c765d // indirect
 	gopkg.in/hraban/opus.v2 v2.0.0-20201025103112-d779bb1cc5a2
 	gopkg.in/yaml.v2 v2.4.0 // indirect

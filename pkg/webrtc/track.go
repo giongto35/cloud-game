@@ -10,6 +10,9 @@ import (
 	"github.com/pion/webrtc/v3/pkg/media"
 )
 
+// CustomTrackSample is used just for adding custom timestamps
+// into outgoing packets, since packetizer is not accessible anymore.
+// Use webrtc.TrackLocalStaticSample instead if you use constant rate streams.
 type CustomTrackSample struct {
 	packetizer rtp.Packetizer
 	rtpTrack   *webrtc.TrackLocalStaticRTP

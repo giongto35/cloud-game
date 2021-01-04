@@ -213,13 +213,8 @@ func NewRoom(roomID string, game games.GameMetadata, videoCodec encoder.VideoCod
 
 		room.director.SetViewport(encoderW, encoderH)
 
-		fps := gameMeta.Fps
-		if fps <= 0.0 {
-			fps = 60.0
-		}
-
 		// Spawn video and audio encoding for webRTC
-		go room.startVideo(encoderW, encoderH, videoCodec, fps)
+		go room.startVideo(encoderW, encoderH, videoCodec)
 		go room.startAudio(gameMeta.AudioSampleRate, cfg.Encoder.Audio)
 		go room.startVoice()
 		room.director.Start()

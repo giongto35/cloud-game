@@ -23,7 +23,6 @@ var webrtcconfig = webrtc.Configuration{ICEServers: []webrtc.ICEServer{{URLs: []
 type WebFrame struct {
 	Data      []byte
 	Timestamp uint32
-	Duration  time.Duration
 }
 
 // WebRTC connection
