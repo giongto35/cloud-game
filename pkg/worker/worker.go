@@ -49,7 +49,7 @@ func (wrk *Worker) init() {
 }
 
 func (wrk *Worker) startModules() {
-	glog.Info(wrk.servers)
+	glog.Info("[worker] active modules: ", wrk.servers)
 	for _, s := range wrk.servers {
 		s := s
 		go func() {
