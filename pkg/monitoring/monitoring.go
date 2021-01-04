@@ -73,6 +73,10 @@ func (sm *ServerMonitoring) Shutdown(ctx context.Context) error {
 	return sm.server.Shutdown(ctx)
 }
 
+func (sm *ServerMonitoring) String() string {
+	return fmt.Sprintf("monitoring::%s:%d", sm.cfg.URLPrefix, sm.cfg.Port)
+}
+
 func validate(conf *monitoring.ServerMonitoringConfig) monitoring.ServerMonitoringConfig {
 	if conf.Port == 0 {
 		conf.Port = 6365
