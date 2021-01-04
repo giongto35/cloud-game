@@ -112,7 +112,7 @@ func (w *WebRTC) StartClient(isMobile bool, iceCB OnIceCallback) (string, error)
 		}
 	}()
 	var err error
-	var videoTrack *webrtc.TrackLocalStaticSample
+	var videoTrack *CustomTrackSample
 
 	// reset client
 	if w.isConnected {
@@ -133,7 +133,7 @@ func (w *WebRTC) StartClient(isMobile bool, iceCB OnIceCallback) (string, error)
 	} else {
 		codec = webrtc.RTPCodecCapability{MimeType: "video/vp8"}
 	}
-	videoTrack, err = webrtc.NewTrackLocalStaticSample(codec, "video", "game-video")
+	videoTrack, err = NewCustomTrackSample(codec, "video", "game-video")
 	if err != nil {
 		return "", err
 	}
@@ -315,7 +315,7 @@ func (w *WebRTC) IsConnected() bool {
 	return w.isConnected
 }
 
-func (w *WebRTC) startStreaming(vp8Track *webrtc.TrackLocalStaticSample, opusTrack *webrtc.TrackLocalStaticSample) {
+func (w *WebRTC) startStreaming(vp8Track *CustomTrackSample, opusTrack *webrtc.TrackLocalStaticSample) {
 	log.Println("Start streaming")
 	// receive frame buffer
 	go func() {
@@ -327,11 +327,7 @@ func (w *WebRTC) startStreaming(vp8Track *webrtc.TrackLocalStaticSample, opusTra
 		}()
 
 		for data := range w.ImageChannel {
-			err := vp8Track.WriteSample(media.Sample{
-				Data:      data.Data,
-				Duration:  data.Duration,
-				Timestamp: time.Unix(int64(data.Timestamp), 0),
-			})
+			err := vp8Track.WriteSampleWithTimestamp(media.Sample{Data: data.Data}, data.Timestamp)
 			if err != nil {
 				log.Println("Warn: Err write sample: ", err)
 				break
