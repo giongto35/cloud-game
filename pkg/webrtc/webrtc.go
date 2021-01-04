@@ -53,7 +53,6 @@ type WebRTC struct {
 // Game Meta
 type GameMeta struct {
 	PlayerIndex int
-	Fps         float64
 }
 
 type OnIceCallback func(candidate string)
