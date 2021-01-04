@@ -157,12 +157,13 @@ func (r *Room) startVideo(width, height int, videoCodec encoder.VideoCodec) {
 		for data := range eoutput {
 			// TODO: r.rtcSessions is rarely updated. Lock will hold down perf
 			for _, webRTC := range r.rtcSessions {
+				if !webRTC.IsConnected() {
+					continue
+				}
 				// encode frame
 				// fanout imageChannel
-				if webRTC.IsConnected() {
-					// NOTE: can block here
-					webRTC.ImageChannel <- webrtc.WebFrame{Data: data.Data, Timestamp: data.Timestamp}
-				}
+				// NOTE: can block here
+				webRTC.ImageChannel <- webrtc.WebFrame{Data: data.Data, Timestamp: data.Timestamp}
 			}
 		}
 	}()
