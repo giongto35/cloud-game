@@ -2,7 +2,6 @@ package webrtc
 
 import (
 	"strings"
-	"sync"
 
 	"github.com/pion/rtp"
 	"github.com/pion/rtp/codecs"
@@ -17,7 +16,6 @@ type CustomTrackSample struct {
 	packetizer rtp.Packetizer
 	rtpTrack   *webrtc.TrackLocalStaticRTP
 	clockRate  float64
-	mu         sync.RWMutex
 }
 
 func NewCustomTrackSample(c webrtc.RTPCodecCapability, id, streamID string) (*CustomTrackSample, error) {
@@ -42,9 +40,6 @@ func (s *CustomTrackSample) Bind(t webrtc.TrackLocalContext) (webrtc.RTPCodecPar
 	if err != nil {
 		return codec, err
 	}
-
-	s.mu.Lock()
-	defer s.mu.Unlock()
 
 	if s.packetizer != nil {
 		return codec, nil
@@ -72,10 +67,7 @@ func (s *CustomTrackSample) Unbind(t webrtc.TrackLocalContext) error {
 }
 
 func (s *CustomTrackSample) WriteSampleWithTimestamp(sample media.Sample, timestamp uint32) (err error) {
-	s.mu.RLock()
-	p := s.packetizer
-	clockRate := s.clockRate
-	s.mu.RUnlock()
+	p, clockRate := s.packetizer, s.clockRate
 
 	if p == nil {
 		return nil
