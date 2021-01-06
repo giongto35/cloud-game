@@ -11,30 +11,20 @@ import (
 	"github.com/giongto35/cloud-game/v2/pkg/emulator/libretro/core"
 	"github.com/giongto35/cloud-game/v2/pkg/emulator/libretro/manager"
 	"github.com/giongto35/cloud-game/v2/pkg/emulator/libretro/repo"
-	"github.com/giongto35/cloud-game/v2/pkg/emulator/libretro/repo/buildbot"
-	"github.com/giongto35/cloud-game/v2/pkg/emulator/libretro/repo/github"
-	"github.com/giongto35/cloud-game/v2/pkg/emulator/libretro/repo/raw"
 	"github.com/gofrs/flock"
 )
 
 type Manager struct {
 	manager.BasicManager
 
-	arch          core.ArchInfo
-	mainRepo      repo.Repository
-	secondaryRepo repo.Repository
-	client        downloader.Downloader
-	fmu           *flock.Flock
+	arch   core.ArchInfo
+	repo   repo.Repository
+	client downloader.Downloader
+	fmu    *flock.Flock
 }
 
 func NewRemoteHttpManager(conf emulator.LibretroConfig) Manager {
-	repoConfMain, repoConfSecond := conf.Cores.Repo.Main, conf.Cores.Repo.Secondary
-	mainRepo := Factory(repoConfMain.Type, repoConfMain.Url, repoConfMain.Compression, "buildbot")
-	var secondaryRepo repo.Repository
-	if repoConfSecond.Type != "" {
-		secondaryRepo = Factory(repoConfSecond.Type, repoConfSecond.Url, repoConfSecond.Compression, "")
-	}
-
+	repoConf := conf.Cores.Repo.Main
 	// used for synchronization of multiple process
 	fileLock := os.TempDir() + string(os.PathSeparator) + "cloud_game.lock"
 
@@ -47,17 +37,15 @@ func NewRemoteHttpManager(conf emulator.LibretroConfig) Manager {
 		BasicManager: manager.BasicManager{
 			Conf: conf,
 		},
-		arch:          arch,
-		mainRepo:      mainRepo,
-		secondaryRepo: secondaryRepo,
-		client:        downloader.NewDefaultDownloader(),
-		fmu:           flock.New(fileLock),
+		arch:   arch,
+		repo:   repo.New(repoConf.Type, repoConf.Url, repoConf.Compression, "buildbot"),
+		client: downloader.NewDefaultDownloader(),
+		fmu:    flock.New(fileLock),
 	}
 }
 
-func (m Manager) Sync() error {
+func (m *Manager) Sync() error {
 	declared := m.Conf.GetCores()
-	dir := m.Conf.GetCoresStorePath()
 
 	// IPC lock if multiple worker processes on the same machine
 	m.fmu.Lock()
@@ -66,44 +54,41 @@ func (m Manager) Sync() error {
 	installed := m.GetInstalled()
 	download := diff(declared, installed)
 
-	var failed []string
-	if len(download) > 0 {
-		log.Printf("Starting Libretro cores download: %v", strings.Join(download, ", "))
-		_, failed = m.client.Download(dir, m.getCoreUrls(download, m.mainRepo)...)
-	}
-	if len(failed) > 0 && m.secondaryRepo != nil {
-		log.Printf("Starting fallback Libretro cores download: %v", strings.Join(failed, ", "))
-		_, failed = m.client.Download(dir, m.getCoreUrls(failed, m.secondaryRepo)...)
+	_, failed := m.download(download)
+	if len(failed) > 0 {
+		log.Printf("[core-dl] error: unable to download some cores, trying 2nd repository")
+		conf := m.Conf.Cores.Repo.Secondary
+		if conf.Type != "" {
+			if fallback := repo.New(conf.Type, conf.Url, conf.Compression, ""); fallback != nil {
+				main := m.repo
+				m.setRepo(fallback)
+				_, failed = m.download(failed)
+				m.setRepo(main)
+			}
+		}
 	}
 
 	return nil
 }
 
-func (m Manager) getCoreUrls(names []string, repo repo.Repository) (urls []backend.Download) {
+func (m *Manager) getCoreUrls(names []string, repo repo.Repository) (urls []backend.Download) {
 	for _, c := range names {
-		urls = append(urls, backend.Download{
-			Key:     c,
-			Address: repo.GetCoreData(c, m.arch).Url,
-		})
+		urls = append(urls, backend.Download{Key: c, Address: repo.GetCoreUrl(c, m.arch)})
 	}
 	return
 }
 
-func Factory(kind string, url string, compression string, defaultRepo string) repo.Repository {
-	var repository repo.Repository
-	switch kind {
-	case "raw":
-		repository = raw.NewRawRepo(url)
-	case "github":
-		repository = github.NewGithubRepo(url, compression)
-	case "buildbot":
-		repository = buildbot.NewBuildbotRepo(url, compression)
-	default:
-		if defaultRepo != "" {
-			repository = Factory(defaultRepo, url, compression, "")
-		}
+func (m *Manager) setRepo(repo repo.Repository) {
+	m.repo = repo
+}
+
+func (m *Manager) download(cores []string) (succeeded []string, failed []string) {
+	if len(cores) > 0 && m.repo != nil {
+		dir := m.Conf.GetCoresStorePath()
+		log.Printf("[core-dl] <<< download: %v", strings.Join(cores, ", "))
+		_, failed = m.client.Download(dir, m.getCoreUrls(cores, m.repo)...)
 	}
-	return repository
+	return
 }
 
 // diff returns a list of not installed cores.

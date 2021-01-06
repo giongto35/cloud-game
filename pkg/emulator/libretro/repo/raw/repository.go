@@ -1,24 +1,18 @@
 package raw
 
-import (
-	"github.com/giongto35/cloud-game/v2/pkg/emulator/libretro/core"
-	"github.com/giongto35/cloud-game/v2/pkg/emulator/libretro/repo"
-)
+import "github.com/giongto35/cloud-game/v2/pkg/emulator/libretro/core"
 
 type Repo struct {
-	address     string
-	compression repo.CompressionType
+	Address     string
+	Compression string
 }
 
 // NewRawRepo defines a simple zip file containing
 // all the cores that will be extracted as is.
 func NewRawRepo(address string) Repo {
-	return Repo{
-		address:     address,
-		compression: "zip",
-	}
+	return Repo{Address: address, Compression: "zip"}
 }
 
-func (r Repo) GetCoreData(_ string, _ core.ArchInfo) repo.Data {
-	return repo.Data{Url: r.address, Compression: r.compression}
+func (r Repo) GetCoreUrl(_ string, _ core.ArchInfo) string {
+	return r.Address
 }
