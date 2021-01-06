@@ -29,7 +29,8 @@ FROM debian:10-slim
 ARG BUILD_PATH
 WORKDIR /usr/local/share/cloud-game
 
-RUN apt-get update && apt-get install -y \
+RUN apt-get update && apt-get install --no-install-recommends -y \
+    ca-certificates \
     libvpx5 \
     libopus0 \
     libopusfile0 \
