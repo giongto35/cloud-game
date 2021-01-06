@@ -1,9 +1,6 @@
 package remotehttp
 
 import (
-	"github.com/giongto35/cloud-game/v2/pkg/emulator/libretro/repo/buildbot"
-	"github.com/giongto35/cloud-game/v2/pkg/emulator/libretro/repo/github"
-	"github.com/giongto35/cloud-game/v2/pkg/emulator/libretro/repo/raw"
 	"log"
 	"os"
 	"strings"
@@ -14,6 +11,9 @@ import (
 	"github.com/giongto35/cloud-game/v2/pkg/emulator/libretro/core"
 	"github.com/giongto35/cloud-game/v2/pkg/emulator/libretro/manager"
 	"github.com/giongto35/cloud-game/v2/pkg/emulator/libretro/repo"
+	"github.com/giongto35/cloud-game/v2/pkg/emulator/libretro/repo/buildbot"
+	"github.com/giongto35/cloud-game/v2/pkg/emulator/libretro/repo/github"
+	"github.com/giongto35/cloud-game/v2/pkg/emulator/libretro/repo/raw"
 	"github.com/gofrs/flock"
 )
 
