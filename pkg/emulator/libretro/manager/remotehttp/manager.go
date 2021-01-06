@@ -60,10 +60,9 @@ func (m *Manager) Sync() error {
 		conf := m.Conf.Cores.Repo.Secondary
 		if conf.Type != "" {
 			if fallback := repo.New(conf.Type, conf.Url, conf.Compression, ""); fallback != nil {
-				main := m.repo
+				defer m.setRepo(m.repo)
 				m.setRepo(fallback)
 				_, failed = m.download(failed)
-				m.setRepo(main)
 			}
 		}
 	}
