@@ -73,7 +73,7 @@ func (m Manager) Sync() error {
 	}
 	if len(failed) > 0 && m.secondaryRepo != nil {
 		log.Printf("Starting fallback Libretro cores download: %v", strings.Join(failed, ", "))
-		_, failed = m.client.Download(dir, m.getCoreUrls(download, m.secondaryRepo)...)
+		_, failed = m.client.Download(dir, m.getCoreUrls(failed, m.secondaryRepo)...)
 	}
 
 	return nil

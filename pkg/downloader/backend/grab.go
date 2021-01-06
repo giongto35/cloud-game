@@ -32,14 +32,14 @@ func (d GrabDownloader) Request(dest string, urls ...Download) (ok []string, noo
 
 	// check each response
 	for resp := range d.client.DoBatch(d.concurrency, reqs...) {
-		key := resp.Request.Label
+		r := resp.Request
 		if err := resp.Err(); err != nil {
-			log.Printf("error: download [%v] failed: %v\n", key, err)
+			log.Printf("error: download [%s] %s failed: %v\n", r.Label, r.URL(), err)
 			if resp.HTTPResponse.StatusCode == 404 {
 				nook = append(nook, resp.Request.Label)
 			}
 		} else {
-			log.Printf("Downloaded [%v] [%s] -> %s\n", resp.HTTPResponse.Status, key, resp.Filename)
+			log.Printf("Downloaded [%v] [%s] -> %s\n", resp.HTTPResponse.Status, r.Label, resp.Filename)
 			ok = append(ok, resp.Filename)
 		}
 	}
