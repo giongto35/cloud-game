@@ -18,24 +18,29 @@ func NewGrabDownloader() GrabDownloader {
 	}
 }
 
-func (d GrabDownloader) Request(dest string, urls ...string) (files []string) {
+func (d GrabDownloader) Request(dest string, urls ...Download) (ok []string, nook []string) {
 	reqs := make([]*grab.Request, 0)
 	for _, url := range urls {
-		req, err := grab.NewRequest(dest, url)
+		req, err := grab.NewRequest(dest, url.Address)
 		if err != nil {
 			log.Printf("error: couldn't make request URL: %v, %v", url, err)
 		} else {
+			req.Label = url.Key
 			reqs = append(reqs, req)
 		}
 	}
 
 	// check each response
 	for resp := range d.client.DoBatch(d.concurrency, reqs...) {
+		key := resp.Request.Label
 		if err := resp.Err(); err != nil {
-			log.Printf("error: download failed: %v\n", err)
+			log.Printf("error: download [%v] failed: %v\n", key, err)
+			if resp.HTTPResponse.StatusCode == 404 {
+				nook = append(nook, resp.Request.Label)
+			}
 		} else {
-			log.Printf("Downloaded [%v] %s\n", resp.HTTPResponse.Status, resp.Filename)
-			files = append(files, resp.Filename)
+			log.Printf("Downloaded [%v] [%s] -> %s\n", resp.HTTPResponse.Status, key, resp.Filename)
+			ok = append(ok, resp.Filename)
 		}
 	}
 	return

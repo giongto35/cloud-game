@@ -86,10 +86,16 @@ emulator:
       repo:
         # enable auto-download for the list of cores (list->lib)
         sync: true
-        type: buildbot
-        url: https://buildbot.libretro.com/nightly
-        # if repo has file compression
-        compression: zip
+        main:
+          type: buildbot
+          url: https://buildbot.libretro.com/nightly
+          # if repo has file compression
+          compression: zip
+        # a secondary repo to use i.e. for not found in the main cores
+        secondary:
+          type: github
+          url: https://github.com/sergystepanov/libretro-spiegel/blob/main
+          compression: zip
       # Libretro core configuration
       #
       # Available config params:
