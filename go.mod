@@ -19,6 +19,7 @@ require (
 	github.com/kkyr/fig v0.2.0
 	github.com/mitchellh/mapstructure v1.4.0 // indirect
 	github.com/pelletier/go-toml v1.8.1 // indirect
+	github.com/pion/interceptor v0.0.9
 	github.com/pion/rtp v1.6.2
 	github.com/pion/webrtc/v3 v3.0.3
 	github.com/prometheus/client_golang v1.9.0
