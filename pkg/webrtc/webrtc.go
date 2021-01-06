@@ -12,7 +12,9 @@ import (
 	webrtcConfig "github.com/giongto35/cloud-game/v2/pkg/config/webrtc"
 	"github.com/giongto35/cloud-game/v2/pkg/encoder"
 	"github.com/giongto35/cloud-game/v2/pkg/util"
+	itc "github.com/giongto35/cloud-game/v2/pkg/webrtc/interceptor"
 	"github.com/gofrs/uuid"
+	"github.com/pion/interceptor"
 	"github.com/pion/webrtc/v3"
 	"github.com/pion/webrtc/v3/pkg/media"
 )
@@ -29,10 +31,11 @@ type WebFrame struct {
 type WebRTC struct {
 	ID string
 
-	connection  *webrtc.PeerConnection
-	cfg         webrtcConfig.Config
-	isConnected bool
-	isClosed    bool
+	connection    *webrtc.PeerConnection
+	cfg           webrtcConfig.Config
+	tsInterceptor itc.ReTime
+	isConnected   bool
+	isClosed      bool
 	// for yuvI420 image
 	ImageChannel    chan WebFrame
 	AudioChannel    chan []byte
@@ -110,7 +113,7 @@ func (w *WebRTC) StartClient(isMobile bool, iceCB OnIceCallback) (string, error)
 		}
 	}()
 	var err error
-	var videoTrack *CustomTrackSample
+	var videoTrack *webrtc.TrackLocalStaticSample
 
 	// reset client
 	if w.isConnected {
@@ -119,7 +122,8 @@ func (w *WebRTC) StartClient(isMobile bool, iceCB OnIceCallback) (string, error)
 	}
 
 	log.Println("=== StartClient ===")
-	w.connection, err = webrtc.NewPeerConnection(webrtcconfig)
+	w.tsInterceptor = itc.ReTime{}
+	w.connection, err = NewInterceptedPeerConnection(webrtcconfig, []interceptor.Interceptor{&w.tsInterceptor})
 	if err != nil {
 		return "", err
 	}
@@ -131,13 +135,11 @@ func (w *WebRTC) StartClient(isMobile bool, iceCB OnIceCallback) (string, error)
 	} else {
 		codec = webrtc.RTPCodecCapability{MimeType: "video/vp8"}
 	}
-	videoTrack, err = NewCustomTrackSample(codec, "video", "game-video")
-	if err != nil {
+	if videoTrack, err = webrtc.NewTrackLocalStaticSample(codec, "video", "game-video"); err != nil {
 		return "", err
 	}
 
-	_, err = w.connection.AddTrack(videoTrack)
-	if err != nil {
+	if _, err = w.connection.AddTrack(videoTrack); err != nil {
 		return "", err
 	}
 	log.Println("Add video track")
@@ -313,7 +315,7 @@ func (w *WebRTC) IsConnected() bool {
 	return w.isConnected
 }
 
-func (w *WebRTC) startStreaming(vp8Track *CustomTrackSample, opusTrack *webrtc.TrackLocalStaticSample) {
+func (w *WebRTC) startStreaming(vp8Track *webrtc.TrackLocalStaticSample, opusTrack *webrtc.TrackLocalStaticSample) {
 	log.Println("Start streaming")
 	// receive frame buffer
 	go func() {
@@ -325,8 +327,8 @@ func (w *WebRTC) startStreaming(vp8Track *CustomTrackSample, opusTrack *webrtc.T
 		}()
 
 		for data := range w.ImageChannel {
-			err := vp8Track.WriteSampleWithTimestamp(media.Sample{Data: data.Data}, data.Timestamp)
-			if err != nil {
+			w.tsInterceptor.SetTimestamp(data.Timestamp)
+			if err := vp8Track.WriteSample(media.Sample{Data: data.Data}); err != nil {
 				log.Println("Warn: Err write sample: ", err)
 				break
 			}
@@ -342,9 +344,7 @@ func (w *WebRTC) startStreaming(vp8Track *CustomTrackSample, opusTrack *webrtc.T
 			}
 		}()
 
-		//opusSamples := uint32(w.cfg.Encoder.Audio.GetFrameDuration() / w.cfg.Encoder.Audio.Channels)
 		audioDuration := time.Duration(w.cfg.Encoder.Audio.Frame) * time.Millisecond
-
 		for data := range w.AudioChannel {
 			if !w.isConnected {
 				return
