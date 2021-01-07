@@ -2,19 +2,17 @@ package github
 
 import (
 	"github.com/giongto35/cloud-game/v2/pkg/emulator/libretro/core"
-	"github.com/giongto35/cloud-game/v2/pkg/emulator/libretro/repo"
 	"github.com/giongto35/cloud-game/v2/pkg/emulator/libretro/repo/buildbot"
 )
 
-type Repo struct {
-	buildbot.Repo
+type RepoGithub struct {
+	buildbot.RepoBuildbot
 }
 
-func NewGithubRepo(address string, compression string) Repo {
-	return Repo{Repo: buildbot.NewBuildbotRepo(address, compression)}
+func NewGithubRepo(address string, compression string) RepoGithub {
+	return RepoGithub{RepoBuildbot: buildbot.NewBuildbotRepo(address, compression)}
 }
 
-func (r Repo) GetCoreData(file string, info core.ArchInfo) repo.Data {
-	dat := r.Repo.GetCoreData(file, info)
-	return repo.Data{Url: dat.Url + "?raw=true", Compression: dat.Compression}
+func (r RepoGithub) GetCoreUrl(file string, info core.ArchInfo) string {
+	return r.RepoBuildbot.GetCoreUrl(file, info) + "?raw=true"
 }

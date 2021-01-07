@@ -22,13 +22,18 @@ type LibretroConfig struct {
 			Configs string
 		}
 		Repo struct {
-			Sync        bool
-			Type        string
-			Url         string
-			Compression string
+			Sync      bool
+			Main      LibretroRepoConfig
+			Secondary LibretroRepoConfig
 		}
 		List map[string]LibretroCoreConfig
 	}
+}
+
+type LibretroRepoConfig struct {
+	Type        string
+	Url         string
+	Compression string
 }
 
 type LibretroCoreConfig struct {
