@@ -9,13 +9,20 @@ services:
     environment:
       - DISPLAY=:99
       - MESA_GL_VERSION_OVERRIDE=3.3
+      - CLOUD_GAME_WEBRTC_ICEPORTS_MIN=50000
+      - CLOUD_GAME_WEBRTC_ICEPORTS_MAX=50001
+      - CLOUD_GAME_WEBRTC_ICEIPMAP=127.0.0.1
     # network_mode: "host"
     command: >
       bash -c "Xvfb :99 & coordinator --v=5 & worker --coordinatorhost localhost:8000"
     ports:
       - "8000:8000"
       - "9000:9000"
-      - "3478:3478/tcp"
-      - "3478:3478/udp"
+      - "50000-50001:50000-50001/udp"
     volumes:
+      # keep cores persistent in the cloud-game_cores volume
+      - cores:/usr/local/share/cloud-game/assets/cores
       - ${CLOUD_GAME_GAMES_PATH}:/usr/local/share/cloud-game/assets/games
+
+volumes:
+  cores:

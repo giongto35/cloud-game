@@ -19,9 +19,6 @@ import (
 	"github.com/pion/webrtc/v3/pkg/media"
 )
 
-// TODO: double check if no need TURN server here
-var webrtcconfig = webrtc.Configuration{ICEServers: []webrtc.ICEServer{{URLs: []string{"stun:stun.l.google.com:19302"}}}}
-
 type WebFrame struct {
 	Data      []byte
 	Timestamp uint32
@@ -123,7 +120,7 @@ func (w *WebRTC) StartClient(isMobile bool, iceCB OnIceCallback) (string, error)
 
 	log.Println("=== StartClient ===")
 	w.tsInterceptor = itc.ReTime{}
-	w.connection, err = NewInterceptedPeerConnection(webrtcconfig, []interceptor.Interceptor{&w.tsInterceptor})
+	w.connection, err = NewInterceptedPeerConnection(w.cfg.Webrtc, []interceptor.Interceptor{&w.tsInterceptor})
 	if err != nil {
 		return "", err
 	}

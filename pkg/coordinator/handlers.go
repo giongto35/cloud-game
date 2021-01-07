@@ -39,7 +39,6 @@ const pingServerTemp = "https://%s.%s/echo"
 const devPingServer = "http://localhost:9000/echo"
 
 var upgrader = websocket.Upgrader{}
-var errNotFound = errors.New("Not found")
 
 func NewServer(cfg coordinator.Config, library games.GameLibrary) *Server {
 	return &Server{

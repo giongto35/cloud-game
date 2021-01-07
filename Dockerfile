@@ -47,4 +47,4 @@ COPY assets/cores/*.so \
      ./assets/cores/
 COPY configs ./configs
 
-EXPOSE 8000 9000 3478/tcp 3478/udp
+EXPOSE 8000 9000
