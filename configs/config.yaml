@@ -157,11 +157,14 @@ encoder:
 
 webrtc:
   # a list of STUN/TURN servers for the client
-  # {server-ip} placeholder will be replaced with
-  # the current server IP
   iceServers:
     - url: stun:stun.l.google.com:19302
-    - url: stun:{server-ip}:3478
-    - url: turn:{server-ip}:3478
-      username: root
-      credential: root
+  # instead of random unlimited port range for
+  # WebRTC UDP connections, these params
+  # define ICE candidates port range explicitly
+  icePorts:
+    min:
+    max:
+  # override ICE candidate IP, see: https://github.com/pion/webrtc/issues/835,
+  # can be used for Docker bridged network internal IP override
+  iceIpMap:
