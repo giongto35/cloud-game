@@ -68,8 +68,8 @@ __See the `docker-compose.yml` file for Xvfb example config.__
 
 ## Run with Docker
 
-__The app runs as a Docker container only in Linux.__
-Use makefile script: `make dev.run-docker` or Docker Compose directly: `docker-compose up --build` (`CLOUD_GAME_GAMES_PATH` is env variable for games on your host).
+Use makefile script: `make dev.run-docker` or Docker Compose directly: `docker-compose up --build`
+(`CLOUD_GAME_GAMES_PATH` is env variable for games on your host).
 It will spawn a docker environment and you can access the service on `localhost:8000`.
 
 ## Configuration
