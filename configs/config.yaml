@@ -159,9 +159,12 @@ webrtc:
   # a list of STUN/TURN servers for the client
   iceServers:
     - url: stun:stun.l.google.com:19302
+  # instead of random unlimited port range for
+  # WebRTC UDP connections, these params
   # define ICE candidates port range explicitly
   icePorts:
     min:
     max:
-  # override ICE candidate IP
+  # override ICE candidate IP, see: https://github.com/pion/webrtc/issues/835,
+  # can be used for Docker bridged network internal IP override
   iceIpMap:
