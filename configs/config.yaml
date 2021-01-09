@@ -131,11 +131,6 @@ emulator:
           width: 256
           height: 224
           hasMultitap: true
-        mame:
-          lib: fbneo_libretro
-          roms: [ "zip" ]
-          width: 240
-          height: 160
         n64:
           lib: mupen64plus_next_libretro
           config: mupen64plus_next_libretro.cfg
