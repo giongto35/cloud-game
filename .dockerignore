@@ -1,16 +1,18 @@
 .git/
-.gitignore
 .github/
 .idea/
+.vscode/
+.gitignore
 
+.editorconfig
 .env
-Dockerfile
 docker-compose.yml
+Dockerfile
 
 LICENSE
-VERSION
 README.md
 bin/
 docs/
+release/
 
 assets/games/
