@@ -71,9 +71,6 @@ jobs:
           echo -e " 2\r\n 8\r\n " >> commands
           ./mesa/systemwidedeploy.cmd < ./commands
 
-          wget -q https://buildbot.libretro.com/nightly/windows/x86_64/latest/mupen64plus_next_libretro.dll.zip
-          "/c/Program Files/7-Zip/7z.exe" x mupen64plus_next_libretro.dll.zip -oassets/cores
-
           make build
 
       - name: Build Linux app
@@ -108,14 +105,13 @@ jobs:
 
       - uses: actions/upload-artifact@v2
         with:
+          name: emulator-test-frames
           path: _rendered/*.png
 
-  docker_build_check:
+  build_docker:
     name: Build (docker)
     runs-on: ubuntu-latest
     if: github.event_name == 'pull_request'
     steps:
-      - name: Get the source
-        uses: actions/checkout@v2
-      - name: Try to build Docker image
-        run: docker build .
+      - uses: actions/checkout@v2
+      - run: docker build .
