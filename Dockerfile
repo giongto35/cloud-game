@@ -41,10 +41,8 @@ RUN apt-get update && apt-get install --no-install-recommends -y \
 
 COPY --from=build ${BUILD_PATH}/bin/ ./
 RUN cp -s $(pwd)/* /usr/local/bin
-COPY web ./web
-COPY assets/cores/*.so \
-     assets/cores/*.cfg \
-     ./assets/cores/
+COPY assets/cores ./assets/cores
 COPY configs ./configs
+COPY web ./web
 
 EXPOSE 8000 9000
