@@ -193,29 +193,30 @@ func (h *Handler) detachRoom(roomID string) {
 // createNewRoom creates a new room
 // Return nil in case of room is existed
 func (h *Handler) createNewRoom(game games.GameMetadata, roomID string, videoCodec encoder.VideoCodec) *room.Room {
-	// If the roomID is empty,
-	// or the roomID doesn't have any running sessions (room was closed)
+	// If the roomID doesn't have any running sessions (room was closed)
 	// we spawn a new room
-	if roomID == "" || !h.isRoomRunning(roomID) {
-		room := room.NewRoom(roomID, game, videoCodec, h.onlineStorage, h.cfg)
-		// TODO: Might have race condition
-		h.rooms[room.ID] = room
-		return room
+	if !h.isRoomRunning(roomID) {
+		newRoom := room.NewRoom(roomID, game, videoCodec, h.onlineStorage, h.cfg)
+		// TODO: Might have race condition (and it has (:)
+		h.rooms[newRoom.ID] = newRoom
+		return newRoom
 	}
-
 	return nil
 }
 
 // isRoomRunning check if there is any running sessions.
-// TODO: If we remove sessions from room anytime a session is closed, we can check if the sessions list is empty or not.
+// TODO: If we remove sessions from room anytime a session is closed,
+// we can check if the sessions list is empty or not.
 func (h *Handler) isRoomRunning(roomID string) bool {
+	if roomID == "" {
+		return false
+	}
 	// If no roomID is registered
-	room, ok := h.rooms[roomID]
+	r, ok := h.rooms[roomID]
 	if !ok {
 		return false
 	}
-
-	return room.IsRunningSessions()
+	return r.IsRunningSessions()
 }
 
 func (h *Handler) Close() {
