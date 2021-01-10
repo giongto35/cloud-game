@@ -61,13 +61,11 @@ type Room struct {
 	encoder encoder.Encoder
 }
 
-const separator = "___"
-
-// TODO: Remove after fully migrate
-const oldSeparator = "|"
-
-const SocketAddrTmpl = "/tmp/cloudretro-retro-%s.sock"
-const bufSize = 245969
+const (
+	bufSize        = 245969
+	separator      = "___"
+	SocketAddrTmpl = "/tmp/cloudretro-retro-%s.sock"
+)
 
 // NewVideoImporter return image Channel from stream
 func NewVideoImporter(roomID string) chan nanoarch.GameFrame {
@@ -242,11 +240,6 @@ func resizeToAspect(ratio float64, sw int, sh int) (dw int, dh int) {
 // getGameNameFromRoomID parse roomID to get roomID and gameName
 func GetGameNameFromRoomID(roomID string) string {
 	parts := strings.Split(roomID, separator)
-	if len(parts) > 1 {
-		return parts[1]
-	}
-	// TODO: Remove when fully migrate
-	parts = strings.Split(roomID, oldSeparator)
 	if len(parts) > 1 {
 		return parts[1]
 	}
