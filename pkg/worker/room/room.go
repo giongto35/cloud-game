@@ -452,7 +452,7 @@ func (r *Room) ToggleMultitap() error {
 	return err
 }
 
-func (r *Room) EmptySessions() bool {
+func (r *Room) IsEmpty() bool {
 	return len(r.rtcSessions) == 0
 }
 

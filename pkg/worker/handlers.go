@@ -29,7 +29,7 @@ type Handler struct {
 	cfg             worker.Config
 	// Rooms map : RoomID -> Room
 	rooms map[string]*room.Room
-	// ID of the current server globalwise
+	// global ID of the current server
 	serverID string
 	// onlineStorage is client accessing to online storage (GCP)
 	onlineStorage *storage.Client
@@ -96,7 +96,7 @@ func (h *Handler) Prepare() {
 	}
 }
 
-func setupCoordinatorConnection(ohost string, zone string, cfg worker.Config) (*CoordinatorClient, error) {
+func setupCoordinatorConnection(host string, zone string, cfg worker.Config) (*CoordinatorClient, error) {
 	var scheme string
 	env := cfg.Environment.Get()
 	if env.AnyOf(environment.Production, environment.Staging) {
@@ -107,7 +107,7 @@ func setupCoordinatorConnection(ohost string, zone string, cfg worker.Config) (*
 
 	coordinatorURL := url.URL{
 		Scheme:   scheme,
-		Host:     ohost,
+		Host:     host,
 		Path:     "/wso",
 		RawQuery: "zone=" + zone,
 	}
@@ -120,15 +120,15 @@ func setupCoordinatorConnection(ohost string, zone string, cfg worker.Config) (*
 	return NewCoordinatorClient(conn), nil
 }
 
-func createCoordinatorConnection(ourl *url.URL) (*websocket.Conn, error) {
+func createCoordinatorConnection(url *url.URL) (*websocket.Conn, error) {
 	var d websocket.Dialer
-	if ourl.Scheme == "wss" {
+	if url.Scheme == "wss" {
 		d = websocket.Dialer{TLSClientConfig: &tls.Config{InsecureSkipVerify: true}}
 	} else {
 		d = websocket.Dialer{}
 	}
 
-	ws, _, err := d.Dial(ourl.String(), nil)
+	ws, _, err := d.Dial(url.String(), nil)
 	if err != nil {
 		return nil, err
 	}
@@ -140,36 +140,28 @@ func (h *Handler) GetCoordinatorClient() *CoordinatorClient {
 	return h.oClient
 }
 
-// detachPeerConn detach/remove a peerconnection from current room
+// detachPeerConn detaches a peerconnection from the current room.
 func (h *Handler) detachPeerConn(pc *webrtc.WebRTC) {
-	log.Println("Detach peerconnection")
-	room := h.getRoom(pc.RoomID)
-	if room == nil {
+	log.Printf("[worker] closing peer connection")
+	gameRoom := h.getRoom(pc.RoomID)
+	if gameRoom == nil || gameRoom.IsEmpty() {
 		return
 	}
-
-	if !room.EmptySessions() {
-		room.RemoveSession(pc)
-		// If no more session in that room, we close that room
-		if room.EmptySessions() {
-			log.Println("No session in room")
-			room.Close()
-			// Signal end of input Channel
-			log.Println("Signal input chan")
-			pc.InputChannel <- []byte{0xFF, 0xFF}
-			close(pc.InputChannel)
-		}
+	gameRoom.RemoveSession(pc)
+	if gameRoom.IsEmpty() {
+		log.Printf("[worker] closing an empty room")
+		gameRoom.Close()
+		pc.InputChannel <- []byte{0xFF, 0xFF}
+		close(pc.InputChannel)
 	}
 }
 
-// getRoom returns room from roomID
-func (h *Handler) getRoom(roomID string) *room.Room {
-	room, ok := h.rooms[roomID]
+func (h *Handler) getRoom(roomID string) (r *room.Room) {
+	r, ok := h.rooms[roomID]
 	if !ok {
 		return nil
 	}
-
-	return room
+	return
 }
 
 // getRoom returns session from sessionID
@@ -192,7 +184,7 @@ func (h *Handler) detachRoom(roomID string) {
 func (h *Handler) createNewRoom(game games.GameMetadata, roomID string, videoCodec encoder.VideoCodec) *room.Room {
 	// If the roomID doesn't have any running sessions (room was closed)
 	// we spawn a new room
-	if !h.isRoomRunning(roomID) {
+	if !h.isRoomBusy(roomID) {
 		newRoom := room.NewRoom(roomID, game, videoCodec, h.onlineStorage, h.cfg)
 		// TODO: Might have race condition (and it has (:)
 		h.rooms[newRoom.ID] = newRoom
@@ -201,10 +193,10 @@ func (h *Handler) createNewRoom(game games.GameMetadata, roomID string, videoCod
 	return nil
 }
 
-// isRoomRunning check if there is any running sessions.
+// isRoomBusy check if there is any running sessions.
 // TODO: If we remove sessions from room anytime a session is closed,
 // we can check if the sessions list is empty or not.
-func (h *Handler) isRoomRunning(roomID string) bool {
+func (h *Handler) isRoomBusy(roomID string) bool {
 	if roomID == "" {
 		return false
 	}
@@ -220,9 +212,8 @@ func (h *Handler) Close() {
 	if h.oClient != nil {
 		h.oClient.Close()
 	}
-	// Close all room
-	for _, room := range h.rooms {
-		room.Close()
+	for _, r := range h.rooms {
+		r.Close()
 	}
 }
 func createOfflineStorage() {
