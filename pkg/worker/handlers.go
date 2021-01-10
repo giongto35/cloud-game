@@ -21,9 +21,6 @@ import (
 	"github.com/gorilla/websocket"
 )
 
-// Flag to determine if the server is coordinator or not
-var upgrader = websocket.Upgrader{}
-
 type Handler struct {
 	// Client that connects to coordinator
 	oClient *CoordinatorClient
