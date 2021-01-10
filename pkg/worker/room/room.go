@@ -36,18 +36,18 @@ type Room struct {
 	// audioChannel is audio stream received from director
 	audioChannel <-chan []int16
 	// inputChannel is input stream send to director. This inputChannel is combined
-	// input from webRTC + connection info (player indexc)
+	// input from webRTC + connection info (player index)
 	inputChannel chan<- nanoarch.InputEvent
 	// voiceInChannel is voice stream received from users
 	voiceInChannel chan []byte
-	// voiceOutChannel is voice stream broadcasted to all users
+	// voiceOutChannel is voice stream routed to all users
 	voiceOutChannel chan []byte
 	voiceSample     [][]byte
 	// State of room
 	IsRunning bool
 	// Done channel is to fire exit event when room is closed
 	Done chan struct{}
-	// List of peerconnections in the room
+	// List of peer connections in the room
 	rtcSessions []*webrtc.WebRTC
 	// NOTE: Not in use, lock rtcSessions
 	sessionsLock *sync.Mutex
@@ -90,8 +90,8 @@ func NewVideoImporter(roomID string) chan nanoarch.GameFrame {
 		log.Println("Received new conn")
 		log.Println("Spawn Importer")
 
-		fullbuf := make([]byte, bufSize*2)
-		fullbuf = fullbuf[:0]
+		fullBuf := make([]byte, bufSize*2)
+		fullBuf = fullBuf[:0]
 
 		for {
 			// TODO: Not reallocate
@@ -105,10 +105,10 @@ func NewVideoImporter(roomID string) chan nanoarch.GameFrame {
 			}
 
 			buf = buf[:l]
-			fullbuf = append(fullbuf, buf...)
-			if len(fullbuf) >= bufSize {
-				bufs := bytes.NewBuffer(fullbuf)
-				dec := gob.NewDecoder(bufs)
+			fullBuf = append(fullBuf, buf...)
+			if len(fullBuf) >= bufSize {
+				buff := bytes.NewBuffer(fullBuf)
+				dec := gob.NewDecoder(buff)
 
 				frame := nanoarch.GameFrame{}
 				err := dec.Decode(&frame)
@@ -116,7 +116,7 @@ func NewVideoImporter(roomID string) chan nanoarch.GameFrame {
 					log.Fatalf("%v", err)
 				}
 				imgChan <- frame
-				fullbuf = fullbuf[bufSize:len(fullbuf)]
+				fullBuf = fullBuf[bufSize:]
 			}
 		}
 	}(l)
@@ -151,9 +151,9 @@ func NewRoom(roomID string, game games.GameMetadata, videoCodec encoder.VideoCod
 	// Check if room is on local storage, if not, pull from GCS to local storage
 	go func(game games.GameMetadata, roomID string) {
 		// Check room is on local or fetch from server
-		savepath := util.GetSavePath(roomID)
-		log.Println("Check ", savepath, " on online storage : ", room.isGameOnLocal(savepath))
-		if err := room.saveOnlineRoomToLocal(roomID, savepath); err != nil {
+		savePath := util.GetSavePath(roomID)
+		log.Println("Check ", savePath, " on online storage : ", room.isGameOnLocal(savePath))
+		if err := room.saveOnlineRoomToLocal(roomID, savePath); err != nil {
 			log.Printf("Warn: Room %s is not in online storage, error %s", roomID, err)
 		}
 
@@ -165,7 +165,7 @@ func NewRoom(roomID string, game games.GameMetadata, videoCodec encoder.VideoCod
 		libretroConfig := cfg.Emulator.GetLibretroCoreConfig(emuName)
 
 		if cfg.Encoder.WithoutGame {
-			// Run without game, image stream is communicated over unixsocket
+			// Run without game, image stream is communicated over a unix socket
 			imageChannel := NewVideoImporter(roomID)
 			director, _, audioChannel := nanoarch.Init(roomID, false, inputChannel, libretroConfig)
 			room.imageChannel = imageChannel
@@ -254,8 +254,8 @@ func generateRoomID(gameName string) string {
 	return roomID
 }
 
-func (r *Room) isGameOnLocal(savepath string) bool {
-	_, err := os.Open(savepath)
+func (r *Room) isGameOnLocal(savePath string) bool {
+	_, err := os.Open(savePath)
 	return err == nil
 }
 
@@ -295,7 +295,7 @@ func (r *Room) startWebRTCSession(peerconnection *webrtc.WebRTC) {
 		}
 	}()
 
-	// bug: when inputchannel here = nil , skip and finish
+	// bug: when input channel here = nil, skip and finish
 	for input := range peerconnection.InputChannel {
 		// NOTE: when room is no longer running. InputChannel needs to have extra event to go inside the loop
 		if peerconnection.Done || !peerconnection.IsConnected() || !r.IsRunning {
@@ -309,8 +309,7 @@ func (r *Room) startWebRTCSession(peerconnection *webrtc.WebRTC) {
 			}
 		}
 	}
-
-	log.Println("Peerconn done")
+	log.Printf("[worker] peer connection is done")
 }
 
 // RemoveSession removes a peerconnection from room and return true if there is no more room
@@ -386,13 +385,11 @@ func (r *Room) isRoomExisted() bool {
 	if err == nil {
 		return true
 	}
-
 	// Check if room is in local
-	savepath := util.GetSavePath(r.ID)
-	if r.isGameOnLocal(savepath) {
+	savePath := util.GetSavePath(r.ID)
+	if r.isGameOnLocal(savePath) {
 		return true
 	}
-
 	return false
 }
 
@@ -416,7 +413,7 @@ func (r *Room) SaveGame() error {
 }
 
 // saveOnlineRoomToLocal save online room to local
-func (r *Room) saveOnlineRoomToLocal(roomID string, savepath string) error {
+func (r *Room) saveOnlineRoomToLocal(roomID string, savePath string) error {
 	log.Println("Check if game is on cloud storage")
 	// If the game is not on local server
 	// Try to load from gcloud
@@ -424,12 +421,10 @@ func (r *Room) saveOnlineRoomToLocal(roomID string, savepath string) error {
 	if err != nil {
 		return err
 	}
-
 	// Save the data fetched from gcloud to local server
 	if data != nil {
-		_ = ioutil.WriteFile(savepath, data, 0644)
+		_ = ioutil.WriteFile(savePath, data, 0644)
 	}
-
 	return nil
 }
 
