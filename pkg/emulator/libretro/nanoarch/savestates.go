@@ -1,17 +1,14 @@
-// Package savestates enables emulator state manipulation.
 package nanoarch
 
-import (
-	"io/ioutil"
-)
+import "io/ioutil"
 
 type state []byte
 
 // Save writes the current state to the filesystem.
 // Deadlock warning: locks the emulator.
 func (na *naEmulator) Save() error {
-	na.GetLock()
-	defer na.ReleaseLock()
+	na.Lock()
+	defer na.Unlock()
 
 	if state, err := getState(); err == nil {
 		return state.toFile(na.GetHashPath())
@@ -23,8 +20,8 @@ func (na *naEmulator) Save() error {
 // Load restores the state from the filesystem.
 // Deadlock warning: locks the emulator.
 func (na *naEmulator) Load() error {
-	na.GetLock()
-	defer na.ReleaseLock()
+	na.Lock()
+	defer na.Unlock()
 
 	path := na.GetHashPath()
 	if state, err := fromFile(path); err == nil {
