@@ -9,7 +9,6 @@ import (
 	"os"
 	"path"
 	"path/filepath"
-	"sync"
 	"testing"
 
 	"github.com/giongto35/cloud-game/v2/pkg/config"
@@ -89,7 +88,6 @@ func GetEmulatorMock(room string, system string) *EmulatorMock {
 			controllersMap: map[string][]controllerState{},
 			roomID:         room,
 			done:           make(chan struct{}, 1),
-			lock:           &sync.Mutex{},
 		},
 
 		canvas: image.NewRGBA(image.Rect(0, 0, meta.Width, meta.Height)),
@@ -150,9 +148,9 @@ func (emu *EmulatorMock) shutdownEmulator() {
 
 // emulateOneFrame emulates one frame with exclusive lock.
 func (emu *EmulatorMock) emulateOneFrame() {
-	emu.GetLock()
+	emu.Lock()
 	nanoarchRun()
-	emu.ReleaseLock()
+	emu.Unlock()
 }
 
 // Who needs generics anyway?
@@ -186,10 +184,10 @@ func (emu *EmulatorMock) getSavePath() string {
 // the latest saved state for its session.
 // Locks the emulator.
 func (emu *EmulatorMock) dumpState() (string, string) {
-	emu.GetLock()
+	emu.Lock()
 	bytes, _ := ioutil.ReadFile(emu.paths.save)
 	persistedStateHash := getHash(bytes)
-	emu.ReleaseLock()
+	emu.Unlock()
 
 	stateHash := emu.getStateHash()
 	fmt.Printf("mem: %v, dat: %v\n", stateHash, persistedStateHash)
@@ -199,9 +197,9 @@ func (emu *EmulatorMock) dumpState() (string, string) {
 // getStateHash returns the current emulator state hash.
 // Locks the emulator.
 func (emu *EmulatorMock) getStateHash() string {
-	emu.GetLock()
+	emu.Lock()
 	state, _ := getState()
-	emu.ReleaseLock()
+	emu.Unlock()
 
 	return getHash(state)
 }

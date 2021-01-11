@@ -60,6 +60,8 @@ type controllerState struct {
 
 // naEmulator implements CloudEmulator
 type naEmulator struct {
+	sync.Mutex
+
 	imageChannel  chan<- GameFrame
 	audioChannel  chan<- []int16
 	inputChannel  <-chan InputEvent
@@ -73,9 +75,6 @@ type naEmulator struct {
 
 	controllersMap map[string][]controllerState
 	done           chan struct{}
-
-	// lock to lock uninteruptable operation
-	lock *sync.Mutex
 }
 
 // VideoExporter produces image frame to unix socket
@@ -124,7 +123,6 @@ func NewNAEmulator(roomID string, inputChannel <-chan InputEvent, conf config.Li
 		controllersMap: map[string][]controllerState{},
 		roomID:         roomID,
 		done:           make(chan struct{}, 1),
-		lock:           &sync.Mutex{},
 	}, imageChannel, audioChannel
 }
 
@@ -200,7 +198,6 @@ func (na *naEmulator) LoadMeta(path string) emulator.Metadata {
 	coreLoad(na.meta)
 	coreLoadGame(path)
 	na.gamePath = path
-
 	return na.meta
 }
 
@@ -225,9 +222,9 @@ func (na *naEmulator) Start() {
 		default:
 		}
 
-		na.GetLock()
+		na.Lock()
 		nanoarchRun()
-		na.ReleaseLock()
+		na.Unlock()
 	}
 }
 
@@ -280,16 +277,5 @@ func (*naEmulator) GetViewport() interface{} {
 }
 
 func (na *naEmulator) Close() {
-	// Unload and deinit in the core.
 	close(na.done)
-}
-
-// GetLock makes the emulator exclusively locked.
-func (na *naEmulator) GetLock() {
-	na.lock.Lock()
-}
-
-// ReleaseLock removes an exclusive lock from the emulator.
-func (na *naEmulator) ReleaseLock() {
-	na.lock.Unlock()
 }
