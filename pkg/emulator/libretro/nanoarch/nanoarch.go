@@ -494,6 +494,7 @@ func coreLoadGame(filename string) {
 	if err != nil {
 		panic(err)
 	}
+	defer file.Close()
 
 	fi, err := file.Stat()
 	if err != nil {
