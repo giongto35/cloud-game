@@ -499,10 +499,9 @@ func coreLoadGame(filename string) {
 	if err != nil {
 		panic(err)
 	}
-	file.Close()
+	_ = file.Close()
 
 	size := fi.Size()
-
 	log.Printf("ROM size: %v", size)
 
 	csFilename := C.CString(filename)
@@ -513,15 +512,12 @@ func coreLoadGame(filename string) {
 	}
 
 	si := C.struct_retro_system_info{}
-
 	C.bridge_retro_get_system_info(retroGetSystemInfo, &si)
-
-	var libName = C.GoString(si.library_name)
-	log.Printf("  library_name: %v", libName)
+	log.Printf("  library_name: %v", C.GoString(si.library_name))
 	log.Printf("  library_version: %v", C.GoString(si.library_version))
 	log.Printf("  valid_extensions: %v", C.GoString(si.valid_extensions))
-	log.Printf("  need_fullpath: %v", si.need_fullpath)
-	log.Printf("  block_extract: %v", si.block_extract)
+	log.Printf("  need_fullpath: %v", bool(si.need_fullpath))
+	log.Printf("  block_extract: %v", bool(si.block_extract))
 
 	if !si.need_fullpath {
 		bytes, err := slurp(filename, size)
@@ -539,7 +535,6 @@ func coreLoadGame(filename string) {
 	}
 
 	avi := C.struct_retro_system_av_info{}
-
 	C.bridge_retro_get_system_av_info(retroGetSystemAVInfo, &avi)
 
 	// Append the library name to the window title.
@@ -713,6 +708,9 @@ func videoSetPixelFormat(format uint32) C.bool {
 }
 
 func setRotation(rotation int) {
+	if rotation == int(video.rotation) {
+		return
+	}
 	video.rotation = image.Angle(rotation)
 	rotationFn = image.GetRotation(video.rotation)
 	NAEmulator.meta.Rotation = rotationFn
