@@ -11,7 +11,6 @@ import (
 	"math/rand"
 	"net"
 	"os"
-	"runtime"
 	"strconv"
 	"strings"
 	"sync"
@@ -130,7 +129,7 @@ func NewRoom(roomID string, game games.GameMetadata, videoCodec encoder.VideoCod
 		roomID = generateRoomID(game.Name)
 	}
 
-	log.Println("Init new room: ", roomID, game)
+	log.Println("New room: ", roomID, game)
 	inputChannel := make(chan nanoarch.InputEvent, 100)
 
 	room := &Room{
@@ -200,10 +199,7 @@ func NewRoom(roomID string, game games.GameMetadata, videoCodec encoder.VideoCod
 			log.Printf("Viewport size has scaled to %dx%d", nwidth, nheight)
 		}
 
-		log.Println("meta: ", gameMeta)
-
-		// set resulting game frame size considering
-		// its orientation
+		// set game frame size considering its orientation
 		encoderW, encoderH := nwidth, nheight
 		if gameMeta.Rotation.IsEven {
 			encoderW, encoderH = nheight, nwidth
@@ -216,13 +212,7 @@ func NewRoom(roomID string, game games.GameMetadata, videoCodec encoder.VideoCod
 		go room.startAudio(gameMeta.AudioSampleRate, cfg.Encoder.Audio)
 		go room.startVoice()
 		room.director.Start()
-
-		log.Printf("Room %s ended", roomID)
-
-		// TODO: do we need GC, we can remove it
-		runtime.GC()
 	}(game, roomID)
-
 	return room
 }
 
