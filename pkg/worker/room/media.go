@@ -9,7 +9,6 @@ import (
 	"github.com/giongto35/cloud-game/v2/pkg/encoder/h264encoder"
 	"github.com/giongto35/cloud-game/v2/pkg/encoder/opus"
 	vpxencoder "github.com/giongto35/cloud-game/v2/pkg/encoder/vpx-encoder"
-	"github.com/giongto35/cloud-game/v2/pkg/util"
 	"github.com/giongto35/cloud-game/v2/pkg/webrtc"
 )
 
@@ -38,32 +37,25 @@ func (r *Room) startVoice() {
 }
 
 func (r *Room) startAudio(sampleRate int, audio encoderConfig.Audio) {
-	log.Println("Enter fan audio")
-
-	enc, err := opus.NewEncoder(audio.Frequency, audio.Channels, audio.GetFrameDuration())
+	sound, err := opus.NewEncoder(
+		sampleRate,
+		audio.Frequency,
+		audio.Channels,
+		opus.SampleBuffer(audio.Frame, sampleRate != audio.Frequency),
+	)
 	if err != nil {
-		log.Println("[!] Cannot create audio encoder", err)
-	}
-	if audio.Frequency != sampleRate {
-		enc.SetResample(sampleRate)
+		log.Fatalf("error: cannot create audio encoder, %v", err)
 	}
 
-	pcm := enc.GetBuffer()
-	idx := 0
-
-	// fanout Audio
-	for sample := range r.audioChannel {
-		for i := 0; i < len(sample); {
-			rem := util.MinInt(len(sample)-i, len(pcm)-idx)
-			copy(pcm[idx:idx+rem], sample[i:i+rem])
-			i += rem
-			idx += rem
-
-			if idx == len(pcm) {
-				data, err := enc.Encode(pcm)
+	for samples := range r.audioChannel {
+		for i := 0; i < len(samples); {
+			// we access the internal buffer in order to
+			// send a valid OPUS chunk ASAP
+			i += sound.BufferWrite(samples[i:])
+			if sound.BufferFull() {
+				data, err := sound.BufferEncode()
 				if err != nil {
 					log.Println("[!] Failed to encode", err)
-					idx = 0
 					continue
 				}
 
@@ -73,11 +65,8 @@ func (r *Room) startAudio(sampleRate int, audio encoderConfig.Audio) {
 						webRTC.AudioChannel <- data
 					}
 				}
-
-				idx = 0
 			}
 		}
-
 	}
 	log.Println("Room ", r.ID, " audio channel closed")
 }

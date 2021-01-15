@@ -19,10 +19,8 @@ func init() {
 func BenchmarkResample(b *testing.B) {
 	sr := 48000
 	bs := getBufferLength(sr)
-	encoder, _ := NewEncoder(sr, 2, bs)
-	encoder.SetResample(44000)
 	for i := 0; i < b.N; i++ {
-		encoder.resample(resampleData, bs)
+		resampleFn(resampleData, bs)
 	}
 }
 
