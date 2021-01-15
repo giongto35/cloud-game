@@ -7,37 +7,11 @@ import (
 	encoderConfig "github.com/giongto35/cloud-game/v2/pkg/config/encoder"
 	"github.com/giongto35/cloud-game/v2/pkg/encoder"
 	"github.com/giongto35/cloud-game/v2/pkg/encoder/h264encoder"
+	"github.com/giongto35/cloud-game/v2/pkg/encoder/opus"
 	vpxencoder "github.com/giongto35/cloud-game/v2/pkg/encoder/vpx-encoder"
 	"github.com/giongto35/cloud-game/v2/pkg/util"
 	"github.com/giongto35/cloud-game/v2/pkg/webrtc"
-	"gopkg.in/hraban/opus.v2"
 )
-
-func resample(pcm []int16, targetSize int, srcSampleRate int, dstSampleRate int) []int16 {
-	newPCML := make([]int16, targetSize/2)
-	newPCMR := make([]int16, targetSize/2)
-	newPCM := make([]int16, targetSize)
-	for i := 0; i+1 < len(pcm); i += 2 {
-		newPCML[(i/2)*dstSampleRate/srcSampleRate] = pcm[i]
-		newPCMR[(i/2)*dstSampleRate/srcSampleRate] = pcm[i+1]
-	}
-	for i := 1; i < len(newPCML); i++ {
-		if newPCML[i] == 0 {
-			newPCML[i] = newPCML[i-1]
-		}
-	}
-	for i := 1; i < len(newPCMR); i++ {
-		if newPCMR[i] == 0 {
-			newPCMR[i] = newPCMR[i-1]
-		}
-	}
-	for i := 0; i+1 < targetSize; i += 2 {
-		newPCM[i] = newPCML[i/2]
-		newPCM[i+1] = newPCMR[i/2]
-	}
-
-	return newPCM
-}
 
 func (r *Room) startVoice() {
 	// broadcast voice
@@ -66,19 +40,15 @@ func (r *Room) startVoice() {
 func (r *Room) startAudio(sampleRate int, audio encoderConfig.Audio) {
 	log.Println("Enter fan audio")
 
-	srcSampleRate := sampleRate
-	enc, err := opus.NewEncoder(audio.Frequency, audio.Channels, opus.AppAudio)
+	enc, err := opus.NewEncoder(audio.Frequency, audio.Channels, audio.GetFrameDuration())
 	if err != nil {
 		log.Println("[!] Cannot create audio encoder", err)
 	}
+	if audio.Frequency != sampleRate {
+		enc.SetResample(sampleRate)
+	}
 
-	enc.SetMaxBandwidth(opus.Fullband)
-	enc.SetBitrateToAuto()
-	enc.SetComplexity(10)
-
-	dstBufferSize := audio.GetFrameDuration()
-	srcBufferSize := dstBufferSize * srcSampleRate / audio.Frequency
-	pcm := make([]int16, srcBufferSize) // 640 * 1000 / 16000 == 40 ms
+	pcm := enc.GetBuffer()
 	idx := 0
 
 	// fanout Audio
@@ -90,20 +60,13 @@ func (r *Room) startAudio(sampleRate int, audio encoderConfig.Audio) {
 			idx += rem
 
 			if idx == len(pcm) {
-				data := make([]byte, 1024*2)
-				dstpcm := resample(pcm, dstBufferSize, srcSampleRate, audio.Frequency)
-				n, err := enc.Encode(dstpcm, data)
-
+				data, err := enc.Encode(pcm)
 				if err != nil {
-					log.Println("[!] Failed to decode", err)
-
+					log.Println("[!] Failed to encode", err)
 					idx = 0
 					continue
 				}
-				data = data[:n]
 
-				// TODO: r.rtcSessions is rarely updated. Lock will hold down perf
-				//r.sessionsLock.Lock()
 				for _, webRTC := range r.rtcSessions {
 					if webRTC.IsConnected() {
 						// NOTE: can block here
