@@ -24,6 +24,7 @@ func NewEncoder(inputSampleRate, outputSampleRate, channels int, options ...func
 	}
 	enc := &Encoder{
 		Encoder:      encoder,
+		buffer:       Buffer{Data: make([]int16, inputSampleRate*20/1000*channels)},
 		channels:     channels,
 		inFrequency:  inputSampleRate,
 		outFrequency: outputSampleRate,
