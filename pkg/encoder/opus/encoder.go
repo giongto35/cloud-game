@@ -1,6 +1,9 @@
 package opus
 
-import "gopkg.in/hraban/opus.v2"
+import (
+	"fmt"
+	"gopkg.in/hraban/opus.v2"
+)
 
 type Encoder struct {
 	*opus.Encoder
@@ -31,7 +34,7 @@ func NewEncoder(inputSampleRate, outputSampleRate, channels int, options ...func
 	}
 
 	_ = enc.SetMaxBandwidth(opus.Fullband)
-	_ = enc.SetBitrateToAuto()
+	_ = enc.SetBitrate(192000)
 	_ = enc.SetComplexity(10)
 
 	for _, option := range options {
@@ -69,6 +72,20 @@ func (e *Encoder) Encode(pcm []int16) ([]byte, error) {
 		return nil, err
 	}
 	return data[:n], nil
+}
+
+func (e *Encoder) GetInfo() string {
+	bitrate, _ := e.Encoder.Bitrate()
+	complexity, _ := e.Encoder.Complexity()
+	dtx, _ := e.Encoder.DTX()
+	fec, _ := e.Encoder.InBandFEC()
+	maxBandwidth, _ := e.Encoder.MaxBandwidth()
+	lossPercent, _ := e.Encoder.PacketLossPerc()
+	sampleRate, _ := e.Encoder.SampleRate()
+	return fmt.Sprintf(
+		"Bitrate: %v bps, Complexity: %v, DTX: %v, FEC: %v, Max bandwidth: *%v, Loss%%: %v, Rate: %v Hz",
+		bitrate, complexity, dtx, fec, maxBandwidth, lossPercent, sampleRate,
+	)
 }
 
 // resampleFn does a simple linear interpolation of audio samples.

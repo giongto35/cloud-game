@@ -46,6 +46,7 @@ func (r *Room) startAudio(sampleRate int, audio encoderConfig.Audio) {
 	if err != nil {
 		log.Fatalf("error: cannot create audio encoder, %v", err)
 	}
+	log.Printf("OPUS: %v", sound.GetInfo())
 
 	for samples := range r.audioChannel {
 		for i := 0; i < len(samples); {
