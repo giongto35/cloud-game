@@ -13,6 +13,8 @@ type Encoder struct {
 	channels     int
 	inFrequency  int
 	outFrequency int
+	// OPUS output buffer, 1K should be enough
+	outBuffer []byte
 
 	buffer          Buffer
 	onFullBuffer    func(data []byte)
@@ -35,6 +37,7 @@ func NewEncoder(inputSampleRate, outputSampleRate, channels int, options ...func
 		channels:     channels,
 		inFrequency:  inputSampleRate,
 		outFrequency: outputSampleRate,
+		outBuffer:    make([]byte, 1024),
 		onFullBuffer: func(data []byte) {},
 	}
 
@@ -89,12 +92,11 @@ func (e *Encoder) Encode(pcm []int16) ([]byte, error) {
 	if e.resampleBufSize > 0 {
 		pcm = resampleFn(pcm, e.resampleBufSize)
 	}
-	data := make([]byte, 1024)
-	n, err := e.Encoder.Encode(pcm, data)
+	n, err := e.Encoder.Encode(pcm, e.outBuffer)
 	if err != nil {
 		return nil, err
 	}
-	return data[:n], nil
+	return e.outBuffer[:n], nil
 }
 
 func (e *Encoder) GetInfo() string {
