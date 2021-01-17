@@ -42,6 +42,9 @@ func (r *Room) startAudio(sampleRate int, audio encoderConfig.Audio) {
 		audio.Frequency,
 		audio.Channels,
 		opus.SampleBuffer(audio.Frame, sampleRate != audio.Frequency),
+		// we use callback on full buffer in order to
+		// send data to all the clients ASAP
+		opus.CallbackOnFullBuffer(r.broadcastAudio),
 	)
 	if err != nil {
 		log.Fatalf("error: cannot create audio encoder, %v", err)
@@ -49,27 +52,19 @@ func (r *Room) startAudio(sampleRate int, audio encoderConfig.Audio) {
 	log.Printf("OPUS: %v", sound.GetInfo())
 
 	for samples := range r.audioChannel {
-		for i := 0; i < len(samples); {
-			// we access the internal buffer in order to
-			// send a valid OPUS chunk ASAP
-			i += sound.BufferWrite(samples[i:])
-			if sound.BufferFull() {
-				data, err := sound.BufferEncode()
-				if err != nil {
-					log.Println("[!] Failed to encode", err)
-					continue
-				}
+		sound.BufferWrite(samples)
+	}
 
-				for _, webRTC := range r.rtcSessions {
-					if webRTC.IsConnected() {
-						// NOTE: can block here
-						webRTC.AudioChannel <- data
-					}
-				}
-			}
+	log.Println("Room ", r.ID, " audio channel closed")
+}
+
+func (r *Room) broadcastAudio(audio []byte) {
+	for _, webRTC := range r.rtcSessions {
+		if webRTC.IsConnected() {
+			// NOTE: can block here
+			webRTC.AudioChannel <- audio
 		}
 	}
-	log.Println("Room ", r.ID, " audio channel closed")
 }
 
 // startVideo processes imageChannel images with an encoder (codec) then pushes the result to WebRTC.

@@ -2,16 +2,20 @@ package opus
 
 import (
 	"fmt"
+	"log"
+
 	"gopkg.in/hraban/opus.v2"
 )
 
 type Encoder struct {
 	*opus.Encoder
 
+	channels     int
+	inFrequency  int
+	outFrequency int
+
 	buffer          Buffer
-	channels        int
-	inFrequency     int
-	outFrequency    int
+	onFullBuffer    func(data []byte)
 	resampleBufSize int
 }
 
@@ -31,6 +35,7 @@ func NewEncoder(inputSampleRate, outputSampleRate, channels int, options ...func
 		channels:     channels,
 		inFrequency:  inputSampleRate,
 		outFrequency: outputSampleRate,
+		onFullBuffer: func(data []byte) {},
 	}
 
 	_ = enc.SetMaxBandwidth(opus.Fullband)
@@ -56,11 +61,29 @@ func SampleBuffer(ms int, resampling bool) func(*Encoder) error {
 	}
 }
 
-func (e *Encoder) BufferWrite(samples []int16) (written int) { return e.buffer.Write(samples) }
+func CallbackOnFullBuffer(fn func(_ []byte)) func(*Encoder) error {
+	return func(e *Encoder) (err error) {
+		e.onFullBuffer = fn
+		return
+	}
+}
 
-func (e *Encoder) BufferEncode() ([]byte, error) { return e.Encode(e.buffer.Data) }
-
-func (e *Encoder) BufferFull() bool { return e.buffer.Full() }
+func (e *Encoder) BufferWrite(samples []int16) (written int) {
+	i := 0
+	// !to make it without an infinite loop possibility
+	for i < len(samples) {
+		i += e.buffer.Write(samples[i:])
+		if e.buffer.Full() {
+			data, err := e.Encode(e.buffer.Data)
+			if err != nil {
+				log.Println("[!] Failed to encode", err)
+				continue
+			}
+			e.onFullBuffer(data)
+		}
+	}
+	return i
+}
 
 func (e *Encoder) Encode(pcm []int16) ([]byte, error) {
 	if e.resampleBufSize > 0 {
