@@ -72,10 +72,9 @@ func CallbackOnFullBuffer(fn func(_ []byte)) func(*Encoder) error {
 }
 
 func (e *Encoder) BufferWrite(samples []int16) (written int) {
-	i := 0
-	// !to make it without an infinite loop possibility
-	for i < len(samples) {
-		i += e.buffer.Write(samples[i:])
+	n := len(samples)
+	for k := n / len(e.buffer.Data); written < n || k >= 0; k-- {
+		written += e.buffer.Write(samples[written:])
 		if e.buffer.Full() {
 			data, err := e.Encode(e.buffer.Data)
 			if err != nil {
@@ -85,7 +84,7 @@ func (e *Encoder) BufferWrite(samples []int16) (written int) {
 			e.onFullBuffer(data)
 		}
 	}
-	return i
+	return
 }
 
 func (e *Encoder) Encode(pcm []int16) ([]byte, error) {
