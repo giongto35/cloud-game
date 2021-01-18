@@ -236,6 +236,7 @@ body {
 }
 
 #btn-join {
+    width: 46px;
     top: 70px;
     left: 22px;
     height: 25px;
@@ -244,6 +245,7 @@ body {
 }
 
 #btn-quit {
+    width: 46px;
     top: 70px;
     left: 75px;
     height: 25px;
@@ -252,6 +254,7 @@ body {
 }
 
 #btn-select {
+    width: 46px;
     top: 100px;
     left: 435px;
     height: 25px;
@@ -260,9 +263,9 @@ body {
 }
 
 #btn-start {
+    width: 46px;
     top: 100px;
     left: 489px;
-    width: 60px;
 
     background-image: url('/static/img/ui/bt START.png');
 }
