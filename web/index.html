@@ -37,7 +37,7 @@
             There is still audio because current audio flow is not from media but it is manually encoded (technical webRTC challenge). Later, when we can integrate audio to media, we can face the issue with mute again .
             https://developers.google.com/web/updates/2017/09/autoplay-policy-changes
         -->
-        <video id="game-screen" muted playinfullscreen="false" playsinline></video>
+        <video id="game-screen" hidden muted playsinline preload="none"></video>
 
         <div id="menu-screen">
             <div id="menu-container">
@@ -122,6 +122,7 @@
 <script src="/static/js/env.js?v=5"></script>
 <script src="/static/js/input/input.js?v=3"></script>
 <script src="/static/js/gameList.js?v=3"></script>
+<script src="/static/js/stream/stream.js?v=1"></script>
 <script src="/static/js/room.js?v=3"></script>
 <script src="/static/js/stats/stats.js?v=1"></script>
 <script src="/static/js/network/ajax.js?v=3"></script>

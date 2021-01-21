@@ -63,8 +63,6 @@ const gameList = (() => {
 
     const startGamePickerTimer = (upDirection) => {
         if (gamePickTimer !== null) return;
-
-        log.debug('[games] start game picker timer');
         const shift = upDirection ? -1 : 1;
         pickGame(gameIndex + shift);
 
@@ -77,8 +75,6 @@ const gameList = (() => {
 
     const stopGamePickerTimer = () => {
         if (gamePickTimer === null) return;
-
-        log.debug('[games] stop game picker timer');
         clearInterval(gamePickTimer);
         gamePickTimer = null;
     };
