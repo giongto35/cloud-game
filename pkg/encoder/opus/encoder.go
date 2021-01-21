@@ -14,7 +14,7 @@ type Encoder struct {
 	inFrequency  int
 	outFrequency int
 	// OPUS output buffer, 1K should be enough
-	outBuffer []byte
+	outBufferSize int
 
 	buffer          Buffer
 	onFullBuffer    func(data []byte)
@@ -32,13 +32,13 @@ func NewEncoder(inputSampleRate, outputSampleRate, channels int, options ...func
 		return Encoder{}, err
 	}
 	enc := &Encoder{
-		Encoder:      encoder,
-		buffer:       Buffer{Data: make([]int16, inputSampleRate*20/1000*channels)},
-		channels:     channels,
-		inFrequency:  inputSampleRate,
-		outFrequency: outputSampleRate,
-		outBuffer:    make([]byte, 1024),
-		onFullBuffer: func(data []byte) {},
+		Encoder:       encoder,
+		buffer:        Buffer{Data: make([]int16, inputSampleRate*20/1000*channels)},
+		channels:      channels,
+		inFrequency:   inputSampleRate,
+		outFrequency:  outputSampleRate,
+		outBufferSize: 1024,
+		onFullBuffer:  func(data []byte) {},
 	}
 
 	_ = enc.SetMaxBandwidth(opus.Fullband)
@@ -91,11 +91,12 @@ func (e *Encoder) Encode(pcm []int16) ([]byte, error) {
 	if e.resampleBufSize > 0 {
 		pcm = resampleFn(pcm, e.resampleBufSize)
 	}
-	n, err := e.Encoder.Encode(pcm, e.outBuffer)
+	data := make([]byte, e.outBufferSize)
+	n, err := e.Encoder.Encode(pcm, data)
 	if err != nil {
-		return nil, err
+		return []byte{}, err
 	}
-	return e.outBuffer[:n], nil
+	return data[:n], nil
 }
 
 func (e *Encoder) GetInfo() string {
