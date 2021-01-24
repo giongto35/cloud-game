@@ -7,9 +7,10 @@
 const stream = (() => {
         const screen = document.getElementById('stream');
 
-        let opts = {
+        let options = {
                 volume: 0.5,
                 poster: '/static/img/screen_loading.gif',
+                mirrorMode: null,
                 mirrorUpdateRate: 1 / 60,
             },
             state = {
@@ -52,15 +53,18 @@ const stream = (() => {
             }
         }, false);
         screen.addEventListener('loadstart', () => {
-            screen.volume = opts.volume;
-            screen.poster = opts.poster;
+            screen.volume = options.volume;
+            screen.poster = options.poster;
         }, false);
         screen.addEventListener('canplay', () => {
             screen.poster = '';
+            useCustomScreen(options.mirrorMode === 'mirror');
         }, false);
 
         const useCustomScreen = (use) => {
             if (use) {
+                if (screen.paused || screen.ended) return;
+
                 let id = state.screen.getAttribute('id');
                 if (id === 'canvas-mirror') return;
 
@@ -72,15 +76,15 @@ const stream = (() => {
                 canvas.style['image-rendering'] = 'pixelated';
                 canvas.classList.add('game-screen');
 
+                let surface = canvas.getContext('2d');
                 screen.parentNode.insertBefore(canvas, screen.nextSibling);
                 toggle(false)
                 state.screen = canvas
                 toggle(true)
-                let surface = canvas.getContext('2d');
                 state.timerId = setInterval(function () {
                     if (screen.paused || screen.ended || !surface) return;
                     surface.drawImage(screen, 0, 0);
-                }, opts.mirrorUpdateRate);
+                }, options.mirrorUpdateRate);
             } else {
                 clearInterval(state.timerId);
                 let mirror = state.screen;
@@ -92,12 +96,25 @@ const stream = (() => {
             }
         }
 
+        const init = () => {
+            options.mirrorMode = settings.loadOr(opts.MIRROR_SCREEN, 'none');
+        }
+
+        event.sub(SETTINGS_CHANGED, () => {
+            const newValue = settings.get()[opts.MIRROR_SCREEN];
+            if (newValue !== options.mirrorMode) {
+                useCustomScreen(newValue === 'mirror');
+                options.mirrorMode = newValue;
+            }
+        });
+
         return {
             audio: {mute},
             video: {toggleFullscreen, el: getVideoEl},
             play: stream,
             toggle,
             useCustomScreen,
+            init
         }
     }
-)(env, gui, log);
+)(env, gui, log, opts, settings);
