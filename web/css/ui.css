@@ -67,6 +67,7 @@
 #settings-data {
     overflow-y: auto;
     height: 50vh;
+    padding: 1em 0;
 }
 
 .container {

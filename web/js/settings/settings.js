@@ -456,6 +456,11 @@ settings._renderrer = (() => {
                         .add(Object.keys(value).map(k => gui.binding(value[k], k, onKeyBindingChange)))
                         .build();
                     break;
+                case opts.MIRROR_SCREEN:
+                    _option(data).withName('Video mirroring without smooth')
+                        .add(gui.select(k, onChange, ['mirror'], value))
+                        .build();
+                    break;
                 default:
                     _option(data).withName(k).add(value).build();
             }
