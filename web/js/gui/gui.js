@@ -57,6 +57,7 @@ const gui = (() => {
     }
 
     return {
+        create: _create,
         select,
         binding,
     }

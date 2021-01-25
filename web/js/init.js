@@ -4,6 +4,7 @@ log.setLevel(settings.loadOr(opts.LOG_LEVEL, 'debug'));
 keyboard.init();
 joystick.init();
 touch.init();
+stream.init();
 
 [roomId, zone] = room.loadMaybe();
 // if from URL -> start game immediately!
