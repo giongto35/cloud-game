@@ -7,7 +7,6 @@
     let state;
     let lastState;
 
-    // flags
     // first user interaction
     let interacted = false;
 
@@ -20,9 +19,6 @@
     })();
     let prevDir = DIR.IDLE;
 
-    // UI elements
-    // use $element[0] for DOM element
-    const gameScreen = $('#game-screen');
     const menuScreen = $('#menu-screen');
     const helpOverlay = $('#help-overlay');
     const popupBox = $('#noti-box');
@@ -103,7 +99,7 @@
             if (this.shown === show) return;
 
             if (state === app.state.game) {
-                gameScreen.toggle(!show);
+                stream.toggle(!show);
             } else {
                 menuScreen.toggle(!show);
             }
@@ -122,7 +118,7 @@
     const showMenuScreen = () => {
         log.debug('[control] loading menu screen');
 
-        gameScreen.hide();
+        stream.toggle(false);
         keyButtons[KEY.SAVE].hide();
         keyButtons[KEY.LOAD].hide();
 
@@ -147,17 +143,7 @@
 
         setState(app.state.game);
 
-        const promise = gameScreen[0].play();
-        if (promise !== undefined) {
-            promise.then(() => log.info('Media can autoplay'))
-                .catch(error => {
-                    // Usually error happens when we autoplay unmuted video, browser requires manual play.
-                    // We already muted video and use separate audio encoding so it's fine now
-                    log.error('Media Failed to autoplay');
-                    log.error(error)
-                    // TODO: Consider workaround
-                });
-        }
+        stream.play()
 
         // TODO get current game from the URL and not from the list?
         // if we are opening a share link it will send the default game name to the server
@@ -169,7 +155,7 @@
         // clear menu screen
         input.poll().disable();
         menuScreen.hide();
-        gameScreen.show();
+        stream.toggle(true);
         keyButtons[KEY.SAVE].show();
         keyButtons[KEY.LOAD].show();
         // end clear
@@ -220,7 +206,7 @@
         // maybe move it somewhere
         if (!interacted) {
             // unmute when there is user interaction
-            gameScreen[0].muted = false;
+            stream.audio.mute(false);
             interacted = true;
         }
 
@@ -243,7 +229,7 @@
         // maybe move it somewhere
         if (!interacted) {
             // unmute when there is user interaction
-            gameScreen[0].muted = false;
+            stream.audio.mute(false);
             interacted = true;
         }
 
@@ -373,7 +359,7 @@
                             loadGame();
                             break;
                         case KEY.FULL:
-                            env.display().toggleFullscreen(gameScreen.height() !== window.innerHeight, gameScreen[0]);
+                            stream.video.toggleFullscreen();
                             break;
 
                         // update player index
@@ -431,7 +417,7 @@
         rtcp.start(data.stunturn);
         gameList.set(data.games);
     });
-    event.sub(MEDIA_STREAM_SDP_AVAILABLE, (data) => rtcp.setRemoteDescription(data.sdp, gameScreen[0]));
+    event.sub(MEDIA_STREAM_SDP_AVAILABLE, (data) => rtcp.setRemoteDescription(data.sdp, stream.video.el()));
     event.sub(MEDIA_STREAM_CANDIDATE_ADD, (data) => rtcp.addCandidate(data.candidate));
     event.sub(MEDIA_STREAM_CANDIDATE_FLUSH, () => rtcp.flushCandidate());
     event.sub(MEDIA_STREAM_READY, () => rtcp.start());
@@ -454,15 +440,6 @@
     event.sub(AXIS_CHANGED, onAxisChanged);
     event.sub(CONTROLLER_UPDATED, data => rtcp.input(data));
 
-    // game screen stuff
-    gameScreen.on('loadstart', () => {
-        gameScreen[0].volume = 0.5;
-        gameScreen[0].poster = '/static/img/screen_loading.gif';
-    });
-    gameScreen.on('canplay', () => {
-        gameScreen[0].poster = '';
-    });
-
     // initial app state
     setState(app.state.eden);
-})($, document, event, env, gameList, input, KEY, log, room, settings, socket, stats, utils);
+})($, document, event, env, gameList, input, KEY, log, room, settings, socket, stats, stream, utils);
