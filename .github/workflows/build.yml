@@ -71,7 +71,7 @@ jobs:
           echo -e " 2\r\n 8\r\n " >> commands
           ./mesa/systemwidedeploy.cmd < ./commands
 
-          make build
+          make WORKER_BUILD_PARAMS=-buildmode=exe build
 
       - name: Build Linux app
         if: matrix.os == 'ubuntu-latest'
