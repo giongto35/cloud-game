@@ -61,7 +61,7 @@ clean:
 
 build:
 	go build -a -tags netgo -ldflags '-w' -o bin/coordinator ./cmd/coordinator
-	go build -a -tags netgo -ldflags '-w' -o bin/worker ./cmd/worker
+	go build ${WORKER_BUILD_PARAMS} -a -tags netgo -ldflags '-w' -o bin/worker ./cmd/worker
 
 dev.tools:
 	./hack/scripts/install_tools.sh
@@ -70,7 +70,7 @@ dev.build: compile build
 
 dev.build-local:
 	go build -o bin/coordinator ./cmd/coordinator
-	go build -o bin/worker ./cmd/worker
+	go build ${WORKER_BUILD_PARAMS} -o bin/worker ./cmd/worker
 
 dev.run: dev.build-local
 	./bin/coordinator --v=5 &
