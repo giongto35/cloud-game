@@ -392,25 +392,29 @@ func deinitVideo() {
 	video.autoGlContext = false
 }
 
-var retroHandle unsafe.Pointer
-var retroInit unsafe.Pointer
-var retroDeinit unsafe.Pointer
-var retroAPIVersion unsafe.Pointer
-var retroGetSystemInfo unsafe.Pointer
-var retroGetSystemAVInfo unsafe.Pointer
-var retroSetEnvironment unsafe.Pointer
-var retroSetVideoRefresh unsafe.Pointer
-var retroSetInputPoll unsafe.Pointer
-var retroSetInputState unsafe.Pointer
-var retroSetAudioSample unsafe.Pointer
-var retroSetAudioSampleBatch unsafe.Pointer
-var retroRun unsafe.Pointer
-var retroLoadGame unsafe.Pointer
-var retroUnloadGame unsafe.Pointer
-var retroSerializeSize unsafe.Pointer
-var retroSerialize unsafe.Pointer
-var retroUnserialize unsafe.Pointer
-var retroSetControllerPortDevice unsafe.Pointer
+var (
+	retroAPIVersion              unsafe.Pointer
+	retroDeinit                  unsafe.Pointer
+	retroGetMemoryData           unsafe.Pointer
+	retroGetMemorySize           unsafe.Pointer
+	retroGetSystemAVInfo         unsafe.Pointer
+	retroGetSystemInfo           unsafe.Pointer
+	retroHandle                  unsafe.Pointer
+	retroInit                    unsafe.Pointer
+	retroLoadGame                unsafe.Pointer
+	retroRun                     unsafe.Pointer
+	retroSerialize               unsafe.Pointer
+	retroSerializeSize           unsafe.Pointer
+	retroSetAudioSample          unsafe.Pointer
+	retroSetAudioSampleBatch     unsafe.Pointer
+	retroSetControllerPortDevice unsafe.Pointer
+	retroSetEnvironment          unsafe.Pointer
+	retroSetInputPoll            unsafe.Pointer
+	retroSetInputState           unsafe.Pointer
+	retroSetVideoRefresh         unsafe.Pointer
+	retroUnloadGame              unsafe.Pointer
+	retroUnserialize             unsafe.Pointer
+)
 
 func coreLoad(meta emulator.Metadata) {
 	isGlAllowed = meta.IsGlAllowed
@@ -458,6 +462,8 @@ func coreLoad(meta emulator.Metadata) {
 	retroSerialize = loadFunction(retroHandle, "retro_serialize")
 	retroUnserialize = loadFunction(retroHandle, "retro_unserialize")
 	retroSetControllerPortDevice = loadFunction(retroHandle, "retro_set_controller_port_device")
+	retroGetMemorySize = loadFunction(retroHandle, "retro_get_memory_size")
+	retroGetMemoryData = loadFunction(retroHandle, "retro_get_memory_data")
 
 	mu.Unlock()
 
@@ -715,4 +721,18 @@ func setRotation(rotation int) {
 	rotationFn = image.GetRotation(video.rotation)
 	NAEmulator.meta.Rotation = rotationFn
 	log.Printf("[Env]: the game video is rotated %v°", map[int]int{0: 0, 1: 90, 2: 180, 3: 270}[rotation])
+}
+
+// getMemorySize returns memory region size.
+func getMemorySize(id uint) uint {
+	return uint(C.bridge_retro_get_memory_size(retroGetMemorySize, C.uint(id)))
+}
+
+// getMemoryData returns a pointer to memory data.
+func getMemoryData(id uint) unsafe.Pointer {
+	return C.bridge_retro_get_memory_data(retroGetMemoryData, C.uint(id))
+}
+
+func getSRAMMemory() (dat unsafe.Pointer, len uint) {
+	return getMemoryData(C.RETRO_MEMORY_SAVE_RAM), getMemorySize(C.RETRO_MEMORY_SAVE_RAM)
 }

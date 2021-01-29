@@ -1,34 +1,67 @@
 package nanoarch
 
+import "C"
 import "io/ioutil"
 
 type state []byte
 
 // Save writes the current state to the filesystem.
 // Deadlock warning: locks the emulator.
-func (na *naEmulator) Save() error {
+func (na *naEmulator) Save() (err error) {
 	na.Lock()
 	defer na.Unlock()
 
+	if sram := getSRAM(); sram != nil {
+		err = toFile(na.GetSRAMPath(), sram)
+	}
 	if state, err := getState(); err == nil {
-		return state.toFile(na.GetHashPath())
+		err = toFile(na.GetHashPath(), state)
 	} else {
 		return err
 	}
+
+	return
 }
 
 // Load restores the state from the filesystem.
 // Deadlock warning: locks the emulator.
-func (na *naEmulator) Load() error {
+func (na *naEmulator) Load() (err error) {
 	na.Lock()
 	defer na.Unlock()
 
+	if data, err := fromFile(na.GetSRAMPath()); err == nil {
+		restoreSRAM(data)
+	}
+
 	path := na.GetHashPath()
 	if state, err := fromFile(path); err == nil {
-		return restoreState(state)
+		err = restoreState(state)
 	} else {
 		return err
 	}
+	return err
+}
+
+// getSRAM returns the game SRAM data or a nil slice.
+func getSRAM() []byte {
+	dat, l := getSRAMMemory()
+	if dat == nil || l == 0 {
+		return nil
+	}
+	return C.GoBytes(dat, C.int(l))
+}
+
+// restoreSRAM restores game SRAM.
+func restoreSRAM(data []byte) {
+	if len(data) == 0 {
+		return
+	}
+	dat, l := getSRAMMemory()
+	if dat == nil || l == 0 {
+		return
+	}
+	sram := (*[1 << 30]byte)(dat)[:l:l]
+	copy(sram, data)
 }
 
 // getState returns the current emulator state.
@@ -46,15 +79,15 @@ func restoreState(dat state) error {
 }
 
 // toFile writes the state to a file with the path.
-func (st state) toFile(path string) error {
-	return ioutil.WriteFile(path, st, 0644)
+func toFile(path string, data []byte) error {
+	return ioutil.WriteFile(path, data, 0644)
 }
 
 // fromFile reads the state from a file with the path.
-func fromFile(path string) (state, error) {
+func fromFile(path string) ([]byte, error) {
 	if bytes, err := ioutil.ReadFile(path); err == nil {
 		return bytes, nil
 	} else {
-		return state{}, err
+		return []byte{}, err
 	}
 }

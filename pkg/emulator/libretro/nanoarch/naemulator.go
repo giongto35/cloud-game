@@ -268,9 +268,9 @@ func (na *naEmulator) ToggleMultitap() error {
 	return nil
 }
 
-func (na *naEmulator) GetHashPath() string {
-	return util.GetSavePath(na.roomID)
-}
+func (na *naEmulator) GetHashPath() string { return util.GetSavePath(na.roomID) }
+
+func (na *naEmulator) GetSRAMPath() string { return util.GetSRAMSavePath(na.roomID) }
 
 func (*naEmulator) GetViewport() interface{} {
 	return outputImg

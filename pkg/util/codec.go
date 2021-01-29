@@ -76,13 +76,11 @@ func init() {
 }
 
 // GetSavePath returns save location of game based on roomID
-func GetSavePath(roomID string) string {
-	return savePath(roomID)
-}
+func GetSavePath(roomID string) string { return savePath(roomID) + ".dat" }
 
-func savePath(hash string) string {
-	return homeDir + "/.cr/save/" + hash + ".dat"
-}
+func GetSRAMSavePath(roomId string) string { return savePath(roomId) + ".srm" }
+
+func savePath(hash string) string { return homeDir + "/.cr/save/" + hash }
 
 // GetVideoEncoder returns video encoder based on some qualification.
 // Actually Android is only supporting VP8 but H264 has better encoding performance
