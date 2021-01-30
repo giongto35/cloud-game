@@ -418,21 +418,11 @@ func (r *Room) saveOnlineRoomToLocal(roomID string, savePath string) error {
 	return nil
 }
 
-func (r *Room) LoadGame() error {
-	err := r.director.LoadGame()
+func (r *Room) LoadGame() error { return r.director.LoadGame() }
 
-	return err
-}
+func (r *Room) ToggleMultitap() error { return r.director.ToggleMultitap() }
 
-func (r *Room) ToggleMultitap() error {
-	err := r.director.ToggleMultitap()
-
-	return err
-}
-
-func (r *Room) IsEmpty() bool {
-	return len(r.rtcSessions) == 0
-}
+func (r *Room) IsEmpty() bool { return len(r.rtcSessions) == 0 }
 
 func (r *Room) IsRunningSessions() bool {
 	// If there is running session
