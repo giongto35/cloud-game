@@ -733,6 +733,11 @@ func getMemoryData(id uint) unsafe.Pointer {
 	return C.bridge_retro_get_memory_data(retroGetMemoryData, C.uint(id))
 }
 
-func getSRAMMemory() (dat unsafe.Pointer, len uint) {
-	return getMemoryData(C.RETRO_MEMORY_SAVE_RAM), getMemorySize(C.RETRO_MEMORY_SAVE_RAM)
+// getSRAMMemory return SRAM memory pointer if core supports it or nil.
+func getSRAMMemory() *mem {
+	ptr, size := getMemoryData(C.RETRO_MEMORY_SAVE_RAM), getMemorySize(C.RETRO_MEMORY_SAVE_RAM)
+	if ptr == nil || size == 0 {
+		return nil
+	}
+	return &mem{ptr: ptr, size: size}
 }

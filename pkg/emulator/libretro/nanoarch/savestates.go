@@ -1,9 +1,17 @@
 package nanoarch
 
 import "C"
-import "io/ioutil"
+import (
+	"io/ioutil"
+	"unsafe"
+)
 
 type state []byte
+
+type mem struct {
+	ptr  unsafe.Pointer
+	size uint
+}
 
 // Save writes the current state to the filesystem.
 // Deadlock warning: locks the emulator.
@@ -44,11 +52,11 @@ func (na *naEmulator) Load() (err error) {
 
 // getSRAM returns the game SRAM data or a nil slice.
 func getSRAM() []byte {
-	dat, l := getSRAMMemory()
-	if dat == nil || l == 0 {
+	mem := getSRAMMemory()
+	if mem == nil {
 		return nil
 	}
-	return C.GoBytes(dat, C.int(l))
+	return C.GoBytes(mem.ptr, C.int(mem.size))
 }
 
 // restoreSRAM restores game SRAM.
@@ -56,12 +64,10 @@ func restoreSRAM(data []byte) {
 	if len(data) == 0 {
 		return
 	}
-	dat, l := getSRAMMemory()
-	if dat == nil || l == 0 {
-		return
+	if mem := getSRAMMemory(); mem != nil {
+		sram := (*[1 << 30]byte)(mem.ptr)[:mem.size:mem.size]
+		copy(sram, data)
 	}
-	sram := (*[1 << 30]byte)(dat)[:l:l]
-	copy(sram, data)
 }
 
 // getState returns the current emulator state.
