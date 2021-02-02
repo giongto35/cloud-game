@@ -20,7 +20,7 @@ import (
 	"github.com/giongto35/cloud-game/v2/pkg/emulator/libretro/nanoarch"
 	"github.com/giongto35/cloud-game/v2/pkg/encoder"
 	"github.com/giongto35/cloud-game/v2/pkg/games"
-	"github.com/giongto35/cloud-game/v2/pkg/util"
+	"github.com/giongto35/cloud-game/v2/pkg/persistence"
 	"github.com/giongto35/cloud-game/v2/pkg/webrtc"
 	storage "github.com/giongto35/cloud-game/v2/pkg/worker/cloud-storage"
 )
@@ -150,9 +150,8 @@ func NewRoom(roomID string, game games.GameMetadata, videoCodec encoder.VideoCod
 	// Check if room is on local storage, if not, pull from GCS to local storage
 	go func(game games.GameMetadata, roomID string) {
 		// Check room is on local or fetch from server
-		savePath := util.GetSavePath(roomID)
-		log.Println("Check ", savePath, " on online storage : ", room.isGameOnLocal(savePath))
-		if err := room.saveOnlineRoomToLocal(roomID, savePath); err != nil {
+		log.Printf("Check %s on online storage: %v", roomID, isGameOnLocal(roomID))
+		if err := room.saveOnlineRoomToLocal(roomID, persistence.GetMainState(roomID)); err != nil {
 			log.Printf("Warn: Room %s is not in online storage, error %s", roomID, err)
 		}
 
@@ -244,8 +243,8 @@ func generateRoomID(gameName string) string {
 	return roomID
 }
 
-func (r *Room) isGameOnLocal(savePath string) bool {
-	_, err := os.Open(savePath)
+func isGameOnLocal(room string) bool {
+	_, err := os.Open(persistence.GetMainState(room))
 	return err == nil
 }
 
@@ -375,12 +374,7 @@ func (r *Room) isRoomExisted() bool {
 	if err == nil {
 		return true
 	}
-	// Check if room is in local
-	savePath := util.GetSavePath(r.ID)
-	if r.isGameOnLocal(savePath) {
-		return true
-	}
-	return false
+	return isGameOnLocal(r.ID)
 }
 
 // SaveGame will save game to local and trigger a callback to store game on onlineStorage, so the game can be accessed later
@@ -402,7 +396,8 @@ func (r *Room) SaveGame() error {
 	return nil
 }
 
-// saveOnlineRoomToLocal save online room to local
+// saveOnlineRoomToLocal save online room to local.
+// !Supports only one file of main save state.
 func (r *Room) saveOnlineRoomToLocal(roomID string, savePath string) error {
 	log.Println("Check if game is on cloud storage")
 	// If the game is not on local server

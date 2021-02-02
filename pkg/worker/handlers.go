@@ -14,7 +14,7 @@ import (
 	"github.com/giongto35/cloud-game/v2/pkg/encoder"
 	"github.com/giongto35/cloud-game/v2/pkg/environment"
 	"github.com/giongto35/cloud-game/v2/pkg/games"
-	"github.com/giongto35/cloud-game/v2/pkg/util"
+	"github.com/giongto35/cloud-game/v2/pkg/persistence"
 	"github.com/giongto35/cloud-game/v2/pkg/webrtc"
 	storage "github.com/giongto35/cloud-game/v2/pkg/worker/cloud-storage"
 	"github.com/giongto35/cloud-game/v2/pkg/worker/room"
@@ -217,7 +217,7 @@ func (h *Handler) Close() {
 	}
 }
 func createOfflineStorage() {
-	dir, _ := path.Split(util.GetSavePath("dummy"))
+	dir, _ := path.Split(persistence.GetSavePath())
 	if err := os.MkdirAll(dir, 0755); err != nil {
 		log.Println("Failed to create offline storage, err: ", err)
 	}

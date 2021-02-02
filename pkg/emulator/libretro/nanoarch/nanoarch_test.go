@@ -198,7 +198,7 @@ func (emu *EmulatorMock) dumpState() (string, string) {
 // Locks the emulator.
 func (emu *EmulatorMock) getStateHash() string {
 	emu.Lock()
-	state, _ := getState()
+	state, _ := getSaveState()
 	emu.Unlock()
 
 	return getHash(state)

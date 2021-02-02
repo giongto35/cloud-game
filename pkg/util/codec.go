@@ -3,8 +3,6 @@ package util
 
 import (
 	"image"
-	"log"
-	"os/user"
 	"unsafe"
 
 	"github.com/giongto35/cloud-game/v2/pkg/encoder"
@@ -64,23 +62,6 @@ func RgbaToYuvInplace(rgba *image.RGBA, yuv []byte, width, height int) {
 	stride := rgba.Stride - width*4
 	C.rgba2yuv(unsafe.Pointer(&yuv[0]), unsafe.Pointer(&rgba.Pix[0]), C.int(width), C.int(height), C.int(stride))
 }
-
-var homeDir string
-
-func init() {
-	u, err := user.Current()
-	if err != nil {
-		log.Fatalln(err)
-	}
-	homeDir = u.HomeDir
-}
-
-// GetSavePath returns save location of game based on roomID
-func GetSavePath(roomID string) string { return savePath(roomID) + ".dat" }
-
-func GetSRAMSavePath(roomId string) string { return savePath(roomId) + ".srm" }
-
-func savePath(hash string) string { return homeDir + "/.cr/save/" + hash }
 
 // GetVideoEncoder returns video encoder based on some qualification.
 // Actually Android is only supporting VP8 but H264 has better encoding performance

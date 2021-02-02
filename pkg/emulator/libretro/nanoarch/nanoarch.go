@@ -2,7 +2,6 @@ package nanoarch
 
 import (
 	"bufio"
-	"errors"
 	"log"
 	"math/rand"
 	"os"
@@ -39,11 +38,6 @@ void bridge_retro_set_audio_sample_batch(void *f, void *callback);
 bool bridge_retro_load_game(void *f, struct retro_game_info *gi);
 void bridge_retro_unload_game(void *f);
 void bridge_retro_run(void *f);
-size_t bridge_retro_get_memory_size(void *f, unsigned id);
-void* bridge_retro_get_memory_data(void *f, unsigned id);
-bool bridge_retro_serialize(void *f, void *data, size_t size);
-bool bridge_retro_unserialize(void *f, void *data, size_t size);
-size_t bridge_retro_serialize_size(void *f);
 void bridge_retro_set_controller_port_device(void *f, unsigned port, unsigned device);
 
 bool coreEnvironment_cgo(unsigned cmd, void *data);
@@ -395,16 +389,12 @@ func deinitVideo() {
 var (
 	retroAPIVersion              unsafe.Pointer
 	retroDeinit                  unsafe.Pointer
-	retroGetMemoryData           unsafe.Pointer
-	retroGetMemorySize           unsafe.Pointer
 	retroGetSystemAVInfo         unsafe.Pointer
 	retroGetSystemInfo           unsafe.Pointer
 	retroHandle                  unsafe.Pointer
 	retroInit                    unsafe.Pointer
 	retroLoadGame                unsafe.Pointer
 	retroRun                     unsafe.Pointer
-	retroSerialize               unsafe.Pointer
-	retroSerializeSize           unsafe.Pointer
 	retroSetAudioSample          unsafe.Pointer
 	retroSetAudioSampleBatch     unsafe.Pointer
 	retroSetControllerPortDevice unsafe.Pointer
@@ -413,7 +403,6 @@ var (
 	retroSetInputState           unsafe.Pointer
 	retroSetVideoRefresh         unsafe.Pointer
 	retroUnloadGame              unsafe.Pointer
-	retroUnserialize             unsafe.Pointer
 )
 
 func coreLoad(meta emulator.Metadata) {
@@ -599,41 +588,6 @@ func toggleMultitap() {
 	}
 }
 
-// serializeSize returns the amount of data the implementation requires to serialize
-// internal state (save states).
-// Between calls to retro_load_game() and retro_unload_game(), the
-// returned size is never allowed to be larger than a previous returned
-// value, to ensure that the frontend can allocate a save state buffer once.
-func serializeSize() uint {
-	return uint(C.bridge_retro_serialize_size(retroSerializeSize))
-}
-
-// Serializes internal state and returns the state as a byte slice.
-func serialize(size uint) ([]byte, error) {
-	data := C.malloc(C.size_t(size))
-	defer C.free(data)
-
-	ok := bool(C.bridge_retro_serialize(retroSerialize, data, C.size_t(size)))
-	if !ok {
-		return nil, errors.New("retro_serialize failed")
-	}
-
-	bytes := C.GoBytes(data, C.int(size))
-	return bytes, nil
-}
-
-// unserialize deserializes internal state from a byte slice.
-func unserialize(bytes []byte, size uint) error {
-	if len(bytes) == 0 {
-		return nil
-	}
-	ok := bool(C.bridge_retro_unserialize(retroUnserialize, unsafe.Pointer(&bytes[0]), C.size_t(size)))
-	if !ok {
-		return errors.New("retro_unserialize failed")
-	}
-	return nil
-}
-
 func nanoarchShutdown() {
 	if usesLibCo {
 		thread.MainMaybe(func() {
@@ -721,23 +675,4 @@ func setRotation(rotation int) {
 	rotationFn = image.GetRotation(video.rotation)
 	NAEmulator.meta.Rotation = rotationFn
 	log.Printf("[Env]: the game video is rotated %v°", map[int]int{0: 0, 1: 90, 2: 180, 3: 270}[rotation])
-}
-
-// getMemorySize returns memory region size.
-func getMemorySize(id uint) uint {
-	return uint(C.bridge_retro_get_memory_size(retroGetMemorySize, C.uint(id)))
-}
-
-// getMemoryData returns a pointer to memory data.
-func getMemoryData(id uint) unsafe.Pointer {
-	return C.bridge_retro_get_memory_data(retroGetMemoryData, C.uint(id))
-}
-
-// getSRAMMemory return SRAM memory pointer if core supports it or nil.
-func getSRAMMemory() *mem {
-	ptr, size := getMemoryData(C.RETRO_MEMORY_SAVE_RAM), getMemorySize(C.RETRO_MEMORY_SAVE_RAM)
-	if ptr == nil || size == 0 {
-		return nil
-	}
-	return &mem{ptr: ptr, size: size}
 }
