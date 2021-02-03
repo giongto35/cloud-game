@@ -12,6 +12,7 @@ type Emulator struct {
 		Width  int
 		Height int
 	}
+	Storage  string
 	Libretro LibretroConfig
 }
 

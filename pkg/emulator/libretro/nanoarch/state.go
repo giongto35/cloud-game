@@ -42,8 +42,7 @@ func getSaveState() (state, error) {
 	size := saveStateSize()
 	data := C.malloc(C.size_t(size))
 	defer C.free(data)
-	ok := bool(C.bridge_retro_serialize(retroSerialize, data, C.size_t(size)))
-	if !ok {
+	if !bool(C.bridge_retro_serialize(retroSerialize, data, C.size_t(size))) {
 		return nil, errors.New("retro_serialize failed")
 	}
 	return C.GoBytes(data, C.int(size)), nil

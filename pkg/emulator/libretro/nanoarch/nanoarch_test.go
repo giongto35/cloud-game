@@ -70,12 +70,18 @@ func GetEmulatorMock(room string, system string) *EmulatorMock {
 	audio := make(chan []int16, 30)
 	inputs := make(chan InputEvent, 100)
 
+	store := Storage{
+		Path:     os.TempDir(),
+		MainSave: room + ".dat",
+	}
+
 	// an emu
 	emu := &EmulatorMock{
 		naEmulator: naEmulator{
 			imageChannel: images,
 			audioChannel: audio,
 			inputChannel: inputs,
+			storage:      store,
 
 			meta: emulator.Metadata{
 				LibPath:     meta.Lib,
@@ -129,15 +135,14 @@ func GetDefaultEmulatorMock(room string, system string, rom string) *EmulatorMoc
 // The rom will be loaded from emulators' games path.
 func (emu *EmulatorMock) loadRom(game string) {
 	fmt.Printf("%v %v\n", emu.paths.cores, emu.core)
-	coreLoad(emulator.Metadata{
-		LibPath: emu.paths.cores + emu.core,
-	})
+	coreLoad(emulator.Metadata{LibPath: emu.paths.cores + emu.core})
 	coreLoadGame(emu.paths.games + game)
 }
 
 // shutdownEmulator closes the emulator and cleans its resources.
 func (emu *EmulatorMock) shutdownEmulator() {
 	_ = os.Remove(emu.GetHashPath())
+	_ = os.Remove(emu.GetSRAMPath())
 
 	close(emu.imageChannel)
 	close(emu.audioChannel)

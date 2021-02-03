@@ -12,7 +12,6 @@ import (
 
 	config "github.com/giongto35/cloud-game/v2/pkg/config/emulator"
 	"github.com/giongto35/cloud-game/v2/pkg/emulator"
-	"github.com/giongto35/cloud-game/v2/pkg/persistence"
 )
 
 /*
@@ -72,9 +71,20 @@ type naEmulator struct {
 	roomID          string
 	gameName        string
 	isSavingLoading bool
+	storage         Storage
 
 	controllersMap map[string][]controllerState
 	done           chan struct{}
+}
+
+type Storage struct {
+	// save path without the dir slash in the end
+	Path string
+	// contains the name of the main save file
+	// e.g. abc<...>293.dat
+	// needed for Google Cloud save/restore which
+	// doesn't support multiple files
+	MainSave string
 }
 
 // VideoExporter produces image frame to unix socket
@@ -103,7 +113,7 @@ const maxPort = 8
 const SocketAddrTmpl = "/tmp/cloudretro-retro-%s.sock"
 
 // NAEmulator implements CloudEmulator interface based on NanoArch(golang RetroArch)
-func NewNAEmulator(roomID string, inputChannel <-chan InputEvent, conf config.LibretroCoreConfig) (*naEmulator, chan GameFrame, chan []int16) {
+func NewNAEmulator(roomID string, inputChannel <-chan InputEvent, storage Storage, conf config.LibretroCoreConfig) (*naEmulator, chan GameFrame, chan []int16) {
 	imageChannel := make(chan GameFrame, 30)
 	audioChannel := make(chan []int16, 30)
 
@@ -117,6 +127,7 @@ func NewNAEmulator(roomID string, inputChannel <-chan InputEvent, conf config.Li
 			HasMultitap:   conf.HasMultitap,
 			AutoGlContext: conf.AutoGlContext,
 		},
+		storage:        storage,
 		imageChannel:   imageChannel,
 		audioChannel:   audioChannel,
 		inputChannel:   inputChannel,
@@ -158,17 +169,17 @@ func NewVideoExporter(roomID string, imgChannel chan GameFrame) *VideoExporter {
 
 // Init initialize new RetroArch cloud emulator
 // withImageChan returns an image stream as Channel for output else it will write to unix socket
-func Init(roomID string, withImageChannel bool, inputChannel <-chan InputEvent, config config.LibretroCoreConfig) (*naEmulator, chan GameFrame, chan []int16) {
-	emulator, imageChannel, audioChannel := NewNAEmulator(roomID, inputChannel, config)
+func Init(roomID string, withImageChannel bool, inputChannel <-chan InputEvent, storage Storage, config config.LibretroCoreConfig) (*naEmulator, chan GameFrame, chan []int16) {
+	emu, imageChannel, audioChannel := NewNAEmulator(roomID, inputChannel, storage, config)
 	// Set to global NAEmulator
-	NAEmulator = emulator
+	NAEmulator = emu
 	if !withImageChannel {
 		NAEmulator.videoExporter = NewVideoExporter(roomID, imageChannel)
 	}
 
 	go NAEmulator.listenInput()
 
-	return emulator, imageChannel, audioChannel
+	return emu, imageChannel, audioChannel
 }
 
 func (na *naEmulator) listenInput() {
@@ -268,9 +279,9 @@ func (na *naEmulator) ToggleMultitap() error {
 	return nil
 }
 
-func (na *naEmulator) GetHashPath() string { return persistence.GetMainState(na.roomID) }
+func (na *naEmulator) GetHashPath() string { return na.storage.Path + "/" + na.storage.MainSave }
 
-func (na *naEmulator) GetSRAMPath() string { return persistence.GetSavePath() + na.roomID + ".srm" }
+func (na *naEmulator) GetSRAMPath() string { return na.storage.Path + "/" + na.roomID + ".srm" }
 
 func (*naEmulator) GetViewport() interface{} {
 	return outputImg

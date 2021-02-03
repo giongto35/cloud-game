@@ -14,7 +14,6 @@ import (
 	"github.com/giongto35/cloud-game/v2/pkg/encoder"
 	"github.com/giongto35/cloud-game/v2/pkg/environment"
 	"github.com/giongto35/cloud-game/v2/pkg/games"
-	"github.com/giongto35/cloud-game/v2/pkg/persistence"
 	"github.com/giongto35/cloud-game/v2/pkg/webrtc"
 	storage "github.com/giongto35/cloud-game/v2/pkg/worker/cloud-storage"
 	"github.com/giongto35/cloud-game/v2/pkg/worker/room"
@@ -42,7 +41,7 @@ type Handler struct {
 // NewHandler returns a new server
 func NewHandler(cfg worker.Config, wrk *Worker) *Handler {
 	// Create offline storage folder
-	createOfflineStorage()
+	createOfflineStorage(cfg.Emulator.Storage)
 
 	// Init online storage
 	onlineStorage := storage.NewInitClient()
@@ -216,8 +215,9 @@ func (h *Handler) Close() {
 		r.Close()
 	}
 }
-func createOfflineStorage() {
-	dir, _ := path.Split(persistence.GetSavePath())
+
+func createOfflineStorage(storage string) {
+	dir, _ := path.Split(storage)
 	if err := os.MkdirAll(dir, 0755); err != nil {
 		log.Println("Failed to create offline storage, err: ", err)
 	}
