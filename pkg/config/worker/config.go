@@ -2,6 +2,8 @@ package worker
 
 import (
 	"encoding/json"
+	"log"
+	"strings"
 
 	"github.com/giongto35/cloud-game/v2/pkg/config"
 	"github.com/giongto35/cloud-game/v2/pkg/config/emulator"
@@ -9,6 +11,7 @@ import (
 	"github.com/giongto35/cloud-game/v2/pkg/config/monitoring"
 	"github.com/giongto35/cloud-game/v2/pkg/config/shared"
 	webrtcConfig "github.com/giongto35/cloud-game/v2/pkg/config/webrtc"
+	"github.com/giongto35/cloud-game/v2/pkg/environment"
 	flag "github.com/spf13/pflag"
 )
 
@@ -35,6 +38,7 @@ func NewConfig() (conf Config) {
 	if err := config.LoadConfig(&conf, configPath); err == nil {
 		conf.Loaded = true
 	}
+	conf.expandSpecialTags()
 	return
 }
 
@@ -64,5 +68,22 @@ func (c *Config) Serialize() []byte {
 func (c *Config) Deserialize(data []byte) {
 	if err := json.Unmarshal(data, c); err == nil {
 		c.Loaded = true
+	}
+	c.expandSpecialTags()
+}
+
+// expandSpecialTags replaces all the special tags in the config.
+func (c *Config) expandSpecialTags() {
+	// home dir
+	dir := c.Emulator.Storage
+	if dir != "" {
+		tag := "{user}"
+		if strings.Contains(dir, tag) {
+			userHomeDir, err := environment.GetUserHome()
+			if err != nil {
+				log.Fatalln("couldn't read user home directory", err)
+			}
+			c.Emulator.Storage = strings.Replace(dir, tag, userHomeDir, -1)
+		}
 	}
 }

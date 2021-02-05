@@ -2,7 +2,6 @@ package nanoarch
 
 import (
 	"bufio"
-	"errors"
 	"log"
 	"math/rand"
 	"os"
@@ -39,11 +38,6 @@ void bridge_retro_set_audio_sample_batch(void *f, void *callback);
 bool bridge_retro_load_game(void *f, struct retro_game_info *gi);
 void bridge_retro_unload_game(void *f);
 void bridge_retro_run(void *f);
-size_t bridge_retro_get_memory_size(void *f, unsigned id);
-void* bridge_retro_get_memory_data(void *f, unsigned id);
-bool bridge_retro_serialize(void *f, void *data, size_t size);
-bool bridge_retro_unserialize(void *f, void *data, size_t size);
-size_t bridge_retro_serialize_size(void *f);
 void bridge_retro_set_controller_port_device(void *f, unsigned port, unsigned device);
 
 bool coreEnvironment_cgo(unsigned cmd, void *data);
@@ -392,25 +386,24 @@ func deinitVideo() {
 	video.autoGlContext = false
 }
 
-var retroHandle unsafe.Pointer
-var retroInit unsafe.Pointer
-var retroDeinit unsafe.Pointer
-var retroAPIVersion unsafe.Pointer
-var retroGetSystemInfo unsafe.Pointer
-var retroGetSystemAVInfo unsafe.Pointer
-var retroSetEnvironment unsafe.Pointer
-var retroSetVideoRefresh unsafe.Pointer
-var retroSetInputPoll unsafe.Pointer
-var retroSetInputState unsafe.Pointer
-var retroSetAudioSample unsafe.Pointer
-var retroSetAudioSampleBatch unsafe.Pointer
-var retroRun unsafe.Pointer
-var retroLoadGame unsafe.Pointer
-var retroUnloadGame unsafe.Pointer
-var retroSerializeSize unsafe.Pointer
-var retroSerialize unsafe.Pointer
-var retroUnserialize unsafe.Pointer
-var retroSetControllerPortDevice unsafe.Pointer
+var (
+	retroAPIVersion              unsafe.Pointer
+	retroDeinit                  unsafe.Pointer
+	retroGetSystemAVInfo         unsafe.Pointer
+	retroGetSystemInfo           unsafe.Pointer
+	retroHandle                  unsafe.Pointer
+	retroInit                    unsafe.Pointer
+	retroLoadGame                unsafe.Pointer
+	retroRun                     unsafe.Pointer
+	retroSetAudioSample          unsafe.Pointer
+	retroSetAudioSampleBatch     unsafe.Pointer
+	retroSetControllerPortDevice unsafe.Pointer
+	retroSetEnvironment          unsafe.Pointer
+	retroSetInputPoll            unsafe.Pointer
+	retroSetInputState           unsafe.Pointer
+	retroSetVideoRefresh         unsafe.Pointer
+	retroUnloadGame              unsafe.Pointer
+)
 
 func coreLoad(meta emulator.Metadata) {
 	isGlAllowed = meta.IsGlAllowed
@@ -458,6 +451,8 @@ func coreLoad(meta emulator.Metadata) {
 	retroSerialize = loadFunction(retroHandle, "retro_serialize")
 	retroUnserialize = loadFunction(retroHandle, "retro_unserialize")
 	retroSetControllerPortDevice = loadFunction(retroHandle, "retro_set_controller_port_device")
+	retroGetMemorySize = loadFunction(retroHandle, "retro_get_memory_size")
+	retroGetMemoryData = loadFunction(retroHandle, "retro_get_memory_data")
 
 	mu.Unlock()
 
@@ -591,41 +586,6 @@ func toggleMultitap() {
 		}
 		multitap.enabled = !multitap.enabled
 	}
-}
-
-// serializeSize returns the amount of data the implementation requires to serialize
-// internal state (save states).
-// Between calls to retro_load_game() and retro_unload_game(), the
-// returned size is never allowed to be larger than a previous returned
-// value, to ensure that the frontend can allocate a save state buffer once.
-func serializeSize() uint {
-	return uint(C.bridge_retro_serialize_size(retroSerializeSize))
-}
-
-// Serializes internal state and returns the state as a byte slice.
-func serialize(size uint) ([]byte, error) {
-	data := C.malloc(C.size_t(size))
-	defer C.free(data)
-
-	ok := bool(C.bridge_retro_serialize(retroSerialize, data, C.size_t(size)))
-	if !ok {
-		return nil, errors.New("retro_serialize failed")
-	}
-
-	bytes := C.GoBytes(data, C.int(size))
-	return bytes, nil
-}
-
-// unserialize deserializes internal state from a byte slice.
-func unserialize(bytes []byte, size uint) error {
-	if len(bytes) == 0 {
-		return nil
-	}
-	ok := bool(C.bridge_retro_unserialize(retroUnserialize, unsafe.Pointer(&bytes[0]), C.size_t(size)))
-	if !ok {
-		return errors.New("retro_unserialize failed")
-	}
-	return nil
 }
 
 func nanoarchShutdown() {

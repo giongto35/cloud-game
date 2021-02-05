@@ -73,6 +73,10 @@ emulator:
     width: 320
     height: 240
 
+  # save directory for emulator states
+  # special tag {user} will be replaced with current user's home dir
+  storage: "{user}/.cr/save"
+
   libretro:
     cores:
       paths:
