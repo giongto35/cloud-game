@@ -20,7 +20,6 @@ import (
 	"github.com/giongto35/cloud-game/v2/pkg/emulator/libretro/nanoarch"
 	"github.com/giongto35/cloud-game/v2/pkg/encoder"
 	"github.com/giongto35/cloud-game/v2/pkg/games"
-	"github.com/giongto35/cloud-game/v2/pkg/util"
 	"github.com/giongto35/cloud-game/v2/pkg/webrtc"
 	storage "github.com/giongto35/cloud-game/v2/pkg/worker/cloud-storage"
 )
@@ -149,10 +148,14 @@ func NewRoom(roomID string, game games.GameMetadata, videoCodec encoder.VideoCod
 
 	// Check if room is on local storage, if not, pull from GCS to local storage
 	go func(game games.GameMetadata, roomID string) {
+		store := nanoarch.Storage{
+			Path:     cfg.Emulator.Storage,
+			MainSave: roomID + ".dat",
+		}
+
 		// Check room is on local or fetch from server
-		savePath := util.GetSavePath(roomID)
-		log.Println("Check ", savePath, " on online storage : ", room.isGameOnLocal(savePath))
-		if err := room.saveOnlineRoomToLocal(roomID, savePath); err != nil {
+		log.Printf("Check %s on online storage: %v", roomID, isGameOnLocal(store.MainSave))
+		if err := room.saveOnlineRoomToLocal(roomID, store.MainSave); err != nil {
 			log.Printf("Warn: Room %s is not in online storage, error %s", roomID, err)
 		}
 
@@ -166,13 +169,13 @@ func NewRoom(roomID string, game games.GameMetadata, videoCodec encoder.VideoCod
 		if cfg.Encoder.WithoutGame {
 			// Run without game, image stream is communicated over a unix socket
 			imageChannel := NewVideoImporter(roomID)
-			director, _, audioChannel := nanoarch.Init(roomID, false, inputChannel, libretroConfig)
+			director, _, audioChannel := nanoarch.Init(roomID, false, inputChannel, store, libretroConfig)
 			room.imageChannel = imageChannel
 			room.director = director
 			room.audioChannel = audioChannel
 		} else {
 			// Run without game, image stream is communicated over image channel
-			director, imageChannel, audioChannel := nanoarch.Init(roomID, true, inputChannel, libretroConfig)
+			director, imageChannel, audioChannel := nanoarch.Init(roomID, true, inputChannel, store, libretroConfig)
 			room.imageChannel = imageChannel
 			room.director = director
 			room.audioChannel = audioChannel
@@ -244,8 +247,8 @@ func generateRoomID(gameName string) string {
 	return roomID
 }
 
-func (r *Room) isGameOnLocal(savePath string) bool {
-	_, err := os.Open(savePath)
+func isGameOnLocal(path string) bool {
+	_, err := os.Open(path)
 	return err == nil
 }
 
@@ -375,12 +378,7 @@ func (r *Room) isRoomExisted() bool {
 	if err == nil {
 		return true
 	}
-	// Check if room is in local
-	savePath := util.GetSavePath(r.ID)
-	if r.isGameOnLocal(savePath) {
-		return true
-	}
-	return false
+	return isGameOnLocal(r.ID)
 }
 
 // SaveGame will save game to local and trigger a callback to store game on onlineStorage, so the game can be accessed later
@@ -402,7 +400,8 @@ func (r *Room) SaveGame() error {
 	return nil
 }
 
-// saveOnlineRoomToLocal save online room to local
+// saveOnlineRoomToLocal save online room to local.
+// !Supports only one file of main save state.
 func (r *Room) saveOnlineRoomToLocal(roomID string, savePath string) error {
 	log.Println("Check if game is on cloud storage")
 	// If the game is not on local server
@@ -418,21 +417,11 @@ func (r *Room) saveOnlineRoomToLocal(roomID string, savePath string) error {
 	return nil
 }
 
-func (r *Room) LoadGame() error {
-	err := r.director.LoadGame()
+func (r *Room) LoadGame() error { return r.director.LoadGame() }
 
-	return err
-}
+func (r *Room) ToggleMultitap() error { return r.director.ToggleMultitap() }
 
-func (r *Room) ToggleMultitap() error {
-	err := r.director.ToggleMultitap()
-
-	return err
-}
-
-func (r *Room) IsEmpty() bool {
-	return len(r.rtcSessions) == 0
-}
+func (r *Room) IsEmpty() bool { return len(r.rtcSessions) == 0 }
 
 func (r *Room) IsRunningSessions() bool {
 	// If there is running session

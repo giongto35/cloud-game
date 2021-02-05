@@ -5,7 +5,6 @@ import (
 	"log"
 	"net/url"
 	"os"
-	"path"
 	"time"
 
 	"github.com/giongto35/cloud-game/v2/pkg/config/worker"
@@ -14,7 +13,6 @@ import (
 	"github.com/giongto35/cloud-game/v2/pkg/encoder"
 	"github.com/giongto35/cloud-game/v2/pkg/environment"
 	"github.com/giongto35/cloud-game/v2/pkg/games"
-	"github.com/giongto35/cloud-game/v2/pkg/util"
 	"github.com/giongto35/cloud-game/v2/pkg/webrtc"
 	storage "github.com/giongto35/cloud-game/v2/pkg/worker/cloud-storage"
 	"github.com/giongto35/cloud-game/v2/pkg/worker/room"
@@ -42,7 +40,7 @@ type Handler struct {
 // NewHandler returns a new server
 func NewHandler(cfg worker.Config, wrk *Worker) *Handler {
 	// Create offline storage folder
-	createOfflineStorage()
+	createOfflineStorage(cfg.Emulator.Storage)
 
 	// Init online storage
 	onlineStorage := storage.NewInitClient()
@@ -105,12 +103,7 @@ func setupCoordinatorConnection(host string, zone string, cfg worker.Config) (*C
 		scheme = "ws"
 	}
 
-	coordinatorURL := url.URL{
-		Scheme:   scheme,
-		Host:     host,
-		Path:     "/wso",
-		RawQuery: "zone=" + zone,
-	}
+	coordinatorURL := url.URL{Scheme: scheme, Host: host, Path: "/wso", RawQuery: "zone=" + zone}
 	log.Println("Worker connecting to coordinator:", coordinatorURL.String())
 
 	conn, err := createCoordinatorConnection(&coordinatorURL)
@@ -216,9 +209,10 @@ func (h *Handler) Close() {
 		r.Close()
 	}
 }
-func createOfflineStorage() {
-	dir, _ := path.Split(util.GetSavePath("dummy"))
-	if err := os.MkdirAll(dir, 0755); err != nil {
+
+func createOfflineStorage(path string) {
+	log.Printf("Set storage: %v", path)
+	if err := os.MkdirAll(path, 0755); err != nil {
 		log.Println("Failed to create offline storage, err: ", err)
 	}
 }

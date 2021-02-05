@@ -1,5 +1,7 @@
 package environment
 
+import "os/user"
+
 type Env string
 
 const (
@@ -15,4 +17,12 @@ func (env *Env) AnyOf(what ...Env) bool {
 		}
 	}
 	return false
+}
+
+func GetUserHome() (string, error) {
+	me, err := user.Current()
+	if err != nil {
+		return "", err
+	}
+	return me.HomeDir, nil
 }
