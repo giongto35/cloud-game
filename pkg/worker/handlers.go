@@ -5,7 +5,6 @@ import (
 	"log"
 	"net/url"
 	"os"
-	"path"
 	"time"
 
 	"github.com/giongto35/cloud-game/v2/pkg/config/worker"
@@ -104,12 +103,7 @@ func setupCoordinatorConnection(host string, zone string, cfg worker.Config) (*C
 		scheme = "ws"
 	}
 
-	coordinatorURL := url.URL{
-		Scheme:   scheme,
-		Host:     host,
-		Path:     "/wso",
-		RawQuery: "zone=" + zone,
-	}
+	coordinatorURL := url.URL{Scheme: scheme, Host: host, Path: "/wso", RawQuery: "zone=" + zone}
 	log.Println("Worker connecting to coordinator:", coordinatorURL.String())
 
 	conn, err := createCoordinatorConnection(&coordinatorURL)
@@ -216,9 +210,9 @@ func (h *Handler) Close() {
 	}
 }
 
-func createOfflineStorage(storage string) {
-	dir, _ := path.Split(storage)
-	if err := os.MkdirAll(dir, 0755); err != nil {
+func createOfflineStorage(path string) {
+	log.Printf("Set storage: %v", path)
+	if err := os.MkdirAll(path, 0755); err != nil {
 		log.Println("Failed to create offline storage, err: ", err)
 	}
 }
