@@ -33,7 +33,7 @@ WORKDIR /usr/local/share/cloud-game
 RUN apt-get update && apt-get install --no-install-recommends -y \
     ca-certificates \
     libvpx5 \
-    libx264-160 \
+    libx264-155 \
     libopus0 \
     libopusfile0 \
     libsdl2-2.0-0 \
