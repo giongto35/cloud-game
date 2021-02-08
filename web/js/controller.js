@@ -98,14 +98,15 @@
         show: function (show, event) {
             if (this.shown === show) return;
 
-            if (state === app.state.game) {
+            const isGameScreen = state === app.state.game
+            if (isGameScreen) {
                 stream.toggle(!show);
             } else {
                 menuScreen.toggle(!show);
             }
 
-            keyButtons[KEY.SAVE].toggle(show);
-            keyButtons[KEY.LOAD].toggle(show);
+            keyButtons[KEY.SAVE].toggle(show || isGameScreen);
+            keyButtons[KEY.LOAD].toggle(show || isGameScreen);
 
             helpOverlay.toggle(show);
 
