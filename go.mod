@@ -8,7 +8,6 @@ require (
 	github.com/cavaliercoder/grab v1.0.1-0.20201108051000-98a5bfe305ec
 	github.com/faiface/mainthread v0.0.0-20171120011319-8b78f0a41ae3
 	github.com/fsnotify/fsnotify v1.4.9
-	github.com/gen2brain/x264-go v0.0.0-20200605131102-0523307cbe23
 	github.com/go-gl/gl v0.0.0-20190320180904-bf2b1f2f34d7
 	github.com/gofrs/flock v0.8.0
 	github.com/gofrs/uuid v4.0.0+incompatible
@@ -25,6 +24,7 @@ require (
 	github.com/pion/webrtc/v3 v3.0.4
 	github.com/prometheus/client_golang v1.9.0
 	github.com/prometheus/procfs v0.3.0 // indirect
+	github.com/sergystepanov/x264-go/v2 v2.0.0-20210207205009-7a761b089231
 	github.com/spf13/pflag v1.0.5
 	github.com/veandco/go-sdl2 v0.4.5
 	go.opencensus.io v0.22.6 // indirect
@@ -33,7 +33,6 @@ require (
 	golang.org/x/mod v0.4.1 // indirect
 	golang.org/x/net v0.0.0-20210119194325-5f4716e94777 // indirect
 	golang.org/x/oauth2 v0.0.0-20210126194326-f9ce19ea3013 // indirect
-	golang.org/x/sys v0.0.0-20210124154548-22da62e12c0c // indirect
 	golang.org/x/text v0.3.5 // indirect
 	golang.org/x/tools v0.1.0 // indirect
 	google.golang.org/api v0.38.0 // indirect

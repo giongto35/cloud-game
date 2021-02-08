@@ -5,8 +5,8 @@ import (
 	"log"
 	"runtime/debug"
 
-	"github.com/gen2brain/x264-go"
 	"github.com/giongto35/cloud-game/v2/pkg/encoder"
+	"github.com/sergystepanov/x264-go/v2"
 )
 
 const chanSize = 2

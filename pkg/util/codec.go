@@ -67,5 +67,5 @@ func RgbaToYuvInplace(rgba *image.RGBA, yuv []byte, width, height int) {
 // Actually Android is only supporting VP8 but H264 has better encoding performance
 // TODO: Better use useragent attribute from frontend
 func GetVideoEncoder(isMobile bool) encoder.VideoCodec {
-	return encoder.VPX
+	return encoder.H264
 }
