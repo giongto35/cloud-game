@@ -6,7 +6,7 @@ import (
 	"runtime/debug"
 
 	"github.com/giongto35/cloud-game/v2/pkg/encoder"
-	"github.com/sergystepanov/x264-go/v2"
+	"github.com/giongto35/cloud-game/v2/pkg/util"
 )
 
 const chanSize = 2
@@ -18,7 +18,7 @@ type H264Encoder struct {
 	done   chan struct{}
 
 	buf *bytes.Buffer
-	enc *x264.Encoder
+	enc *Encoder
 
 	// C
 	width  int
@@ -47,17 +47,18 @@ func NewH264Encoder(width, height, fps int) (encoder.Encoder, error) {
 }
 
 func (v *H264Encoder) init() error {
-	opts := &x264.Options{
-		Width:     v.width,
-		Height:    v.height,
+	opts := &Options{
+		Width:     int32(v.width),
+		Height:    int32(v.height),
 		FrameRate: v.fps,
 		Tune:      "zerolatency",
 		Preset:    "veryfast",
 		Profile:   "baseline",
+		//LogLevel: 3,
 		//LogLevel:  x264.LogDebug,
 	}
 
-	enc, err := x264.NewEncoder(v.buf, opts)
+	enc, err := NewEncoder(v.buf, opts)
 	if err != nil {
 		panic(err)
 	}
@@ -75,8 +76,12 @@ func (v *H264Encoder) startLooping() {
 		}
 	}()
 
+	size := int(float32(v.width*v.height) * 1.5)
+	yuv := make([]byte, size, size)
+
 	for img := range v.Input {
-		err := v.enc.Encode(img.Image)
+		util.RgbaToYuvInplace(img.Image, yuv, v.width, v.height)
+		err := v.enc.Encode(yuv)
 		if err != nil {
 			log.Println("err encoding ", img.Image, " using h264")
 		}
@@ -90,9 +95,7 @@ func (v *H264Encoder) startLooping() {
 // Release release memory and stop loop
 func (v *H264Encoder) release() {
 	close(v.Input)
-	// Wait for loop to stop
 	<-v.done
-	log.Println("Releasing encoder")
 	err := v.enc.Close()
 	if err != nil {
 		log.Println("Failed to close H264 encoder")
