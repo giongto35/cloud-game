@@ -74,7 +74,7 @@ func (r *Room) startVideo(width, height int, videoCodec encoder.VideoCodec) {
 
 	log.Println("Video Encoder: ", videoCodec)
 	if videoCodec == encoder.H264 {
-		enc, err = h264encoder.NewH264Encoder(width, height, 1)
+		enc, err = h264.NewH264Encoder(width, height, 1)
 	} else {
 		enc, err = vpxencoder.NewVpxEncoder(width, height, 20, 1200, 5)
 	}

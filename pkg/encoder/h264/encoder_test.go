@@ -1,4 +1,4 @@
-package h264encoder
+package h264
 
 import (
 	"image"
