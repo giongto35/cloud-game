@@ -11,6 +11,8 @@ import (
 // https://stackoverflow.com/questions/9465815/rgb-to-yuv420-algorithm-efficiency
 
 /*
+#cgo CFLAGS: -O3
+
 void rgba2yuv(void * destination, void * source, int width, int height, int stride) {
   const int image_size = width * height;
   unsigned char * rgba = source;

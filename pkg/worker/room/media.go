@@ -6,7 +6,7 @@ import (
 
 	encoderConfig "github.com/giongto35/cloud-game/v2/pkg/config/encoder"
 	"github.com/giongto35/cloud-game/v2/pkg/encoder"
-	"github.com/giongto35/cloud-game/v2/pkg/encoder/h264encoder"
+	"github.com/giongto35/cloud-game/v2/pkg/encoder/h264"
 	"github.com/giongto35/cloud-game/v2/pkg/encoder/opus"
 	vpxencoder "github.com/giongto35/cloud-game/v2/pkg/encoder/vpx-encoder"
 	"github.com/giongto35/cloud-game/v2/pkg/webrtc"
@@ -72,9 +72,9 @@ func (r *Room) startVideo(width, height int, videoCodec encoder.VideoCodec) {
 	var enc encoder.Encoder
 	var err error
 
-	log.Println("Video Encoder: ", videoCodec)
+	log.Println("Video codec:", videoCodec)
 	if videoCodec == encoder.H264 {
-		enc, err = h264.NewH264Encoder(width, height, 1)
+		enc, err = h264.NewEncoder(width, height)
 	} else {
 		enc, err = vpxencoder.NewVpxEncoder(width, height, 20, 1200, 5)
 	}
