@@ -23,6 +23,7 @@ type H264 struct {
 
 func NewH264Encoder(w io.Writer, width, height int, options ...Option) (encoder *H264, err error) {
 	opts := &Options{
+		Crf:     12,
 		Tune:    "zerolatency",
 		Preset:  "superfast",
 		Profile: "baseline",
@@ -60,8 +61,8 @@ func NewH264Encoder(w io.Writer, width, height int, options ...Option) (encoder 
 	param.BAnnexb = 1
 	param.ILogLevel = opts.LogLevel
 
-	//param.Rc.IRcMethod = x264.X264RcCrf
-	//param.Rc.FRfConstant = 23
+	param.Rc.IRcMethod = x264.RcCrf
+	param.Rc.FRfConstant = float32(opts.Crf)
 
 	encoder = &H264{
 		csp:        param.ICsp,

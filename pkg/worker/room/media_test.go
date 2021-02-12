@@ -1,4 +1,4 @@
-package h264
+package room
 
 import (
 	"image"
@@ -7,18 +7,26 @@ import (
 	"testing"
 
 	"github.com/giongto35/cloud-game/v2/pkg/encoder"
+	"github.com/giongto35/cloud-game/v2/pkg/encoder/h264"
+	"github.com/giongto35/cloud-game/v2/pkg/encoder/vpx"
 )
 
-//func TestVpxEncoder(t *testing.T) {
-//	encoder, _ := vpxencoder.NewVpxEncoder(320, 240, 20, 1500, 5)
-//	in, out := encoder.GetInputChan(), encoder.GetOutputChan()
-//
-//	encoder.Stop()
-//}
-
 func BenchmarkH264(b *testing.B) {
-	w, h := 1920, 1080
-	enc, _ := NewEncoder(w, h)
+	benchmarkEncoder(1920, 1080, encoder.H264, b)
+}
+
+func BenchmarkVP8(b *testing.B) {
+	benchmarkEncoder(1920, 1080, encoder.VPX, b)
+}
+
+func benchmarkEncoder(w, h int, codec encoder.VideoCodec, b *testing.B) {
+	var enc encoder.Encoder
+
+	if codec == encoder.H264 {
+		enc, _ = h264.NewEncoder(w, h)
+	} else {
+		enc, _ = vpx.NewEncoder(w, h, 20, 1200, 5)
+	}
 	defer enc.Stop()
 
 	in, out := enc.GetInputChan(), enc.GetOutputChan()

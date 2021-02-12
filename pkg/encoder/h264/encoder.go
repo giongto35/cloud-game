@@ -46,7 +46,7 @@ func NewEncoder(width, height int) (encoder.Encoder, error) {
 }
 
 func (v *Encoder) init() error {
-	enc, err := NewH264Encoder(v.buf, v.width, v.height)
+	enc, err := NewH264Encoder(v.buf, v.width, v.height, Preset("veryfast"))
 	if err != nil {
 		panic(err)
 	}
