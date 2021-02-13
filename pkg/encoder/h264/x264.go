@@ -19,6 +19,7 @@ type H264 struct {
 	csp        int32
 	nnals      int32
 	nals       []*x264.Nal
+	pts        int64
 }
 
 func NewH264Encoder(w io.Writer, width, height int, options ...Option) (encoder *H264, err error) {
@@ -35,20 +36,16 @@ func NewH264Encoder(w io.Writer, width, height int, options ...Option) (encoder 
 
 	param := x264.Param{}
 	if opts.Preset != "" && opts.Tune != "" {
-		ret := x264.ParamDefaultPreset(&param, opts.Preset, opts.Tune)
-		if ret < 0 {
-			err = fmt.Errorf("x264: invalid preset/tune name")
-			return
+		if x264.ParamDefaultPreset(&param, opts.Preset, opts.Tune) < 0 {
+			return nil, fmt.Errorf("x264: invalid preset/tune name")
 		}
 	} else {
 		x264.ParamDefault(&param)
 	}
 
 	if opts.Profile != "" {
-		ret := x264.ParamApplyProfile(&param, opts.Profile)
-		if ret < 0 {
-			err = fmt.Errorf("x264: invalid profile name")
-			return
+		if x264.ParamApplyProfile(&param, opts.Profile) < 0 {
+			return nil, fmt.Errorf("x264: invalid profile name")
 		}
 	}
 
@@ -60,6 +57,12 @@ func NewH264Encoder(w io.Writer, width, height int, options ...Option) (encoder 
 	param.BRepeatHeaders = 1
 	param.BAnnexb = 1
 	param.ILogLevel = opts.LogLevel
+	//param.BIntraRefresh = 1
+	param.IFpsNum = uint32(60)
+	param.IFpsDen = 1
+
+	//param.IKeyintMax = int32(20)
+	//param.BIntraRefresh = 1
 
 	param.Rc.IRcMethod = x264.RcCrf
 	param.Rc.FRfConstant = float32(opts.Crf)
@@ -106,6 +109,9 @@ func (e *H264) Encode(yuv []byte) (err error) {
 		C.free(picIn.Img.Plane[1])
 		C.free(picIn.Img.Plane[2])
 	}()
+
+	picIn.IPts = int64(e.pts)
+	e.pts++
 
 	if ret := x264.EncoderEncode(e.ref, e.nals, &e.nnals, &picIn, &picOut); ret > 0 {
 		_, err = e.w.Write(C.GoBytes(e.nals[0].PPayload, C.int(ret)))

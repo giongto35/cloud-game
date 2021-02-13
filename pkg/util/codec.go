@@ -4,8 +4,6 @@ package util
 import (
 	"image"
 	"unsafe"
-
-	"github.com/giongto35/cloud-game/v2/pkg/encoder"
 )
 
 // https://stackoverflow.com/questions/9465815/rgb-to-yuv420-algorithm-efficiency
@@ -63,11 +61,4 @@ func RgbaToYuv(rgba *image.RGBA) []byte {
 func RgbaToYuvInplace(rgba *image.RGBA, yuv []byte, width, height int) {
 	stride := rgba.Stride - width*4
 	C.rgba2yuv(unsafe.Pointer(&yuv[0]), unsafe.Pointer(&rgba.Pix[0]), C.int(width), C.int(height), C.int(stride))
-}
-
-// GetVideoEncoder returns video encoder based on some qualification.
-// Actually Android is only supporting VP8 but H264 has better encoding performance
-// TODO: Better use useragent attribute from frontend
-func GetVideoEncoder(isMobile bool) encoder.VideoCodec {
-	return encoder.H264
 }

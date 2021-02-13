@@ -27,7 +27,7 @@ type Encoder struct {
 }
 
 // NewEncoder creates h264 encoder
-func NewEncoder(width, height int) (encoder.Encoder, error) {
+func NewEncoder(width, height int, options ...Option) (encoder.Encoder, error) {
 	v := &Encoder{
 		Output: make(chan encoder.OutFrame, 5*chanSize),
 		Input:  make(chan encoder.InFrame, chanSize),
@@ -38,15 +38,15 @@ func NewEncoder(width, height int) (encoder.Encoder, error) {
 		height: height,
 	}
 
-	if err := v.init(); err != nil {
+	if err := v.init(options...); err != nil {
 		return nil, err
 	}
 
 	return v, nil
 }
 
-func (v *Encoder) init() error {
-	enc, err := NewH264Encoder(v.buf, v.width, v.height, Preset("veryfast"))
+func (v *Encoder) init(options ...Option) error {
+	enc, err := NewH264Encoder(v.buf, v.width, v.height, options...)
 	if err != nil {
 		panic(err)
 	}

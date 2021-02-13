@@ -68,13 +68,19 @@ func (r *Room) broadcastAudio(audio []byte) {
 }
 
 // startVideo processes imageChannel images with an encoder (codec) then pushes the result to WebRTC.
-func (r *Room) startVideo(width, height int, videoCodec encoder.VideoCodec) {
+func (r *Room) startVideo(width, height int, video encoderConfig.Video) {
 	var enc encoder.Encoder
 	var err error
 
-	log.Println("Video codec:", videoCodec)
-	if videoCodec == encoder.H264 {
-		enc, err = h264.NewEncoder(width, height)
+	log.Println("Video codec:", video.Codec)
+	if video.Codec == encoder.H264.String() {
+		enc, err = h264.NewEncoder(width, height, h264.WithOptions(h264.Options{
+			Crf:      video.H264.Crf,
+			Tune:     video.H264.Tune,
+			Preset:   video.H264.Preset,
+			Profile:  video.H264.Profile,
+			LogLevel: int32(video.H264.LogLevel),
+		}))
 	} else {
 		enc, err = vpx.NewEncoder(width, height, 20, 1200, 5)
 	}

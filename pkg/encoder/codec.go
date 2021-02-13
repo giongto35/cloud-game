@@ -9,8 +9,8 @@ const (
 
 func (v VideoCodec) String() string {
 	if v == H264 {
-		return "H264"
+		return "h264"
 	} else {
-		return "VPX"
+		return "vpx"
 	}
 }

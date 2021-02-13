@@ -17,6 +17,15 @@ type Options struct {
 
 type Option func(*Options)
 
+func WithOptions(arg Options) Option {
+	return func(args *Options) {
+		args.Crf = arg.Crf
+		args.Tune = arg.Tune
+		args.Preset = arg.Preset
+		args.Profile = arg.Profile
+		args.LogLevel = arg.LogLevel
+	}
+}
 func Crf(arg uint8) Option      { return func(args *Options) { args.Crf = arg } }
 func Tune(arg string) Option    { return func(args *Options) { args.Tune = arg } }
 func Preset(arg string) Option  { return func(args *Options) { args.Preset = arg } }

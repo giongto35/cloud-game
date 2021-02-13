@@ -8,9 +8,7 @@ import (
 	webrtcConfig "github.com/giongto35/cloud-game/v2/pkg/config/webrtc"
 	"github.com/giongto35/cloud-game/v2/pkg/cws"
 	"github.com/giongto35/cloud-game/v2/pkg/cws/api"
-	"github.com/giongto35/cloud-game/v2/pkg/encoder"
 	"github.com/giongto35/cloud-game/v2/pkg/games"
-	"github.com/giongto35/cloud-game/v2/pkg/util"
 	"github.com/giongto35/cloud-game/v2/pkg/webrtc"
 	"github.com/giongto35/cloud-game/v2/pkg/worker/room"
 )
@@ -144,7 +142,7 @@ func (h *Handler) handleGameStart() cws.PacketHandler {
 			Path: startPacket.Path,
 		}
 
-		room := h.startGameHandler(gameMeta, resp.RoomID, resp.PlayerIndex, peerconnection, util.GetVideoEncoder(false))
+		room := h.startGameHandler(gameMeta, resp.RoomID, resp.PlayerIndex, peerconnection)
 		session.RoomID = room.ID
 		// TODO: can data race
 		h.rooms[room.ID] = room
@@ -259,7 +257,7 @@ func (h *Handler) handleGameMultitap() cws.PacketHandler {
 }
 
 // startGameHandler starts a game if roomID is given, if not create new room
-func (h *Handler) startGameHandler(game games.GameMetadata, existedRoomID string, playerIndex int, peerconnection *webrtc.WebRTC, videoCodec encoder.VideoCodec) *room.Room {
+func (h *Handler) startGameHandler(game games.GameMetadata, existedRoomID string, playerIndex int, peerconnection *webrtc.WebRTC) *room.Room {
 	log.Printf("Loading game: %v\n", game.Name)
 	// If we are connecting to coordinator, request corresponding serverID based on roomID
 	// TODO: check if existedRoomID is in the current server
@@ -268,7 +266,7 @@ func (h *Handler) startGameHandler(game games.GameMetadata, existedRoomID string
 	if room == nil {
 		log.Println("Got Room from local ", room, " ID: ", existedRoomID)
 		// Create new room and update player index
-		room = h.createNewRoom(game, existedRoomID, videoCodec)
+		room = h.createNewRoom(game, existedRoomID)
 		room.UpdatePlayerIndex(peerconnection, playerIndex)
 
 		// Wait for done signal from room
