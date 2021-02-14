@@ -160,7 +160,7 @@ encoder:
       # ultrafast, superfast, veryfast, faster, fast, medium, slow, slower, veryslow, placebo
       preset: veryfast
       # baseline, main, high, high10, high422, high444
-      profile: baseline
+      profile: main
       # film, animation, grain, stillimage, psnr, ssim, fastdecode, zerolatency
       tune: zerolatency
       # 0-3
