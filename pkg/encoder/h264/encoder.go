@@ -9,9 +9,7 @@ import (
 	"github.com/giongto35/cloud-game/v2/pkg/util"
 )
 
-const chanSize = 2
-
-// H264Encoder yuvI420 image to vp8 video
+// Encoder converts a yuvI420 image to h264 frame.
 type Encoder struct {
 	Output chan encoder.OutFrame
 	Input  chan encoder.InFrame
@@ -28,9 +26,9 @@ type Encoder struct {
 
 // NewEncoder creates h264 encoder
 func NewEncoder(width, height int, options ...Option) (encoder.Encoder, error) {
-	v := &Encoder{
-		Output: make(chan encoder.OutFrame, 5*chanSize),
-		Input:  make(chan encoder.InFrame, chanSize),
+	enc := &Encoder{
+		Output: make(chan encoder.OutFrame, 10),
+		Input:  make(chan encoder.InFrame, 2),
 		done:   make(chan struct{}),
 
 		buf:    bytes.NewBuffer(make([]byte, 0)),
@@ -38,25 +36,25 @@ func NewEncoder(width, height int, options ...Option) (encoder.Encoder, error) {
 		height: height,
 	}
 
-	if err := v.init(options...); err != nil {
+	if err := enc.init(options...); err != nil {
 		return nil, err
 	}
 
-	return v, nil
+	return enc, nil
 }
 
-func (v *Encoder) init(options ...Option) error {
-	enc, err := NewH264Encoder(v.buf, v.width, v.height, options...)
+func (e *Encoder) init(options ...Option) error {
+	enc, err := NewH264Encoder(e.buf, e.width, e.height, options...)
 	if err != nil {
 		panic(err)
 	}
-	v.enc = enc
+	e.enc = enc
 
-	go v.startLooping()
+	go e.startLooping()
 	return nil
 }
 
-func (v *Encoder) startLooping() {
+func (e *Encoder) startLooping() {
 	defer func() {
 		if r := recover(); r != nil {
 			log.Println("Warn: Recovered panic in encoding ", r)
@@ -64,43 +62,34 @@ func (v *Encoder) startLooping() {
 		}
 	}()
 
-	size := int(float32(v.width*v.height) * 1.5)
+	size := int(float32(e.width*e.height) * 1.5)
 	yuv := make([]byte, size, size)
 
-	for img := range v.Input {
-		util.RgbaToYuvInplace(img.Image, yuv, v.width, v.height)
-		err := v.enc.Encode(yuv)
+	for img := range e.Input {
+		util.RgbaToYuvInplace(img.Image, yuv, e.width, e.height)
+		err := e.enc.Encode(yuv)
 		if err != nil {
 			log.Println("err encoding ", img.Image, " using h264")
 		}
-		v.Output <- encoder.OutFrame{Data: v.buf.Bytes(), Timestamp: img.Timestamp}
-		v.buf.Reset()
+		e.Output <- encoder.OutFrame{Data: e.buf.Bytes(), Timestamp: img.Timestamp}
+		e.buf.Reset()
 	}
-	close(v.Output)
-	close(v.done)
+	close(e.Output)
+	close(e.done)
 }
 
 // Release release memory and stop loop
-func (v *Encoder) release() {
-	close(v.Input)
-	<-v.done
-	err := v.enc.Close()
+func (e *Encoder) release() {
+	close(e.Input)
+	<-e.done
+	err := e.enc.Close()
 	if err != nil {
 		log.Println("Failed to close H264 encoder")
 	}
 }
 
-// GetInputChan returns input channel
-func (v *Encoder) GetInputChan() chan encoder.InFrame {
-	return v.Input
-}
+func (e *Encoder) GetInputChan() chan encoder.InFrame { return e.Input }
 
-// GetInputChan returns output channel
-func (v *Encoder) GetOutputChan() chan encoder.OutFrame {
-	return v.Output
-}
+func (e *Encoder) GetOutputChan() chan encoder.OutFrame { return e.Output }
 
-// GetDoneChan returns done channel
-func (v *Encoder) Stop() {
-	v.release()
-}
+func (e *Encoder) Stop() { e.release() }

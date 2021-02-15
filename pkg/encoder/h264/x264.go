@@ -19,6 +19,9 @@ type H264 struct {
 	csp        int32
 	nnals      int32
 	nals       []*x264.Nal
+
+	// keep monotonic pts to suppress warnings
+	pts int64
 }
 
 func NewH264Encoder(w io.Writer, width, height int, options ...Option) (encoder *H264, err error) {
@@ -53,8 +56,6 @@ func NewH264Encoder(w io.Writer, width, height int, options ...Option) (encoder 
 	param.ICsp = x264.CspI420
 	param.IWidth = int32(width)
 	param.IHeight = int32(height)
-	param.BRepeatHeaders = 1
-	param.BAnnexb = 1
 	param.ILogLevel = opts.LogLevel
 
 	param.Rc.IRcMethod = x264.RcCrf
@@ -96,6 +97,9 @@ func (e *H264) Encode(yuv []byte) (err error) {
 	picIn.Img.Plane[0] = C.CBytes(yuv[:e.lumaSize])
 	picIn.Img.Plane[1] = C.CBytes(yuv[e.lumaSize : e.lumaSize+e.chromaSize])
 	picIn.Img.Plane[2] = C.CBytes(yuv[e.lumaSize+e.chromaSize:])
+
+	picIn.IPts = e.pts
+	e.pts++
 
 	defer func() {
 		C.free(picIn.Img.Plane[0])
