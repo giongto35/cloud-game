@@ -50,13 +50,6 @@ void coreLog_cgo(enum retro_log_level level, const char *msg);
 */
 import "C"
 
-const numAxes = 4
-
-type controllerState struct {
-	keyState uint16
-	axes     [numAxes]int16
-}
-
 // naEmulator implements CloudEmulator
 type naEmulator struct {
 	sync.Mutex
@@ -93,12 +86,6 @@ type VideoExporter struct {
 	imageChannel chan<- GameFrame
 }
 
-type InputEvent struct {
-	RawState  []byte
-	PlayerIdx int
-	ConnID    string
-}
-
 // GameFrame contains image and timeframe
 type GameFrame struct {
 	Image     *image.RGBA
@@ -107,8 +94,6 @@ type GameFrame struct {
 
 var NAEmulator *naEmulator
 var outputImg *image.RGBA
-
-const maxPort = 8
 
 const SocketAddrTmpl = "/tmp/cloudretro-retro-%s.sock"
 
@@ -185,22 +170,20 @@ func Init(roomID string, withImageChannel bool, inputChannel <-chan InputEvent, 
 func (na *naEmulator) listenInput() {
 	// input from javascript follows bitmap. Ex: 00110101
 	// we decode the bitmap and send to channel
-	for inpEvent := range NAEmulator.inputChannel {
-		inpBitmap := uint16(inpEvent.RawState[1])<<8 + uint16(inpEvent.RawState[0])
-
-		if inpBitmap == 0xFFFF {
-			// terminated
-			delete(na.controllersMap, inpEvent.ConnID)
+	for in := range NAEmulator.inputChannel {
+		bitmap := in.bitmap()
+		if bitmap == InputTerminate {
+			delete(na.controllersMap, in.ConnID)
 			continue
 		}
 
-		if _, ok := na.controllersMap[inpEvent.ConnID]; !ok {
-			na.controllersMap[inpEvent.ConnID] = make([]controllerState, maxPort)
+		if _, ok := na.controllersMap[in.ConnID]; !ok {
+			na.controllersMap[in.ConnID] = make([]controllerState, maxPort)
 		}
 
-		na.controllersMap[inpEvent.ConnID][inpEvent.PlayerIdx].keyState = inpBitmap
-		for i := 0; i < numAxes && (i+1)*2+1 < len(inpEvent.RawState); i++ {
-			na.controllersMap[inpEvent.ConnID][inpEvent.PlayerIdx].axes[i] = int16(inpEvent.RawState[(i+1)*2+1])<<8 + int16(inpEvent.RawState[(i+1)*2])
+		na.controllersMap[in.ConnID][in.PlayerIdx].keyState = bitmap
+		for i := 0; i < numAxes && (i+1)*2+1 < len(in.RawState); i++ {
+			na.controllersMap[in.ConnID][in.PlayerIdx].axes[i] = int16(in.RawState[(i+1)*2+1])<<8 + int16(in.RawState[(i+1)*2])
 		}
 	}
 }
