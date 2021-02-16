@@ -111,8 +111,8 @@ func (c *Client) Receive(id string, f PacketHandler) {
 		req.PacketID = response.PacketID
 		req.SessionID = response.SessionID
 
-		// Skip rqeuest if it is EmptyPacket
-		if req == EmptyPacket {
+		// Skip response if it is EmptyPacket
+		if response == EmptyPacket {
 			return
 		}
 		resp, err := json.Marshal(req)
