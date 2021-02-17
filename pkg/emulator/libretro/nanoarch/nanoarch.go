@@ -182,11 +182,9 @@ func coreInputState(port C.unsigned, device C.unsigned, index C.unsigned, id C.u
 			return 0
 		}
 		axis := index*2 + id
-		for k := range NAEmulator.controllersMap {
-			value := NAEmulator.controllersMap[k][port].axes[axis]
-			if value != 0 {
-				return (C.int16_t)(value)
-			}
+		value := NAEmulator.players.session.isDpad(uint(port), uint(axis))
+		if value != 0 {
+			return (C.int16_t)(value)
 		}
 	}
 
@@ -200,12 +198,10 @@ func coreInputState(port C.unsigned, device C.unsigned, index C.unsigned, id C.u
 		return 0
 	}
 
-	// check if any player is pressing that key
-	for k := range NAEmulator.controllersMap {
-		if ((NAEmulator.controllersMap[k][port].keyState >> uint(key)) & 1) == 1 {
-			return 1
-		}
+	if NAEmulator.players.session.isKeyPressed(uint(port), key) {
+		return 1
 	}
+
 	return 0
 }
 

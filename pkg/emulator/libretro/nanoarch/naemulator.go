@@ -66,8 +66,10 @@ type naEmulator struct {
 	isSavingLoading bool
 	storage         Storage
 
-	controllersMap map[string][]controllerState
-	done           chan struct{}
+	players players
+
+	//controllersMap map[string][]controllerState
+	done chan struct{}
 }
 
 type Storage struct {
@@ -112,13 +114,13 @@ func NewNAEmulator(roomID string, inputChannel <-chan InputEvent, storage Storag
 			HasMultitap:   conf.HasMultitap,
 			AutoGlContext: conf.AutoGlContext,
 		},
-		storage:        storage,
-		imageChannel:   imageChannel,
-		audioChannel:   audioChannel,
-		inputChannel:   inputChannel,
-		controllersMap: map[string][]controllerState{},
-		roomID:         roomID,
-		done:           make(chan struct{}, 1),
+		storage:      storage,
+		imageChannel: imageChannel,
+		audioChannel: audioChannel,
+		inputChannel: inputChannel,
+		players:      NewPlayerSessionInput(),
+		roomID:       roomID,
+		done:         make(chan struct{}, 1),
 	}, imageChannel, audioChannel
 }
 
@@ -167,24 +169,17 @@ func Init(roomID string, withImageChannel bool, inputChannel <-chan InputEvent, 
 	return emu, imageChannel, audioChannel
 }
 
+// listenInput handles user input.
+// The user input is encoded as bitmap that we decode
+// and send into the game emulator.
 func (na *naEmulator) listenInput() {
-	// input from javascript follows bitmap. Ex: 00110101
-	// we decode the bitmap and send to channel
 	for in := range NAEmulator.inputChannel {
 		bitmap := in.bitmap()
 		if bitmap == InputTerminate {
-			delete(na.controllersMap, in.ConnID)
+			na.players.session.close(in.ConnID)
 			continue
 		}
-
-		if _, ok := na.controllersMap[in.ConnID]; !ok {
-			na.controllersMap[in.ConnID] = make([]controllerState, maxPort)
-		}
-
-		na.controllersMap[in.ConnID][in.PlayerIdx].keyState = bitmap
-		for i := 0; i < numAxes && (i+1)*2+1 < len(in.RawState); i++ {
-			na.controllersMap[in.ConnID][in.PlayerIdx].axes[i] = int16(in.RawState[(i+1)*2+1])<<8 + int16(in.RawState[(i+1)*2])
-		}
+		na.players.session.setInputForPlayer(in.ConnID, in.PlayerIdx, bitmap, in.RawState)
 	}
 }
 
