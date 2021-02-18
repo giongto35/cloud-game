@@ -182,7 +182,7 @@ func coreInputState(port C.unsigned, device C.unsigned, index C.unsigned, id C.u
 			return 0
 		}
 		axis := index*2 + id
-		value := NAEmulator.players.session.isDpad(uint(port), uint(axis))
+		value := NAEmulator.players.isDpadTouched(uint(port), uint(axis))
 		if value != 0 {
 			return (C.int16_t)(value)
 		}
@@ -198,7 +198,7 @@ func coreInputState(port C.unsigned, device C.unsigned, index C.unsigned, id C.u
 		return 0
 	}
 
-	if NAEmulator.players.session.isKeyPressed(uint(port), key) {
+	if NAEmulator.players.isKeyPressed(uint(port), key) {
 		return 1
 	}
 

@@ -66,9 +66,8 @@ type naEmulator struct {
 	isSavingLoading bool
 	storage         Storage
 
-	players players
+	players Players
 
-	//controllersMap map[string][]controllerState
 	done chan struct{}
 }
 
@@ -97,8 +96,6 @@ type GameFrame struct {
 var NAEmulator *naEmulator
 var outputImg *image.RGBA
 
-const SocketAddrTmpl = "/tmp/cloudretro-retro-%s.sock"
-
 // NAEmulator implements CloudEmulator interface based on NanoArch(golang RetroArch)
 func NewNAEmulator(roomID string, inputChannel <-chan InputEvent, storage Storage, conf config.LibretroCoreConfig) (*naEmulator, chan GameFrame, chan []int16) {
 	imageChannel := make(chan GameFrame, 30)
@@ -126,7 +123,7 @@ func NewNAEmulator(roomID string, inputChannel <-chan InputEvent, storage Storag
 
 // NewVideoExporter creates new video Exporter that produces to unix socket
 func NewVideoExporter(roomID string, imgChannel chan GameFrame) *VideoExporter {
-	sockAddr := fmt.Sprintf(SocketAddrTmpl, roomID)
+	sockAddr := fmt.Sprintf("/tmp/cloudretro-retro-%s.sock", roomID)
 
 	go func(sockAddr string) {
 		log.Println("Dialing to ", sockAddr)
@@ -148,10 +145,7 @@ func NewVideoExporter(roomID string, imgChannel chan GameFrame) *VideoExporter {
 		}
 	}(sockAddr)
 
-	return &VideoExporter{
-		imageChannel: imgChannel,
-	}
-
+	return &VideoExporter{imageChannel: imgChannel}
 }
 
 // Init initialize new RetroArch cloud emulator
@@ -179,7 +173,7 @@ func (na *naEmulator) listenInput() {
 			na.players.session.close(in.ConnID)
 			continue
 		}
-		na.players.session.setInputForPlayer(in.ConnID, in.PlayerIdx, bitmap, in.RawState)
+		na.players.session.setInput(in.ConnID, in.PlayerIdx, bitmap, in.RawState)
 	}
 }
 
@@ -196,7 +190,7 @@ func (na *naEmulator) SetViewport(width int, height int) {
 }
 
 func (na *naEmulator) Start() {
-	na.playGame(na.gamePath)
+	na.playGame()
 	ticker := time.NewTicker(time.Second / time.Duration(na.meta.Fps))
 
 	for range ticker.C {
@@ -217,7 +211,7 @@ func (na *naEmulator) Start() {
 	}
 }
 
-func (na *naEmulator) playGame(path string) {
+func (na *naEmulator) playGame() {
 	// When start game, we also try loading if there was a saved state
 	na.LoadGame()
 }
