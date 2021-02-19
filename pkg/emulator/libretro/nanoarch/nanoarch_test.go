@@ -91,9 +91,9 @@ func GetEmulatorMock(room string, system string) *EmulatorMock {
 				UsesLibCo:   meta.UsesLibCo,
 				HasMultitap: meta.HasMultitap,
 			},
-			controllersMap: map[string][]controllerState{},
-			roomID:         room,
-			done:           make(chan struct{}, 1),
+			players: NewPlayerSessionInput(),
+			roomID:  room,
+			done:    make(chan struct{}, 1),
 		},
 
 		canvas: image.NewRGBA(image.Rect(0, 0, meta.Width, meta.Height)),

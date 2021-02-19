@@ -50,13 +50,6 @@ void coreLog_cgo(enum retro_log_level level, const char *msg);
 */
 import "C"
 
-const numAxes = 4
-
-type controllerState struct {
-	keyState uint16
-	axes     [numAxes]int16
-}
-
 // naEmulator implements CloudEmulator
 type naEmulator struct {
 	sync.Mutex
@@ -73,8 +66,9 @@ type naEmulator struct {
 	isSavingLoading bool
 	storage         Storage
 
-	controllersMap map[string][]controllerState
-	done           chan struct{}
+	players Players
+
+	done chan struct{}
 }
 
 type Storage struct {
@@ -93,12 +87,6 @@ type VideoExporter struct {
 	imageChannel chan<- GameFrame
 }
 
-type InputEvent struct {
-	RawState  []byte
-	PlayerIdx int
-	ConnID    string
-}
-
 // GameFrame contains image and timeframe
 type GameFrame struct {
 	Image     *image.RGBA
@@ -107,10 +95,6 @@ type GameFrame struct {
 
 var NAEmulator *naEmulator
 var outputImg *image.RGBA
-
-const maxPort = 8
-
-const SocketAddrTmpl = "/tmp/cloudretro-retro-%s.sock"
 
 // NAEmulator implements CloudEmulator interface based on NanoArch(golang RetroArch)
 func NewNAEmulator(roomID string, inputChannel <-chan InputEvent, storage Storage, conf config.LibretroCoreConfig) (*naEmulator, chan GameFrame, chan []int16) {
@@ -127,19 +111,19 @@ func NewNAEmulator(roomID string, inputChannel <-chan InputEvent, storage Storag
 			HasMultitap:   conf.HasMultitap,
 			AutoGlContext: conf.AutoGlContext,
 		},
-		storage:        storage,
-		imageChannel:   imageChannel,
-		audioChannel:   audioChannel,
-		inputChannel:   inputChannel,
-		controllersMap: map[string][]controllerState{},
-		roomID:         roomID,
-		done:           make(chan struct{}, 1),
+		storage:      storage,
+		imageChannel: imageChannel,
+		audioChannel: audioChannel,
+		inputChannel: inputChannel,
+		players:      NewPlayerSessionInput(),
+		roomID:       roomID,
+		done:         make(chan struct{}, 1),
 	}, imageChannel, audioChannel
 }
 
 // NewVideoExporter creates new video Exporter that produces to unix socket
 func NewVideoExporter(roomID string, imgChannel chan GameFrame) *VideoExporter {
-	sockAddr := fmt.Sprintf(SocketAddrTmpl, roomID)
+	sockAddr := fmt.Sprintf("/tmp/cloudretro-retro-%s.sock", roomID)
 
 	go func(sockAddr string) {
 		log.Println("Dialing to ", sockAddr)
@@ -161,10 +145,7 @@ func NewVideoExporter(roomID string, imgChannel chan GameFrame) *VideoExporter {
 		}
 	}(sockAddr)
 
-	return &VideoExporter{
-		imageChannel: imgChannel,
-	}
-
+	return &VideoExporter{imageChannel: imgChannel}
 }
 
 // Init initialize new RetroArch cloud emulator
@@ -182,26 +163,17 @@ func Init(roomID string, withImageChannel bool, inputChannel <-chan InputEvent, 
 	return emu, imageChannel, audioChannel
 }
 
+// listenInput handles user input.
+// The user input is encoded as bitmap that we decode
+// and send into the game emulator.
 func (na *naEmulator) listenInput() {
-	// input from javascript follows bitmap. Ex: 00110101
-	// we decode the bitmap and send to channel
-	for inpEvent := range NAEmulator.inputChannel {
-		inpBitmap := uint16(inpEvent.RawState[1])<<8 + uint16(inpEvent.RawState[0])
-
-		if inpBitmap == 0xFFFF {
-			// terminated
-			delete(na.controllersMap, inpEvent.ConnID)
+	for in := range NAEmulator.inputChannel {
+		bitmap := in.bitmap()
+		if bitmap == InputTerminate {
+			na.players.session.close(in.ConnID)
 			continue
 		}
-
-		if _, ok := na.controllersMap[inpEvent.ConnID]; !ok {
-			na.controllersMap[inpEvent.ConnID] = make([]controllerState, maxPort)
-		}
-
-		na.controllersMap[inpEvent.ConnID][inpEvent.PlayerIdx].keyState = inpBitmap
-		for i := 0; i < numAxes && (i+1)*2+1 < len(inpEvent.RawState); i++ {
-			na.controllersMap[inpEvent.ConnID][inpEvent.PlayerIdx].axes[i] = int16(inpEvent.RawState[(i+1)*2+1])<<8 + int16(inpEvent.RawState[(i+1)*2])
-		}
+		na.players.session.setInput(in.ConnID, in.PlayerIdx, bitmap, in.RawState)
 	}
 }
 
@@ -218,7 +190,7 @@ func (na *naEmulator) SetViewport(width int, height int) {
 }
 
 func (na *naEmulator) Start() {
-	na.playGame(na.gamePath)
+	na.playGame()
 	ticker := time.NewTicker(time.Second / time.Duration(na.meta.Fps))
 
 	for range ticker.C {
@@ -239,7 +211,7 @@ func (na *naEmulator) Start() {
 	}
 }
 
-func (na *naEmulator) playGame(path string) {
+func (na *naEmulator) playGame() {
 	// When start game, we also try loading if there was a saved state
 	na.LoadGame()
 }
