@@ -423,7 +423,10 @@
     event.sub(MEDIA_STREAM_CANDIDATE_FLUSH, () => rtcp.flushCandidate());
     event.sub(MEDIA_STREAM_READY, () => rtcp.start());
     event.sub(CONNECTION_READY, onConnectionReady);
-    event.sub(CONNECTION_CLOSED, () => input.poll().disable());
+    event.sub(CONNECTION_CLOSED, () => {
+        input.poll().disable();
+        socket.abort();
+    });
     event.sub(LATENCY_CHECK_REQUESTED, onLatencyCheck);
     event.sub(GAMEPAD_CONNECTED, () => popup('Gamepad connected'));
     event.sub(GAMEPAD_DISCONNECTED, () => popup('Gamepad disconnected'));
