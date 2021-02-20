@@ -23,8 +23,8 @@ const socket = (() => {
         Below is high level implementation of ping.
         // TODO: find the best ping time, currently 2 seconds works well in Chrome+Firefox
     */
-    const pingIntervalMs = 2000; // 2 secs
-    // const pingIntervalMs = 1000 / 5; // too much
+    const pingIntervalMs = 2000;
+    let pingIntervalId = 0;
 
     let conn;
     let curPacketId = '';
@@ -37,10 +37,12 @@ const socket = (() => {
 
         // Clear old roomID
         conn.onopen = () => {
+            if (pingIntervalId > 0) return;
+
             log.info('[ws] <- open connection');
             log.info(`[ws] -> setting ping interval to ${pingIntervalMs}ms`);
             // !to add destructor if SPA
-            setInterval(ping, pingIntervalMs)
+            pingIntervalId = setInterval(ping, pingIntervalMs)
         };
         conn.onerror = error => log.error(`[ws] ${error}`);
         conn.onclose = () => log.info('[ws] closed');
@@ -89,13 +91,28 @@ const socket = (() => {
         };
     };
 
+    /**
+     * Abnormal connection termination cleanup.
+     */
+    const abort = () => {
+        if (pingIntervalId < 0) return;
+
+        log.info('[ws] ping has been disabled');
+        clearInterval(pingIntervalId);
+        pingIntervalId = 0;
+    }
+
     // TODO: format the package with time
     const ping = () => {
         const time = Date.now();
         send({"id": "heartbeat", "data": time.toString()});
         event.pub(PING_REQUEST, {time: time});
     }
-    const send = (data) => conn.send(JSON.stringify(data));
+    const send = (data) => {
+        if (conn.readyState === 1) {
+            conn.send(JSON.stringify(data));
+        }
+    }
     const latency = (workers, packetId) => send({
         "id": "checkLatency",
         "data": JSON.stringify(workers),
@@ -118,6 +135,7 @@ const socket = (() => {
 
     return {
         init: init,
+        abort: abort,
         send: send,
         latency: latency,
         saveGame: saveGame,
