@@ -58,7 +58,7 @@ func (wrk *Worker) startModules() {
 				return
 			}
 			if err := s.Run(); err != nil {
-				glog.Errorf("failed start server")
+				glog.Errorf("failed start server: [%v]", err)
 			}
 		}()
 	}
