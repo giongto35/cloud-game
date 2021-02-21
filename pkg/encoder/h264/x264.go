@@ -5,6 +5,7 @@ import "C"
 import (
 	"fmt"
 	"io"
+	"log"
 
 	x264 "github.com/sergystepanov/x264-go/v2/x264c/external"
 )
@@ -28,7 +29,7 @@ func NewH264Encoder(w io.Writer, width, height int, options ...Option) (encoder 
 	libVersion := int(x264.Build)
 
 	if libVersion < 150 {
-		return nil, fmt.Errorf("x264: the library version should be older than v150, got %v", libVersion)
+		return nil, fmt.Errorf("x264: the library version should be newer than v150, you have got version %v", libVersion)
 	}
 
 	opts := &Options{
@@ -40,6 +41,10 @@ func NewH264Encoder(w io.Writer, width, height int, options ...Option) (encoder 
 
 	for _, opt := range options {
 		opt(opts)
+	}
+
+	if opts.LogLevel > 0 {
+		log.Printf("x264: build v%v", x264.Build)
 	}
 
 	param := x264.Param{}
@@ -60,7 +65,7 @@ func NewH264Encoder(w io.Writer, width, height int, options ...Option) (encoder 
 	// legacy encoder lacks of this param
 	param.IBitdepth = 8
 
-	if libVersion > 159 {
+	if libVersion > 155 {
 		param.ICsp = x264.CspI420
 	} else {
 		param.ICsp = 1
