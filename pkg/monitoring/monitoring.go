@@ -16,7 +16,7 @@ import (
 type ServerMonitoring struct {
 	cfg    monitoring.ServerMonitoringConfig
 	tag    string
-	server http.Server
+	server *http.Server
 }
 
 func NewServerMonitoring(cfg monitoring.ServerMonitoringConfig, tag string) *ServerMonitoring {
@@ -37,6 +37,7 @@ func (sm *ServerMonitoring) Run() error {
 			Addr:    fmt.Sprintf(":%d", sm.cfg.Port),
 			Handler: monitoringServerMux,
 		}
+		sm.server = &srv
 		glog.Infof("[%v] Starting monitoring server at %v", sm.tag, srv.Addr)
 
 		if sm.cfg.ProfilingEnabled {
@@ -62,7 +63,6 @@ func (sm *ServerMonitoring) Run() error {
 			glog.Infof("[%v] Prometheus metric is enabled at %v", sm.tag, srv.Addr+metricPath)
 			monitoringServerMux.Handle(metricPath, promhttp.Handler())
 		}
-		sm.server = srv
 		return srv.ListenAndServe()
 	}
 	return nil
