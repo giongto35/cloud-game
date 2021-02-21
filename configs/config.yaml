@@ -152,7 +152,7 @@ encoder:
     frequency: 48000
   video:
     # h264, vpx
-    codec: h264
+    codec: vpx
     # see: https://trac.ffmpeg.org/wiki/Encode/H.264
     h264:
       # Constant Rate Factor (CRF) 0-51 (default: 23)
