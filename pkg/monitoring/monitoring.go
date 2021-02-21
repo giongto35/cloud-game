@@ -63,12 +63,22 @@ func (sm *ServerMonitoring) Run() error {
 			glog.Infof("[%v] Prometheus metric is enabled at %v", sm.tag, srv.Addr+metricPath)
 			monitoringServerMux.Handle(metricPath, promhttp.Handler())
 		}
-		return srv.ListenAndServe()
+
+		err := srv.ListenAndServe()
+		if err == http.ErrServerClosed {
+			glog.Infof("[%v] The main HTTP server has been closed", sm.tag)
+			return nil
+		}
+		return err
 	}
 	return nil
 }
 
 func (sm *ServerMonitoring) Shutdown(ctx context.Context) error {
+	if sm.server == nil {
+		return nil
+	}
+
 	glog.Infof("[%v] Shutting down monitoring server", sm.tag)
 	return sm.server.Shutdown(ctx)
 }
