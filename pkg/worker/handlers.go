@@ -10,7 +10,6 @@ import (
 	"github.com/giongto35/cloud-game/v2/pkg/config/worker"
 	"github.com/giongto35/cloud-game/v2/pkg/cws/api"
 	"github.com/giongto35/cloud-game/v2/pkg/emulator/libretro/manager/remotehttp"
-	"github.com/giongto35/cloud-game/v2/pkg/encoder"
 	"github.com/giongto35/cloud-game/v2/pkg/environment"
 	"github.com/giongto35/cloud-game/v2/pkg/games"
 	"github.com/giongto35/cloud-game/v2/pkg/webrtc"
@@ -174,11 +173,11 @@ func (h *Handler) detachRoom(roomID string) {
 
 // createNewRoom creates a new room
 // Return nil in case of room is existed
-func (h *Handler) createNewRoom(game games.GameMetadata, roomID string, videoCodec encoder.VideoCodec) *room.Room {
+func (h *Handler) createNewRoom(game games.GameMetadata, roomID string) *room.Room {
 	// If the roomID doesn't have any running sessions (room was closed)
 	// we spawn a new room
 	if !h.isRoomBusy(roomID) {
-		newRoom := room.NewRoom(roomID, game, videoCodec, h.onlineStorage, h.cfg)
+		newRoom := room.NewRoom(roomID, game, h.onlineStorage, h.cfg)
 		// TODO: Might have race condition (and it has (:)
 		h.rooms[newRoom.ID] = newRoom
 		return newRoom

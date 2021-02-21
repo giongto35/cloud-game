@@ -235,8 +235,9 @@ func getRoomMock(cfg roomMockConfig) roomMock {
 	if err := coreManager.Sync(); err != nil {
 		log.Printf("error: cores sync has failed, %v", err)
 	}
+	conf.Encoder.Video.Codec = cfg.codec.String()
 
-	room := NewRoom(cfg.roomName, cfg.game, cfg.codec, storage.NewInitClient(), conf)
+	room := NewRoom(cfg.roomName, cfg.game, storage.NewInitClient(), conf)
 
 	// loop-wait the room initialization
 	var init sync.WaitGroup

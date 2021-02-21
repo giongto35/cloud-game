@@ -11,6 +11,7 @@ RUN apt-get update && apt-get install -y \
     make \
     pkg-config \
     libvpx-dev \
+    libx264-dev \
     libopus-dev \
     libopusfile-dev \
     libsdl2-dev \
@@ -32,6 +33,7 @@ WORKDIR /usr/local/share/cloud-game
 RUN apt-get update && apt-get install --no-install-recommends -y \
     ca-certificates \
     libvpx5 \
+    libx264-155 \
     libopus0 \
     libopusfile0 \
     libsdl2-2.0-0 \

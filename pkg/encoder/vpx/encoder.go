@@ -1,4 +1,4 @@
-package vpxencoder
+package vpx
 
 import (
 	"fmt"
@@ -61,8 +61,8 @@ type VpxEncoder struct {
 	vpxCodexIter     C.vpx_codec_iter_t
 }
 
-// NewVpxEncoder create vp8 encoder
-func NewVpxEncoder(w, h, fps, bitrate, keyframe int) (encoder.Encoder, error) {
+// NewEncoder create vp8 encoder
+func NewEncoder(w, h, fps, bitrate, keyframe int) (encoder.Encoder, error) {
 	v := &VpxEncoder{
 		Output: make(chan encoder.OutFrame, 5*chanSize),
 		Input:  make(chan encoder.InFrame, chanSize),
@@ -161,9 +161,7 @@ func (v *VpxEncoder) startLooping() {
 // Release release memory and stop loop
 func (v *VpxEncoder) release() {
 	close(v.Input)
-	// Wait for loop to stop
 	<-v.done
-	log.Println("Releasing encoder")
 	C.vpx_img_free(&v.vpxImage)
 	C.vpx_codec_destroy(&v.vpxCodexCtx)
 }

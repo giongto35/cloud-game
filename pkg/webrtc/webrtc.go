@@ -11,7 +11,6 @@ import (
 
 	webrtcConfig "github.com/giongto35/cloud-game/v2/pkg/config/webrtc"
 	"github.com/giongto35/cloud-game/v2/pkg/encoder"
-	"github.com/giongto35/cloud-game/v2/pkg/util"
 	itc "github.com/giongto35/cloud-game/v2/pkg/webrtc/interceptor"
 	"github.com/gofrs/uuid"
 	"github.com/pion/interceptor"
@@ -127,7 +126,7 @@ func (w *WebRTC) StartClient(isMobile bool, iceCB OnIceCallback) (string, error)
 
 	// add video track
 	var codec webrtc.RTPCodecCapability
-	if util.GetVideoEncoder(isMobile) == encoder.H264 {
+	if w.cfg.Encoder.Video.Codec == encoder.H264.String() {
 		codec = webrtc.RTPCodecCapability{MimeType: "video/h264"}
 	} else {
 		codec = webrtc.RTPCodecCapability{MimeType: "video/vp8"}
