@@ -25,6 +25,12 @@ type H264 struct {
 }
 
 func NewH264Encoder(w io.Writer, width, height int, options ...Option) (encoder *H264, err error) {
+	libVersion := int(x264.Build)
+
+	if libVersion < 150 {
+		return nil, fmt.Errorf("x264: the library version should be older than v150, got %v", libVersion)
+	}
+
 	opts := &Options{
 		Crf:     12,
 		Tune:    "zerolatency",
@@ -53,7 +59,12 @@ func NewH264Encoder(w io.Writer, width, height int, options ...Option) (encoder 
 
 	// legacy encoder lacks of this param
 	param.IBitdepth = 8
-	param.ICsp = x264.CspI420
+
+	if libVersion > 159 {
+		param.ICsp = x264.CspI420
+	} else {
+		param.ICsp = 1
+	}
 	param.IWidth = int32(width)
 	param.IHeight = int32(height)
 	param.ILogLevel = opts.LogLevel
