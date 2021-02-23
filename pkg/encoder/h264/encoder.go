@@ -18,10 +18,8 @@ type Encoder struct {
 	buf *bytes.Buffer
 	enc *H264
 
-	// C
 	width  int
 	height int
-	fps    int
 }
 
 // NewEncoder creates h264 encoder
