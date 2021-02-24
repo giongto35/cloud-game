@@ -22,7 +22,6 @@ type Encoder struct {
 	height int
 }
 
-// NewEncoder creates h264 encoder
 func NewEncoder(width, height int, options ...Option) (encoder.Encoder, error) {
 	enc := &Encoder{
 		Output: make(chan encoder.OutFrame, 10),

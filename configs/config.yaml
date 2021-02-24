@@ -151,7 +151,7 @@ encoder:
     frame: 20
     frequency: 48000
   video:
-    # h264, vpx
+    # h264, vpx (VP8)
     codec: vpx
     # see: https://trac.ffmpeg.org/wiki/Encode/H.264
     h264:
@@ -165,6 +165,12 @@ encoder:
       tune: zerolatency
       # 0-3
       logLevel: 0
+    # see: https://www.webmproject.org/docs/encoder-parameters
+    vpx:
+      # target bitrate (KBit/s)
+      bitrate: 1200
+      # force keyframe interval
+      keyframeInterval: 5
   # run without a game
   # (experimental)
   withoutGame: false

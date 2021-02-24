@@ -5,6 +5,7 @@ import (
 
 	"github.com/giongto35/cloud-game/v2/pkg/encoder"
 	"github.com/giongto35/cloud-game/v2/pkg/encoder/vpx/libvpx"
+	"github.com/giongto35/cloud-game/v2/pkg/encoder/vpx/options"
 	"github.com/giongto35/cloud-game/v2/pkg/util"
 )
 
@@ -20,8 +21,7 @@ type Encoder struct {
 	height int
 }
 
-// NewEncoder create vp8 encoder
-func NewEncoder(w, h, fps, bitrate, keyframe int) (encoder.Encoder, error) {
+func NewEncoder(w, h int, options ...options.Option) (encoder.Encoder, error) {
 	v := &Encoder{
 		Output: make(chan encoder.OutFrame, 10),
 		Input:  make(chan encoder.InFrame, 2),
@@ -31,15 +31,15 @@ func NewEncoder(w, h, fps, bitrate, keyframe int) (encoder.Encoder, error) {
 		height: h,
 	}
 
-	if err := v.init(fps, bitrate, keyframe); err != nil {
+	if err := v.init(options...); err != nil {
 		return nil, err
 	}
 
 	return v, nil
 }
 
-func (v *Encoder) init(fps int, bitrate int, keyframeI int) error {
-	enc, err := libvpx.NewEncoder(v.width, v.height, fps, bitrate, keyframeI)
+func (v *Encoder) init(options ...options.Option) error {
+	enc, err := libvpx.NewEncoder(v.width, v.height, options...)
 	if err != nil {
 		return err
 	}

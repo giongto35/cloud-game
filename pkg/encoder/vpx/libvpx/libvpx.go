@@ -34,6 +34,8 @@ import "C"
 import (
 	"fmt"
 	"unsafe"
+
+	codec "github.com/giongto35/cloud-game/v2/pkg/encoder/vpx/options"
 )
 
 type Vpx struct {
@@ -45,17 +47,26 @@ type Vpx struct {
 	kfi C.int
 }
 
-func NewEncoder(width, height, fps, bitrate, kfi int) (*Vpx, error) {
-	codec := C.CString("vp8")
-	defer C.free(unsafe.Pointer(codec))
-	encoder := C.get_vpx_encoder_by_name(codec)
+func NewEncoder(width, height int, options ...codec.Option) (*Vpx, error) {
+	codecName := C.CString("vp8")
+	defer C.free(unsafe.Pointer(codecName))
+	encoder := C.get_vpx_encoder_by_name(codecName)
 	if encoder == nil {
 		return nil, fmt.Errorf("get_vpx_encoder_by_name failed")
 	}
 
+	opts := &codec.Options{
+		Bitrate:     1200,
+		KeyframeInt: 5,
+	}
+
+	for _, opt := range options {
+		opt(opts)
+	}
+
 	vpx := Vpx{
 		frameCount: C.int(0),
-		kfi:        C.int(kfi),
+		kfi:        C.int(opts.KeyframeInt),
 	}
 
 	if C.vpx_img_alloc(&vpx.image, C.VPX_IMG_FMT_I420, C.uint(width), C.uint(height), 0) == nil {
@@ -69,9 +80,7 @@ func NewEncoder(width, height, fps, bitrate, kfi int) (*Vpx, error) {
 
 	cfg.g_w = C.uint(width)
 	cfg.g_h = C.uint(height)
-	cfg.g_timebase.num = 1
-	cfg.g_timebase.den = C.int(fps)
-	cfg.rc_target_bitrate = C.uint(bitrate)
+	cfg.rc_target_bitrate = C.uint(opts.Bitrate)
 	cfg.g_error_resilient = 1
 
 	if C.call_vpx_codec_enc_init(&vpx.codecCtx, encoder, &cfg) != 0 {

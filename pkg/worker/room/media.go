@@ -2,6 +2,7 @@ package room
 
 import (
 	"fmt"
+	"github.com/giongto35/cloud-game/v2/pkg/encoder/vpx/options"
 	"log"
 
 	encoderConfig "github.com/giongto35/cloud-game/v2/pkg/config/encoder"
@@ -82,7 +83,10 @@ func (r *Room) startVideo(width, height int, video encoderConfig.Video) {
 			LogLevel: int32(video.H264.LogLevel),
 		}))
 	} else {
-		enc, err = vpx.NewEncoder(width, height, 20, 1200, 5)
+		enc, err = vpx.NewEncoder(width, height, options.WithOptions(options.Options{
+			Bitrate:     video.Vpx.Bitrate,
+			KeyframeInt: video.Vpx.KeyframeInterval,
+		}))
 	}
 
 	defer func() {

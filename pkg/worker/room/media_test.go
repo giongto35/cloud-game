@@ -25,7 +25,7 @@ func benchmarkEncoder(w, h int, codec encoder.VideoCodec, b *testing.B) {
 	if codec == encoder.H264 {
 		enc, _ = h264.NewEncoder(w, h)
 	} else {
-		enc, _ = vpx.NewEncoder(w, h, 20, 1200, 5)
+		enc, _ = vpx.NewEncoder(w, h)
 	}
 	defer enc.Stop()
 
