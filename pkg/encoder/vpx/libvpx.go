@@ -1,4 +1,4 @@
-package libvpx
+package vpx
 
 // https://chromium.googlesource.com/webm/libvpx/+/master/examples/simple_encoder.c
 
@@ -34,8 +34,6 @@ import "C"
 import (
 	"fmt"
 	"unsafe"
-
-	codec "github.com/giongto35/cloud-game/v2/pkg/encoder/vpx/options"
 )
 
 type Vpx struct {
@@ -47,7 +45,7 @@ type Vpx struct {
 	kfi C.int
 }
 
-func NewEncoder(width, height int, options ...codec.Option) (*Vpx, error) {
+func NewEncoder(width, height int, options ...Option) (*Vpx, error) {
 	codecName := C.CString("vp8")
 	defer C.free(unsafe.Pointer(codecName))
 	encoder := C.get_vpx_encoder_by_name(codecName)
@@ -55,7 +53,7 @@ func NewEncoder(width, height int, options ...codec.Option) (*Vpx, error) {
 		return nil, fmt.Errorf("get_vpx_encoder_by_name failed")
 	}
 
-	opts := &codec.Options{
+	opts := &Options{
 		Bitrate:     1200,
 		KeyframeInt: 5,
 	}
@@ -90,7 +88,7 @@ func NewEncoder(width, height int, options ...codec.Option) (*Vpx, error) {
 	return &vpx, nil
 }
 
-func (vpx *Vpx) Encode(yuv []byte) ([]byte, error) {
+func (vpx *Vpx) Encode(yuv []byte) []byte {
 	vpx.codecIter = nil
 	C.vpx_img_read(&vpx.image, unsafe.Pointer(&yuv[0]))
 
@@ -105,12 +103,12 @@ func (vpx *Vpx) Encode(yuv []byte) ([]byte, error) {
 
 	goBytes := C.get_frame_buffer(&vpx.codecCtx, &vpx.codecIter)
 	if goBytes.bs == nil {
-		return []byte{}, nil
+		return []byte{}
 	}
-	return C.GoBytes(goBytes.bs, goBytes.size), nil
+	return C.GoBytes(goBytes.bs, goBytes.size)
 }
 
-func (vpx *Vpx) Close() error {
+func (vpx *Vpx) Shutdown() error {
 	C.vpx_img_free(&vpx.image)
 	C.vpx_codec_destroy(&vpx.codecCtx)
 	return nil

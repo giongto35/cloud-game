@@ -1,12 +1,12 @@
-// credit to https://github.com/poi5305/go-yuv2webRTC/blob/master/webrtc/webrtc.go
-package util
+package encoder
 
 import (
 	"image"
 	"unsafe"
 )
 
-// https://stackoverflow.com/questions/9465815/rgb-to-yuv420-algorithm-efficiency
+// see: https://stackoverflow.com/questions/9465815/rgb-to-yuv420-algorithm-efficiency
+// credit to https://github.com/poi5305/go-yuv2webRTC/blob/master/webrtc/webrtc.go
 
 /*
 #cgo CFLAGS: -O3

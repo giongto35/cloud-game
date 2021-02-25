@@ -1,4 +1,4 @@
-package options
+package vpx
 
 type Options struct {
 	// Target bandwidth to use for this stream, in kilobits per second.

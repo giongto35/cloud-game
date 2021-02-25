@@ -4,7 +4,6 @@ package h264
 import "C"
 import (
 	"fmt"
-	"io"
 	"log"
 
 	x264 "github.com/sergystepanov/x264-go/v2/x264c/external"
@@ -12,7 +11,6 @@ import (
 
 type H264 struct {
 	ref *x264.T
-	w   io.Writer
 
 	width      int32
 	lumaSize   int32
@@ -25,7 +23,7 @@ type H264 struct {
 	pts int64
 }
 
-func NewH264Encoder(w io.Writer, width, height int, options ...Option) (encoder *H264, err error) {
+func NewEncoder(width, height int, options ...Option) (encoder *H264, err error) {
 	libVersion := int(x264.Build)
 
 	if libVersion < 150 {
@@ -82,7 +80,6 @@ func NewH264Encoder(w io.Writer, width, height int, options ...Option) (encoder 
 		lumaSize:   int32(width * height),
 		chromaSize: int32(width*height) / 4,
 		nals:       make([]*x264.Nal, 1),
-		w:          w,
 		width:      int32(width),
 	}
 
@@ -93,15 +90,10 @@ func NewH264Encoder(w io.Writer, width, height int, options ...Option) (encoder 
 		err = fmt.Errorf("x264: cannot open the encoder")
 		return
 	}
-
-	if ret := x264.EncoderHeaders(encoder.ref, encoder.nals, &encoder.nnals); ret > 0 {
-		_, err = encoder.w.Write(C.GoBytes(encoder.nals[0].PPayload, C.int(ret)))
-	}
-
 	return
 }
 
-func (e *H264) Encode(yuv []byte) (err error) {
+func (e *H264) Encode(yuv []byte) []byte {
 	var picIn, picOut x264.Picture
 
 	picIn.Img.ICsp = e.csp
@@ -124,13 +116,13 @@ func (e *H264) Encode(yuv []byte) (err error) {
 	}()
 
 	if ret := x264.EncoderEncode(e.ref, e.nals, &e.nnals, &picIn, &picOut); ret > 0 {
-		_, err = e.w.Write(C.GoBytes(e.nals[0].PPayload, C.int(ret)))
+		return C.GoBytes(e.nals[0].PPayload, C.int(ret))
 		// ret should be equal to writer writes
 	}
-	return
+	return []byte{}
 }
 
-func (e *H264) Close() error {
+func (e *H264) Shutdown() error {
 	x264.EncoderClose(e.ref)
 	return nil
 }

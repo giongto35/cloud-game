@@ -2,7 +2,6 @@ package room
 
 import (
 	"fmt"
-	"github.com/giongto35/cloud-game/v2/pkg/encoder/vpx/options"
 	"log"
 
 	encoderConfig "github.com/giongto35/cloud-game/v2/pkg/config/encoder"
@@ -83,27 +82,23 @@ func (r *Room) startVideo(width, height int, video encoderConfig.Video) {
 			LogLevel: int32(video.H264.LogLevel),
 		}))
 	} else {
-		enc, err = vpx.NewEncoder(width, height, options.WithOptions(options.Options{
+		enc, err = vpx.NewEncoder(width, height, vpx.WithOptions(vpx.Options{
 			Bitrate:     video.Vpx.Bitrate,
 			KeyframeInt: video.Vpx.KeyframeInterval,
 		}))
 	}
-
-	defer func() {
-		enc.Stop()
-	}()
 
 	if err != nil {
 		fmt.Println("error create new encoder", err)
 		return
 	}
 
-	r.encoder = enc
+	r.vPipe = encoder.NewVideoPipe(enc, width, height)
+	defer func() { r.vPipe.Stop() }()
+	einput, eoutput := r.vPipe.Input, r.vPipe.Output
 
-	einput := enc.GetInputChan()
-	eoutput := enc.GetOutputChan()
+	go r.vPipe.Start()
 
-	// send screenshot
 	go func() {
 		defer func() {
 			if r := recover(); r != nil {

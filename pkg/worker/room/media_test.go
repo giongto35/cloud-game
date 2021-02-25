@@ -27,9 +27,10 @@ func benchmarkEncoder(w, h int, codec encoder.VideoCodec, b *testing.B) {
 	} else {
 		enc, _ = vpx.NewEncoder(w, h)
 	}
-	defer enc.Stop()
 
-	in, out := enc.GetInputChan(), enc.GetOutputChan()
+	pipe := encoder.NewVideoPipe(enc, w, h)
+	defer pipe.Stop()
+	go pipe.Start()
 
 	image1 := genTestImage(w, h, rand.New(rand.NewSource(int64(1))).Float32())
 	image2 := genTestImage(w, h, rand.New(rand.NewSource(int64(2))).Float32())
@@ -39,8 +40,8 @@ func benchmarkEncoder(w, h int, codec encoder.VideoCodec, b *testing.B) {
 		if i%2 == 0 {
 			im = image2
 		}
-		in <- encoder.InFrame{Image: im}
-		<-out
+		pipe.Input <- encoder.InFrame{Image: im}
+		<-pipe.Output
 	}
 }
 
