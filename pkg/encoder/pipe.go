@@ -20,8 +20,8 @@ type VideoPipe struct {
 // puts the result into the output channel.
 func NewVideoPipe(enc Encoder, w, h int) *VideoPipe {
 	return &VideoPipe{
-		Output: make(chan OutFrame, 10),
-		Input:  make(chan InFrame, 2),
+		Input:  make(chan InFrame, 1),
+		Output: make(chan OutFrame, 2),
 		done:   make(chan struct{}),
 
 		encoder: enc,
@@ -44,12 +44,6 @@ func (vp *VideoPipe) Start() {
 	yuv := make([]byte, size, size)
 
 	for img := range vp.Input {
-		// if buffer is full skip frame
-		// why the hell we need that?
-		//if len(vp.Output) >= cap(vp.Output) {
-		//	continue
-		//}
-
 		RgbaToYuvInplace(img.Image, yuv, vp.w, vp.h)
 		frame := vp.encoder.Encode(yuv)
 		if len(frame) > 0 {
