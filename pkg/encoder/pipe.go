@@ -40,12 +40,9 @@ func (vp *VideoPipe) Start() {
 		}
 	}()
 
-	size := int(float32(vp.w*vp.h) * 1.5)
-	yuv := make([]byte, size, size)
-
+	yuv := NewYuvBuffer(vp.w, vp.h)
 	for img := range vp.Input {
-		RgbaToYuvInplace(img.Image, yuv, vp.w, vp.h)
-		frame := vp.encoder.Encode(yuv)
+		frame := vp.encoder.Encode(yuv.FromRGBA(img.Image).data)
 		if len(frame) > 0 {
 			vp.Output <- OutFrame{Data: frame, Timestamp: img.Timestamp}
 		}
