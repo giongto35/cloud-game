@@ -121,7 +121,6 @@ func NewEncoder(width, height int, options ...Option) (*Vpx, error) {
 	cfg.rc_target_bitrate = C.uint(opts.Bitrate)
 	cfg.g_error_resilient = 1
 
-	C.vpx_codec_enc_init(&vpx.codecCtx, encoder.codec_interface(), cfg, 0)
 	if C.call_vpx_codec_enc_init(&vpx.codecCtx, encoder, &cfg) != 0 {
 		return nil, fmt.Errorf("failed to initialize encoder")
 	}
