@@ -21,6 +21,10 @@ type Video struct {
 		Tune     string
 		LogLevel int
 	}
+	Vpx struct {
+		Bitrate          uint
+		KeyframeInterval uint
+	}
 }
 
 func (a *Audio) GetFrameDuration() int {

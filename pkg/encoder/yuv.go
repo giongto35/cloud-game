@@ -1,16 +1,14 @@
-// credit to https://github.com/poi5305/go-yuv2webRTC/blob/master/webrtc/webrtc.go
-package util
+package encoder
 
 import (
 	"image"
 	"unsafe"
 )
 
-// https://stackoverflow.com/questions/9465815/rgb-to-yuv420-algorithm-efficiency
+// see: https://stackoverflow.com/questions/9465815/rgb-to-yuv420-algorithm-efficiency
+// credit to https://github.com/poi5305/go-yuv2webRTC/blob/master/webrtc/webrtc.go
 
 /*
-#cgo CFLAGS: -O3
-
 void rgba2yuv(void * destination, void * source, int width, int height, int stride) {
   const int image_size = width * height;
   unsigned char * rgba = source;
@@ -46,19 +44,22 @@ void rgba2yuv(void * destination, void * source, int width, int height, int stri
 */
 import "C"
 
-// RgbaToYuv convert to yuv from rgba
-func RgbaToYuv(rgba *image.RGBA) []byte {
-	w := rgba.Rect.Max.X
-	h := rgba.Rect.Max.Y
-	size := int(float32(w*h) * 1.5)
-	stride := rgba.Stride - w*4
-	yuv := make([]byte, size, size)
-	C.rgba2yuv(unsafe.Pointer(&yuv[0]), unsafe.Pointer(&rgba.Pix[0]), C.int(w), C.int(h), C.int(stride))
-	return yuv
+type Yuv struct {
+	data []byte
+	w, h int
 }
 
-// RgbaToYuvInplace convert to yuv from rgba inplace to yuv. Avoid reallocation
-func RgbaToYuvInplace(rgba *image.RGBA, yuv []byte, width, height int) {
-	stride := rgba.Stride - width*4
-	C.rgba2yuv(unsafe.Pointer(&yuv[0]), unsafe.Pointer(&rgba.Pix[0]), C.int(width), C.int(height), C.int(stride))
+func NewYuvBuffer(w, h int) Yuv {
+	size := int(float32(w*h) * 1.5)
+	return Yuv{
+		data: make([]byte, size, size),
+		w:    w,
+		h:    h,
+	}
+}
+
+// FromRGBA converts RGBA colorspace into YUV I420 format inside the internal buffer.
+func (yuv *Yuv) FromRGBA(rgba *image.RGBA) *Yuv {
+	C.rgba2yuv(unsafe.Pointer(&yuv.data[0]), unsafe.Pointer(&rgba.Pix[0]), C.int(yuv.w), C.int(yuv.h), C.int(0))
+	return yuv
 }
