@@ -2,9 +2,10 @@ package room
 
 import (
 	"image"
-	col "image/color"
+	"image/color"
 	"math/rand"
 	"testing"
+	"time"
 
 	"github.com/giongto35/cloud-game/v2/pkg/encoder"
 	"github.com/giongto35/cloud-game/v2/pkg/encoder/h264"
@@ -29,8 +30,8 @@ func benchmarkEncoder(w, h int, codec encoder.VideoCodec, b *testing.B) {
 	}
 
 	pipe := encoder.NewVideoPipe(enc, w, h)
-	defer pipe.Stop()
 	go pipe.Start()
+	defer pipe.Stop()
 
 	image1 := genTestImage(w, h, rand.New(rand.NewSource(int64(1))).Float32())
 	image2 := genTestImage(w, h, rand.New(rand.NewSource(int64(2))).Float32())
@@ -41,7 +42,11 @@ func benchmarkEncoder(w, h int, codec encoder.VideoCodec, b *testing.B) {
 			im = image2
 		}
 		pipe.Input <- encoder.InFrame{Image: im}
-		<-pipe.Output
+		select {
+		case <-pipe.Output:
+		case <-time.After(5 * time.Second):
+			b.Fatalf("encoder didn't produce an image")
+		}
 	}
 }
 
@@ -49,9 +54,8 @@ func genTestImage(w, h int, seed float32) *image.RGBA {
 	img := image.NewRGBA(image.Rectangle{Max: image.Point{X: w, Y: h}})
 	for x := 0; x < w; x++ {
 		for y := 0; y < h; y++ {
-			var color col.Color
-			color = col.RGBA{R: uint8(seed * 255), G: uint8(seed * 255), B: uint8(seed * 255), A: 0xff}
-			img.Set(x, y, color)
+			col := color.RGBA{R: uint8(seed * 255), G: uint8(seed * 255), B: uint8(seed * 255), A: 0xff}
+			img.Set(x, y, col)
 		}
 	}
 	return img

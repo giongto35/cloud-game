@@ -94,10 +94,10 @@ func (r *Room) startVideo(width, height int, video encoderConfig.Video) {
 	}
 
 	r.vPipe = encoder.NewVideoPipe(enc, width, height)
-	defer func() { r.vPipe.Stop() }()
 	einput, eoutput := r.vPipe.Input, r.vPipe.Output
 
 	go r.vPipe.Start()
+	defer r.vPipe.Stop()
 
 	go func() {
 		defer func() {
