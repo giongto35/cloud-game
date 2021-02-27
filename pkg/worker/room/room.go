@@ -56,7 +56,7 @@ type Room struct {
 	// GameName
 	gameName string
 
-	encoder encoder.Encoder
+	vPipe *encoder.VideoPipe
 }
 
 const (

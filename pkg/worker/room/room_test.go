@@ -90,7 +90,7 @@ func TestRoom(t *testing.T) {
 			codec:     test.codec,
 		})
 		t.Logf("The game [%v] has been loaded", test.game.Name)
-		waitNFrames(test.frames, room.encoder.GetOutputChan())
+		waitNFrames(test.frames, room.vPipe.Output)
 		room.Close()
 	}
 	// hack: wait room destruction
@@ -122,7 +122,7 @@ func TestRoomWithGL(t *testing.T) {
 				codec:     test.codec,
 			})
 			t.Logf("The game [%v] has been loaded", test.game.Name)
-			waitNFrames(test.frames, room.encoder.GetOutputChan())
+			waitNFrames(test.frames, room.vPipe.Output)
 			room.Close()
 		}
 		// hack: wait room destruction
@@ -161,7 +161,7 @@ func TestAllEmulatorRooms(t *testing.T) {
 			autoGlContext: autoGlContext,
 		})
 		t.Logf("The game [%v] has been loaded", test.game.Name)
-		waitNFrames(test.frames, room.encoder.GetOutputChan())
+		waitNFrames(test.frames, room.vPipe.Output)
 
 		if renderFrames {
 			img := room.director.GetViewport().(*image.RGBA)
@@ -245,7 +245,7 @@ func getRoomMock(cfg roomMockConfig) roomMock {
 	wasted := 0
 	go func() {
 		sleepDeltaMs := 10
-		for room.director == nil || room.encoder == nil {
+		for room.director == nil || room.vPipe == nil {
 			time.Sleep(time.Duration(sleepDeltaMs) * time.Millisecond)
 			wasted++
 			if wasted > 1000 {
@@ -315,7 +315,7 @@ func benchmarkRoom(rom games.GameMetadata, codec encoder.VideoCodec, frames int,
 			game:      rom,
 			codec:     codec,
 		})
-		waitNFrames(frames, room.encoder.GetOutputChan())
+		waitNFrames(frames, room.vPipe.Output)
 		room.Close()
 	}
 }
