@@ -82,24 +82,23 @@ func (r *Room) startVideo(width, height int, video encoderConfig.Video) {
 			LogLevel: int32(video.H264.LogLevel),
 		}))
 	} else {
-		enc, err = vpx.NewEncoder(width, height, 20, 1200, 5)
+		enc, err = vpx.NewEncoder(width, height, vpx.WithOptions(vpx.Options{
+			Bitrate:     video.Vpx.Bitrate,
+			KeyframeInt: video.Vpx.KeyframeInterval,
+		}))
 	}
-
-	defer func() {
-		enc.Stop()
-	}()
 
 	if err != nil {
 		fmt.Println("error create new encoder", err)
 		return
 	}
 
-	r.encoder = enc
+	r.vPipe = encoder.NewVideoPipe(enc, width, height)
+	einput, eoutput := r.vPipe.Input, r.vPipe.Output
 
-	einput := enc.GetInputChan()
-	eoutput := enc.GetOutputChan()
+	go r.vPipe.Start()
+	defer r.vPipe.Stop()
 
-	// send screenshot
 	go func() {
 		defer func() {
 			if r := recover(); r != nil {
