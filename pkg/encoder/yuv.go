@@ -51,7 +51,7 @@ void rgbaToYuvTl(void * destination, void * source, int width, int height) {
 // X   X   X   X
 //   O       O
 // X   X   X   X
-void rgbaToyuvByFour(void *destination, void *source, int width, int height) {
+void rgbaToYuvByFour(void *destination, void *source, int width, int height) {
     const int image_size = width * height;
     unsigned char *rgba = source;
     unsigned char *dst_y = destination;
@@ -125,6 +125,6 @@ func (yuv *Yuv) FromRGBA(rgba *image.RGBA) *Yuv {
 }
 
 func (yuv *Yuv) FromRGBA2(rgba *image.RGBA) *Yuv {
-	C.rgba2yuv(unsafe.Pointer(&yuv.data[0]), unsafe.Pointer(&rgba.Pix[0]), C.int(yuv.w), C.int(yuv.h))
+	C.rgbaToYuvByFour(unsafe.Pointer(&yuv.data[0]), unsafe.Pointer(&rgba.Pix[0]), C.int(yuv.w), C.int(yuv.h))
 	return yuv
 }
