@@ -5,18 +5,11 @@ import (
 	"unsafe"
 )
 
-// see: https://stackoverflow.com/questions/9465815/rgb-to-yuv420-algorithm-efficiency
-// credit to https://github.com/poi5305/go-yuv2webRTC/blob/master/webrtc/webrtc.go
+// acknowledgments:
+// 	- https://stackoverflow.com/questions/9465815/rgb-to-yuv420-algorithm-efficiency
+//  - https://github.com/poi5305/go-yuv2webRTC/blob/master/webrtc/webrtc.go
 
 /*
-#cgo CFLAGS: -Wall -O3
-
-// cgo uses pthreads anyway
-#include <pthread.h>
-
-#define MAX_THREADS 1
-static pthread_t threads[MAX_THREADS];
-
 typedef enum {
     // It will take each TL pixel for chroma values.
     // XO  X   XO  X
@@ -29,27 +22,27 @@ typedef enum {
     BETWEEN_FOUR = 1
 } chromaPos;
 
-typedef struct {
-	int width;
-	int height;
-	unsigned char *rgba;
-    unsigned char *dst_u;
-    unsigned char *dst_v;
-	chromaPos chroma;
-} chroma_args;
+// Converts RGBA image to YUV (I420) with BT.601 studio color range.
+void rgbaToYuv(void *destination, void *source, int width, int height, chromaPos chroma) {
+    const int image_size = width * height;
+    unsigned char *rgba = source;
+    unsigned char *dst_y = destination;
+    unsigned char *dst_u = destination + image_size;
+    unsigned char *dst_v = destination + image_size + image_size / 4;
 
-void *process_chroma(void *params) {
-	chroma_args *args = params;
+    int r1, g1, b1, stride;
+    // Y plane
+    for (int y = 0; y < height; ++y) {
+        stride = 4 * y * width;
+        for (int x = 0; x < width; ++x) {
+            r1 = 4 * x + stride;
+            g1 = r1 + 1;
+            b1 = g1 + 1;
+            *dst_y++ = ((66 * rgba[r1] + 129 * rgba[g1] + 25 * rgba[b1]) >> 8) + 16;
+        }
+    }
 
-	chromaPos chroma = args -> chroma;
-	unsigned char *rgba = args -> rgba;
-    unsigned char *dst_u = args -> dst_u;
-    unsigned char *dst_v = args -> dst_v;
-	int width = args -> width;
-	int height = args -> height;
-
-	int r1, b1, g1, stride;
-	// U+V plane
+    // U+V plane
     if (chroma == TOP_LEFT) {
         for (int y = 0; y < height; y += 2) {
             stride = 4 * y * width;
@@ -63,8 +56,8 @@ void *process_chroma(void *params) {
         }
     } else if (chroma == BETWEEN_FOUR) {
         int r2, g2, b2,
-            r3, g3, b3,
-            r4, g4, b4;
+                r3, g3, b3,
+                r4, g4, b4;
         for (int y = 0; y < height; y += 2) {
             stride = 4 * y * width;
             for (int x = 0; x < width; x += 2) {
@@ -95,41 +88,6 @@ void *process_chroma(void *params) {
             }
         }
     }
-	return NULL;
-}
-
-// Converts RGBA image to YUV (I420) with BT.601 studio color range.
-void rgbaToYuv(void *destination, void *source, int width, int height, chromaPos chroma) {
-    const int image_size = width * height;
-    unsigned char *rgba = source;
-    unsigned char *dst_y = destination;
-    unsigned char *dst_u = destination + image_size;
-    unsigned char *dst_v = destination + image_size + image_size / 4;
-
-	chroma_args args;
-	args.chroma = chroma;
-	args.rgba = rgba;
-	args.dst_u = dst_u;
-	args.dst_v = dst_v;
-	args.width = width;
-	args.height = height;
-
-	// U+V plane
-	pthread_create(&threads[0], NULL, &process_chroma, (void *) &args);
-
-    int r1, g1, b1, stride;
-    // Y plane
-    for (int y = 0; y < height; ++y) {
-        stride = 4 * y * width;
-        for (int x = 0; x < width; ++x) {
-            r1 = 4 * x + stride;
-            g1 = r1 + 1;
-            b1 = g1 + 1;
-            *dst_y++ = ((66 * rgba[r1] + 129 * rgba[g1] + 25 * rgba[b1]) >> 8) + 16;
-        }
-    }
-
-	pthread_join(threads[0], NULL);
 }
 */
 import "C"
