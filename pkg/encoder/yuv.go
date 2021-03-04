@@ -23,7 +23,7 @@ typedef enum {
 	BETWEEN_FOUR = 1
 } chromaPos;
 
-// Converts RGBA image to YUV (I420).
+// Converts RGBA image to YUV (I420) with BT.601 studio color range.
 void rgbaToYuv(void *destination, void *source, int width, int height, chromaPos chroma) {
     const int image_size = width * height;
     unsigned char *rgba = source;
@@ -31,12 +31,13 @@ void rgbaToYuv(void *destination, void *source, int width, int height, chromaPos
     unsigned char *dst_u = destination + image_size;
     unsigned char *dst_v = destination + image_size + image_size / 4;
 
-    int x, y, r1, g1, b1;
+    int x, y, r1, g1, b1, stride;
 
     // Y plane
     for (y = 0; y < height; ++y) {
+		stride = 4 * y * width;
         for (x = 0; x < width; ++x) {
-            r1 = 4 * (y * width + x);
+            r1 = 4 * x + stride;
             g1 = r1 + 1;
             b1 = g1 + 1;
             *dst_y++ = ((66 * rgba[r1] + 129 * rgba[g1] + 25 * rgba[b1]) >> 8) + 16;
@@ -46,8 +47,9 @@ void rgbaToYuv(void *destination, void *source, int width, int height, chromaPos
     // U+V plane
     if (chroma == TOP_LEFT) {
         for (y = 0; y < height; y += 2) {
+			stride = 4 * y * width;
             for (x = 0; x < width; x += 2) {
-                r1 = 4 * (y * width + x);
+                r1 = 4 * x + stride;
                 g1 = r1 + 1;
                 b1 = g1 + 1;
                 *dst_u++ = ((-38 * rgba[r1] + -74 * rgba[g1] + 112 * rgba[b1]) >> 8) + 128;
@@ -60,17 +62,22 @@ void rgbaToYuv(void *destination, void *source, int width, int height, chromaPos
             r4, g4, b4;
 
         for (y = 0; y < height; y += 2) {
+			stride = 4 * y * width;
             for (x = 0; x < width; x += 2) {
-                r1 = 4 * (y * width + x);
+				// (1 2) x x
+				//  x x  x x
+                r1 = 4 * x + stride;
                 g1 = r1 + 1;
                 b1 = g1 + 1;
-                r2 = 4 * (y * width + x + 1);
+                r2 = r1 + 4;
                 g2 = r2 + 1;
                 b2 = g2 + 1;
-                r3 = 4 * ((y + 1) * width + x);
+				//  x x  x x
+				// (3 4) x x
+                r3 = r1 + 4 * width;
                 g3 = r3 + 1;
                 b3 = g3 + 1;
-                r4 = 4 * ((y + 1) * width + x + 1);
+                r4 = r3 + 4;
                 g4 = r4 + 1;
                 b4 = g4 + 1;
 

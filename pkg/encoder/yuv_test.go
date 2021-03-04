@@ -44,12 +44,14 @@ func BenchmarkNew(b *testing.B) {
 }
 
 func benchmarkConverter(w, h int, chroma ChromaPos, b *testing.B) {
+	b.StopTimer()
 	buf := NewYuvBuffer(w, h)
 	buf.pos = chroma
 
 	image1 := genTestImage(w, h, rand.New(rand.NewSource(int64(1))).Float32())
 	image2 := genTestImage(w, h, rand.New(rand.NewSource(int64(2))).Float32())
 
+	b.StartTimer()
 	for i := 0; i < b.N; i++ {
 		im := image1
 		if i%2 == 0 {
