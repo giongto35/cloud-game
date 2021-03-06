@@ -30,7 +30,6 @@ type threadedProcessor struct {
 	// threading
 	threads int
 	chunk   int
-	wg      sync.WaitGroup
 
 	// cache
 	dst     unsafe.Pointer
@@ -110,14 +109,15 @@ func (yuv *threadedProcessor) Get() []byte {
 // Each chunk should contain 2, 4, 6, and etc. rows of the image.
 //
 //        8x4          CPU (2)
-//  x x x x x x x x  | Thread 1
-//  x x x x x x x x  | Thread 1
-//  x x x x x x x x  | Thread 2
-//  x x x x x x x x  | Thread 2
+//  x x x x x x x x  | Coroutine 1
+//  x x x x x x x x  | Coroutine 1
+//  x x x x x x x x  | Coroutine 2
+//  x x x x x x x x  | Coroutine 2
 //
 func (yuv *threadedProcessor) Process(rgba *image.RGBA) ImgProcessor {
 	src := unsafe.Pointer(&rgba.Pix[0])
-	yuv.wg.Add(2 * yuv.threads)
+	wg := sync.WaitGroup{}
+	wg.Add(2 * yuv.threads)
 	for i := 0; i < yuv.threads; i++ {
 		pos, hh := C.int(yuv.w*i*yuv.chunk), C.int(yuv.chunk)
 		// we need to know how many pixels left
@@ -126,12 +126,12 @@ func (yuv *threadedProcessor) Process(rgba *image.RGBA) ImgProcessor {
 		if i == yuv.threads-1 {
 			hh = C.int(yuv.h - i*yuv.chunk)
 		}
-		go func() { defer yuv.wg.Done(); C.luma(yuv.dst, src, pos, yuv.ww, hh) }()
+		go func() { defer wg.Done(); C.luma(yuv.dst, src, pos, yuv.ww, hh) }()
 		go func() {
-			defer yuv.wg.Done()
+			defer wg.Done()
 			C.chroma(yuv.dst, src, pos, yuv.chromaU, yuv.chromaV, yuv.ww, hh, yuv.chroma)
 		}()
 	}
-	yuv.wg.Wait()
+	wg.Wait()
 	return yuv
 }
