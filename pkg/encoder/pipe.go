@@ -44,9 +44,9 @@ func (vp *VideoPipe) Start() {
 		}
 	}()
 
-	image := yuv.NewYuvBuffer(vp.w, vp.h)
+	yuvProc := yuv.NewYuvImgProcessor(vp.w, vp.h)
 	for img := range vp.Input {
-		frame := vp.encoder.Encode(image.FromRgbaThreaded(img.Image).Data)
+		frame := vp.encoder.Encode(yuvProc.Process(img.Image).Get())
 		if len(frame) > 0 {
 			vp.Output <- OutFrame{Data: frame, Timestamp: img.Timestamp}
 		}

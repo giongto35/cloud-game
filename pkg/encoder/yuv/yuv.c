@@ -1,8 +1,6 @@
 #include "yuv.h"
 
-// acknowledgments:
-// 	- https://stackoverflow.com/questions/9465815/rgb-to-yuv420-algorithm-efficiency
-//  - https://github.com/poi5305/go-yuv2webRTC/blob/master/webrtc/webrtc.go
+// based on: https://stackoverflow.com/questions/9465815/rgb-to-yuv420-algorithm-efficiency
 
 // Converts RGBA image to YUV (I420) with BT.601 studio color range.
 void rgbaToYuv(void *destination, void *source, int width, int height, chromaPos chroma) {
