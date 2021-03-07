@@ -145,7 +145,7 @@ const rtcp = (() => {
             const answer = await connection.createAnswer();
             // Chrome bug https://bugs.chromium.org/p/chromium/issues/detail?id=818180 workaround
             // force stereo params for Opus tracks (a=fmtp:111 ...)
-            answer.sdp = answer.sdp.replace(/(a=fmtp:111 .*)/g, '$1;stereo=1;sprop-stereo=1');
+            answer.sdp = answer.sdp.replace(/(a=fmtp:111 .*)/g, '$1;stereo=1');
             await connection.setLocalDescription(answer);
 
             isAnswered = true;

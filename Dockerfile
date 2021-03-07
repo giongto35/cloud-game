@@ -2,7 +2,7 @@
 ARG BUILD_PATH=/go/src/github.com/giongto35/cloud-game
 
 # build image
-FROM golang:1.15 AS build
+FROM golang:1.16 AS build
 ARG BUILD_PATH
 WORKDIR ${BUILD_PATH}
 

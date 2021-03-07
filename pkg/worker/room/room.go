@@ -37,10 +37,10 @@ type Room struct {
 	// input from webRTC + connection info (player index)
 	inputChannel chan<- nanoarch.InputEvent
 	// voiceInChannel is voice stream received from users
-	voiceInChannel chan []byte
+	//voiceInChannel chan []byte
 	// voiceOutChannel is voice stream routed to all users
-	voiceOutChannel chan []byte
-	voiceSample     [][]byte
+	//voiceOutChannel chan []byte
+	//voiceSample     [][]byte
 	// State of room
 	IsRunning bool
 	// Done channel is to fire exit event when room is closed
@@ -136,8 +136,8 @@ func NewRoom(roomID string, game games.GameMetadata, onlineStorage *storage.Clie
 
 		inputChannel:    inputChannel,
 		imageChannel:    nil,
-		voiceInChannel:  make(chan []byte, 1),
-		voiceOutChannel: make(chan []byte, 1),
+		//voiceInChannel:  make(chan []byte, 1),
+		//voiceOutChannel: make(chan []byte, 1),
 		rtcSessions:     []*webrtc.WebRTC{},
 		sessionsLock:    &sync.Mutex{},
 		IsRunning:       true,
@@ -213,7 +213,7 @@ func NewRoom(roomID string, game games.GameMetadata, onlineStorage *storage.Clie
 		// Spawn video and audio encoding for webRTC
 		go room.startVideo(encoderW, encoderH, cfg.Encoder.Video)
 		go room.startAudio(gameMeta.AudioSampleRate, cfg.Encoder.Audio)
-		go room.startVoice()
+		//go room.startVoice()
 		room.director.Start()
 	}(game, roomID)
 	return room
@@ -272,21 +272,21 @@ func (r *Room) startWebRTCSession(peerconnection *webrtc.WebRTC) {
 	}()
 
 	log.Println("Start WebRTC session")
-	go func() {
-
-		// set up voice input and output. A room has multiple voice input and only one combined voice output.
-		for voiceInput := range peerconnection.VoiceInChannel {
-			// NOTE: when room is no longer running. InputChannel needs to have extra event to go inside the loop
-			if peerconnection.Done || !peerconnection.IsConnected() || !r.IsRunning {
-				break
-			}
-
-			if peerconnection.IsConnected() {
-				r.voiceInChannel <- voiceInput
-			}
-
-		}
-	}()
+	//go func() {
+	//
+	//	// set up voice input and output. A room has multiple voice input and only one combined voice output.
+	//	for voiceInput := range peerconnection.VoiceInChannel {
+	//		// NOTE: when room is no longer running. InputChannel needs to have extra event to go inside the loop
+	//		if peerconnection.Done || !peerconnection.IsConnected() || !r.IsRunning {
+	//			break
+	//		}
+	//
+	//		if peerconnection.IsConnected() {
+	//			r.voiceInChannel <- voiceInput
+	//		}
+	//
+	//	}
+	//}()
 
 	// bug: when input channel here = nil, skip and finish
 	for input := range peerconnection.InputChannel {
@@ -363,8 +363,8 @@ func (r *Room) Close() {
 	}
 	log.Println("Closing input of room ", r.ID)
 	close(r.inputChannel)
-	close(r.voiceOutChannel)
-	close(r.voiceInChannel)
+	//close(r.voiceOutChannel)
+	//close(r.voiceInChannel)
 	close(r.Done)
 	// Close here is a bit wrong because this read channel
 	// Just dont close it, let it be gc
