@@ -6,6 +6,12 @@ type Options struct {
 	Threads  int
 }
 
+func (o *Options) override(options ...Option) {
+	for _, opt := range options {
+		opt(o)
+	}
+}
+
 type Option func(*Options)
 
 func Threaded(t bool) Option {
