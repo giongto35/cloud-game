@@ -51,7 +51,7 @@ func NewInterceptedPeerConnection(conf conf.Webrtc, interceptors []interceptor.I
 func RegisterCodecs(m *MediaEngine) error {
 	for _, codec := range []RTPCodecParameters{
 		{
-			RTPCodecCapability: RTPCodecCapability{MimeType: MimeTypeOpus, ClockRate: 48000, Channels: 2, SDPFmtpLine: "minptime=10;useinbandfec=1;stereo=1"},
+			RTPCodecCapability: RTPCodecCapability{MimeType: MimeTypeOpus, ClockRate: 48000, Channels: 2},
 			PayloadType:        111,
 		},
 	} {
@@ -71,14 +71,6 @@ func RegisterCodecs(m *MediaEngine) error {
 			PayloadType:        102,
 		},
 		{
-			RTPCodecCapability: RTPCodecCapability{MimeType: MimeTypeH264, ClockRate: 90000, SDPFmtpLine: "level-asymmetry-allowed=1;packetization-mode=0;profile-level-id=42001f", RTCPFeedback: videoRTCPFeedback},
-			PayloadType:        127,
-		},
-		{
-			RTPCodecCapability: RTPCodecCapability{MimeType: MimeTypeH264, ClockRate: 90000, SDPFmtpLine: "level-asymmetry-allowed=1;packetization-mode=1;profile-level-id=42e01f", RTCPFeedback: videoRTCPFeedback},
-			PayloadType:        125,
-		},
-		{
 			RTPCodecCapability: RTPCodecCapability{MimeType: MimeTypeH264, ClockRate: 90000, SDPFmtpLine: "level-asymmetry-allowed=1;packetization-mode=0;profile-level-id=42e01f", RTCPFeedback: videoRTCPFeedback},
 			PayloadType:        108,
 		},
@@ -87,10 +79,13 @@ func RegisterCodecs(m *MediaEngine) error {
 			PayloadType:        127,
 		},
 		{
-			RTPCodecCapability: RTPCodecCapability{MimeType: MimeTypeH264, ClockRate: 90000, SDPFmtpLine: "level-asymmetry-allowed=1;packetization-mode=1;profile-level-id=640032", RTCPFeedback: videoRTCPFeedback},
+			RTPCodecCapability: RTPCodecCapability{MimeType: MimeTypeH264, ClockRate: 90000, RTCPFeedback: videoRTCPFeedback},
 			PayloadType:        123,
 		},
-		// for #123 Chrome returns profile-level-id=640015
+		{
+			RTPCodecCapability: RTPCodecCapability{MimeType: MimeTypeH264, ClockRate: 90000, SDPFmtpLine: "level-asymmetry-allowed=1;packetization-mode=1;profile-level-id=42e01f", RTCPFeedback: videoRTCPFeedback},
+			PayloadType:        125,
+		},
 	} {
 		if err := m.RegisterCodec(codec, RTPCodecTypeVideo); err != nil {
 			return err

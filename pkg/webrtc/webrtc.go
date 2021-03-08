@@ -33,11 +33,11 @@ type WebRTC struct {
 	isConnected   bool
 	isClosed      bool
 	// for yuvI420 image
-	ImageChannel    chan WebFrame
-	AudioChannel    chan []byte
+	ImageChannel chan WebFrame
+	AudioChannel chan []byte
 	//VoiceInChannel  chan []byte
 	//VoiceOutChannel chan []byte
-	InputChannel    chan []byte
+	InputChannel chan []byte
 
 	Done     bool
 	lastTime time.Time
@@ -86,11 +86,11 @@ func NewWebRTC() *WebRTC {
 	w := &WebRTC{
 		ID: uuid.Must(uuid.NewV4()).String(),
 
-		ImageChannel:    make(chan WebFrame, 30),
-		AudioChannel:    make(chan []byte, 1),
+		ImageChannel: make(chan WebFrame, 30),
+		AudioChannel: make(chan []byte, 1),
 		//VoiceInChannel:  make(chan []byte, 1),
 		//VoiceOutChannel: make(chan []byte, 1),
-		InputChannel:    make(chan []byte, 100),
+		InputChannel: make(chan []byte, 100),
 	}
 	return w
 }
@@ -127,9 +127,9 @@ func (w *WebRTC) StartClient(isMobile bool, iceCB OnIceCallback) (string, error)
 	// add video track
 	var codec webrtc.RTPCodecCapability
 	if w.cfg.Encoder.Video.Codec == encoder.H264.String() {
-		codec = webrtc.RTPCodecCapability{MimeType: webrtc.MimeTypeH264}
+		codec = webrtc.RTPCodecCapability{MimeType: webrtc.MimeTypeH264, ClockRate: 90000}
 	} else {
-		codec = webrtc.RTPCodecCapability{MimeType: webrtc.MimeTypeVP8}
+		codec = webrtc.RTPCodecCapability{MimeType: webrtc.MimeTypeVP8, ClockRate: 90000}
 	}
 	if videoTrack, err = webrtc.NewTrackLocalStaticSample(codec, "video", "game-video"); err != nil {
 		return "", err
