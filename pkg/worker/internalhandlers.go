@@ -89,10 +89,9 @@ func (h *Handler) handleAnswer() cws.PacketHandler {
 		session := h.getSession(resp.SessionID)
 		if session != nil {
 			peerconnection := session.peerconnection
-
 			err := peerconnection.SetRemoteSDP(resp.Data)
 			if err != nil {
-				log.Println("Error: Cannot set RemoteSDP of client: " + resp.SessionID)
+				log.Printf("Error: cannot set RemoteSDP of client: %v beacuse %v", resp.SessionID, err)
 			}
 		} else {
 			log.Printf("Error: No session for ID: %s\n", resp.SessionID)

@@ -75,23 +75,16 @@ const rtcp = (() => {
     }
 
     const ice = (() => {
-        let isGatheringDone = false;
-        let timeForIceGathering;
-
         const ICE_TIMEOUT = 2000;
+        let timeForIceGathering;
 
         return {
             onIcecandidate: event => {
-                // this trigger when setRemoteDesc success
-                // send any candidate to worker
-                if (event.candidate != null) {
-                    candidate = JSON.stringify(event.candidate);
-                    log.info(`[rtcp] got ice candidate: ${candidate}`);
-                    socket.send({
-                        'id': 'ice_candidate',
-                        'data': btoa(candidate),
-                    })
-                }
+                if (!event.candidate) return;
+                // send ICE candidate to the worker
+                const candidate = JSON.stringify(event.candidate);
+                log.info(`[rtcp] user candidate: ${candidate}`);
+                socket.send({'id': 'ice_candidate', 'data': btoa(candidate)})
             },
             onIceStateChange: event => {
                 switch (event.target.iceGatheringState) {
@@ -145,8 +138,9 @@ const rtcp = (() => {
             const answer = await connection.createAnswer();
             // Chrome bug https://bugs.chromium.org/p/chromium/issues/detail?id=818180 workaround
             // force stereo params for Opus tracks (a=fmtp:111 ...)
-            answer.sdp = answer.sdp.replace(/(a=fmtp:111 .*)/g, '$1;stereo=1;sprop-stereo=1');
+            answer.sdp = answer.sdp.replace(/(a=fmtp:111 .*)/g, '$1;stereo=1');
             await connection.setLocalDescription(answer);
+            log.debug("Local SDP: ", answer)
 
             isAnswered = true;
             event.pub(MEDIA_STREAM_CANDIDATE_FLUSH);

@@ -33,11 +33,11 @@ type WebRTC struct {
 	isConnected   bool
 	isClosed      bool
 	// for yuvI420 image
-	ImageChannel    chan WebFrame
-	AudioChannel    chan []byte
-	VoiceInChannel  chan []byte
-	VoiceOutChannel chan []byte
-	InputChannel    chan []byte
+	ImageChannel chan WebFrame
+	AudioChannel chan []byte
+	//VoiceInChannel  chan []byte
+	//VoiceOutChannel chan []byte
+	InputChannel chan []byte
 
 	Done     bool
 	lastTime time.Time
@@ -86,11 +86,11 @@ func NewWebRTC() *WebRTC {
 	w := &WebRTC{
 		ID: uuid.Must(uuid.NewV4()).String(),
 
-		ImageChannel:    make(chan WebFrame, 30),
-		AudioChannel:    make(chan []byte, 1),
-		VoiceInChannel:  make(chan []byte, 1),
-		VoiceOutChannel: make(chan []byte, 1),
-		InputChannel:    make(chan []byte, 100),
+		ImageChannel: make(chan WebFrame, 30),
+		AudioChannel: make(chan []byte, 1),
+		//VoiceInChannel:  make(chan []byte, 1),
+		//VoiceOutChannel: make(chan []byte, 1),
+		InputChannel: make(chan []byte, 100),
 	}
 	return w
 }
@@ -127,9 +127,9 @@ func (w *WebRTC) StartClient(isMobile bool, iceCB OnIceCallback) (string, error)
 	// add video track
 	var codec webrtc.RTPCodecCapability
 	if w.cfg.Encoder.Video.Codec == encoder.H264.String() {
-		codec = webrtc.RTPCodecCapability{MimeType: "video/h264"}
+		codec = webrtc.RTPCodecCapability{MimeType: webrtc.MimeTypeH264, ClockRate: 90000}
 	} else {
-		codec = webrtc.RTPCodecCapability{MimeType: "video/vp8"}
+		codec = webrtc.RTPCodecCapability{MimeType: webrtc.MimeTypeVP8, ClockRate: 90000}
 	}
 	if videoTrack, err = webrtc.NewTrackLocalStaticSample(codec, "video", "game-video"); err != nil {
 		return "", err
@@ -141,7 +141,7 @@ func (w *WebRTC) StartClient(isMobile bool, iceCB OnIceCallback) (string, error)
 	log.Println("Add video track")
 
 	// add audio track
-	opusTrack, err := webrtc.NewTrackLocalStaticSample(webrtc.RTPCodecCapability{MimeType: "audio/opus"}, "audio", "game-audio")
+	opusTrack, err := webrtc.NewTrackLocalStaticSample(webrtc.RTPCodecCapability{MimeType: webrtc.MimeTypeOpus}, "audio", "game-audio")
 	if err != nil {
 		return "", err
 	}
@@ -150,7 +150,7 @@ func (w *WebRTC) StartClient(isMobile bool, iceCB OnIceCallback) (string, error)
 		return "", err
 	}
 
-	_, err = w.connection.AddTransceiverFromKind(webrtc.RTPCodecTypeAudio, webrtc.RtpTransceiverInit{Direction: webrtc.RTPTransceiverDirectionRecvonly})
+	//_, err = w.connection.AddTransceiverFromKind(webrtc.RTPCodecTypeAudio, webrtc.RtpTransceiverInit{Direction: webrtc.RTPTransceiverDirectionRecvonly})
 
 	// create data channel for input, and register callbacks
 	// order: true, negotiated: false, id: random
@@ -302,8 +302,8 @@ func (w *WebRTC) StopClient() {
 	// NOTE: ImageChannel is waiting for input. Close in writer is not correct for this
 	close(w.ImageChannel)
 	close(w.AudioChannel)
-	close(w.VoiceInChannel)
-	close(w.VoiceOutChannel)
+	//close(w.VoiceInChannel)
+	//close(w.VoiceOutChannel)
 }
 
 // IsConnected comment
@@ -352,26 +352,26 @@ func (w *WebRTC) startStreaming(vp8Track *webrtc.TrackLocalStaticSample, opusTra
 		}
 	}()
 
-	// send voice
-	go func() {
-		defer func() {
-			if r := recover(); r != nil {
-				fmt.Println("Recovered from err", r)
-				log.Println(debug.Stack())
-			}
-		}()
-
-		for data := range w.VoiceOutChannel {
-			if !w.isConnected {
-				return
-			}
-			// !to pass duration from the input
-			err := opusTrack.WriteSample(media.Sample{Data: data})
-			if err != nil {
-				log.Println("Warn: Err write sample: ", err)
-			}
-		}
-	}()
+	//// send voice
+	//go func() {
+	//	defer func() {
+	//		if r := recover(); r != nil {
+	//			fmt.Println("Recovered from err", r)
+	//			log.Println(debug.Stack())
+	//		}
+	//	}()
+	//
+	//	for data := range w.VoiceOutChannel {
+	//		if !w.isConnected {
+	//			return
+	//		}
+	//		// !to pass duration from the input
+	//		err := opusTrack.WriteSample(media.Sample{Data: data})
+	//		if err != nil {
+	//			log.Println("Warn: Err write sample: ", err)
+	//		}
+	//	}
+	//}()
 }
 
 func (w *WebRTC) calculateFPS() int {
