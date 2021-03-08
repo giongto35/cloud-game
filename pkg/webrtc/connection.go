@@ -8,7 +8,11 @@ import (
 
 func NewInterceptedPeerConnection(conf conf.Webrtc, interceptors []interceptor.Interceptor) (*PeerConnection, error) {
 	m := &MediaEngine{}
-	if err := m.RegisterDefaultCodecs(); err != nil {
+	//if err := m.RegisterDefaultCodecs(); err != nil {
+	//	return nil, err
+	//}
+
+	if err := RegisterCodecs(m); err != nil {
 		return nil, err
 	}
 
@@ -41,4 +45,52 @@ func NewInterceptedPeerConnection(conf conf.Webrtc, interceptors []interceptor.I
 
 	api := NewAPI(WithMediaEngine(m), WithInterceptorRegistry(i), WithSettingEngine(settingEngine))
 	return api.NewPeerConnection(peerConf)
+}
+
+// RegisterCodecs registers the default codecs supported by WebRTC.
+func RegisterCodecs(m *MediaEngine) error {
+	for _, codec := range []RTPCodecParameters{
+		{
+			RTPCodecCapability: RTPCodecCapability{MimeType: MimeTypeOpus, ClockRate: 48000, Channels: 2},
+			PayloadType:        111,
+		},
+	} {
+		if err := m.RegisterCodec(codec, RTPCodecTypeAudio); err != nil {
+			return err
+		}
+	}
+
+	videoRTCPFeedback := []RTCPFeedback{{"goog-remb", ""}, {"ccm", "fir"}, {"nack", ""}, {"nack", "pli"}}
+	for _, codec := range []RTPCodecParameters{
+		{
+			RTPCodecCapability: RTPCodecCapability{MimeType: MimeTypeVP8, ClockRate: 90000, RTCPFeedback: videoRTCPFeedback},
+			PayloadType:        96,
+		},
+		{
+			RTPCodecCapability: RTPCodecCapability{MimeType: MimeTypeH264, ClockRate: 90000, SDPFmtpLine: "level-asymmetry-allowed=1;packetization-mode=1;profile-level-id=42001f", RTCPFeedback: videoRTCPFeedback},
+			PayloadType:        102,
+		},
+		{
+			RTPCodecCapability: RTPCodecCapability{MimeType: MimeTypeH264, ClockRate: 90000, SDPFmtpLine: "level-asymmetry-allowed=1;packetization-mode=0;profile-level-id=42e01f", RTCPFeedback: videoRTCPFeedback},
+			PayloadType:        108,
+		},
+		{
+			RTPCodecCapability: RTPCodecCapability{MimeType: MimeTypeH264, ClockRate: 90000, SDPFmtpLine: "level-asymmetry-allowed=1;packetization-mode=0;profile-level-id=42001f", RTCPFeedback: videoRTCPFeedback},
+			PayloadType:        127,
+		},
+		{
+			RTPCodecCapability: RTPCodecCapability{MimeType: MimeTypeH264, ClockRate: 90000, RTCPFeedback: videoRTCPFeedback},
+			PayloadType:        123,
+		},
+		{
+			RTPCodecCapability: RTPCodecCapability{MimeType: MimeTypeH264, ClockRate: 90000, SDPFmtpLine: "level-asymmetry-allowed=1;packetization-mode=1;profile-level-id=42e01f", RTCPFeedback: videoRTCPFeedback},
+			PayloadType:        125,
+		},
+	} {
+		if err := m.RegisterCodec(codec, RTPCodecTypeVideo); err != nil {
+			return err
+		}
+	}
+
+	return nil
 }
