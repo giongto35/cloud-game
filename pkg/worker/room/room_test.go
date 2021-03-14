@@ -17,6 +17,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/giongto35/cloud-game/v2/pkg/codec"
 	"github.com/giongto35/cloud-game/v2/pkg/config"
 	"github.com/giongto35/cloud-game/v2/pkg/config/worker"
 	"github.com/giongto35/cloud-game/v2/pkg/emulator/libretro/manager/remotehttp"
@@ -43,7 +44,7 @@ type roomMockConfig struct {
 	roomName      string
 	gamesPath     string
 	game          games.GameMetadata
-	codec         encoder.VideoCodec
+	vCodec        codec.VideoCodec
 	autoGlContext bool
 }
 
@@ -68,7 +69,7 @@ func TestRoom(t *testing.T) {
 	tests := []struct {
 		roomName string
 		game     games.GameMetadata
-		codec    encoder.VideoCodec
+		vCodec   codec.VideoCodec
 		frames   int
 	}{
 		{
@@ -77,7 +78,7 @@ func TestRoom(t *testing.T) {
 				Type: "nes",
 				Path: "Super Mario Bros.nes",
 			},
-			codec:  encoder.VPX,
+			vCodec: codec.VPX,
 			frames: 5,
 		},
 	}
@@ -87,7 +88,7 @@ func TestRoom(t *testing.T) {
 			roomName:  test.roomName,
 			gamesPath: whereIsGames,
 			game:      test.game,
-			codec:     test.codec,
+			vCodec:    test.vCodec,
 		})
 		t.Logf("The game [%v] has been loaded", test.game.Name)
 		waitNFrames(test.frames, room.vPipe.Output)
@@ -100,7 +101,7 @@ func TestRoom(t *testing.T) {
 func TestRoomWithGL(t *testing.T) {
 	tests := []struct {
 		game   games.GameMetadata
-		codec  encoder.VideoCodec
+		vCodec codec.VideoCodec
 		frames int
 	}{
 		{
@@ -109,7 +110,7 @@ func TestRoomWithGL(t *testing.T) {
 				Type: "n64",
 				Path: "Sample Demo by Florian (PD).z64",
 			},
-			codec:  encoder.VPX,
+			vCodec: codec.VPX,
 			frames: 50,
 		},
 	}
@@ -119,7 +120,7 @@ func TestRoomWithGL(t *testing.T) {
 			room := getRoomMock(roomMockConfig{
 				gamesPath: whereIsGames,
 				game:      test.game,
-				codec:     test.codec,
+				vCodec:    test.vCodec,
 			})
 			t.Logf("The game [%v] has been loaded", test.game.Name)
 			waitNFrames(test.frames, room.vPipe.Output)
@@ -157,7 +158,7 @@ func TestAllEmulatorRooms(t *testing.T) {
 		room := getRoomMock(roomMockConfig{
 			gamesPath:     whereIsGames,
 			game:          test.game,
-			codec:         encoder.VPX,
+			vCodec:        codec.VPX,
 			autoGlContext: autoGlContext,
 		})
 		t.Logf("The game [%v] has been loaded", test.game.Name)
@@ -235,7 +236,7 @@ func getRoomMock(cfg roomMockConfig) roomMock {
 	if err := coreManager.Sync(); err != nil {
 		log.Printf("error: cores sync has failed, %v", err)
 	}
-	conf.Encoder.Video.Codec = cfg.codec.String()
+	conf.Encoder.Video.Codec = string(cfg.vCodec)
 
 	room := NewRoom(cfg.roomName, cfg.game, storage.NewInitClient(), conf)
 
@@ -303,7 +304,7 @@ func waitNFrames(n int, ch chan encoder.OutFrame) {
 
 // benchmarkRoom measures app performance for n emulation frames.
 // Measure period: the room initialization, n emulated and encoded frames, the room shutdown.
-func benchmarkRoom(rom games.GameMetadata, codec encoder.VideoCodec, frames int, suppressOutput bool, b *testing.B) {
+func benchmarkRoom(rom games.GameMetadata, codec codec.VideoCodec, frames int, suppressOutput bool, b *testing.B) {
 	if suppressOutput {
 		log.SetOutput(ioutil.Discard)
 		os.Stdout, _ = os.Open(os.DevNull)
@@ -313,7 +314,7 @@ func benchmarkRoom(rom games.GameMetadata, codec encoder.VideoCodec, frames int,
 		room := getRoomMock(roomMockConfig{
 			gamesPath: whereIsGames,
 			game:      rom,
-			codec:     codec,
+			vCodec:    codec,
 		})
 		waitNFrames(frames, room.vPipe.Output)
 		room.Close()
@@ -326,7 +327,7 @@ func BenchmarkRoom(b *testing.B) {
 	benches := []struct {
 		system string
 		game   games.GameMetadata
-		codecs []encoder.VideoCodec
+		codecs []codec.VideoCodec
 		frames int
 	}{
 		// warm up
@@ -337,7 +338,7 @@ func BenchmarkRoom(b *testing.B) {
 				Type: "gba",
 				Path: "Sushi The Cat.gba",
 			},
-			codecs: []encoder.VideoCodec{encoder.VPX},
+			codecs: []codec.VideoCodec{codec.VPX},
 			frames: 50,
 		},
 		{
@@ -347,7 +348,7 @@ func BenchmarkRoom(b *testing.B) {
 				Type: "gba",
 				Path: "Sushi The Cat.gba",
 			},
-			codecs: []encoder.VideoCodec{encoder.VPX, encoder.H264},
+			codecs: []codec.VideoCodec{codec.VPX, codec.H264},
 			frames: 100,
 		},
 		{
@@ -357,15 +358,15 @@ func BenchmarkRoom(b *testing.B) {
 				Type: "nes",
 				Path: "Super Mario Bros.nes",
 			},
-			codecs: []encoder.VideoCodec{encoder.VPX, encoder.H264},
+			codecs: []codec.VideoCodec{codec.VPX, codec.H264},
 			frames: 100,
 		},
 	}
 
 	for _, bench := range benches {
-		for _, codec := range bench.codecs {
-			b.Run(fmt.Sprintf("%s-%v-%d", bench.system, codec, bench.frames), func(b *testing.B) {
-				benchmarkRoom(bench.game, codec, bench.frames, true, b)
+		for _, cod := range bench.codecs {
+			b.Run(fmt.Sprintf("%s-%v-%d", bench.system, cod, bench.frames), func(b *testing.B) {
+				benchmarkRoom(bench.game, cod, bench.frames, true, b)
 			})
 			// hack: wait room destruction
 			time.Sleep(5 * time.Second)
