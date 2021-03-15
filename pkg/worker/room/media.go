@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"log"
 
+	"github.com/giongto35/cloud-game/v2/pkg/codec"
 	encoderConfig "github.com/giongto35/cloud-game/v2/pkg/config/encoder"
 	"github.com/giongto35/cloud-game/v2/pkg/encoder"
 	"github.com/giongto35/cloud-game/v2/pkg/encoder/h264"
@@ -73,7 +74,7 @@ func (r *Room) startVideo(width, height int, video encoderConfig.Video) {
 	var err error
 
 	log.Println("Video codec:", video.Codec)
-	if video.Codec == encoder.H264.String() {
+	if video.Codec == string(codec.H264) {
 		enc, err = h264.NewEncoder(width, height, h264.WithOptions(h264.Options{
 			Crf:      video.H264.Crf,
 			Tune:     video.H264.Tune,

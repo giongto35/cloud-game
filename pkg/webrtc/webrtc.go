@@ -9,8 +9,8 @@ import (
 	"runtime/debug"
 	"time"
 
+	"github.com/giongto35/cloud-game/v2/pkg/codec"
 	webrtcConfig "github.com/giongto35/cloud-game/v2/pkg/config/webrtc"
-	"github.com/giongto35/cloud-game/v2/pkg/encoder"
 	itc "github.com/giongto35/cloud-game/v2/pkg/webrtc/interceptor"
 	"github.com/gofrs/uuid"
 	"github.com/pion/interceptor"
@@ -125,13 +125,13 @@ func (w *WebRTC) StartClient(isMobile bool, iceCB OnIceCallback) (string, error)
 	}
 
 	// add video track
-	var codec webrtc.RTPCodecCapability
-	if w.cfg.Encoder.Video.Codec == encoder.H264.String() {
-		codec = webrtc.RTPCodecCapability{MimeType: webrtc.MimeTypeH264, ClockRate: 90000}
+	var rtpCodec webrtc.RTPCodecCapability
+	if w.cfg.Encoder.Video.Codec == string(codec.H264) {
+		rtpCodec = webrtc.RTPCodecCapability{MimeType: webrtc.MimeTypeH264, ClockRate: 90000}
 	} else {
-		codec = webrtc.RTPCodecCapability{MimeType: webrtc.MimeTypeVP8, ClockRate: 90000}
+		rtpCodec = webrtc.RTPCodecCapability{MimeType: webrtc.MimeTypeVP8, ClockRate: 90000}
 	}
-	if videoTrack, err = webrtc.NewTrackLocalStaticSample(codec, "video", "game-video"); err != nil {
+	if videoTrack, err = webrtc.NewTrackLocalStaticSample(rtpCodec, "video", "game-video"); err != nil {
 		return "", err
 	}
 
