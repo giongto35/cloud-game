@@ -7,7 +7,7 @@ import (
 	"github.com/giongto35/cloud-game/v2/pkg/cws"
 	"github.com/giongto35/cloud-game/v2/pkg/cws/api"
 	"github.com/giongto35/cloud-game/v2/pkg/games"
-	"github.com/giongto35/cloud-game/v2/pkg/worker/room"
+	"github.com/giongto35/cloud-game/v2/pkg/session"
 )
 
 func (bc *BrowserClient) handleHeartbeat() cws.PacketHandler {
@@ -191,7 +191,7 @@ func newGameStartCall(roomId string, data string, library games.GameLibrary) (ap
 	game := request.GameName
 	if roomId != "" {
 		// ! should be moved into coordinator
-		name := room.GetGameNameFromRoomID(roomId)
+		name := session.GetGameNameFromRoomID(roomId)
 		if name == "" {
 			return api.GameStartCall{}, errors.New("couldn't decode game name from the room id")
 		}

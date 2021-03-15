@@ -1,4 +1,4 @@
-package webrtc
+package ice
 
 import (
 	"testing"
