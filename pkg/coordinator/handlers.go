@@ -15,8 +15,8 @@ import (
 	"github.com/giongto35/cloud-game/v2/pkg/cws/api"
 	"github.com/giongto35/cloud-game/v2/pkg/environment"
 	"github.com/giongto35/cloud-game/v2/pkg/games"
+	"github.com/giongto35/cloud-game/v2/pkg/ice"
 	"github.com/giongto35/cloud-game/v2/pkg/util"
-	"github.com/giongto35/cloud-game/v2/pkg/webrtc"
 	"github.com/gofrs/uuid"
 	"github.com/gorilla/websocket"
 )
@@ -132,7 +132,7 @@ func (o *Server) WSO(w http.ResponseWriter, r *http.Request) {
 
 	// Create a workerClient instance
 	wc.Address = address
-	wc.StunTurnServer = webrtc.ToJson(o.cfg.Webrtc.IceServers, webrtc.Replacement{From: "server-ip", To: address})
+	wc.StunTurnServer = ice.ToJson(o.cfg.Webrtc.IceServers, ice.Replacement{From: "server-ip", To: address})
 	wc.Zone = zone
 	wc.PingServer = pingServer
 

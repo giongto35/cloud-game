@@ -7,23 +7,24 @@ import (
 	"testing"
 	"time"
 
+	"github.com/giongto35/cloud-game/v2/pkg/codec"
 	"github.com/giongto35/cloud-game/v2/pkg/encoder"
 	"github.com/giongto35/cloud-game/v2/pkg/encoder/h264"
 	"github.com/giongto35/cloud-game/v2/pkg/encoder/vpx"
 )
 
 func BenchmarkH264(b *testing.B) {
-	benchmarkEncoder(1920, 1080, encoder.H264, b)
+	benchmarkEncoder(1920, 1080, codec.H264, b)
 }
 
 func BenchmarkVP8(b *testing.B) {
-	benchmarkEncoder(1920, 1080, encoder.VPX, b)
+	benchmarkEncoder(1920, 1080, codec.VPX, b)
 }
 
-func benchmarkEncoder(w, h int, codec encoder.VideoCodec, b *testing.B) {
+func benchmarkEncoder(w, h int, cod codec.VideoCodec, b *testing.B) {
 	var enc encoder.Encoder
 
-	if codec == encoder.H264 {
+	if cod == codec.H264 {
 		enc, _ = h264.NewEncoder(w, h)
 	} else {
 		enc, _ = vpx.NewEncoder(w, h)

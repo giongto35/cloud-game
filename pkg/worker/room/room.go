@@ -8,11 +8,8 @@ import (
 	"io/ioutil"
 	"log"
 	"math"
-	"math/rand"
 	"net"
 	"os"
-	"strconv"
-	"strings"
 	"sync"
 
 	"github.com/giongto35/cloud-game/v2/pkg/config/worker"
@@ -20,6 +17,7 @@ import (
 	"github.com/giongto35/cloud-game/v2/pkg/emulator/libretro/nanoarch"
 	"github.com/giongto35/cloud-game/v2/pkg/encoder"
 	"github.com/giongto35/cloud-game/v2/pkg/games"
+	"github.com/giongto35/cloud-game/v2/pkg/session"
 	"github.com/giongto35/cloud-game/v2/pkg/webrtc"
 	storage "github.com/giongto35/cloud-game/v2/pkg/worker/cloud-storage"
 )
@@ -61,7 +59,6 @@ type Room struct {
 
 const (
 	bufSize        = 245969
-	separator      = "___"
 	SocketAddrTmpl = "/tmp/cloudretro-retro-%s.sock"
 )
 
@@ -125,7 +122,7 @@ func NewVideoImporter(roomID string) chan nanoarch.GameFrame {
 // NewRoom creates a new room
 func NewRoom(roomID string, game games.GameMetadata, onlineStorage *storage.Client, cfg worker.Config) *Room {
 	if roomID == "" {
-		roomID = generateRoomID(game.Name)
+		roomID = session.GenerateRoomID(game.Name)
 	}
 
 	log.Println("New room: ", roomID, game)
@@ -134,14 +131,14 @@ func NewRoom(roomID string, game games.GameMetadata, onlineStorage *storage.Clie
 	room := &Room{
 		ID: roomID,
 
-		inputChannel:    inputChannel,
-		imageChannel:    nil,
+		inputChannel: inputChannel,
+		imageChannel: nil,
 		//voiceInChannel:  make(chan []byte, 1),
 		//voiceOutChannel: make(chan []byte, 1),
-		rtcSessions:     []*webrtc.WebRTC{},
-		sessionsLock:    &sync.Mutex{},
-		IsRunning:       true,
-		onlineStorage:   onlineStorage,
+		rtcSessions:   []*webrtc.WebRTC{},
+		sessionsLock:  &sync.Mutex{},
+		IsRunning:     true,
+		onlineStorage: onlineStorage,
 
 		Done: make(chan struct{}, 1),
 	}
@@ -228,23 +225,6 @@ func resizeToAspect(ratio float64, sw int, sh int) (dw int, dh int) {
 		dh = int(math.Round(float64(sw)/ratio/2) * 2)
 	}
 	return
-}
-
-// getGameNameFromRoomID parse roomID to get roomID and gameName
-func GetGameNameFromRoomID(roomID string) string {
-	parts := strings.Split(roomID, separator)
-	if len(parts) > 1 {
-		return parts[1]
-	}
-	return ""
-}
-
-// generateRoomID generate a unique room ID containing 16 digits
-func generateRoomID(gameName string) string {
-	// RoomID contains random number + gameName
-	// Next time when we only get roomID, we can launch game based on gameName
-	roomID := strconv.FormatInt(rand.Int63(), 16) + separator + gameName
-	return roomID
 }
 
 func isGameOnLocal(path string) bool {
