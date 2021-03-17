@@ -567,6 +567,12 @@ func coreLoadGame(filename string) {
 			runtime.UnlockOSThread()
 		}
 	}
+
+	// set default controller types on all ports
+	maxPort := 4 // controllersNum
+	for i := 0; i < maxPort; i++ {
+		C.bridge_retro_set_controller_port_device(retroSetControllerPortDevice, C.uint(i), C.RETRO_DEVICE_JOYPAD)
+	}
 }
 
 func toggleMultitap() {
