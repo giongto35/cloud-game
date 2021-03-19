@@ -118,19 +118,16 @@ func (w *WebRTC) StartClient(isMobile bool, iceCB OnIceCallback) (string, error)
 	}
 
 	log.Println("=== StartClient ===")
+
+	videoCodec := w.getVideoCodec()
 	w.tsInterceptor = itc.ReTime{}
-	w.connection, err = NewInterceptedPeerConnection(w.cfg.Webrtc, []interceptor.Interceptor{&w.tsInterceptor})
+	w.connection, err = NewInterceptedPeerConnection(w.cfg.Webrtc, []interceptor.Interceptor{&w.tsInterceptor}, videoCodec)
 	if err != nil {
 		return "", err
 	}
 
 	// add video track
-	var rtpCodec webrtc.RTPCodecCapability
-	if w.cfg.Encoder.Video.Codec == string(codec.H264) {
-		rtpCodec = webrtc.RTPCodecCapability{MimeType: webrtc.MimeTypeH264, ClockRate: 90000}
-	} else {
-		rtpCodec = webrtc.RTPCodecCapability{MimeType: webrtc.MimeTypeVP8, ClockRate: 90000}
-	}
+	rtpCodec := webrtc.RTPCodecCapability{MimeType: videoCodec}
 	if videoTrack, err = webrtc.NewTrackLocalStaticSample(rtpCodec, "video", "game-video"); err != nil {
 		return "", err
 	}
@@ -241,6 +238,17 @@ func (w *WebRTC) StartClient(isMobile bool, iceCB OnIceCallback) (string, error)
 	}
 
 	return localSession, nil
+}
+
+func (w *WebRTC) getVideoCodec() string {
+	switch w.cfg.Encoder.Video.Codec {
+	case string(codec.H264):
+		return webrtc.MimeTypeH264
+	case string(codec.VPX):
+		return webrtc.MimeTypeVP8
+	default:
+		return webrtc.MimeTypeH264
+	}
 }
 
 func (w *WebRTC) AttachRoomID(roomID string) {
