@@ -535,13 +535,22 @@ body {
     100% { transform: translateX(0%); }
 }
 
+@keyframes fadeIn {
+    from { opacity: 0; }
+}
+
+.animate-fadeInOut {
+    animation: fadeIn 1s alternate;
+}
+
+
 
 #noti-box {
     display: none;
     padding: 5px 10px 0 10px;
     height: 20px;
     background-color: #ddd;
-    opacity: 0.8;
+    /*opacity: 0;*/
     position: absolute;
 
     border: 5px #000;

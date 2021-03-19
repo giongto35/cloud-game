@@ -9,8 +9,8 @@ const gameList = (() => {
     let gamePickTimer = null;
 
     // UI
-    const listBox = $('#menu-container');
-    const menuItemChoice = $('#menu-item-choice');
+    const listBox = document.getElementById('menu-container');
+    const menuItemChoice = document.getElementById('menu-item-choice');
 
     const MENU_TOP_POSITION = 102;
     let menuTop = MENU_TOP_POSITION;
@@ -22,20 +22,15 @@ const gameList = (() => {
     const render = () => {
         log.debug('[games] load game menu');
 
-        listBox.html(games
+        listBox.innerHTML = games
             .map(game => `<div class="menu-item unselectable" unselectable="on"><div><span>${game}</span></div></div>`)
-            .join('')
-        );
+            .join('');
     };
 
     const show = () => {
         render();
-        menuItemChoice.show();
+        menuItemChoice.style.display = "block";
         pickGame();
-    };
-
-    const hide = () => {
-        menuItemChoice.hide();
     };
 
     const pickGame = (index) => {
@@ -47,16 +42,19 @@ const gameList = (() => {
         if (idx >= games.length) idx = 0;
 
         // transition menu box
-        listBox.css('transition', 'top 0.2s');
-        listBox.css('-moz-transition', 'top 0.2s');
-        listBox.css('-webkit-transition', 'top 0.2s');
+        listBox.style['transition'] = 'top 0.2s';
+        listBox.style['-moz-transition'] = 'top 0.2s';
+        listBox.style['-webkit-transition'] = 'top 0.2s';
 
         menuTop = MENU_TOP_POSITION - idx * 36;
-        listBox.css('top', `${menuTop}px`);
+        listBox.style['top'] = `${menuTop}px`;
 
         // overflow marquee
-        $('.menu-item .pick').removeClass('pick');
-        $(`.menu-item:eq(${idx}) span`).addClass('pick');
+        let pick = document.querySelectorAll('.menu-item .pick')[0];
+        if (pick) {
+            pick.classList.remove('pick');
+        }
+        document.querySelectorAll(`.menu-item span`)[idx].classList.add('pick');
 
         gameIndex = idx;
     };
@@ -80,10 +78,10 @@ const gameList = (() => {
     };
 
     const onMenuPressed = (newPosition) => {
-        listBox.css('transition', '');
-        listBox.css('-moz-transition', '');
-        listBox.css('-webkit-transition', '');
-        listBox.css('top', `${menuTop - newPosition}px`);
+        listBox.style['transition'] = '';
+        listBox.style['-moz-transition'] = '';
+        listBox.style['-webkit-transition'] = '';
+        listBox.style['top'] = `${menuTop - newPosition}px`;
     };
 
     const onMenuReleased = (position) => {
@@ -100,8 +98,7 @@ const gameList = (() => {
         stopGamePickerTimer: stopGamePickerTimer,
         pickGame: pickGame,
         show: show,
-        hide: hide,
         set: setGames,
         getCurrentGame: () => games[gameIndex]
     }
-})($, event, log);
+})(document, event, log);

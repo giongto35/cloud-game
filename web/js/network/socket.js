@@ -145,4 +145,4 @@ const socket = (() => {
         quitGame: quitGame,
         toggleMultitap: toggleMultitap,
     }
-})($, event, log);
+})(event, log);
