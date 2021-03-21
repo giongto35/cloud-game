@@ -23,7 +23,7 @@ const gameList = (() => {
         log.debug('[games] load game menu');
 
         listBox.innerHTML = games
-            .map(game => `<div class="menu-item unselectable" unselectable="on"><div><span>${game}</span></div></div>`)
+            .map(game => `<div class="menu-item unselectable"><div><span>${game}</span></div></div>`)
             .join('');
     };
 
