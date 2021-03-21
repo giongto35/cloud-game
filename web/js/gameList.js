@@ -43,8 +43,6 @@ const gameList = (() => {
 
         // transition menu box
         listBox.style['transition'] = 'top 0.2s';
-        listBox.style['-moz-transition'] = 'top 0.2s';
-        listBox.style['-webkit-transition'] = 'top 0.2s';
 
         menuTop = MENU_TOP_POSITION - idx * 36;
         listBox.style['top'] = `${menuTop}px`;
@@ -79,8 +77,6 @@ const gameList = (() => {
 
     const onMenuPressed = (newPosition) => {
         listBox.style['transition'] = '';
-        listBox.style['-moz-transition'] = '';
-        listBox.style['-webkit-transition'] = '';
         listBox.style['top'] = `${menuTop - newPosition}px`;
     };
 

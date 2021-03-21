@@ -19,7 +19,6 @@ const touch = (() => {
     let vpadHolder = document.getElementById('circle-pad-holder');
     let vpadCircle = document.getElementById('circle-pad');
 
-    const window_ = window;
     const buttons = Array.from(document.getElementsByClassName('btn'));
     const playerSlider = document.getElementById('playeridx');
     const dpad = document.getElementsByClassName('dpad');
@@ -86,8 +85,6 @@ const touch = (() => {
 
     function handleVpadJoystickDown(event) {
         vpadCircle.style['transition'] = '0s';
-        vpadCircle.style['-moz-transition'] = '0s';
-        vpadCircle.style['-webkit-transition'] = '0s';
 
         if (event.changedTouches) {
             resetVpadState();
@@ -103,11 +100,7 @@ const touch = (() => {
         if (vpadTouchDrag === null) return;
 
         vpadCircle.style['transition'] = '.2s';
-        vpadCircle.style['-moz-transition'] = '.2s';
-        vpadCircle.style['-webkit-transition'] = '.2s';
         vpadCircle.style['transform'] = 'translate3d(0px, 0px, 0px)';
-        vpadCircle.style['-moz-transform'] = 'translate3d(0px, 0px, 0px)';
-        vpadCircle.style['-webkit-transform'] = 'translate3d(0px, 0px, 0px)';
 
         resetVpadState();
     }
@@ -140,10 +133,7 @@ const touch = (() => {
             yNew = -tmp;
         }
 
-        let style = `translate(${xNew}px, ${yNew}px)`;
-        vpadCircle.style['transform'] = style;
-        vpadCircle.style['-webkit-transform'] = style;
-        vpadCircle.style['-moz-transform'] = style;
+        vpadCircle.style['transform'] = `translate(${xNew}px, ${yNew}px)`;
 
         let xRatio = xNew / MAX_DIFF;
         let yRatio = yNew / MAX_DIFF;
@@ -311,10 +301,9 @@ const touch = (() => {
                 vpadState[el.getAttribute('value')] = false;
             });
 
-            // Bind events for window
-            window_.addEventListener('mousemove', handleWindowMove);
-            window_.addEventListener('touchmove', handleWindowMove, {passive: false});
-            window_.addEventListener('mouseup', handleWindowUp);
+            window.addEventListener('mousemove', handleWindowMove);
+            window.addEventListener('touchmove', handleWindowMove, {passive: false});
+            window.addEventListener('mouseup', handleWindowUp);
 
             log.info('[input] touch input has been initialized');
         }

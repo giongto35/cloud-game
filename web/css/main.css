@@ -1,3 +1,9 @@
+html {
+    /* force full size for Firefox */
+    width: 100vw;
+    height: 100vh;
+}
+
 body {
     background-image: url('/static/img/background.jpg');
     background-repeat: repeat;
@@ -76,7 +82,7 @@ body {
 }
 
 .dpad-empty {
-  background-image: url('/static/img/ui/bt MOVE EMPTY.png') !important;
+    background-image: url('/static/img/ui/bt MOVE EMPTY.png') !important;
 }
 
 #guide-txt {
@@ -103,8 +109,8 @@ body {
 
 
 .bong-full {
-  opacity: 1.0 !important;
-  background-image: url('/static/img/ui/bong full.png') !important;
+    opacity: 1.0 !important;
+    background-image: url('/static/img/ui/bong full.png') !important;
 }
 
 .dpad {
@@ -390,12 +396,12 @@ body {
 
 
 .pressed {
-  filter: brightness(50%);
+    filter: brightness(50%);
 }
 
 .dpad-pressed {
-  background-color: #333 !important;
-  opacity: 0.75;
+    background-color: #333 !important;
+    opacity: 0.75;
 }
 
 #bottom-screen {
@@ -458,7 +464,6 @@ body {
 }
 
 
-
 @font-face {
     font-family: 'Roboto'; /*a name to be used later*/
     src: url('/static/fonts/Roboto-Regular.ttf'); /*URL to font*/
@@ -514,43 +519,64 @@ body {
 
 
 @-moz-keyframes horizontally {
-    0%   { transform: translateX(0%); }
-    25% { transform: translateX(-20%); }
-    50% { transform: translateX(0%); }
-    75% { transform: translateX(20%); }
-    100% { transform: translateX(0%); }
+    0% {
+        transform: translateX(0%);
+    }
+    25% {
+        transform: translateX(-20%);
+    }
+    50% {
+        transform: translateX(0%);
+    }
+    75% {
+        transform: translateX(20%);
+    }
+    100% {
+        transform: translateX(0%);
+    }
 }
+
 @-webkit-keyframes horizontally {
-    0%   { transform: translateX(0%); }
-    25% { transform: translateX(-20%); }
-    50% { transform: translateX(0%); }
-    75% { transform: translateX(20%); }
-    100% { transform: translateX(0%); }
+    0% {
+        transform: translateX(0%);
+    }
+    25% {
+        transform: translateX(-20%);
+    }
+    50% {
+        transform: translateX(0%);
+    }
+    75% {
+        transform: translateX(20%);
+    }
+    100% {
+        transform: translateX(0%);
+    }
 }
+
 @keyframes horizontally {
-    0%   { transform: translateX(0%); }
-    25% { transform: translateX(-20%); }
-    50% { transform: translateX(0%); }
-    75% { transform: translateX(20%); }
-    100% { transform: translateX(0%); }
+    0% {
+        transform: translateX(0%);
+    }
+    25% {
+        transform: translateX(-20%);
+    }
+    50% {
+        transform: translateX(0%);
+    }
+    75% {
+        transform: translateX(20%);
+    }
+    100% {
+        transform: translateX(0%);
+    }
 }
-
-@keyframes fadeIn {
-    from { opacity: 0; }
-}
-
-.animate-fadeInOut {
-    animation: fadeIn 1s alternate;
-}
-
-
 
 #noti-box {
     display: none;
     padding: 5px 10px 0 10px;
     height: 20px;
     background-color: #ddd;
-    /*opacity: 0;*/
     position: absolute;
 
     border: 5px #000;
@@ -579,56 +605,56 @@ body {
 
 /* The slider itself */
 .slider {
-  -webkit-appearance: none;  /* Override default CSS styles */
-  appearance: none;
-  width: 100%; /* Full-width */
-  height: 25px; /* Specified height */
-  outline: none; /* Remove outline */
-  /*opacity: 0.7; [> Set transparency (for mouse-over effects on hover) <]*/
-  -webkit-transition: .2s; /* 0.2 seconds transition on hover */
-  transition: opacity .2s;
+    -webkit-appearance: none; /* Override default CSS styles */
+    appearance: none;
+    width: 100%; /* Full-width */
+    height: 25px; /* Specified height */
+    outline: none; /* Remove outline */
+    /*opacity: 0.7; [> Set transparency (for mouse-over effects on hover) <]*/
+    -webkit-transition: .2s; /* 0.2 seconds transition on hover */
+    transition: opacity .2s;
 
-  background-color: transparent;
-  background-repeat: no-repeat;
-  background-size: contain;
-  background-image: url('/static/img/ui/FramePlayerIndex.png');
+    background-color: transparent;
+    background-repeat: no-repeat;
+    background-size: contain;
+    background-image: url('/static/img/ui/FramePlayerIndex.png');
 }
 
 /* Mouse-over effects */
 .slider:hover {
-  opacity: 1; /* Fully shown on mouse-over */
+    opacity: 1; /* Fully shown on mouse-over */
 }
 
 /* The slider handle (use -webkit- (Chrome, Opera, Safari, Edge) and -moz- (Firefox) to override default look) */
 .slider::-webkit-slider-thumb {
-  -webkit-appearance: none; /* Override default look */
-  appearance: none;
-  width: 25px; /* Set a specific slider handle width */
-  height: 25px; /* Slider handle height */
-  cursor: pointer; /* Cursor on hover */
+    -webkit-appearance: none; /* Override default look */
+    appearance: none;
+    width: 25px; /* Set a specific slider handle width */
+    height: 25px; /* Slider handle height */
+    cursor: pointer; /* Cursor on hover */
 
-  background-color: transparent;
-  background-repeat: no-repeat;
-  background-size: contain;
-  background-image: url('/static/img/ui/bt PlayerIndex.png');
+    background-color: transparent;
+    background-repeat: no-repeat;
+    background-size: contain;
+    background-image: url('/static/img/ui/bt PlayerIndex.png');
 }
 
 .slider::-moz-range-thumb {
-  appearance: none;
-  width: 25px; /* Set a specific slider handle width */
-  height: 25px; /* Slider handle height */
-  cursor: pointer; /* Cursor on hover */
+    appearance: none;
+    width: 25px; /* Set a specific slider handle width */
+    height: 25px; /* Slider handle height */
+    cursor: pointer; /* Cursor on hover */
 
-  border: 0px;
-  background-color: transparent;
-  background-repeat: no-repeat;
-  background-size: contain;
-  background-image: url('/static/img/ui/bt PlayerIndex.png');
+    border: 0px;
+    background-color: transparent;
+    background-repeat: no-repeat;
+    background-size: contain;
+    background-image: url('/static/img/ui/bt PlayerIndex.png');
 }
 
 * {
-      touch-action: manipulation;
-  }
+    touch-action: manipulation;
+}
 
 #stats-overlay {
     position: absolute;
@@ -662,7 +688,7 @@ body {
     margin-bottom: 1em;
 }
 
-#stats-overlay>div>div {
+#stats-overlay > div > div {
     display: inline-block;
     font-weight: 500;
     width: 4em;
@@ -684,53 +710,53 @@ body {
 }
 
 .dpad-toggle-label {
-  position: relative;
-  display: inline-block;
-  width: 35px;
-  height: 20px;
+    position: relative;
+    display: inline-block;
+    width: 35px;
+    height: 20px;
 
-  top: 44px;
-  left: 85px;
+    top: 44px;
+    left: 85px;
 }
 
 .dpad-toggle-label input {
-  opacity: 0;
-  width: 0;
-  height: 0;
+    opacity: 0;
+    width: 0;
+    height: 0;
 }
 
 .dpad-toggle-slider {
-  position: absolute;
-  cursor: pointer;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background-color: #515151;
-  -webkit-transition: .4s;
-  transition: .4s;
-  border-radius: 20px;
+    position: absolute;
+    cursor: pointer;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: #515151;
+    -webkit-transition: .4s;
+    transition: .4s;
+    border-radius: 20px;
 }
 
 .dpad-toggle-slider:before {
-  position: absolute;
-  content: "";
-  height: 14px;
-  width: 14px;
-  left: 3px;
-  bottom: 3px;
-  background-color: #5f5f5f;
-  -webkit-transition: .4s;
-  transition: .4s;
-  border-radius: 50%;
+    position: absolute;
+    content: "";
+    height: 14px;
+    width: 14px;
+    left: 3px;
+    bottom: 3px;
+    background-color: #5f5f5f;
+    -webkit-transition: .4s;
+    transition: .4s;
+    border-radius: 50%;
 }
 
 input:checked + .dpad-toggle-slider {
-  background-color: #515151;
+    background-color: #515151;
 }
 
 input:checked + .dpad-toggle-slider:before {
-  -webkit-transform: translateX(15px);
-  -ms-transform: translateX(15px);
-  transform: translateX(15px);
+    -webkit-transform: translateX(15px);
+    -ms-transform: translateX(15px);
+    transform: translateX(15px);
 }

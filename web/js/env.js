@@ -19,24 +19,19 @@ const env = (() => {
             targetHeight = ph;
         }
 
-        // Should have maximum box for desktop?
-        // targetWidth = 800; targetHeight = 600; // test on desktop
+        // save page rotation
+        isLayoutSwitched = isPortrait();
 
         rescaleGameBoy(targetWidth, targetHeight);
 
-        let st = isLayoutSwitched ? 'rotate(90deg)' : '';
         ghRibbon.style['bottom'] = isLayoutSwitched ? 0 : '';
         ghRibbon.style['top'] = isLayoutSwitched ? '' : 0;
-        ghRibbon.style['transform'] = st;
-        ghRibbon.style['-webkit-transform'] = st;
-        ghRibbon.style['-moz-transform'] = st;
+        ghRibbon.style['transform'] = isLayoutSwitched ? 'rotate(90deg)' : '';
     };
 
     const rescaleGameBoy = (targetWidth, targetHeight) => {
         const transformations = ['translate(-50%, -50%)'];
 
-        // rotate portrait layout
-        isLayoutSwitched = isPortrait();
         if (isLayoutSwitched) {
             transformations.push('rotate(90deg)');
             [targetWidth, targetHeight] = [targetHeight, targetWidth]
@@ -46,10 +41,7 @@ const env = (() => {
         const scale = Math.min(targetWidth / getWidth(gameBoy), targetHeight / getHeight(gameBoy));
         transformations.push(`scale(${scale})`);
 
-        const transform = transformations.join(' ');
-        gameBoy.style['transform'] = transform;
-        gameBoy.style['-webkit-transform'] = transform;
-        gameBoy.style['-moz-transform'] = transform;
+        gameBoy.style['transform'] = transformations.join(' ');
     }
 
     const getOS = () => {
