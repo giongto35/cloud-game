@@ -64,19 +64,7 @@ const env = (() => {
         return browserName;
     };
 
-    // !to use more sophisticated approach / lib
-    const isPortrait = () => {
-        // ios / mobile app
-        switch (window.orientation) {
-            case 0:
-            case 180:
-                return true;
-        }
-
-        // desktop
-        const orientation = screen.msOrientation || screen.mozOrientation || (screen.orientation || {}).type;
-        return orientation === 'portrait-primary';
-    };
+    const isPortrait = () => getWidth(page) < getHeight(page);
 
     const toggleFullscreen = (enable, element) => {
         const el = enable ? element : document;
