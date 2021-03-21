@@ -92,6 +92,8 @@ body {
     left: 30px;
     width: 1000px;
     position: absolute;
+
+    user-select: none;
 }
 
 #circle-pad {
@@ -601,6 +603,8 @@ body {
     top: 90px;
     left: 20px;
     width: 100px;
+
+    user-select: none;
 }
 
 /* The slider itself */
