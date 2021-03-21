@@ -13,12 +13,6 @@ const env = (() => {
             targetWidth = Math.round(pw * 0.9 / 2) * 2,
             targetHeight = Math.round(ph * 0.9 / 2) * 2;
 
-        // mobile == full screen
-        if (env.getOs() === 'android') {
-            targetWidth = pw;
-            targetHeight = ph;
-        }
-
         // save page rotation
         isLayoutSwitched = isPortrait();
 
