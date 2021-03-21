@@ -169,7 +169,6 @@
 
     // pre-state key press handler
     const onKeyPress = (data) => {
-        console.log("press: ", data.key)
         const button = keyButtons[data.key];
 
         if (_dpadArrowKeys.includes(data.key)) {

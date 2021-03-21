@@ -68,7 +68,6 @@ const touch = (() => {
     }
 
     function checkVpadState(axis, state) {
-        console.log("state: ", state, vpadState[axis])
         if (state !== vpadState[axis]) {
             vpadState[axis] = state;
             event.pub(state ? KEY_PRESSED : KEY_RELEASED, {key: axis});
@@ -261,7 +260,6 @@ const touch = (() => {
     }
 
     function handleWindowUp(ev) {
-        console.log("window up")
         handleVpadJoystickUp(ev);
         handleMenuUp(ev);
         if (ev.target) {
