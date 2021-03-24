@@ -148,10 +148,7 @@ const touch = (() => {
         }
     }
 
-    /*
-        Right side - Control buttons
-    */
-
+    // right side - control buttons
     function handleButtonDown() {
         checkVpadState(this.getAttribute('value'), true);
         // add touchIdx?
@@ -162,20 +159,12 @@ const touch = (() => {
         checkVpadState(button, false);
     }
 
-
-    /*
-        Player index slider
-    */
-
     function handlePlayerSlider() {
         socket.updatePlayerIndex(this.value - 1);
     }
 
 
-    /*
-        Touch menu
-    */
-
+    // Touch menu
     let menuTouchIdx = null;
     let menuTouchDrag = null;
     let menuTouchTime = null;
@@ -233,9 +222,7 @@ const touch = (() => {
         menuTouchDrag = null;
     }
 
-    /*
-        Common events
-    */
+    // Common events
     function handleWindowMove(event) {
         event.preventDefault();
         handleVpadJoystickMove(event);
