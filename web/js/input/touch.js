@@ -262,9 +262,9 @@ const touch = (() => {
     function handleWindowUp(ev) {
         handleVpadJoystickUp(ev);
         handleMenuUp(ev);
-        if (ev.target) {
-            ev.target.dispatchEvent(new Event('touchend'))
-        }
+        buttons.forEach((btn) => {
+            btn.dispatchEvent(new Event('touchend'));
+        });
     }
 
     // touch/mouse events for control buttons. mouseup events is binded to window.
