@@ -326,6 +326,20 @@ body {
     background-image: url('/static/img/ui/bt Y.png');
 }
 
+#btn-settings {
+    width: 65px;
+    height: 21px;
+
+    top: 9%;
+    left: 55px;
+
+    padding: 0;
+
+    transform: translateY(-50%);
+    background-image: url('/static/img/ui/bt OPTIONS.png');
+
+    opacity: .7;
+}
 
 #lights-holder {
     display: block;
