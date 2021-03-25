@@ -21,7 +21,7 @@ const touch = (() => {
 
     const buttons = Array.from(document.getElementsByClassName('btn'));
     const playerSlider = document.getElementById('playeridx');
-    const dpad = document.getElementsByClassName('dpad');
+    const dpad = Array.from(document.getElementsByClassName('dpad'));
 
     const dpadToggle = document.getElementById('dpad-toggle')
     dpadToggle.addEventListener('change', (e) => {
@@ -62,9 +62,8 @@ const touch = (() => {
 
         vpadTouchDrag = null;
         vpadTouchIdx = null;
-        for (let arrow of dpad) {
-            arrow.classList.remove('pressed');
-        }
+
+        dpad.forEach(arrow => arrow.classList.remove('pressed'));
     }
 
     function checkVpadState(axis, state) {
@@ -149,20 +148,26 @@ const touch = (() => {
     }
 
     // right side - control buttons
+    const _handleButton = (key, state) => checkVpadState(key, state)
+
     function handleButtonDown() {
-        checkVpadState(this.getAttribute('value'), true);
-        // add touchIdx?
+        _handleButton(this.getAttribute('value'), true);
     }
 
     function handleButtonUp() {
-        const button = this.getAttribute('value');
-        checkVpadState(button, false);
+        _handleButton(this.getAttribute('value'), false);
+    }
+
+    function handleButtonClick() {
+        _handleButton(this.getAttribute('value'), true);
+        setTimeout(() => {
+            _handleButton(this.getAttribute('value'), false);
+        }, 30);
     }
 
     function handlePlayerSlider() {
         socket.updatePlayerIndex(this.value - 1);
     }
-
 
     // Touch menu
     let menuTouchIdx = null;
@@ -265,6 +270,10 @@ const touch = (() => {
     vpadHolder.addEventListener('mousedown', handleVpadJoystickDown);
     vpadHolder.addEventListener('touchstart', handleVpadJoystickDown);
     vpadHolder.addEventListener('touchend', handleVpadJoystickUp);
+
+    dpad.forEach((arrow) => {
+        arrow.addEventListener('click', handleButtonClick);
+    });
 
     // touch/mouse events for player slider.
     playerSlider.addEventListener('oninput', handlePlayerSlider);

@@ -105,6 +105,8 @@ body {
     top: 15px;
     left: 15px;
 
+    pointer-events: none;
+
     opacity: 0.5;
     background-image: url('/static/img/ui/bong.png');
 }
