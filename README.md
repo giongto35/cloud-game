@@ -66,6 +66,8 @@ Because the coordinator and workers need to run simultaneously. Workers connect 
 __Additionally, you may install and configure an `X Server` display in order to be able to run OpenGL cores.__
 __See the `docker-compose.yml` file for Xvfb example config.__
 
+__Minimum supported libx264 (x264 codec) version is v160!__
+
 ## Run with Docker
 
 Use makefile script: `make dev.run-docker` or Docker Compose directly: `docker-compose up --build`
