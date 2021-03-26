@@ -56,9 +56,70 @@ const gui = (() => {
         return el;
     }
 
+    const show = (el) => {
+        el.style.display = 'block';
+    }
+
+    const hide = (el) => {
+        el.style.display = 'none';
+    }
+
+    const toggle = (el, what) => {
+        if (what) {
+            show(el)
+        } else {
+            hide(el)
+        }
+    }
+
+    const fadeIn = async (el, speed = .1) => {
+        el.style.opacity = '0';
+        el.style.display = 'block';
+        return new Promise((done) => (function fade() {
+                let val = parseFloat(el.style.opacity);
+                const proceed = ((val += 0.1) <= 1);
+                if (proceed) {
+                    el.style.opacity = '' + val;
+                    requestAnimationFrame(fade);
+                } else {
+                    done();
+                }
+            })()
+        );
+    }
+
+    const fadeOut = async (el, speed = .1) => {
+        el.style.opacity = '1';
+        return new Promise((done) => (function fade() {
+                if ((el.style.opacity -= speed) < 0) {
+                    el.style.display = "none";
+                    done();
+                } else {
+                    requestAnimationFrame(fade);
+                }
+            })()
+        )
+    }
+
+    const sleep = async (ms) => new Promise(resolve => setTimeout(resolve, ms));
+
+    const fadeInOut = async (el, wait = 1000, speed = .1) => {
+        await fadeIn(el, speed)
+        await sleep(wait);
+        await fadeOut(el, speed)
+    }
+
     return {
+        anim: {
+            fadeIn,
+            fadeOut,
+            fadeInOut,
+        },
         create: _create,
         select,
         binding,
+        show,
+        hide,
+        toggle,
     }
 })(document);

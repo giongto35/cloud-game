@@ -16,37 +16,36 @@ const touch = (() => {
 
     let vpadTouchIdx = null;
     let vpadTouchDrag = null;
-    let vpadHolder = $("#circle-pad-holder");
-    let vpadCircle = $("#circle-pad");
+    let vpadHolder = document.getElementById('circle-pad-holder');
+    let vpadCircle = document.getElementById('circle-pad');
 
-    const window_ = $(window);
-    const buttons = $(".btn");
-    const playerSlider = $("#playeridx")
-    const dpad = $(".dpad");
+    const buttons = Array.from(document.getElementsByClassName('btn'));
+    const playerSlider = document.getElementById('playeridx');
+    const dpad = Array.from(document.getElementsByClassName('dpad'));
 
     const dpadToggle = document.getElementById('dpad-toggle')
     dpadToggle.addEventListener('change', (e) => {
-      event.pub(DPAD_TOGGLE, {checked: e.target.checked});
+        event.pub(DPAD_TOGGLE, {checked: e.target.checked});
     });
 
     let dpadMode = true;
     const deadZone = 0.1;
 
     function onDpadToggle(checked) {
-      if (dpadMode === checked) {
-        return //error?
-      }
-      if (dpadMode) {
-        dpadMode = false;
-        vpadHolder.addClass('dpad-empty');
-        vpadCircle.addClass('bong-full');
-        // reset dpad keys pressed before moving to analog stick mode
-        resetVpadState()
-      } else {
-        dpadMode = true;
-        vpadHolder.removeClass('dpad-empty');
-        vpadCircle.removeClass('bong-full');
-      }
+        if (dpadMode === checked) {
+            return //error?
+        }
+        if (dpadMode) {
+            dpadMode = false;
+            vpadHolder.classList.add('dpad-empty');
+            vpadCircle.classList.add('bong-full');
+            // reset dpad keys pressed before moving to analog stick mode
+            resetVpadState()
+        } else {
+            dpadMode = true;
+            vpadHolder.classList.remove('dpad-empty');
+            vpadCircle.classList.remove('bong-full');
+        }
     }
 
     function resetVpadState() {
@@ -63,7 +62,8 @@ const touch = (() => {
 
         vpadTouchDrag = null;
         vpadTouchIdx = null;
-        dpad.removeClass('pressed');
+
+        dpad.forEach(arrow => arrow.classList.remove('pressed'));
     }
 
     function checkVpadState(axis, state) {
@@ -82,9 +82,7 @@ const touch = (() => {
     }
 
     function handleVpadJoystickDown(event) {
-        vpadCircle.css('transition', '0s');
-        vpadCircle.css('-moz-transition', '0s');
-        vpadCircle.css('-webkit-transition', '0s');
+        vpadCircle.style['transition'] = '0s';
 
         if (event.changedTouches) {
             resetVpadState();
@@ -99,12 +97,8 @@ const touch = (() => {
     function handleVpadJoystickUp() {
         if (vpadTouchDrag === null) return;
 
-        vpadCircle.css('transition', '.2s');
-        vpadCircle.css('-moz-transition', '.2s');
-        vpadCircle.css('-webkit-transition', '.2s');
-        vpadCircle.css('transform', 'translate3d(0px, 0px, 0px)');
-        vpadCircle.css('-moz-transform', 'translate3d(0px, 0px, 0px)');
-        vpadCircle.css('-webkit-transform', 'translate3d(0px, 0px, 0px)');
+        vpadCircle.style['transition'] = '.2s';
+        vpadCircle.style['transform'] = 'translate3d(0px, 0px, 0px)';
 
         resetVpadState();
     }
@@ -137,10 +131,7 @@ const touch = (() => {
             yNew = -tmp;
         }
 
-        let style = `translate(${xNew}px, ${yNew}px)`;
-        vpadCircle.css('transform', style);
-        vpadCircle.css('-webkit-transform', style);
-        vpadCircle.css('-moz-transform', style);
+        vpadCircle.style['transform'] = `translate(${xNew}px, ${yNew}px)`;
 
         let xRatio = xNew / MAX_DIFF;
         let yRatio = yNew / MAX_DIFF;
@@ -156,33 +147,29 @@ const touch = (() => {
         }
     }
 
-    /*
-        Right side - Control buttons
-    */
+    // right side - control buttons
+    const _handleButton = (key, state) => checkVpadState(key, state)
 
     function handleButtonDown() {
-        checkVpadState($(this).attr('value'), true);
-        // add touchIdx?
+        _handleButton(this.getAttribute('value'), true);
     }
 
     function handleButtonUp() {
-        checkVpadState($(this).attr('value'), false);
+        _handleButton(this.getAttribute('value'), false);
     }
 
-
-    /*
-        Player index slider
-    */
+    function handleButtonClick() {
+        _handleButton(this.getAttribute('value'), true);
+        setTimeout(() => {
+            _handleButton(this.getAttribute('value'), false);
+        }, 30);
+    }
 
     function handlePlayerSlider() {
-            socket.updatePlayerIndex($(this).val() - 1);
+        socket.updatePlayerIndex(this.value - 1);
     }
 
-
-    /*
-        Touch menu
-    */
-
+    // Touch menu
     let menuTouchIdx = null;
     let menuTouchDrag = null;
     let menuTouchTime = null;
@@ -240,9 +227,7 @@ const touch = (() => {
         menuTouchDrag = null;
     }
 
-    /*
-        Common events
-    */
+    // Common events
     function handleWindowMove(event) {
         event.preventDefault();
         handleVpadJoystickMove(event);
@@ -255,10 +240,11 @@ const touch = (() => {
                     // check class
 
                     let elem = document.elementFromPoint(event.changedTouches[i].clientX, event.changedTouches[i].clientY);
+
                     if (elem.classList.contains('btn')) {
-                        $(elem).trigger('touchstart');
+                        elem.dispatchEvent(new Event('touchstart'));
                     } else {
-                        buttons.trigger('touchend');
+                        elem.dispatchEvent(new Event('touchend'));
                     }
                 }
             }
@@ -268,23 +254,31 @@ const touch = (() => {
     function handleWindowUp(ev) {
         handleVpadJoystickUp(ev);
         handleMenuUp(ev);
-        buttons.trigger('touchend');
+        buttons.forEach((btn) => {
+            btn.dispatchEvent(new Event('touchend'));
+        });
     }
 
     // touch/mouse events for control buttons. mouseup events is binded to window.
-    buttons.on('mousedown', handleButtonDown);
-    buttons.on('touchstart', handleButtonDown);
-    buttons.on('touchend', handleButtonUp);
+    buttons.forEach((btn) => {
+        btn.addEventListener('mousedown', handleButtonDown);
+        btn.addEventListener('touchstart', handleButtonDown);
+        btn.addEventListener('touchend', handleButtonUp);
+    });
 
     // touch/mouse events for dpad. mouseup events is binded to window.
-    vpadHolder.on('mousedown', handleVpadJoystickDown);
-    vpadHolder.on('touchstart', handleVpadJoystickDown);
-    vpadHolder.on('touchend', handleVpadJoystickUp);
+    vpadHolder.addEventListener('mousedown', handleVpadJoystickDown);
+    vpadHolder.addEventListener('touchstart', handleVpadJoystickDown);
+    vpadHolder.addEventListener('touchend', handleVpadJoystickUp);
+
+    dpad.forEach((arrow) => {
+        arrow.addEventListener('click', handleButtonClick);
+    });
 
     // touch/mouse events for player slider.
-    playerSlider.on('oninput', handlePlayerSlider);
-    playerSlider.on('onchange', handlePlayerSlider);
-    playerSlider.on('mouseup', handlePlayerSlider);
+    playerSlider.addEventListener('oninput', handlePlayerSlider);
+    playerSlider.addEventListener('onchange', handlePlayerSlider);
+    playerSlider.addEventListener('mouseup', handlePlayerSlider);
 
     // Bind events for menu
     // TODO change this flow
@@ -297,16 +291,15 @@ const touch = (() => {
     return {
         init: () => {
             // add buttons into the state 🤦
-            $('.btn, .btn-big').each((_, el) => {
-                vpadState[$(el).attr('value')] = false;
+            Array.from(document.querySelectorAll('.btn,.btn-big')).forEach((el) => {
+                vpadState[el.getAttribute('value')] = false;
             });
 
-            // Bind events for window
-            window_.on('mousemove', handleWindowMove);
-            window_[0].addEventListener('touchmove', handleWindowMove, {passive: false});
-            window_.on('mouseup', handleWindowUp);
+            window.addEventListener('mousemove', handleWindowMove);
+            window.addEventListener('touchmove', handleWindowMove, {passive: false});
+            window.addEventListener('mouseup', handleWindowUp);
 
             log.info('[input] touch input has been initialized');
         }
     }
-})($, document, event, KEY, window);
+})(document, event, KEY, window);

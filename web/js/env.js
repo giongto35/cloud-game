@@ -1,57 +1,41 @@
 const env = (() => {
     // UI
-    const doc = $(document);
-    const gameBoy = $('#gamebody');
-    const ghRibbon = $('#ribbon');
+    const page = document.getElementsByTagName('html')[0];
+    const gameBoy = document.getElementById('gamebody');
+    const ghRibbon = document.getElementById('ribbon');
 
     let isLayoutSwitched = false;
 
     // Window rerender / rotate screen if needed
     const fixScreenLayout = () => {
-        let targetWidth = Math.round(doc.width() * 0.9 / 2) * 2,
-            targetHeight = Math.round(doc.height() * 0.9 / 2) * 2;
+        let pw = getWidth(page),
+            ph = getHeight(page),
+            targetWidth = Math.round(pw * 0.9 / 2) * 2,
+            targetHeight = Math.round(ph * 0.9 / 2) * 2;
 
-        // mobile == full screen
-        if (env.getOs() === 'android') {
-            targetWidth = doc.width();
-            targetHeight = doc.height();
-        }
-
-        // Should have maximum box for desktop?
-        // targetWidth = 800; targetHeight = 600; // test on desktop
+        // save page rotation
+        isLayoutSwitched = isPortrait();
 
         rescaleGameBoy(targetWidth, targetHeight);
 
-        let st = isLayoutSwitched ? 'rotate(90deg)' : '';
-        ghRibbon.css({
-            'bottom': isLayoutSwitched ? 0 : '',
-            'top': isLayoutSwitched ? '' : 0,
-            'transform': st,
-            '-webkit-transform': st,
-            '-moz-transform': st
-        })
+        ghRibbon.style['bottom'] = isLayoutSwitched ? 0 : '';
+        ghRibbon.style['top'] = isLayoutSwitched ? '' : 0;
+        ghRibbon.style['transform'] = isLayoutSwitched ? 'rotate(90deg)' : '';
     };
 
     const rescaleGameBoy = (targetWidth, targetHeight) => {
         const transformations = ['translate(-50%, -50%)'];
 
-        // rotate portrait layout
-        isLayoutSwitched = isPortrait();
         if (isLayoutSwitched) {
             transformations.push('rotate(90deg)');
             [targetWidth, targetHeight] = [targetHeight, targetWidth]
         }
 
         // scale, fit to target size
-        const scale = Math.min(targetWidth / gameBoy.width(), targetHeight / gameBoy.height());
+        const scale = Math.min(targetWidth / getWidth(gameBoy), targetHeight / getHeight(gameBoy));
         transformations.push(`scale(${scale})`);
 
-        const transform = transformations.join(' ');
-        gameBoy.css({
-            'transform': transform,
-            '-webkit-transform': transform,
-            '-moz-transform': transform
-        });
+        gameBoy.style['transform'] = transformations.join(' ');
     }
 
     const getOS = () => {
@@ -74,19 +58,7 @@ const env = (() => {
         return browserName;
     };
 
-    // !to use more sophisticated approach / lib
-    const isPortrait = () => {
-        // ios / mobile app
-        switch (window.orientation) {
-            case 0:
-            case 180:
-                return true;
-        }
-
-        // desktop
-        const orientation = screen.msOrientation || screen.mozOrientation || (screen.orientation || {}).type;
-        return orientation === 'portrait-primary';
-    };
+    const isPortrait = () => getWidth(page) < getHeight(page);
 
     const toggleFullscreen = (enable, element) => {
         const el = enable ? element : document;
@@ -114,6 +86,14 @@ const env = (() => {
         }
     };
 
+    function getHeight(el) {
+        return parseFloat(getComputedStyle(el, null).height.replace("px", ""));
+    }
+
+    function getWidth(el) {
+        return parseFloat(getComputedStyle(el, null).width.replace("px", ""));
+    }
+
     window.addEventListener('resize', fixScreenLayout);
     window.addEventListener('orientationchange', fixScreenLayout);
     document.addEventListener('DOMContentLoaded', () => fixScreenLayout(), false);
@@ -130,4 +110,4 @@ const env = (() => {
             isLayoutSwitched: isLayoutSwitched
         })
     }
-})($, document, log, navigator, screen, window);
+})(document, log, navigator, screen, window);
