@@ -19,15 +19,14 @@
     })();
     let prevDir = DIR.IDLE;
 
-    const menuScreen = $('#menu-screen');
-    const helpOverlay = $('#help-overlay');
-    const popupBox = $('#noti-box');
+    const menuScreen = document.getElementById('menu-screen');
+    const helpOverlay = document.getElementById('help-overlay');
     const playerIndex = document.getElementById('playeridx');
 
     // keymap
     const keyButtons = {};
     Object.keys(KEY).forEach(button => {
-        keyButtons[KEY[button]] = $(`#btn-${KEY[button]}`);
+        keyButtons[KEY[button]] = document.getElementById(`btn-${KEY[button]}`);
     });
 
     /**
@@ -61,7 +60,7 @@
     };
 
     const onGameRoomAvailable = () => {
-        popup('Now you can share you game!');
+        message.show('Now you can share you game!');
     };
 
     const onConnectionReady = () => {
@@ -74,7 +73,7 @@
     };
 
     const onLatencyCheck = (data) => {
-        popup('Connecting to fastest server...');
+        message.show('Connecting to fastest server...');
         const timeoutMs = 1111;
         // deduplicate
         const addresses = [...new Set(data.addresses || [])];
@@ -102,13 +101,13 @@
             if (isGameScreen) {
                 stream.toggle(!show);
             } else {
-                menuScreen.toggle(!show);
+                gui.toggle(menuScreen, !show);
             }
 
-            keyButtons[KEY.SAVE].toggle(show || isGameScreen);
-            keyButtons[KEY.LOAD].toggle(show || isGameScreen);
+            gui.toggle(keyButtons[KEY.SAVE], show || isGameScreen);
+            gui.toggle(keyButtons[KEY.LOAD], show || isGameScreen);
 
-            helpOverlay.toggle(show);
+            gui.toggle(helpOverlay, show);
 
             this.shown = show;
 
@@ -120,23 +119,23 @@
         log.debug('[control] loading menu screen');
 
         stream.toggle(false);
-        keyButtons[KEY.SAVE].hide();
-        keyButtons[KEY.LOAD].hide();
+        gui.hide(keyButtons[KEY.SAVE]);
+        gui.hide(keyButtons[KEY.LOAD]);
 
         gameList.show();
-        menuScreen.show();
+        gui.show(menuScreen);
 
         setState(app.state.menu);
     };
 
     const startGame = () => {
         if (!rtcp.isConnected()) {
-            popup('Game cannot load. Please refresh');
+            message.show('Game cannot load. Please refresh');
             return;
         }
 
         if (!rtcp.isInputReady()) {
-            popup('Game is not ready yet. Please wait');
+            message.show('Game is not ready yet. Please wait');
             return;
         }
 
@@ -155,19 +154,16 @@
 
         // clear menu screen
         input.poll().disable();
-        menuScreen.hide();
+        gui.hide(menuScreen);
         stream.toggle(true);
-        keyButtons[KEY.SAVE].show();
-        keyButtons[KEY.LOAD].show();
+        gui.show(keyButtons[KEY.SAVE]);
+        gui.show(keyButtons[KEY.LOAD]);
         // end clear
         input.poll().enable();
     };
 
     const saveGame = utils.debounce(socket.saveGame, 1000);
     const loadGame = utils.debounce(socket.loadGame, 1000);
-
-    const _popup = (message) => popupBox.html(message).fadeIn().fadeOut();
-    const popup = utils.throttle(_popup, 1000);
 
     const _dpadArrowKeys = [KEY.UP, KEY.DOWN, KEY.LEFT, KEY.RIGHT];
 
@@ -176,9 +172,9 @@
         const button = keyButtons[data.key];
 
         if (_dpadArrowKeys.includes(data.key)) {
-            button.addClass('dpad-pressed');
+            button.classList.add('dpad-pressed');
         } else {
-            if (button) button.addClass('pressed');
+            if (button) button.classList.add('pressed');
         }
 
         if (state !== app.state.settings) {
@@ -192,12 +188,10 @@
     const onKeyRelease = data => {
         const button = keyButtons[data.key];
 
-        if (!button) return;
-
         if (_dpadArrowKeys.includes(data.key)) {
-            button.removeClass('dpad-pressed');
+            button.classList.remove('dpad-pressed');
         } else {
-            if (button) button.removeClass('pressed');
+            if (button) button.classList.remove('pressed');
         }
 
         if (state !== app.state.settings) {
@@ -314,13 +308,13 @@
                             startGame();
                             break;
                         case KEY.QUIT:
-                            popup('You are already in menu screen!');
+                            message.show('You are already in menu screen!');
                             break;
                         case KEY.LOAD:
-                            popup('Loading the game.');
+                            message.show('Loading the game.');
                             break;
                         case KEY.SAVE:
-                            popup('Saving the game.');
+                            message.show('Saving the game.');
                             break;
                         case KEY.STATS:
                             event.pub(STATS_TOGGLE);
@@ -351,7 +345,7 @@
                             // save when click share
                             saveGame();
                             room.copyToClipboard();
-                            popup('Shared link copied to the clipboard!');
+                            message.show('Shared link copied to the clipboard!');
                             break;
                         case KEY.SAVE:
                             saveGame();
@@ -390,7 +384,7 @@
                             socket.quitGame(room.getId());
                             room.reset();
 
-                            popup('Quit!');
+                            message.show('Quit!');
 
                             window.location = window.location.pathname;
                             break;
@@ -410,9 +404,11 @@
 
     // subscriptions
     event.sub(GAME_ROOM_AVAILABLE, onGameRoomAvailable, 2);
-    event.sub(GAME_SAVED, () => popup('Saved'));
-    event.sub(GAME_LOADED, () => popup('Loaded'));
-    event.sub(GAME_PLAYER_IDX, idx => popup(+idx + 1));
+    event.sub(GAME_SAVED, () => message.show('Saved'));
+    event.sub(GAME_LOADED, () => message.show('Loaded'));
+    event.sub(GAME_PLAYER_IDX, idx => {
+        if (!isNaN(+idx)) message.show(+idx + 1);
+    });
 
     event.sub(MEDIA_STREAM_INITIALIZED, (data) => {
         rtcp.start(data.stunturn);
@@ -428,16 +424,16 @@
         socket.abort();
     });
     event.sub(LATENCY_CHECK_REQUESTED, onLatencyCheck);
-    event.sub(GAMEPAD_CONNECTED, () => popup('Gamepad connected'));
-    event.sub(GAMEPAD_DISCONNECTED, () => popup('Gamepad disconnected'));
+    event.sub(GAMEPAD_CONNECTED, () => message.show('Gamepad connected'));
+    event.sub(GAMEPAD_DISCONNECTED, () => message.show('Gamepad disconnected'));
     // touch stuff
     event.sub(MENU_HANDLER_ATTACHED, (data) => {
-        menuScreen.on(data.event, data.handler);
+        menuScreen.addEventListener(data.event, data.handler);
     });
     event.sub(KEY_PRESSED, onKeyPress);
     event.sub(KEY_RELEASED, onKeyRelease);
     event.sub(KEY_STATE_UPDATED, data => rtcp.input(data));
-    event.sub(SETTINGS_CHANGED, () => popup('Settings have been updated'));
+    event.sub(SETTINGS_CHANGED, () => message.show('Settings have been updated'));
     event.sub(SETTINGS_CLOSED, () => {
         state.keyRelease(KEY.SETTINGS);
     });
@@ -446,4 +442,4 @@
 
     // initial app state
     setState(app.state.eden);
-})($, document, event, env, gameList, input, KEY, log, room, settings, socket, stats, stream, utils);
+})(document, event, env, gameList, input, KEY, log, message, room, settings, socket, stats, stream, utils);
