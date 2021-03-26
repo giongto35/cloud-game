@@ -6,14 +6,14 @@ const room = (() => {
     let id = '';
 
     // UI
-    const roomLabel = $('#room-txt');
+    const roomLabel = document.getElementById('room-txt');
 
     // !to rewrite
     const parseURLForRoom = () => {
         let queryDict = {};
         let regex = /^\/?([A-Za-z]*)\/?/g;
-        var zone = regex.exec(location.pathname)[1]
-        var room = null
+        const zone = regex.exec(location.pathname)[1];
+        let room = null;
 
         // get room from URL
         location.search.substr(1)
@@ -23,7 +23,7 @@ const room = (() => {
             });
 
         if (typeof queryDict.id === 'string') {
-            room =  decodeURIComponent(queryDict.id);
+            room = decodeURIComponent(queryDict.id);
         }
 
         return [room, zone];
@@ -38,11 +38,11 @@ const room = (() => {
         getId: () => id,
         setId: (id_) => {
             id = id_;
-            roomLabel.val(id);
+            roomLabel.value = id;
         },
         reset: () => {
             id = '';
-            roomLabel.val(id);
+            roomLabel.value = id;
         },
         save: (roomIndex) => {
             localStorage.setItem('roomID', roomIndex);

@@ -3,11 +3,6 @@
     display: none;
 }
 
-#btn-settings {
-    top: 14px;
-    left: 70px;
-}
-
 .modal-window {
     position: fixed;
 

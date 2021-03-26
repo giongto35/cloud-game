@@ -49,45 +49,43 @@
     <div id="guide-txt"><b>Arrows</b>(move),<b>ZXCVAS</b>(game ABXYLR),<b>1/2</b>(1st/2nd player),<b>Shift/Enter/K/L</b>(select/start/save/load),<b>F</b>(fullscreen),<b>share</b>(copy
         sharelink to clipboard)
     </div>
-    <div id="btn-load" unselectable="on" class="btn big unselectable" value="load"></div>
-    <div id="btn-save" unselectable="on" class="btn big unselectable" value="save"></div>
-    <div id="btn-join" unselectable="on" class="btn big unselectable" value="join"></div>
+    <div id="btn-load" class="btn big unselectable" value="load"></div>
+    <div id="btn-save" class="btn big unselectable" value="save"></div>
+    <div id="btn-join" class="btn big unselectable" value="join"></div>
     <div id="slider-playeridx" class="slidecontainer">
         player choice
         <input type="range" min="1" max="4" value="1" class="slider" id="playeridx" onkeydown="event.preventDefault()">
     </div>
 
-    <div id="btn-quit" unselectable="on" class="btn big unselectable" value="quit"></div>
-    <div id="btn-select" unselectable="on" class="btn big unselectable" value="select"></div>
-    <div id="btn-start" unselectable="on" class="btn big unselectable" value="start"></div>
+    <div id="btn-quit" class="btn big unselectable" value="quit"></div>
+    <div id="btn-select" class="btn big unselectable" value="select"></div>
+    <div id="btn-start" class="btn big unselectable" value="start"></div>
 
 
     <div id="color-button-holder">
-        <div id="btn-a" unselectable="on" class="btn unselectable" value="a"></div>
-        <div id="btn-b" unselectable="on" class="btn unselectable" value="b"></div>
-        <div id="btn-x" unselectable="on" class="btn unselectable" value="x"></div>
-        <div id="btn-y" unselectable="on" class="btn unselectable" value="y"></div>
+        <div id="btn-a" class="btn unselectable" value="a"></div>
+        <div id="btn-b" class="btn unselectable" value="b"></div>
+        <div id="btn-x" class="btn unselectable" value="x"></div>
+        <div id="btn-y" class="btn unselectable" value="y"></div>
     </div>
 
+    <div id="btn-settings" class="btn unselectable" value="settings"></div>
+
     <!-- TODO: remove -->
-    <input id="room-txt" type="text" placeholder="room id..." unselectable="on" class=" unselectable" disabled>
+    <input id="room-txt" type="text" placeholder="room id..." class=" unselectable" disabled>
 
     <label class="dpad-toggle-label" title="D-pad toggle">
         <input type="checkbox" id="dpad-toggle" checked>
         <span class="dpad-toggle-slider"></span>
     </label>
 
-    <div id="noti-box" unselectable="on" class="unselectable">Oh my god</div>
+    <div id="noti-box" class="unselectable">Oh my god</div>
 
     <div id="help-overlay">
         <div id="help-overlay-background"></div>
         <div id="help-overlay-detail"></div>
     </div>
-    <div id="btn-help" unselectable="on" class="btn unselectable" value="help"></div>
-
-    <div id="btn-settings" class="btn btn2 unselectable" value="settings">
-        Settings
-    </div>
+    <div id="btn-help" class="btn unselectable" value="help"></div>
 </div>
 
 <div id="app-settings" class="modal-window">
@@ -98,7 +96,7 @@
             <span title="Reset" id="settings__controls__reset" class="semi-button">⟲</span>
             <span title="Close" id="settings__controls__close" class="semi-button">X</span>
         </div>
-        <h1>Settings</h1>
+        <h1>Options</h1>
         <div id="settings-data"></div>
         <div>
             * -- applied after application restart
@@ -111,11 +109,10 @@
         src="https://github.blog/wp-content/uploads/2008/12/forkme_right_gray_6d6d6d.png?resize=149%2C149"
         class="attachment-full size-full" alt="Fork me on GitHub" data-recalc-dims="1"></a>
 
-<script src="/static/js/lib/jquery-3.4.1.min.js"></script>
-
 <script src="/static/js/gui/gui.js?v=1"></script>
-<script src="/static/js/log.js?v=5"></script>
 <script src="/static/js/utils.js?v1"></script>
+<script src="/static/js/gui/message.js?v=1"></script>
+<script src="/static/js/log.js?v=5"></script>
 <script src="/static/js/event/event.js?v=5"></script>
 <script src="/static/js/input/keys.js?v=3"></script>
 <script src="/static/js/settings/opts.js?v=1"></script>
