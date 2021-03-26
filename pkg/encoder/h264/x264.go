@@ -30,6 +30,10 @@ func NewEncoder(width, height int, options ...Option) (encoder *H264, err error)
 		return nil, fmt.Errorf("x264: the library version should be newer than v150, you have got version %v", libVersion)
 	}
 
+	if libVersion < 160 {
+		log.Printf("x264: warning, installed version of libx264 %v is older than minimally supported v160, expect bugs", libVersion)
+	}
+
 	opts := &Options{
 		Crf:     12,
 		Tune:    "zerolatency",
