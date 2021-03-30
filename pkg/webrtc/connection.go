@@ -17,8 +17,10 @@ func NewInterceptedPeerConnection(conf conf.Webrtc, ics []interceptor.Intercepto
 	}
 
 	i := &interceptor.Registry{}
-	if err := RegisterDefaultInterceptors(m, i); err != nil {
-		return nil, err
+	if !conf.DisableDefaultInterceptors {
+		if err := RegisterDefaultInterceptors(m, i); err != nil {
+			return nil, err
+		}
 	}
 	for _, itc := range ics {
 		i.Add(itc)
