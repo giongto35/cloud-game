@@ -43,7 +43,10 @@ type (
 	PacketHandler func(resp WSPacket) (req WSPacket)
 )
 
-var EmptyPacket = WSPacket{}
+var (
+	EmptyPacket     = WSPacket{}
+	HeartbeatPacket = WSPacket{ID: "heartbeat"}
+)
 
 const WSWait = 20 * time.Second
 
@@ -153,20 +156,22 @@ func (c *Client) SyncSend(request WSPacket) (response WSPacket) {
 //	}
 //}
 
-// Heartbeat maintains connection to server
+// Heartbeat maintains connection to coordinator.
+// Blocking.
 func (c *Client) Heartbeat() {
 	// send heartbeat every 1s
-	timer := time.Tick(time.Second)
-
-	for range timer {
+	t := time.NewTicker(time.Second)
+	// don't wait 1 second
+	c.Send(HeartbeatPacket, nil)
+	for {
 		select {
 		case <-c.Done:
-			log.Println("Close heartbeat")
+			t.Stop()
+			log.Printf("Close heartbeat")
 			return
-		default:
+		case <-t.C:
+			c.Send(HeartbeatPacket, nil)
 		}
-		// !to resolve cycle deps
-		c.Send(WSPacket{ID: "heartbeat"}, nil)
 	}
 }
 
