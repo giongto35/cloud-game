@@ -60,7 +60,7 @@ clean:
 	@go clean ./cmd/*
 
 build:
-	go build -a -tags netgo -ldflags '-w' -o bin/coordinator ./cmd/coordinator
+	CGO_ENABLED=0 go build -a -ldflags '-w' -o bin/coordinator ./cmd/coordinator
 	go build ${WORKER_BUILD_PARAMS} -a -tags netgo -ldflags '-w' -o bin/worker ./cmd/worker
 
 dev.tools:
@@ -69,7 +69,7 @@ dev.tools:
 dev.build: compile build
 
 dev.build-local:
-	go build -o bin/coordinator ./cmd/coordinator
+	CGO_ENABLED=0 go build -o bin/coordinator ./cmd/coordinator
 	go build ${WORKER_BUILD_PARAMS} -o bin/worker ./cmd/worker
 
 dev.run: dev.build-local
