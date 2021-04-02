@@ -293,14 +293,14 @@ func (o *Server) getWorkerFromAddress(address string) *WorkerClient {
 func (o *Server) findBestServerFromBrowser(workerClients map[string]*WorkerClient, client *BrowserClient, zone string) (string, error) {
 	// TODO: Find best Server by latency, currently return by ping
 	if len(workerClients) == 0 {
-		return "", errors.New("No server found")
+		return "", errors.New("no server found")
 	}
 
 	latencies := o.getLatencyMapFromBrowser(workerClients, client)
 	client.Println("Latency map", latencies)
 
 	if len(latencies) == 0 {
-		return "", errors.New("No server found")
+		return "", errors.New("no server found")
 	}
 
 	var bestWorker *WorkerClient
