@@ -6,8 +6,8 @@ type Env string
 
 const (
 	Dev        Env = "dev"
-	Staging        = "staging"
-	Production     = "prod"
+	Staging    Env = "staging"
+	Production Env = "prod"
 )
 
 func (env *Env) AnyOf(what ...Env) bool {
