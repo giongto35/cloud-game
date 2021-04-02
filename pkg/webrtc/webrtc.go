@@ -31,7 +31,6 @@ type WebRTC struct {
 	cfg           webrtcConfig.Config
 	tsInterceptor itc.ReTime
 	isConnected   bool
-	isClosed      bool
 	// for yuvI420 image
 	ImageChannel chan WebFrame
 	AudioChannel chan []byte
@@ -39,9 +38,9 @@ type WebRTC struct {
 	//VoiceOutChannel chan []byte
 	InputChannel chan []byte
 
-	Done     bool
-	lastTime time.Time
-	curFPS   int
+	Done bool
+	//lastTime time.Time
+	//curFPS   int
 
 	RoomID string
 
@@ -152,6 +151,9 @@ func (w *WebRTC) StartClient(isMobile bool, iceCB OnIceCallback) (string, error)
 	// create data channel for input, and register callbacks
 	// order: true, negotiated: false, id: random
 	inputTrack, err := w.connection.CreateDataChannel("game-input", nil)
+	if err != nil {
+		return "", err
+	}
 
 	inputTrack.OnOpen(func() {
 		log.Printf("Data channel '%s'-'%d' open.\n", inputTrack.Label(), inputTrack.ID())
@@ -295,7 +297,7 @@ func (w *WebRTC) AddCandidate(candidate string) error {
 // StopClient disconnect
 func (w *WebRTC) StopClient() {
 	// if stopped, bypass
-	if w.isConnected == false {
+	if !w.isConnected {
 		return
 	}
 
@@ -382,10 +384,10 @@ func (w *WebRTC) startStreaming(vp8Track *webrtc.TrackLocalStaticSample, opusTra
 	//}()
 }
 
-func (w *WebRTC) calculateFPS() int {
-	elapsedTime := time.Now().Sub(w.lastTime)
-	w.lastTime = time.Now()
-	curFPS := time.Second / elapsedTime
-	w.curFPS = int(float32(w.curFPS)*0.9 + float32(curFPS)*0.1)
-	return w.curFPS
-}
+//func (w *WebRTC) calculateFPS() int {
+//	elapsedTime := time.Now().Sub(w.lastTime)
+//	w.lastTime = time.Now()
+//	curFPS := time.Second / elapsedTime
+//	w.curFPS = int(float32(w.curFPS)*0.9 + float32(curFPS)*0.1)
+//	return w.curFPS
+//}
