@@ -6,6 +6,7 @@ import (
 	"math/rand"
 	"os"
 	"os/signal"
+	"syscall"
 	"time"
 
 	config "github.com/giongto35/cloud-game/v2/pkg/config/worker"
@@ -35,14 +36,20 @@ func run() {
 	wrk := worker.New(ctx, conf)
 	wrk.Run()
 
-	stop := make(chan os.Signal, 1)
-	signal.Notify(stop, os.Interrupt)
-	select {
-	case <-stop:
-		glog.V(4).Info("[worker] Shutting down")
-		wrk.Shutdown()
-		cancelCtx()
-	}
+	signals := make(chan os.Signal, 1)
+	done := make(chan struct{}, 1)
+
+	signal.Notify(signals, os.Interrupt, syscall.SIGTERM)
+
+	go func() {
+		sig := <-signals
+		glog.V(4).Infof("[worker] Shutting down [os:%v]", sig)
+		done <- struct{}{}
+	}()
+
+	<-done
+	wrk.Shutdown()
+	cancelCtx()
 }
 
 func main() {
