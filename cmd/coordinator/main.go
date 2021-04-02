@@ -6,6 +6,7 @@ import (
 	"math/rand"
 	"os"
 	"os/signal"
+	"syscall"
 	"time"
 
 	config "github.com/giongto35/cloud-game/v2/pkg/config/coordinator"
@@ -35,12 +36,18 @@ func main() {
 		os.Exit(1)
 	}
 
-	stop := make(chan os.Signal, 1)
-	signal.Notify(stop, os.Interrupt)
-	select {
-	case <-stop:
-		glog.Infoln("Received SIGTERM, Quiting Coordinator")
-		o.Shutdown()
-		cancelCtx()
-	}
+	signals := make(chan os.Signal, 1)
+	done := make(chan struct{}, 1)
+
+	signal.Notify(signals, os.Interrupt, syscall.SIGTERM)
+
+	go func() {
+		sig := <-signals
+		glog.V(4).Infof("[coordinator] Shutting down [os:%v]", sig)
+		done <- struct{}{}
+	}()
+
+	<-done
+	o.Shutdown()
+	cancelCtx()
 }
