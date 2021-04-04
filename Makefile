@@ -60,14 +60,14 @@ clean:
 	@go clean ./cmd/*
 
 build:
-	CGO_ENABLED=0 go build -a -ldflags '-w' -o bin/coordinator${EXT} ./cmd/coordinator
-	go build ${WORKER_BUILD_PARAMS} -a -ldflags '-w' -o bin/worker${EXT} ./cmd/worker
+	CGO_ENABLED=0 go build -a -ldflags '-w -s' -o bin/coordinator${EXT} ./cmd/coordinator
+	go build -buildmode=exe -a -ldflags '-w -s' -o bin/worker${EXT} ./cmd/worker
 
 dev.build: compile build
 
 dev.build-local:
 	CGO_ENABLED=0 go build -o bin/coordinator ./cmd/coordinator
-	go build ${WORKER_BUILD_PARAMS} -o bin/worker ./cmd/worker
+	go build -buildmode=exe -o bin/worker ./cmd/worker
 
 dev.run: dev.build-local
 	./bin/coordinator --v=5 &
