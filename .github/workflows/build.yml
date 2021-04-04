@@ -77,7 +77,7 @@ jobs:
         if: matrix.step == 'build' && matrix.os == 'windows-latest'
         shell: msys2 {0}
         run: |
-          make WORKER_BUILD_PARAMS=-buildmode=exe build
+          make build
 
       - name: Build Linux app
         if: matrix.step == 'build' && matrix.os == 'ubuntu-latest'
