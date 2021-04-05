@@ -12,7 +12,6 @@ RUN apt-get update && apt-get install --no-install-recommends -y \
     make \
     pkg-config \
     wget \
-    ca-certificates \
     libvpx-dev \
     libx264-dev \
     libopus-dev \
@@ -21,7 +20,7 @@ RUN apt-get update && apt-get install --no-install-recommends -y \
 
 # go setup layer
 ARG GO=go1.16.3.linux-amd64.tar.gz
-RUN wget -q https://golang.org/dl/$GO \
+RUN wget -q --no-check-certificate https://golang.org/dl/$GO \
     && rm -rf /usr/local/go \
     && tar -C /usr/local -xzf $GO \
     && rm $GO
