@@ -9,23 +9,23 @@ WORKDIR ${BUILD_PATH}
 # system libs layer
 RUN apt-get update && apt-get install --no-install-recommends -y \
     gcc \
+    ca-certificates \
+    libopus-dev \
+    libsdl2-dev \
+    libvpx-dev \
+    libx264-dev \
     make \
     pkg-config \
     wget \
-    libvpx-dev \
-    libx264-dev \
-    libopus-dev \
-    libsdl2-dev \
  && rm -rf /var/lib/apt/lists/*
 
 # go setup layer
 ARG GO=go1.16.3.linux-amd64.tar.gz
-RUN wget -q --no-check-certificate https://golang.org/dl/$GO \
+RUN wget -q https://golang.org/dl/$GO \
     && rm -rf /usr/local/go \
     && tar -C /usr/local -xzf $GO \
     && rm $GO
 ENV PATH="${PATH}:/usr/local/go/bin"
-RUN go version
 
 # go deps layer
 COPY go.mod go.sum ./
