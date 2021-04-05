@@ -36,6 +36,5 @@ require (
 	golang.org/x/sys v0.0.0-20210326220804-49726bf1d181 // indirect
 	google.golang.org/api v0.43.0 // indirect
 	google.golang.org/genproto v0.0.0-20210329143202-679c6ae281ee // indirect
-	gopkg.in/hraban/opus.v2 v2.0.0-20201025103112-d779bb1cc5a2
 	gopkg.in/yaml.v2 v2.4.0 // indirect
 )

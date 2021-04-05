@@ -61,16 +61,16 @@ clean:
 
 build:
 	CGO_ENABLED=0 go build -ldflags '-w -s' -o bin/coordinator$(EXT) ./cmd/coordinator
-	go build -buildmode=exe -tags "static nolibopusfile" -ldflags '-w -s' -o bin/worker$(EXT) ./cmd/worker
+	go build -buildmode=exe -tags static -ldflags '-w -s' -o bin/worker$(EXT) ./cmd/worker
 
 verify-cores:
-	go test -tags=nolibopusfile -run TestAllEmulatorRooms ./pkg/worker/room -v -renderFrames $(GL_CTX) -outputPath "../../../_rendered"
+	go test -run TestAllEmulatorRooms ./pkg/worker/room -v -renderFrames $(GL_CTX) -outputPath "../../../_rendered"
 
 dev.build: compile build
 
 dev.build-local:
 	CGO_ENABLED=0 go build -o bin/coordinator ./cmd/coordinator
-	go build -buildmode=exe -tags nolibopusfile -o bin/worker ./cmd/worker
+	go build -buildmode=exe -o bin/worker ./cmd/worker
 
 dev.run: dev.build-local
 	./bin/coordinator --v=5 &
