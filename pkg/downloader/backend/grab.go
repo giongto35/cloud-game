@@ -1,7 +1,9 @@
 package backend
 
 import (
+	"crypto/tls"
 	"log"
+	"net/http"
 
 	"github.com/cavaliercoder/grab"
 )
@@ -12,8 +14,17 @@ type GrabDownloader struct {
 }
 
 func NewGrabDownloader() GrabDownloader {
+	client := grab.Client{
+		UserAgent: "Cloud-Game/2.2",
+		HTTPClient: &http.Client{
+			Transport: &http.Transport{
+				Proxy:           http.ProxyFromEnvironment,
+				TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
+			},
+		},
+	}
 	return GrabDownloader{
-		client:      grab.NewClient(),
+		client:      &client,
 		concurrency: 5,
 	}
 }
