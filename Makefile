@@ -60,8 +60,8 @@ clean:
 	@go clean ./cmd/*
 
 build:
-	CGO_ENABLED=0 go build -a -ldflags '-w -s' -o bin/coordinator${EXT} ./cmd/coordinator
-	go build -buildmode=exe -a -ldflags '-w -s' -o bin/worker${EXT} ./cmd/worker
+	CGO_ENABLED=0 go build -ldflags '-w -s' -o bin/coordinator$(EXT) ./cmd/coordinator
+	go build -buildmode=exe -tags static -ldflags '-w -s' -o bin/worker$(EXT) ./cmd/worker
 
 dev.build: compile build
 
