@@ -52,6 +52,7 @@ jobs:
             mingw-w64-x86_64-pkg-config
             mingw-w64-x86_64-dlfcn
             mingw-w64-x86_64-libvpx
+            mingw-w64-x86_64-opus
             mingw-w64-x86_64-x264-git
             mingw-w64-x86_64-SDL2
 
