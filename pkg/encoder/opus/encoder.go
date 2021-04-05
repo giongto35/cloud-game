@@ -3,12 +3,10 @@ package opus
 import (
 	"fmt"
 	"log"
-
-	"gopkg.in/hraban/opus.v2"
 )
 
 type Encoder struct {
-	*opus.Encoder
+	*LibOpusEncoder
 
 	channels     int
 	inFrequency  int
@@ -22,26 +20,26 @@ type Encoder struct {
 }
 
 func NewEncoder(inputSampleRate, outputSampleRate, channels int, options ...func(*Encoder) error) (Encoder, error) {
-	encoder, err := opus.NewEncoder(
+	encoder, err := NewOpusEncoder(
 		outputSampleRate,
 		channels,
 		// be aware that low delay option is not optimized for voice
-		opus.AppRestrictedLowdelay,
+		AppRestrictedLowdelay,
 	)
 	if err != nil {
 		return Encoder{}, err
 	}
 	enc := &Encoder{
-		Encoder:       encoder,
-		buffer:        Buffer{Data: make([]int16, inputSampleRate*20/1000*channels)},
-		channels:      channels,
-		inFrequency:   inputSampleRate,
-		outFrequency:  outputSampleRate,
-		outBufferSize: 1024,
-		onFullBuffer:  func(data []byte) {},
+		LibOpusEncoder: encoder,
+		buffer:         Buffer{Data: make([]int16, inputSampleRate*20/1000*channels)},
+		channels:       channels,
+		inFrequency:    inputSampleRate,
+		outFrequency:   outputSampleRate,
+		outBufferSize:  1024,
+		onFullBuffer:   func(data []byte) {},
 	}
 
-	_ = enc.SetMaxBandwidth(opus.Fullband)
+	_ = enc.SetMaxBandwidth(FullBand)
 	_ = enc.SetBitrate(192000)
 	_ = enc.SetComplexity(10)
 
@@ -92,7 +90,7 @@ func (e *Encoder) Encode(pcm []int16) ([]byte, error) {
 		pcm = resampleFn(pcm, e.resampleBufSize)
 	}
 	data := make([]byte, e.outBufferSize)
-	n, err := e.Encoder.Encode(pcm, data)
+	n, err := e.LibOpusEncoder.Encode(pcm, data)
 	if err != nil {
 		return []byte{}, err
 	}
@@ -100,16 +98,16 @@ func (e *Encoder) Encode(pcm []int16) ([]byte, error) {
 }
 
 func (e *Encoder) GetInfo() string {
-	bitrate, _ := e.Encoder.Bitrate()
-	complexity, _ := e.Encoder.Complexity()
-	dtx, _ := e.Encoder.DTX()
-	fec, _ := e.Encoder.InBandFEC()
-	maxBandwidth, _ := e.Encoder.MaxBandwidth()
-	lossPercent, _ := e.Encoder.PacketLossPerc()
-	sampleRate, _ := e.Encoder.SampleRate()
+	bitrate, _ := e.LibOpusEncoder.Bitrate()
+	complexity, _ := e.LibOpusEncoder.Complexity()
+	dtx, _ := e.LibOpusEncoder.DTX()
+	fec, _ := e.LibOpusEncoder.FEC()
+	maxBandwidth, _ := e.LibOpusEncoder.MaxBandwidth()
+	lossPercent, _ := e.LibOpusEncoder.PacketLossPerc()
+	sampleRate, _ := e.LibOpusEncoder.SampleRate()
 	return fmt.Sprintf(
-		"Bitrate: %v bps, Complexity: %v, DTX: %v, FEC: %v, Max bandwidth: *%v, Loss%%: %v, Rate: %v Hz",
-		bitrate, complexity, dtx, fec, maxBandwidth, lossPercent, sampleRate,
+		"%v, Bitrate: %v bps, Complexity: %v, DTX: %v, FEC: %v, Max bandwidth: *%v, Loss%%: %v, Rate: %v Hz",
+		CodecVersion(), bitrate, complexity, dtx, fec, maxBandwidth, lossPercent, sampleRate,
 	)
 }
 
