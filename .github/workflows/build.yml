@@ -94,19 +94,19 @@ jobs:
         env:
           MESA_GL_VERSION_OVERRIDE: 3.3COMPAT
         run: |
-          go test -run TestAllEmulatorRooms ./pkg/worker/room -v -renderFrames -autoGlContext -outputPath "../../../_rendered"
+          GL_CTX=-autoGlContext make verify-cores
 
       - name: Verify core rendering (ubuntu-latest)
         if: matrix.step == 'check' && matrix.os == 'ubuntu-latest' && always()
         env:
           MESA_GL_VERSION_OVERRIDE: 3.3COMPAT
         run: |
-          xvfb-run --auto-servernum go test -run TestAllEmulatorRooms ./pkg/worker/room -v -renderFrames -autoGlContext -outputPath "../../../_rendered"
+          GL_CTX=-autoGlContext xvfb-run --auto-servernum make verify-cores
 
       - name: Verify core rendering (macos-latest)
         if: matrix.step == 'check' && matrix.os == 'macos-latest' && always()
         run: |
-          go test -run TestAllEmulatorRooms ./pkg/worker/room -v -renderFrames -outputPath "../../../_rendered"
+          make verify-cores
 
       - uses: actions/upload-artifact@v2
         if: matrix.step == 'check' && always()

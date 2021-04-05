@@ -63,6 +63,9 @@ build:
 	CGO_ENABLED=0 go build -ldflags '-w -s' -o bin/coordinator$(EXT) ./cmd/coordinator
 	go build -buildmode=exe -tags "static nolibopusfile" -ldflags '-w -s' -o bin/worker$(EXT) ./cmd/worker
 
+verify-cores:
+	go test -tags=nolibopusfile -run TestAllEmulatorRooms ./pkg/worker/room -v -renderFrames $(GL_CTX) -outputPath "../../../_rendered"
+
 dev.build: compile build
 
 dev.build-local:
