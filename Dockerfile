@@ -16,12 +16,11 @@ RUN apt-get update && apt-get install --no-install-recommends -y \
     libvpx-dev \
     libx264-dev \
     libopus-dev \
-    libopusfile-dev \
     libsdl2-dev \
  && rm -rf /var/lib/apt/lists/*
 
 # go setup layer
-ARG GO=go1.16.2.linux-amd64.tar.gz
+ARG GO=go1.16.3.linux-amd64.tar.gz
 RUN wget -q https://golang.org/dl/$GO \
     && rm -rf /usr/local/go \
     && tar -C /usr/local -xzf $GO \
@@ -34,7 +33,9 @@ COPY go.mod go.sum ./
 RUN go mod download
 
 # app build layer
-COPY ./ ./
+COPY pkg ./pkg
+COPY cmd ./cmd
+COPY Makefile .
 RUN make build
 
 # base image
@@ -42,16 +43,9 @@ FROM debian:bullseye-slim
 ARG BUILD_PATH
 WORKDIR /usr/local/share/cloud-game
 
-RUN apt-get update && apt-get install --no-install-recommends -y \
-    ca-certificates \
-    libvpx6 \
-    libx264-160 \
-    libopus0 \
-    libopusfile0 \
-    libsdl2-2.0-0 \
-    libgl1-mesa-glx \
-    xvfb \
-  && rm -rf /var/lib/apt/lists/*
+COPY scripts/install.sh install.sh
+RUN bash install.sh && \
+    rm -rf /var/lib/apt/lists/* install.sh
 
 COPY --from=build ${BUILD_PATH}/bin/ ./
 RUN cp -s $(pwd)/* /usr/local/bin
