@@ -33,12 +33,12 @@ jobs:
         if: matrix.os == 'ubuntu-latest'
         run: |
           sudo apt-get update
-          sudo apt-get install -y make pkg-config libvpx-dev libx264-dev libopus-dev libopusfile-dev libsdl2-dev libgl1-mesa-glx
+          sudo apt-get install -y make pkg-config libvpx-dev libx264-dev libopus-dev libsdl2-dev libgl1-mesa-glx
 
       - name: Get MacOS dev libraries and tools
         if: matrix.os == 'macos-latest'
         run: |
-          brew install pkg-config libvpx x264 opus opusfile sdl2
+          brew install pkg-config libvpx x264 opus sdl2
 
       - name: Get Windows dev libraries and tools
         if: matrix.os == 'windows-latest'
@@ -52,8 +52,8 @@ jobs:
             mingw-w64-x86_64-pkg-config
             mingw-w64-x86_64-dlfcn
             mingw-w64-x86_64-libvpx
+            mingw-w64-x86_64-opus
             mingw-w64-x86_64-x264-git
-            mingw-w64-x86_64-opusfile
             mingw-w64-x86_64-SDL2
 
       - name: Get Windows OpenGL drivers
@@ -77,7 +77,7 @@ jobs:
         if: matrix.step == 'build' && matrix.os == 'windows-latest'
         shell: msys2 {0}
         run: |
-          make WORKER_BUILD_PARAMS=-buildmode=exe build
+          make build
 
       - name: Build Linux app
         if: matrix.step == 'build' && matrix.os == 'ubuntu-latest'
@@ -95,19 +95,19 @@ jobs:
         env:
           MESA_GL_VERSION_OVERRIDE: 3.3COMPAT
         run: |
-          go test -run TestAllEmulatorRooms ./pkg/worker/room -v -renderFrames -autoGlContext -outputPath "../../../_rendered"
+          GL_CTX=-autoGlContext make verify-cores
 
       - name: Verify core rendering (ubuntu-latest)
         if: matrix.step == 'check' && matrix.os == 'ubuntu-latest' && always()
         env:
           MESA_GL_VERSION_OVERRIDE: 3.3COMPAT
         run: |
-          xvfb-run --auto-servernum go test -run TestAllEmulatorRooms ./pkg/worker/room -v -renderFrames -autoGlContext -outputPath "../../../_rendered"
+          GL_CTX=-autoGlContext xvfb-run --auto-servernum make verify-cores
 
       - name: Verify core rendering (macos-latest)
         if: matrix.step == 'check' && matrix.os == 'macos-latest' && always()
         run: |
-          go test -run TestAllEmulatorRooms ./pkg/worker/room -v -renderFrames -outputPath "../../../_rendered"
+          make verify-cores
 
       - uses: actions/upload-artifact@v2
         if: matrix.step == 'check' && always()

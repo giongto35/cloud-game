@@ -1,30 +1,27 @@
 package h264
 
-// #include <stdlib.h>
 import "C"
 import (
 	"fmt"
 	"log"
-
-	x264 "github.com/sergystepanov/x264-go/v2/x264c/external"
 )
 
 type H264 struct {
-	ref *x264.T
+	ref *T
 
 	width      int32
 	lumaSize   int32
 	chromaSize int32
 	csp        int32
 	nnals      int32
-	nals       []*x264.Nal
+	nals       []*Nal
 
 	// keep monotonic pts to suppress warnings
 	pts int64
 }
 
 func NewEncoder(width, height int, options ...Option) (encoder *H264, err error) {
-	libVersion := int(x264.Build)
+	libVersion := int(Build)
 
 	if libVersion < 150 {
 		return nil, fmt.Errorf("x264: the library version should be newer than v150, you have got version %v", libVersion)
@@ -46,20 +43,20 @@ func NewEncoder(width, height int, options ...Option) (encoder *H264, err error)
 	}
 
 	if opts.LogLevel > 0 {
-		log.Printf("x264: build v%v", x264.Build)
+		log.Printf("x264: build v%v", Build)
 	}
 
-	param := x264.Param{}
+	param := Param{}
 	if opts.Preset != "" && opts.Tune != "" {
-		if x264.ParamDefaultPreset(&param, opts.Preset, opts.Tune) < 0 {
+		if ParamDefaultPreset(&param, opts.Preset, opts.Tune) < 0 {
 			return nil, fmt.Errorf("x264: invalid preset/tune name")
 		}
 	} else {
-		x264.ParamDefault(&param)
+		ParamDefault(&param)
 	}
 
 	if opts.Profile != "" {
-		if x264.ParamApplyProfile(&param, opts.Profile) < 0 {
+		if ParamApplyProfile(&param, opts.Profile) < 0 {
 			return nil, fmt.Errorf("x264: invalid profile name")
 		}
 	}
@@ -68,7 +65,7 @@ func NewEncoder(width, height int, options ...Option) (encoder *H264, err error)
 	param.IBitdepth = 8
 
 	if libVersion > 155 {
-		param.ICsp = x264.CspI420
+		param.ICsp = CspI420
 	} else {
 		param.ICsp = 1
 	}
@@ -76,21 +73,21 @@ func NewEncoder(width, height int, options ...Option) (encoder *H264, err error)
 	param.IHeight = int32(height)
 	param.ILogLevel = opts.LogLevel
 
-	param.Rc.IRcMethod = x264.RcCrf
+	param.Rc.IRcMethod = RcCrf
 	param.Rc.FRfConstant = float32(opts.Crf)
 
 	encoder = &H264{
 		csp:        param.ICsp,
 		lumaSize:   int32(width * height),
 		chromaSize: int32(width*height) / 4,
-		nals:       make([]*x264.Nal, 1),
+		nals:       make([]*Nal, 1),
 		width:      int32(width),
 	}
 
-	var picIn x264.Picture
-	x264.PictureInit(&picIn)
+	var picIn Picture
+	PictureInit(&picIn)
 
-	if encoder.ref = x264.EncoderOpen(&param); encoder.ref == nil {
+	if encoder.ref = EncoderOpen(&param); encoder.ref == nil {
 		err = fmt.Errorf("x264: cannot open the encoder")
 		return
 	}
@@ -98,7 +95,7 @@ func NewEncoder(width, height int, options ...Option) (encoder *H264, err error)
 }
 
 func (e *H264) Encode(yuv []byte) []byte {
-	var picIn, picOut x264.Picture
+	var picIn, picOut Picture
 
 	picIn.Img.ICsp = e.csp
 	picIn.Img.IPlane = 3
@@ -114,12 +111,12 @@ func (e *H264) Encode(yuv []byte) []byte {
 	e.pts++
 
 	defer func() {
-		C.free(picIn.Img.Plane[0])
-		C.free(picIn.Img.Plane[1])
-		C.free(picIn.Img.Plane[2])
+		picIn.freePlane(0)
+		picIn.freePlane(1)
+		picIn.freePlane(2)
 	}()
 
-	if ret := x264.EncoderEncode(e.ref, e.nals, &e.nnals, &picIn, &picOut); ret > 0 {
+	if ret := EncoderEncode(e.ref, e.nals, &e.nnals, &picIn, &picOut); ret > 0 {
 		return C.GoBytes(e.nals[0].PPayload, C.int(ret))
 		// ret should be equal to writer writes
 	}
@@ -127,6 +124,6 @@ func (e *H264) Encode(yuv []byte) []byte {
 }
 
 func (e *H264) Shutdown() error {
-	x264.EncoderClose(e.ref)
+	EncoderClose(e.ref)
 	return nil
 }

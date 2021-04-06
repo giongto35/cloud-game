@@ -88,6 +88,12 @@ func (h *Handler) Prepare() {
 
 	log.Printf("Starting Libretro cores sync...")
 	coreManager := remotehttp.NewRemoteHttpManager(h.cfg.Emulator.Libretro)
+	// make a dir for cores
+	dir := coreManager.Conf.GetCoresStorePath()
+	if err := os.MkdirAll(dir, os.ModeDir); err != nil {
+		log.Printf("error: couldn't make %v directory", dir)
+		return
+	}
 	if err := coreManager.Sync(); err != nil {
 		log.Printf("error: cores sync has failed, %v", err)
 	}

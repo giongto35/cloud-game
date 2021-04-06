@@ -60,17 +60,17 @@ clean:
 	@go clean ./cmd/*
 
 build:
-	go build -a -tags netgo -ldflags '-w' -o bin/coordinator ./cmd/coordinator
-	go build ${WORKER_BUILD_PARAMS} -a -tags netgo -ldflags '-w' -o bin/worker ./cmd/worker
+	CGO_ENABLED=0 go build -ldflags '-w -s' -o bin/coordinator$(EXT) ./cmd/coordinator
+	go build -buildmode=exe -tags static -ldflags '-w -s' -o bin/worker$(EXT) ./cmd/worker
 
-dev.tools:
-	./hack/scripts/install_tools.sh
+verify-cores:
+	go test -run TestAllEmulatorRooms ./pkg/worker/room -v -renderFrames $(GL_CTX) -outputPath "../../../_rendered"
 
 dev.build: compile build
 
 dev.build-local:
-	go build -o bin/coordinator ./cmd/coordinator
-	go build ${WORKER_BUILD_PARAMS} -o bin/worker ./cmd/worker
+	CGO_ENABLED=0 go build -o bin/coordinator ./cmd/coordinator
+	go build -buildmode=exe -o bin/worker ./cmd/worker
 
 dev.run: dev.build-local
 	./bin/coordinator --v=5 &
@@ -86,13 +86,15 @@ dev.run-docker:
 # Folder structure:
 #   - assets/
 #   	- games/ (shared between both executables)
-#   	- emulator/libretro/cores/ (filtered by extension)
+#   	- cores/ (filtered by extension)
 #   - web/
 #   - coordinator
 #   - worker
+#   - config.yaml (shared)
 #
 # Config params:
 # - RELEASE_DIR: the name of the output folder (default: release).
+# - CONFIG_DIR: search dir for core config files.
 # - DLIB_TOOL: the name of a dynamic lib copy tool (with params) (e.g., ldd -x -y; defalut: ldd).
 # - DLIB_SEARCH_PATTERN: a grep filter of the output of the DLIB_TOOL (e.g., mylib.so; default: .*so).
 #   Be aware that this search pattern will return only matched regular expression part and not the whole line.
@@ -100,15 +102,18 @@ dev.run-docker:
 #   Makefile special symbols should be escaped with \.
 # - DLIB_ALTER: a special flag to use altered dynamic copy lib tool for macOS only.
 # - CORE_EXT: a glob pattern to filter the cores that are copied into the release.
+# - CFG_EXT: a glob pattern to copy config file into the release (default: *.cfg).
 #
 # Example:
 #   make release DLIB_TOOL="ldd -x" DLIB_SEARCH_PATTERN=/usr/lib.*\\\\s CORE_EXT=*.so
 #
 RELEASE_DIR ?= release
+CONFIG_DIR = configs
 DLIB_TOOL ?= ldd
 DLIB_SEARCH_PATTERN ?= .*so
 DLIB_ALTER ?= false
 CORE_EXT ?= *_libretro.so
+CFG_EXT ?= *.cfg
 COORDINATOR_DIR = ./$(RELEASE_DIR)
 WORKER_DIR = ./$(RELEASE_DIR)
 CORES_DIR = assets/cores
@@ -133,6 +138,8 @@ release: clean build
 		cp -R ./$(GAMES_DIR) $(WORKER_DIR)/assets
     endif
 	mkdir -p $(WORKER_DIR)/$(CORES_DIR)
+	cp ./$(CORES_DIR)/$(CFG_EXT) $(WORKER_DIR)/$(CORES_DIR)
     ifneq (,$(wildcard ./$(CORES_DIR)/$(CORE_EXT)))
 		cp -R ./$(CORES_DIR)/$(CORE_EXT) $(WORKER_DIR)/$(CORES_DIR)
     endif
+	cp ./$(CONFIG_DIR)/config.yaml ./$(RELEASE_DIR)
