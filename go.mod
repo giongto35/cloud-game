@@ -25,7 +25,6 @@ require (
 	github.com/pion/webrtc/v3 v3.0.19
 	github.com/prometheus/client_golang v1.10.0
 	github.com/prometheus/common v0.20.0 // indirect
-	github.com/sergystepanov/x264-go/v2 v2.0.0-20210221160055-cd2aaf7070fc
 	github.com/spf13/pflag v1.0.5
 	github.com/veandco/go-sdl2 v0.4.5
 	golang.org/x/crypto v0.0.0-20210322153248-0c34fe9e7dc2
