@@ -11,6 +11,7 @@ RUN apt-get update && apt-get install --no-install-recommends -y \
     gcc \
     ca-certificates \
     libopus-dev \
+    libsdl2-dev \
     libvpx-dev \
     libx264-dev \
     make \
