@@ -7,11 +7,10 @@ then
   exit 1
 fi
 
-apt-get update
-apt-get install --no-install-recommends -y \
+apt-get -qq update
+apt-get -qq install --no-install-recommends -y \
     libvpx6 \
     libx264-160 \
     libopus0 \
-    libsdl2-2.0-0 \
     libgl1-mesa-glx \
     xvfb

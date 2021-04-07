@@ -24,7 +24,6 @@ on:
     tags:
       - 'v*'
 env:
-  go-version: 1.15
   app-name: cloud-game
   app-arch: x86_64
 jobs:
@@ -33,79 +32,74 @@ jobs:
     name: Build
     strategy:
       matrix:
-        os: [ubuntu-latest, macos-latest, windows-latest]
+        os: [ ubuntu-latest, macos-latest, windows-latest ]
     runs-on: ${{ matrix.os }}
     env:
       release-dir: _release
     steps:
-    - name: Get the source
-      uses: actions/checkout@v2
-    - name: Set up Go
-      uses: actions/setup-go@v2
-      with:
-        go-version: ${{ env.go-version }}
+      - uses: actions/checkout@v2
 
-    - name: Get Linux dev libraries and tools
-      if: matrix.os == 'ubuntu-latest'
-      run: |
-        sudo apt-get update
-        sudo apt-get install -y make pkg-config libvpx-dev libx264-dev libopus-dev libopusfile-dev libsdl2-dev
+      - uses: actions/setup-go@v2
+        with:
+          go-version: ^1.16
 
-    - name: Get MacOS dev libraries and tools
-      if: matrix.os == 'macos-latest'
-      run: |
-        brew install pkg-config libvpx x264 opus opusfile sdl2
+      - name: Get Linux dev libraries and tools
+        if: matrix.os == 'ubuntu-latest'
+        run: |
+          sudo apt-get -qq update
+          sudo apt-get -qq install -y make pkg-config libvpx-dev libx264-dev libopus-dev libsdl2-dev libgl1-mesa-glx
 
-    - name: Get Windows dev libraries and tools
-      if: matrix.os == 'windows-latest'
-      uses: msys2/setup-msys2@v2
-      with:
-        msystem: MINGW64
-        path-type: inherit
-        update: true
+      - name: Get MacOS dev libraries and tools
+        if: matrix.os == 'macos-latest'
+        run: |
+          brew install pkg-config libvpx x264 opus sdl2
 
-    - name: Load Go modules maybe?
-      uses: actions/cache@v2
-      with:
-        path: ~/go/pkg/mod
-        key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
-        restore-keys: |
-          ${{ runner.os }}-go-
+      - name: Get Windows dev libraries and tools
+        if: matrix.os == 'windows-latest'
+        uses: msys2/setup-msys2@v2
+        with:
+          msystem: MINGW64
+          path-type: inherit
+          release: false
+          install: >
+            mingw-w64-x86_64-gcc
+            mingw-w64-x86_64-pkg-config
+            mingw-w64-x86_64-dlfcn
+            mingw-w64-x86_64-libvpx
+            mingw-w64-x86_64-opus
+            mingw-w64-x86_64-x264-git
+            mingw-w64-x86_64-SDL2
 
-    - name: Build Windows app
-      if: matrix.os == 'windows-latest'
-      shell: msys2 {0}
-      run: >
-        pacman -S --noconfirm --needed make
-        mingw-w64-x86_64-gcc
-        mingw-w64-x86_64-pkg-config
-        mingw-w64-x86_64-dlfcn
-        mingw-w64-x86_64-libvpx
-        mingw-w64-x86_64-x264-git
-        mingw-w64-x86_64-opusfile
-        mingw-w64-x86_64-SDL2
+      - name: Build Windows app
+        if: matrix.os == 'windows-latest'
+        shell: msys2 {0}
+        run: |
+          EXT=.exe make release RELEASE_DIR=${{ env.release-dir }} DLIB_SEARCH_PATTERN=/mingw.*dll CORE_EXT=*.dll
 
-        make release RELEASE_DIR=${{ env.release-dir }} DLIB_SEARCH_PATTERN=/mingw.*dll CORE_EXT=*.dll
+      - name: Build Linux app
+        if: matrix.os == 'ubuntu-latest'
+        run: |
+          EXT_WFLAGS="-ldflags '-extldflags \"-Wl,-rpath=\$\$ORIGIN\"'" \
+          make release RELEASE_DIR=${{ env.release-dir }} \
+          DLIB_SEARCH_PATTERN="/lib/.*?lib\(x264\|vpx\|opus\).*?\ " \
+          CORE_EXT=*_libretro.so
 
-    - name: Build Linux app
-      if: matrix.os == 'ubuntu-latest'
-      run: |
-        make release RELEASE_DIR=${{ env.release-dir }} DLIB_SEARCH_PATTERN=/usr/lib.*\\\\s CORE_EXT=*_libretro.so
+          cp ./scripts/install.sh ${{ env.release-dir }}
 
-    - name: Build macOS app
-      if: matrix.os == 'macos-latest'
-      run: |
-        # skip copy libs due to outrageous otool behaviour, depend on sys install
-        # should be recursive + paths rewritten to @executable_path
-        # lddx seems to be working ok
-        go get github.com/jtanx/lddx
-        make release RELEASE_DIR=${{ env.release-dir }} DLIB_ALTER=true DLIB_TOOL="lddx -r -c" CORE_EXT=*.dylib
+      - name: Build macOS app
+        if: matrix.os == 'macos-latest'
+        run: |
+          # skip copy libs due to outrageous otool behaviour, depend on sys install
+          # should be recursive + paths rewritten to @executable_path
+          # lddx seems to be working ok
+          go get github.com/jtanx/lddx
+          make release RELEASE_DIR=${{ env.release-dir }} DLIB_ALTER=true DLIB_TOOL="lddx -r -c" CORE_EXT=*.dylib
 
-    - name: Save built app for upload
-      uses: actions/upload-artifact@v1
-      with:
-        name: ${{ runner.os }}
-        path: ${{ env.release-dir }}
+      - name: Save built app for upload
+        uses: actions/upload-artifact@v1
+        with:
+          name: ${{ runner.os }}
+          path: ${{ env.release-dir }}
 
   release:
     name: Create or find Github release
