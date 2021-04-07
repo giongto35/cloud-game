@@ -24,7 +24,6 @@ on:
     tags:
       - 'v*'
 env:
-  go-version: 1.15
   app-name: cloud-game
   app-arch: x86_64
 jobs:
@@ -61,7 +60,6 @@ jobs:
         with:
           msystem: MINGW64
           path-type: inherit
-          update: true
           install: >
             mingw-w64-x86_64-gcc
             mingw-w64-x86_64-pkg-config
@@ -75,12 +73,13 @@ jobs:
         if: matrix.os == 'windows-latest'
         shell: msys2 {0}
         run: |
-          make release RELEASE_DIR=${{ env.release-dir }} DLIB_SEARCH_PATTERN=/mingw.*dll CORE_EXT=*.dll
+          EXT=.exe make release RELEASE_DIR=${{ env.release-dir }} DLIB_SEARCH_PATTERN=/mingw.*dll CORE_EXT=*.dll
 
       - name: Build Linux app
         if: matrix.os == 'ubuntu-latest'
         run: |
-          make release RELEASE_DIR=${{ env.release-dir }} DLIB_SEARCH_PATTERN=/usr/lib.*\\\\s CORE_EXT=*_libretro.so
+          make release RELEASE_DIR=${{ env.release-dir }} DLIB_SEARCH_PATTERN=none CORE_EXT=*_libretro.so
+          cp ./scripts/install.sh ${{ env.release-dir }}
 
       - name: Build macOS app
         if: matrix.os == 'macos-latest'

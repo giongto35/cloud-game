@@ -46,7 +46,6 @@ jobs:
         with:
           msystem: MINGW64
           path-type: inherit
-          update: true
           install: >
             mingw-w64-x86_64-gcc
             mingw-w64-x86_64-pkg-config
@@ -64,14 +63,6 @@ jobs:
           "/c/Program Files/7-Zip/7z.exe" x mesa3d-20.2.1-release-mingw.7z -omesa
           echo -e " 2\r\n 8\r\n " >> commands
           ./mesa/systemwidedeploy.cmd < ./commands
-
-      - name: Load Go modules maybe?
-        uses: actions/cache@v2
-        with:
-          path: ~/go/pkg/mod
-          key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
-          restore-keys: |
-            ${{ runner.os }}-go-
 
       - name: Build Windows app
         if: matrix.step == 'build' && matrix.os == 'windows-latest'
