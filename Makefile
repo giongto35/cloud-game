@@ -61,7 +61,7 @@ clean:
 
 build:
 	CGO_ENABLED=0 go build -ldflags '-w -s' -o bin/coordinator$(EXT) ./cmd/coordinator
-	go build -buildmode=exe -tags static -ldflags '-w -s' -o bin/worker$(EXT) ./cmd/worker
+	go build -buildmode=exe -tags static -ldflags '-w -s' $(EXT_WFLAGS) -o bin/worker$(EXT) ./cmd/worker
 
 verify-cores:
 	go test -run TestAllEmulatorRooms ./pkg/worker/room -v -renderFrames $(GL_CTX) -outputPath "../../../_rendered"
@@ -126,7 +126,7 @@ release: clean build
 	cp ./bin/coordinator $(COORDINATOR_DIR) && cp ./bin/worker $(WORKER_DIR)
 	chmod +x $(COORDINATOR_DIR)/coordinator $(WORKER_DIR)/worker
     ifeq ($(DLIB_ALTER),false)
-		for bin in $$($(DLIB_TOOL) $(WORKER_DIR)/worker | grep -o $(DLIB_SEARCH_PATTERN)); \
+		for bin in $$($(DLIB_TOOL) $(WORKER_DIR)/worker | grep -oE $(DLIB_SEARCH_PATTERN)); \
 			do cp -v "$$bin" $(WORKER_DIR); \
 		done
     else

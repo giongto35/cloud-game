@@ -79,7 +79,11 @@ jobs:
       - name: Build Linux app
         if: matrix.os == 'ubuntu-latest'
         run: |
-          make release RELEASE_DIR=${{ env.release-dir }} DLIB_SEARCH_PATTERN=none CORE_EXT=*_libretro.so
+          EXT_WFLAGS="-ldflags '-extldflags \"-Wl,-rpath=\$\$ORIGIN\"'" \
+          make release RELEASE_DIR=${{ env.release-dir }} \
+          DLIB_SEARCH_PATTERN="/lib/.*?lib\(x264\|vpx\|opus\).*?\ " \
+          CORE_EXT=*_libretro.so
+
           cp ./scripts/install.sh ${{ env.release-dir }}
 
       - name: Build macOS app
