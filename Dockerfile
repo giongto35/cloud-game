@@ -7,7 +7,7 @@ ARG BUILD_PATH
 WORKDIR ${BUILD_PATH}
 
 # system libs layer
-RUN apt-get update && apt-get install --no-install-recommends -y \
+RUN apt-get -qq update && -qq apt-get install --no-install-recommends -y \
     gcc \
     ca-certificates \
     libopus-dev \

@@ -32,8 +32,8 @@ jobs:
       - name: Get Linux dev libraries and tools
         if: matrix.os == 'ubuntu-latest'
         run: |
-          sudo apt-get update
-          sudo apt-get install -y make pkg-config libvpx-dev libx264-dev libopus-dev libsdl2-dev libgl1-mesa-glx
+          sudo apt-get -qq update
+          sudo apt-get -qq install -y make pkg-config libvpx-dev libx264-dev libopus-dev libsdl2-dev libgl1-mesa-glx
 
       - name: Get MacOS dev libraries and tools
         if: matrix.os == 'macos-latest'
@@ -46,6 +46,7 @@ jobs:
         with:
           msystem: MINGW64
           path-type: inherit
+          release: false
           install: >
             mingw-w64-x86_64-gcc
             mingw-w64-x86_64-pkg-config
