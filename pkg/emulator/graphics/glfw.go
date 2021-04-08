@@ -61,7 +61,6 @@ func Init(cfg Config) {
 
 	// In OSX 10.14+ window creation and context creation must happen in the main thread
 	thread.MainMaybe(createWindow)
-	state.w.MakeContextCurrent()
 	initContext(glfw.GetProcAddress)
 
 	PrintDriverInfo()
@@ -88,6 +87,7 @@ func createWindow() {
 		err != nil {
 		panic(err)
 	}
+	state.w.MakeContextCurrent()
 }
 
 // destroyWindow destroys previously created GLFW window.

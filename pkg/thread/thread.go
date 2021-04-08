@@ -4,6 +4,7 @@
 package thread
 
 import (
+	"log"
 	"runtime"
 
 	"github.com/faiface/mainthread"
@@ -25,6 +26,7 @@ func MainWrapMaybe(f func()) {
 // Enabled for macOS only.
 func MainMaybe(f func()) {
 	if isMacOs {
+		log.Printf("MAIN THREAD")
 		mainthread.Call(f)
 	} else {
 		f()
