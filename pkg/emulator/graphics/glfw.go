@@ -46,19 +46,12 @@ func Init(cfg Config) {
 	} else {
 		switch cfg.Ctx {
 		case CtxOpenGlCore:
-			glfw.WindowHint(glfw.OpenGLProfile, glfw.OpenGLCoreProfile)
 			log.Printf("[OpenGL] CONTEXT_PROFILE_CORE")
 			break
 		case CtxOpenGlEs2:
-			glfw.WindowHint(glfw.ClientAPI, glfw.OpenGLESAPI)
-			glfw.WindowHint(glfw.ContextVersionMajor, 3)
-			glfw.WindowHint(glfw.ContextVersionMinor, 0)
 			log.Printf("[OpenGL] CONTEXT_PROFILE_ES 3.0")
 			break
 		case CtxOpenGl:
-			if cfg.Gl.VersionMajor >= 3 {
-				glfw.WindowHint(glfw.OpenGLProfile, glfw.OpenGLCompatProfile)
-			}
 			log.Printf("[OpenGL] CONTEXT_PROFILE_COMPATIBILITY")
 			break
 		default:
