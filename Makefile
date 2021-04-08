@@ -60,8 +60,8 @@ clean:
 	@go clean ./cmd/*
 
 build:
-	CGO_ENABLED=0 go build -ldflags '-w -s' -o bin/coordinator$(EXT) ./cmd/coordinator
-	go build -buildmode=exe -tags static -ldflags '-w -s' $(EXT_WFLAGS) -o bin/worker$(EXT) ./cmd/worker
+	CGO_ENABLED=0 go build -ldflags '-w -s' -o bin/ ./cmd/coordinator
+	go build -buildmode=exe -tags static -ldflags '-w -s' $(EXT_WFLAGS) -o bin/ ./cmd/worker
 
 verify-cores:
 	go test -run TestAllEmulatorRooms ./pkg/worker/room -v -renderFrames $(GL_CTX) -outputPath "../../../_rendered"
@@ -69,8 +69,8 @@ verify-cores:
 dev.build: compile build
 
 dev.build-local:
-	CGO_ENABLED=0 go build -o bin/coordinator ./cmd/coordinator
-	go build -buildmode=exe -o bin/worker ./cmd/worker
+	CGO_ENABLED=0 go build -o bin/ ./cmd/coordinator
+	go build -buildmode=exe -o bin/ ./cmd/worker
 
 dev.run: dev.build-local
 	./bin/coordinator --v=5 &

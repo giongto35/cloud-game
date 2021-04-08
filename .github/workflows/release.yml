@@ -74,7 +74,7 @@ jobs:
         if: matrix.os == 'windows-latest'
         shell: msys2 {0}
         run: |
-          EXT=.exe make release RELEASE_DIR=${{ env.release-dir }} DLIB_SEARCH_PATTERN=/mingw.*dll CORE_EXT=*.dll
+          make release RELEASE_DIR=${{ env.release-dir }} DLIB_SEARCH_PATTERN=/mingw.*dll CORE_EXT=*.dll
 
       - name: Build Linux app
         if: matrix.os == 'ubuntu-latest'
