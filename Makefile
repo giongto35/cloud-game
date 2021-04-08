@@ -61,7 +61,7 @@ clean:
 
 build:
 	CGO_ENABLED=0 go build -ldflags '-w -s' -o bin/coordinator$(EXT) ./cmd/coordinator
-	go build -buildmode=exe -tags static -ldflags '-w -s' $(EXT_WFLAGS) -o bin/worker$(EXT) ./cmd/worker
+	go build -buildmode=exe -ldflags '-w -s' $(EXT_WFLAGS) -o bin/worker$(EXT) ./cmd/worker
 
 verify-cores:
 	go test -run TestAllEmulatorRooms ./pkg/worker/room -v -renderFrames $(GL_CTX) -outputPath "../../../_rendered"

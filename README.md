@@ -42,16 +42,16 @@ Install Golang https://golang.org/doc/install . Because the project uses GoModul
 
 ### Install Dependencies
 
-  * Install [libvpx](https://www.webmproject.org/code/), [libx264](https://www.videolan.org/developers/x264.html), [libopus](http://opus-codec.org/), [pkg-config](https://www.freedesktop.org/wiki/Software/pkg-config/), [sdl2](https://wiki.libsdl.org/Installation)
+  * Install [libvpx](https://www.webmproject.org/code/), [libx264](https://www.videolan.org/developers/x264.html), [libopus](http://opus-codec.org/), [pkg-config](https://www.freedesktop.org/wiki/Software/pkg-config/)
 ```
 # Ubuntu / Windows (WSL2)
-apt-get install -y make gcc pkg-config libvpx-dev libx264-dev libopus-dev libsdl2-dev
+apt-get install -y make gcc pkg-config libvpx-dev libx264-dev libopus-dev
 
 # MacOS
-brew install pkg-config libvpx x264 opus sdl2
+brew install pkg-config libvpx x264 opus
 
 # Windows (MSYS2)
-pacman -Sy --noconfirm --needed git make mingw-w64-x86_64-{gcc,pkg-config,dlfcn,libvpx,opus,x264-git,SDL2}
+pacman -Sy --noconfirm --needed git make mingw-w64-x86_64-{gcc,pkg-config,dlfcn,libvpx,opus,x264-git}
 ```
 
 Because the coordinator and workers need to run simultaneously. Workers connect to the coordinator.

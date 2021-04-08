@@ -11,7 +11,6 @@ RUN apt-get -qq update && apt-get -qq install --no-install-recommends -y \
     gcc \
     ca-certificates \
     libopus-dev \
-    libsdl2-dev \
     libvpx-dev \
     libx264-dev \
     make \

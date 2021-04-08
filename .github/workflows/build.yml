@@ -33,12 +33,12 @@ jobs:
         if: matrix.os == 'ubuntu-latest'
         run: |
           sudo apt-get -qq update
-          sudo apt-get -qq install -y make pkg-config libvpx-dev libx264-dev libopus-dev libsdl2-dev libgl1-mesa-glx
+          sudo apt-get -qq install -y make pkg-config libvpx-dev libx264-dev libopus-dev libgl1-mesa-glx
 
       - name: Get MacOS dev libraries and tools
         if: matrix.os == 'macos-latest'
         run: |
-          brew install pkg-config libvpx x264 opus sdl2
+          brew install pkg-config libvpx x264 opus
 
       - name: Get Windows dev libraries and tools
         if: matrix.os == 'windows-latest'
@@ -54,7 +54,6 @@ jobs:
             mingw-w64-x86_64-libvpx
             mingw-w64-x86_64-opus
             mingw-w64-x86_64-x264-git
-            mingw-w64-x86_64-SDL2
 
       - name: Get Windows OpenGL drivers
         if: matrix.step == 'check' && matrix.os == 'windows-latest'
