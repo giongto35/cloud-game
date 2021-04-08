@@ -16,6 +16,7 @@ RUN apt-get -qq update && apt-get -qq install --no-install-recommends -y \
     make \
     pkg-config \
     wget \
+    xorg-dev \
  && rm -rf /var/lib/apt/lists/*
 
 # go setup layer

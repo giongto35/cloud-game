@@ -47,7 +47,7 @@ jobs:
         if: matrix.os == 'ubuntu-latest'
         run: |
           sudo apt-get -qq update
-          sudo apt-get -qq install -y make pkg-config libvpx-dev libx264-dev libopus-dev libgl1-mesa-glx
+          sudo apt-get -qq install -y make pkg-config libvpx-dev libx264-dev libopus-dev libgl1-mesa-glx xorg-dev
 
       - name: Get MacOS dev libraries and tools
         if: matrix.os == 'macos-latest'
