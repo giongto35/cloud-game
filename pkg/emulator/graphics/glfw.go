@@ -46,6 +46,9 @@ func Init(cfg Config) {
 	} else {
 		switch cfg.Ctx {
 		case CtxOpenGlCore:
+			glfw.WindowHint(glfw.OpenGLProfile, glfw.OpenGLCoreProfile)
+			glfw.WindowHint(glfw.ContextVersionMajor, 3)
+			glfw.WindowHint(glfw.ContextVersionMinor, 2)
 			log.Printf("[OpenGL] CONTEXT_PROFILE_CORE")
 			break
 		case CtxOpenGlEs2:
@@ -61,6 +64,7 @@ func Init(cfg Config) {
 
 	// In OSX 10.14+ window creation and context creation must happen in the main thread
 	thread.MainMaybe(createWindow)
+	state.w.MakeContextCurrent()
 	initContext(glfw.GetProcAddress)
 
 	PrintDriverInfo()
@@ -87,7 +91,6 @@ func createWindow() {
 		err != nil {
 		panic(err)
 	}
-	state.w.MakeContextCurrent()
 }
 
 // destroyWindow destroys previously created GLFW window.
