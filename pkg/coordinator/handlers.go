@@ -50,6 +50,23 @@ func NewServer(cfg coordinator.Config, library games.GameLibrary) *Server {
 	}
 }
 
+func index(w http.ResponseWriter, r *http.Request) {
+	// return 404 on unknown
+	if r.URL.Path != "/" {
+		http.NotFound(w, r)
+		return
+	}
+	http.ServeFile(w, r, "./web/index.html")
+}
+
+func redirect(w http.ResponseWriter, r *http.Request) {
+	http.Redirect(w, r, "https://"+r.Host+r.URL.String(), http.StatusFound)
+}
+
+func static(dir string) http.Handler {
+	return http.StripPrefix("/static/", http.FileServer(http.Dir(dir)))
+}
+
 // getPingServer returns the server for latency check of a zone.
 // In latency check to find best worker step, we use this server to find the closest worker.
 func (o *Server) getPingServer(zone string) string {

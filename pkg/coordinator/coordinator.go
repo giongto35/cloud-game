@@ -14,7 +14,6 @@ import (
 	"github.com/giongto35/cloud-game/v2/pkg/games"
 	"github.com/giongto35/cloud-game/v2/pkg/monitoring"
 	"github.com/golang/glog"
-	"github.com/gorilla/mux"
 	"golang.org/x/crypto/acme"
 	"golang.org/x/crypto/acme/autocert"
 )
@@ -58,30 +57,23 @@ func (o *Coordinator) Shutdown() {
 }
 
 func newServer(server *Server, redirectHTTPS bool) *http.Server {
-	r := mux.NewRouter()
+	h := http.NewServeMux()
+
+	base := index
 	if redirectHTTPS {
-		r.PathPrefix("/").HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			http.Redirect(w, r, "https://"+r.Host+r.URL.String(), http.StatusFound)
-		})
-	} else {
-		r.HandleFunc("/ws", server.WS)
-		r.HandleFunc("/wso", server.WSO)
-		r.PathPrefix("/static/").Handler(http.StripPrefix("/static/", http.FileServer(http.Dir("./web"))))
-		r.PathPrefix("/").HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			http.ServeFile(w, r, "./web/index.html")
-		})
+		base = redirect
 	}
+	h.HandleFunc("/", base)
+	h.Handle("/static/", static("./web"))
+	h.HandleFunc("/ws", server.WS)
+	h.HandleFunc("/wso", server.WSO)
 
-	h := &http.ServeMux{}
-	h.Handle("/", r)
-
-	// set timeouts so that a slow or malicious client doesn't
-	// hold resources forever
+	// timeouts negate slow / frozen clients
 	return &http.Server{
+		Handler:      h,
+		IdleTimeout:  120 * time.Second,
 		ReadTimeout:  5 * time.Second,
 		WriteTimeout: 5 * time.Second,
-		IdleTimeout:  120 * time.Second,
-		Handler:      h,
 	}
 }
 
