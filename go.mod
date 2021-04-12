@@ -13,7 +13,6 @@ require (
 	github.com/gofrs/uuid v4.0.0+incompatible
 	github.com/golang/glog v0.0.0-20160126235308-23def4e6c14b
 	github.com/golang/groupcache v0.0.0-20210331224755-41bb18bfe9da // indirect
-	github.com/gorilla/mux v1.8.0
 	github.com/gorilla/websocket v1.4.2
 	github.com/kkyr/fig v0.2.0
 	github.com/mitchellh/mapstructure v1.4.1 // indirect
