@@ -73,8 +73,9 @@ func makeHTTPServer(server *Server) *http.Server {
 	r.HandleFunc("/ws", server.WS)
 	r.HandleFunc("/wso", server.WSO)
 	r.PathPrefix("/static/").Handler(http.StripPrefix("/static/", http.FileServer(http.Dir("./web"))))
-	r.PathPrefix("/").HandlerFunc(server.GetWeb)
-
+	r.PathPrefix("/").HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		http.ServeFile(w, r, "./web/index.html")
+	})
 	svmux := &http.ServeMux{}
 	svmux.Handle("/", r)
 

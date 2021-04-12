@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"html/template"
 	"log"
 	"math"
 	"net/http"
@@ -20,8 +19,6 @@ import (
 	"github.com/gofrs/uuid"
 	"github.com/gorilla/websocket"
 )
-
-const index = "./web/index.html"
 
 type Server struct {
 	cfg coordinator.Config
@@ -51,16 +48,6 @@ func NewServer(cfg coordinator.Config, library games.GameLibrary) *Server {
 		// Mapping sessionID to browser
 		browserClients: map[string]*BrowserClient{},
 	}
-}
-
-// GetWeb returns web frontend
-func (o *Server) GetWeb(w http.ResponseWriter, r *http.Request) {
-	tmpl, err := template.ParseFiles(index)
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	tmpl.Execute(w, struct{}{})
 }
 
 // getPingServer returns the server for latency check of a zone.
