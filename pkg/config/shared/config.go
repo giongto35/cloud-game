@@ -8,15 +8,15 @@ import (
 type Environment environment.Env
 
 type Server struct {
-	Port       int
-	HttpsPort  int
-	HttpsKey   string
-	HttpsChain string
+	Address      string
+	HttpsAddress string
+	HttpsKey     string
+	HttpsChain   string
 }
 
 func (s *Server) WithFlags() {
-	flag.IntVar(&s.Port, "port", s.Port, "HTTP server port")
-	flag.IntVar(&s.HttpsPort, "httpsPort", s.HttpsPort, "HTTPS server port (just why?)")
+	flag.StringVar(&s.Address, "port", s.Address, "HTTP server address (host:port)")
+	flag.StringVar(&s.HttpsAddress, "httpsPort", s.HttpsAddress, "HTTPS server address (host:port)")
 	flag.StringVar(&s.HttpsKey, "httpsKey", s.HttpsKey, "HTTPS key")
 	flag.StringVar(&s.HttpsChain, "httpsChain", s.HttpsChain, "HTTPS chain")
 }

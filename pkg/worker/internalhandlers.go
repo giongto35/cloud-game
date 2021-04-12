@@ -222,7 +222,6 @@ func (h *Handler) handleGamePlayerSelect() cws.PacketHandler {
 		room := h.getRoom(resp.RoomID)
 		session := h.getSession(resp.SessionID)
 		idx, err := strconv.Atoi(resp.Data)
-		log.Printf("Got session %v and room %v", session, room)
 
 		if room != nil && session != nil && err == nil {
 			room.UpdatePlayerIndex(session.peerconnection, idx)

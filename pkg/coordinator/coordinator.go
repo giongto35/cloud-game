@@ -5,7 +5,6 @@ import (
 	"crypto/tls"
 	"log"
 	"net/http"
-	"strconv"
 	"time"
 
 	"github.com/giongto35/cloud-game/v2/pkg/config/coordinator"
@@ -74,7 +73,7 @@ func (c *Coordinator) init() {
 	mode := c.conf.Environment.Get()
 	if mode.AnyOf(environment.Production, environment.Staging) {
 		httpsSrv = newServer(srv, false)
-		httpsSrv.Addr = strconv.Itoa(conf.Server.HttpsPort)
+		httpsSrv.Addr = conf.Server.HttpsAddress
 
 		if conf.Server.HttpsChain == "" || conf.Server.HttpsKey == "" {
 			conf.Server.HttpsChain = ""
@@ -105,7 +104,7 @@ func (c *Coordinator) init() {
 	if certManager != nil {
 		httpSrv.Handler = certManager.HTTPHandler(httpSrv.Handler)
 	}
-	httpSrv.Addr = ":" + strconv.Itoa(conf.Server.Port)
+	httpSrv.Addr = conf.Server.Address
 	if err := httpSrv.ListenAndServe(); err != nil {
 		log.Fatalf("httpSrv.ListenAndServe() failed with %s", err)
 	}
