@@ -50,7 +50,7 @@ worker:
     zone:
   monitoring:
     # monitoring server port
-    port: 6601
+    port: 6602
     profilingEnabled: false
     # monitoring server URL prefix
     metricEnabled: true

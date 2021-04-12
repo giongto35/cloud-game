@@ -12,43 +12,24 @@ import (
 	"github.com/giongto35/cloud-game/v2/pkg/environment"
 	"github.com/giongto35/cloud-game/v2/pkg/games"
 	"github.com/giongto35/cloud-game/v2/pkg/monitoring"
-	"github.com/golang/glog"
+	"github.com/giongto35/cloud-game/v2/pkg/server"
 	"golang.org/x/crypto/acme"
 	"golang.org/x/crypto/acme/autocert"
 )
 
 type Coordinator struct {
-	cfg              coordinator.Config
-	ctx              context.Context
-	monitoringServer *monitoring.ServerMonitoring
+	conf     coordinator.Config
+	ctx      *context.Context
+	services server.Services
 }
 
-func New(ctx context.Context, cfg coordinator.Config) *Coordinator {
+func New(ctx context.Context, conf coordinator.Config) *Coordinator {
 	return &Coordinator{
-		ctx: ctx,
-		cfg: cfg,
-
-		monitoringServer: monitoring.NewServerMonitoring(cfg.Coordinator.Monitoring, "cord"),
-	}
-}
-
-func (c *Coordinator) Run() error {
-	go c.init()
-	go c.RunMonitoringServer()
-	return nil
-}
-
-func (c *Coordinator) RunMonitoringServer() {
-	glog.Infoln("Starting monitoring server for coordinator")
-	err := c.monitoringServer.Run()
-	if err != nil {
-		glog.Errorf("Failed to start monitoring server, reason %s", err)
-	}
-}
-
-func (c *Coordinator) Shutdown() {
-	if err := c.monitoringServer.Shutdown(c.ctx); err != nil {
-		glog.Errorln("Failed to shutdown monitoring server")
+		ctx:  &ctx,
+		conf: conf,
+		services: []server.Server{
+			monitoring.NewServerMonitoring(conf.Coordinator.Monitoring, "cord"),
+		},
 	}
 }
 
@@ -73,24 +54,30 @@ func newServer(server *Server, redirectHTTPS bool) *http.Server {
 	}
 }
 
+func (c *Coordinator) Run() error {
+	go c.init()
+	c.services.Start()
+	return nil
+}
+
 func (c *Coordinator) init() {
-	conf := c.cfg.Coordinator
+	conf := c.conf.Coordinator
 	// init games library
 	if len(conf.Library.Supported) == 0 {
-		conf.Library.Supported = c.cfg.Emulator.GetSupportedExtensions()
+		conf.Library.Supported = c.conf.Emulator.GetSupportedExtensions()
 	}
 	lib := games.NewLibrary(conf.Library)
 	lib.Scan()
 
-	server := NewServer(c.cfg, lib)
+	srv := NewServer(c.conf, lib)
 
 	var certManager *autocert.Manager
 	var httpsSrv *http.Server
 
 	log.Println("Initializing Coordinator Server")
-	mode := c.cfg.Environment.Get()
+	mode := c.conf.Environment.Get()
 	if mode.AnyOf(environment.Production, environment.Staging) {
-		httpsSrv = newServer(server, false)
+		httpsSrv = newServer(srv, false)
 		httpsSrv.Addr = strconv.Itoa(conf.Server.HttpsPort)
 
 		if conf.Server.HttpsChain == "" || conf.Server.HttpsKey == "" {
@@ -118,7 +105,7 @@ func (c *Coordinator) init() {
 		}()
 	}
 
-	httpSrv := newServer(server, mode.AnyOf(environment.Production, environment.Staging))
+	httpSrv := newServer(srv, mode.AnyOf(environment.Production, environment.Staging))
 	if certManager != nil {
 		httpSrv.Handler = certManager.HTTPHandler(httpSrv.Handler)
 	}
@@ -127,3 +114,5 @@ func (c *Coordinator) init() {
 		log.Fatalf("httpSrv.ListenAndServe() failed with %s", err)
 	}
 }
+
+func (c *Coordinator) Shutdown() { c.services.Shutdown(c.ctx) }

@@ -8,40 +8,35 @@ import (
 	"strings"
 
 	"github.com/giongto35/cloud-game/v2/pkg/config/monitoring"
-	config "github.com/giongto35/cloud-game/v2/pkg/config/worker"
 	"github.com/golang/glog"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 )
 
 type ServerMonitoring struct {
-	cfg    monitoring.ServerMonitoringConfig
+	conf   monitoring.ServerMonitoringConfig
 	tag    string
 	server *http.Server
 }
 
-func NewServerMonitoring(cfg monitoring.ServerMonitoringConfig, tag string) *ServerMonitoring {
-	return &ServerMonitoring{cfg: validate(&cfg), tag: tag}
-}
-
-func (sm *ServerMonitoring) Init(conf interface{}) error {
-	cfg := conf.(config.Config).Worker.Monitoring
-	sm.cfg = validate(&cfg)
-	return nil
+// NewServerMonitoring creates new monitoring service.
+// The tag param specifies owner label for logs.
+func NewServerMonitoring(conf monitoring.ServerMonitoringConfig, tag string) *ServerMonitoring {
+	return &ServerMonitoring{conf: validate(&conf), tag: tag}
 }
 
 func (sm *ServerMonitoring) Run() error {
-	if sm.cfg.ProfilingEnabled || sm.cfg.MetricEnabled {
+	if sm.conf.ProfilingEnabled || sm.conf.MetricEnabled {
 		monitoringServerMux := http.NewServeMux()
 
 		srv := http.Server{
-			Addr:    fmt.Sprintf(":%d", sm.cfg.Port),
+			Addr:    fmt.Sprintf(":%d", sm.conf.Port),
 			Handler: monitoringServerMux,
 		}
 		sm.server = &srv
 		glog.Infof("[%v] Starting monitoring server at %v", sm.tag, srv.Addr)
 
-		if sm.cfg.ProfilingEnabled {
-			pprofPath := fmt.Sprintf("%s/debug/pprof", sm.cfg.URLPrefix)
+		if sm.conf.ProfilingEnabled {
+			pprofPath := fmt.Sprintf("%s/debug/pprof", sm.conf.URLPrefix)
 			glog.Infof("[%v] Profiling is enabled at %v", sm.tag, srv.Addr+pprofPath)
 			monitoringServerMux.Handle(pprofPath+"/", http.HandlerFunc(pprof.Index))
 			monitoringServerMux.Handle(pprofPath+"/cmdline", http.HandlerFunc(pprof.Cmdline))
@@ -58,8 +53,8 @@ func (sm *ServerMonitoring) Run() error {
 			monitoringServerMux.Handle(pprofPath+"/threadcreate", pprof.Handler("threadcreate"))
 		}
 
-		if sm.cfg.MetricEnabled {
-			metricPath := fmt.Sprintf("%s/metrics", sm.cfg.URLPrefix)
+		if sm.conf.MetricEnabled {
+			metricPath := fmt.Sprintf("%s/metrics", sm.conf.URLPrefix)
 			glog.Infof("[%v] Prometheus metric is enabled at %v", sm.tag, srv.Addr+metricPath)
 			monitoringServerMux.Handle(metricPath, promhttp.Handler())
 		}
@@ -74,17 +69,17 @@ func (sm *ServerMonitoring) Run() error {
 	return nil
 }
 
-func (sm *ServerMonitoring) Shutdown(ctx context.Context) error {
+func (sm *ServerMonitoring) Shutdown(ctx *context.Context) error {
 	if sm.server == nil {
 		return nil
 	}
 
 	glog.Infof("[%v] Shutting down monitoring server", sm.tag)
-	return sm.server.Shutdown(ctx)
+	return sm.server.Shutdown(*ctx)
 }
 
 func (sm *ServerMonitoring) String() string {
-	return fmt.Sprintf("monitoring::%s:%d", sm.cfg.URLPrefix, sm.cfg.Port)
+	return fmt.Sprintf("monitoring::%s:%d", sm.conf.URLPrefix, sm.conf.Port)
 }
 
 func validate(conf *monitoring.ServerMonitoringConfig) monitoring.ServerMonitoringConfig {
