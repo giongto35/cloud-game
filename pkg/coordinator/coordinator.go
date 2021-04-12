@@ -62,11 +62,8 @@ func (c *Coordinator) Run() error {
 
 func (c *Coordinator) init() {
 	conf := c.conf.Coordinator
-	// init games library
-	if len(conf.Library.Supported) == 0 {
-		conf.Library.Supported = c.conf.Emulator.GetSupportedExtensions()
-	}
-	lib := games.NewLibrary(conf.Library)
+
+	lib := getLibrary(&c.conf)
 	lib.Scan()
 
 	srv := NewServer(c.conf, lib)
@@ -74,7 +71,6 @@ func (c *Coordinator) init() {
 	var certManager *autocert.Manager
 	var httpsSrv *http.Server
 
-	log.Println("Initializing Coordinator Server")
 	mode := c.conf.Environment.Get()
 	if mode.AnyOf(environment.Production, environment.Staging) {
 		httpsSrv = newServer(srv, false)
@@ -116,3 +112,12 @@ func (c *Coordinator) init() {
 }
 
 func (c *Coordinator) Shutdown() { c.services.Shutdown(c.ctx) }
+
+// getLibrary initializes game library.
+func getLibrary(conf *coordinator.Config) games.GameLibrary {
+	libConf := conf.Coordinator.Library
+	if len(libConf.Supported) == 0 {
+		libConf.Supported = conf.Emulator.GetSupportedExtensions()
+	}
+	return games.NewLibrary(libConf)
+}

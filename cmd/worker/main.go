@@ -31,7 +31,6 @@ func run() {
 
 	ctx, cancelCtx := context.WithCancel(context.Background())
 
-	glog.V(4).Info("[worker] Initialization")
 	glog.V(4).Infof("[worker] Local configuration %+v", conf)
 	wrk := worker.New(ctx, conf)
 	wrk.Run()
