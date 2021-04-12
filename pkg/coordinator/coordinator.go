@@ -3,7 +3,6 @@ package coordinator
 import (
 	"context"
 	"crypto/tls"
-	"fmt"
 	"log"
 	"net/http"
 	"strconv"
@@ -18,12 +17,9 @@ import (
 	"golang.org/x/crypto/acme/autocert"
 )
 
-const stagingLEURL = "https://acme-staging-v02.api.letsencrypt.org/directory"
-
 type Coordinator struct {
-	ctx context.Context
-	cfg coordinator.Config
-
+	cfg              coordinator.Config
+	ctx              context.Context
 	monitoringServer *monitoring.ServerMonitoring
 }
 
@@ -37,7 +33,7 @@ func New(ctx context.Context, cfg coordinator.Config) *Coordinator {
 }
 
 func (c *Coordinator) Run() error {
-	go c.initializeCoordinator()
+	go c.init()
 	go c.RunMonitoringServer()
 	return nil
 }
@@ -77,14 +73,13 @@ func newServer(server *Server, redirectHTTPS bool) *http.Server {
 	}
 }
 
-// initializeCoordinator setup an coordinator server
-func (c *Coordinator) initializeCoordinator() {
+func (c *Coordinator) init() {
+	conf := c.cfg.Coordinator
 	// init games library
-	libraryConf := c.cfg.Coordinator.Library
-	if len(libraryConf.Supported) == 0 {
-		libraryConf.Supported = c.cfg.Emulator.GetSupportedExtensions()
+	if len(conf.Library.Supported) == 0 {
+		conf.Library.Supported = c.cfg.Emulator.GetSupportedExtensions()
 	}
-	lib := games.NewLibrary(libraryConf)
+	lib := games.NewLibrary(conf.Library)
 	lib.Scan()
 
 	server := NewServer(c.cfg, lib)
@@ -95,54 +90,40 @@ func (c *Coordinator) initializeCoordinator() {
 	log.Println("Initializing Coordinator Server")
 	mode := c.cfg.Environment.Get()
 	if mode.AnyOf(environment.Production, environment.Staging) {
-		serverConfig := c.cfg.Coordinator.Server
 		httpsSrv = newServer(server, false)
-		httpsSrv.Addr = strconv.Itoa(serverConfig.HttpsPort)
+		httpsSrv.Addr = strconv.Itoa(conf.Server.HttpsPort)
 
-		if serverConfig.HttpsChain == "" || serverConfig.HttpsKey == "" {
-			serverConfig.HttpsChain = ""
-			serverConfig.HttpsKey = ""
+		if conf.Server.HttpsChain == "" || conf.Server.HttpsKey == "" {
+			conf.Server.HttpsChain = ""
+			conf.Server.HttpsKey = ""
 
-			var leurl string
+			letsEncryptURL := acme.LetsEncryptURL
 			if mode == environment.Staging {
-				leurl = stagingLEURL
-			} else {
-				leurl = acme.LetsEncryptURL
+				letsEncryptURL = "https://acme-staging-v02.api.letsencrypt.org/directory"
 			}
-
 			certManager = &autocert.Manager{
 				Prompt:     autocert.AcceptTOS,
-				HostPolicy: autocert.HostWhitelist(c.cfg.Coordinator.PublicDomain),
+				HostPolicy: autocert.HostWhitelist(conf.PublicDomain),
 				Cache:      autocert.DirCache("assets/cache"),
-				Client:     &acme.Client{DirectoryURL: leurl},
+				Client:     &acme.Client{DirectoryURL: letsEncryptURL},
 			}
-
 			httpsSrv.TLSConfig = &tls.Config{GetCertificate: certManager.GetCertificate}
 		}
 
-		go func(chain string, key string) {
-			fmt.Printf("Starting HTTPS server on %s\n", httpsSrv.Addr)
-			err := httpsSrv.ListenAndServeTLS(chain, key)
-			if err != nil {
+		go func() {
+			log.Printf("Starting HTTPS server on %s\n", httpsSrv.Addr)
+			if err := httpsSrv.ListenAndServeTLS(conf.Server.HttpsChain, conf.Server.HttpsKey); err != nil {
 				log.Fatalf("httpsSrv.ListendAndServeTLS() failed with %s", err)
 			}
-		}(serverConfig.HttpsChain, serverConfig.HttpsKey)
+		}()
 	}
 
-	var httpSrv *http.Server
-	if mode.AnyOf(environment.Production, environment.Staging) {
-		httpSrv = newServer(server, true)
-	} else {
-		httpSrv = newServer(server, false)
-	}
-
+	httpSrv := newServer(server, mode.AnyOf(environment.Production, environment.Staging))
 	if certManager != nil {
 		httpSrv.Handler = certManager.HTTPHandler(httpSrv.Handler)
 	}
-
-	httpSrv.Addr = ":" + strconv.Itoa(c.cfg.Coordinator.Server.Port)
-	err := httpSrv.ListenAndServe()
-	if err != nil {
+	httpSrv.Addr = ":" + strconv.Itoa(conf.Server.Port)
+	if err := httpSrv.ListenAndServe(); err != nil {
 		log.Fatalf("httpSrv.ListenAndServe() failed with %s", err)
 	}
 }
