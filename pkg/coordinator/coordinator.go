@@ -57,43 +57,32 @@ func (o *Coordinator) Shutdown() {
 	}
 }
 
-func makeServerFromMux(mux *http.ServeMux) *http.Server {
+func newServer(server *Server, redirectHTTPS bool) *http.Server {
+	r := mux.NewRouter()
+	if redirectHTTPS {
+		r.PathPrefix("/").HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			http.Redirect(w, r, "https://"+r.Host+r.URL.String(), http.StatusFound)
+		})
+	} else {
+		r.HandleFunc("/ws", server.WS)
+		r.HandleFunc("/wso", server.WSO)
+		r.PathPrefix("/static/").Handler(http.StripPrefix("/static/", http.FileServer(http.Dir("./web"))))
+		r.PathPrefix("/").HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			http.ServeFile(w, r, "./web/index.html")
+		})
+	}
+
+	h := &http.ServeMux{}
+	h.Handle("/", r)
+
 	// set timeouts so that a slow or malicious client doesn't
 	// hold resources forever
 	return &http.Server{
 		ReadTimeout:  5 * time.Second,
 		WriteTimeout: 5 * time.Second,
 		IdleTimeout:  120 * time.Second,
-		Handler:      mux,
+		Handler:      h,
 	}
-}
-
-func makeHTTPServer(server *Server) *http.Server {
-	r := mux.NewRouter()
-	r.HandleFunc("/ws", server.WS)
-	r.HandleFunc("/wso", server.WSO)
-	r.PathPrefix("/static/").Handler(http.StripPrefix("/static/", http.FileServer(http.Dir("./web"))))
-	r.PathPrefix("/").HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		http.ServeFile(w, r, "./web/index.html")
-	})
-	svmux := &http.ServeMux{}
-	svmux.Handle("/", r)
-
-	return makeServerFromMux(svmux)
-}
-
-func makeHTTPToHTTPSRedirectServer(server *Server) *http.Server {
-	handleRedirect := func(w http.ResponseWriter, r *http.Request) {
-		newURI := "https://" + r.Host + r.URL.String()
-		http.Redirect(w, r, newURI, http.StatusFound)
-	}
-	r := mux.NewRouter()
-	r.PathPrefix("/").HandlerFunc(handleRedirect)
-
-	svmux := &http.ServeMux{}
-	svmux.Handle("/", r)
-
-	return makeServerFromMux(svmux)
 }
 
 // initializeCoordinator setup an coordinator server
@@ -115,8 +104,8 @@ func (o *Coordinator) initializeCoordinator() {
 	mode := o.cfg.Environment.Get()
 	if mode.AnyOf(environment.Production, environment.Staging) {
 		serverConfig := o.cfg.Coordinator.Server
-		httpsSrv = makeHTTPServer(server)
-		httpsSrv.Addr = fmt.Sprintf(":%d", serverConfig.HttpsPort)
+		httpsSrv = newServer(server, false)
+		httpsSrv.Addr = strconv.Itoa(serverConfig.HttpsPort)
 
 		if serverConfig.HttpsChain == "" || serverConfig.HttpsKey == "" {
 			serverConfig.HttpsChain = ""
@@ -150,9 +139,9 @@ func (o *Coordinator) initializeCoordinator() {
 
 	var httpSrv *http.Server
 	if mode.AnyOf(environment.Production, environment.Staging) {
-		httpSrv = makeHTTPToHTTPSRedirectServer(server)
+		httpSrv = newServer(server, true)
 	} else {
-		httpSrv = makeHTTPServer(server)
+		httpSrv = newServer(server, false)
 	}
 
 	if certManager != nil {
