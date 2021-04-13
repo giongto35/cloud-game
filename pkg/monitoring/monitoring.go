@@ -69,13 +69,13 @@ func (sm *ServerMonitoring) Run() error {
 	return nil
 }
 
-func (sm *ServerMonitoring) Shutdown(ctx *context.Context) error {
+func (sm *ServerMonitoring) Shutdown(ctx context.Context) error {
 	if sm.server == nil {
 		return nil
 	}
 
 	glog.Infof("[%v] Shutting down monitoring server", sm.tag)
-	return sm.server.Shutdown(*ctx)
+	return sm.server.Shutdown(ctx)
 }
 
 func (sm *ServerMonitoring) String() string {

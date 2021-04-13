@@ -12,13 +12,12 @@ import (
 
 type Config struct {
 	Coordinator struct {
-		PublicDomain string
-		PingServer   string
-		DebugHost    string
-		Library      games.Config
-		Monitoring   monitoring.ServerMonitoringConfig
-		Server       shared.Server
-		Analytics    Analytics
+		PingServer string
+		DebugHost  string
+		Library    games.Config
+		Monitoring monitoring.ServerMonitoringConfig
+		Server     shared.Server
+		Analytics  Analytics
 	}
 	Emulator    emulator.Emulator
 	Environment shared.Environment

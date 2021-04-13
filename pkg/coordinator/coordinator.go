@@ -2,29 +2,27 @@ package coordinator
 
 import (
 	"context"
-	"crypto/tls"
 	"log"
 	"net/http"
 	"time"
 
 	"github.com/giongto35/cloud-game/v2/pkg/config/coordinator"
-	"github.com/giongto35/cloud-game/v2/pkg/environment"
 	"github.com/giongto35/cloud-game/v2/pkg/games"
 	"github.com/giongto35/cloud-game/v2/pkg/monitoring"
 	"github.com/giongto35/cloud-game/v2/pkg/server"
-	"golang.org/x/crypto/acme"
+	"github.com/giongto35/cloud-game/v2/pkg/tls"
 	"golang.org/x/crypto/acme/autocert"
 )
 
 type Coordinator struct {
 	conf     coordinator.Config
-	ctx      *context.Context
+	ctx      context.Context
 	services server.Services
 }
 
 func New(ctx context.Context, conf coordinator.Config) *Coordinator {
 	return &Coordinator{
-		ctx:  &ctx,
+		ctx:  ctx,
 		conf: conf,
 		services: []server.Server{
 			monitoring.NewServerMonitoring(conf.Coordinator.Monitoring, "cord"),
@@ -32,7 +30,7 @@ func New(ctx context.Context, conf coordinator.Config) *Coordinator {
 	}
 }
 
-func newServer(server *Server, redirectHTTPS bool) *http.Server {
+func newServer(server *Server, addr string, redirectHTTPS bool) *http.Server {
 	h := http.NewServeMux()
 
 	base := index(server.cfg)
@@ -46,6 +44,7 @@ func newServer(server *Server, redirectHTTPS bool) *http.Server {
 
 	// timeouts negate slow / frozen clients
 	return &http.Server{
+		Addr:         addr,
 		Handler:      h,
 		IdleTimeout:  120 * time.Second,
 		ReadTimeout:  5 * time.Second,
@@ -67,46 +66,38 @@ func (c *Coordinator) init() {
 
 	srv := NewServer(c.conf, lib)
 
-	var certManager *autocert.Manager
-	var httpsSrv *http.Server
-
-	mode := c.conf.Environment.Get()
-	if mode.AnyOf(environment.Production, environment.Staging) {
-		httpsSrv = newServer(srv, false)
-		httpsSrv.Addr = conf.Server.HttpsAddress
-
-		if conf.Server.HttpsChain == "" || conf.Server.HttpsKey == "" {
-			conf.Server.HttpsChain = ""
-			conf.Server.HttpsKey = ""
-
-			letsEncryptURL := acme.LetsEncryptURL
-			if mode == environment.Staging {
-				letsEncryptURL = "https://acme-staging-v02.api.letsencrypt.org/directory"
-			}
-			certManager = &autocert.Manager{
-				Prompt:     autocert.AcceptTOS,
-				HostPolicy: autocert.HostWhitelist(conf.PublicDomain),
-				Cache:      autocert.DirCache("assets/cache"),
-				Client:     &acme.Client{DirectoryURL: letsEncryptURL},
-			}
-			httpsSrv.TLSConfig = &tls.Config{GetCertificate: certManager.GetCertificate}
+	if conf.Server.Https {
+		// Letsencrypt or self
+		var certManager *autocert.Manager
+		if !conf.Server.Tls.IsSelfCert() {
+			certManager = tls.NewTLSConfig(conf.Server.Tls.Domain).CertManager
 		}
 
 		go func() {
-			log.Printf("Starting HTTPS server on %s\n", httpsSrv.Addr)
-			if err := httpsSrv.ListenAndServeTLS(conf.Server.HttpsChain, conf.Server.HttpsKey); err != nil {
-				log.Fatalf("httpsSrv.ListendAndServeTLS() failed with %s", err)
+			serv := newServer(srv, conf.Server.Address, true)
+			log.Printf("Starting HTTP->HTTPS server on %s", serv.Addr)
+			if certManager != nil {
+				serv.Handler = certManager.HTTPHandler(serv.Handler)
+			}
+			if err := serv.ListenAndServe(); err != nil {
+				return
 			}
 		}()
-	}
 
-	httpSrv := newServer(srv, mode.AnyOf(environment.Production, environment.Staging))
-	if certManager != nil {
-		httpSrv.Handler = certManager.HTTPHandler(httpSrv.Handler)
-	}
-	httpSrv.Addr = conf.Server.Address
-	if err := httpSrv.ListenAndServe(); err != nil {
-		log.Fatalf("httpSrv.ListenAndServe() failed with %s", err)
+		serv := newServer(srv, conf.Server.Address, false)
+		if certManager != nil {
+			serv.TLSConfig = certManager.TLSConfig()
+		}
+		log.Printf("Starting HTTPS server on %s", serv.Addr)
+		if err := serv.ListenAndServeTLS(conf.Server.Tls.HttpsCert, conf.Server.Tls.HttpsKey); err != nil {
+			log.Fatalf("error: %s", err)
+		}
+	} else {
+		serv := newServer(srv, conf.Server.Address, false)
+		log.Printf("Starting HTTP server on %s", serv.Addr)
+		if err := serv.ListenAndServe(); err != nil {
+			log.Fatalf("error: %s", err)
+		}
 	}
 }
 

@@ -38,9 +38,15 @@ coordinator:
   # HTTP(S) server config
   server:
     address: :8000
-    httpsAddress: :443
-    httpsKey:
-    httpsChain:
+    https: false
+    # Letsencrypt or self cert config
+    tls:
+      address: :443
+      letsencryptUrl:
+      # if both are set then will use certs
+      # and Letsencryt instead
+      httpsKey:
+      httpsChain:
   analytics:
     inject: false
     gtag: UA-145078282-1
@@ -60,9 +66,15 @@ worker:
     urlPrefix: /worker
   server:
     address: :9000
-    httpsAddress: :443
-    httpsKey:
-    httpsChain:
+    https: false
+    tls:
+      address: :443
+      # LetsEncrypt config
+      # if empty will use URL from Go
+      letsencryptUrl:
+      # Own certs config
+      httpsKey:
+      httpsChain:
 
 emulator:
   # set output viewport scale factor

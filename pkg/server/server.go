@@ -7,7 +7,7 @@ import (
 
 type Server interface {
 	Run() error
-	Shutdown(ctx *context.Context) error
+	Shutdown(ctx context.Context) error
 }
 
 type Services []Server
@@ -24,7 +24,7 @@ func (svs *Services) Start() {
 }
 
 // !to add a proper HTTP(S) server shutdown (cws/handler bad loop)
-func (svs *Services) Shutdown(ctx *context.Context) {
+func (svs *Services) Shutdown(ctx context.Context) {
 	for _, s := range *svs {
 		if err := s.Shutdown(ctx); err != nil {
 			log.Printf("error: failed to stop [%s] because of %v", s, err)

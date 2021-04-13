@@ -87,9 +87,8 @@ func (o *Server) getPingServer(zone string) string {
 		return fmt.Sprintf("%s/echo", o.cfg.Coordinator.PingServer)
 	}
 
-	mode := o.cfg.Environment.Get()
-	if mode.AnyOf(environment.Production, environment.Staging) {
-		return fmt.Sprintf(pingServerTemp, zone, o.cfg.Coordinator.PublicDomain)
+	if o.cfg.Coordinator.Server.Https && !o.cfg.Coordinator.Server.Tls.IsSelfCert() {
+		return fmt.Sprintf(pingServerTemp, zone, o.cfg.Coordinator.Server.Tls.Domain)
 	}
 	return devPingServer
 }

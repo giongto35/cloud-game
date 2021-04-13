@@ -12,7 +12,7 @@ import (
 )
 
 type Worker struct {
-	ctx      *context.Context
+	ctx      context.Context
 	conf     worker.Config
 	services server.Services
 	// to pause initialization
@@ -21,7 +21,7 @@ type Worker struct {
 
 func New(ctx context.Context, conf worker.Config) *Worker {
 	return &Worker{
-		ctx:  &ctx,
+		ctx:  ctx,
 		conf: conf,
 		services: []server.Server{
 			monitoring.NewServerMonitoring(conf.Worker.Monitoring, "worker"),
