@@ -2,16 +2,13 @@ package coordinator
 
 import (
 	"context"
-	"log"
 	"net/http"
-	"time"
 
 	"github.com/giongto35/cloud-game/v2/pkg/config/coordinator"
 	"github.com/giongto35/cloud-game/v2/pkg/games"
 	"github.com/giongto35/cloud-game/v2/pkg/monitoring"
+	"github.com/giongto35/cloud-game/v2/pkg/network/httpx"
 	"github.com/giongto35/cloud-game/v2/pkg/server"
-	"github.com/giongto35/cloud-game/v2/pkg/tls"
-	"golang.org/x/crypto/acme/autocert"
 )
 
 type Coordinator struct {
@@ -30,28 +27,6 @@ func New(ctx context.Context, conf coordinator.Config) *Coordinator {
 	}
 }
 
-func newServer(server *Server, addr string, redirectHTTPS bool) *http.Server {
-	h := http.NewServeMux()
-
-	base := index(server.cfg)
-	if redirectHTTPS {
-		base = redirect()
-	}
-	h.Handle("/", base)
-	h.Handle("/static/", static("./web"))
-	h.HandleFunc("/ws", server.WS)
-	h.HandleFunc("/wso", server.WSO)
-
-	// timeouts negate slow / frozen clients
-	return &http.Server{
-		Addr:         addr,
-		Handler:      h,
-		IdleTimeout:  120 * time.Second,
-		ReadTimeout:  5 * time.Second,
-		WriteTimeout: 5 * time.Second,
-	}
-}
-
 func (c *Coordinator) Run() error {
 	go c.init()
 	c.services.Start()
@@ -66,39 +41,22 @@ func (c *Coordinator) init() {
 
 	srv := NewServer(c.conf, lib)
 
+	address := conf.Server.Address
 	if conf.Server.Https {
-		// Letsencrypt or self
-		var certManager *autocert.Manager
-		if !conf.Server.Tls.IsSelfCert() {
-			certManager = tls.NewTLSConfig(conf.Server.Tls.Domain).CertManager
-		}
-
-		go func() {
-			serv := newServer(srv, conf.Server.Address, true)
-			log.Printf("Starting HTTP->HTTPS server on %s", serv.Addr)
-			if certManager != nil {
-				serv.Handler = certManager.HTTPHandler(serv.Handler)
-			}
-			if err := serv.ListenAndServe(); err != nil {
-				return
-			}
-		}()
-
-		serv := newServer(srv, conf.Server.Address, false)
-		if certManager != nil {
-			serv.TLSConfig = certManager.TLSConfig()
-		}
-		log.Printf("Starting HTTPS server on %s", serv.Addr)
-		if err := serv.ListenAndServeTLS(conf.Server.Tls.HttpsCert, conf.Server.Tls.HttpsKey); err != nil {
-			log.Fatalf("error: %s", err)
-		}
-	} else {
-		serv := newServer(srv, conf.Server.Address, false)
-		log.Printf("Starting HTTP server on %s", serv.Addr)
-		if err := serv.ListenAndServe(); err != nil {
-			log.Fatalf("error: %s", err)
-		}
+		address = conf.Server.Tls.Address
 	}
+	httpx.NewServer(
+		address,
+		func(serv *httpx.Server) http.Handler {
+			h := http.NewServeMux()
+			h.Handle("/", index(c.conf))
+			h.Handle("/static/", static("./web"))
+			h.HandleFunc("/ws", srv.WS)
+			h.HandleFunc("/wso", srv.WSO)
+			return h
+		},
+		httpx.WithServerConfig(conf.Server),
+	).Start()
 }
 
 func (c *Coordinator) Shutdown() { c.services.Shutdown(c.ctx) }
