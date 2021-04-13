@@ -262,13 +262,13 @@ const touch = (() => {
     // touch/mouse events for control buttons. mouseup events is binded to window.
     buttons.forEach((btn) => {
         btn.addEventListener('mousedown', handleButtonDown);
-        btn.addEventListener('touchstart', handleButtonDown);
+        btn.addEventListener('touchstart', handleButtonDown, {passive: true});
         btn.addEventListener('touchend', handleButtonUp);
     });
 
     // touch/mouse events for dpad. mouseup events is binded to window.
     vpadHolder.addEventListener('mousedown', handleVpadJoystickDown);
-    vpadHolder.addEventListener('touchstart', handleVpadJoystickDown);
+    vpadHolder.addEventListener('touchstart', handleVpadJoystickDown, {passive: true});
     vpadHolder.addEventListener('touchend', handleVpadJoystickUp);
 
     dpad.forEach((arrow) => {

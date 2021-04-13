@@ -428,7 +428,7 @@
     event.sub(GAMEPAD_DISCONNECTED, () => message.show('Gamepad disconnected'));
     // touch stuff
     event.sub(MENU_HANDLER_ATTACHED, (data) => {
-        menuScreen.addEventListener(data.event, data.handler);
+        menuScreen.addEventListener(data.event, data.handler, {passive: true});
     });
     event.sub(KEY_PRESSED, onKeyPress);
     event.sub(KEY_RELEASED, onKeyRelease);
