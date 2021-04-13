@@ -18,10 +18,17 @@ type Config struct {
 		Library      games.Config
 		Monitoring   monitoring.ServerMonitoringConfig
 		Server       shared.Server
+		Analytics    Analytics
 	}
 	Emulator    emulator.Emulator
 	Environment shared.Environment
 	Webrtc      webrtcConfig.Webrtc
+}
+
+// Analytics is optional Google Analytics
+type Analytics struct {
+	Inject bool
+	Gtag   string
 }
 
 // allows custom config path

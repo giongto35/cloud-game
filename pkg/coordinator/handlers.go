@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"html/template"
 	"log"
 	"math"
 	"net/http"
@@ -50,17 +51,29 @@ func NewServer(cfg coordinator.Config, library games.GameLibrary) *Server {
 	}
 }
 
-func index(w http.ResponseWriter, r *http.Request) {
-	// return 404 on unknown
-	if r.URL.Path != "/" {
-		http.NotFound(w, r)
-		return
+func index(conf coordinator.Config) http.Handler {
+	tpl, err := template.ParseFiles("./web/index.html")
+	if err != nil {
+		log.Fatal(err)
 	}
-	http.ServeFile(w, r, "./web/index.html")
+
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		// return 404 on unknown
+		if r.URL.Path != "/" {
+			http.NotFound(w, r)
+			return
+		}
+		// render index page with some tpl values
+		if err = tpl.Execute(w, conf.Coordinator.Analytics); err != nil {
+			log.Fatal(err)
+		}
+	})
 }
 
-func redirect(w http.ResponseWriter, r *http.Request) {
-	http.Redirect(w, r, "https://"+r.Host+r.URL.String(), http.StatusFound)
+func redirect() http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		http.Redirect(w, r, "https://"+r.Host+r.URL.String(), http.StatusFound)
+	})
 }
 
 func static(dir string) http.Handler {
