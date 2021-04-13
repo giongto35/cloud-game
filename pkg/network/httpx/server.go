@@ -1,12 +1,12 @@
 package httpx
 
 import (
-	"github.com/giongto35/cloud-game/v2/pkg/network"
 	"log"
 	"net/http"
 	"strconv"
 	"time"
 
+	"github.com/giongto35/cloud-game/v2/pkg/network"
 	"golang.org/x/crypto/acme/autocert"
 )
 
@@ -94,7 +94,7 @@ func (s *Server) start(startPort int) {
 		endPort = startPort + 42
 	}
 
-	for port, n := startPort, endPort; port <= n; port++ {
+	for port := startPort; port < endPort; port++ {
 		// !to make it with full address
 		s.Addr = ":" + strconv.Itoa(port)
 		log.Printf("Starting %s server on %s", protocol, s.Addr)
@@ -112,8 +112,8 @@ func (s *Server) start(startPort int) {
 			log.Printf("error: %s", err)
 		}
 
-		if s.opts.PortRoll && port == n {
-			log.Fatalf("error: couldn't find an open port in range %v-%v\n", startPort, port)
+		if s.opts.PortRoll && port+1 == endPort {
+			log.Fatalf("error: couldn't find an open port in range %v-%v\n", startPort, endPort)
 		}
 	}
 }
