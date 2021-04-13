@@ -101,7 +101,6 @@ func (wrk *Worker) spawnServer(addr string) {
 
 	// ":3833" -> 3833
 	if err, port := address.Port(); err == nil {
-		log.Printf("ADDR: %v, PORT: %v", address, port)
 		startServer(httpSrv, port)
 	} else {
 		log.Fatalf("error: couldn't extract port from %v", address)

@@ -15,8 +15,8 @@ type Server struct {
 }
 
 func (s *Server) WithFlags() {
-	flag.StringVar(&s.Address, "port", s.Address, "HTTP server address (host:port)")
-	flag.StringVar(&s.HttpsAddress, "httpsPort", s.HttpsAddress, "HTTPS server address (host:port)")
+	flag.StringVar(&s.Address, "address", s.Address, "HTTP server address (host:port)")
+	flag.StringVar(&s.HttpsAddress, "httpsAddress", s.HttpsAddress, "HTTPS server address (host:port)")
 	flag.StringVar(&s.HttpsKey, "httpsKey", s.HttpsKey, "HTTPS key")
 	flag.StringVar(&s.HttpsChain, "httpsChain", s.HttpsChain, "HTTPS chain")
 }
