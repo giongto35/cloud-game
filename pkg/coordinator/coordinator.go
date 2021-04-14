@@ -34,20 +34,20 @@ func (c *Coordinator) Run() error {
 }
 
 func (c *Coordinator) init() {
-	conf := c.conf.Coordinator
+	conf := c.conf.Coordinator.Server
 
 	lib := getLibrary(&c.conf)
 	lib.Scan()
 
 	srv := NewServer(c.conf, lib)
 
-	address := conf.Server.Address
-	if conf.Server.Https {
-		address = conf.Server.Tls.Address
+	address := conf.Address
+	if conf.Https {
+		address = conf.Tls.Address
 	}
 	httpx.NewServer(
 		address,
-		func(serv *httpx.Server) http.Handler {
+		func(_ *httpx.Server) http.Handler {
 			h := http.NewServeMux()
 			h.Handle("/", index(c.conf))
 			h.Handle("/static/", static("./web"))
@@ -55,7 +55,7 @@ func (c *Coordinator) init() {
 			h.HandleFunc("/wso", srv.WSO)
 			return h
 		},
-		httpx.WithServerConfig(conf.Server),
+		httpx.WithServerConfig(conf),
 	).Start()
 }
 
