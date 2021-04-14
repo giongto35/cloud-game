@@ -31,8 +31,6 @@ coordinator:
     profilingEnabled: false
     metricEnabled: false
     urlPrefix: /coordinator
-  # the public domain of the coordinator
-  publicDomain: http://localhost:8000
   # specify the worker address that the client can ping (with protocol and port)
   pingServer:
   # HTTP(S) server config
@@ -42,11 +40,13 @@ coordinator:
     # Letsencrypt or self cert config
     tls:
       address: :443
+      # the public domain of the coordinator
+      domain: http://localhost:8000
       letsencryptUrl:
       # if both are set then will use certs
       # and Letsencryt instead
+      httpsCert:
       httpsKey:
-      httpsChain:
   analytics:
     inject: false
     gtag: UA-145078282-1
@@ -73,8 +73,8 @@ worker:
       # if empty will use URL from Go
       letsencryptUrl:
       # Own certs config
+      httpsCert:
       httpsKey:
-      httpsChain:
 
 emulator:
   # set output viewport scale factor

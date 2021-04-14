@@ -61,7 +61,7 @@ func (s *Server) Start() {
 		log.Fatalf("error: couldn't extract port from %v", address)
 	}
 
-	if s.opts.Https {
+	if s.opts.Https && s.opts.HttpsRedirect {
 		log.Printf("Starting HTTP->HTTPS redirection server on %s", s.Addr)
 		go NewServer(s.opts.HttpsRedirectAddress, func(serv *Server) http.Handler {
 			h := http.NewServeMux()
@@ -91,7 +91,7 @@ func (s *Server) start(startPort int) {
 
 	endPort := startPort + 1
 	if s.opts.PortRoll {
-		endPort = startPort + 42
+		endPort += 42
 	}
 
 	for port := startPort; port < endPort; port++ {

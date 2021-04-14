@@ -30,6 +30,8 @@ func (o *Options) override(options ...Option) {
 
 func (o *Options) IsAutoHttpsCert() bool { return !(o.HttpsCert != "" && o.HttpsKey != "") }
 
+func HttpsRedirect(redirect bool) Option { return func(opts *Options) { opts.HttpsRedirect = redirect } }
+
 //func Https(is bool) Option                { return func(opts *Options) { opts.Https = is } }
 //func HttpsCert(cert string) Option        { return func(opts *Options) { opts.HttpsCert = cert } }
 //func HttpsKey(key string) Option          { return func(opts *Options) { opts.HttpsKey = key } }
