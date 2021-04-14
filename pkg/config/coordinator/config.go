@@ -15,7 +15,7 @@ type Config struct {
 		PingServer string
 		DebugHost  string
 		Library    games.Config
-		Monitoring monitoring.ServerMonitoringConfig
+		Monitoring monitoring.Config
 		Server     shared.Server
 		Analytics  Analytics
 	}

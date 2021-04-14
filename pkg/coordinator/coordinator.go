@@ -14,16 +14,17 @@ import (
 type Coordinator struct {
 	conf     coordinator.Config
 	ctx      context.Context
-	services server.Services
+	services *server.Services
 }
 
 func New(ctx context.Context, conf coordinator.Config) *Coordinator {
+	services := server.Services{}
 	return &Coordinator{
 		ctx:  ctx,
 		conf: conf,
-		services: []server.Server{
-			monitoring.NewServerMonitoring(conf.Coordinator.Monitoring, "cord"),
-		},
+		services: services.AddIf(
+			conf.Coordinator.Monitoring.IsEnabled(), monitoring.New(conf.Coordinator.Monitoring, "cord"),
+		),
 	}
 }
 

@@ -20,7 +20,7 @@ type Config struct {
 	Emulator    emulator.Emulator
 	Environment shared.Environment
 	Worker      struct {
-		Monitoring monitoring.ServerMonitoringConfig
+		Monitoring monitoring.Config
 		Network    struct {
 			CoordinatorAddress string
 			Zone               string

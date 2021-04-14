@@ -16,19 +16,20 @@ import (
 type Worker struct {
 	conf     worker.Config
 	ctx      context.Context
-	services server.Services
+	services *server.Services
 
 	// to pause initialization
 	lock *lock.TimeLock
 }
 
 func New(ctx context.Context, conf worker.Config) *Worker {
+	services := server.Services{}
 	return &Worker{
 		ctx:  ctx,
 		conf: conf,
-		services: []server.Server{
-			monitoring.NewServerMonitoring(conf.Worker.Monitoring, "worker"),
-		},
+		services: services.AddIf(
+			conf.Worker.Monitoring.IsEnabled(), monitoring.New(conf.Worker.Monitoring, "worker"),
+		),
 		lock: lock.NewLock(),
 	}
 }
