@@ -46,19 +46,16 @@ func Init(cfg Config) {
 		case CtxOpenGlCore:
 			setAttribute(sdl.GL_CONTEXT_PROFILE_MASK, sdl.GL_CONTEXT_PROFILE_CORE)
 			log.Printf("[OpenGL] CONTEXT_PROFILE_CORE")
-			break
 		case CtxOpenGlEs2:
 			setAttribute(sdl.GL_CONTEXT_PROFILE_MASK, sdl.GL_CONTEXT_PROFILE_ES)
 			setAttribute(sdl.GL_CONTEXT_MAJOR_VERSION, 3)
 			setAttribute(sdl.GL_CONTEXT_MINOR_VERSION, 0)
 			log.Printf("[OpenGL] CONTEXT_PROFILE_ES 3.0")
-			break
 		case CtxOpenGl:
 			if cfg.Gl.VersionMajor >= 3 {
 				setAttribute(sdl.GL_CONTEXT_PROFILE_MASK, sdl.GL_CONTEXT_PROFILE_COMPATIBILITY)
 			}
 			log.Printf("[OpenGL] CONTEXT_PROFILE_COMPATIBILITY")
-			break
 		default:
 			log.Printf("Unsupported hw context: %v", cfg.Ctx)
 		}

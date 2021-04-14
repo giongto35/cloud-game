@@ -62,7 +62,7 @@ func (m *Manager) Sync() error {
 			if fallback := repo.New(conf.Type, conf.Url, conf.Compression, ""); fallback != nil {
 				defer m.setRepo(m.repo)
 				m.setRepo(fallback)
-				_, failed = m.download(failed)
+				_, _ = m.download(failed)
 			}
 		}
 	}

@@ -36,7 +36,7 @@ func TestSave(t *testing.T) {
 		}
 
 		fmt.Printf("[%-14v] ", "before save")
-		snapshot1, _ := mock.dumpState()
+		_, _ = mock.dumpState()
 		if err := mock.Save(); err != nil {
 			t.Errorf("Save fail %v", err)
 		}

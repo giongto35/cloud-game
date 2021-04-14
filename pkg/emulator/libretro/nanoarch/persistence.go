@@ -12,7 +12,7 @@ func (na *naEmulator) Save() (err error) {
 		err = toFile(na.GetSRAMPath(), sramState)
 	}
 	if saveState, err := getSaveState(); err == nil {
-		err = toFile(na.GetHashPath(), saveState)
+		return toFile(na.GetHashPath(), saveState)
 	}
 	return
 }
@@ -27,7 +27,7 @@ func (na *naEmulator) Load() (err error) {
 		restoreSaveRAM(sramState)
 	}
 	if saveState, err := fromFile(na.GetHashPath()); err == nil {
-		err = restoreSaveState(saveState)
+		return restoreSaveState(saveState)
 	}
 	return
 }

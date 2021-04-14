@@ -58,7 +58,7 @@ func NewYuvImgProcessor(w, h int, options ...Option) ImgProcessor {
 	opts.override(options...)
 
 	bufSize := int(float32(w*h) * 1.5)
-	buf := make([]byte, bufSize, bufSize)
+	buf := make([]byte, bufSize)
 
 	processor := processor{
 		Data:   buf,

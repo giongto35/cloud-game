@@ -51,8 +51,6 @@ type Room struct {
 	director emulator.CloudEmulator
 	// Cloud storage to store room state online
 	onlineStorage *storage.Client
-	// GameName
-	gameName string
 
 	vPipe *encoder.VideoPipe
 }

@@ -21,9 +21,6 @@ type testRun struct {
 	system         string
 	rom            string
 	emulationTicks int
-
-	gl    bool
-	libCo bool
 }
 
 // EmulatorMock contains naEmulator mocking data.
@@ -178,11 +175,6 @@ func (emu *EmulatorMock) handleInput(handler func(event InputEvent)) {
 	for event := range emu.inputChannel {
 		handler(event)
 	}
-}
-
-// getSavePath returns the full path to the emulator latest save.
-func (emu *EmulatorMock) getSavePath() string {
-	return cleanPath(emu.GetHashPath())
 }
 
 // dumpState returns the current emulator state and

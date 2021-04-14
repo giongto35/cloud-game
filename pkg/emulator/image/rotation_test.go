@@ -140,7 +140,7 @@ func TestRotate(t *testing.T) {
 
 	for _, test := range tests {
 		for i, rot := range test.rotateHow {
-			if output := ExampleRotate(test.input, test.w, test.h, rot); bytes.Compare(output, test.expected[i]) != 0 {
+			if output := ExampleRotate(test.input, test.w, test.h, rot); !bytes.Equal(output, test.expected[i]) {
 				t.Errorf(
 					"Test fail for angle %v with %v that should be \n%v but it's \n%v",
 					rot, test.input, test.expected[i], output)
@@ -204,24 +204,21 @@ func TestBoundsAfterRotation(t *testing.T) {
 
 func BenchmarkDirect(b *testing.B) {
 	for i := 0; i < b.N; i++ {
-		p1, p2 := Rotate90(1, 1, 2, 2)
-		p1, p2 = p2, p1
+		_, _ = Rotate90(1, 1, 2, 2)
 	}
 }
 
 func BenchmarkLiteral(b *testing.B) {
 	fn := Rotate90
 	for i := 0; i < b.N; i++ {
-		p1, p2 := fn(1, 1, 2, 2)
-		p1, p2 = p2, p1
+		_, _ = fn(1, 1, 2, 2)
 	}
 }
 
 func BenchmarkAssign(b *testing.B) {
 	fn := Angles[Angle90].Call
 	for i := 0; i < b.N; i++ {
-		p1, p2 := fn(1, 1, 2, 2)
-		p1, p2 = p2, p1
+		_, _ = fn(1, 1, 2, 2)
 	}
 }
 
@@ -229,15 +226,13 @@ func BenchmarkMapReassign(b *testing.B) {
 	fn := Angles[Angle90].Call
 	for i := 0; i < b.N; i++ {
 		fn2 := fn
-		p1, p2 := fn2(1, 1, 2, 2)
-		p1, p2 = p2, p1
+		_, _ = fn2(1, 1, 2, 2)
 	}
 }
 
 func BenchmarkMapDirect(b *testing.B) {
 	for i := 0; i < b.N; i++ {
-		p1, p2 := Angles[Angle90].Call(1, 1, 2, 2)
-		p1, p2 = p2, p1
+		_, _ = Angles[Angle90].Call(1, 1, 2, 2)
 	}
 }
 
@@ -247,7 +242,6 @@ func BenchmarkNewMapDirect(b *testing.B) {
 	}
 
 	for i := 0; i < b.N; i++ {
-		p1, p2 := fns[Angle90](1, 1, 2, 2)
-		p1, p2 = p2, p1
+		_, _ = fns[Angle90](1, 1, 2, 2)
 	}
 }

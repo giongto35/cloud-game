@@ -263,15 +263,12 @@ func coreEnvironment(cmd C.unsigned, data unsafe.Pointer) C.bool {
 			}
 		}
 		*username = currentUser
-		break
 	case C.RETRO_ENVIRONMENT_GET_LOG_INTERFACE:
 		cb := (*C.struct_retro_log_callback)(data)
 		cb.log = (C.retro_log_printf_t)(C.coreLog_cgo)
-		break
 	case C.RETRO_ENVIRONMENT_GET_CAN_DUPE:
 		bval := (*C.bool)(data)
 		*bval = C.bool(true)
-		break
 	case C.RETRO_ENVIRONMENT_SET_PIXEL_FORMAT:
 		return videoSetPixelFormat(*(*C.enum_retro_pixel_format)(data))
 	case C.RETRO_ENVIRONMENT_GET_SYSTEM_DIRECTORY:
@@ -650,19 +647,16 @@ func videoSetPixelFormat(format uint32) C.bool {
 		video.bpp = 2
 		// format is not implemented
 		pixelFormatConverterFn = nil
-		break
 	case C.RETRO_PIXEL_FORMAT_XRGB8888:
 		video.pixFmt = image.BitFormatInt8888Rev
 		graphics.SetPixelFormat(graphics.UnsignedInt8888Rev)
 		video.bpp = 4
 		pixelFormatConverterFn = image.Rgba8888
-		break
 	case C.RETRO_PIXEL_FORMAT_RGB565:
 		video.pixFmt = image.BitFormatShort565
 		graphics.SetPixelFormat(graphics.UnsignedShort565)
 		video.bpp = 2
 		pixelFormatConverterFn = image.Rgb565
-		break
 	default:
 		log.Fatalf("Unknown pixel type %v", format)
 	}

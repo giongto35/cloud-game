@@ -47,11 +47,6 @@ func initFramebuffer(w int, h int, hasDepth bool, hasStencil bool) {
 
 	// texture init
 	gl.GenTextures(1, &opt.tex)
-	if opt.tex < 0 {
-		log.Printf("[OpenGL] GenTextures: 0x%X", opt.tex)
-		panic("OpenGL texture initialization has failed")
-	}
-
 	gl.BindTexture(gl.TEXTURE_2D, opt.tex)
 
 	gl.TexParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST)
@@ -116,15 +111,12 @@ func SetPixelFormat(format PixelFormat) {
 	case UnsignedShort5551:
 		opt.pixFormat = gl.UNSIGNED_SHORT_5_5_5_1
 		opt.pixType = gl.BGRA
-		break
 	case UnsignedShort565:
 		opt.pixFormat = gl.UNSIGNED_SHORT_5_6_5
 		opt.pixType = gl.RGB
-		break
 	case UnsignedInt8888Rev:
 		opt.pixFormat = gl.UNSIGNED_INT_8_8_8_8_REV
 		opt.pixType = gl.BGRA
-		break
 	default:
 		log.Fatalf("[opengl] Error! Unknown pixel type %v", format)
 	}
