@@ -38,7 +38,7 @@ func (wc *WorkerClient) handleGetRoom(s *Server) cws.PacketHandler {
 	return func(resp cws.WSPacket) cws.WSPacket {
 		log.Println("Coordinator: Received a get room request")
 		log.Println("Result: ", s.roomToWorker[resp.Data])
-		return api.GetRoomPacket(s.roomToWorker[resp.Data])
+		return api.GetRoomPacket(s.roomToWorker[resp.Data].String())
 	}
 }
 
@@ -59,7 +59,7 @@ func (wc *WorkerClient) handleIceCandidate(s *Server) cws.PacketHandler {
 		bc, ok := s.browserClients[resp.SessionID]
 		if ok {
 			// Remove SessionID while sending back to browser
-			resp.SessionID = ""
+			resp.SessionID = [16]byte{}
 			bc.Send(resp, nil)
 		} else {
 			wc.Println("Error: unknown SessionID:", resp.SessionID)

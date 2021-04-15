@@ -275,7 +275,11 @@ func (r *Room) startWebRTCSession(peerconnection *webrtc.WebRTC) {
 
 		if peerconnection.IsConnected() {
 			select {
-			case r.inputChannel <- nanoarch.InputEvent{RawState: input, PlayerIdx: peerconnection.GameMeta.PlayerIndex, ConnID: peerconnection.ID}:
+			case r.inputChannel <- nanoarch.InputEvent{
+				RawState:  input,
+				PlayerIdx: peerconnection.GameMeta.PlayerIndex,
+				ConnID:    peerconnection.ID,
+			}:
 			default:
 			}
 		}

@@ -13,6 +13,7 @@ import (
 	"github.com/giongto35/cloud-game/v2/pkg/emulator/libretro/manager/remotehttp"
 	"github.com/giongto35/cloud-game/v2/pkg/environment"
 	"github.com/giongto35/cloud-game/v2/pkg/games"
+	"github.com/giongto35/cloud-game/v2/pkg/network"
 	"github.com/giongto35/cloud-game/v2/pkg/webrtc"
 	storage "github.com/giongto35/cloud-game/v2/pkg/worker/cloud-storage"
 	"github.com/giongto35/cloud-game/v2/pkg/worker/room"
@@ -32,7 +33,7 @@ type Handler struct {
 	// onlineStorage is client accessing to online storage (GCP)
 	onlineStorage *storage.Client
 	// sessions handles all sessions server is handler (key is sessionID)
-	sessions map[string]*Session
+	sessions map[network.Uid]*Session
 
 	w *Worker
 }
@@ -46,7 +47,7 @@ func NewHandler(cfg worker.Config, wrk *Worker) *Handler {
 	onlineStorage := storage.NewInitClient()
 	return &Handler{
 		rooms:           map[string]*room.Room{},
-		sessions:        map[string]*Session{},
+		sessions:        map[network.Uid]*Session{},
 		coordinatorHost: cfg.Worker.Network.CoordinatorAddress,
 		cfg:             cfg,
 		onlineStorage:   onlineStorage,
@@ -164,7 +165,7 @@ func (h *Handler) getRoom(roomID string) (r *room.Room) {
 }
 
 // getRoom returns session from sessionID
-func (h *Handler) getSession(sessionID string) *Session {
+func (h *Handler) getSession(sessionID network.Uid) *Session {
 	session, ok := h.sessions[sessionID]
 	if !ok {
 		return nil

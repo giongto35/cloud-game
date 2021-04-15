@@ -110,7 +110,7 @@ func (h *Handler) handleIceCandidate() cws.PacketHandler {
 
 			err := peerconnection.AddCandidate(resp.Data)
 			if err != nil {
-				log.Println("Error: Cannot add IceCandidate of client: " + resp.SessionID)
+				log.Printf("Error: Cannot add IceCandidate of client: %s", resp.SessionID)
 			}
 		} else {
 			log.Printf("Error: No session for ID: %s\n", resp.SessionID)

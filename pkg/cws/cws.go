@@ -7,19 +7,19 @@ import (
 	"sync"
 	"time"
 
-	"github.com/gofrs/uuid"
+	"github.com/giongto35/cloud-game/v2/pkg/network"
 	"github.com/gorilla/websocket"
 )
 
 type (
 	Client struct {
-		id string
+		id network.Uid
 
 		conn *websocket.Conn
 
 		sendLock sync.Mutex
 		// sendCallback is callback based on packetID
-		sendCallback     map[string]func(req WSPacket)
+		sendCallback     map[network.Uid]func(req WSPacket)
 		sendCallbackLock sync.Mutex
 		// recvCallback is callback when receive based on ID of the packet
 		recvCallback map[string]func(req WSPacket)
@@ -35,9 +35,9 @@ type (
 		RoomID      string `json:"room_id"`
 		PlayerIndex int    `json:"player_index"`
 
-		PacketID string `json:"packet_id"`
+		PacketID network.Uid `json:"packet_id"`
 		// Globally ID of a browser session
-		SessionID string `json:"session_id"`
+		SessionID network.Uid `json:"session_id"`
 	}
 
 	PacketHandler func(resp WSPacket) (req WSPacket)
@@ -51,16 +51,12 @@ var (
 const WSWait = 20 * time.Second
 
 func NewClient(conn *websocket.Conn) *Client {
-	id := uuid.Must(uuid.NewV4()).String()
-	sendCallback := map[string]func(WSPacket){}
-	recvCallback := map[string]func(WSPacket){}
-
 	return &Client{
-		id:   id,
+		id:   network.NewUid(),
 		conn: conn,
 
-		sendCallback: sendCallback,
-		recvCallback: recvCallback,
+		sendCallback: map[network.Uid]func(WSPacket){},
+		recvCallback: map[string]func(WSPacket){},
 
 		Done: make(chan struct{}),
 	}
@@ -68,7 +64,7 @@ func NewClient(conn *websocket.Conn) *Client {
 
 // Send sends a packet and trigger callback when the packet comes back
 func (c *Client) Send(request WSPacket, callback func(response WSPacket)) {
-	request.PacketID = uuid.Must(uuid.NewV4()).String()
+	request.PacketID = network.NewUid()
 	data, err := json.Marshal(request)
 	if err != nil {
 		return

@@ -16,8 +16,8 @@ import (
 	"github.com/giongto35/cloud-game/v2/pkg/environment"
 	"github.com/giongto35/cloud-game/v2/pkg/games"
 	"github.com/giongto35/cloud-game/v2/pkg/ice"
+	"github.com/giongto35/cloud-game/v2/pkg/network"
 	"github.com/giongto35/cloud-game/v2/pkg/util"
-	"github.com/gofrs/uuid"
 	"github.com/gorilla/websocket"
 )
 
@@ -26,11 +26,11 @@ type Server struct {
 	// games library
 	library games.GameLibrary
 	// roomToWorker map roomID to workerID
-	roomToWorker map[string]string
+	roomToWorker map[string]network.Uid
 	// workerClients are the map workerID to worker Client
-	workerClients map[string]*WorkerClient
+	workerClients map[network.Uid]*WorkerClient
 	// browserClients are the map sessionID to browser Client
-	browserClients map[string]*BrowserClient
+	browserClients map[network.Uid]*BrowserClient
 }
 
 const pingServerTemp = "https://%s.%s/echo"
@@ -43,11 +43,11 @@ func NewServer(cfg coordinator.Config, library games.GameLibrary) *Server {
 		cfg:     cfg,
 		library: library,
 		// Mapping roomID to server
-		roomToWorker: map[string]string{},
+		roomToWorker: map[string]network.Uid{},
 		// Mapping workerID to worker
-		workerClients: map[string]*WorkerClient{},
+		workerClients: map[network.Uid]*WorkerClient{},
 		// Mapping sessionID to browser
-		browserClients: map[string]*BrowserClient{},
+		browserClients: map[network.Uid]*BrowserClient{},
 	}
 }
 
@@ -100,14 +100,7 @@ func (o *Server) WSO(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Generate workerID
-	var workerID string
-	for {
-		workerID = uuid.Must(uuid.NewV4()).String()
-		// check duplicate
-		if _, ok := o.workerClients[workerID]; !ok {
-			break
-		}
-	}
+	workerID := network.NewUid()
 
 	// Create a workerClient instance
 	wc := NewWorkerClient(c, workerID)
@@ -173,15 +166,7 @@ func (o *Server) WS(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Generate sessionID for browserClient
-	var sessionID string
-	for {
-		sessionID = uuid.Must(uuid.NewV4()).String()
-		// check duplicate
-		if _, ok := o.browserClients[sessionID]; !ok {
-			break
-		}
-	}
+	sessionID := network.NewUid()
 
 	// Create browserClient instance
 	bc := NewBrowserClient(c, sessionID)
@@ -276,14 +261,13 @@ func (o *Server) getBestWorkerClient(client *BrowserClient, zone string) (*Worke
 }
 
 // getAvailableWorkers returns the list of available worker
-func (o *Server) getAvailableWorkers() map[string]*WorkerClient {
-	workerClients := map[string]*WorkerClient{}
+func (o *Server) getAvailableWorkers() map[network.Uid]*WorkerClient {
+	workerClients := map[network.Uid]*WorkerClient{}
 	for k, w := range o.workerClients {
 		if w.IsAvailable {
 			workerClients[k] = w
 		}
 	}
-
 	return workerClients
 }
 
@@ -300,17 +284,17 @@ func (o *Server) getWorkerFromAddress(address string) *WorkerClient {
 
 // findBestServerFromBrowser returns the best server for a session
 // All workers addresses are sent to user and user will ping to get latency
-func (o *Server) findBestServerFromBrowser(workerClients map[string]*WorkerClient, client *BrowserClient, zone string) (string, error) {
+func (o *Server) findBestServerFromBrowser(workerClients map[network.Uid]*WorkerClient, client *BrowserClient, zone string) (network.Uid, error) {
 	// TODO: Find best Server by latency, currently return by ping
 	if len(workerClients) == 0 {
-		return "", errors.New("no server found")
+		return [16]byte{}, errors.New("no server found")
 	}
 
 	latencies := o.getLatencyMapFromBrowser(workerClients, client)
 	client.Println("Latency map", latencies)
 
 	if len(latencies) == 0 {
-		return "", errors.New("no server found")
+		return [16]byte{}, errors.New("no server found")
 	}
 
 	var bestWorker *WorkerClient
@@ -329,11 +313,15 @@ func (o *Server) findBestServerFromBrowser(workerClients map[string]*WorkerClien
 		}
 	}
 
+	if bestWorker == nil {
+		return [16]byte{}, errors.New("no server found")
+	}
+
 	return bestWorker.WorkerID, nil
 }
 
 // getLatencyMapFromBrowser get all latencies from worker to user
-func (o *Server) getLatencyMapFromBrowser(workerClients map[string]*WorkerClient, client *BrowserClient) map[*WorkerClient]int64 {
+func (o *Server) getLatencyMapFromBrowser(workerClients map[network.Uid]*WorkerClient, client *BrowserClient) map[*WorkerClient]int64 {
 	var workersList []*WorkerClient
 	var addressList []string
 	uniqueAddresses := map[string]bool{}
@@ -371,7 +359,7 @@ func (o *Server) getLatencyMapFromBrowser(workerClients map[string]*WorkerClient
 }
 
 // cleanBrowser is called when a browser is disconnected
-func (o *Server) cleanBrowser(bc *BrowserClient, sessionID string) {
+func (o *Server) cleanBrowser(bc *BrowserClient, sessionID network.Uid) {
 	bc.Println("Disconnect from coordinator")
 	delete(o.browserClients, sessionID)
 	bc.Close()
@@ -379,7 +367,7 @@ func (o *Server) cleanBrowser(bc *BrowserClient, sessionID string) {
 
 // cleanWorker is called when a worker is disconnected
 // connection from worker to coordinator is also closed
-func (o *Server) cleanWorker(wc *WorkerClient, workerID string) {
+func (o *Server) cleanWorker(wc *WorkerClient, workerID network.Uid) {
 	wc.Println("Unregister worker from coordinator")
 	// Remove workerID from workerClients
 	delete(o.workerClients, workerID)

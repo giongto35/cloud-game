@@ -11,8 +11,8 @@ import (
 
 	"github.com/giongto35/cloud-game/v2/pkg/codec"
 	webrtcConfig "github.com/giongto35/cloud-game/v2/pkg/config/webrtc"
+	"github.com/giongto35/cloud-game/v2/pkg/network"
 	itc "github.com/giongto35/cloud-game/v2/pkg/webrtc/interceptor"
-	"github.com/gofrs/uuid"
 	"github.com/pion/interceptor"
 	"github.com/pion/webrtc/v3"
 	"github.com/pion/webrtc/v3/pkg/media"
@@ -83,7 +83,7 @@ func Decode(in string, obj interface{}) error {
 // NewWebRTC create
 func NewWebRTC() *WebRTC {
 	w := &WebRTC{
-		ID: uuid.Must(uuid.NewV4()).String(),
+		ID: network.NewUid().String(),
 
 		ImageChannel: make(chan WebFrame, 30),
 		AudioChannel: make(chan []byte, 1),
