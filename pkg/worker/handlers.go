@@ -225,5 +225,6 @@ func createOfflineStorage(path string) {
 
 func echo(w http.ResponseWriter, _ *http.Request) {
 	w.Header().Set("Access-Control-Allow-Origin", "*")
-	log.Println(w, "echo")
+	// hello
+	_, _ = w.Write([]byte{0x65, 0x63, 0x68, 0x6f})
 }
