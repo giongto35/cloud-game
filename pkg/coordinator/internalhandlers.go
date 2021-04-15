@@ -55,14 +55,14 @@ func (wc *WorkerClient) handleCloseRoom(s *Server) cws.PacketHandler {
 // handleIceCandidate passes an ICE candidate (WebRTC) to the browser.
 func (wc *WorkerClient) handleIceCandidate(s *Server) cws.PacketHandler {
 	return func(resp cws.WSPacket) cws.WSPacket {
-		wc.Println("Received IceCandidate from worker -> relay to browser")
+		wc.Println("relay IceCandidate to useragent")
 		bc, ok := s.browserClients[resp.SessionID]
 		if ok {
 			// Remove SessionID while sending back to browser
 			resp.SessionID = [16]byte{}
 			bc.Send(resp, nil)
 		} else {
-			wc.Println("Error: unknown SessionID:", resp.SessionID)
+			wc.Println("error: unknown SessionID:", resp.SessionID)
 		}
 		return cws.EmptyPacket
 	}

@@ -55,6 +55,10 @@ worker:
   network:
     # a coordinator address to connect to
     coordinatorAddress: localhost:8000
+    # where to connect
+    endpoint: /wso
+    # make coordinator connection secure (wss)
+    secure: false
     # ISO Alpha-2 country code to group workers by zones
     zone:
   monitoring:

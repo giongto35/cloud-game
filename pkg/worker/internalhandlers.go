@@ -264,7 +264,7 @@ func (h *Handler) startGameHandler(game games.GameMetadata, existedRoomID string
 	if room == nil {
 		log.Println("Got Room from local ", room, " ID: ", existedRoomID)
 		// Create new room and update player index
-		room = h.createNewRoom(game, existedRoomID)
+		room = h.createRoom(existedRoomID, game)
 		room.UpdatePlayerIndex(peerconnection, playerIndex)
 
 		// Wait for done signal from room
