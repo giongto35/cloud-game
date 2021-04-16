@@ -100,7 +100,7 @@ func (w *WebRTC) WithConfig(conf webrtcConfig.Config) *WebRTC {
 }
 
 // StartClient start webrtc
-func (w *WebRTC) StartClient(isMobile bool, iceCB OnIceCallback) (string, error) {
+func (w *WebRTC) StartClient(iceCB OnIceCallback) (string, error) {
 	defer func() {
 		if err := recover(); err != nil {
 			log.Println(err)

@@ -125,7 +125,6 @@ const socket = (() => {
         "id": "start",
         "data": JSON.stringify({
             "game_name": gameName,
-            "is_mobile": isMobile
         }),
         "room_id": roomId != null ? roomId : '',
         "player_index": playerIndex

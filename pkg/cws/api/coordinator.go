@@ -28,7 +28,6 @@ const (
 
 type GameStartRequest struct {
 	GameName string `json:"game_name"`
-	IsMobile bool   `json:"is_mobile"`
 }
 
 func (packet *GameStartRequest) From(data string) error { return from(packet, data) }
