@@ -1,6 +1,8 @@
 package api
 
 import (
+	"strings"
+
 	"github.com/giongto35/cloud-game/v2/pkg/cws"
 	"github.com/giongto35/cloud-game/v2/pkg/network"
 )
@@ -12,6 +14,8 @@ const (
 	RegisterRoom  = "register_room"
 	Heartbeat     = "heartbeat"
 	IceCandidate  = "ice_candidate"
+	Init          = "init"
+	CheckLatency  = "checkLatency"
 
 	NoData = ""
 
@@ -45,6 +49,7 @@ func (packet *GameStartCall) To() (string, error)    { return to(packet) }
 //
 // *** packets ***
 //
+func InitPacket(data string) cws.WSPacket         { return cws.WSPacket{ID: Init, Data: data} }
 func ConfigPacket() cws.WSPacket                  { return cws.WSPacket{ID: ConfigRequest} }
 func RegisterRoomPacket(data string) cws.WSPacket { return cws.WSPacket{ID: RegisterRoom, Data: data} }
 func GetRoomPacket(data string) cws.WSPacket      { return cws.WSPacket{ID: GetRoom, Data: data} }
@@ -53,3 +58,6 @@ func IceCandidatePacket(data string, sessionId network.Uid) cws.WSPacket {
 	return cws.WSPacket{ID: IceCandidate, Data: data, SessionID: sessionId}
 }
 func OfferPacket(sdp string) cws.WSPacket { return cws.WSPacket{ID: "offer", Data: sdp} }
+func CheckLatencyPacket(addresses []string) cws.WSPacket {
+	return cws.WSPacket{ID: CheckLatency, Data: strings.Join(addresses, ",")}
+}
