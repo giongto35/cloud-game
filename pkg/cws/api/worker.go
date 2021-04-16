@@ -6,6 +6,7 @@ import (
 )
 
 const (
+	Start            = "start"
 	ServerId         = "server_id"
 	TerminateSession = "terminateSession"
 )
@@ -22,3 +23,4 @@ func ConfigRequestPacket(conf []byte) cws.WSPacket { return cws.WSPacket{Data: s
 func TerminateSessionPacket(sessionId network.Uid) cws.WSPacket {
 	return cws.WSPacket{ID: TerminateSession, SessionID: sessionId}
 }
+func StartPacket(room string) cws.WSPacket { return cws.WSPacket{ID: Start, RoomID: room} }

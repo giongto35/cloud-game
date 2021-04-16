@@ -17,6 +17,7 @@ const (
 
 	InitWebrtc = "init_webrtc"
 	Answer     = "answer"
+	Offer      = "offer"
 
 	GameStart        = "start"
 	GameQuit         = "quit"
@@ -51,3 +52,4 @@ func CloseRoomPacket(data string) cws.WSPacket    { return cws.WSPacket{ID: Clos
 func IceCandidatePacket(data string, sessionId network.Uid) cws.WSPacket {
 	return cws.WSPacket{ID: IceCandidate, Data: data, SessionID: sessionId}
 }
+func OfferPacket(sdp string) cws.WSPacket { return cws.WSPacket{ID: "offer", Data: sdp} }

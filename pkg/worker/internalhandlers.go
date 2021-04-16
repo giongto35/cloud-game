@@ -13,17 +13,17 @@ import (
 )
 
 func (h *Handler) handleServerId() cws.PacketHandler {
-	return func(resp cws.WSPacket) (req cws.WSPacket) {
+	return func(resp cws.WSPacket) cws.WSPacket {
 		log.Printf("[worker] new id: %s", resp.Data)
 		h.serverID = resp.Data
 		// unlock worker if it's locked
 		h.w.lock.Unlock()
-		return
+		return cws.EmptyPacket
 	}
 }
 
 func (h *Handler) handleTerminateSession() cws.PacketHandler {
-	return func(resp cws.WSPacket) (req cws.WSPacket) {
+	return func(resp cws.WSPacket) cws.WSPacket {
 		log.Println("Received a terminate session ", resp.SessionID)
 		session := h.getSession(resp.SessionID)
 		if session != nil {
@@ -33,45 +33,38 @@ func (h *Handler) handleTerminateSession() cws.PacketHandler {
 		} else {
 			log.Printf("Error: No session for ID: %s\n", resp.SessionID)
 		}
-
 		return cws.EmptyPacket
 	}
 }
 
 func (h *Handler) handleInitWebrtc() cws.PacketHandler {
-	return func(resp cws.WSPacket) (req cws.WSPacket) {
+	return func(resp cws.WSPacket) cws.WSPacket {
 		log.Println("Received a request to createOffer from browser via coordinator")
 
 		peerconnection := webrtc.NewWebRTC().WithConfig(
 			webrtcConfig.Config{Encoder: h.cfg.Encoder, Webrtc: h.cfg.Webrtc},
 		)
 
-		localSession, err := peerconnection.StartClient(
+		localSDP, err := peerconnection.StartClient(
 			// send back candidate string to browser
 			func(cd string) { h.oClient.Send(api.IceCandidatePacket(cd, resp.SessionID), nil) },
 		)
-
-		// localSession, err := peerconnection.StartClient(initPacket.IsMobile, iceCandidates[resp.SessionID])
-		// h.peerconnections[resp.SessionID] = peerconnection
-
-		// Create new sessions when we have new peerconnection initialized
-		session := &Session{
-			peerconnection: peerconnection,
-		}
-		h.sessions[resp.SessionID] = session
-		log.Println("Start peerconnection", resp.SessionID)
 
 		if err != nil {
 			log.Println("Error: Cannot create new webrtc session", err)
 			return cws.EmptyPacket
 		}
 
-		return cws.WSPacket{ID: "offer", Data: localSession}
+		// Create new sessions when we have new peerconnection initialized
+		h.sessions[resp.SessionID] = &Session{peerconnection: peerconnection}
+		log.Println("Start peerconnection", resp.SessionID)
+
+		return api.OfferPacket(localSDP)
 	}
 }
 
 func (h *Handler) handleAnswer() cws.PacketHandler {
-	return func(resp cws.WSPacket) (req cws.WSPacket) {
+	return func(resp cws.WSPacket) cws.WSPacket {
 		log.Println("Received answer SDP from browser")
 		session := h.getSession(resp.SessionID)
 		if session != nil {
@@ -88,7 +81,7 @@ func (h *Handler) handleAnswer() cws.PacketHandler {
 }
 
 func (h *Handler) handleIceCandidate() cws.PacketHandler {
-	return func(resp cws.WSPacket) (req cws.WSPacket) {
+	return func(resp cws.WSPacket) cws.WSPacket {
 		log.Println("Received remote Ice Candidate from browser")
 		session := h.getSession(resp.SessionID)
 
@@ -102,13 +95,12 @@ func (h *Handler) handleIceCandidate() cws.PacketHandler {
 		} else {
 			log.Printf("Error: No session for ID: %s\n", resp.SessionID)
 		}
-
 		return cws.EmptyPacket
 	}
 }
 
 func (h *Handler) handleGameStart() cws.PacketHandler {
-	return func(resp cws.WSPacket) (req cws.WSPacket) {
+	return func(resp cws.WSPacket) cws.WSPacket {
 		log.Println("Received a start request from coordinator")
 		session := h.getSession(resp.SessionID)
 		if session == nil {
@@ -128,30 +120,28 @@ func (h *Handler) handleGameStart() cws.PacketHandler {
 			Path: startPacket.Path,
 		}
 
-		room := h.startGameHandler(gameMeta, resp.RoomID, resp.PlayerIndex, peerconnection)
-		session.RoomID = room.ID
+		gameRoom := h.startGameHandler(gameMeta, resp.RoomID, resp.PlayerIndex, peerconnection)
+		session.RoomID = gameRoom.ID
 		// TODO: can data race
-		h.rooms[room.ID] = room
+		h.rooms[gameRoom.ID] = gameRoom
 
-		return cws.WSPacket{ID: "start", RoomID: room.ID}
+		return api.StartPacket(gameRoom.ID)
 	}
 }
 
 func (h *Handler) handleGameQuit() cws.PacketHandler {
-	return func(resp cws.WSPacket) (req cws.WSPacket) {
+	return func(resp cws.WSPacket) cws.WSPacket {
 		log.Println("Received a quit request from coordinator")
 		session := h.getSession(resp.SessionID)
 
 		if session != nil {
-			room := h.getRoom(session.RoomID)
 			// Defensive coding, check if the peerconnection is in room
-			if room.IsPCInRoom(session.peerconnection) {
+			if h.getRoom(session.RoomID).IsPCInRoom(session.peerconnection) {
 				h.detachPeerConn(session.peerconnection)
 			}
 		} else {
 			log.Printf("Error: No session for ID: %s\n", resp.SessionID)
 		}
-
 		return cws.EmptyPacket
 	}
 }
@@ -163,11 +153,11 @@ func (h *Handler) handleGameSave() cws.PacketHandler {
 		req.ID = api.GameSave
 		req.Data = "ok"
 		if resp.RoomID != "" {
-			room := h.getRoom(resp.RoomID)
-			if room == nil {
+			gameRoom := h.getRoom(resp.RoomID)
+			if gameRoom == nil {
 				return
 			}
-			err := room.SaveGame()
+			err := gameRoom.SaveGame()
 			if err != nil {
 				log.Println("[!] Cannot save game state: ", err)
 				req.Data = "error"
@@ -175,7 +165,6 @@ func (h *Handler) handleGameSave() cws.PacketHandler {
 		} else {
 			req.Data = "error"
 		}
-
 		return req
 	}
 }
@@ -187,8 +176,7 @@ func (h *Handler) handleGameLoad() cws.PacketHandler {
 		req.ID = api.GameLoad
 		req.Data = "ok"
 		if resp.RoomID != "" {
-			room := h.getRoom(resp.RoomID)
-			err := room.LoadGame()
+			err := h.getRoom(resp.RoomID).LoadGame()
 			if err != nil {
 				log.Println("[!] Cannot load game state: ", err)
 				req.Data = "error"
@@ -196,7 +184,6 @@ func (h *Handler) handleGameLoad() cws.PacketHandler {
 		} else {
 			req.Data = "error"
 		}
-
 		return req
 	}
 }
@@ -206,17 +193,16 @@ func (h *Handler) handleGamePlayerSelect() cws.PacketHandler {
 		log.Println("Received an update player index event from coordinator")
 		req.ID = api.GamePlayerSelect
 
-		room := h.getRoom(resp.RoomID)
 		session := h.getSession(resp.SessionID)
 		idx, err := strconv.Atoi(resp.Data)
+		gameRoom := h.getRoom(resp.RoomID)
 
-		if room != nil && session != nil && err == nil {
-			room.UpdatePlayerIndex(session.peerconnection, idx)
+		if gameRoom != nil && session != nil && err == nil {
+			gameRoom.UpdatePlayerIndex(session.peerconnection, idx)
 			req.Data = strconv.Itoa(idx)
 		} else {
 			req.Data = "error"
 		}
-
 		return req
 	}
 }
@@ -227,8 +213,7 @@ func (h *Handler) handleGameMultitap() cws.PacketHandler {
 		req.ID = api.GameMultitap
 		req.Data = "ok"
 		if resp.RoomID != "" {
-			room := h.getRoom(resp.RoomID)
-			err := room.ToggleMultitap()
+			err := h.getRoom(resp.RoomID).ToggleMultitap()
 			if err != nil {
 				log.Println("[!] Could not toggle multitap state: ", err)
 				req.Data = "error"
@@ -236,7 +221,6 @@ func (h *Handler) handleGameMultitap() cws.PacketHandler {
 		} else {
 			req.Data = "error"
 		}
-
 		return req
 	}
 }
@@ -246,34 +230,33 @@ func (h *Handler) startGameHandler(game games.GameMetadata, existedRoomID string
 	log.Printf("Loading game: %v\n", game.Name)
 	// If we are connecting to coordinator, request corresponding serverID based on roomID
 	// TODO: check if existedRoomID is in the current server
-	room := h.getRoom(existedRoomID)
+	gameRoom := h.getRoom(existedRoomID)
 	// If room is not running
-	if room == nil {
-		log.Println("Got Room from local ", room, " ID: ", existedRoomID)
+	if gameRoom == nil {
+		log.Println("Got Room from local ", gameRoom, " ID: ", existedRoomID)
 		// Create new room and update player index
-		room = h.createRoom(existedRoomID, game)
-		room.UpdatePlayerIndex(peerconnection, playerIndex)
+		gameRoom = h.createRoom(existedRoomID, game)
+		gameRoom.UpdatePlayerIndex(peerconnection, playerIndex)
 
 		// Wait for done signal from room
 		go func() {
-			<-room.Done
-			h.detachRoom(room.ID)
+			<-gameRoom.Done
+			h.detachRoom(gameRoom.ID)
 			// send signal to coordinator that the room is closed, coordinator will remove that room
-			h.oClient.Send(api.CloseRoomPacket(room.ID), nil)
+			h.oClient.Send(api.CloseRoomPacket(gameRoom.ID), nil)
 		}()
 	}
 
 	// Attach peerconnection to room. If PC is already in room, don't detach
-	log.Println("Is PC in room", room.IsPCInRoom(peerconnection))
-	if !room.IsPCInRoom(peerconnection) {
+	log.Println("Is PC in room", gameRoom.IsPCInRoom(peerconnection))
+	if !gameRoom.IsPCInRoom(peerconnection) {
 		h.detachPeerConn(peerconnection)
-		room.AddConnectionToRoom(peerconnection)
+		gameRoom.AddConnectionToRoom(peerconnection)
 	}
 
 	// Register room to coordinator if we are connecting to coordinator
-	if room != nil && h.oClient != nil {
-		h.oClient.Send(api.RegisterRoomPacket(room.ID), nil)
+	if gameRoom != nil && h.oClient != nil {
+		h.oClient.Send(api.RegisterRoomPacket(gameRoom.ID), nil)
 	}
-
-	return room
+	return gameRoom
 }
