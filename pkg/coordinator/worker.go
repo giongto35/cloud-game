@@ -31,6 +31,8 @@ func NewWorkerClient(c *websocket.Conn, workerID network.Uid) *WorkerClient {
 	}
 }
 
+func (wc *WorkerClient) makeAvailable(avail bool) { wc.IsAvailable = avail }
+
 func (wc *WorkerClient) Printf(format string, args ...interface{}) {
 	log.Printf(fmt.Sprintf("Worker [%s] %s", wc.WorkerID.Short(), format), args...)
 }

@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/giongto35/cloud-game/v2/pkg/cws"
 	"html/template"
 	"log"
 	"math"
@@ -16,8 +17,8 @@ import (
 	"github.com/giongto35/cloud-game/v2/pkg/games"
 	"github.com/giongto35/cloud-game/v2/pkg/ice"
 	"github.com/giongto35/cloud-game/v2/pkg/network"
+	ws "github.com/giongto35/cloud-game/v2/pkg/network/websocket"
 	"github.com/giongto35/cloud-game/v2/pkg/util"
-	"github.com/gorilla/websocket"
 )
 
 type Server struct {
@@ -35,8 +36,6 @@ type Server struct {
 const pingServerTemp = "https://%s.%s/echo"
 const devPingServer = "http://localhost:9000/echo"
 
-var upgrader = websocket.Upgrader{}
-
 func NewServer(cfg coordinator.Config, library games.GameLibrary) *Server {
 	return &Server{
 		cfg:     cfg,
@@ -48,6 +47,15 @@ func NewServer(cfg coordinator.Config, library games.GameLibrary) *Server {
 		// Mapping sessionID to browser
 		browserClients: map[network.Uid]*BrowserClient{},
 	}
+}
+
+func (c *Server) RelayPacket(u *BrowserClient, packet cws.WSPacket, req func(w *WorkerClient, p cws.WSPacket) cws.WSPacket) cws.WSPacket {
+	packet.SessionID = u.SessionID
+	wc, ok := c.workerClients[u.Worker.WorkerID]
+	if !ok {
+		return cws.EmptyPacket
+	}
+	return req(wc, packet)
 }
 
 func index(conf coordinator.Config) http.Handler {
@@ -88,13 +96,11 @@ func (c *Server) getPingServer(zone string) string {
 
 // WSO handles all connections from a new worker to coordinator
 func (c *Server) WSO(w http.ResponseWriter, r *http.Request) {
-	log.Println("Coordinator: A worker is connecting...")
+	log.Printf("New worker connection...")
 
-	// be aware of ReadBufferSize, WriteBufferSize (default 4096)
-	// https://pkg.go.dev/github.com/gorilla/websocket?tab=doc#Upgrader
-	conn, err := upgrader.Upgrade(w, r, nil)
+	conn, err := ws.Upgrade(w, r)
 	if err != nil {
-		log.Println("Coordinator: [!] WS upgrade:", err)
+		log.Printf("error: socket upgrade failed because of %v", err)
 		return
 	}
 
@@ -150,32 +156,25 @@ func (c *Server) WSO(w http.ResponseWriter, r *http.Request) {
 
 // WS handles all connections from user/frontend to coordinator
 func (c *Server) WS(w http.ResponseWriter, r *http.Request) {
-	log.Println("Coordinator: A user is connecting...")
 	defer func() {
 		if r := recover(); r != nil {
 			log.Println("Warn: Something wrong. Recovered in ", r)
 		}
 	}()
 
-	// be aware of ReadBufferSize, WriteBufferSize (default 4096)
-	// https://pkg.go.dev/github.com/gorilla/websocket?tab=doc#Upgrader
-	conn, err := upgrader.Upgrade(w, r, nil)
+	conn, err := ws.Upgrade(w, r)
 	if err != nil {
-		log.Println("Coordinator: [!] WS upgrade:", err)
+		log.Printf("error: socket upgrade failed because of %v", err)
 		return
 	}
 
-	sessionID := network.NewUid()
-
-	// Create browserClient instance
-	bc := NewBrowserClient(conn, sessionID)
-	bc.Println("Generated worker ID")
+	user := NewBrowserClient(conn, network.NewUid())
 
 	// Run browser listener first (to capture ping)
-	go bc.Listen()
+	go user.Listen()
 
 	/* Create a session - mapping browserClient with workerClient */
-	var wc *WorkerClient
+	var worker *WorkerClient
 
 	// get roomID if it is embeded in request. Server will pair the frontend with the server running the room. It only happens when we are trying to access a running room over share link.
 	// TODO: Update link to the wiki
@@ -184,53 +183,47 @@ func (c *Server) WS(w http.ResponseWriter, r *http.Request) {
 	// if there is no zone param, we can pic
 	userZone := r.URL.Query().Get("zone")
 
-	bc.Printf("Get Room %s Zone %s From URL %v", roomID, userZone, r.URL)
+	user.Printf("Get Room %s Zone %s From URL %v", roomID, userZone, r.URL)
 
 	if roomID != "" {
-		bc.Printf("Detected roomID %v from URL", roomID)
+		user.Printf("Detected roomID %v from URL", roomID)
 		if workerID, ok := c.roomToWorker[roomID]; ok {
-			wc = c.workerClients[workerID]
-			if userZone != "" && wc.Zone != userZone {
+			worker = c.workerClients[workerID]
+			if userZone != "" && worker.Zone != userZone {
 				// if there is zone param, we need to ensure ther worker in that zone
 				// if not we consider the room is missing
-				wc = nil
+				worker = nil
 			} else {
-				bc.Printf("Found running server with id=%v client=%v", workerID, wc)
+				user.Printf("Found running server with id=%v client=%v", workerID, worker)
 			}
 		}
 	}
 
 	// If there is no existing server to connect to, we find the best possible worker for the frontend
-	if wc == nil {
+	if worker == nil {
 		// Get best server for frontend to connect to
-		wc, err = c.getBestWorkerClient(bc, userZone)
+		worker, err = c.getBestWorkerClient(user, userZone)
 		if err != nil {
 			return
 		}
 	}
 
-	// Assign available worker to browserClient
-	bc.WorkerID = wc.WorkerID
-	wc.IsAvailable = false
+	user.AssignWorker(worker)
 
-	// Everything is cool
 	// Attach to Server instance with sessionID
-	c.browserClients[sessionID] = bc
-	defer c.cleanBrowser(bc, sessionID)
-
+	c.browserClients[user.SessionID] = user
+	defer c.cleanBrowser(user)
 	// Routing browserClient message
-	c.useragentRoutes(bc)
+	c.useragentRoutes(user)
 
-	bc.Send(api.InitPacket(createInitPackage(wc.StunTurnServer, c.library.GetAll())), nil)
+	user.SendPacket(api.InitPacket(createInitPackage(worker.StunTurnServer, c.library.GetAll())))
 
 	// If peerconnection is done (client.Done is signalled), we close peerconnection
-	<-bc.Done
+	<-user.Done
 
 	// Notify worker to clean session
-	wc.Send(api.TerminateSessionPacket(sessionID), nil)
-
-	// WorkerClient become available again
-	wc.IsAvailable = true
+	worker.SendPacket(api.TerminateSessionPacket(user.SessionID))
+	user.RetainWorker()
 }
 
 func (c *Server) getBestWorkerClient(client *BrowserClient, zone string) (*WorkerClient, error) {
@@ -352,9 +345,9 @@ func (c *Server) getLatencyMapFromBrowser(workerClients map[network.Uid]*WorkerC
 }
 
 // cleanBrowser is called when a browser is disconnected
-func (c *Server) cleanBrowser(bc *BrowserClient, sessionID network.Uid) {
+func (c *Server) cleanBrowser(bc *BrowserClient) {
 	bc.Println("Disconnect from coordinator")
-	delete(c.browserClients, sessionID)
+	delete(c.browserClients, bc.SessionID)
 	bc.Close()
 }
 

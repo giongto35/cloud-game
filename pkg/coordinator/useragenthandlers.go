@@ -15,167 +15,118 @@ func (bc *BrowserClient) handleHeartbeat() cws.PacketHandler {
 }
 
 func (bc *BrowserClient) handleInitWebrtc(o *Server) cws.PacketHandler {
-	return func(resp cws.WSPacket) (req cws.WSPacket) {
+	return func(resp cws.WSPacket) cws.WSPacket {
 		// initWebrtc now only sends signal to worker, asks it to createOffer
-		bc.Printf("Received init_webrtc request -> relay to worker: %s", bc.WorkerID)
+		bc.Printf("Received init_webrtc request -> relay to worker: %s", bc.Worker)
 		// relay request to target worker
 		// worker creates a PeerConnection, and createOffer
 		// send SDP back to browser
-		resp.SessionID = bc.SessionID
-		wc, ok := o.workerClients[bc.WorkerID]
-		if !ok {
-			return cws.EmptyPacket
-		}
-		sdp := wc.SyncSend(resp)
-		bc.Println("Received SDP from worker -> sending back to browser")
-		return sdp
+		return o.RelayPacket(bc, resp, func(w *WorkerClient, p cws.WSPacket) cws.WSPacket {
+			defer bc.Println("Received SDP from worker -> sending back to browser")
+			return w.SyncSend(p)
+		})
 	}
 }
 
 func (bc *BrowserClient) handleAnswer(o *Server) cws.PacketHandler {
 	return func(resp cws.WSPacket) (req cws.WSPacket) {
 		// contains SDP of browser createAnswer
-		// forward to worker
 		bc.Println("Received browser answered SDP -> relay to worker")
-		resp.SessionID = bc.SessionID
-		wc, ok := o.workerClients[bc.WorkerID]
-		if !ok {
+		return o.RelayPacket(bc, resp, func(w *WorkerClient, p cws.WSPacket) cws.WSPacket {
+			w.SendPacket(p)
 			return cws.EmptyPacket
-		}
-		wc.Send(resp, nil)
-		// no need to response
-		return cws.EmptyPacket
+		})
 	}
 }
 
 func (bc *BrowserClient) handleIceCandidate(o *Server) cws.PacketHandler {
 	return func(resp cws.WSPacket) (req cws.WSPacket) {
 		// contains ICE candidate of browser
-		// forward to worker
 		bc.Println("Received IceCandidate from browser -> relay to worker")
-		resp.SessionID = bc.SessionID
-		wc, ok := o.workerClients[bc.WorkerID]
-		if !ok {
+		return o.RelayPacket(bc, resp, func(w *WorkerClient, p cws.WSPacket) cws.WSPacket {
+			w.SendPacket(p)
 			return cws.EmptyPacket
-		}
-		wc.Send(resp, nil)
-		return cws.EmptyPacket
+		})
 	}
 }
 
 func (bc *BrowserClient) handleGameStart(o *Server) cws.PacketHandler {
 	return func(resp cws.WSPacket) (req cws.WSPacket) {
 		bc.Println("Received start request from a browser -> relay to worker")
-
 		// TODO: Async
-		resp.SessionID = bc.SessionID
-		wc, ok := o.workerClients[bc.WorkerID]
-		if !ok {
-			return cws.EmptyPacket
-		}
+		return o.RelayPacket(bc, resp, func(w *WorkerClient, p cws.WSPacket) cws.WSPacket {
+			// +injects game data into the original game request
+			gameStartCall, err := newGameStartCall(p.RoomID, p.Data, o.library)
+			if err != nil {
+				return cws.EmptyPacket
+			}
+			if packet, err := gameStartCall.To(); err != nil {
+				return cws.EmptyPacket
+			} else {
+				p.Data = packet
+			}
+			workerResp := w.SyncSend(p)
 
-		// +injects game data into the original game request
-		gameStartCall, err := newGameStartCall(resp.RoomID, resp.Data, o.library)
-		if err != nil {
-			return cws.EmptyPacket
-		}
-		if packet, err := gameStartCall.To(); err != nil {
-			return cws.EmptyPacket
-		} else {
-			resp.Data = packet
-		}
-		workerResp := wc.SyncSend(resp)
-
-		// Response from worker contains initialized roomID. Set roomID to the session
-		bc.RoomID = workerResp.RoomID
-		bc.Println("Received room response from browser: ", workerResp.RoomID)
-
-		return workerResp
+			// Response from worker contains initialized roomID. Set roomID to the session
+			bc.RoomID = workerResp.RoomID
+			bc.Println("Received room response from browser: ", workerResp.RoomID)
+			return workerResp
+		})
 	}
 }
 
 func (bc *BrowserClient) handleGameQuit(o *Server) cws.PacketHandler {
 	return func(resp cws.WSPacket) (req cws.WSPacket) {
 		bc.Println("Received quit request from a browser -> relay to worker")
-
 		// TODO: Async
-		resp.SessionID = bc.SessionID
-		wc, ok := o.workerClients[bc.WorkerID]
-		if !ok {
+		return o.RelayPacket(bc, resp, func(w *WorkerClient, p cws.WSPacket) cws.WSPacket {
+			w.SyncSend(p)
 			return cws.EmptyPacket
-		}
-		// Send but, waiting
-		wc.SyncSend(resp)
-
-		return cws.EmptyPacket
+		})
 	}
 }
 
 func (bc *BrowserClient) handleGameSave(o *Server) cws.PacketHandler {
 	return func(resp cws.WSPacket) (req cws.WSPacket) {
 		bc.Println("Received save request from a browser -> relay to worker")
-
 		// TODO: Async
-		resp.SessionID = bc.SessionID
-		resp.RoomID = bc.RoomID
-		wc, ok := o.workerClients[bc.WorkerID]
-		if !ok {
-			return cws.EmptyPacket
-		}
-		resp = wc.SyncSend(resp)
-
-		return resp
+		return o.RelayPacket(bc, resp, func(w *WorkerClient, p cws.WSPacket) cws.WSPacket {
+			p.RoomID = bc.RoomID
+			return w.SyncSend(p)
+		})
 	}
 }
 
 func (bc *BrowserClient) handleGameLoad(o *Server) cws.PacketHandler {
 	return func(resp cws.WSPacket) (req cws.WSPacket) {
 		bc.Println("Received load request from a browser -> relay to worker")
-
 		// TODO: Async
-		resp.SessionID = bc.SessionID
-		resp.RoomID = bc.RoomID
-		wc, ok := o.workerClients[bc.WorkerID]
-		if !ok {
-			return cws.EmptyPacket
-		}
-		resp = wc.SyncSend(resp)
-
-		return resp
+		return o.RelayPacket(bc, resp, func(w *WorkerClient, p cws.WSPacket) cws.WSPacket {
+			p.RoomID = bc.RoomID
+			return w.SyncSend(p)
+		})
 	}
 }
 
 func (bc *BrowserClient) handleGamePlayerSelect(o *Server) cws.PacketHandler {
 	return func(resp cws.WSPacket) (req cws.WSPacket) {
 		bc.Println("Received update player index request from a browser -> relay to worker")
-
 		// TODO: Async
-		resp.SessionID = bc.SessionID
-		resp.RoomID = bc.RoomID
-		wc, ok := o.workerClients[bc.WorkerID]
-		if !ok {
-			return cws.EmptyPacket
-		}
-		resp = wc.SyncSend(resp)
-
-		return resp
+		return o.RelayPacket(bc, resp, func(w *WorkerClient, p cws.WSPacket) cws.WSPacket {
+			p.RoomID = bc.RoomID
+			return w.SyncSend(p)
+		})
 	}
 }
 
 func (bc *BrowserClient) handleGameMultitap(o *Server) cws.PacketHandler {
 	return func(resp cws.WSPacket) (req cws.WSPacket) {
 		bc.Println("Received multitap request from a browser -> relay to worker")
-
 		// TODO: Async
-		resp.SessionID = bc.SessionID
-		resp.RoomID = bc.RoomID
-		wc, ok := o.workerClients[bc.WorkerID]
-		if !ok {
-			return cws.EmptyPacket
-		}
-		resp = wc.SyncSend(resp)
-
-		return resp
+		return o.RelayPacket(bc, resp, func(w *WorkerClient, p cws.WSPacket) cws.WSPacket {
+			p.RoomID = bc.RoomID
+			return w.SyncSend(p)
+		})
 	}
 }
 

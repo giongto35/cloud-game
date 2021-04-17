@@ -62,6 +62,10 @@ func NewClient(conn *websocket.Conn) *Client {
 	}
 }
 
+func (c *Client) SendPacket(request WSPacket) {
+	c.Send(request, nil)
+}
+
 // Send sends a packet and trigger callback when the packet comes back
 func (c *Client) Send(request WSPacket, callback func(response WSPacket)) {
 	request.PacketID = network.NewUid()
