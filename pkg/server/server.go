@@ -6,7 +6,7 @@ import (
 )
 
 type Server interface {
-	Run() error
+	Run()
 	Shutdown(ctx context.Context) error
 }
 
@@ -26,12 +26,7 @@ func (svs *Services) AddIf(condition bool, services ...Server) *Services {
 
 func (svs *Services) Start() {
 	for _, s := range svs.list {
-		s := s
-		go func() {
-			if err := s.Run(); err != nil {
-				log.Printf("error: failed to start service [%s] due to [%v]", s, err)
-			}
-		}()
+		go s.Run()
 	}
 }
 

@@ -31,13 +31,9 @@ func main() {
 	ctx, cancelCtx := context.WithCancel(context.Background())
 
 	glog.Infof("[coordinator] version: %v", Version)
-	glog.Infof("Initializing coordinator server")
 	glog.V(4).Infof("Coordinator configs %v", conf)
-	app := coordinator.New(ctx, conf)
-	if err := app.Run(); err != nil {
-		glog.Errorf("Failed to run coordinator server, reason %v", err)
-		os.Exit(1)
-	}
+	c := coordinator.New(ctx, conf)
+	c.Run()
 
 	signals := make(chan os.Signal, 1)
 	done := make(chan struct{}, 1)
@@ -51,6 +47,6 @@ func main() {
 	}()
 
 	<-done
-	app.Shutdown()
+	c.Shutdown()
 	cancelCtx()
 }
