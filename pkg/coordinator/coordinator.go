@@ -28,16 +28,10 @@ func New(ctx context.Context, conf coordinator.Config) *Coordinator {
 	}
 }
 
-func (c *Coordinator) Run() error {
-	go c.init()
-	c.services.Start()
-	return nil
-}
-
-func (c *Coordinator) init() {
+func (c *Coordinator) Run() {
 	conf := c.conf.Coordinator.Server
 
-	lib := getLibrary(&c.conf)
+	lib := c.getLibrary()
 	lib.Scan()
 
 	srv := NewServer(c.conf, lib)
@@ -46,7 +40,7 @@ func (c *Coordinator) init() {
 	if conf.Https {
 		address = conf.Tls.Address
 	}
-	httpx.NewServer(
+	go httpx.NewServer(
 		address,
 		func(_ *httpx.Server) http.Handler {
 			h := http.NewServeMux()
@@ -58,15 +52,19 @@ func (c *Coordinator) init() {
 		},
 		httpx.WithServerConfig(conf),
 	).Start()
+
+	c.services.Start()
 }
 
 func (c *Coordinator) Shutdown() { c.services.Shutdown(c.ctx) }
 
-// getLibrary initializes game library.
-func getLibrary(conf *coordinator.Config) games.GameLibrary {
-	libConf := conf.Coordinator.Library
+// !to rewrite
+// getLibrary scans files with explicit extensions or
+// the extensions specified in the emulator config.
+func (c *Coordinator) getLibrary() games.GameLibrary {
+	libConf := c.conf.Coordinator.Library
 	if len(libConf.Supported) == 0 {
-		libConf.Supported = conf.Emulator.GetSupportedExtensions()
+		libConf.Supported = c.conf.Emulator.GetSupportedExtensions()
 	}
 	return games.NewLibrary(libConf)
 }

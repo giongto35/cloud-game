@@ -30,10 +30,7 @@ func main() {
 
 	glog.V(4).Infof("Coordinator configs %v", conf)
 	c := coordinator.New(ctx, conf)
-	if err := c.Run(); err != nil {
-		glog.Errorf("Failed to run coordinator server, reason %v", err)
-		os.Exit(1)
-	}
+	c.Run()
 
 	signals := make(chan os.Signal, 1)
 	done := make(chan struct{}, 1)

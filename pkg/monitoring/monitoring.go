@@ -58,10 +58,9 @@ func New(conf monitoring.Config, tag string) *Monitoring {
 	return &Monitoring{conf: conf, tag: tag, server: serv}
 }
 
-func (m *Monitoring) Run() error {
+func (m *Monitoring) Run() {
 	log.Printf("[%v] Starting monitoring server at %v", m.tag, m.server.Addr)
 	m.server.Start()
-	return nil
 }
 
 func (m *Monitoring) Shutdown(ctx context.Context) error {
