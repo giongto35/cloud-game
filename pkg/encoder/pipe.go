@@ -46,7 +46,8 @@ func (vp *VideoPipe) Start() {
 
 	yuvProc := yuv.NewYuvImgProcessor(vp.w, vp.h)
 	for img := range vp.Input {
-		frame := vp.encoder.Encode(yuvProc.Process(img.Image).Get())
+		yCbCr := yuvProc.Process(img.Image).Get()
+		frame := vp.encoder.Encode(yCbCr)
 		if len(frame) > 0 {
 			vp.Output <- OutFrame{Data: frame, Timestamp: img.Timestamp}
 		}

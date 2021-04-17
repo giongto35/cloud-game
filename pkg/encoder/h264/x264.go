@@ -84,9 +84,6 @@ func NewEncoder(width, height int, options ...Option) (encoder *H264, err error)
 		width:      int32(width),
 	}
 
-	var picIn Picture
-	PictureInit(&picIn)
-
 	if encoder.ref = EncoderOpen(&param); encoder.ref == nil {
 		err = fmt.Errorf("x264: cannot open the encoder")
 		return
