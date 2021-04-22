@@ -356,7 +356,7 @@ func (r *Room) isRoomExisted() bool {
 	if err == nil {
 		return true
 	}
-	return isGameOnLocal(r.ID)
+	return isGameOnLocal(r.director.GetHashPath())
 }
 
 // SaveGame will save game to local and trigger a callback to store game on onlineStorage, so the game can be accessed later
