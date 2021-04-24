@@ -16,8 +16,8 @@ type User struct {
 	Worker *worker.WorkerClient
 }
 
-func New(conn *ipc.Client) *User {
-	return &User{
+func New(conn *ipc.Client) User {
+	return User{
 		Id:   network.NewUid(),
 		wire: conn,
 	}

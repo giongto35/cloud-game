@@ -28,7 +28,7 @@ type Hub struct {
 	library games.GameLibrary
 	crowd   Crowd
 	guild   Guild
-	rooms   map[string]*worker.WorkerClient
+	rooms   map[string]worker.WorkerClient
 }
 
 func NewHub(cfg coordinator.Config, library games.GameLibrary) *Hub {
@@ -37,7 +37,7 @@ func NewHub(cfg coordinator.Config, library games.GameLibrary) *Hub {
 		library: library,
 		crowd:   NewCrowd(),
 		guild:   NewGuild(),
-		rooms:   map[string]*worker.WorkerClient{},
+		rooms:   map[string]worker.WorkerClient{},
 	}
 }
 
@@ -173,7 +173,7 @@ func (h *Hub) handleNewWebsocketWorkerConnection(w http.ResponseWriter, r *http.
 
 // cleanWorker is called when a worker is disconnected
 // connection from worker to coordinator is also closed
-func (h *Hub) cleanWorker(worker *worker.WorkerClient) {
+func (h *Hub) cleanWorker(worker worker.WorkerClient) {
 	h.guild.remove(worker)
 	// Clean all rooms connecting to that server
 	for roomID, roomServer := range h.rooms {
@@ -185,11 +185,7 @@ func (h *Hub) cleanWorker(worker *worker.WorkerClient) {
 }
 
 // useragentRoutes adds all useragent (browser) request routes.
-func (h *Hub) useragentRoutes(user *user.User) {
-	if user == nil {
-		return
-	}
-
+func (h *Hub) useragentRoutes(user user.User) {
 	user.Handle(func(p ipc.Packet) {
 
 		switch p.T {
@@ -306,10 +302,7 @@ func (h *Hub) getGames() []string {
 }
 
 // workerRoutes adds all worker request routes.
-func (h *Hub) workerRoutes(wc *worker.WorkerClient) {
-	if wc == nil {
-		return
-	}
+func (h *Hub) workerRoutes(wc worker.WorkerClient) {
 	wc.Receive(api.Heartbeat, func(resp cws.WSPacket) (req cws.WSPacket) {
 		return resp
 	})

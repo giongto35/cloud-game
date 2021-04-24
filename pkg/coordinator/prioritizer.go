@@ -8,7 +8,7 @@ func (h *Hub) findWorkerByRoom(id string, region string) *worker.WorkerClient {
 	}
 	if w, ok := h.rooms[id]; ok {
 		if w.InRegion(region) {
-			return w
+			return &w
 		}
 		// if there is zone param, we need to ensure ther worker in that zone
 		// if not we consider the room is missing
@@ -23,14 +23,14 @@ func (h *Hub) findWorkerByIp(address string) *worker.WorkerClient {
 	return h.guild.findFreeByIp(address)
 }
 
-func (h *Hub) getAvailableWorkers(region string) []*worker.WorkerClient {
-	return h.guild.filter(func(w *worker.WorkerClient) bool { return w.IsFree && w.InRegion(region) })
+func (h *Hub) getAvailableWorkers(region string) []worker.WorkerClient {
+	return h.guild.filter(func(w worker.WorkerClient) bool { return w.IsFree && w.InRegion(region) })
 }
 
 func (h *Hub) findAnyFreeWorker(region string) *worker.WorkerClient {
 	workers := h.getAvailableWorkers(region)
 	if len(workers) > 0 {
-		return workers[0]
+		return &workers[0]
 	}
 	return nil
 }

@@ -23,8 +23,8 @@ type WorkerClient struct {
 
 // NewWorkerClient returns a client connecting to worker.
 // This connection exchanges information between workers and server.
-func NewWorkerClient(c *websocket.Conn, id network.Uid) *WorkerClient {
-	return &WorkerClient{
+func NewWorkerClient(c *websocket.Conn, id network.Uid) WorkerClient {
+	return WorkerClient{
 		Client: cws.NewClient(c),
 		Id:     id,
 		IsFree: true,
