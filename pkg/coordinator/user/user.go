@@ -1,39 +1,36 @@
-package coordinator
+package user
 
 import (
 	"fmt"
 	"log"
 
+	"github.com/giongto35/cloud-game/v2/pkg/coordinator/worker"
 	"github.com/giongto35/cloud-game/v2/pkg/ipc"
 	"github.com/giongto35/cloud-game/v2/pkg/network"
 )
 
 type User struct {
-	id     network.Uid
+	Id     network.Uid
 	RoomID string
 	wire   *ipc.Client
-	Worker *WorkerClient
+	Worker *worker.WorkerClient
 }
 
-func NewUser(conn *ipc.Client) *User {
-
-	user := &User{
-		id: network.NewUid(),
+func New(conn *ipc.Client) *User {
+	return &User{
+		Id:   network.NewUid(),
+		wire: conn,
 	}
-
-	user.wire = conn
-
-	return user
 }
 
-func (u *User) AssignWorker(w *WorkerClient) {
+func (u *User) AssignWorker(w *worker.WorkerClient) {
 	u.Worker = w
-	w.makeAvailable(false)
+	w.MakeAvailable(false)
 }
 
 func (u *User) RetainWorker() {
 	if u.Worker != nil {
-		u.Worker.makeAvailable(true)
+		u.Worker.MakeAvailable(true)
 	}
 }
 
@@ -58,9 +55,9 @@ func (u *User) Clean() {
 }
 
 func (u *User) Printf(format string, args ...interface{}) {
-	log.Printf(fmt.Sprintf("user: [%s] %s", u.id.Short(), format), args...)
+	log.Printf(fmt.Sprintf("user: [%s] %s", u.Id.Short(), format), args...)
 }
 
 func (u *User) Println(args ...interface{}) {
-	log.Println(fmt.Sprintf("user: [%s] %s", u.id.Short(), fmt.Sprint(args...)))
+	log.Println(fmt.Sprintf("user: [%s] %s", u.Id.Short(), fmt.Sprint(args...)))
 }

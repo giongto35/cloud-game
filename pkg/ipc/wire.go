@@ -10,6 +10,9 @@ type Packet struct {
 
 type PacketType uint8
 
+type PacketPayload struct {
+}
+
 type Call struct {
 	done     chan struct{}
 	err      error

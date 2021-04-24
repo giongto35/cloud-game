@@ -4,6 +4,7 @@ import (
 	"log"
 	"sync"
 
+	"github.com/giongto35/cloud-game/v2/pkg/coordinator/worker"
 	"github.com/giongto35/cloud-game/v2/pkg/network"
 )
 
@@ -12,16 +13,16 @@ import (
 type Guild struct {
 	mu sync.Mutex
 
-	workers map[network.Uid]*WorkerClient
+	workers map[network.Uid]*worker.WorkerClient
 }
 
 func NewGuild() Guild {
 	return Guild{
-		workers: map[network.Uid]*WorkerClient{},
+		workers: map[network.Uid]*worker.WorkerClient{},
 	}
 }
 
-func (g *Guild) add(w *WorkerClient) {
+func (g *Guild) add(w *worker.WorkerClient) {
 	g.mu.Lock()
 	defer g.mu.Unlock()
 
@@ -29,7 +30,7 @@ func (g *Guild) add(w *WorkerClient) {
 	log.Printf("Guild: %v", g.workers)
 }
 
-func (g *Guild) remove(w *WorkerClient) {
+func (g *Guild) remove(w *worker.WorkerClient) {
 	w.Printf("Has done his duty")
 	g.mu.Lock()
 	defer g.mu.Unlock()
@@ -39,7 +40,7 @@ func (g *Guild) remove(w *WorkerClient) {
 	log.Printf("Guild: %v", g.workers)
 }
 
-func (g *Guild) findFreeByIp(addr string) *WorkerClient {
+func (g *Guild) findFreeByIp(addr string) *worker.WorkerClient {
 	g.mu.Lock()
 	defer g.mu.Unlock()
 
@@ -51,7 +52,7 @@ func (g *Guild) findFreeByIp(addr string) *WorkerClient {
 	return nil
 }
 
-func (g *Guild) findByPingServer(address string) *WorkerClient {
+func (g *Guild) findByPingServer(address string) *worker.WorkerClient {
 	g.mu.Lock()
 	defer g.mu.Unlock()
 
@@ -63,11 +64,11 @@ func (g *Guild) findByPingServer(address string) *WorkerClient {
 	return nil
 }
 
-func (g *Guild) filter(fn func(w *WorkerClient) bool) []*WorkerClient {
+func (g *Guild) filter(fn func(w *worker.WorkerClient) bool) []*worker.WorkerClient {
 	g.mu.Lock()
 	defer g.mu.Unlock()
 
-	var list []*WorkerClient
+	var list []*worker.WorkerClient
 	for _, w := range g.workers {
 		if fn(w) {
 			list = append(list, w)

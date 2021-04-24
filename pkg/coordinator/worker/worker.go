@@ -1,4 +1,4 @@
-package coordinator
+package worker
 
 import (
 	"fmt"
@@ -31,11 +31,11 @@ func NewWorkerClient(c *websocket.Conn, id network.Uid) *WorkerClient {
 	}
 }
 
-// inRegion say whether some worker from this region.
+// InRegion say whether some worker from this region.
 // Empty region always returns true.
-func (wc *WorkerClient) inRegion(region string) bool { return region == "" && region == wc.Region }
+func (wc *WorkerClient) InRegion(region string) bool { return region == "" && region == wc.Region }
 
-func (wc *WorkerClient) makeAvailable(avail bool) { wc.IsFree = avail }
+func (wc *WorkerClient) MakeAvailable(avail bool) { wc.IsFree = avail }
 
 func (wc *WorkerClient) Printf(format string, args ...interface{}) {
 	log.Printf(fmt.Sprintf("Worker [%s] %s", wc.Id.Short(), format), args...)

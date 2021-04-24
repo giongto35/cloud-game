@@ -1,14 +1,17 @@
 package coordinator
 
 import (
+	"errors"
 	"fmt"
 	"log"
 	"net/http"
 	"strconv"
+	"unsafe"
 
 	api2 "github.com/giongto35/cloud-game/v2/pkg/api"
 	"github.com/giongto35/cloud-game/v2/pkg/config/coordinator"
-	"github.com/giongto35/cloud-game/v2/pkg/config/webrtc"
+	"github.com/giongto35/cloud-game/v2/pkg/coordinator/user"
+	"github.com/giongto35/cloud-game/v2/pkg/coordinator/worker"
 	"github.com/giongto35/cloud-game/v2/pkg/cws"
 	"github.com/giongto35/cloud-game/v2/pkg/cws/api"
 	"github.com/giongto35/cloud-game/v2/pkg/environment"
@@ -16,6 +19,7 @@ import (
 	"github.com/giongto35/cloud-game/v2/pkg/ipc"
 	"github.com/giongto35/cloud-game/v2/pkg/network"
 	ws "github.com/giongto35/cloud-game/v2/pkg/network/websocket"
+	"github.com/giongto35/cloud-game/v2/pkg/session"
 	"github.com/giongto35/cloud-game/v2/pkg/util"
 )
 
@@ -24,8 +28,8 @@ type Hub struct {
 	library games.GameLibrary
 
 	guild Guild
-	rooms map[string]*WorkerClient
-	users map[network.Uid]*User
+	Rooms map[string]*worker.WorkerClient
+	Users map[network.Uid]*user.User
 }
 
 func NewRouter(cfg coordinator.Config, library games.GameLibrary) *Hub {
@@ -34,8 +38,8 @@ func NewRouter(cfg coordinator.Config, library games.GameLibrary) *Hub {
 		library: library,
 
 		guild: NewGuild(),
-		rooms: map[string]*WorkerClient{},
-		users: map[network.Uid]*User{},
+		Rooms: map[string]*worker.WorkerClient{},
+		Users: map[network.Uid]*user.User{},
 	}
 }
 
@@ -49,10 +53,10 @@ func (h *Hub) handleNewWebsocketUserConnection(w http.ResponseWriter, r *http.Re
 
 	conn, err := ipc.NewClientServer(w, r)
 	if err != nil {
-		log.Fatalf("error: couldn't start user handler")
+		log.Fatalf("error: couldn't start usr handler")
 	}
-	user := NewUser(conn)
-	log.Printf("new user: %v", user.id)
+	usr := user.New(conn)
+	log.Printf("new usr: %v", usr.Id)
 
 	// Server will pair the frontend with the server running the room.
 	// It only happens when we are trying to access a running room over share link.
@@ -61,61 +65,51 @@ func (h *Hub) handleNewWebsocketUserConnection(w http.ResponseWriter, r *http.Re
 	region := r.URL.Query().Get("zone")
 
 	// O_o
-	user.Printf("Trying to find some worker")
-	var worker *WorkerClient
-	if worker = h.findWorkerByRoom(roomId, region); worker != nil {
-		user.Printf("An existing worker has been found for room [%v]", roomId)
+	usr.Printf("Trying to find some wkr")
+	var wkr *worker.WorkerClient
+	if wkr = h.findWorkerByRoom(roomId, region); wkr != nil {
+		usr.Printf("An existing wkr has been found for room [%v]", roomId)
 		goto connection
 	}
-	if worker = h.findWorkerByIp(h.cfg.Coordinator.DebugHost); worker != nil {
-		user.Printf("The worker has been found with provided address: %v", h.cfg.Coordinator.DebugHost)
+	if wkr = h.findWorkerByIp(h.cfg.Coordinator.DebugHost); wkr != nil {
+		usr.Printf("The wkr has been found with provided address: %v", h.cfg.Coordinator.DebugHost)
 		goto connection
 	}
 	if h.cfg.Coordinator.RoundRobin {
-		if worker = h.findAnyFreeWorker(region); worker != nil {
-			user.Printf("A free worker has been found right away")
+		if wkr = h.findAnyFreeWorker(region); wkr != nil {
+			usr.Printf("A free wkr has been found right away")
 			goto connection
 		}
 	}
-	if worker = h.findFastestWorker(region, func(addresses []string) (error, map[string]int64) {
-		// send this address to user and get back latency
-		user.Printf("Ping addresses: %v", addresses)
-		data, err := user.Send(api2.P_latencyCheck, addresses)
-		if err != nil {
-			log.Printf("can't get a response with latencies %v", err)
-			return err, map[string]int64{}
-		}
-		ll := api2.Latencies{}
-		err = ll.FromResponse(data)
-		if err != nil {
-			log.Printf("can't convert user latencies, %v", err)
-			return err, map[string]int64{}
-		}
-		return nil, ll
-	}); worker != nil {
-		user.Printf("The fastest worker has been found")
+	if wkr = h.findFastestWorker(region,
+		func(servers []string) (map[string]int64, error) { return usr.CheckLatency(servers) }); wkr != nil {
+		usr.Printf("The fastest wkr has been found")
 		goto connection
 	}
 
-	user.Printf("error: THERE ARE NO FREE WORKERS")
+	usr.Printf("error: THERE ARE NO FREE WORKERS")
 	return
 
 connection:
-	user.Printf("Assigned worker: %v", worker.Id)
+	usr.Printf("Assigned wkr: %v", wkr.Id)
 
-	user.AssignWorker(worker)
-	h.users[user.id] = user
-	defer h.cleanUser(user)
+	usr.AssignWorker(wkr)
+	h.Users[usr.Id] = usr
+	defer h.cleanUser(usr)
 
-	h.useragentRoutes(user)
+	h.useragentRoutes(usr)
 
-	_, _ = user.SendAndForget(api2.P_init, initPacket(h.cfg.Webrtc.IceServers, h.library.GetAll()))
+	usr.InitSession(user.InitSessionRequest{
+		// don't do this at home
+		Ice:   *(*[]user.IceServer)(unsafe.Pointer(&h.cfg.Webrtc.IceServers)),
+		Games: h.getGames(),
+	})
 
-	user.WaitDisconnect()
-	user.RetainWorker()
+	usr.WaitDisconnect()
+	usr.RetainWorker()
 
-	// Notify worker to clean session
-	worker.SendPacket(api.TerminateSessionPacket(user.id))
+	// Notify wkr to clean session
+	wkr.SendPacket(api.TerminateSessionPacket(usr.Id))
 }
 
 // WSO handles all connections from a new worker to coordinator
@@ -132,67 +126,67 @@ func (h *Hub) handleNewWebsocketWorkerConnection(w http.ResponseWriter, r *http.
 		return
 	}
 
-	worker := NewWorkerClient(conn, network.NewUid())
-	log.Printf("new worker: %v", worker.Id)
+	wkr := worker.NewWorkerClient(conn, network.NewUid())
+	log.Printf("new wkr: %v", wkr.Id)
 
 	// Register to workersClients map the client connection
 	address := util.GetRemoteAddress(conn)
-	worker.Println("Address:", address)
-	// Region of the worker
+	wkr.Println("Address:", address)
+	// Region of the wkr
 	zone := r.URL.Query().Get("zone")
-	worker.Printf("Is public: %v zone: %v", util.IsPublicIP(address), zone)
+	wkr.Printf("Is public: %v zone: %v", util.IsPublicIP(address), zone)
 
 	pingServer := h.getPingServer(zone)
 
-	worker.Printf("Set ping server address: %s", pingServer)
+	wkr.Printf("Set ping server address: %s", pingServer)
 
-	// In case worker and coordinator in the same host
+	// In case wkr and coordinator in the same host
 	if !util.IsPublicIP(address) && h.cfg.Environment.Get() == environment.Production {
-		// Don't accept private IP for worker's address in prod mode
-		// However, if the worker in the same host with coordinator, we can get public IP of worker
-		worker.Printf("[!] Address %s is invalid", address)
+		// Don't accept private IP for wkr's address in prod mode
+		// However, if the wkr in the same host with coordinator, we can get public IP of wkr
+		wkr.Printf("[!] Address %s is invalid", address)
 
 		address = util.GetHostPublicIP()
-		worker.Printf("Find public address: %s", address)
+		wkr.Printf("Find public address: %s", address)
 
 		if address == "" || !util.IsPublicIP(address) {
-			// Skip this worker because we cannot find public IP
-			worker.Println("[!] Unable to find public address, reject worker")
+			// Skip this wkr because we cannot find public IP
+			wkr.Println("[!] Unable to find public address, reject wkr")
 			return
 		}
 	}
 
 	// Create a workerClient instance
-	worker.Address = address
-	//worker.StunTurnServer = ice.ToJson(h.cfg.Webrtc.IceServers, ice.Replacement{From: "server-ip", To: address})
-	worker.Region = zone
-	worker.PingServer = pingServer
+	wkr.Address = address
+	//wkr.StunTurnServer = ice.ToJson(h.cfg.Webrtc.IceServers, ice.Replacement{From: "server-ip", To: address})
+	wkr.Region = zone
+	wkr.PingServer = pingServer
 
 	// Attach to Server instance with workerID, add defer
-	h.guild.add(worker)
-	defer h.cleanWorker(worker)
+	h.guild.add(wkr)
+	defer h.cleanWorker(wkr)
 
-	worker.SendPacket(api.ServerIdPacket(worker.Id))
+	wkr.SendPacket(api.ServerIdPacket(wkr.Id))
 
-	h.workerRoutes(worker)
-	worker.Listen()
+	h.workerRoutes(wkr)
+	wkr.Listen()
 }
 
-func (h *Hub) cleanUser(user *User) {
+func (h *Hub) cleanUser(user *user.User) {
 	user.Println("Disconnect from coordinator")
-	delete(h.users, user.id)
+	delete(h.Users, user.Id)
 	user.Clean()
 }
 
 // cleanWorker is called when a worker is disconnected
 // connection from worker to coordinator is also closed
-func (h *Hub) cleanWorker(worker *WorkerClient) {
+func (h *Hub) cleanWorker(worker *worker.WorkerClient) {
 	h.guild.remove(worker)
 	// Clean all rooms connecting to that server
-	for roomID, roomServer := range h.rooms {
+	for roomID, roomServer := range h.Rooms {
 		if roomServer == worker {
 			worker.Printf("Remove room %s", roomID)
-			delete(h.rooms, roomID)
+			delete(h.Rooms, roomID)
 		}
 	}
 }
@@ -211,7 +205,7 @@ func (h *Hub) getPingServer(zone string) string {
 }
 
 // useragentRoutes adds all useragent (browser) request routes.
-func (h *Hub) useragentRoutes(user *User) {
+func (h *Hub) useragentRoutes(user *user.User) {
 	if user == nil {
 		return
 	}
@@ -232,18 +226,17 @@ func (h *Hub) useragentRoutes(user *User) {
 			// send SDP back to browser
 
 			defer user.Println("Received SDP from worker -> sending back to browser")
-			resp := user.Worker.SyncSend(cws.WSPacket{ID: api.InitWebrtc, SessionID: user.id})
+			resp := user.Worker.SyncSend(cws.WSPacket{ID: api.InitWebrtc, SessionID: user.Id})
 
 			if resp != cws.EmptyPacket && resp.ID == api.Offer {
-				rez, err := user.SendAndForget(api2.P_webrtc_offer, resp.Data)
-				log.Printf("OFFER REZ %+v, err: %v", rez, err)
+				user.SendWebrtcOffer(resp.Data)
 			}
 		case ipc.PacketType(api2.P_webrtc_answer):
 			user.Println("Received browser answered SDP -> relay to worker")
-			user.Worker.SendPacket(cws.WSPacket{ID: api.Answer, SessionID: user.id, Data: p.Payload.(string)})
+			user.Worker.SendPacket(cws.WSPacket{ID: api.Answer, SessionID: user.Id, Data: p.Payload.(string)})
 		case ipc.PacketType(api2.P_webrtc_ice_candidate):
 			user.Println("Received IceCandidate from browser -> relay to worker")
-			pack := cws.WSPacket{ID: api.IceCandidate, SessionID: user.id, Data: p.Payload.(string)}
+			pack := cws.WSPacket{ID: api.IceCandidate, SessionID: user.Id, Data: p.Payload.(string)}
 			user.Worker.SendPacket(pack)
 		case ipc.PacketType(api2.P_game_start):
 			user.Println("Received start request from a browser -> relay to worker")
@@ -265,14 +258,13 @@ func (h *Hub) useragentRoutes(user *User) {
 			}
 
 			workerResp := user.Worker.SyncSend(cws.WSPacket{
-				ID: api.Start, SessionID: user.id, RoomID: request.RoomId, Data: packet})
+				ID: api.Start, SessionID: user.Id, RoomID: request.RoomId, Data: packet})
 
 			// Response from worker contains initialized roomID. Set roomID to the session
 			user.RoomID = workerResp.RoomID
 			user.Println("Received room response from browser: ", workerResp.RoomID)
 
-			_, err = user.SendAndForget(api2.P_game_start, user.RoomID)
-			if err != nil {
+			if err = user.StartGame(); err != nil {
 				user.Printf("can't send back start request")
 				return
 			}
@@ -283,16 +275,16 @@ func (h *Hub) useragentRoutes(user *User) {
 				user.Printf("err: %v", err)
 				return
 			}
-			user.Worker.SyncSend(cws.WSPacket{ID: api.GameQuit, SessionID: user.id, RoomID: request.RoomId})
+			user.Worker.SyncSend(cws.WSPacket{ID: api.GameQuit, SessionID: user.Id, RoomID: request.RoomId})
 		case ipc.PacketType(api2.P_game_save):
 			user.Println("Received save request from a browser -> relay to worker")
 			// TODO: Async
-			response := user.Worker.SyncSend(cws.WSPacket{ID: api.GameSave, SessionID: user.id, RoomID: user.RoomID})
+			response := user.Worker.SyncSend(cws.WSPacket{ID: api.GameSave, SessionID: user.Id, RoomID: user.RoomID})
 			user.Printf("SAVE result: %v", response.Data)
 		case ipc.PacketType(api2.P_game_load):
 			user.Println("Received load request from a browser -> relay to worker")
 			// TODO: Async
-			response := user.Worker.SyncSend(cws.WSPacket{ID: api.GameLoad, SessionID: user.id, RoomID: user.RoomID})
+			response := user.Worker.SyncSend(cws.WSPacket{ID: api.GameLoad, SessionID: user.Id, RoomID: user.RoomID})
 			user.Printf("LOAD result: %v", response.Data)
 		case ipc.PacketType(api2.P_game_set_player_index):
 			user.Println("Received update player index request from a browser -> relay to worker")
@@ -305,7 +297,7 @@ func (h *Hub) useragentRoutes(user *User) {
 			// TODO: Async
 			response := user.Worker.SyncSend(cws.WSPacket{
 				ID:        api.GamePlayerSelect,
-				SessionID: user.id,
+				SessionID: user.Id,
 				RoomID:    user.RoomID,
 				Data:      v,
 			})
@@ -314,35 +306,85 @@ func (h *Hub) useragentRoutes(user *User) {
 			if response.Data == "error" {
 				user.Printf("Player switch failed for some reason")
 			}
-
 			idx, _ := strconv.Atoi(response.Data)
-
-			_, _ = user.SendAndForget(api2.P_game_set_player_index, idx)
+			user.ChangePlayer(idx)
 		case ipc.PacketType(api2.P_game_toggle_multitap):
 			user.Println("Received multitap request from a browser -> relay to worker")
 			// TODO: Async
-			response := user.Worker.SyncSend(cws.WSPacket{ID: api.GameMultitap, SessionID: user.id, RoomID: user.RoomID})
+			response := user.Worker.SyncSend(cws.WSPacket{ID: api.GameMultitap, SessionID: user.Id, RoomID: user.RoomID})
 			user.Printf("MULTITAP result: %v", response.Data)
 		}
 	})
 }
 
+func (h *Hub) getGames() []string {
+	var gameList []string
+	for _, game := range h.library.GetAll() {
+		gameList = append(gameList, game.Name)
+	}
+	return gameList
+}
+
 // workerRoutes adds all worker request routes.
-func (h *Hub) workerRoutes(wc *WorkerClient) {
+func (h *Hub) workerRoutes(wc *worker.WorkerClient) {
 	if wc == nil {
 		return
 	}
-	wc.Receive(api.Heartbeat, wc.handleHeartbeat())
-	wc.Receive(api.RegisterRoom, wc.handleRegisterRoom2(h))
-	wc.Receive(api.GetRoom, wc.handleGetRoom2(h))
-	wc.Receive(api.CloseRoom, wc.handleCloseRoom2(h))
-	wc.Receive(api.IceCandidate, wc.handleIceCandidate2(h))
+	wc.Receive(api.Heartbeat, func(resp cws.WSPacket) (req cws.WSPacket) {
+		return resp
+	})
+	wc.Receive(api.RegisterRoom, func(resp cws.WSPacket) (req cws.WSPacket) {
+		log.Printf("Coordinator: Received registerRoom room %s from worker %s", resp.Data, wc.Id)
+		h.Rooms[resp.Data] = wc
+		log.Printf("Coordinator: Current room list is: %+v", h.Rooms)
+		return api.RegisterRoomPacket(api.NoData)
+	})
+	wc.Receive(api.GetRoom, func(resp cws.WSPacket) (req cws.WSPacket) {
+		log.Println("Coordinator: Received a get room request")
+		log.Println("Result: ", h.Rooms[resp.Data])
+		return api.GetRoomPacket(string(h.Rooms[resp.Data].Id))
+	})
+	wc.Receive(api.CloseRoom, func(resp cws.WSPacket) (req cws.WSPacket) {
+		log.Printf("Coordinator: Received closeRoom room %s from worker %s", resp.Data, wc.Id)
+		delete(h.Rooms, resp.Data)
+		log.Printf("Coordinator: Current room list is: %+v", h.Rooms)
+		return api.CloseRoomPacket(api.NoData)
+	})
+	wc.Receive(api.IceCandidate, func(resp cws.WSPacket) (req cws.WSPacket) {
+		wc.Println("relay IceCandidate to useragent")
+		usr, ok := h.Users[resp.SessionID]
+		if ok {
+			// Remove SessionID while sending back to browser
+			resp.SessionID = ""
+			usr.SendWebrtcIceCandidate(resp.Data)
+		} else {
+			wc.Println("error: unknown SessionID:", resp.SessionID)
+		}
+		return cws.EmptyPacket
+	})
 }
 
-func initPacket(servers []webrtc.IceServer, games []games.GameMetadata) api2.InitPack {
-	var gameName []string
-	for _, game := range games {
-		gameName = append(gameName, game.Name)
+func newNewGameStartCall(request api.GameStartRequest, library games.GameLibrary) (api.GameStartCall, error) {
+	// the name of the game either in the `room id` field or
+	// it's in the initial request
+	game := request.GameName
+	if request.RoomId != "" {
+		// ! should be moved into coordinator
+		name := session.GetGameNameFromRoomID(request.RoomId)
+		if name == "" {
+			return api.GameStartCall{}, errors.New("couldn't decode game name from the room id")
+		}
+		game = name
 	}
-	return api2.InitPack{Ice: servers, Games: gameName}
+
+	gameInfo := library.FindGameByName(game)
+	if gameInfo.Path == "" {
+		return api.GameStartCall{}, fmt.Errorf("couldn't find game info for the game %v", game)
+	}
+
+	return api.GameStartCall{
+		Name: gameInfo.Name,
+		Path: gameInfo.Path,
+		Type: gameInfo.Type,
+	}, nil
 }
