@@ -34,7 +34,7 @@ func (c *Coordinator) Run() {
 	lib := c.getLibrary()
 	lib.Scan()
 
-	srv := NewRouter(c.conf, lib)
+	hub := NewHub(c.conf, lib)
 
 	address := conf.Address
 	if conf.Https {
@@ -46,8 +46,8 @@ func (c *Coordinator) Run() {
 			h := http.NewServeMux()
 			h.Handle("/", index(c.conf))
 			h.Handle("/static/", static("./web"))
-			h.HandleFunc("/ws", srv.handleNewWebsocketUserConnection)
-			h.HandleFunc("/wso", srv.handleNewWebsocketWorkerConnection)
+			h.HandleFunc("/ws", hub.handleNewWebsocketUserConnection)
+			h.HandleFunc("/wso", hub.handleNewWebsocketWorkerConnection)
 			return h
 		},
 		httpx.WithServerConfig(conf),

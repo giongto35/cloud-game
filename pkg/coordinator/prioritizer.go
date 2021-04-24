@@ -6,8 +6,7 @@ func (h *Hub) findWorkerByRoom(id string, region string) *worker.WorkerClient {
 	if id == "" {
 		return nil
 	}
-
-	if w, ok := h.Rooms[id]; ok {
+	if w, ok := h.rooms[id]; ok {
 		if w.InRegion(region) {
 			return w
 		}
@@ -38,6 +37,7 @@ func (h *Hub) findAnyFreeWorker(region string) *worker.WorkerClient {
 
 // findFastestWorker returns the best server for a session.
 // All workers addresses are sent to user and user will ping to get latency.
+// !to rewrite
 func (h *Hub) findFastestWorker(region string, fn func(addresses []string) (map[string]int64, error)) *worker.WorkerClient {
 	workers := h.getAvailableWorkers(region)
 	if len(workers) == 0 {

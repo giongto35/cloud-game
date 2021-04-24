@@ -8,18 +8,6 @@ import (
 	"github.com/giongto35/cloud-game/v2/pkg/config/coordinator"
 )
 
-const pingServerTemp = "https://%s.%s/echo"
-const devPingServer = "http://localhost:9000/echo"
-
-//func (c *Server) RelayPacket(u *BrowserClient, packet cws.WSPacket, req func(w *WorkerClient, p cws.WSPacket) cws.WSPacket) cws.WSPacket {
-//	packet.SessionID = u.SessionID
-//	wc, ok := c.workerClients[u.Worker.Id]
-//	if !ok {
-//		return cws.EmptyPacket
-//	}
-//	return req(wc, packet)
-//}
-
 func index(conf coordinator.Config) http.Handler {
 	tpl, err := template.ParseFiles("./web/index.html")
 	if err != nil {

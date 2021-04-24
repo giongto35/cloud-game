@@ -23,7 +23,7 @@ type Handler struct {
 	// Raw address of coordinator
 	coordinatorHost string
 	cfg             worker.Config
-	// Rooms map : RoomID -> Room
+	// rooms map : RoomID -> Room
 	rooms map[string]*room.Room
 	// global ID of the current server
 	serverID string

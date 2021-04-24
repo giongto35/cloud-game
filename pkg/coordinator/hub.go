@@ -28,18 +28,18 @@ type Hub struct {
 	library games.GameLibrary
 
 	guild Guild
-	Rooms map[string]*worker.WorkerClient
-	Users map[network.Uid]*user.User
+	rooms map[string]*worker.WorkerClient
+	users map[network.Uid]*user.User
 }
 
-func NewRouter(cfg coordinator.Config, library games.GameLibrary) *Hub {
+func NewHub(cfg coordinator.Config, library games.GameLibrary) *Hub {
 	return &Hub{
 		cfg:     cfg,
 		library: library,
 
 		guild: NewGuild(),
-		Rooms: map[string]*worker.WorkerClient{},
-		Users: map[network.Uid]*user.User{},
+		rooms: map[string]*worker.WorkerClient{},
+		users: map[network.Uid]*user.User{},
 	}
 }
 
@@ -94,7 +94,7 @@ connection:
 	usr.Printf("Assigned wkr: %v", wkr.Id)
 
 	usr.AssignWorker(wkr)
-	h.Users[usr.Id] = usr
+	h.users[usr.Id] = usr
 	defer h.cleanUser(usr)
 
 	h.useragentRoutes(usr)
@@ -136,7 +136,7 @@ func (h *Hub) handleNewWebsocketWorkerConnection(w http.ResponseWriter, r *http.
 	zone := r.URL.Query().Get("zone")
 	wkr.Printf("Is public: %v zone: %v", util.IsPublicIP(address), zone)
 
-	pingServer := h.getPingServer(zone)
+	pingServer := h.cfg.Coordinator.GetPingServer(zone)
 
 	wkr.Printf("Set ping server address: %s", pingServer)
 
@@ -174,7 +174,7 @@ func (h *Hub) handleNewWebsocketWorkerConnection(w http.ResponseWriter, r *http.
 
 func (h *Hub) cleanUser(user *user.User) {
 	user.Println("Disconnect from coordinator")
-	delete(h.Users, user.Id)
+	delete(h.users, user.Id)
 	user.Clean()
 }
 
@@ -183,25 +183,12 @@ func (h *Hub) cleanUser(user *user.User) {
 func (h *Hub) cleanWorker(worker *worker.WorkerClient) {
 	h.guild.remove(worker)
 	// Clean all rooms connecting to that server
-	for roomID, roomServer := range h.Rooms {
+	for roomID, roomServer := range h.rooms {
 		if roomServer == worker {
 			worker.Printf("Remove room %s", roomID)
-			delete(h.Rooms, roomID)
+			delete(h.rooms, roomID)
 		}
 	}
-}
-
-// getPingServer returns the server for latency check of a zone.
-// In latency check to find best worker step, we use this server to find the closest worker.
-func (h *Hub) getPingServer(zone string) string {
-	if h.cfg.Coordinator.PingServer != "" {
-		return fmt.Sprintf("%s/echo", h.cfg.Coordinator.PingServer)
-	}
-
-	if h.cfg.Coordinator.Server.Https && h.cfg.Coordinator.Server.Tls.Domain != "" {
-		return fmt.Sprintf(pingServerTemp, zone, h.cfg.Coordinator.Server.Tls.Domain)
-	}
-	return devPingServer
 }
 
 // useragentRoutes adds all useragent (browser) request routes.
@@ -335,24 +322,24 @@ func (h *Hub) workerRoutes(wc *worker.WorkerClient) {
 	})
 	wc.Receive(api.RegisterRoom, func(resp cws.WSPacket) (req cws.WSPacket) {
 		log.Printf("Coordinator: Received registerRoom room %s from worker %s", resp.Data, wc.Id)
-		h.Rooms[resp.Data] = wc
-		log.Printf("Coordinator: Current room list is: %+v", h.Rooms)
+		h.rooms[resp.Data] = wc
+		log.Printf("Coordinator: Current room list is: %+v", h.rooms)
 		return api.RegisterRoomPacket(api.NoData)
 	})
 	wc.Receive(api.GetRoom, func(resp cws.WSPacket) (req cws.WSPacket) {
 		log.Println("Coordinator: Received a get room request")
-		log.Println("Result: ", h.Rooms[resp.Data])
-		return api.GetRoomPacket(string(h.Rooms[resp.Data].Id))
+		log.Println("Result: ", h.rooms[resp.Data])
+		return api.GetRoomPacket(string(h.rooms[resp.Data].Id))
 	})
 	wc.Receive(api.CloseRoom, func(resp cws.WSPacket) (req cws.WSPacket) {
 		log.Printf("Coordinator: Received closeRoom room %s from worker %s", resp.Data, wc.Id)
-		delete(h.Rooms, resp.Data)
-		log.Printf("Coordinator: Current room list is: %+v", h.Rooms)
+		delete(h.rooms, resp.Data)
+		log.Printf("Coordinator: Current room list is: %+v", h.rooms)
 		return api.CloseRoomPacket(api.NoData)
 	})
 	wc.Receive(api.IceCandidate, func(resp cws.WSPacket) (req cws.WSPacket) {
 		wc.Println("relay IceCandidate to useragent")
-		usr, ok := h.Users[resp.SessionID]
+		usr, ok := h.users[resp.SessionID]
 		if ok {
 			// Remove SessionID while sending back to browser
 			resp.SessionID = ""
