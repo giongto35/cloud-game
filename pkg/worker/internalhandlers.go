@@ -16,8 +16,6 @@ func (h *Handler) handleServerId() cws.PacketHandler {
 	return func(resp cws.WSPacket) cws.WSPacket {
 		log.Printf("[worker] new id: %s", resp.Data)
 		h.serverID = resp.Data
-		// unlock worker if it's locked
-		h.w.lock.Unlock()
 		return cws.EmptyPacket
 	}
 }

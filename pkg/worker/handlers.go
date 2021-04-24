@@ -8,11 +8,10 @@ import (
 	"time"
 
 	"github.com/giongto35/cloud-game/v2/pkg/config/worker"
-	"github.com/giongto35/cloud-game/v2/pkg/cws/api"
 	"github.com/giongto35/cloud-game/v2/pkg/emulator/libretro/manager/remotehttp"
 	"github.com/giongto35/cloud-game/v2/pkg/games"
+	"github.com/giongto35/cloud-game/v2/pkg/ipc"
 	"github.com/giongto35/cloud-game/v2/pkg/network"
-	"github.com/giongto35/cloud-game/v2/pkg/network/websocket"
 	"github.com/giongto35/cloud-game/v2/pkg/webrtc"
 	storage "github.com/giongto35/cloud-game/v2/pkg/worker/cloud-storage"
 	"github.com/giongto35/cloud-game/v2/pkg/worker/room"
@@ -73,14 +72,6 @@ func (h *Handler) Run() {
 	}
 }
 
-func (h *Handler) RequestConfig() {
-	log.Printf("[worker] asking for a config...")
-	response := h.oClient.SyncSend(api.ConfigPacket())
-	conf := worker.EmptyConfig()
-	conf.Deserialize([]byte(response.Data))
-	log.Printf("[worker] pulled config: %+v", conf)
-}
-
 func (h *Handler) Prepare() {
 	if !h.cfg.Emulator.Libretro.Cores.Repo.Sync {
 		return
@@ -107,7 +98,7 @@ func newCoordinatorConnection(host string, zone string, conf worker.Config) (*Co
 	address := url.URL{Scheme: scheme, Host: host, Path: conf.Worker.Network.Endpoint, RawQuery: "zone=" + zone}
 	log.Printf("[worker] connect to %v", address.String())
 
-	conn, err := websocket.Connect(address)
+	conn, err := ipc.Connect(address)
 	if err != nil {
 		return nil, err
 	}
@@ -189,5 +180,5 @@ func createOfflineStorage(path string) {
 
 func echo(w http.ResponseWriter, _ *http.Request) {
 	w.Header().Set("Access-Control-Allow-Origin", "*")
-	_, _ = w.Write([]byte{0x65, 0x63, 0x68, 0x6f}) // hello
+	_, _ = w.Write([]byte{0x65, 0x63, 0x68, 0x6f}) // echo
 }

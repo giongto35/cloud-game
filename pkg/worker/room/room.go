@@ -183,7 +183,7 @@ func NewRoom(roomID string, game games.GameMetadata, onlineStorage *storage.Clie
 		emu, ar := cfg.Emulator, cfg.Emulator.AspectRatio
 
 		if ar.Keep {
-			baseAspectRatio := float64(gameMeta.BaseWidth) / float64(ar.Height)
+			baseAspectRatio := gameMeta.Ratio //float64(gameMeta.BaseWidth) / float64(ar.Height)
 			nwidth, nheight = resizeToAspect(baseAspectRatio, ar.Width, ar.Height)
 			log.Printf("Viewport size will be changed from %dx%d (%f) -> %dx%d", ar.Width, ar.Height,
 				baseAspectRatio, nwidth, nheight)
@@ -292,8 +292,8 @@ func (r *Room) RemoveSession(w *webrtc.WebRTC) {
 	log.Println("Cleaning session: ", w.ID)
 	// TODO: get list of r.rtcSessions in lock
 	for i, s := range r.rtcSessions {
-		log.Println("found session: ", w.ID)
 		if s.ID == w.ID {
+			log.Println("found session: ", w.ID)
 			r.rtcSessions = append(r.rtcSessions[:i], r.rtcSessions[i+1:]...)
 			s.RoomID = ""
 			log.Println("Removed session ", s.ID, " from room: ", r.ID)
@@ -328,6 +328,9 @@ func (r *Room) Close() {
 	r.IsRunning = false
 	log.Println("Closing room and director of room ", r.ID)
 
+	// check room save before close
+	log.Printf("CHEKC BEFORE QUIT, room %v in local %v", r.ID, isGameOnLocal(r.ID))
+
 	// Save game before quit. Only save for game which was previous saved to avoid flooding database
 	if r.isRoomExisted() {
 		log.Println("Saved Game before closing room")
@@ -360,7 +363,7 @@ func (r *Room) isRoomExisted() bool {
 	if err == nil {
 		return true
 	}
-	return isGameOnLocal(r.ID)
+	return isGameOnLocal(r.director.GetHashPath())
 }
 
 // SaveGame will save game to local and trigger a callback to store game on onlineStorage, so the game can be accessed later

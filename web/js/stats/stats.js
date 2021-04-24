@@ -298,8 +298,8 @@ const stats = (() => {
         const render = () => ui.update(value);
 
         function getStats() {
-            if (!active || !rtcp.isConnected()) return;
-            rtcp.getConnection().getStats(null).then(stats => {
+            if (!active || !webrtc.isConnected()) return;
+            webrtc.getConnection().getStats(null).then(stats => {
                 stats.forEach(report => {
                     if (report["framesReceived"] !== undefined && report["framesDecoded"] !== undefined && report["framesDropped"] !== undefined) {
                         value = report["framesReceived"] - report["framesDecoded"] - report["framesDropped"];

@@ -166,7 +166,7 @@ const touch = (() => {
     }
 
     function handlePlayerSlider() {
-        socket.updatePlayerIndex(this.value - 1);
+        event.pub(GAME_PLAYER_IDX, {index: this.value - 1});
     }
 
     // Touch menu

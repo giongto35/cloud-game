@@ -83,7 +83,7 @@ func Decode(in string, obj interface{}) error {
 // NewWebRTC create
 func NewWebRTC() *WebRTC {
 	w := &WebRTC{
-		ID: network.NewUid().String(),
+		ID: string(network.NewUid()),
 
 		ImageChannel: make(chan WebFrame, 30),
 		AudioChannel: make(chan []byte, 1),
@@ -182,6 +182,7 @@ func (w *WebRTC) StartClient(iceCB OnIceCallback) (string, error) {
 
 		}
 		if connectionState == webrtc.ICEConnectionStateFailed || connectionState == webrtc.ICEConnectionStateClosed || connectionState == webrtc.ICEConnectionStateDisconnected {
+			log.Printf("Stop webrtc %v room %v", w.ID, w.RoomID)
 			w.StopClient()
 		}
 	})

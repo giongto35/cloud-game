@@ -4,8 +4,8 @@ import "github.com/giongto35/cloud-game/v2/pkg/config/encoder"
 
 type Webrtc struct {
 	DisableDefaultInterceptors bool
-	IceServers []IceServer
-	IcePorts   struct {
+	IceServers                 []IceServer
+	IcePorts                   struct {
 		Min uint16
 		Max uint16
 	}
@@ -13,9 +13,9 @@ type Webrtc struct {
 }
 
 type IceServer struct {
-	Url        string
-	Username   string
-	Credential string
+	Urls       string `json:"urls,omitempty"`
+	Username   string `json:"username,omitempty"`
+	Credential string `json:"credential,omitempty"`
 }
 
 type Config struct {

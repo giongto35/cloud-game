@@ -1,7 +1,6 @@
 package worker
 
 import (
-	"encoding/json"
 	"log"
 	"strings"
 
@@ -30,22 +29,16 @@ type Config struct {
 		Server shared.Server
 	}
 	Webrtc webrtcConfig.Webrtc
-	Loaded bool
 }
 
 // allows custom config path
 var configPath string
 
 func NewConfig() (conf Config) {
-	if err := config.LoadConfig(&conf, configPath); err == nil {
-		conf.Loaded = true
+	if err := config.LoadConfig(&conf, configPath); err != nil {
+		panic(err)
 	}
 	conf.expandSpecialTags()
-	return
-}
-
-func EmptyConfig() (conf Config) {
-	conf.Loaded = false
 	return
 }
 
@@ -60,18 +53,6 @@ func (c *Config) ParseFlags() {
 	flag.StringVar(&c.Worker.Network.Zone, "zone", c.Worker.Network.Zone, "Worker network zone (us, eu, etc.)")
 	flag.StringVarP(&configPath, "conf", "c", configPath, "Set custom configuration file path")
 	flag.Parse()
-}
-
-func (c *Config) Serialize() []byte {
-	res, _ := json.Marshal(c)
-	return res
-}
-
-func (c *Config) Deserialize(data []byte) {
-	if err := json.Unmarshal(data, c); err == nil {
-		c.Loaded = true
-	}
-	c.expandSpecialTags()
 }
 
 // expandSpecialTags replaces all the special tags in the config.

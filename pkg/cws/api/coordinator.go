@@ -8,7 +8,6 @@ import (
 )
 
 const (
-	ConfigRequest = "config_request"
 	GetRoom       = "get_room"
 	CloseRoom     = "close_room"
 	RegisterRoom  = "register_room"
@@ -32,8 +31,16 @@ const (
 )
 
 type GameStartRequest struct {
-	GameName string `json:"game_name"`
+	GameName    string `json:"game_name"`
+	RoomId      string `json:"room_id"`
+	PlayerIndex int    `json:"player_index"`
 }
+
+type GameQuitRequest struct {
+	RoomId string `json:"room_id"`
+}
+
+func (packet *GameQuitRequest) From(data string) error { return from(packet, data) }
 
 func (packet *GameStartRequest) From(data string) error { return from(packet, data) }
 
@@ -50,7 +57,6 @@ func (packet *GameStartCall) To() (string, error)    { return to(packet) }
 // *** packets ***
 //
 func InitPacket(data string) cws.WSPacket         { return cws.WSPacket{ID: Init, Data: data} }
-func ConfigPacket() cws.WSPacket                  { return cws.WSPacket{ID: ConfigRequest} }
 func RegisterRoomPacket(data string) cws.WSPacket { return cws.WSPacket{ID: RegisterRoom, Data: data} }
 func GetRoomPacket(data string) cws.WSPacket      { return cws.WSPacket{ID: GetRoom, Data: data} }
 func CloseRoomPacket(data string) cws.WSPacket    { return cws.WSPacket{ID: CloseRoom, Data: data} }

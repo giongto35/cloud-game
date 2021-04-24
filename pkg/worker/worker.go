@@ -2,24 +2,18 @@ package worker
 
 import (
 	"context"
-	"log"
-	"net/http"
-	"time"
-
 	"github.com/giongto35/cloud-game/v2/pkg/config/worker"
-	"github.com/giongto35/cloud-game/v2/pkg/lock"
 	"github.com/giongto35/cloud-game/v2/pkg/monitoring"
 	"github.com/giongto35/cloud-game/v2/pkg/network/httpx"
 	"github.com/giongto35/cloud-game/v2/pkg/server"
+	"log"
+	"net/http"
 )
 
 type Worker struct {
 	conf     worker.Config
 	ctx      context.Context
 	services *server.Services
-
-	// to pause initialization
-	lock *lock.TimeLock
 }
 
 func New(ctx context.Context, conf worker.Config) *Worker {
@@ -30,7 +24,6 @@ func New(ctx context.Context, conf worker.Config) *Worker {
 		services: services.AddIf(
 			conf.Worker.Monitoring.IsEnabled(), monitoring.New(conf.Worker.Monitoring, "worker"),
 		),
-		lock: lock.NewLock(),
 	}
 }
 
@@ -43,10 +36,6 @@ func (wrk *Worker) Run() {
 		}()
 
 		go h.Run()
-		if !wrk.conf.Loaded {
-			wrk.lock.LockFor(time.Second * 10)
-			h.RequestConfig()
-		}
 		h.Prepare()
 		wrk.init()
 	}()

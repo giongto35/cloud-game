@@ -39,7 +39,7 @@ func NewInterceptedPeerConnection(conf conf.Webrtc, ics []interceptor.Intercepto
 	peerConf := Configuration{ICEServers: []ICEServer{}}
 	for _, server := range conf.IceServers {
 		peerConf.ICEServers = append(peerConf.ICEServers, ICEServer{
-			URLs:       []string{server.Url},
+			URLs:       []string{server.Urls},
 			Username:   server.Username,
 			Credential: server.Credential,
 		})

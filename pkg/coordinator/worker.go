@@ -12,31 +12,35 @@ import (
 type WorkerClient struct {
 	*cws.Client
 
-	WorkerID network.Uid
-	Address  string // ip address of worker
+	Id      network.Uid
+	Address string // ip address of worker
 	// public server used for ping check (Cannot use worker address because they are not publicly exposed)
-	PingServer     string
-	StunTurnServer string
-	IsAvailable    bool
-	Zone           string
+	PingServer string
+	//StunTurnServer string
+	IsFree bool
+	Region string
 }
 
 // NewWorkerClient returns a client connecting to worker.
 // This connection exchanges information between workers and server.
-func NewWorkerClient(c *websocket.Conn, workerID network.Uid) *WorkerClient {
+func NewWorkerClient(c *websocket.Conn, id network.Uid) *WorkerClient {
 	return &WorkerClient{
-		Client:      cws.NewClient(c),
-		WorkerID:    workerID,
-		IsAvailable: true,
+		Client: cws.NewClient(c),
+		Id:     id,
+		IsFree: true,
 	}
 }
 
-func (wc *WorkerClient) makeAvailable(avail bool) { wc.IsAvailable = avail }
+// inRegion say whether some worker from this region.
+// Empty region always returns true.
+func (wc *WorkerClient) inRegion(region string) bool { return region == "" && region == wc.Region }
+
+func (wc *WorkerClient) makeAvailable(avail bool) { wc.IsFree = avail }
 
 func (wc *WorkerClient) Printf(format string, args ...interface{}) {
-	log.Printf(fmt.Sprintf("Worker [%s] %s", wc.WorkerID.Short(), format), args...)
+	log.Printf(fmt.Sprintf("Worker [%s] %s", wc.Id.Short(), format), args...)
 }
 
 func (wc *WorkerClient) Println(args ...interface{}) {
-	log.Println(fmt.Sprintf("Worker [%s] %s", wc.WorkerID.Short(), fmt.Sprint(args...)))
+	log.Println(fmt.Sprintf("Worker [%s] %s", wc.Id.Short(), fmt.Sprint(args...)))
 }

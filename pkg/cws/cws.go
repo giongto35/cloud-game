@@ -162,7 +162,7 @@ func (c *Client) Heartbeat() {
 	// send heartbeat every 1s
 	t := time.NewTicker(time.Second)
 	// don't wait 1 second
-	c.Send(HeartbeatPacket, nil)
+	c.SendPacket(HeartbeatPacket)
 	for {
 		select {
 		case <-c.Done:
@@ -170,7 +170,7 @@ func (c *Client) Heartbeat() {
 			log.Printf("Close heartbeat")
 			return
 		case <-t.C:
-			c.Send(HeartbeatPacket, nil)
+			c.SendPacket(HeartbeatPacket)
 		}
 	}
 }

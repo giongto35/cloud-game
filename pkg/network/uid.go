@@ -1,21 +1,20 @@
 package network
 
 import (
-	"encoding/hex"
+	"encoding/base64"
+	"strings"
+
 	"github.com/gofrs/uuid"
 )
 
-type Uid uuid.UUID
+type Uid string
+
+const EmptyUid Uid = ""
 
 func NewUid() Uid {
 	uid, _ := uuid.NewV4()
-	return Uid(uid)
+	return Uid(base64.RawURLEncoding.EncodeToString(uid.Bytes()))
 }
 
-func (u Uid) String() string { return uuid.UUID(u).String() }
-
-func (u Uid) Short() string {
-	buf := make([]byte, 8)
-	hex.Encode(buf[0:8], u[0:4])
-	return string(buf)
-}
+// Short returns Github-like short ID version (i.e. 81cef7d).
+func (u Uid) Short() string { return strings.ToLower(string(u[0:6])) }

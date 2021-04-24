@@ -26,8 +26,8 @@ func NewServer(address string, handler func(serv *Server) http.Handler, options 
 		HttpsRedirect: true,
 		// timeouts negate slow / frozen clients
 		IdleTimeout:  120 * time.Second,
-		ReadTimeout:  5 * time.Second,
-		WriteTimeout: 5 * time.Second,
+		ReadTimeout:  60 * time.Second,
+		WriteTimeout: 60 * time.Second,
 	}
 	opts.override(options...)
 

@@ -13,6 +13,7 @@ import (
 type Config struct {
 	Coordinator struct {
 		PingServer string
+		RoundRobin bool
 		DebugHost  string
 		Library    games.Config
 		Monitoring monitoring.Config
