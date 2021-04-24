@@ -12,7 +12,6 @@ import (
 // and their jobs.
 type Guild struct {
 	mu sync.Mutex
-
 	workers map[network.Uid]*worker.WorkerClient
 }
 

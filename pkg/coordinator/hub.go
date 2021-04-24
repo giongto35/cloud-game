@@ -26,20 +26,18 @@ import (
 type Hub struct {
 	cfg     coordinator.Config
 	library games.GameLibrary
-
-	guild Guild
-	rooms map[string]*worker.WorkerClient
-	users map[network.Uid]*user.User
+	crowd   Crowd
+	guild   Guild
+	rooms   map[string]*worker.WorkerClient
 }
 
 func NewHub(cfg coordinator.Config, library games.GameLibrary) *Hub {
 	return &Hub{
 		cfg:     cfg,
 		library: library,
-
-		guild: NewGuild(),
-		rooms: map[string]*worker.WorkerClient{},
-		users: map[network.Uid]*user.User{},
+		crowd:   NewCrowd(),
+		guild:   NewGuild(),
+		rooms:   map[string]*worker.WorkerClient{},
 	}
 }
 
@@ -94,8 +92,8 @@ connection:
 	usr.Printf("Assigned wkr: %v", wkr.Id)
 
 	usr.AssignWorker(wkr)
-	h.users[usr.Id] = usr
-	defer h.cleanUser(usr)
+	h.crowd.add(usr)
+	defer h.crowd.finish(usr)
 
 	h.useragentRoutes(usr)
 
@@ -110,9 +108,10 @@ connection:
 
 	// Notify wkr to clean session
 	wkr.SendPacket(api.TerminateSessionPacket(usr.Id))
+	usr.Println("Disconnect from coordinator")
 }
 
-// WSO handles all connections from a new worker to coordinator
+// handleNewWebsocketWorkerConnection handles all connections from a new worker to coordinator.
 func (h *Hub) handleNewWebsocketWorkerConnection(w http.ResponseWriter, r *http.Request) {
 	defer func() {
 		if r := recover(); r != nil {
@@ -170,12 +169,6 @@ func (h *Hub) handleNewWebsocketWorkerConnection(w http.ResponseWriter, r *http.
 
 	h.workerRoutes(wkr)
 	wkr.Listen()
-}
-
-func (h *Hub) cleanUser(user *user.User) {
-	user.Println("Disconnect from coordinator")
-	delete(h.users, user.Id)
-	user.Clean()
 }
 
 // cleanWorker is called when a worker is disconnected
@@ -339,8 +332,8 @@ func (h *Hub) workerRoutes(wc *worker.WorkerClient) {
 	})
 	wc.Receive(api.IceCandidate, func(resp cws.WSPacket) (req cws.WSPacket) {
 		wc.Println("relay IceCandidate to useragent")
-		usr, ok := h.users[resp.SessionID]
-		if ok {
+		usr := h.crowd.findById(resp.SessionID)
+		if usr != nil {
 			// Remove SessionID while sending back to browser
 			resp.SessionID = ""
 			usr.SendWebrtcIceCandidate(resp.Data)
