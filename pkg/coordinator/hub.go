@@ -1,6 +1,7 @@
 package coordinator
 
 import (
+	"github.com/giongto35/cloud-game/v2/pkg/launcher"
 	"log"
 	"net/http"
 	"unsafe"
@@ -88,9 +89,9 @@ connection:
 	h.crowd.add(usr)
 	defer h.crowd.finish(usr)
 
-	usr.HandleRequests(h.library)
+	usr.HandleRequests(launcher.NewGameLauncher(h.library))
 
-	usr.InitSession(user.InitSessionRequest{
+	usr.InitSession(user.InitSessionOutRequest{
 		// don't do this at home
 		Ice:   *(*[]user.IceServer)(unsafe.Pointer(&h.cfg.Webrtc.IceServers)),
 		Games: h.getGames(),

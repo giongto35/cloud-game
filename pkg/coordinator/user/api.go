@@ -1,3 +1,13 @@
+// Represents API interface for bi-directional user connections.
+//
+// Prefixes in the names are such:
+// in:  user ---> server
+// out: user <--- server
+//
+// As example, DoThingOutRequest / DoThingOutResponse mean outgoing request
+// and incoming response initiated by the server, so DoThingInX means requests
+// and responses from the other side.
+
 package user
 
 import (
@@ -23,9 +33,9 @@ const (
 
 var convertErr = errors.New("can't convert")
 
-type CheckLatencyRequest []string
-type CheckLatencyResponse map[string]int64
-type InitSessionRequest struct {
+type CheckLatencyOutRequest []string
+type CheckLatencyOutResponse map[string]int64
+type InitSessionOutRequest struct {
 	Ice   []IceServer `json:"ice"`
 	Games []string    `json:"games"`
 }
@@ -34,11 +44,22 @@ type IceServer struct {
 	Username   string `json:"username,omitempty"`
 	Credential string `json:"credential,omitempty"`
 }
+type WebrtcAnswerInRequest = string
+type WebrtcIceCandidateInRequest = string
+type GameQuitInRequest struct {
+	RoomId string `json:"room_id"`
+}
+type ChangePlayerInRequest = string
+type GameStartInRequest struct {
+	GameName    string `json:"game_name"`
+	RoomId      string `json:"room_id"`
+	PlayerIndex int    `json:"player_index"`
+}
 
 // CheckLatency (3) sends a list of server addresses to the user
 // and waits get back this list with tested ping times for each server.
-func (u *User) CheckLatency(req CheckLatencyRequest) (CheckLatencyResponse, error) {
-	var response CheckLatencyResponse
+func (u *User) CheckLatency(req CheckLatencyOutRequest) (CheckLatencyOutResponse, error) {
+	var response CheckLatencyOutResponse
 	u.Printf("Ping addresses: %v", req)
 	data, err := u.Send(CheckLatency, req)
 	if err != nil {
@@ -58,7 +79,7 @@ func (u *User) CheckLatency(req CheckLatencyRequest) (CheckLatencyResponse, erro
 }
 
 // InitSession (4) signals the user that the app is ready to go.
-func (u *User) InitSession(req InitSessionRequest) {
+func (u *User) InitSession(req InitSessionOutRequest) {
 	_, _ = u.SendAndForget(InitSession, req)
 }
 
@@ -81,4 +102,54 @@ func (u *User) StartGame() error {
 // Notify unconditionally sends the result of some operation.
 func (u *User) Notify(endpoint uint8, result interface{}) {
 	_, _ = u.SendAndForget(endpoint, result)
+}
+
+func webrtcAnswerInRequest(data interface{}) (WebrtcAnswerInRequest, error) {
+	v, ok := data.(WebrtcAnswerInRequest)
+	if !ok {
+		return v, convertErr
+	}
+	return v, nil
+}
+
+func webrtcIceCandidateInRequest(data interface{}) (WebrtcIceCandidateInRequest, error) {
+	v, ok := data.(WebrtcIceCandidateInRequest)
+	if !ok {
+		return v, convertErr
+	}
+	return v, nil
+}
+
+func gameStartInRequest(data interface{}) (GameStartInRequest, error) {
+	var r GameStartInRequest
+	v, ok := data.(string)
+	if !ok {
+		return r, convertErr
+	}
+	err := json.Unmarshal([]byte(v), &r)
+	if err != nil {
+		return r, convertErr
+	}
+	return r, nil
+}
+
+func gameQuitInRequest(data interface{}) (GameQuitInRequest, error) {
+	var r GameQuitInRequest
+	v, ok := data.(string)
+	if !ok {
+		return r, convertErr
+	}
+	err := json.Unmarshal([]byte(v), &r)
+	if err != nil {
+		return r, convertErr
+	}
+	return r, nil
+}
+
+func changePlayerInRequest(data interface{}) (ChangePlayerInRequest, error) {
+	v, ok := data.(ChangePlayerInRequest)
+	if !ok {
+		return v, convertErr
+	}
+	return v, nil
 }

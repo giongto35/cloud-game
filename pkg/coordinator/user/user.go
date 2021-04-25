@@ -2,10 +2,10 @@ package user
 
 import (
 	"fmt"
+	"github.com/giongto35/cloud-game/v2/pkg/launcher"
 	"log"
 
 	"github.com/giongto35/cloud-game/v2/pkg/coordinator/worker"
-	"github.com/giongto35/cloud-game/v2/pkg/games"
 	"github.com/giongto35/cloud-game/v2/pkg/ipc"
 	"github.com/giongto35/cloud-game/v2/pkg/network"
 )
@@ -36,6 +36,10 @@ func (u *User) RetainWorker() {
 	}
 }
 
+func (u *User) AssignRoom(id string) {
+	u.RoomID = id
+}
+
 func (u *User) Send(t uint8, data interface{}) (interface{}, error) {
 	return u.wire.Call(t, data)
 }
@@ -64,12 +68,17 @@ func (u *User) Println(args ...interface{}) {
 	log.Println(fmt.Sprintf("user: [%s] %s", u.Id.Short(), fmt.Sprint(args...)))
 }
 
-func (u *User) HandleRequests(lib games.GameLibrary) {
+func (u *User) HandleRequests(launcher launcher.Launcher) {
 	u.Handle(func(p ipc.Packet) {
 		switch p.T {
 		case ipc.PacketType(WebrtcInit):
 			u.Printf("Received init_webrtc request -> relay to worker: %s", u.Worker)
+			// initWebrtc now only sends signal to worker, asks it to createOffer
+			// relay request to target worker
+			// worker creates a PeerConnection, and createOffer
+			// send SDP back to browser
 			u.HandleWebrtcInit()
+			u.Println("Received SDP from worker -> sending back to browser")
 		case ipc.PacketType(WebrtcAnswer):
 			u.Println("Received browser answered SDP -> relay to worker")
 			u.HandleWebrtcAnswer(p.Payload)
@@ -78,7 +87,7 @@ func (u *User) HandleRequests(lib games.GameLibrary) {
 			u.HandleWebrtcIceCandidate(p.Payload)
 		case ipc.PacketType(StartGame):
 			u.Println("Received start request from a browser -> relay to worker")
-			u.HandleStartGame(p.Payload, lib)
+			u.HandleStartGame(p.Payload, launcher)
 		case ipc.PacketType(QuitGame):
 			u.Println("Received quit request from a browser -> relay to worker")
 			u.HandleQuitGame(p.Payload)
