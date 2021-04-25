@@ -5,6 +5,7 @@ import (
 	"log"
 
 	"github.com/giongto35/cloud-game/v2/pkg/coordinator/worker"
+	"github.com/giongto35/cloud-game/v2/pkg/games"
 	"github.com/giongto35/cloud-game/v2/pkg/ipc"
 	"github.com/giongto35/cloud-game/v2/pkg/network"
 )
@@ -24,6 +25,7 @@ func New(conn *ipc.Client) User {
 }
 
 func (u *User) AssignWorker(w *worker.WorkerClient) {
+	u.Printf("Assigned wkr: %v", w.Id)
 	u.Worker = w
 	w.MakeAvailable(false)
 }
@@ -35,11 +37,11 @@ func (u *User) RetainWorker() {
 }
 
 func (u *User) Send(t uint8, data interface{}) (interface{}, error) {
-	return u.wire.Call(t, ipc.Payload(data))
+	return u.wire.Call(t, data)
 }
 
 func (u *User) SendAndForget(t uint8, data interface{}) (interface{}, error) {
-	return u.wire.Send(t, ipc.Payload(data))
+	return u.wire.Send(t, data)
 }
 
 func (u *User) Handle(fn func(p ipc.Packet)) {
@@ -60,4 +62,38 @@ func (u *User) Printf(format string, args ...interface{}) {
 
 func (u *User) Println(args ...interface{}) {
 	log.Println(fmt.Sprintf("user: [%s] %s", u.Id.Short(), fmt.Sprint(args...)))
+}
+
+func (u *User) HandleRequests(lib games.GameLibrary) {
+	u.Handle(func(p ipc.Packet) {
+		switch p.T {
+		case ipc.PacketType(WebrtcInit):
+			u.Printf("Received init_webrtc request -> relay to worker: %s", u.Worker)
+			u.HandleWebrtcInit()
+		case ipc.PacketType(WebrtcAnswer):
+			u.Println("Received browser answered SDP -> relay to worker")
+			u.HandleWebrtcAnswer(p.Payload)
+		case ipc.PacketType(WebrtcIceCandidate):
+			u.Println("Received IceCandidate from browser -> relay to worker")
+			u.HandleWebrtcIceCandidate(p.Payload)
+		case ipc.PacketType(StartGame):
+			u.Println("Received start request from a browser -> relay to worker")
+			u.HandleStartGame(p.Payload, lib)
+		case ipc.PacketType(QuitGame):
+			u.Println("Received quit request from a browser -> relay to worker")
+			u.HandleQuitGame(p.Payload)
+		case ipc.PacketType(SaveGame):
+			u.Println("Received save request from a browser -> relay to worker")
+			u.HandleSaveGame()
+		case ipc.PacketType(LoadGame):
+			u.Println("Received load request from a browser -> relay to worker")
+			u.HandleLoadGame()
+		case ipc.PacketType(ChangePlayer):
+			u.Println("Received update player index request from a browser -> relay to worker")
+			u.HandleChangePlayer(p.Payload)
+		case ipc.PacketType(ToggleMultitap):
+			u.Println("Received multitap request from a browser -> relay to worker")
+			u.HandleToggleMultitap()
+		}
+	})
 }

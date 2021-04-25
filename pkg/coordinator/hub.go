@@ -1,14 +1,10 @@
 package coordinator
 
 import (
-	"errors"
-	"fmt"
 	"log"
 	"net/http"
-	"strconv"
 	"unsafe"
 
-	api2 "github.com/giongto35/cloud-game/v2/pkg/api"
 	"github.com/giongto35/cloud-game/v2/pkg/config/coordinator"
 	"github.com/giongto35/cloud-game/v2/pkg/coordinator/user"
 	"github.com/giongto35/cloud-game/v2/pkg/coordinator/worker"
@@ -19,7 +15,6 @@ import (
 	"github.com/giongto35/cloud-game/v2/pkg/ipc"
 	"github.com/giongto35/cloud-game/v2/pkg/network"
 	ws "github.com/giongto35/cloud-game/v2/pkg/network/websocket"
-	"github.com/giongto35/cloud-game/v2/pkg/session"
 	"github.com/giongto35/cloud-game/v2/pkg/util"
 )
 
@@ -89,13 +84,11 @@ func (h *Hub) handleNewWebsocketUserConnection(w http.ResponseWriter, r *http.Re
 	return
 
 connection:
-	usr.Printf("Assigned wkr: %v", wkr.Id)
-
 	usr.AssignWorker(wkr)
 	h.crowd.add(usr)
 	defer h.crowd.finish(usr)
 
-	h.useragentRoutes(usr)
+	usr.HandleRequests(h.library)
 
 	usr.InitSession(user.InitSessionRequest{
 		// don't do this at home
@@ -184,115 +177,6 @@ func (h *Hub) cleanWorker(worker worker.WorkerClient) {
 	}
 }
 
-// useragentRoutes adds all useragent (browser) request routes.
-func (h *Hub) useragentRoutes(user user.User) {
-	user.Handle(func(p ipc.Packet) {
-
-		switch p.T {
-		case ipc.PacketType(api2.P_webrtc_init):
-			if user.Worker == nil {
-				//return cws.EmptyPacket
-				return
-			}
-
-			// initWebrtc now only sends signal to worker, asks it to createOffer
-			user.Printf("Received init_webrtc request -> relay to worker: %s", user.Worker)
-			// relay request to target worker
-			// worker creates a PeerConnection, and createOffer
-			// send SDP back to browser
-
-			defer user.Println("Received SDP from worker -> sending back to browser")
-			resp := user.Worker.SyncSend(cws.WSPacket{ID: api.InitWebrtc, SessionID: user.Id})
-
-			if resp != cws.EmptyPacket && resp.ID == api.Offer {
-				user.SendWebrtcOffer(resp.Data)
-			}
-		case ipc.PacketType(api2.P_webrtc_answer):
-			user.Println("Received browser answered SDP -> relay to worker")
-			user.Worker.SendPacket(cws.WSPacket{ID: api.Answer, SessionID: user.Id, Data: p.Payload.(string)})
-		case ipc.PacketType(api2.P_webrtc_ice_candidate):
-			user.Println("Received IceCandidate from browser -> relay to worker")
-			pack := cws.WSPacket{ID: api.IceCandidate, SessionID: user.Id, Data: p.Payload.(string)}
-			user.Worker.SendPacket(pack)
-		case ipc.PacketType(api2.P_game_start):
-			user.Println("Received start request from a browser -> relay to worker")
-			// +injects game data into the original game request
-			request := api.GameStartRequest{}
-			if err := request.From(p.Payload.(string)); err != nil {
-				user.Printf("err: %v", err)
-				return
-			}
-			gameStartCall, err := newNewGameStartCall(request, h.library)
-			if err != nil {
-				user.Printf("err: %v", err)
-				return
-			}
-			packet, err := gameStartCall.To()
-			if err != nil {
-				user.Printf("err: %v", err)
-				return
-			}
-
-			workerResp := user.Worker.SyncSend(cws.WSPacket{
-				ID: api.Start, SessionID: user.Id, RoomID: request.RoomId, Data: packet})
-
-			// Response from worker contains initialized roomID. Set roomID to the session
-			user.RoomID = workerResp.RoomID
-			user.Println("Received room response from browser: ", workerResp.RoomID)
-
-			if err = user.StartGame(); err != nil {
-				user.Printf("can't send back start request")
-				return
-			}
-		case ipc.PacketType(api2.P_game_quit):
-			user.Println("Received quit request from a browser -> relay to worker")
-			request := api.GameQuitRequest{}
-			if err := request.From(p.Payload.(string)); err != nil {
-				user.Printf("err: %v", err)
-				return
-			}
-			user.Worker.SyncSend(cws.WSPacket{ID: api.GameQuit, SessionID: user.Id, RoomID: request.RoomId})
-		case ipc.PacketType(api2.P_game_save):
-			user.Println("Received save request from a browser -> relay to worker")
-			// TODO: Async
-			response := user.Worker.SyncSend(cws.WSPacket{ID: api.GameSave, SessionID: user.Id, RoomID: user.RoomID})
-			user.Printf("SAVE result: %v", response.Data)
-		case ipc.PacketType(api2.P_game_load):
-			user.Println("Received load request from a browser -> relay to worker")
-			// TODO: Async
-			response := user.Worker.SyncSend(cws.WSPacket{ID: api.GameLoad, SessionID: user.Id, RoomID: user.RoomID})
-			user.Printf("LOAD result: %v", response.Data)
-		case ipc.PacketType(api2.P_game_set_player_index):
-			user.Println("Received update player index request from a browser -> relay to worker")
-			user.Printf("val is %v", p.Payload)
-			v, ok := p.Payload.(string)
-			if !ok {
-				user.Printf("can't convert %v", v)
-				return
-			}
-			// TODO: Async
-			response := user.Worker.SyncSend(cws.WSPacket{
-				ID:        api.GamePlayerSelect,
-				SessionID: user.Id,
-				RoomID:    user.RoomID,
-				Data:      v,
-			})
-			user.Printf("Player index result: %v", response.Data)
-
-			if response.Data == "error" {
-				user.Printf("Player switch failed for some reason")
-			}
-			idx, _ := strconv.Atoi(response.Data)
-			user.ChangePlayer(idx)
-		case ipc.PacketType(api2.P_game_toggle_multitap):
-			user.Println("Received multitap request from a browser -> relay to worker")
-			// TODO: Async
-			response := user.Worker.SyncSend(cws.WSPacket{ID: api.GameMultitap, SessionID: user.Id, RoomID: user.RoomID})
-			user.Printf("MULTITAP result: %v", response.Data)
-		}
-	})
-}
-
 func (h *Hub) getGames() []string {
 	var gameList []string
 	for _, game := range h.library.GetAll() {
@@ -335,29 +219,4 @@ func (h *Hub) workerRoutes(wc worker.WorkerClient) {
 		}
 		return cws.EmptyPacket
 	})
-}
-
-func newNewGameStartCall(request api.GameStartRequest, library games.GameLibrary) (api.GameStartCall, error) {
-	// the name of the game either in the `room id` field or
-	// it's in the initial request
-	game := request.GameName
-	if request.RoomId != "" {
-		// ! should be moved into coordinator
-		name := session.GetGameNameFromRoomID(request.RoomId)
-		if name == "" {
-			return api.GameStartCall{}, errors.New("couldn't decode game name from the room id")
-		}
-		game = name
-	}
-
-	gameInfo := library.FindGameByName(game)
-	if gameInfo.Path == "" {
-		return api.GameStartCall{}, fmt.Errorf("couldn't find game info for the game %v", game)
-	}
-
-	return api.GameStartCall{
-		Name: gameInfo.Name,
-		Path: gameInfo.Path,
-		Type: gameInfo.Type,
-	}, nil
 }

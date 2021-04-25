@@ -7,12 +7,18 @@ import (
 )
 
 const (
-	CheckLatency           uint8 = 3
-	InitSession            uint8 = 4
-	SendWebrtcOffer        uint8 = 101
-	SendWebrtcIceCandidate uint8 = 103
-	StartGame              uint8 = 104
-	ChangePlayer           uint8 = 108
+	CheckLatency       uint8 = 3   // out
+	InitSession        uint8 = 4   // out
+	WebrtcInit         uint8 = 100 // in
+	WebrtcOffer        uint8 = 101 // out
+	WebrtcAnswer       uint8 = 102 // in
+	WebrtcIceCandidate uint8 = 103 // in / out
+	StartGame          uint8 = 104 // in / out
+	ChangePlayer       uint8 = 108 // in / out
+	QuitGame           uint8 = 105 // in
+	SaveGame           uint8 = 106 // in
+	LoadGame           uint8 = 107 // in
+	ToggleMultitap     uint8 = 109 // in
 )
 
 var convertErr = errors.New("can't convert")
@@ -58,13 +64,12 @@ func (u *User) InitSession(req InitSessionRequest) {
 
 // SendWebrtcOffer (101) sends SDP offer back to the user.
 func (u *User) SendWebrtcOffer(sdp string) {
-	rez, err := u.SendAndForget(SendWebrtcOffer, sdp)
-	log.Printf("OFFER REZ %+v, err: %v", rez, err)
+	_, _ = u.SendAndForget(WebrtcOffer, sdp)
 }
 
 // SendWebrtcIceCandidate (103) sends remote ICE candidate back to the user.
 func (u *User) SendWebrtcIceCandidate(candidate string) {
-	_, _ = u.SendAndForget(SendWebrtcIceCandidate, candidate)
+	_, _ = u.SendAndForget(WebrtcIceCandidate, candidate)
 }
 
 // StartGame signals the user that everything is ready to start a game.
@@ -73,7 +78,7 @@ func (u *User) StartGame() error {
 	return err
 }
 
-// ChangePlayer signals back to the user that player change was successful.
-func (u *User) ChangePlayer(player int) {
-	_, _ = u.SendAndForget(ChangePlayer, player)
+// Notify unconditionally sends the result of some operation.
+func (u *User) Notify(endpoint uint8, result interface{}) {
+	_, _ = u.SendAndForget(endpoint, result)
 }

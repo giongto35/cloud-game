@@ -8,7 +8,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/giongto35/cloud-game/v2/pkg/api"
 	"github.com/giongto35/cloud-game/v2/pkg/network/websocket"
 )
 
@@ -51,29 +50,29 @@ func testWebsocket(t *testing.T) {
 
 	calls := []struct {
 		typ        uint8
-		opts       []PacketOption
+		payload    interface{}
 		concurrent bool
 
 		value interface{}
 	}{
 		{
-			typ:        api.PtEcho,
-			opts:       []PacketOption{Payload("test")},
+			typ:        10,
+			payload:    "test",
 			value:      "test",
 			concurrent: true,
 		},
 		{
-			typ:   api.PtEcho,
-			opts:  []PacketOption{Payload("test2")},
-			value: "test2",
+			typ:     10,
+			payload: "test2",
+			value:   "test2",
 		},
 		{
-			typ:   api.PtEcho,
-			opts:  []PacketOption{Payload("test3")},
-			value: "test3",
+			typ:     11,
+			payload: "test3",
+			value:   "test3",
 		},
 		{
-			typ: api.PtUnknown,
+			typ: 0,
 		},
 	}
 
@@ -87,11 +86,11 @@ func testWebsocket(t *testing.T) {
 				go func() {
 					w := rand.Intn(800-100) + 100
 					time.Sleep(time.Duration(w) * time.Millisecond)
-					vv, err := client.Call(call.typ, call.opts...)
+					vv, err := client.Call(call.typ, call.payload)
 					checkCall(t, vv, err, call.value)
 				}()
 			} else {
-				vv, err := client.Call(call.typ, call.opts...)
+				vv, err := client.Call(call.typ, call.payload)
 				checkCall(t, vv, err, call.value)
 			}
 		}

@@ -28,7 +28,6 @@ type Client struct {
 
 func NewClient(address url.URL) (*Client, error) {
 	conn := ws.NewClient(address)
-	//http.Header{		"User-Agent": []string{"Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/61.0.3163.100 Safari/537.36"},})
 	if conn == nil {
 		return nil, errors.New("can't connect")
 	}
@@ -42,7 +41,6 @@ func NewClient(address url.URL) (*Client, error) {
 
 func NewClientServer(w http.ResponseWriter, r *http.Request) (*Client, error) {
 	conn := ws.NewServer(w, r)
-	//http.Header{		"User-Agent": []string{"Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/61.0.3163.100 Safari/537.36"},})
 	if conn == nil {
 		return nil, errors.New("can't connect")
 	}
@@ -69,12 +67,10 @@ func (c *Client) Close() {
 	c.releaseQueue(errors.New("connection closed"))
 }
 
-func (c *Client) Call(type_ uint8, opts ...PacketOption) (interface{}, error) {
+// !to expose channel instead of results
+func (c *Client) Call(type_ uint8, payload interface{}) (interface{}, error) {
 	id := network.NewUid()
-	rq := Packet{Id: id, T: PacketType(type_)}
-	for _, o := range opts {
-		o(&rq)
-	}
+	rq := Packet{Id: id, T: PacketType(type_), Payload: payload}
 	call := &Call{Request: rq, done: make(chan struct{})}
 	r, err := json.Marshal(&rq)
 	if err != nil {
@@ -94,11 +90,8 @@ func (c *Client) Call(type_ uint8, opts ...PacketOption) (interface{}, error) {
 	return call.Response.Payload, call.err
 }
 
-func (c *Client) Send(type_ uint8, opts ...PacketOption) (interface{}, error) {
-	rq := Packet{T: PacketType(type_)}
-	for _, o := range opts {
-		o(&rq)
-	}
+func (c *Client) Send(type_ uint8, payload interface{}) (interface{}, error) {
+	rq := Packet{T: PacketType(type_), Payload: payload}
 	call := &Call{Request: rq}
 	r, err := json.Marshal(&rq)
 	if err != nil {

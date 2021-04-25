@@ -35,10 +35,9 @@ type WS struct {
 type WSMessageHandler func(message []byte, err error)
 
 var upgrader = websocket.Upgrader{
-	ReadBufferSize:    1024,
-	WriteBufferSize:   1024,
-	EnableCompression: true,
-	WriteBufferPool:   &sync.Pool{},
+	ReadBufferSize:  1024,
+	WriteBufferSize: 1024,
+	WriteBufferPool: &sync.Pool{},
 }
 
 func Upgrade(w http.ResponseWriter, r *http.Request) (*websocket.Conn, error) {
