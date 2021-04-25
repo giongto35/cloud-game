@@ -2,11 +2,11 @@ package user
 
 import (
 	"fmt"
-	"github.com/giongto35/cloud-game/v2/pkg/launcher"
 	"log"
 
 	"github.com/giongto35/cloud-game/v2/pkg/coordinator/worker"
 	"github.com/giongto35/cloud-game/v2/pkg/ipc"
+	"github.com/giongto35/cloud-game/v2/pkg/launcher"
 	"github.com/giongto35/cloud-game/v2/pkg/network"
 )
 
@@ -18,27 +18,17 @@ type User struct {
 }
 
 func New(conn *ipc.Client) User {
-	return User{
-		Id:   network.NewUid(),
-		wire: conn,
-	}
+	return User{Id: network.NewUid(), wire: conn}
 }
 
 func (u *User) AssignWorker(w *worker.WorkerClient) {
-	u.Printf("Assigned wkr: %v", w.Id)
 	u.Worker = w
 	w.MakeAvailable(false)
 }
 
-func (u *User) RetainWorker() {
-	if u.Worker != nil {
-		u.Worker.MakeAvailable(true)
-	}
-}
+func (u *User) RetainWorker() { u.Worker.MakeAvailable(true) }
 
-func (u *User) AssignRoom(id string) {
-	u.RoomID = id
-}
+func (u *User) AssignRoom(id string) { u.RoomID = id }
 
 func (u *User) Send(t uint8, data interface{}) (interface{}, error) {
 	return u.wire.Call(t, data)
@@ -72,7 +62,7 @@ func (u *User) HandleRequests(launcher launcher.Launcher) {
 	u.Handle(func(p ipc.Packet) {
 		switch p.T {
 		case ipc.PacketType(WebrtcInit):
-			u.Printf("Received init_webrtc request -> relay to worker: %s", u.Worker)
+			u.Printf("Received init_webrtc request -> relay to worker: %s", u.Worker.Id)
 			// initWebrtc now only sends signal to worker, asks it to createOffer
 			// relay request to target worker
 			// worker creates a PeerConnection, and createOffer

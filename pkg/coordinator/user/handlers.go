@@ -108,7 +108,7 @@ func (u *User) HandleChangePlayer(data interface{}) {
 	}
 	// TODO: Async
 	resp := u.Worker.SyncSend(
-		cws.WSPacket{ID: api.GamePlayerSelect, SessionID: u.Id, RoomID: u.RoomID, Data: string(req)})
+		cws.WSPacket{ID: api.GamePlayerSelect, SessionID: u.Id, RoomID: u.RoomID, Data: req})
 	if resp.Data == "error" {
 		u.Printf("error: player switch failed for some reason")
 	}

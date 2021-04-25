@@ -1,7 +1,6 @@
 package coordinator
 
 import (
-	"github.com/giongto35/cloud-game/v2/pkg/launcher"
 	"log"
 	"net/http"
 	"unsafe"
@@ -14,26 +13,27 @@ import (
 	"github.com/giongto35/cloud-game/v2/pkg/environment"
 	"github.com/giongto35/cloud-game/v2/pkg/games"
 	"github.com/giongto35/cloud-game/v2/pkg/ipc"
+	"github.com/giongto35/cloud-game/v2/pkg/launcher"
 	"github.com/giongto35/cloud-game/v2/pkg/network"
 	ws "github.com/giongto35/cloud-game/v2/pkg/network/websocket"
 	"github.com/giongto35/cloud-game/v2/pkg/util"
 )
 
 type Hub struct {
-	cfg     coordinator.Config
-	library games.GameLibrary
-	crowd   Crowd
-	guild   Guild
-	rooms   map[string]worker.WorkerClient
+	cfg      coordinator.Config
+	launcher launcher.Launcher
+	crowd    Crowd
+	guild    Guild
+	rooms    map[string]worker.WorkerClient
 }
 
-func NewHub(cfg coordinator.Config, library games.GameLibrary) *Hub {
+func NewHub(cfg coordinator.Config, lib games.GameLibrary) *Hub {
 	return &Hub{
-		cfg:     cfg,
-		library: library,
-		crowd:   NewCrowd(),
-		guild:   NewGuild(),
-		rooms:   map[string]worker.WorkerClient{},
+		cfg:      cfg,
+		launcher: launcher.NewGameLauncher(lib),
+		crowd:    NewCrowd(),
+		guild:    NewGuild(),
+		rooms:    map[string]worker.WorkerClient{},
 	}
 }
 
@@ -89,12 +89,12 @@ connection:
 	h.crowd.add(usr)
 	defer h.crowd.finish(usr)
 
-	usr.HandleRequests(launcher.NewGameLauncher(h.library))
+	usr.HandleRequests(h.launcher)
 
 	usr.InitSession(user.InitSessionOutRequest{
 		// don't do this at home
 		Ice:   *(*[]user.IceServer)(unsafe.Pointer(&h.cfg.Webrtc.IceServers)),
-		Games: h.getGames(),
+		Games: h.launcher.GetAppNames(),
 	})
 
 	usr.WaitDisconnect()
@@ -176,14 +176,6 @@ func (h *Hub) cleanWorker(worker worker.WorkerClient) {
 			delete(h.rooms, roomID)
 		}
 	}
-}
-
-func (h *Hub) getGames() []string {
-	var gameList []string
-	for _, game := range h.library.GetAll() {
-		gameList = append(gameList, game.Name)
-	}
-	return gameList
 }
 
 // workerRoutes adds all worker request routes.

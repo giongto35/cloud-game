@@ -26,3 +26,11 @@ func (gl GameLauncher) FindAppByName(name string) (AppMeta, error) {
 func (gl GameLauncher) ExtractAppNameFromUrl(name string) string {
 	return session.GetGameNameFromRoomID(name)
 }
+
+func (gl GameLauncher) GetAppNames() []string {
+	var gameList []string
+	for _, game := range gl.lib.GetAll() {
+		gameList = append(gameList, game.Name)
+	}
+	return gameList
+}
