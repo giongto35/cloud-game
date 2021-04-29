@@ -1,14 +1,12 @@
 package coordinator
 
-import "github.com/giongto35/cloud-game/v2/pkg/coordinator/worker"
+import "log"
 
-func (h *Hub) findWorkerByRoom(id string, region string) *worker.WorkerClient {
-	if id == "" {
-		return nil
-	}
-	if w, ok := h.rooms[id]; ok {
+func (h *Hub) findWorkerByRoom(id string, region string) *Worker {
+	w, err := h.rooms.Find(id)
+	if err == nil {
 		if w.InRegion(region) {
-			return &w
+			return w.(*Worker)
 		}
 		// if there is zone param, we need to ensure ther worker in that zone
 		// if not we consider the room is missing
@@ -16,18 +14,18 @@ func (h *Hub) findWorkerByRoom(id string, region string) *worker.WorkerClient {
 	return nil
 }
 
-func (h *Hub) findWorkerByIp(address string) *worker.WorkerClient {
+func (h *Hub) findWorkerByIp(address string) *Worker {
 	if address == "" {
 		return nil
 	}
 	return h.guild.findFreeByIp(address)
 }
 
-func (h *Hub) getAvailableWorkers(region string) []worker.WorkerClient {
-	return h.guild.filter(func(w worker.WorkerClient) bool { return w.IsFree && w.InRegion(region) })
+func (h *Hub) getAvailableWorkers(region string) []Worker {
+	return h.guild.filter(func(w Worker) bool { return w.IsFree && w.InRegion(region) })
 }
 
-func (h *Hub) findAnyFreeWorker(region string) *worker.WorkerClient {
+func (h *Hub) findAnyFreeWorker(region string) *Worker {
 	workers := h.getAvailableWorkers(region)
 	if len(workers) > 0 {
 		return &workers[0]
@@ -38,7 +36,7 @@ func (h *Hub) findAnyFreeWorker(region string) *worker.WorkerClient {
 // findFastestWorker returns the best server for a session.
 // All workers addresses are sent to user and user will ping to get latency.
 // !to rewrite
-func (h *Hub) findFastestWorker(region string, fn func(addresses []string) (map[string]int64, error)) *worker.WorkerClient {
+func (h *Hub) findFastestWorker(region string, fn func(addresses []string) (map[string]int64, error)) *Worker {
 	workers := h.getAvailableWorkers(region)
 	if len(workers) == 0 {
 		return nil
@@ -58,7 +56,9 @@ func (h *Hub) findFastestWorker(region string, fn func(addresses []string) (map[
 		return nil
 	}
 
-	var bestWorker *worker.WorkerClient
+	log.Printf("LATENCIES: %v", latencies)
+
+	var bestWorker *Worker
 	var minLatency int64 = 1<<31 - 1
 	// get the worker with lowest latency to user
 	for addr, ping := range latencies {

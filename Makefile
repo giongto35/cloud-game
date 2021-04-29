@@ -74,7 +74,7 @@ dev.build-local:
 
 dev.run: dev.build-local
 	./bin/coordinator --v=5 &
-	./bin/worker --coordinatorhost localhost:8000
+	./bin/worker --v=5 --coordinatorhost localhost:8000
 
 dev.run-docker:
 	docker rm cloud-game-local -f || true

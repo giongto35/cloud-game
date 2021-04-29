@@ -1,18 +1,21 @@
 package ipc
 
-import "github.com/giongto35/cloud-game/v2/pkg/network"
+import (
+	"encoding/json"
 
-type Packet struct {
+	"github.com/giongto35/cloud-game/v2/pkg/network"
+)
+
+type InPacket struct {
+	Id      network.Uid     `json:"id,omitempty"`
+	T       PacketType      `json:"t"`
+	Payload json.RawMessage `json:"payload,omitempty"`
+}
+
+type OutPacket struct {
 	Id      network.Uid `json:"id,omitempty"`
 	T       PacketType  `json:"t"`
 	Payload interface{} `json:"payload,omitempty"`
 }
 
-type PacketType uint8
-
-type Call struct {
-	done     chan struct{}
-	err      error
-	Request  Packet
-	Response Packet
-}
+type PacketType = uint8

@@ -68,7 +68,7 @@ worker:
     port: 6602
     profilingEnabled: false
     # monitoring server URL prefix
-    metricEnabled: true
+    metricEnabled: false
     urlPrefix: /worker
   server:
     address: :9000

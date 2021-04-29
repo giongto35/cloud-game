@@ -17,18 +17,16 @@ const GAME_TOGGLE_MULTITAP = 109
 
 const gameStartRequest = (game = '', roomId = '', player = 0) => ({
     t: GAME_START,
-    payload: JSON.stringify({
+    payload: {
         game_name: game,
         room_id: roomId,
         player_index: player,
-    })
+    }
 })
 
-const gameQuitRequest = (roomId = '') => (
-    {
-        t: GAME_QUIT,
-        payload: JSON.stringify({
-            room_id: roomId
-        })
+const gameQuitRequest = (roomId = '') => ({
+    t: GAME_QUIT,
+    payload: {
+        room_id: roomId
     }
-)
+})

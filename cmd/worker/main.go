@@ -33,7 +33,7 @@ func run() {
 
 	glog.V(4).Infof("[worker] Local configuration %+v", conf)
 	wrk := worker.New(ctx, conf)
-	wrk.Run()
+	wrk.Run(ctx)
 
 	signals := make(chan os.Signal, 1)
 	done := make(chan struct{}, 1)

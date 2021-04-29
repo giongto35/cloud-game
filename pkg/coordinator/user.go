@@ -1,27 +1,35 @@
-package user
+package coordinator
 
 import (
 	"fmt"
 	"log"
 
-	"github.com/giongto35/cloud-game/v2/pkg/coordinator/worker"
+	"github.com/giongto35/cloud-game/v2/pkg/api"
 	"github.com/giongto35/cloud-game/v2/pkg/ipc"
 	"github.com/giongto35/cloud-game/v2/pkg/launcher"
 	"github.com/giongto35/cloud-game/v2/pkg/network"
 )
 
 type User struct {
-	Id     network.Uid
+	id     network.Uid
 	RoomID string
 	wire   *ipc.Client
-	Worker *worker.WorkerClient
+	Worker *Worker
 }
 
-func New(conn *ipc.Client) User {
-	return User{Id: network.NewUid(), wire: conn}
+func (u *User) Id() network.Uid {
+	return u.id
 }
 
-func (u *User) AssignWorker(w *worker.WorkerClient) {
+func (u *User) InRegion(region string) bool {
+	panic("implement me")
+}
+
+func NewUser(conn *ipc.Client) User {
+	return User{id: network.NewUid(), wire: conn}
+}
+
+func (u *User) AssignWorker(w *Worker) {
 	u.Worker = w
 	w.MakeAvailable(false)
 }
@@ -34,12 +42,8 @@ func (u *User) Send(t uint8, data interface{}) (interface{}, error) {
 	return u.wire.Call(t, data)
 }
 
-func (u *User) SendAndForget(t uint8, data interface{}) (interface{}, error) {
+func (u *User) SendAndForget(t uint8, data interface{}) error {
 	return u.wire.Send(t, data)
-}
-
-func (u *User) Handle(fn func(p ipc.Packet)) {
-	u.wire.OnPacket = fn
 }
 
 func (u *User) WaitDisconnect() {
@@ -51,48 +55,48 @@ func (u *User) Clean() {
 }
 
 func (u *User) Printf(format string, args ...interface{}) {
-	log.Printf(fmt.Sprintf("user: [%s] %s", u.Id.Short(), format), args...)
+	log.Printf(fmt.Sprintf("user: [%s] %s", u.id.Short(), format), args...)
 }
 
 func (u *User) Println(args ...interface{}) {
-	log.Println(fmt.Sprintf("user: [%s] %s", u.Id.Short(), fmt.Sprint(args...)))
+	log.Println(fmt.Sprintf("user: [%s] %s", u.id.Short(), fmt.Sprint(args...)))
 }
 
 func (u *User) HandleRequests(launcher launcher.Launcher) {
-	u.Handle(func(p ipc.Packet) {
+	u.wire.OnPacket = func(p ipc.InPacket) {
 		switch p.T {
-		case ipc.PacketType(WebrtcInit):
-			u.Printf("Received init_webrtc request -> relay to worker: %s", u.Worker.Id)
+		case api.WebrtcInit:
+			u.Printf("Received init_webrtc request -> relay to worker: %s", u.Worker.Id())
 			// initWebrtc now only sends signal to worker, asks it to createOffer
 			// relay request to target worker
 			// worker creates a PeerConnection, and createOffer
 			// send SDP back to browser
 			u.HandleWebrtcInit()
 			u.Println("Received SDP from worker -> sending back to browser")
-		case ipc.PacketType(WebrtcAnswer):
+		case api.WebrtcAnswer:
 			u.Println("Received browser answered SDP -> relay to worker")
 			u.HandleWebrtcAnswer(p.Payload)
-		case ipc.PacketType(WebrtcIceCandidate):
+		case api.WebrtcIceCandidate:
 			u.Println("Received IceCandidate from browser -> relay to worker")
 			u.HandleWebrtcIceCandidate(p.Payload)
-		case ipc.PacketType(StartGame):
+		case api.StartGame:
 			u.Println("Received start request from a browser -> relay to worker")
 			u.HandleStartGame(p.Payload, launcher)
-		case ipc.PacketType(QuitGame):
+		case api.QuitGame:
 			u.Println("Received quit request from a browser -> relay to worker")
 			u.HandleQuitGame(p.Payload)
-		case ipc.PacketType(SaveGame):
+		case api.SaveGame:
 			u.Println("Received save request from a browser -> relay to worker")
 			u.HandleSaveGame()
-		case ipc.PacketType(LoadGame):
+		case api.LoadGame:
 			u.Println("Received load request from a browser -> relay to worker")
 			u.HandleLoadGame()
-		case ipc.PacketType(ChangePlayer):
+		case api.ChangePlayer:
 			u.Println("Received update player index request from a browser -> relay to worker")
 			u.HandleChangePlayer(p.Payload)
-		case ipc.PacketType(ToggleMultitap):
+		case api.ToggleMultitap:
 			u.Println("Received multitap request from a browser -> relay to worker")
 			u.HandleToggleMultitap()
 		}
-	})
+	}
 }

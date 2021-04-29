@@ -1,10 +1,9 @@
 package ipc
 
 import (
-	"crypto/tls"
 	"encoding/json"
 	"errors"
-	"log"
+	"net"
 	"net/http"
 	"net/url"
 	"sync"
@@ -12,53 +11,39 @@ import (
 
 	"github.com/giongto35/cloud-game/v2/pkg/network"
 	ws "github.com/giongto35/cloud-game/v2/pkg/network/websocket"
-	"github.com/gorilla/websocket"
 )
 
-const callTimeout = 5 * time.Second
+// !todo revamp termination hold
+const callTimeout = 1 * time.Second
+
+type call struct {
+	done     chan struct{}
+	err      error
+	Request  OutPacket
+	Response InPacket
+}
 
 type Client struct {
 	Conn *ws.WS
 	// !to check leaks
-	queue map[network.Uid]*Call
-	mu    sync.Mutex
-
-	OnPacket func(packet Packet)
+	queue    map[network.Uid]*call
+	mu       sync.Mutex
+	OnPacket func(packet InPacket)
 }
 
-func NewClient(address url.URL) (*Client, error) {
-	conn := ws.NewClient(address)
-	if conn == nil {
-		return nil, errors.New("can't connect")
-	}
-	client := &Client{
-		Conn:  conn,
-		queue: make(map[network.Uid]*Call, 1),
-	}
-	client.Conn.OnMessage = client.handleMessage
-	return client, nil
-}
+func NewClient(address url.URL) (*Client, error) { return connect(ws.NewClient(address)) }
 
 func NewClientServer(w http.ResponseWriter, r *http.Request) (*Client, error) {
-	conn := ws.NewServer(w, r)
+	return connect(ws.NewServer(w, r))
+}
+
+func connect(conn *ws.WS) (*Client, error) {
 	if conn == nil {
 		return nil, errors.New("can't connect")
 	}
-	client := &Client{
-		Conn:  conn,
-		queue: make(map[network.Uid]*Call, 1),
-	}
+	client := &Client{Conn: conn, queue: make(map[network.Uid]*call, 1), OnPacket: func(packet InPacket) {}}
 	client.Conn.OnMessage = client.handleMessage
 	return client, nil
-}
-
-func Connect(address url.URL) (*websocket.Conn, error) {
-	dialer := websocket.Dialer{}
-	if address.Scheme == "wss" {
-		dialer.TLSClientConfig = &tls.Config{InsecureSkipVerify: true}
-	}
-	conn, _, err := dialer.Dial(address.String(), nil)
-	return conn, err
 }
 
 // !to handle error
@@ -68,10 +53,10 @@ func (c *Client) Close() {
 }
 
 // !to expose channel instead of results
-func (c *Client) Call(type_ uint8, payload interface{}) (interface{}, error) {
+func (c *Client) Call(type_ uint8, payload interface{}) ([]byte, error) {
 	id := network.NewUid()
-	rq := Packet{Id: id, T: PacketType(type_), Payload: payload}
-	call := &Call{Request: rq, done: make(chan struct{})}
+	rq := OutPacket{Id: id, T: type_, Payload: payload}
+	call := &call{Request: rq, done: make(chan struct{})}
 	r, err := json.Marshal(&rq)
 	if err != nil {
 		delete(c.queue, id)
@@ -90,19 +75,22 @@ func (c *Client) Call(type_ uint8, payload interface{}) (interface{}, error) {
 	return call.Response.Payload, call.err
 }
 
-func (c *Client) Send(type_ uint8, payload interface{}) (interface{}, error) {
-	rq := Packet{T: PacketType(type_), Payload: payload}
-	call := &Call{Request: rq}
-	r, err := json.Marshal(&rq)
+func (c *Client) Send(type_ uint8, payload interface{}) error {
+	return c.SendPacket(OutPacket{T: type_, Payload: payload})
+}
+
+func (c *Client) SendPacket(packet OutPacket) error {
+	call := &call{Request: packet}
+	r, err := json.Marshal(packet)
 	if err != nil {
-		return nil, err
+		return err
 	}
 
 	c.mu.Lock()
 	c.Conn.Write(r)
 	c.mu.Unlock()
 
-	return call.Response.Payload, call.err
+	return call.err
 }
 
 func (c *Client) handleMessage(message []byte, err error) {
@@ -110,26 +98,23 @@ func (c *Client) handleMessage(message []byte, err error) {
 		return
 	}
 
-	var res Packet
-	_ = json.Unmarshal(message, &res)
-
-	// skip block on "async" calls
-	if res.Id == network.EmptyUid {
-		c.OnPacket(res)
+	var res InPacket
+	if err = json.Unmarshal(message, &res); err != nil {
 		return
 	}
 
-	call := c.pop(res.Id)
-	if call == nil {
-		log.Printf("no pending request found")
-		return
+	if res.Id != network.EmptyUid {
+		call := c.pop(res.Id)
+		if call != nil {
+			call.Response = res
+			call.done <- struct{}{}
+			return
+		}
 	}
-
-	call.Response = res
-	call.done <- struct{}{}
+	c.OnPacket(res)
 }
 
-func (c *Client) pop(id network.Uid) *Call {
+func (c *Client) pop(id network.Uid) *call {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 	call := c.queue[id]
@@ -144,4 +129,8 @@ func (c *Client) releaseQueue(err error) {
 		call.err = err
 		call.done <- struct{}{}
 	}
+}
+
+func (c *Client) GetRemoteAddr() net.Addr {
+	return c.Conn.GetRemoteAddr()
 }

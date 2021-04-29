@@ -1,77 +1,53 @@
 package coordinator
 
 import (
-	"log"
-	"sync"
-
-	"github.com/giongto35/cloud-game/v2/pkg/coordinator/worker"
-	"github.com/giongto35/cloud-game/v2/pkg/network"
+	"github.com/giongto35/cloud-game/v2/pkg/cache"
+	"github.com/giongto35/cloud-game/v2/pkg/client"
 )
 
 // Guild denotes some abstraction over list of workers
 // and their jobs.
 type Guild struct {
-	mu      sync.Mutex
-	workers map[network.Uid]worker.WorkerClient
+	cache.Cache
 }
 
 func NewGuild() Guild {
-	return Guild{
-		workers: make(map[network.Uid]worker.WorkerClient, 10),
+	return Guild{cache.New(make(map[string]client.NetClient, 10))}
+}
+
+func (g *Guild) add(worker Worker) {
+	g.Add(string(worker.Id()), &worker)
+}
+
+func (g *Guild) findFreeByIp(addr string) *Worker {
+	worker, err := g.FindBy(func(cl client.NetClient) bool {
+		worker := cl.(*Worker)
+		return worker.IsFree && worker.Address == addr
+	})
+	if err != nil {
+		return nil
 	}
+	return worker.(*Worker)
 }
 
-func (g *Guild) add(w worker.WorkerClient) {
-	g.mu.Lock()
-	defer g.mu.Unlock()
-
-	g.workers[w.Id] = w
-	log.Printf("Guild: %v", g.workers)
+func (g *Guild) findByPingServer(address string) *Worker {
+	worker, err := g.FindBy(func(cl client.NetClient) bool {
+		worker := cl.(*Worker)
+		return worker.PingServer == address
+	})
+	if err != nil {
+		return nil
+	}
+	return worker.(*Worker)
 }
 
-func (g *Guild) remove(w worker.WorkerClient) {
-	w.Printf("Has done his duty")
-	g.mu.Lock()
-	defer g.mu.Unlock()
-
-	delete(g.workers, w.Id)
-	w.Close()
-	log.Printf("Guild: %v", g.workers)
-}
-
-func (g *Guild) findFreeByIp(addr string) *worker.WorkerClient {
-	g.mu.Lock()
-	defer g.mu.Unlock()
-
-	for _, w := range g.workers {
-		if w.IsFree && w.Address == addr {
-			return &w
+func (g *Guild) filter(fn func(w Worker) bool) []Worker {
+	var list []Worker
+	g.ForEach(func(cl client.NetClient) {
+		worker := *cl.(*Worker)
+		if fn(worker) {
+			list = append(list, worker)
 		}
-	}
-	return nil
-}
-
-func (g *Guild) findByPingServer(address string) *worker.WorkerClient {
-	g.mu.Lock()
-	defer g.mu.Unlock()
-
-	for _, w := range g.workers {
-		if w.PingServer == address {
-			return &w
-		}
-	}
-	return nil
-}
-
-func (g *Guild) filter(fn func(w worker.WorkerClient) bool) []worker.WorkerClient {
-	g.mu.Lock()
-	defer g.mu.Unlock()
-
-	var list []worker.WorkerClient
-	for _, w := range g.workers {
-		if fn(w) {
-			list = append(list, w)
-		}
-	}
+	})
 	return list
 }

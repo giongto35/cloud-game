@@ -1,10 +1,10 @@
-package user
+package coordinator
 
 import (
+	"encoding/json"
 	"strconv"
 
-	"github.com/giongto35/cloud-game/v2/pkg/cws"
-	"github.com/giongto35/cloud-game/v2/pkg/cws/api"
+	"github.com/giongto35/cloud-game/v2/pkg/api"
 	"github.com/giongto35/cloud-game/v2/pkg/launcher"
 )
 
@@ -12,31 +12,34 @@ func (u *User) HandleWebrtcInit() {
 	if u.Worker == nil {
 		return
 	}
-	resp := u.Worker.SyncSend(cws.WSPacket{ID: api.InitWebrtc, SessionID: u.Id})
-	if resp != cws.EmptyPacket && resp.ID == api.Offer {
-		u.SendWebrtcOffer(resp.Data)
+	resp, err := u.Worker.WebrtcInit(u.Id())
+	if err != nil || resp == "" {
+		u.Printf("error: webrtc init failed, %v", err)
+		return
 	}
+	u.SendWebrtcOffer(resp)
 }
 
-func (u *User) HandleWebrtcAnswer(data interface{}) {
+func (u *User) HandleWebrtcAnswer(data json.RawMessage) {
 	req, err := webrtcAnswerInRequest(data)
 	if err != nil {
 		u.Printf("error: broken webrtc answer request %v", err)
 		return
 	}
-	u.Worker.SendPacket(cws.WSPacket{ID: api.Answer, SessionID: u.Id, Data: req})
+	u.Worker.WebrtcAnswer(u.Id(), req)
 }
 
-func (u *User) HandleWebrtcIceCandidate(data interface{}) {
+func (u *User) HandleWebrtcIceCandidate(data json.RawMessage) {
 	req, err := webrtcIceCandidateInRequest(data)
 	if err != nil {
-		u.Printf("error: broken webrtc answer request %v", err)
+		u.Printf("error: broken ICE candidate request %v", err)
 		return
 	}
-	u.Worker.SendPacket(cws.WSPacket{ID: api.IceCandidate, SessionID: u.Id, Data: req})
+	u.Worker.WebrtcIceCandidate(u.Id(), req)
 }
 
-func (u *User) HandleStartGame(data interface{}, launcher launcher.Launcher) {
+func (u *User) HandleStartGame(data json.RawMessage, launcher launcher.Launcher) {
+
 	req, err := gameStartInRequest(data)
 	if err != nil {
 		u.Printf("error: broken game start request %v", err)
@@ -61,17 +64,14 @@ func (u *User) HandleStartGame(data interface{}, launcher launcher.Launcher) {
 		return
 	}
 
-	gameStartCall := api.GameStartCall{Name: gameInfo.Name, Path: gameInfo.Path, Type: gameInfo.Type}
-	packet, err := gameStartCall.To()
+	workerResp, err := u.Worker.StartGame(u.Id(), req.RoomId, req.PlayerIndex, gameInfo)
 	if err != nil {
 		u.Printf("err: %v", err)
 		return
 	}
-
-	workerResp := u.Worker.SyncSend(cws.WSPacket{ID: api.Start, SessionID: u.Id, RoomID: req.RoomId, Data: packet})
 	// Response from worker contains initialized roomID. Set roomID to the session
-	u.AssignRoom(workerResp.RoomID)
-	u.Println("Received room response from worker: ", workerResp.RoomID)
+	u.AssignRoom(workerResp.RoomId)
+	u.Println("Received room response from worker: ", workerResp.RoomId)
 
 	if err = u.StartGame(); err != nil {
 		u.Printf("can't send back start request")
@@ -79,48 +79,55 @@ func (u *User) HandleStartGame(data interface{}, launcher launcher.Launcher) {
 	}
 }
 
-func (u *User) HandleQuitGame(data interface{}) {
+func (u *User) HandleQuitGame(data json.RawMessage) {
 	req, err := gameQuitInRequest(data)
 	if err != nil {
 		u.Printf("error: broken game quit request %v", err)
 		return
 	}
-	u.Worker.SyncSend(cws.WSPacket{ID: api.GameQuit, SessionID: u.Id, RoomID: req.RoomId})
+	u.Worker.QuitGame(u.Id(), req.RoomId)
 }
 
 func (u *User) HandleSaveGame() {
 	// TODO: Async
-	resp := u.Worker.SyncSend(cws.WSPacket{ID: api.GameSave, SessionID: u.Id, RoomID: u.RoomID})
-	u.Notify(SaveGame, resp.Data)
+	resp, err := u.Worker.SaveGame(u.Id(), u.RoomID)
+	if err != nil {
+		u.Printf("error: broken game save request %v", err)
+		return
+	}
+	u.Notify(api.SaveGame, resp)
 }
 
 func (u *User) HandleLoadGame() {
 	// TODO: Async
-	resp := u.Worker.SyncSend(cws.WSPacket{ID: api.GameLoad, SessionID: u.Id, RoomID: u.RoomID})
-	u.Notify(LoadGame, resp.Data)
+	resp, err := u.Worker.LoadGame(u.Id(), u.RoomID)
+	if err != nil {
+		u.Printf("error: broken game load request %v", err)
+		return
+	}
+	u.Notify(api.LoadGame, resp)
 }
 
-func (u *User) HandleChangePlayer(data interface{}) {
+func (u *User) HandleChangePlayer(data json.RawMessage) {
 	req, err := changePlayerInRequest(data)
 	if err != nil {
 		u.Printf("error: broken player change request %v", err)
 		return
 	}
 	// TODO: Async
-	resp := u.Worker.SyncSend(
-		cws.WSPacket{ID: api.GamePlayerSelect, SessionID: u.Id, RoomID: u.RoomID, Data: req})
-	if resp.Data == "error" {
+	resp, err := u.Worker.ChangePlayer(u.Id(), u.RoomID, req)
+	if err != nil || resp == "error" {
 		u.Printf("error: player switch failed for some reason")
 	}
-	idx, err := strconv.Atoi(resp.Data)
+	idx, err := strconv.Atoi(resp)
 	if err != nil {
 		u.Printf("error: broken player change response %v", err)
 		return
 	}
-	u.Notify(ChangePlayer, idx)
+	u.Notify(api.ChangePlayer, idx)
 }
 
 func (u *User) HandleToggleMultitap() {
 	// TODO: Async
-	_ = u.Worker.SyncSend(cws.WSPacket{ID: api.GameMultitap, SessionID: u.Id, RoomID: u.RoomID})
+	u.Worker.ToggleMultitap(u.Id(), u.RoomID)
 }

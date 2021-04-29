@@ -86,7 +86,7 @@
         })).then(servers => {
             const latencies = Object.assign({}, ...servers);
             log.info('[ping] <->', latencies);
-            socket.send({id: data.packetId, "t": LATENCY_CHECK, "payload": JSON.stringify(latencies)});
+            socket.send({id: data.packetId, "t": LATENCY_CHECK, "payload": latencies});
         });
     };
 

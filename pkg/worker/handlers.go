@@ -1,10 +1,13 @@
 package worker
 
 import (
+	"context"
+	"errors"
 	"log"
 	"net/http"
 	"net/url"
 	"os"
+	"sync"
 	"time"
 
 	"github.com/giongto35/cloud-game/v2/pkg/config/worker"
@@ -18,8 +21,7 @@ import (
 )
 
 type Handler struct {
-	// Client that connects to coordinator
-	oClient *CoordinatorClient
+	cord Coordinator
 	// Raw address of coordinator
 	coordinatorHost string
 	cfg             worker.Config
@@ -31,6 +33,8 @@ type Handler struct {
 	onlineStorage *storage.Client
 	// sessions handles all sessions server is handler (key is sessionID)
 	sessions map[network.Uid]*Session
+
+	mu sync.Mutex
 
 	w *Worker
 }
@@ -53,9 +57,16 @@ func NewHandler(cfg worker.Config, wrk *Worker) *Handler {
 }
 
 // Run starts a Handler running logic
-func (h *Handler) Run() {
+func (h *Handler) Run(ctx context.Context) {
 	conf := h.cfg.Worker.Network
+
+	h.Prepare()
+
 	for {
+		if errors.Is(ctx.Err(), context.Canceled) {
+			return
+		}
+
 		conn, err := newCoordinatorConnection(conf.CoordinatorAddress, conf.Zone, h.cfg)
 		if err != nil {
 			log.Printf("Cannot connect to coordinator. %v Retrying...", err)
@@ -64,11 +75,14 @@ func (h *Handler) Run() {
 		}
 		log.Printf("[worker] connected to: %v", conf.CoordinatorAddress)
 
-		h.oClient = conn
-		go h.oClient.Heartbeat()
-		h.routes()
-		h.oClient.Listen()
-		// If cannot listen, reconnect to coordinator
+		h.cord = conn
+		h.cord.HandleRequests(h)
+		h.cord.WaitDisconnect()
+		h.Close()
+
+		if errors.Is(ctx.Err(), context.Canceled) {
+			return
+		}
 	}
 }
 
@@ -90,7 +104,7 @@ func (h *Handler) Prepare() {
 	}
 }
 
-func newCoordinatorConnection(host string, zone string, conf worker.Config) (*CoordinatorClient, error) {
+func newCoordinatorConnection(host string, zone string, conf worker.Config) (Coordinator, error) {
 	scheme := "ws"
 	if conf.Worker.Network.Secure {
 		scheme = "wss"
@@ -98,15 +112,11 @@ func newCoordinatorConnection(host string, zone string, conf worker.Config) (*Co
 	address := url.URL{Scheme: scheme, Host: host, Path: conf.Worker.Network.Endpoint, RawQuery: "zone=" + zone}
 	log.Printf("[worker] connect to %v", address.String())
 
-	conn, err := ipc.Connect(address)
+	conn, err := ipc.NewClient(address)
 	if err != nil {
-		return nil, err
+		return Coordinator{}, err
 	}
-	return NewCoordinatorClient(conn), nil
-}
-
-func (h *Handler) GetCoordinatorClient() *CoordinatorClient {
-	return h.oClient
+	return NewCoordinator(conn), nil
 }
 
 // detachPeerConn detaches a peerconnection from the current room.
@@ -125,13 +135,35 @@ func (h *Handler) detachPeerConn(pc *webrtc.WebRTC) {
 	}
 }
 
-func (h *Handler) getSession(id network.Uid) *Session { return h.sessions[id] }
+func (h *Handler) getSession(id network.Uid) *Session {
+	h.mu.Lock()
+	defer h.mu.Unlock()
+	return h.sessions[id]
+}
 
-func (h *Handler) getRoom(id string) *room.Room { return h.rooms[id] }
+func (h *Handler) addSession(id network.Uid, value *Session) {
+	h.mu.Lock()
+	h.sessions[id] = value
+	h.mu.Unlock()
+}
+
+func (h *Handler) removeSession(id network.Uid) {
+	h.mu.Lock()
+	delete(h.sessions, id)
+	h.mu.Unlock()
+}
+
+func (h *Handler) getRoom(id string) *room.Room {
+	//h.mu.Lock()
+	//defer h.mu.Unlock()
+	return h.rooms[id]
+}
 
 // detachRoom detach room from Handler
 func (h *Handler) detachRoom(id string) {
+	//h.mu.Lock()
 	delete(h.rooms, id)
+	//h.mu.Unlock()
 }
 
 // createRoom creates a new room or returns nil for existing.
@@ -140,8 +172,9 @@ func (h *Handler) createRoom(id string, game games.GameMetadata) *room.Room {
 	// we spawn a new room
 	if !h.isRoomBusy(id) {
 		newRoom := room.NewRoom(id, game, h.onlineStorage, h.cfg)
-		// TODO: Might have race condition (and it has (:)
+		//h.mu.Lock()
 		h.rooms[newRoom.ID] = newRoom
+		//h.mu.Unlock()
 		return newRoom
 	}
 	return nil
@@ -155,7 +188,9 @@ func (h *Handler) isRoomBusy(roomID string) bool {
 		return false
 	}
 	// If no roomID is registered
+	h.mu.Lock()
 	r, ok := h.rooms[roomID]
+	h.mu.Unlock()
 	if !ok {
 		return false
 	}
@@ -163,9 +198,7 @@ func (h *Handler) isRoomBusy(roomID string) bool {
 }
 
 func (h *Handler) Close() {
-	if h.oClient != nil {
-		h.oClient.Close()
-	}
+	h.cord.wire.Close()
 	for _, r := range h.rooms {
 		r.Close()
 	}

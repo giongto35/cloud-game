@@ -2,12 +2,12 @@ package worker
 
 import (
 	"context"
+	"net/http"
+
 	"github.com/giongto35/cloud-game/v2/pkg/config/worker"
 	"github.com/giongto35/cloud-game/v2/pkg/monitoring"
 	"github.com/giongto35/cloud-game/v2/pkg/network/httpx"
 	"github.com/giongto35/cloud-game/v2/pkg/server"
-	"log"
-	"net/http"
 )
 
 type Worker struct {
@@ -27,29 +27,21 @@ func New(ctx context.Context, conf worker.Config) *Worker {
 	}
 }
 
-func (wrk *Worker) Run() {
-	go func() {
-		h := NewHandler(wrk.conf, wrk)
-		defer func() {
-			log.Printf("[worker] Closing handler")
-			h.Close()
-		}()
+// !to add proper shutdown on app termination
 
-		go h.Run()
-		h.Prepare()
-		wrk.init()
-	}()
-	wrk.services.Start()
-}
-
-func (wrk *Worker) init() {
+func (wrk *Worker) Run(ctx context.Context) {
 	conf := wrk.conf.Worker.Server
+
+	h := NewHandler(wrk.conf, wrk)
+
+	go h.Run(ctx)
 
 	address := conf.Address
 	if conf.Https {
 		address = conf.Tls.Address
 	}
-	httpx.NewServer(
+
+	go httpx.NewServer(
 		address,
 		func(_ *httpx.Server) http.Handler {
 			h := http.NewServeMux()
@@ -61,6 +53,8 @@ func (wrk *Worker) init() {
 		httpx.HttpsRedirect(false),
 		httpx.WithPortRoll(true),
 	).Start()
+
+	wrk.services.Start()
 }
 
 func (wrk *Worker) Shutdown() { wrk.services.Shutdown(wrk.ctx) }

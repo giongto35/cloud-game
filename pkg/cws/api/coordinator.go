@@ -6,7 +6,6 @@ import (
 )
 
 const (
-	GetRoom      = "get_room"
 	CloseRoom    = "close_room"
 	RegisterRoom = "register_room"
 	Heartbeat    = "heartbeat"
@@ -36,7 +35,6 @@ func (packet *GameStartCall) From(data string) error { return from(packet, data)
 func (packet *GameStartCall) To() (string, error)    { return to(packet) }
 
 func RegisterRoomPacket(data string) cws.WSPacket { return cws.WSPacket{ID: RegisterRoom, Data: data} }
-func GetRoomPacket(data string) cws.WSPacket      { return cws.WSPacket{ID: GetRoom, Data: data} }
 func CloseRoomPacket(data string) cws.WSPacket    { return cws.WSPacket{ID: CloseRoom, Data: data} }
 func IceCandidatePacket(data string, sessionId network.Uid) cws.WSPacket {
 	return cws.WSPacket{ID: IceCandidate, Data: data, SessionID: sessionId}

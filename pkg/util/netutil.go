@@ -3,15 +3,13 @@ package util
 import (
 	"net"
 	"strings"
-
-	"github.com/gorilla/websocket"
 )
 
 // GetRemoteAddress returns public address of websocket connection
-func GetRemoteAddress(conn *websocket.Conn) string {
+func GetRemoteAddress(addr net.Addr) string {
 	var remoteAddr string
 	// log.Println("Address :", conn.RemoteAddr().String())
-	if parts := strings.Split(conn.RemoteAddr().String(), ":"); len(parts) == 2 {
+	if parts := strings.Split(addr.String(), ":"); len(parts) == 2 {
 		remoteAddr = parts[0]
 	}
 	if remoteAddr == "" {
