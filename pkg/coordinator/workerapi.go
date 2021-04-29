@@ -9,30 +9,18 @@ import (
 	"github.com/giongto35/cloud-game/v2/pkg/network"
 )
 
-type WebrtcInitOutRequest struct {
-	api.StatefulRequest
-}
-type WebrtcInitOutResponse = string
-
-type TerminateSessionOutRequest struct {
-	api.StatefulRequest
-}
-
 func (w *Worker) AssignId(id network.Uid) {
 	_ = w.SendAndForget(api.IdentifyWorker, id)
 }
 
-func (w *Worker) WebrtcInit(id network.Uid) (WebrtcInitOutResponse, error) {
-	data, err := w.Send(api.WebrtcInit, WebrtcInitOutRequest{api.StatefulRequest{Id: id}})
+func (w *Worker) WebrtcInit(id network.Uid) (api.WebrtcInitResponse, error) {
+	data, err := w.Send(api.WebrtcInit, api.WebrtcInitRequest{StatefulRequest: api.StatefulRequest{Id: id}})
 	if err != nil {
 		return "", errors.New("request error")
 	}
 	var resp string
 	err = json.Unmarshal(data, &resp)
-	if err != nil {
-		return "", api.ConvertErr
-	}
-	return resp, nil
+	return resp, err
 }
 
 func (w *Worker) WebrtcAnswer(id network.Uid, sdp string) {
@@ -65,14 +53,11 @@ func (w *Worker) StartGame(id network.Uid, roomId string, idx int, game launcher
 		return resp, errors.New("request error")
 	}
 	err = json.Unmarshal(data, &resp)
-	if err != nil {
-		return resp, api.ConvertErr
-	}
-	return resp, nil
+	return resp, err
 }
 
 func (w *Worker) QuitGame(id network.Uid, roomId string) {
-	_, _ = w.Send(api.QuitGame, api.GameQuitRequest{
+	_ = w.SendAndForget(api.QuitGame, api.GameQuitRequest{
 		StatefulRequest: api.StatefulRequest{Id: id},
 		RoomId:          roomId,
 	})
@@ -88,10 +73,7 @@ func (w *Worker) SaveGame(id network.Uid, roomId string) (api.SaveGameResponse, 
 		return resp, errors.New("request error")
 	}
 	err = json.Unmarshal(data, &resp)
-	if err != nil {
-		return resp, api.ConvertErr
-	}
-	return resp, nil
+	return resp, err
 }
 
 func (w *Worker) LoadGame(id network.Uid, roomId string) (api.LoadGameResponse, error) {
@@ -104,10 +86,7 @@ func (w *Worker) LoadGame(id network.Uid, roomId string) (api.LoadGameResponse, 
 		return resp, errors.New("request error")
 	}
 	err = json.Unmarshal(data, &resp)
-	if err != nil {
-		return resp, api.ConvertErr
-	}
-	return resp, nil
+	return resp, err
 }
 
 func (w *Worker) ChangePlayer(id network.Uid, roomId string, index string) (api.ChangePlayerResponse, error) {
@@ -121,10 +100,7 @@ func (w *Worker) ChangePlayer(id network.Uid, roomId string, index string) (api.
 		return resp, errors.New("request error")
 	}
 	err = json.Unmarshal(data, &resp)
-	if err != nil {
-		return resp, api.ConvertErr
-	}
-	return resp, nil
+	return resp, err
 }
 
 func (w *Worker) ToggleMultitap(id network.Uid, roomId string) {
@@ -135,5 +111,5 @@ func (w *Worker) ToggleMultitap(id network.Uid, roomId string) {
 }
 
 func (w *Worker) TerminateSession(id network.Uid) {
-	_, _ = w.Send(api.TerminateSession, TerminateSessionOutRequest{StatefulRequest: api.StatefulRequest{Id: id}})
+	_, _ = w.Send(api.TerminateSession, api.TerminateSessionRequest{StatefulRequest: api.StatefulRequest{Id: id}})
 }

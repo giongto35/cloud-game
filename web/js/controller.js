@@ -168,13 +168,7 @@
     const loadGame = utils.debounce(() => socket.send({t: GAME_LOAD}), 1000);
 
     const onMessage = (message) => {
-        // type Packet struct {
-        //     Id      network.Uid `json:"id,omitempty"`
-        //     T       PacketType  `json:"t"`
-        //     Payload interface{} `json:"payload,omitempty"`
-        // }
         const {id, t, payload} = message;
-
         switch (t) {
             case INIT:
                 event.pub(WEBRTC_NEW_CONNECTION, payload);

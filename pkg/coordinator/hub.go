@@ -3,7 +3,6 @@ package coordinator
 import (
 	"log"
 	"net/http"
-	"unsafe"
 
 	"github.com/giongto35/cloud-game/v2/pkg/cache"
 	"github.com/giongto35/cloud-game/v2/pkg/client"
@@ -37,25 +36,23 @@ func NewHub(cfg coordinator.Config, lib games.GameLibrary) *Hub {
 func (h *Hub) handleNewWebsocketUserConnection(w http.ResponseWriter, r *http.Request) {
 	defer func() {
 		if r := recover(); r != nil {
-			log.Println("Warn: Something wrong. Recovered in ", r)
+			log.Printf("error: recovered user client from (%v)", r)
 		}
 	}()
 
 	conn, err := ipc.NewClientServer(w, r)
 	if err != nil {
-		log.Fatalf("error: couldn't start usr handler")
+		log.Fatalf("error: couldn't init user connection")
 	}
 	usr := NewUser(conn)
-	log.Printf("new usr: %v", usr.Id())
+	defer usr.Clean()
+	uid := string(usr.Id())
+	usr.Printf("Connected")
 
-	// Server will pair the frontend with the server running the room.
-	// It only happens when we are trying to access a running room over share link.
-	// TODO: Update link to the wiki
 	roomId := r.URL.Query().Get("room_id")
 	region := r.URL.Query().Get("zone")
 
-	// O_o
-	usr.Printf("Trying to find some wkr")
+	usr.Printf("Searching for a free worker")
 	var wkr *Worker
 	if wkr = h.findWorkerByRoom(roomId, region); wkr != nil {
 		usr.Printf("An existing wkr has been found for room [%v]", roomId)
@@ -73,34 +70,22 @@ func (h *Hub) handleNewWebsocketUserConnection(w http.ResponseWriter, r *http.Re
 	}
 
 	usr.AssignWorker(wkr)
-	h.crowd.Add(string(usr.Id()), &usr)
-	defer func() {
-		usr.Printf("CLEAAAAAAN __________________ usr: %v", usr)
-		h.crowd.Remove(string(usr.Id()))
-		usr.Clean()
-	}()
-
+	h.crowd.Add(uid, &usr)
+	defer h.crowd.Remove(uid)
 	usr.HandleRequests(h.launcher)
-
-	usr.InitSession(InitSessionOutRequest{
-		// don't do this at home
-		Ice:   *(*[]IceServer)(unsafe.Pointer(&h.cfg.Webrtc.IceServers)),
-		Games: h.launcher.GetAppNames(),
-	})
+	usr.InitSession(h.cfg.Webrtc.IceServers, h.launcher.GetAppNames())
 
 	usr.WaitDisconnect()
 	usr.RetainWorker()
-
-	// Notify wkr to clean session
 	usr.Worker.TerminateSession(usr.Id())
-	usr.Println("Disconnect from coordinator")
+	usr.Printf("Disconnected")
 }
 
 // handleNewWebsocketWorkerConnection handles all connections from a new worker to coordinator.
 func (h *Hub) handleNewWebsocketWorkerConnection(w http.ResponseWriter, r *http.Request) {
 	defer func() {
 		if r := recover(); r != nil {
-			log.Println("Warn: Something wrong. Recovered in ", r)
+			log.Printf("error: recovered worker client from (%v)", r)
 		}
 	}()
 
@@ -108,24 +93,19 @@ func (h *Hub) handleNewWebsocketWorkerConnection(w http.ResponseWriter, r *http.
 
 	con, err := ipc.NewClientServer(w, r)
 	if err != nil {
-		log.Fatalf("error: couldn't start wrker handler")
+		log.Fatalf("error: couldn't init worker connection")
 	}
 	backend := NewWorker(con)
-	log.Printf("new wrk: %v", backend.Id())
+	backend.Printf("Connect")
 
-	// Register to workersClients map the client connection
 	address := util.GetRemoteAddress(con.GetRemoteAddr())
-	backend.Println("Address:", address)
-	// Region of the wkr
+	public := util.IsPublicIP(address)
 	zone := r.URL.Query().Get("zone")
-	backend.Printf("Is public: %v zone: %v", util.IsPublicIP(address), zone)
-
 	pingServer := h.cfg.Coordinator.GetPingServer(zone)
-
-	backend.Printf("Set ping server address: %s", pingServer)
+	backend.Printf("info - address: %v, zone: %v, public: %v, ping server: %v", address, zone, public, pingServer)
 
 	// In case wkr and coordinator in the same host
-	if !util.IsPublicIP(address) && h.cfg.Environment.Get() == environment.Production {
+	if !public && h.cfg.Environment.Get() == environment.Production {
 		// Don't accept private IP for wkr's address in prod mode
 		// However, if the wkr in the same host with coordinator, we can get public IP of wkr
 		backend.Printf("[!] Address %s is invalid", address)
@@ -146,13 +126,12 @@ func (h *Hub) handleNewWebsocketWorkerConnection(w http.ResponseWriter, r *http.
 	backend.Region = zone
 	backend.PingServer = pingServer
 
-	// Attach to Server instance with workerID, add defer
 	h.guild.add(backend)
 	defer h.cleanWorker(backend)
-
 	backend.AssignId(backend.Id())
 
 	<-backend.wire.Conn.Done
+	backend.Printf("Disconnect")
 }
 
 // cleanWorker is called when a worker is disconnected

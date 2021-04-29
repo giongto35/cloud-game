@@ -1,5 +1,3 @@
-//
-
 const LATENCY_CHECK = 3
 const INIT = 4
 

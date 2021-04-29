@@ -5,29 +5,28 @@ import (
 	"log"
 
 	"github.com/giongto35/cloud-game/v2/pkg/api"
+	"github.com/giongto35/cloud-game/v2/pkg/client"
 	"github.com/giongto35/cloud-game/v2/pkg/ipc"
 	"github.com/giongto35/cloud-game/v2/pkg/launcher"
 	"github.com/giongto35/cloud-game/v2/pkg/network"
 )
 
 type User struct {
+	client.NetClient
+
 	id     network.Uid
 	RoomID string
 	wire   *ipc.Client
 	Worker *Worker
 }
 
-func (u *User) Id() network.Uid {
-	return u.id
-}
-
-func (u *User) InRegion(region string) bool {
-	panic("implement me")
-}
-
 func NewUser(conn *ipc.Client) User {
 	return User{id: network.NewUid(), wire: conn}
 }
+
+func (u *User) Id() network.Uid { return u.id }
+
+func (u *User) InRegion(string) bool { return false }
 
 func (u *User) AssignWorker(w *Worker) {
 	u.Worker = w

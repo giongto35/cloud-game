@@ -5,15 +5,12 @@ import (
 	"log"
 	"strconv"
 
-	"github.com/giongto35/cloud-game/v2/pkg/worker/room"
-
-	"github.com/giongto35/cloud-game/v2/pkg/games"
-
 	"github.com/giongto35/cloud-game/v2/pkg/api"
-
 	webrtcConfig "github.com/giongto35/cloud-game/v2/pkg/config/webrtc"
+	"github.com/giongto35/cloud-game/v2/pkg/games"
 	"github.com/giongto35/cloud-game/v2/pkg/ipc"
 	"github.com/giongto35/cloud-game/v2/pkg/webrtc"
+	"github.com/giongto35/cloud-game/v2/pkg/worker/room"
 )
 
 func (c *Coordinator) HandleIdentifyWorker(data json.RawMessage, h *Handler) {

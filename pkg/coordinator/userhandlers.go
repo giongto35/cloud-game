@@ -21,7 +21,8 @@ func (u *User) HandleWebrtcInit() {
 }
 
 func (u *User) HandleWebrtcAnswer(data json.RawMessage) {
-	req, err := webrtcAnswerInRequest(data)
+	var req api.WebrtcAnswerUserRequest
+	err := json.Unmarshal(data, &req)
 	if err != nil {
 		u.Printf("error: broken webrtc answer request %v", err)
 		return
@@ -30,7 +31,8 @@ func (u *User) HandleWebrtcAnswer(data json.RawMessage) {
 }
 
 func (u *User) HandleWebrtcIceCandidate(data json.RawMessage) {
-	req, err := webrtcIceCandidateInRequest(data)
+	var req api.WebrtcIceCandidateUserRequest
+	err := json.Unmarshal(data, &req)
 	if err != nil {
 		u.Printf("error: broken ICE candidate request %v", err)
 		return
@@ -39,8 +41,8 @@ func (u *User) HandleWebrtcIceCandidate(data json.RawMessage) {
 }
 
 func (u *User) HandleStartGame(data json.RawMessage, launcher launcher.Launcher) {
-
-	req, err := gameStartInRequest(data)
+	var req api.GameStartUserRequest
+	err := json.Unmarshal(data, &req)
 	if err != nil {
 		u.Printf("error: broken game start request %v", err)
 		return
@@ -80,7 +82,8 @@ func (u *User) HandleStartGame(data json.RawMessage, launcher launcher.Launcher)
 }
 
 func (u *User) HandleQuitGame(data json.RawMessage) {
-	req, err := gameQuitInRequest(data)
+	var req api.GameQuitRequest
+	err := json.Unmarshal(data, &req)
 	if err != nil {
 		u.Printf("error: broken game quit request %v", err)
 		return
@@ -109,7 +112,8 @@ func (u *User) HandleLoadGame() {
 }
 
 func (u *User) HandleChangePlayer(data json.RawMessage) {
-	req, err := changePlayerInRequest(data)
+	var req api.ChangePlayerUserRequest
+	err := json.Unmarshal(data, &req)
 	if err != nil {
 		u.Printf("error: broken player change request %v", err)
 		return

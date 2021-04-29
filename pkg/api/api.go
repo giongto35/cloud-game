@@ -1,9 +1,6 @@
 package api
 
-import (
-	"errors"
-	"github.com/giongto35/cloud-game/v2/pkg/network"
-)
+import "github.com/giongto35/cloud-game/v2/pkg/network"
 
 // User
 const (
@@ -29,8 +26,6 @@ const (
 	IceCandidate     uint8 = 4
 	TerminateSession uint8 = 5
 )
-
-var ConvertErr = errors.New("can't convert")
 
 type StatefulRequest struct {
 	Id network.Uid `json:"id"`
