@@ -183,7 +183,10 @@ const stats = (() => {
 
         const ui = moduleUi('Ping', true);
 
-        const onPingRequest = (data) => previous = data.time;
+        const onPingRequest = (data) => {
+            previous = data.time;
+            console.log("TIMe", data.time)
+        }
 
         const onPingResponse = () => {
             length++;

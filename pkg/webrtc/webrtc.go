@@ -161,6 +161,10 @@ func (w *WebRTC) StartClient(iceCB OnIceCallback) (string, error) {
 
 	// Register text message handling
 	inputTrack.OnMessage(func(msg webrtc.DataChannelMessage) {
+		if msg.IsString {
+			_ = inputTrack.Send([]byte{0x42})
+			return
+		}
 		// TODO: Can add recover here
 		w.InputChannel <- msg.Data
 	})

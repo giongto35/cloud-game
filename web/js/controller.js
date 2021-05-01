@@ -10,6 +10,9 @@
     // first user interaction
     let interacted = false;
 
+    // ping-pong
+    const pingPong = true;
+
     const DIR = (() => {
         return {
             IDLE: 'idle',
@@ -63,7 +66,19 @@
         message.show('Now you can share you game!');
     };
 
+    const onWebrtcMessage = () => {
+        event.pub(PING_RESPONSE);
+    };
+
     const onConnectionReady = () => {
+        // ping / pong
+        if (pingPong) {
+            setInterval(() => {
+                webrtc.message('x');
+                event.pub(PING_REQUEST, {time: Date.now()})
+            }, 10000);
+        }
+
         // start a game right away or show the menu
         if (room.getId()) {
             startGame();
@@ -448,6 +463,9 @@
     });
 
     event.sub(WEBRTC_NEW_CONNECTION, (data) => {
+        if (pingPong) {
+            webrtc.setMessageHandler(onWebrtcMessage);
+        }
         webrtc.start(data.ice);
         socket.send({'t': INIT_WEBRTC});
         gameList.set(data.games);

@@ -21,6 +21,8 @@ const webrtc = (() => {
     let connected = false;
     let inputReady = false;
 
+    let onMessage;
+
     const start = (iceservers) => {
         log.info('[rtc] <- ICE servers', iceservers);
 
@@ -35,6 +37,9 @@ const webrtc = (() => {
                 inputReady = true;
                 event.pub(WEBRTC_CONNECTION_READY)
             };
+            if (onMessage) {
+                inputChannel.onmessage = onMessage;
+            }
             inputChannel.onclose = () => log.info('[rtp] the input channel has been closed');
         }
         connection.oniceconnectionstatechange = ice.onIceConnectionStateChange;
@@ -117,6 +122,7 @@ const webrtc = (() => {
             event.pub(WEBRTC_SDP_ANSWER, {sdp: answer});
             media.srcObject = mediaStream;
         },
+        setMessageHandler: (handler) => onMessage = handler,
         addCandidate: (data) => {
             if (data === '') {
                 event.pub(WEBRTC_ICE_CANDIDATES_FLUSH);
@@ -136,6 +142,7 @@ const webrtc = (() => {
             });
             isFlushing = false;
         },
+        message: (mess = '') => inputChannel.send(mess),
         input: (data) => inputChannel.send(data),
         isConnected: () => connected,
         isInputReady: () => inputReady,
