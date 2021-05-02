@@ -29,7 +29,7 @@ func (c *Coordinator) HandleTerminateSession(data json.RawMessage, h *Handler) {
 		c.Printf("error: broken terminate session request %v", err)
 		return
 	}
-	c.Println("Received a terminate session ", resp.Id)
+	c.Printf("Received a terminate session ", resp.Id)
 	session := h.getSession(resp.Id)
 	if session != nil {
 		session.Close()
@@ -60,7 +60,7 @@ func (c *Coordinator) HandleWebrtcInit(packet ipc.InPacket, h *Handler) {
 
 	if err != nil {
 		log.Println("Error: Cannot create new webrtc session", err)
-		_ = h.cord.wire.SendPacket(ipc.OutPacket{
+		_ = h.cord.SendPacket(ipc.OutPacket{
 			Id:      packet.Id,
 			T:       packet.T,
 			Payload: "",
@@ -71,7 +71,7 @@ func (c *Coordinator) HandleWebrtcInit(packet ipc.InPacket, h *Handler) {
 	h.addSession(resp.Id, &Session{peerconnection: peerconnection})
 	log.Println("Start peerconnection", resp.Id)
 
-	_ = h.cord.wire.SendPacket(ipc.OutPacket{
+	_ = h.cord.SendPacket(ipc.OutPacket{
 		Id:      packet.Id,
 		T:       packet.T,
 		Payload: localSDP,
@@ -79,7 +79,7 @@ func (c *Coordinator) HandleWebrtcInit(packet ipc.InPacket, h *Handler) {
 }
 
 func (c *Coordinator) HandleWebrtcAnswer(packet ipc.InPacket, h *Handler) {
-	c.Println("Received answer SDP from browser")
+	c.Printf("Received answer SDP from browser")
 	var resp api.WebrtcAnswerRequest
 	err := fromJson(packet.Payload, &resp)
 	if err != nil {
@@ -99,7 +99,7 @@ func (c *Coordinator) HandleWebrtcAnswer(packet ipc.InPacket, h *Handler) {
 }
 
 func (c *Coordinator) HandleWebrtcIceCandidate(packet ipc.InPacket, h *Handler) {
-	c.Println("Received remote Ice Candidate from browser")
+	c.Printf("Received remote Ice Candidate from browser")
 	var resp api.WebrtcIceCandidateRequest
 	err := fromJson(packet.Payload, &resp)
 	if err != nil {
@@ -126,13 +126,13 @@ func (c *Coordinator) HandleGameStart(packet ipc.InPacket, h *Handler) {
 	err := fromJson(packet.Payload, &resp)
 	if err != nil {
 		c.Printf("error: broken game start request %v", err)
-		_ = h.cord.wire.SendPacket(ipc.OutPacket{Id: packet.Id, T: packet.T, Payload: ""})
+		_ = h.cord.SendPacket(ipc.OutPacket{Id: packet.Id, T: packet.T, Payload: ""})
 		return
 	}
 	session := h.getSession(resp.Id)
 	if session == nil {
 		log.Printf("Error: No session for ID: %s\n", resp.Id)
-		_ = h.cord.wire.SendPacket(ipc.OutPacket{Id: packet.Id, T: packet.T, Payload: ""})
+		_ = h.cord.SendPacket(ipc.OutPacket{Id: packet.Id, T: packet.T, Payload: ""})
 		return
 	}
 
@@ -143,7 +143,7 @@ func (c *Coordinator) HandleGameStart(packet ipc.InPacket, h *Handler) {
 	// TODO: can data race
 	h.rooms[gameRoom.ID] = gameRoom
 
-	_ = h.cord.wire.SendPacket(ipc.OutPacket{Id: packet.Id, T: packet.T, Payload: api.StartGameResponse{
+	_ = h.cord.SendPacket(ipc.OutPacket{Id: packet.Id, T: packet.T, Payload: api.StartGameResponse{
 		RoomId: gameRoom.ID,
 	}})
 }
@@ -206,14 +206,14 @@ func (c *Coordinator) HandleQuitGame(packet ipc.InPacket, h *Handler) {
 }
 
 func (c *Coordinator) HandleSaveGame(packet ipc.InPacket, h *Handler) {
-	c.Println("Received a save game from coordinator")
+	c.Printf("Received a save game from coordinator")
 	var resp api.SaveGameRequest
 	err := fromJson(packet.Payload, &resp)
 	if err != nil {
 		c.Printf("error: broken game save request %v", err)
 		return
 	}
-	c.Println("RoomID:", resp.RoomId)
+	c.Printf("RoomID:", resp.RoomId)
 	rez := "ok"
 	if resp.RoomId != "" {
 		gameRoom := h.getRoom(resp.RoomId)
@@ -229,7 +229,7 @@ func (c *Coordinator) HandleSaveGame(packet ipc.InPacket, h *Handler) {
 		rez = "error"
 	}
 
-	_ = h.cord.wire.SendPacket(ipc.OutPacket{Id: packet.Id, T: packet.T, Payload: api.SaveGameResponse(rez)})
+	_ = h.cord.SendPacket(ipc.OutPacket{Id: packet.Id, T: packet.T, Payload: api.SaveGameResponse(rez)})
 }
 
 func (c *Coordinator) HandleLoadGame(packet ipc.InPacket, h *Handler) {
@@ -251,7 +251,7 @@ func (c *Coordinator) HandleLoadGame(packet ipc.InPacket, h *Handler) {
 	} else {
 		rez = "error"
 	}
-	_ = h.cord.wire.SendPacket(ipc.OutPacket{Id: packet.Id, T: packet.T, Payload: api.SaveGameResponse(rez)})
+	_ = h.cord.SendPacket(ipc.OutPacket{Id: packet.Id, T: packet.T, Payload: api.SaveGameResponse(rez)})
 }
 
 func (c *Coordinator) HandleChangePlayer(packet ipc.InPacket, h *Handler) {
@@ -274,7 +274,7 @@ func (c *Coordinator) HandleChangePlayer(packet ipc.InPacket, h *Handler) {
 	} else {
 		rez = "error"
 	}
-	_ = h.cord.wire.SendPacket(ipc.OutPacket{Id: packet.Id, T: packet.T, Payload: rez})
+	_ = h.cord.SendPacket(ipc.OutPacket{Id: packet.Id, T: packet.T, Payload: rez})
 }
 
 func (c *Coordinator) HandleToggleMultitap(packet ipc.InPacket, h *Handler) {
@@ -296,5 +296,5 @@ func (c *Coordinator) HandleToggleMultitap(packet ipc.InPacket, h *Handler) {
 	} else {
 		rez = "error"
 	}
-	_ = h.cord.wire.SendPacket(ipc.OutPacket{Id: packet.Id, T: packet.T, Payload: rez})
+	_ = h.cord.SendPacket(ipc.OutPacket{Id: packet.Id, T: packet.T, Payload: rez})
 }

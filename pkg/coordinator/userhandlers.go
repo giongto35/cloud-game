@@ -73,7 +73,7 @@ func (u *User) HandleStartGame(data json.RawMessage, launcher launcher.Launcher)
 	}
 	// Response from worker contains initialized roomID. Set roomID to the session
 	u.AssignRoom(workerResp.RoomId)
-	u.Println("Received room response from worker: ", workerResp.RoomId)
+	u.Printf("Received room response from worker: ", workerResp.RoomId)
 
 	if err = u.StartGame(); err != nil {
 		u.Printf("can't send back start request")

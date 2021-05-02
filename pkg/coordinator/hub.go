@@ -45,7 +45,7 @@ func (h *Hub) handleNewWebsocketUserConnection(w http.ResponseWriter, r *http.Re
 		log.Fatalf("error: couldn't init user connection")
 	}
 	usr := NewUser(conn)
-	defer usr.Clean()
+	defer usr.Close()
 	uid := string(usr.Id())
 	usr.Printf("Connected")
 
@@ -75,7 +75,7 @@ func (h *Hub) handleNewWebsocketUserConnection(w http.ResponseWriter, r *http.Re
 	usr.HandleRequests(h.launcher)
 	usr.InitSession(h.cfg.Webrtc.IceServers, h.launcher.GetAppNames())
 
-	usr.WaitDisconnect()
+	usr.Listen()
 	usr.RetainWorker()
 	usr.Worker.TerminateSession(usr.Id())
 	usr.Printf("Disconnected")
@@ -115,7 +115,7 @@ func (h *Hub) handleNewWebsocketWorkerConnection(w http.ResponseWriter, r *http.
 
 		if address == "" || !util.IsPublicIP(address) {
 			// Skip this wkr because we cannot find public IP
-			backend.Println("[!] Unable to find public address, reject wkr")
+			backend.Printf("[!] Unable to find public address, reject wkr")
 			return
 		}
 	}
@@ -130,7 +130,7 @@ func (h *Hub) handleNewWebsocketWorkerConnection(w http.ResponseWriter, r *http.
 	defer h.cleanWorker(backend)
 	backend.AssignId(backend.Id())
 
-	<-backend.wire.Conn.Done
+	backend.Listen()
 	backend.Printf("Disconnect")
 }
 
@@ -138,6 +138,6 @@ func (h *Hub) handleNewWebsocketWorkerConnection(w http.ResponseWriter, r *http.
 // connection from worker to coordinator is also closed
 func (h *Hub) cleanWorker(worker Worker) {
 	h.guild.Remove(string(worker.Id()))
-	worker.Clean()
+	worker.Close()
 	h.rooms.RemoveAllWithId(string(worker.Id()))
 }

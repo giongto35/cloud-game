@@ -1,11 +1,15 @@
 package coordinator
 
-import "log"
+import (
+	"log"
+
+	"github.com/giongto35/cloud-game/v2/pkg/client"
+)
 
 func (h *Hub) findWorkerByRoom(id string, region string) *Worker {
 	w, err := h.rooms.Find(id)
 	if err == nil {
-		if w.InRegion(region) {
+		if w.(client.RegionalClient).In(region) {
 			return w.(*Worker)
 		}
 		// if there is zone param, we need to ensure ther worker in that zone
@@ -22,7 +26,7 @@ func (h *Hub) findWorkerByIp(address string) *Worker {
 }
 
 func (h *Hub) getAvailableWorkers(region string) []Worker {
-	return h.guild.filter(func(w Worker) bool { return w.IsFree && w.InRegion(region) })
+	return h.guild.filter(func(w Worker) bool { return w.IsFree && w.In(region) })
 }
 
 func (h *Hub) findAnyFreeWorker(region string) *Worker {

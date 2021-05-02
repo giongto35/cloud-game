@@ -40,6 +40,6 @@ func (w *Worker) HandleIceCandidate(data json.RawMessage, crowd *cache.Cache) {
 		u := usr.(*User)
 		u.SendWebrtcIceCandidate(req.Candidate)
 	} else {
-		w.Println("error: unknown SessionID:", req.Id)
+		w.Printf("error: unknown SessionID:", req.Id)
 	}
 }

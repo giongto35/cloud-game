@@ -19,9 +19,7 @@ func (u *User) CheckLatency(req api.CheckLatencyUserResponse) (api.CheckLatencyU
 		log.Printf("can't get a response with latencies %v", err)
 		return response, err
 	}
-	if v, ok := data.([]byte); ok {
-		err = json.Unmarshal(v, &response)
-	}
+	err = json.Unmarshal(data, &response)
 	return response, err
 }
 

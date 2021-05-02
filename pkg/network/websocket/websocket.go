@@ -82,7 +82,7 @@ func (ws *WS) reader() {
 			log.Printf("read error: %v", err)
 			break
 		}
-		log.Printf("%v [ws] READ: %v", ws.id.Short(), string(message))
+		//log.Printf("%v [ws] READ: %v", ws.id.Short(), string(message))
 		ws.OnMessage(message, err)
 	}
 }

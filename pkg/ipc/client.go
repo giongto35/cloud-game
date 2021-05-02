@@ -14,7 +14,7 @@ import (
 )
 
 // !todo revamp termination hold
-const callTimeout = 1 * time.Second
+const callTimeout = 5 * time.Second
 
 type call struct {
 	done     chan struct{}

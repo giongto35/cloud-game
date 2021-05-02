@@ -1,25 +1,22 @@
 package worker
 
 import (
-	"fmt"
-	"log"
-
 	"github.com/giongto35/cloud-game/v2/pkg/api"
+	"github.com/giongto35/cloud-game/v2/pkg/client"
 	"github.com/giongto35/cloud-game/v2/pkg/ipc"
 	"github.com/giongto35/cloud-game/v2/pkg/network"
 )
 
 type Coordinator struct {
-	id   network.Uid
-	wire *ipc.Client
+	client.DefaultClient
 }
 
 func NewCoordinator(conn *ipc.Client) Coordinator {
-	return Coordinator{id: network.NewUid(), wire: conn}
+	return Coordinator{DefaultClient: client.New(conn, "cord")}
 }
 
 func (c *Coordinator) HandleRequests(h *Handler) {
-	c.wire.OnPacket = func(p ipc.InPacket) {
+	c.OnPacket(func(p ipc.InPacket) {
 		switch p.T {
 		case api.IdentifyWorker:
 			c.HandleIdentifyWorker(p.Payload, h)
@@ -44,36 +41,24 @@ func (c *Coordinator) HandleRequests(h *Handler) {
 		case api.ToggleMultitap:
 			c.HandleToggleMultitap(p, h)
 		default:
-			c.Println("warning: unhandled packet type %v", p.T)
+			c.Printf("warning: unhandled packet type %v", p.T)
 		}
-	}
-}
-
-func (c *Coordinator) Printf(format string, args ...interface{}) {
-	log.Printf(fmt.Sprintf("cord: [%s] %s", c.id.Short(), format), args...)
-}
-
-func (c *Coordinator) Println(args ...interface{}) {
-	log.Println(fmt.Sprintf("cord: [%s] %s", c.id.Short(), fmt.Sprint(args...)))
-}
-
-func (c *Coordinator) WaitDisconnect() {
-	<-c.wire.Conn.Done
+	})
 }
 
 func (c *Coordinator) CloseRoom(id string) {
 	// api.CloseRoom
-	_ = c.wire.Send(api.CloseRoom, api.CloseRoomRequest(id))
+	_ = c.SendAndForget(api.CloseRoom, id)
 }
 
 func (c *Coordinator) RegisterRoom(id string) {
 	// api.RegisterRoom
-	_ = c.wire.Send(api.RegisterRoom, api.RegisterRoomRequest(id))
+	_ = c.SendAndForget(api.RegisterRoom, id)
 }
 
 func (c *Coordinator) IceCandidate(candidate string, sessionId string) {
 	//api.IceCandidate
-	_ = c.wire.Send(api.IceCandidate, api.WebrtcIceCandidateRequest{
+	_ = c.SendAndForget(api.IceCandidate, api.WebrtcIceCandidateRequest{
 		StatefulRequest: api.StatefulRequest{Id: network.Uid(sessionId)},
 		Candidate:       candidate,
 	})

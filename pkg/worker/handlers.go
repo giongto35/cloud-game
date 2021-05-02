@@ -77,9 +77,9 @@ func (h *Handler) Run(ctx context.Context) {
 
 		h.cord = conn
 		h.cord.HandleRequests(h)
-		h.cord.WaitDisconnect()
-		h.Close()
 
+		h.cord.Listen()
+		h.Close()
 		if errors.Is(ctx.Err(), context.Canceled) {
 			return
 		}
@@ -198,7 +198,7 @@ func (h *Handler) isRoomBusy(roomID string) bool {
 }
 
 func (h *Handler) Close() {
-	h.cord.wire.Close()
+	h.cord.Close()
 	for _, r := range h.rooms {
 		r.Close()
 	}

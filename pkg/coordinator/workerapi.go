@@ -50,7 +50,7 @@ func (w *Worker) StartGame(id network.Uid, roomId string, idx int, game launcher
 	})
 	var resp api.StartGameResponse
 	if err != nil {
-		return resp, errors.New("request error")
+		return resp, err
 	}
 	err = json.Unmarshal(data, &resp)
 	return resp, err
