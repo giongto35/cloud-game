@@ -137,7 +137,7 @@ func (h *Hub) handleNewWebsocketWorkerConnection(w http.ResponseWriter, r *http.
 // cleanWorker is called when a worker is disconnected
 // connection from worker to coordinator is also closed
 func (h *Hub) cleanWorker(worker Worker) {
-	h.guild.Remove(string(worker.Id()))
+	h.guild.Remove(worker)
 	worker.Close()
 	h.rooms.RemoveAllWithId(string(worker.Id()))
 }

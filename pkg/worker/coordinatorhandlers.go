@@ -19,7 +19,7 @@ func (c *Coordinator) HandleIdentifyWorker(data json.RawMessage, h *Handler) {
 		c.Printf("error: broken identify request %v", err)
 		return
 	}
-	c.Printf("[worker] new id: %s", resp)
+	c.Printf("worker's new id: %s", resp)
 	h.serverID = resp
 }
 
@@ -42,115 +42,88 @@ func (c *Coordinator) HandleTerminateSession(data json.RawMessage, h *Handler) {
 }
 
 func (c *Coordinator) HandleWebrtcInit(packet ipc.InPacket, h *Handler) {
-	log.Println("Received a request to createOffer from browser via coordinator")
 	resp, err := c.webrtcInit(packet.Payload)
 	if err != nil {
 		c.Printf("error: broken webrtc init request %v", err)
 		return
 	}
 
-	peerconnection := webrtc.NewWebRTC().WithConfig(
-		webrtcConfig.Config{Encoder: h.cfg.Encoder, Webrtc: h.cfg.Webrtc},
-	)
+	peerconnection := webrtc.NewWebRTC().WithConfig(webrtcConfig.Config{Encoder: h.cfg.Encoder, Webrtc: h.cfg.Webrtc})
 
-	localSDP, err := peerconnection.StartClient(
-		// send back candidate string to browser
-		func(cd string) { h.cord.IceCandidate(cd, string(resp.Id)) },
-	)
+	// send back candidate string to browser
+	localSDP, err := peerconnection.StartClient(func(cd string) { h.cord.IceCandidate(cd, string(resp.Id)) })
 
 	if err != nil {
-		log.Println("Error: Cannot create new webrtc session", err)
-		_ = h.cord.SendPacket(ipc.OutPacket{
-			Id:      packet.Id,
-			T:       packet.T,
-			Payload: "",
-		})
+		log.Println("error: cannot create new webrtc session", err)
+		_ = h.cord.SendPacket(packet.Proxy(""))
 	}
 
 	// Create new sessions when we have new peerconnection initialized
 	h.addSession(resp.Id, &Session{peerconnection: peerconnection})
 	log.Println("Start peerconnection", resp.Id)
 
-	_ = h.cord.SendPacket(ipc.OutPacket{
-		Id:      packet.Id,
-		T:       packet.T,
-		Payload: localSDP,
-	})
+	_ = h.cord.SendPacket(packet.Proxy(localSDP))
 }
 
 func (c *Coordinator) HandleWebrtcAnswer(packet ipc.InPacket, h *Handler) {
-	c.Printf("Received answer SDP from browser")
 	var resp api.WebrtcAnswerRequest
 	err := fromJson(packet.Payload, &resp)
 	if err != nil {
-		c.Printf("error: broken webrtc init request %v", err)
+		log.Printf("error: broken webrtc init request %v", err)
 		return
 	}
-	session := h.getSession(resp.Id)
-	if session != nil {
-		peerconnection := session.peerconnection
-		err := peerconnection.SetRemoteSDP(resp.Sdp)
-		if err != nil {
+	if session := h.getSession(resp.Id); session != nil {
+		if err := session.peerconnection.SetRemoteSDP(resp.Sdp); err != nil {
 			log.Printf("Error: cannot set RemoteSDP of client: %v beacuse %v", resp.Id, err)
 		}
 	} else {
-		log.Printf("Error: No session for ID: %s\n", resp.Id)
+		log.Printf("Error: No session for ID: %s", resp.Id)
 	}
 }
 
 func (c *Coordinator) HandleWebrtcIceCandidate(packet ipc.InPacket, h *Handler) {
-	c.Printf("Received remote Ice Candidate from browser")
 	var resp api.WebrtcIceCandidateRequest
 	err := fromJson(packet.Payload, &resp)
 	if err != nil {
-		c.Printf("error: broken webrtc candidate request %v", err)
+		log.Printf("error: broken webrtc candidate request %v", err)
 		return
 	}
 	session := h.getSession(resp.Id)
-
 	if session != nil {
-		peerconnection := session.peerconnection
-
-		err := peerconnection.AddCandidate(resp.Candidate)
-		if err != nil {
-			log.Printf("Error: Cannot add IceCandidate of client: %s", resp.Id)
+		if err := session.peerconnection.AddCandidate(resp.Candidate); err != nil {
+			log.Printf("error: cannot add IceCandidate of client: %s", resp.Id)
 		}
 	} else {
-		log.Printf("Error: No session for ID: %s\n", resp.Id)
+		log.Printf("error: no session for ID: %s", resp.Id)
 	}
 }
 
 func (c *Coordinator) HandleGameStart(packet ipc.InPacket, h *Handler) {
-	log.Println("Received a start request from coordinator")
 	var resp api.StartGameRequest
 	err := fromJson(packet.Payload, &resp)
 	if err != nil {
-		c.Printf("error: broken game start request %v", err)
-		_ = h.cord.SendPacket(ipc.OutPacket{Id: packet.Id, T: packet.T, Payload: ""})
+		log.Printf("error: broken game start request %v", err)
+		_ = h.cord.SendPacket(packet.Proxy(""))
 		return
 	}
 	session := h.getSession(resp.Id)
 	if session == nil {
-		log.Printf("Error: No session for ID: %s\n", resp.Id)
-		_ = h.cord.SendPacket(ipc.OutPacket{Id: packet.Id, T: packet.T, Payload: ""})
+		log.Printf("error: no session for ID: %s", resp.Id)
+		_ = h.cord.SendPacket(packet.Proxy(""))
 		return
 	}
 
-	peerconnection := session.peerconnection
 	gameMeta := games.GameMetadata{Name: resp.Game.Name, Type: resp.Game.Type, Path: resp.Game.Path}
-	gameRoom := h.startGameHandler(gameMeta, resp.RoomId, resp.PlayerIndex, peerconnection)
+	gameRoom := h.startGameHandler(gameMeta, resp.RoomId, resp.PlayerIndex, session.peerconnection)
 	session.RoomID = gameRoom.ID
 	// TODO: can data race
 	h.rooms[gameRoom.ID] = gameRoom
-
-	_ = h.cord.SendPacket(ipc.OutPacket{Id: packet.Id, T: packet.T, Payload: api.StartGameResponse{
-		RoomId: gameRoom.ID,
-	}})
+	_ = h.cord.SendPacket(packet.Proxy(api.StartGameResponse{RoomId: gameRoom.ID}))
 }
 
 // startGameHandler starts a game if roomID is given, if not create new room
 func (h *Handler) startGameHandler(game games.GameMetadata, existedRoomID string, playerIndex int, peerconnection *webrtc.WebRTC) *room.Room {
-	log.Printf("Loading game: %v\n", game.Name)
+	log.Printf("Loading game: %v", game.Name)
 	// If we are connecting to coordinator, request corresponding serverID based on roomID
 	// TODO: check if existedRoomID is in the current server
 	gameRoom := h.getRoom(existedRoomID)
@@ -172,7 +145,7 @@ func (h *Handler) startGameHandler(game games.GameMetadata, existedRoomID string
 	}
 
 	// Attach peerconnection to room. If PC is already in room, don't detach
-	log.Println("Is PC in room", gameRoom.IsPCInRoom(peerconnection))
+	log.Printf("The peer is in the room: %v", gameRoom.IsPCInRoom(peerconnection))
 	if !gameRoom.IsPCInRoom(peerconnection) {
 		h.detachPeerConn(peerconnection)
 		gameRoom.AddConnectionToRoom(peerconnection)
@@ -186,34 +159,31 @@ func (h *Handler) startGameHandler(game games.GameMetadata, existedRoomID string
 }
 
 func (c *Coordinator) HandleQuitGame(packet ipc.InPacket, h *Handler) {
-	log.Println("Received a quit request from coordinator")
 	var resp api.GameQuitRequest
 	err := fromJson(packet.Payload, &resp)
 	if err != nil {
-		c.Printf("error: broken game quit request %v", err)
+		log.Printf("error: broken game quit request %v", err)
 		return
 	}
 	session := h.getSession(resp.Id)
-
 	if session != nil {
 		// Defensive coding, check if the peerconnection is in room
 		if h.getRoom(session.RoomID).IsPCInRoom(session.peerconnection) {
 			h.detachPeerConn(session.peerconnection)
 		}
 	} else {
-		log.Printf("Error: No session for ID: %s\n", resp.Id)
+		log.Printf("error: no session for ID: %s", resp.Id)
 	}
 }
 
 func (c *Coordinator) HandleSaveGame(packet ipc.InPacket, h *Handler) {
-	c.Printf("Received a save game from coordinator")
 	var resp api.SaveGameRequest
 	err := fromJson(packet.Payload, &resp)
 	if err != nil {
-		c.Printf("error: broken game save request %v", err)
+		log.Printf("error: broken game save request %v", err)
 		return
 	}
-	c.Printf("RoomID:", resp.RoomId)
+	log.Printf("RoomID: %v", resp.RoomId)
 	rez := "ok"
 	if resp.RoomId != "" {
 		gameRoom := h.getRoom(resp.RoomId)
@@ -228,17 +198,15 @@ func (c *Coordinator) HandleSaveGame(packet ipc.InPacket, h *Handler) {
 	} else {
 		rez = "error"
 	}
-
-	_ = h.cord.SendPacket(ipc.OutPacket{Id: packet.Id, T: packet.T, Payload: api.SaveGameResponse(rez)})
+	_ = h.cord.SendPacket(packet.Proxy(rez))
 }
 
 func (c *Coordinator) HandleLoadGame(packet ipc.InPacket, h *Handler) {
-	log.Println("Received a load game from coordinator")
 	log.Println("Loading game state")
 	var resp api.LoadGameRequest
 	err := fromJson(packet.Payload, &resp)
 	if err != nil {
-		c.Printf("error: broken game load request %v", err)
+		log.Printf("error: broken game load request %v", err)
 		return
 	}
 	rez := "ok"
@@ -251,15 +219,14 @@ func (c *Coordinator) HandleLoadGame(packet ipc.InPacket, h *Handler) {
 	} else {
 		rez = "error"
 	}
-	_ = h.cord.SendPacket(ipc.OutPacket{Id: packet.Id, T: packet.T, Payload: api.SaveGameResponse(rez)})
+	_ = h.cord.SendPacket(packet.Proxy(rez))
 }
 
 func (c *Coordinator) HandleChangePlayer(packet ipc.InPacket, h *Handler) {
-	log.Println("Received an update player index event from coordinator")
 	var resp api.ChangePlayerRequest
 	err := fromJson(packet.Payload, &resp)
 	if err != nil {
-		c.Printf("error: broken change player request %v", err)
+		log.Printf("error: broken change player request %v", err)
 		return
 	}
 
@@ -274,15 +241,14 @@ func (c *Coordinator) HandleChangePlayer(packet ipc.InPacket, h *Handler) {
 	} else {
 		rez = "error"
 	}
-	_ = h.cord.SendPacket(ipc.OutPacket{Id: packet.Id, T: packet.T, Payload: rez})
+	_ = h.cord.SendPacket(packet.Proxy(rez))
 }
 
 func (c *Coordinator) HandleToggleMultitap(packet ipc.InPacket, h *Handler) {
-	log.Println("Received a multitap toggle from coordinator")
 	var resp api.ToggleMultitapRequest
 	err := fromJson(packet.Payload, &resp)
 	if err != nil {
-		c.Printf("error: broken toggle multitap request %v", err)
+		log.Printf("error: broken toggle multitap request %v", err)
 		return
 	}
 
@@ -296,5 +262,5 @@ func (c *Coordinator) HandleToggleMultitap(packet ipc.InPacket, h *Handler) {
 	} else {
 		rez = "error"
 	}
-	_ = h.cord.SendPacket(ipc.OutPacket{Id: packet.Id, T: packet.T, Payload: rez})
+	_ = h.cord.SendPacket(packet.Proxy(rez))
 }

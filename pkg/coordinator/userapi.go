@@ -2,7 +2,6 @@ package coordinator
 
 import (
 	"encoding/json"
-	"log"
 	"unsafe"
 
 	"github.com/giongto35/cloud-game/v2/pkg/api"
@@ -16,7 +15,7 @@ func (u *User) CheckLatency(req api.CheckLatencyUserResponse) (api.CheckLatencyU
 	u.Printf("servers to ping: %v", req)
 	data, err := u.Send(api.CheckLatency, req)
 	if err != nil || data == nil {
-		log.Printf("can't get a response with latencies %v", err)
+		u.Printf("error: can't get a response with latencies %v", err)
 		return response, err
 	}
 	err = json.Unmarshal(data, &response)

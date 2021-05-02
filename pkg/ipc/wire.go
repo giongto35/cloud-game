@@ -19,3 +19,7 @@ type OutPacket struct {
 }
 
 type PacketType = uint8
+
+func (p InPacket) Proxy(payload interface{}) OutPacket {
+	return OutPacket{Id: p.Id, T: p.T, Payload: payload}
+}

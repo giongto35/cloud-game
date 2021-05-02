@@ -2,7 +2,6 @@ package coordinator
 
 import (
 	"encoding/json"
-	"errors"
 
 	"github.com/giongto35/cloud-game/v2/pkg/api"
 	"github.com/giongto35/cloud-game/v2/pkg/launcher"
@@ -15,10 +14,10 @@ func (w *Worker) AssignId(id network.Uid) {
 
 func (w *Worker) WebrtcInit(id network.Uid) (api.WebrtcInitResponse, error) {
 	data, err := w.Send(api.WebrtcInit, api.WebrtcInitRequest{StatefulRequest: api.StatefulRequest{Id: id}})
-	if err != nil {
-		return "", errors.New("request error")
-	}
 	var resp string
+	if err != nil {
+		return resp, err
+	}
 	err = json.Unmarshal(data, &resp)
 	return resp, err
 }
@@ -70,7 +69,7 @@ func (w *Worker) SaveGame(id network.Uid, roomId string) (api.SaveGameResponse, 
 	})
 	var resp api.SaveGameResponse
 	if err != nil {
-		return resp, errors.New("request error")
+		return resp, err
 	}
 	err = json.Unmarshal(data, &resp)
 	return resp, err
@@ -83,7 +82,7 @@ func (w *Worker) LoadGame(id network.Uid, roomId string) (api.LoadGameResponse, 
 	})
 	var resp api.LoadGameResponse
 	if err != nil {
-		return resp, errors.New("request error")
+		return resp, err
 	}
 	err = json.Unmarshal(data, &resp)
 	return resp, err
@@ -97,7 +96,7 @@ func (w *Worker) ChangePlayer(id network.Uid, roomId string, index string) (api.
 	})
 	var resp api.ChangePlayerResponse
 	if err != nil {
-		return resp, errors.New("request error")
+		return resp, err
 	}
 	err = json.Unmarshal(data, &resp)
 	return resp, err

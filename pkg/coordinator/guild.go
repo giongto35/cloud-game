@@ -51,3 +51,7 @@ func (g *Guild) filter(fn func(w Worker) bool) []Worker {
 	})
 	return list
 }
+
+func (g *Guild) Remove(w Worker) {
+	g.Cache.Remove(string(w.Id()))
+}
