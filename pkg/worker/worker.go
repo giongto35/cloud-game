@@ -45,7 +45,10 @@ func (wrk *Worker) Run(ctx context.Context) {
 		address,
 		func(_ *httpx.Server) http.Handler {
 			h := http.NewServeMux()
-			h.HandleFunc("/echo", echo)
+			h.HandleFunc("/echo", func(w http.ResponseWriter, _ *http.Request) {
+				w.Header().Set("Access-Control-Allow-Origin", "*")
+				_, _ = w.Write([]byte{0x65, 0x63, 0x68, 0x6f}) // echo
+			})
 			return h
 		},
 		httpx.WithServerConfig(conf),

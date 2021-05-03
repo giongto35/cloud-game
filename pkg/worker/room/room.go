@@ -409,8 +409,7 @@ func (r *Room) ToggleMultitap() error { return r.director.ToggleMultitap() }
 
 func (r *Room) IsEmpty() bool { return len(r.rtcSessions) == 0 }
 
-func (r *Room) IsRunningSessions() bool {
-	// If there is running session
+func (r *Room) HasRunningSessions() bool {
 	for _, s := range r.rtcSessions {
 		if s.IsConnected() {
 			return true

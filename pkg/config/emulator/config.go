@@ -1,6 +1,7 @@
 package emulator
 
 import (
+	"os"
 	"path"
 	"path/filepath"
 )
@@ -83,6 +84,8 @@ func (e *Emulator) GetSupportedExtensions() []string {
 	}
 	return extensions
 }
+
+func (e *Emulator) CreateOfflineStorage() error { return os.MkdirAll(e.Storage, 0755) }
 
 func (l *LibretroConfig) GetCores() []string {
 	var cores []string

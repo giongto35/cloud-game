@@ -1,8 +1,11 @@
 package worker
 
 import (
+	"net/url"
+
 	"github.com/giongto35/cloud-game/v2/pkg/api"
 	"github.com/giongto35/cloud-game/v2/pkg/client"
+	"github.com/giongto35/cloud-game/v2/pkg/config/worker"
 	"github.com/giongto35/cloud-game/v2/pkg/ipc"
 	"github.com/giongto35/cloud-game/v2/pkg/network"
 )
@@ -11,8 +14,18 @@ type Coordinator struct {
 	client.DefaultClient
 }
 
-func NewCoordinator(conn *ipc.Client) Coordinator {
-	return Coordinator{DefaultClient: client.New(conn, "cord")}
+func newCoordinatorConnection(host string, zone string, conf worker.Config) (Coordinator, error) {
+	scheme := "ws"
+	if conf.Worker.Network.Secure {
+		scheme = "wss"
+	}
+	address := url.URL{Scheme: scheme, Host: host, Path: conf.Worker.Network.Endpoint, RawQuery: "zone=" + zone}
+
+	conn, err := ipc.NewClient(address)
+	if err != nil {
+		return Coordinator{}, err
+	}
+	return Coordinator{DefaultClient: client.New(conn, "cord")}, nil
 }
 
 func (c *Coordinator) HandleRequests(h *Handler) {
