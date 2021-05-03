@@ -16,7 +16,6 @@ type (
 		StatefulRequest
 		RoomId string `json:"room_id"`
 	}
-	IdentifyWorkerRequest = string
 	LoadGameRequest       struct {
 		StatefulRequest
 		RoomId string `json:"room_id"`

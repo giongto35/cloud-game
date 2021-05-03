@@ -8,10 +8,6 @@ import (
 	"github.com/giongto35/cloud-game/v2/pkg/network"
 )
 
-func (w *Worker) AssignId(id network.Uid) {
-	_ = w.SendAndForget(api.IdentifyWorker, id)
-}
-
 func (w *Worker) WebrtcInit(id network.Uid) (api.WebrtcInitResponse, error) {
 	data, err := w.Send(api.WebrtcInit, api.WebrtcInitRequest{StatefulRequest: api.StatefulRequest{Id: id}})
 	var resp string

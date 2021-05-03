@@ -6,14 +6,6 @@ import (
 	"github.com/giongto35/cloud-game/v2/pkg/api"
 )
 
-// !to do nil check
-func (c *Coordinator) identifyWorkerInRequest(data json.RawMessage) (api.IdentifyWorkerRequest, error) {
-	if data == nil {
-		return "", nil
-	}
-	return api.IdentifyWorkerRequest(data), nil
-}
-
 func (c *Coordinator) terminateSession(data json.RawMessage) (api.TerminateSessionRequest, error) {
 	var v api.TerminateSessionRequest
 	err := json.Unmarshal(data, &v)

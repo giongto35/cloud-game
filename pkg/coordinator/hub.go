@@ -128,7 +128,6 @@ func (h *Hub) handleNewWebsocketWorkerConnection(w http.ResponseWriter, r *http.
 
 	h.guild.add(backend)
 	defer h.cleanWorker(backend)
-	backend.AssignId(backend.Id())
 
 	backend.Listen()
 	backend.Printf("Disconnect")

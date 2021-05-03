@@ -20,7 +20,6 @@ const (
 
 // Worker
 const (
-	IdentifyWorker   uint8 = 1
 	RegisterRoom     uint8 = 2
 	CloseRoom        uint8 = 3
 	IceCandidate     uint8 = 4

@@ -13,16 +13,6 @@ import (
 	"github.com/giongto35/cloud-game/v2/pkg/worker/room"
 )
 
-func (c *Coordinator) HandleIdentifyWorker(data json.RawMessage, h *Handler) {
-	resp, err := c.identifyWorkerInRequest(data)
-	if err != nil {
-		c.Printf("error: broken identify request %v", err)
-		return
-	}
-	c.Printf("worker's new id: %s", resp)
-	h.serverID = resp
-}
-
 func (c *Coordinator) HandleTerminateSession(data json.RawMessage, h *Handler) {
 	resp, err := c.terminateSession(data)
 	if err != nil {

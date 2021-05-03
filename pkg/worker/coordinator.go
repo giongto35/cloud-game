@@ -18,8 +18,6 @@ func NewCoordinator(conn *ipc.Client) Coordinator {
 func (c *Coordinator) HandleRequests(h *Handler) {
 	c.OnPacket(func(p ipc.InPacket) {
 		switch p.T {
-		case api.IdentifyWorker:
-			c.HandleIdentifyWorker(p.Payload, h)
 		case api.TerminateSession:
 			c.HandleTerminateSession(p.Payload, h)
 		case api.WebrtcInit:
