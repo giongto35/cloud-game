@@ -9,13 +9,13 @@ import (
 type InPacket struct {
 	Id      network.Uid     `json:"id,omitempty"`
 	T       PacketType      `json:"t"`
-	Payload json.RawMessage `json:"payload,omitempty"`
+	Payload json.RawMessage `json:"p,omitempty"`
 }
 
 type OutPacket struct {
 	Id      network.Uid `json:"id,omitempty"`
 	T       PacketType  `json:"t"`
-	Payload interface{} `json:"payload,omitempty"`
+	Payload interface{} `json:"p,omitempty"`
 }
 
 type PacketType = uint8

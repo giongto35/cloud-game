@@ -7,7 +7,7 @@ HTTP: None
 Packet:
     id 
     t
-    payload
+    p
 
 WebSocket:
  - The initial request should be wss://coordinator-address?room_id=id&zone=zone

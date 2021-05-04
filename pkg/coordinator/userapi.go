@@ -11,15 +11,14 @@ import (
 // CheckLatency sends a list of server addresses to the user
 // and waits get back this list with tested ping times for each server.
 func (u *User) CheckLatency(req api.CheckLatencyUserResponse) (api.CheckLatencyUserRequest, error) {
-	var response api.CheckLatencyUserRequest
 	u.Printf("servers to ping: %v", req)
+	var response api.CheckLatencyUserRequest
 	data, err := u.Send(api.CheckLatency, req)
 	if err != nil || data == nil {
 		u.Printf("error: can't get a response with latencies %v", err)
 		return response, err
 	}
-	err = json.Unmarshal(data, &response)
-	return response, err
+	return response, json.Unmarshal(data, &response)
 }
 
 // InitSession signals the user that the app is ready to go.

@@ -101,7 +101,7 @@
         })).then(servers => {
             const latencies = Object.assign({}, ...servers);
             log.info('[ping] <->', latencies);
-            socket.send({id: data.packetId, "t": LATENCY_CHECK, "payload": latencies});
+            api.server.latencyCheck(data.packetId, latencies);
         });
     };
 
@@ -166,8 +166,7 @@
         // on the server this game is ignored and the actual game will be extracted from the share link
         // so there's no point in doing this and this' really confusing
 
-        const rq = gameStartRequest(gameList.getCurrentGame(), room.getId(), +playerIndex.value - 1);
-        socket.send(rq);
+        api.game.start(gameList.getCurrentGame(), room.getId(), +playerIndex.value - 1);
 
         // clear menu screen
         input.poll().disable();
@@ -179,11 +178,11 @@
         input.poll().enable();
     };
 
-    const saveGame = utils.debounce(() => socket.send({t: GAME_SAVE}), 1000);
-    const loadGame = utils.debounce(() => socket.send({t: GAME_LOAD}), 1000);
+    const saveGame = utils.debounce(() => api.game.save(), 1000);
+    const loadGame = utils.debounce(() => api.game.load(), 1000);
 
     const onMessage = (message) => {
-        const {id, t, payload} = message;
+        const {id, t, p: payload} = message;
         switch (t) {
             case INIT:
                 event.pub(WEBRTC_NEW_CONNECTION, payload);
@@ -259,7 +258,7 @@
 
     const updatePlayerIndex = idx => {
         playerIndex.value = idx + 1;
-        socket.send({t: GAME_SET_PLAYER_INDEX, payload: '' + idx});
+        api.game.setPlayerIndex(idx);
     };
 
     // noop function for the state
@@ -278,7 +277,7 @@
     };
 
     const handleToggle = () => {
-        var toggle = document.getElementById('dpad-toggle');
+        const toggle = document.getElementById('dpad-toggle');
         toggle.checked = !toggle.checked;
         event.pub(DPAD_TOGGLE, {checked: toggle.checked});
     };
@@ -419,16 +418,15 @@
 
                         // toggle multitap
                         case KEY.MULTITAP:
-                            socket.send({t: GAME_TOGGLE_MULTITAP});
+                            api.game.toggleMultitap();
                             break;
 
                         // quit
                         case KEY.QUIT:
                             input.poll().disable();
 
-                            // TODO: Stop game
-                            const req = gameQuitRequest(room.getId());
-                            socket.send(req);
+                            // TODO: Stop game / SPA
+                            api.game.quit(room.getId());
                             room.reset();
 
                             message.show('Quit!');
@@ -461,21 +459,16 @@
     event.sub(GAME_PLAYER_IDX_SET, idx => {
         if (!isNaN(+idx)) message.show(+idx + 1);
     });
-
     event.sub(WEBRTC_NEW_CONNECTION, (data) => {
         if (pingPong) {
             webrtc.setMessageHandler(onWebrtcMessage);
         }
         webrtc.start(data.ice);
-        socket.send({'t': INIT_WEBRTC});
+        api.server.initWebrtc()
         gameList.set(data.games);
     });
-    event.sub(WEBRTC_ICE_CANDIDATE_FOUND, (data) => {
-        socket.send({'t': ICE_CANDIDATE, 'payload': btoa(JSON.stringify(data.candidate))});
-    })
-    event.sub(WEBRTC_SDP_ANSWER, (data) => {
-        socket.send({'t': ANSWER, 'payload': btoa(JSON.stringify(data.sdp))});
-    })
+    event.sub(WEBRTC_ICE_CANDIDATE_FOUND, (data) => api.server.sendIceCandidate(data.candidate));
+    event.sub(WEBRTC_SDP_ANSWER, (data) => api.server.sendSdp(data.sdp));
     event.sub(WEBRTC_SDP_OFFER, (data) => webrtc.setRemoteDescription(data.sdp, stream.video.el()));
     event.sub(WEBRTC_ICE_CANDIDATE_RECEIVED, (data) => webrtc.addCandidate(data.candidate));
     event.sub(WEBRTC_ICE_CANDIDATES_FLUSH, () => webrtc.flushCandidates());

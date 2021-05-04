@@ -80,17 +80,14 @@ func (c *Client) Send(type_ uint8, payload interface{}) error {
 }
 
 func (c *Client) SendPacket(packet OutPacket) error {
-	call := &call{Request: packet}
 	r, err := json.Marshal(packet)
 	if err != nil {
 		return err
 	}
-
 	c.mu.Lock()
 	c.Conn.Write(r)
 	c.mu.Unlock()
-
-	return call.err
+	return nil
 }
 
 func (c *Client) handleMessage(message []byte, err error) {
