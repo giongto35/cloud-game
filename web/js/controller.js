@@ -184,28 +184,28 @@
     const onMessage = (message) => {
         const {id, t, p: payload} = message;
         switch (t) {
-            case INIT:
+            case api.endpoint.INIT:
                 event.pub(WEBRTC_NEW_CONNECTION, payload);
                 break;
-            case OFFER:
+            case api.endpoint.OFFER:
                 event.pub(WEBRTC_SDP_OFFER, {sdp: payload});
                 break;
-            case ICE_CANDIDATE:
+            case api.endpoint.ICE_CANDIDATE:
                 event.pub(WEBRTC_ICE_CANDIDATE_RECEIVED, {candidate: payload});
                 break;
-            case GAME_START:
+            case api.endpoint.GAME_START:
                 event.pub(GAME_ROOM_AVAILABLE, {roomId: payload});
                 break;
-            case GAME_SAVE:
+            case api.endpoint.GAME_SAVE:
                 event.pub(GAME_SAVED);
                 break;
-            case GAME_LOAD:
+            case api.endpoint.GAME_LOAD:
                 event.pub(GAME_LOADED);
                 break;
-            case GAME_SET_PLAYER_INDEX:
+            case api.endpoint.GAME_SET_PLAYER_INDEX:
                 event.pub(GAME_PLAYER_IDX_SET, payload);
                 break;
-            case LATENCY_CHECK:
+            case api.endpoint.LATENCY_CHECK:
                 event.pub(LATENCY_CHECK_REQUESTED, {packetId: id, addresses: payload});
         }
     }
