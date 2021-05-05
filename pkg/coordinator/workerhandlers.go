@@ -34,7 +34,6 @@ func (w *Worker) HandleIceCandidate(data json.RawMessage, crowd *cache.Cache) {
 		w.Printf("error: broken ice candidate request %v", err)
 		return
 	}
-	w.Printf("SESSIONS: %v", crowd.List())
 	usr, err := crowd.Find(string(req.Id))
 	if err == nil {
 		u := usr.(*User)
