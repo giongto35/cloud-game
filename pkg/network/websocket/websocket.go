@@ -8,7 +8,6 @@ import (
 	"sync"
 	"time"
 
-	"github.com/giongto35/cloud-game/v2/pkg/network"
 	"github.com/gorilla/websocket"
 )
 
@@ -20,7 +19,6 @@ const (
 )
 
 type WS struct {
-	id   network.Uid
 	conn deadlinedConn
 	send chan []byte
 
@@ -29,6 +27,7 @@ type WS struct {
 	pingPong bool
 
 	shutdown *sync.WaitGroup
+	once     sync.Once
 	Done     chan struct{}
 	closed   bool
 }
@@ -48,7 +47,7 @@ func (ws *WS) reader() {
 		ws.closed = true
 		close(ws.send)
 		ws.shutdown.Done()
-		ws.close("reader")
+		ws.close()
 	}()
 
 	ws.conn.setup(func(conn *websocket.Conn) {
@@ -95,7 +94,7 @@ func (ws *WS) writer() {
 			ticker.Stop()
 		}
 		ws.shutdown.Done()
-		ws.close("writer")
+		ws.close()
 	}()
 	if ws.pingPong {
 		for {
@@ -159,10 +158,10 @@ func newSocket(conn *websocket.Conn, pingPong bool) *WS {
 	safeConn := deadlinedConn{sock: conn, wt: writeWait}
 
 	ws := &WS{
-		id:        network.NewUid(),
 		conn:      safeConn,
 		send:      make(chan []byte),
 		shutdown:  &shut,
+		once:      sync.Once{},
 		Done:      make(chan struct{}, 1),
 		pingPong:  pingPong,
 		OnMessage: func(message []byte, err error) {},
@@ -184,11 +183,13 @@ func (ws *WS) Close() {
 	_ = ws.conn.write(websocket.CloseMessage, []byte{})
 }
 
-func (ws *WS) close(what string) {
+func (ws *WS) close() {
 	ws.shutdown.Wait()
-	_ = ws.conn.close()
-	ws.Done <- struct{}{}
-	log.Printf("[%v] close %v", ws.id, what)
+	ws.once.Do(func() {
+		_ = ws.conn.close()
+		ws.Done <- struct{}{}
+		log.Printf("ws should be closed now")
+	})
 }
 
 func (ws *WS) GetRemoteAddr() net.Addr {

@@ -55,17 +55,17 @@ func (h *Hub) handleNewWebsocketUserConnection(w http.ResponseWriter, r *http.Re
 	usr.Printf("Searching for a free worker")
 	var wkr *Worker
 	if wkr = h.findWorkerByRoom(roomId, region); wkr != nil {
-		usr.Printf("An existing wkr has been found for room [%v]", roomId)
+		usr.Printf("An existing worker has been found for room [%v]", roomId)
 	} else if wkr = h.findWorkerByIp(h.cfg.Coordinator.DebugHost); wkr != nil {
-		usr.Printf("The wkr has been found with provided address: %v", h.cfg.Coordinator.DebugHost)
+		usr.Printf("The worker has been found with provided address: %v", h.cfg.Coordinator.DebugHost)
 		if wkr = h.findAnyFreeWorker(region); wkr != nil {
-			usr.Printf("A free wkr has been found right away")
+			usr.Printf("A free worker has been found right away")
 		}
 	} else if wkr = h.findFastestWorker(region,
 		func(servers []string) (map[string]int64, error) { return usr.CheckLatency(servers) }); wkr != nil {
-		usr.Printf("The fastest wkr has been found")
+		usr.Printf("The fastest worker has been found")
 	} else {
-		usr.Printf("error: THERE ARE NO FREE WORKERS")
+		usr.Printf("error: no workers")
 		return
 	}
 

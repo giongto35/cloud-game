@@ -15,7 +15,6 @@ func (u *User) CheckLatency(req api.CheckLatencyUserResponse) (api.CheckLatencyU
 	var response api.CheckLatencyUserRequest
 	data, err := u.Send(api.CheckLatency, req)
 	if err != nil || data == nil {
-		u.Printf("error: can't get a response with latencies %v", err)
 		return response, err
 	}
 	return response, json.Unmarshal(data, &response)
