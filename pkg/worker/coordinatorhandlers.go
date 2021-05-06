@@ -1,17 +1,31 @@
 package worker
 
 import (
+	"encoding/base64"
 	"encoding/json"
 	"log"
 	"strconv"
 
 	"github.com/giongto35/cloud-game/v2/pkg/api"
 	webrtcConfig "github.com/giongto35/cloud-game/v2/pkg/config/webrtc"
+	"github.com/giongto35/cloud-game/v2/pkg/config/worker"
 	"github.com/giongto35/cloud-game/v2/pkg/games"
 	"github.com/giongto35/cloud-game/v2/pkg/ipc"
 	"github.com/giongto35/cloud-game/v2/pkg/webrtc"
 	"github.com/giongto35/cloud-game/v2/pkg/worker/room"
 )
+
+func MakeConnectionRequest(conf worker.Config) (string, error) {
+	req := api.ConnectionRequest{
+		Zone:     conf.Worker.Network.Zone,
+		PingAddr: conf.GetPingAddr(),
+	}
+	rez, err := json.Marshal(req)
+	if err != nil {
+		return "", err
+	}
+	return base64.URLEncoding.EncodeToString(rez), nil
+}
 
 func (c *Coordinator) HandleTerminateSession(data json.RawMessage, h *Handler) {
 	resp, err := c.terminateSession(data)

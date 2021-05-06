@@ -48,7 +48,7 @@ func (h *Handler) Run(ctx context.Context) {
 			return
 		}
 
-		conn, err := newCoordinatorConnection(conf.CoordinatorAddress, conf.Zone, h.cfg)
+		conn, err := newCoordinatorConnection(conf.CoordinatorAddress, h.cfg)
 		if err != nil {
 			log.Printf("Cannot connect to coordinator. %v Retrying...", err)
 			time.Sleep(time.Second)

@@ -14,7 +14,7 @@ type Worker struct {
 	client.RegionalClient
 
 	Address string // ip address of worker
-	// public server used for ping check (Cannot use worker address because they are not publicly exposed)
+	// public server used for ping check
 	PingServer string
 	//StunTurnServer string
 	IsFree bool

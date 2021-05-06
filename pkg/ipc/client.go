@@ -37,9 +37,9 @@ func NewClientServer(w http.ResponseWriter, r *http.Request) (*Client, error) {
 	return connect(ws.NewServer(w, r))
 }
 
-func connect(conn *ws.WS) (*Client, error) {
-	if conn == nil {
-		return nil, errors.New("can't connect")
+func connect(conn *ws.WS, err error) (*Client, error) {
+	if err != nil {
+		return nil, err
 	}
 	client := &Client{Conn: conn, queue: make(map[network.Uid]*call, 1), OnPacket: func(packet InPacket) {}}
 	client.Conn.OnMessage = client.handleMessage

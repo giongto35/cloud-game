@@ -134,20 +134,20 @@ func (ws *WS) handleMessage(message []byte, ok bool) bool {
 }
 
 // NewServer initializes new websocket peer requests handler.
-func NewServer(w http.ResponseWriter, r *http.Request) *WS {
+func NewServer(w http.ResponseWriter, r *http.Request) (*WS, error) {
 	conn, err := upgrader.Upgrade(w, r, nil)
 	if err != nil {
-		return nil
+		return nil, err
 	}
-	return newSocket(conn, true)
+	return newSocket(conn, true), nil
 }
 
-func NewClient(address url.URL) *WS {
+func NewClient(address url.URL) (*WS, error) {
 	conn, _, err := websocket.DefaultDialer.Dial(address.String(), nil)
 	if err != nil {
-		return nil
+		return nil, err
 	}
-	return newSocket(conn, false)
+	return newSocket(conn, false), nil
 }
 
 func newSocket(conn *websocket.Conn, pingPong bool) *WS {

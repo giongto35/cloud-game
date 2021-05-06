@@ -26,12 +26,11 @@ const socket = (() => {
         const url = buildUrl({room_id: roomId, zone: zone})
         console.info(`[ws] connecting to ${url}`);
         conn = new WebSocket(url.toString());
-
         conn.onopen = () => {
             log.info('[ws] <- open connection');
         };
-        conn.onerror = error => log.error(`[ws] ${error}`);
-        conn.onclose = () => log.info('[ws] closed');
+        conn.onerror = () => log.error('[ws] some error!');
+        conn.onclose = (event) => log.info(`[ws] closed (${event.code})`);
         conn.onmessage = response => {
             const data = JSON.parse(response.data);
             log.debug('[ws] <- ', data);

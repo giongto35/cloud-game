@@ -14,12 +14,17 @@ type Coordinator struct {
 	client.DefaultClient
 }
 
-func newCoordinatorConnection(host string, zone string, conf worker.Config) (Coordinator, error) {
+func newCoordinatorConnection(host string, conf worker.Config) (Coordinator, error) {
 	scheme := "ws"
 	if conf.Worker.Network.Secure {
 		scheme = "wss"
 	}
-	address := url.URL{Scheme: scheme, Host: host, Path: conf.Worker.Network.Endpoint, RawQuery: "zone=" + zone}
+	address := url.URL{Scheme: scheme, Host: host, Path: conf.Worker.Network.Endpoint}
+
+	req, err := MakeConnectionRequest(conf)
+	if req != "" && err == nil {
+		address.RawQuery = "data=" + req
+	}
 
 	conn, err := ipc.NewClient(address)
 	if err != nil {

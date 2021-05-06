@@ -89,20 +89,24 @@ func (h *Hub) handleNewWebsocketWorkerConnection(w http.ResponseWriter, r *http.
 		}
 	}()
 
-	// !to add TLS stuff
-
-	con, err := ipc.NewClientServer(w, r)
+	conn, err := ipc.NewClientServer(w, r)
 	if err != nil {
 		log.Fatalf("error: couldn't init worker connection")
 	}
-	backend := NewWorker(con)
+	backend := NewWorker(conn)
 	backend.Printf("Connect")
+	defer backend.Close()
 
-	address := util.GetRemoteAddress(con.GetRemoteAddr())
+	address := util.GetRemoteAddress(conn.GetRemoteAddr())
 	public := util.IsPublicIP(address)
-	zone := r.URL.Query().Get("zone")
-	pingServer := h.cfg.Coordinator.GetPingServer(zone)
-	backend.Printf("info - address: %v, zone: %v, public: %v, ping server: %v", address, zone, public, pingServer)
+	connRt, err := GetConnectionRequest(r.URL.Query().Get("data"))
+	if err != nil {
+		backend.Printf("error: malformed request sent")
+	} else {
+		backend.Region = connRt.Zone
+		backend.PingServer = connRt.PingAddr
+	}
+	backend.Printf("addr: %v | zone: %v | pub: %v | ping: %v", address, backend.Region, public, backend.PingServer)
 
 	// In case wkr and coordinator in the same host
 	if !public && h.cfg.Environment.Get() == environment.Production {
@@ -119,12 +123,8 @@ func (h *Hub) handleNewWebsocketWorkerConnection(w http.ResponseWriter, r *http.
 			return
 		}
 	}
-	backend.HandleRequests(&h.rooms, &h.crowd)
-
-	// Create a workerClient instance
 	backend.Address = address
-	backend.Region = zone
-	backend.PingServer = pingServer
+	backend.HandleRequests(&h.rooms, &h.crowd)
 
 	h.guild.add(backend)
 	defer h.cleanWorker(backend)
@@ -137,6 +137,5 @@ func (h *Hub) handleNewWebsocketWorkerConnection(w http.ResponseWriter, r *http.
 // connection from worker to coordinator is also closed
 func (h *Hub) cleanWorker(worker Worker) {
 	h.guild.Remove(worker)
-	worker.Close()
 	h.rooms.RemoveAllWithId(string(worker.Id()))
 }

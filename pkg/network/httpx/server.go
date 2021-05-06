@@ -4,6 +4,7 @@ import (
 	"log"
 	"net/http"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/giongto35/cloud-game/v2/pkg/network"
@@ -62,10 +63,10 @@ func (s *Server) Start() {
 	}
 
 	if s.opts.Https && s.opts.HttpsRedirect {
-		log.Printf("Starting HTTP->HTTPS redirection server on %s", s.Addr)
+		log.Printf("Starting HTTP->HTTPS redirection server")
 		go NewServer(s.opts.HttpsRedirectAddress, func(serv *Server) http.Handler {
 			h := http.NewServeMux()
-			h.Handle("/", redirect())
+			h.Handle("/", redirect(s.Addr))
 			// do we need this after all?
 			if serv.autoCert != nil {
 				return serv.autoCert.HTTPHandler(h)
@@ -77,9 +78,13 @@ func (s *Server) Start() {
 	s.start(port)
 }
 
-func redirect() http.Handler {
+func redirect(addr string) http.Handler {
+	if strings.HasPrefix(addr, ":") {
+		addr = "localhost" + addr
+	}
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		http.Redirect(w, r, "https://"+r.Host+r.URL.String(), http.StatusFound)
+		log.Printf("REDIRECT from %v%v -> %v", r.Host, r.URL, addr)
+		http.Redirect(w, r, "https://"+addr, http.StatusFound)
 	})
 }
 
