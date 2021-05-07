@@ -82,9 +82,7 @@ type Vpx struct {
 	frameCount C.int
 	image      C.vpx_image_t
 	codecCtx   C.vpx_codec_ctx_t
-	codecIter  C.vpx_codec_iter_t
-
-	kfi C.int
+	kfi        C.int
 }
 
 func NewEncoder(width, height int, options ...Option) (*Vpx, error) {
@@ -130,7 +128,7 @@ func NewEncoder(width, height int, options ...Option) (*Vpx, error) {
 
 // see: https://chromium.googlesource.com/webm/libvpx/+/master/examples/simple_encoder.c
 func (vpx *Vpx) Encode(yuv []byte) []byte {
-	vpx.codecIter = nil
+	var iter C.vpx_codec_iter_t
 	C.vpx_img_read(&vpx.image, unsafe.Pointer(&yuv[0]))
 
 	var flags C.int
@@ -142,7 +140,7 @@ func (vpx *Vpx) Encode(yuv []byte) []byte {
 	}
 	vpx.frameCount++
 
-	fb := C.get_frame_buffer(&vpx.codecCtx, &vpx.codecIter)
+	fb := C.get_frame_buffer(&vpx.codecCtx, &iter)
 	if fb.ptr == nil {
 		return []byte{}
 	}
@@ -150,7 +148,9 @@ func (vpx *Vpx) Encode(yuv []byte) []byte {
 }
 
 func (vpx *Vpx) Shutdown() error {
-	C.vpx_img_free(&vpx.image)
+	if &vpx.image != nil {
+		C.vpx_img_free(&vpx.image)
+	}
 	C.vpx_codec_destroy(&vpx.codecCtx)
 	return nil
 }

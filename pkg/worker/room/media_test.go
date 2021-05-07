@@ -61,7 +61,10 @@ func run(w, h int, cod codec.VideoCodec, count int, a *image.RGBA, b *image.RGBA
 		}
 		pipe.Input <- encoder.InFrame{Image: im}
 		select {
-		case <-pipe.Output:
+		case _, ok := <-pipe.Output:
+			if !ok {
+				backend.Fatalf("encoder closed abnormally")
+			}
 		case <-time.After(5 * time.Second):
 			backend.Fatalf("encoder didn't produce an image")
 		}

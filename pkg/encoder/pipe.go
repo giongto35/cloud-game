@@ -42,6 +42,8 @@ func (vp *VideoPipe) Start() {
 		if r := recover(); r != nil {
 			log.Println("Warn: Recovered panic in encoding ", r)
 		}
+		close(vp.Output)
+		close(vp.done)
 	}()
 
 	yuvProc := yuv.NewYuvImgProcessor(vp.w, vp.h)
@@ -52,8 +54,6 @@ func (vp *VideoPipe) Start() {
 			vp.Output <- OutFrame{Data: frame, Timestamp: img.Timestamp}
 		}
 	}
-	close(vp.Output)
-	close(vp.done)
 }
 
 func (vp *VideoPipe) Stop() {
