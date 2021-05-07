@@ -9,10 +9,13 @@ import (
 
 	"github.com/giongto35/cloud-game/v2/pkg/config/monitoring"
 	"github.com/giongto35/cloud-game/v2/pkg/network/httpx"
+	"github.com/giongto35/cloud-game/v2/pkg/service"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 )
 
 type Monitoring struct {
+	service.Service
+
 	conf   monitoring.Config
 	tag    string
 	server *httpx.Server

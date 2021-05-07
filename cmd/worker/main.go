@@ -4,12 +4,10 @@ import (
 	"context"
 	goflag "flag"
 	"math/rand"
-	"os"
-	"os/signal"
-	"syscall"
 	"time"
 
 	config "github.com/giongto35/cloud-game/v2/pkg/config/worker"
+	"github.com/giongto35/cloud-game/v2/pkg/os"
 	"github.com/giongto35/cloud-game/v2/pkg/thread"
 	"github.com/giongto35/cloud-game/v2/pkg/util/logging"
 	"github.com/giongto35/cloud-game/v2/pkg/worker"
@@ -32,22 +30,11 @@ func run() {
 	ctx, cancelCtx := context.WithCancel(context.Background())
 
 	glog.V(4).Infof("[worker] Local configuration %+v", conf)
-	wrk := worker.New(ctx, conf)
-	wrk.Run(ctx)
+	wrk := worker.New(conf)
+	wrk.Start()
+	defer wrk.Shutdown(ctx)
 
-	signals := make(chan os.Signal, 1)
-	done := make(chan struct{}, 1)
-
-	signal.Notify(signals, os.Interrupt, syscall.SIGTERM)
-
-	go func() {
-		sig := <-signals
-		glog.V(4).Infof("[worker] Shutting down [os:%v]", sig)
-		done <- struct{}{}
-	}()
-
-	<-done
-	wrk.Shutdown()
+	<-os.ExpectTermination()
 	cancelCtx()
 }
 

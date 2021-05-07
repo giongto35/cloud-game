@@ -2,7 +2,6 @@ package worker
 
 import (
 	"context"
-	"errors"
 	"log"
 	"os"
 	"time"
@@ -10,44 +9,41 @@ import (
 	"github.com/giongto35/cloud-game/v2/pkg/config/worker"
 	"github.com/giongto35/cloud-game/v2/pkg/emulator/libretro/manager/remotehttp"
 	"github.com/giongto35/cloud-game/v2/pkg/games"
+	"github.com/giongto35/cloud-game/v2/pkg/service"
 	"github.com/giongto35/cloud-game/v2/pkg/storage"
 	"github.com/giongto35/cloud-game/v2/pkg/webrtc"
 	"github.com/giongto35/cloud-game/v2/pkg/worker/room"
 )
 
 type Handler struct {
+	service.Service
+
 	cfg           worker.Config
 	cord          Coordinator
 	onlineStorage *storage.Client
 	rooms         Rooms
 	sessions      Sessions
-	w             *Worker
 }
 
 // NewHandler returns a new server
-func NewHandler(wrk *Worker) *Handler {
-	if err := wrk.conf.Emulator.CreateOfflineStorage(); err != nil {
-		log.Printf("error: couldn't create offline storage at %v", wrk.conf.Emulator.Storage)
+func NewHandler(conf worker.Config) *Handler {
+	if err := conf.Emulator.CreateOfflineStorage(); err != nil {
+		log.Printf("error: couldn't create offline storage at %v", conf.Emulator.Storage)
 	}
 	return &Handler{
-		cfg:           wrk.conf,
+		cfg:           conf,
 		onlineStorage: storage.NewInitClient(),
 		rooms:         NewRooms(),
 		sessions:      NewSessions(),
-		w:             wrk,
 	}
 }
 
-func (h *Handler) Run(ctx context.Context) {
+func (h *Handler) Run() {
 	conf := h.cfg.Worker.Network
 
 	h.syncCores()
 
 	for {
-		if errors.Is(ctx.Err(), context.Canceled) {
-			return
-		}
-
 		conn, err := newCoordinatorConnection(conf.CoordinatorAddress, h.cfg)
 		if err != nil {
 			log.Printf("Cannot connect to coordinator. %v Retrying...", err)
@@ -61,10 +57,11 @@ func (h *Handler) Run(ctx context.Context) {
 
 		h.cord.Close()
 		h.rooms.CloseAll()
-		if errors.Is(ctx.Err(), context.Canceled) {
-			return
-		}
 	}
+}
+
+func (h *Handler) Shutdown(context.Context) error {
+	return nil
 }
 
 func (h *Handler) syncCores() {
