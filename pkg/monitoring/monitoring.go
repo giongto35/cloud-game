@@ -14,7 +14,7 @@ import (
 )
 
 type Monitoring struct {
-	service.Service
+	service.RunnableService
 
 	conf   monitoring.Config
 	tag    string

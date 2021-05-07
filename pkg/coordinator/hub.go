@@ -11,10 +11,13 @@ import (
 	"github.com/giongto35/cloud-game/v2/pkg/games"
 	"github.com/giongto35/cloud-game/v2/pkg/ipc"
 	"github.com/giongto35/cloud-game/v2/pkg/launcher"
+	"github.com/giongto35/cloud-game/v2/pkg/service"
 	"github.com/giongto35/cloud-game/v2/pkg/util"
 )
 
 type Hub struct {
+	service.Service
+
 	cfg      coordinator.Config
 	launcher launcher.Launcher
 	crowd    cache.Cache // stores users
@@ -23,6 +26,9 @@ type Hub struct {
 }
 
 func NewHub(cfg coordinator.Config, lib games.GameLibrary) *Hub {
+	// scan the lib right away
+	lib.Scan()
+
 	return &Hub{
 		cfg:      cfg,
 		launcher: launcher.NewGameLauncher(lib),
@@ -32,8 +38,8 @@ func NewHub(cfg coordinator.Config, lib games.GameLibrary) *Hub {
 	}
 }
 
-// handleNewWebsocketUserConnection handles all connections from user/frontend.
-func (h *Hub) handleNewWebsocketUserConnection(w http.ResponseWriter, r *http.Request) {
+// handleWebsocketUserConnection handles all connections from user/frontend.
+func (h *Hub) handleWebsocketUserConnection(w http.ResponseWriter, r *http.Request) {
 	defer func() {
 		if r := recover(); r != nil {
 			log.Printf("error: recovered user client from (%v)", r)
@@ -81,8 +87,8 @@ func (h *Hub) handleNewWebsocketUserConnection(w http.ResponseWriter, r *http.Re
 	usr.Printf("Disconnected")
 }
 
-// handleNewWebsocketWorkerConnection handles all connections from a new worker to coordinator.
-func (h *Hub) handleNewWebsocketWorkerConnection(w http.ResponseWriter, r *http.Request) {
+// handleWebsocketWorkerConnection handles all connections from a new worker to coordinator.
+func (h *Hub) handleWebsocketWorkerConnection(w http.ResponseWriter, r *http.Request) {
 	defer func() {
 		if r := recover(); r != nil {
 			log.Printf("error: recovered worker client from (%v)", r)
@@ -108,6 +114,7 @@ func (h *Hub) handleNewWebsocketWorkerConnection(w http.ResponseWriter, r *http.
 	}
 	backend.Printf("addr: %v | zone: %v | pub: %v | ping: %v", address, backend.Region, public, backend.PingServer)
 
+	// !to rewrite
 	// In case wkr and coordinator in the same host
 	if !public && h.cfg.Environment.Get() == environment.Production {
 		// Don't accept private IP for wkr's address in prod mode
@@ -127,15 +134,11 @@ func (h *Hub) handleNewWebsocketWorkerConnection(w http.ResponseWriter, r *http.
 	backend.HandleRequests(&h.rooms, &h.crowd)
 
 	h.guild.add(backend)
-	defer h.cleanWorker(backend)
+	defer func() {
+		h.guild.Remove(backend)
+		h.rooms.RemoveAllWithId(string(backend.Id()))
+	}()
 
 	backend.Listen()
 	backend.Printf("Disconnect")
-}
-
-// cleanWorker is called when a worker is disconnected
-// connection from worker to coordinator is also closed
-func (h *Hub) cleanWorker(worker Worker) {
-	h.guild.Remove(worker)
-	h.rooms.RemoveAllWithId(string(worker.Id()))
 }

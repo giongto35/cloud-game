@@ -16,7 +16,7 @@ import (
 )
 
 type Handler struct {
-	service.Service
+	service.RunnableService
 
 	cfg           worker.Config
 	cord          Coordinator
@@ -60,9 +60,7 @@ func (h *Handler) Run() {
 	}
 }
 
-func (h *Handler) Shutdown(context.Context) error {
-	return nil
-}
+func (h *Handler) Shutdown(context.Context) error { return nil }
 
 func (h *Handler) syncCores() {
 	if !h.cfg.Emulator.Libretro.Cores.Repo.Sync {

@@ -10,7 +10,7 @@ import (
 )
 
 type HTTPServer struct {
-	service.Service
+	service.RunnableService
 
 	server *httpx.Server
 }
@@ -29,10 +29,6 @@ func NewHTTPServer(conf coordinator.Config, fnMux func(mux *http.ServeMux)) HTTP
 	)}
 }
 
-func (s HTTPServer) Run() {
-	go s.server.Start()
-}
+func (s HTTPServer) Run() { go s.server.Start() }
 
-func (s HTTPServer) Shutdown(ctx context.Context) error {
-	return s.server.Shutdown(ctx)
-}
+func (s HTTPServer) Shutdown(ctx context.Context) error { return s.server.Shutdown(ctx) }

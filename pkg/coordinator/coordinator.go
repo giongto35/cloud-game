@@ -9,29 +9,18 @@ import (
 	"github.com/giongto35/cloud-game/v2/pkg/service"
 )
 
-func New(conf coordinator.Config) service.Services {
-	lib := getLibrary(conf)
-	lib.Scan()
+func New(conf coordinator.Config) (services service.Services) {
+	hub := NewHub(conf, games.NewLibWhitelisted(conf.Coordinator.Library, conf.Emulator))
 
-	hub := NewHub(conf, lib)
-
-	services := service.Services{}
-	services.Add(NewHTTPServer(conf, func(mux *http.ServeMux) {
-		mux.HandleFunc("/ws", hub.handleNewWebsocketUserConnection)
-		mux.HandleFunc("/wso", hub.handleNewWebsocketWorkerConnection)
-	}))
+	services.Add(
+		hub,
+		NewHTTPServer(conf, func(mux *http.ServeMux) {
+			mux.HandleFunc("/ws", hub.handleWebsocketUserConnection)
+			mux.HandleFunc("/wso", hub.handleWebsocketWorkerConnection)
+		}),
+	)
 	if conf.Coordinator.Monitoring.IsEnabled() {
 		services.Add(monitoring.New(conf.Coordinator.Monitoring, "cord"))
 	}
-	return services
-}
-
-// !to rewrite
-// getLibrary scans files with explicit extensions or
-// the extensions specified in the emulator config.
-func getLibrary(conf coordinator.Config) games.GameLibrary {
-	if len(conf.Coordinator.Library.Supported) == 0 {
-		conf.Coordinator.Library.Supported = conf.Emulator.GetSupportedExtensions()
-	}
-	return games.NewLibrary(conf.Coordinator.Library)
+	return
 }

@@ -10,7 +10,7 @@ import (
 )
 
 type HTTPServer struct {
-	service.Service
+	service.RunnableService
 
 	server *httpx.Server
 }
@@ -33,10 +33,6 @@ func NewHTTPServer(conf worker.Config) HTTPServer {
 	)}
 }
 
-func (s HTTPServer) Run() {
-	go s.server.Start()
-}
+func (s HTTPServer) Run() { go s.server.Start() }
 
-func (s HTTPServer) Shutdown(ctx context.Context) error {
-	return s.server.Shutdown(ctx)
-}
+func (s HTTPServer) Shutdown(ctx context.Context) error { return s.server.Shutdown(ctx) }

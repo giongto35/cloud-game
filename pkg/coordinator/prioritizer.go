@@ -1,10 +1,6 @@
 package coordinator
 
-import (
-	"log"
-
-	"github.com/giongto35/cloud-game/v2/pkg/client"
-)
+import "github.com/giongto35/cloud-game/v2/pkg/client"
 
 func (h *Hub) findWorkerByRoom(id string, region string) *Worker {
 	w, err := h.rooms.Find(id)
@@ -59,8 +55,6 @@ func (h *Hub) findFastestWorker(region string, fn func(addresses []string) (map[
 	if len(latencies) == 0 || err != nil {
 		return nil
 	}
-
-	log.Printf("LATENCIES: %v", latencies)
 
 	var bestWorker *Worker
 	var minLatency int64 = 1<<31 - 1
