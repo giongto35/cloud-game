@@ -48,6 +48,6 @@ func (w *Worker) HandleRequests(rooms *cache.Cache, crowd *cache.Cache) {
 
 // In say whether some worker from this region.
 // Empty region always returns true.
-func (w *Worker) In(region string) bool { return region == "" && region == w.Region }
+func (w *Worker) In(region string) bool { return region == "" || region == w.Region }
 
 func (w *Worker) MakeAvailable(avail bool) { w.IsFree = avail }
