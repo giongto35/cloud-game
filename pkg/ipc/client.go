@@ -10,7 +10,7 @@ import (
 	"time"
 
 	"github.com/giongto35/cloud-game/v2/pkg/network"
-	ws "github.com/giongto35/cloud-game/v2/pkg/network/websocket"
+	"github.com/giongto35/cloud-game/v2/pkg/network/websocket"
 )
 
 // !todo revamp termination hold
@@ -24,20 +24,20 @@ type call struct {
 }
 
 type Client struct {
-	Conn *ws.WS
+	Conn *websocket.WS
 	// !to check leaks
 	queue    map[network.Uid]*call
 	mu       sync.Mutex
 	OnPacket func(packet InPacket)
 }
 
-func NewClient(address url.URL) (*Client, error) { return connect(ws.NewClient(address)) }
+func NewClient(address url.URL) (*Client, error) { return connect(websocket.NewClient(address)) }
 
 func NewClientServer(w http.ResponseWriter, r *http.Request) (*Client, error) {
-	return connect(ws.NewServer(w, r))
+	return connect(websocket.NewServer(w, r))
 }
 
-func connect(conn *ws.WS, err error) (*Client, error) {
+func connect(conn *websocket.WS, err error) (*Client, error) {
 	if err != nil {
 		return nil, err
 	}

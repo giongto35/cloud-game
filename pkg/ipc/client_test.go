@@ -38,7 +38,11 @@ func testWebsocket(t *testing.T) {
 	// socket handler
 	var socket *websocket.WS
 	http.HandleFunc("/ws", func(w http.ResponseWriter, r *http.Request) {
-		socket = websocket.NewServer(w, r)
+		sock, err := websocket.NewServer(w, r)
+		if err != nil {
+			t.Fatalf("couldn't init socket server")
+		}
+		socket = sock
 		socket.OnMessage = func(message []byte, err error) {
 			// echo response
 			socket.Write(message)

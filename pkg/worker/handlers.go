@@ -10,8 +10,8 @@ import (
 	"github.com/giongto35/cloud-game/v2/pkg/config/worker"
 	"github.com/giongto35/cloud-game/v2/pkg/emulator/libretro/manager/remotehttp"
 	"github.com/giongto35/cloud-game/v2/pkg/games"
+	"github.com/giongto35/cloud-game/v2/pkg/storage"
 	"github.com/giongto35/cloud-game/v2/pkg/webrtc"
-	storage "github.com/giongto35/cloud-game/v2/pkg/worker/cloud-storage"
 	"github.com/giongto35/cloud-game/v2/pkg/worker/room"
 )
 
@@ -25,12 +25,12 @@ type Handler struct {
 }
 
 // NewHandler returns a new server
-func NewHandler(cfg worker.Config, wrk *Worker) *Handler {
-	if err := cfg.Emulator.CreateOfflineStorage(); err != nil {
-		log.Printf("error: couldn't create offline storage at %v", cfg.Emulator.Storage)
+func NewHandler(wrk *Worker) *Handler {
+	if err := wrk.conf.Emulator.CreateOfflineStorage(); err != nil {
+		log.Printf("error: couldn't create offline storage at %v", wrk.conf.Emulator.Storage)
 	}
 	return &Handler{
-		cfg:           cfg,
+		cfg:           wrk.conf,
 		onlineStorage: storage.NewInitClient(),
 		rooms:         NewRooms(),
 		sessions:      NewSessions(),

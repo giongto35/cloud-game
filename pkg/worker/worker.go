@@ -27,23 +27,14 @@ func New(ctx context.Context, conf worker.Config) *Worker {
 	}
 }
 
-// !to add proper shutdown on app termination
+// !to add proper shutdown on app termination with cancellation ctx
 
-func (wrk *Worker) Run(ctx context.Context) {
-	conf := wrk.conf.Worker
-
-	h := NewHandler(wrk.conf, wrk)
-
-	go h.Run(ctx)
-
-	address := conf.Server.Address
-	if conf.Server.Https {
-		address = conf.Server.Tls.Address
-	}
-
+func (w *Worker) Run(ctx context.Context) {
+	conf := w.conf.Worker
+	go NewHandler(w).Run(ctx)
 	go httpx.NewServer(
-		address,
-		func(_ *httpx.Server) http.Handler {
+		conf.Server.GetAddr(),
+		func(*httpx.Server) http.Handler {
 			h := http.NewServeMux()
 			h.HandleFunc(conf.Network.PingEndpoint, func(w http.ResponseWriter, _ *http.Request) {
 				w.Header().Set("Access-Control-Allow-Origin", "*")
@@ -56,8 +47,7 @@ func (wrk *Worker) Run(ctx context.Context) {
 		httpx.HttpsRedirect(false),
 		httpx.WithPortRoll(true),
 	).Start()
-
-	wrk.services.Start()
+	w.services.Start()
 }
 
-func (wrk *Worker) Shutdown() { wrk.services.Shutdown(wrk.ctx) }
+func (w *Worker) Shutdown() { w.services.Shutdown(w.ctx) }
