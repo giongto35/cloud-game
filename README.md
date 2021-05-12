@@ -74,6 +74,9 @@ Use makefile script: `make dev.run-docker` or Docker Compose directly: `docker-c
 (`CLOUD_GAME_GAMES_PATH` is env variable for games on your host).
 It will spawn a docker environment and you can access the service on `localhost:8000`.
 
+## Code Pointer
+[Code Pointer Wiki](https://github.com/giongto35/cloud-game/wiki/Code-Deep-Dive)
+
 ## Configuration
 
 The configuration parameters are stored in the [`configs/config.yaml`](configs/config.yaml) file which is shared for
