@@ -45,7 +45,3 @@ The streaming process begins when a user opens the main application page (index.
 - Workers should not have any closed UDP ports to be able to provide suitable ICE candidates.
 - Coordinator should have at least one non-blocked TCP port (default: 8000) for HTTP/WebSocket signaling connections from users and workers.
 - Browser should not block WebRTC and support it (check [here](https://test.webrtc.org/)).
-#### Possible streaming initialization failures
-- Worker server should not have any closed UDP ports in order to be able to provide suitable ICE candidates.
-- Coordinator should have at least one non-blocked TCP port (default: 8000) for HTTP/WebSocket signaling connections from users and workers.
-- Browser should not block WebRTC and support it (check [here](https://test.webrtc.org/)).
