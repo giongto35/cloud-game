@@ -26,6 +26,5 @@ func (env *Environment) Get() environment.Env {
 }
 
 func (env *Environment) WithFlags() {
-	val := string(*env)
-	flag.StringVar(&val, "env", val, "Specify environment type: [dev, staging, prod]")
+	flag.StringVar((*string)(env), "env", string(*env), "Specify environment type: [dev, staging, prod]")
 }
