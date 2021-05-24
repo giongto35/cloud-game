@@ -23,6 +23,7 @@ jobs:
           password: ${{ secrets.GITHUB_TOKEN }}
           add_git_labels: true
           tag_with_ref: true
+          tags: latest
 
           registry: docker.pkg.github.com
           repository: ${{ github.REPOSITORY }}/cloud-game
