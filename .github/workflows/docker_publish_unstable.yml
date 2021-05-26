@@ -1,18 +1,16 @@
-# ------------------------------------------------------------------------
-#  Publish Docker image from the current snapshot into Github repository
-# ------------------------------------------------------------------------
+# ----------------------------------------------------------------------------
+#  Publish Docker image from the current master branch into Github repository
+# ----------------------------------------------------------------------------
 
-name: publish
+name: publish-unstable
 
 on:
   push:
     branches:
       - master
-    tags:
-      - 'v*'
 
 jobs:
-  docker-publish:
+  docker-publish-unstable:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
@@ -22,11 +20,7 @@ jobs:
           username: ${{ github.repository_owner }}
           password: ${{ secrets.GITHUB_TOKEN }}
           add_git_labels: true
-          tag_with_ref: true
-          tags: latest
+          tags: dev
 
           registry: docker.pkg.github.com
           repository: ${{ github.REPOSITORY }}/cloud-game
-
-      - name: Redeploy
-        run: ./scripts/redeploy.sh

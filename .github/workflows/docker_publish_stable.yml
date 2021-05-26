@@ -1,0 +1,31 @@
+# ------------------------------------------------------------------------
+#  Publish Docker image from the stable snapshot into Github repository
+# ------------------------------------------------------------------------
+
+name: publish-stable
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+jobs:
+  docker-publish-stable:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+
+      - run: echo "TAG=${GITHUB_REF/refs\/tags\//}" >> $GITHUB_ENV
+
+      - uses: docker/build-push-action@v1
+        with:
+          username: ${{ github.repository_owner }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+          add_git_labels: true
+          tags: latest,${{ env.TAG }}
+
+          registry: docker.pkg.github.com
+          repository: ${{ github.REPOSITORY }}/cloud-game
+
+      - name: Redeploy
+        run: ./scripts/redeploy.sh
