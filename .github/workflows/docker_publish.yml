@@ -27,3 +27,7 @@ jobs:
 
           registry: docker.pkg.github.com
           repository: ${{ github.REPOSITORY }}/cloud-game
+
+      - name: Redeploy
+        run: ./redeploy.sh
+
