@@ -30,4 +30,3 @@ jobs:
 
       - name: Redeploy
         run: ./scripts/redeploy.sh
-
