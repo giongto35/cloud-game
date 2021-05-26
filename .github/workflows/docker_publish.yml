@@ -29,5 +29,5 @@ jobs:
           repository: ${{ github.REPOSITORY }}/cloud-game
 
       - name: Redeploy
-        run: ./redeploy.sh
+        run: ./scripts/redeploy.sh
 
