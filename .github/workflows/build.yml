@@ -36,7 +36,7 @@ jobs:
           USERNAME: ${{ github.repository_owner }}
           PASSWORD: ${{ secrets.GITHUB_TOKEN }}
           DO_TOKEN: ${{ secrets.DO_TOKEN }}
-        run: ./.github/workflows/redeploy/redeploy_specific.sh eu.cloudretro.io
+        run: ./.github/workflows/redeploy/redeploy.sh
 
       - uses: actions/setup-go@v2
         with:
