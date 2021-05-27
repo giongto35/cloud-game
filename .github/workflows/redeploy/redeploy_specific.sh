@@ -8,7 +8,7 @@ do
     ssh-keyscan -H $ip_address >> ~/.ssh/known_hosts
     sleep 2
 
-    if [ "$ip_address" == "cloudretro.io" ]
+    if [ "$ip_address" == "167.172.70.98" ] || [ "$ip_address" == "cloudretro.io" ] 
     then
         launchcommand="coordinator > /tmp/startup.log"
         httpport=8000
