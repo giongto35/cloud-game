@@ -37,6 +37,4 @@ do
 
 done
 
-./update_games_specific.sh $iplist
-
 echo 'done'
