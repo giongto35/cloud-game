@@ -19,6 +19,7 @@ do
     rsync ./.github/workflows/redeploy/config.yaml root@$ip_address:/cloud-game/configs/config.yaml
     run_content="'#! /bin/bash
     echo $PASSWORD | docker login https://docker.pkg.github.com --username $USERNAME --password-stdin; 
+    ufw disable;
     docker system prune -f;
     source /etc/profile; 
     docker pull docker.pkg.github.com/giongto35/cloud-game/cloud-game:latest;
