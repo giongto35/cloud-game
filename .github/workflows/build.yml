@@ -24,7 +24,9 @@ jobs:
     runs-on: ${{ matrix.os }}
     steps:
       - name: Redeploy
-        run: ./.github/workflows/redeploy/redeploy_specific.sh eu.cloudretro.com
+        env:
+          DO_TOKEN: ${{ secrets.DO_TOKEN }}
+        run: ./scripts/redeploy_specific.sh eu.cloudretro.com
 
       - uses: actions/checkout@v2
 
