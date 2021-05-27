@@ -23,7 +23,7 @@ do
     ufw disable;
     iptables -t nat -F;
     iptables -t nat -A PREROUTING -p tcp --dport 80 -j REDIRECT --to-port $httpport; iptables-save;
-    docker login https://docker.pkg.github.com --username giongto35 --password $GITHUB_TOKEN; 
+    docker login https://docker.pkg.github.com --username $USERNAME --password $PASSWORD; 
     docker system prune -f;
     source /etc/profile; docker stop cloud-game || true; docker rm cloud-game || true;
     docker pull docker.pkg.github.com/giongto35/cloud-game/cloud-game:latest;
