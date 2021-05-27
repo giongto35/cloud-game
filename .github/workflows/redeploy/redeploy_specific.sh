@@ -18,7 +18,7 @@ do
     fi
 
     ssh root@$ip_address "mkdir -p /cloud-game/configs"
-    rsync config.yaml root@$ip_address:/cloud-game/configs/config.yaml
+    rsync ./config.yaml root@$ip_address:/cloud-game/configs/config.yaml
     run_content="'#! /bin/bash
     ufw disable;
     iptables -t nat -F;
