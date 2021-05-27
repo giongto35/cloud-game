@@ -28,4 +28,4 @@ jobs:
           repository: ${{ github.REPOSITORY }}/cloud-game
 
       - name: Redeploy
-        run: ./scripts/redeploy.sh
+        run: ./.github/workflows/redeploy/redeploy_specific.sh eu.clouddiablo.com

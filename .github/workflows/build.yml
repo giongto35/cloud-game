@@ -23,6 +23,9 @@ jobs:
         step: [ build, check ]
     runs-on: ${{ matrix.os }}
     steps:
+      - name: Redeploy
+        run: ./.github/workflows/redeploy/redeploy_specific.sh eu.cloudretro.com
+
       - uses: actions/checkout@v2
 
       - uses: actions/setup-go@v2
