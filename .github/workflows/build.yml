@@ -25,12 +25,6 @@ jobs:
     steps:
       - uses: actions/checkout@v2
 
-      - name: Install SSH Key
-        uses: shimataro/ssh-key-action@v2
-        with:
-          key: ${{ secrets.SSH_PRIVATE_KEY }} 
-          known_hosts: 'PLACEHOLDER'
-
       - name: Get Linux dev libraries and tools
         if: matrix.os == 'ubuntu-latest'
         run: |
