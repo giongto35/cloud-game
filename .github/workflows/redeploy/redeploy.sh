@@ -1,5 +1,6 @@
 #! /bin/bash
 
+iplist="cloudretro.io"
 for tagName in cloud-gaming cloud-gaming-eu cloud-gaming-usw; do
     echo "scanning: $tagName"
     regional_iplist=$(curl -X GET -H "Content-Type: application/json" -H "Authorization: Bearer "$DO_TOKEN "https://api.digitalocean.com/v2/droplets?tag_name=$tagName" | jq -r ".droplets[]" | jq -r ".networks.v4[0].ip_address")
