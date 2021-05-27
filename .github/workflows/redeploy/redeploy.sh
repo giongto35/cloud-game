@@ -14,7 +14,7 @@ echo "iplist "$iplist
 
 for ip_address in $iplist
 do
-    ./redeploy_specific.sh $ip_address
+    .github/workflows/redeploy/redeploy_specific.sh $ip_address
 done
 
 echo 'done'
