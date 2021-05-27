@@ -11,18 +11,13 @@ do
     if [ "$ip_address" == "167.172.70.98" ] || [ "$ip_address" == "cloudretro.io" ] 
     then
         launchcommand="coordinator > /tmp/startup.log"
-        httpport=8000
     else
         launchcommand="Xvfb :99 & worker --coordinatorhost cloudretro.io --zone \$zone > /tmp/startup.log"
-        httpport=9000
     fi
 
     ssh root@$ip_address "mkdir -p /cloud-game/configs"
     rsync ./.github/workflows/redeploy/config.yaml root@$ip_address:/cloud-game/configs/config.yaml
     run_content="'#! /bin/bash
-    ufw disable;
-    iptables -t nat -F;
-    iptables -t nat -A PREROUTING -p tcp --dport 80 -j REDIRECT --to-port $httpport; iptables-save;
     echo $PASSWORD | docker login https://docker.pkg.github.com --username $USERNAME --password-stdin; 
     docker system prune -f;
     source /etc/profile; 
