@@ -13,6 +13,8 @@ CloudRetro provides an open-source cloud gaming platform for retro games. It sta
 
 Theoretically, in cloud gaming, games are run on remote servers and media are streamed to the player optimally to ensure the most comfortable user interaction. It opens the ability to play any retro games on web-browser directly, which are fully compatible with multi-platform like Desktop, Android, ~~IOS~~.
 
+Discord: [Join Us](https://discord.gg/sXRQZa2zeP)
+
 ## Announcement
 **(Currently, I'm working on [CloudMorph](https://github.com/giongto35/cloud-morph): It offers more generic solution to run any offline games/application on browser in Cloud Gaming approach: [https://github.com/giongto35/cloud-morph](https://github.com/giongto35/cloud-morph))**
 
