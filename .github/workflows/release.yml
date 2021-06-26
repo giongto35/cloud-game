@@ -63,7 +63,7 @@ jobs:
           release: false
           install: >
             mingw-w64-x86_64-gcc
-            mingw-w64-x86_64-pkg-config
+            mingw-w64-x86_64-pkgconf
             mingw-w64-x86_64-dlfcn
             mingw-w64-x86_64-libvpx
             mingw-w64-x86_64-opus
