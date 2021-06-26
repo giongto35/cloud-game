@@ -6,7 +6,6 @@ import (
 	"io"
 	"log"
 	"os"
-	"path"
 	"path/filepath"
 	"strings"
 	"sync"
@@ -115,7 +114,7 @@ func (lib *library) GetAll() []GameMetadata {
 func (lib *library) FindGameByName(name string) GameMetadata {
 	var game GameMetadata
 	if val, ok := lib.games[name]; ok {
-		val.Path = path.Join(lib.config.path, val.Path)
+		val.Path = filepath.Join(lib.config.path, val.Path)
 		game = val
 	}
 	return game
