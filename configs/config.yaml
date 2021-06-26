@@ -124,6 +124,13 @@ emulator:
           roms: [ "cue" ]
           width: 350
           height: 240
+        # MAME core requires additional manual setup, please read:
+        # https://docs.libretro.com/library/fbneo/
+        mame:
+          lib: fbneo_libretro
+          roms: [ "zip" ]
+          width: 240
+          height: 160
         nes:
           lib: nestopia_libretro
           roms: [ "nes" ]
