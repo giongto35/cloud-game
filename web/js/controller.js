@@ -406,6 +406,9 @@
     event.sub(GAME_ROOM_AVAILABLE, onGameRoomAvailable, 2);
     event.sub(GAME_SAVED, () => message.show('Saved'));
     event.sub(GAME_LOADED, () => message.show('Loaded'));
+    event.sub(GAME_PLAYER_IDX_CHANGE, data => {
+       updatePlayerIndex(data.index);
+    });
     event.sub(GAME_PLAYER_IDX, idx => {
         if (!isNaN(+idx)) message.show(+idx + 1);
     });
