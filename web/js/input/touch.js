@@ -165,8 +165,9 @@ const touch = (() => {
         }, 30);
     }
 
+    // !to rewrite slider completely
     function handlePlayerSlider() {
-        socket.updatePlayerIndex(this.value - 1);
+        event.pub(GAME_PLAYER_IDX_CHANGE, {index: +this.value - 1})
     }
 
     // Touch menu
@@ -279,6 +280,7 @@ const touch = (() => {
     playerSlider.addEventListener('oninput', handlePlayerSlider);
     playerSlider.addEventListener('onchange', handlePlayerSlider);
     playerSlider.addEventListener('mouseup', handlePlayerSlider);
+    playerSlider.addEventListener('touchend', handlePlayerSlider);
 
     // Bind events for menu
     // TODO change this flow
