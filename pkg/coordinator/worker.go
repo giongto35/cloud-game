@@ -17,6 +17,7 @@ type WorkerClient struct {
 	PingServer     string
 	StunTurnServer string
 	IsAvailable    bool
+	UserCount      int
 	Zone           string
 }
 

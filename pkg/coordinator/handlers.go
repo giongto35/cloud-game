@@ -217,6 +217,7 @@ func (o *Server) WS(w http.ResponseWriter, r *http.Request) {
 
 	// Assign available worker to browserClient
 	bc.WorkerID = wc.WorkerID
+	wc.UserCount++
 	wc.IsAvailable = false
 
 	// Everything is cool
@@ -239,7 +240,10 @@ func (o *Server) WS(w http.ResponseWriter, r *http.Request) {
 	wc.Send(api.TerminateSessionPacket(sessionID), nil)
 
 	// WorkerClient become available again
-	wc.IsAvailable = true
+	wc.UserCount--
+	if wc.UserCount <= 0 {
+		wc.IsAvailable = true
+	}
 }
 
 func (o *Server) getBestWorkerClient(client *BrowserClient, zone string) (*WorkerClient, error) {
