@@ -217,7 +217,9 @@ func (o *Server) WS(w http.ResponseWriter, r *http.Request) {
 
 	// Assign available worker to browserClient
 	bc.WorkerID = wc.WorkerID
-	wc.IsAvailable = false
+
+	wc.ChangeUserQuantityBy(1)
+	defer wc.ChangeUserQuantityBy(-1)
 
 	// Everything is cool
 	// Attach to Server instance with sessionID
@@ -237,9 +239,6 @@ func (o *Server) WS(w http.ResponseWriter, r *http.Request) {
 
 	// Notify worker to clean session
 	wc.Send(api.TerminateSessionPacket(sessionID), nil)
-
-	// WorkerClient become available again
-	wc.IsAvailable = true
 }
 
 func (o *Server) getBestWorkerClient(client *BrowserClient, zone string) (*WorkerClient, error) {
@@ -269,7 +268,7 @@ func (o *Server) getBestWorkerClient(client *BrowserClient, zone string) (*Worke
 func (o *Server) getAvailableWorkers() map[string]*WorkerClient {
 	workerClients := map[string]*WorkerClient{}
 	for k, w := range o.workerClients {
-		if w.IsAvailable {
+		if w.HasGameSlot() {
 			workerClients[k] = w
 		}
 	}
@@ -280,7 +279,7 @@ func (o *Server) getAvailableWorkers() map[string]*WorkerClient {
 // getWorkerFromAddress returns the worker has given address
 func (o *Server) getWorkerFromAddress(address string) *WorkerClient {
 	for _, w := range o.workerClients {
-		if w.IsAvailable && w.Address == address {
+		if w.HasGameSlot() && w.Address == address {
 			return w
 		}
 	}
