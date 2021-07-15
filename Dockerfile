@@ -20,7 +20,7 @@ RUN apt-get -qq update && apt-get -qq install --no-install-recommends -y \
  && rm -rf /var/lib/apt/lists/*
 
 # go setup layer
-ARG GO=go1.16.3.linux-amd64.tar.gz
+ARG GO=go1.16.6.linux-amd64.tar.gz
 RUN wget -q https://golang.org/dl/$GO \
     && rm -rf /usr/local/go \
     && tar -C /usr/local -xzf $GO \
@@ -35,7 +35,9 @@ RUN go mod download
 COPY pkg ./pkg
 COPY cmd ./cmd
 COPY Makefile .
-RUN make build
+COPY scripts ./scripts
+ARG VERSION
+RUN GIT_VERSION=${VERSION} make build
 
 # base image
 FROM debian:bullseye-slim
@@ -51,5 +53,9 @@ RUN cp -s $(pwd)/* /usr/local/bin
 COPY assets/cores ./assets/cores
 COPY configs ./configs
 COPY web ./web
+ARG VERSION=Unspecified
+COPY scripts/version.sh version.sh
+RUN bash ./version.sh ./web/index.html ${VERSION} && \
+    rm -rf version.sh
 
 EXPOSE 8000 9000

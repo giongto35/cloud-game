@@ -17,6 +17,8 @@ import (
 	flag "github.com/spf13/pflag"
 )
 
+var Version = "Unspecified"
+
 func init() {
 	rand.Seed(time.Now().UTC().UnixNano())
 }
@@ -31,6 +33,7 @@ func run() {
 
 	ctx, cancelCtx := context.WithCancel(context.Background())
 
+	glog.Infof("[worker] version: %v", Version)
 	glog.V(4).Info("[worker] Initialization")
 	glog.V(4).Infof("[worker] Local configuration %+v", conf)
 	wrk := worker.New(ctx, conf)

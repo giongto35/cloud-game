@@ -16,6 +16,8 @@ import (
 	flag "github.com/spf13/pflag"
 )
 
+var Version = "Unspecified"
+
 func main() {
 	rand.Seed(time.Now().UTC().UnixNano())
 
@@ -28,6 +30,7 @@ func main() {
 
 	ctx, cancelCtx := context.WithCancel(context.Background())
 
+	glog.Infof("[coordinator] version: %v", Version)
 	glog.Infof("Initializing coordinator server")
 	glog.V(4).Infof("Coordinator configs %v", conf)
 	o := coordinator.New(ctx, conf)
