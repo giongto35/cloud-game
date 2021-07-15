@@ -16,8 +16,8 @@ from="(<span id=\"v\">).*?(<\/span>)"
 #
 # See: https://git-scm.com/docs/git-describe
 #
-# Replaces version placeholder when the file param is provided.
-# Uses a provided version value instead of git.
+# The first input param replaces the version placeholder when provided.
+# The second input param forces the use of some version instead of a git-derived one.
 #
 if [ "$version" == "" ]; then
   version=$(git describe --abbrev=5 --always --tags 2> /dev/null)
