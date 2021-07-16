@@ -11,7 +11,7 @@ from="(<span id=\"v\">).*?(<\/span>)"
 # |  | | |
 # |  | | '- commit hash of HEAD (1st 5 symbols)
 # |  | '-- "g" stands for git
-# |  '---- n commits since last tag
+# |  '---- n commits since the last tag
 # '------- last tag
 #
 # See: https://git-scm.com/docs/git-describe
