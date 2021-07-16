@@ -16,7 +16,7 @@ import (
 	flag "github.com/spf13/pflag"
 )
 
-var Version = "Unspecified"
+var Version = ""
 
 func main() {
 	rand.Seed(time.Now().UTC().UnixNano())

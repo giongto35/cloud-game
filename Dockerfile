@@ -53,7 +53,7 @@ RUN cp -s $(pwd)/* /usr/local/bin
 COPY assets/cores ./assets/cores
 COPY configs ./configs
 COPY web ./web
-ARG VERSION=Unspecified
+ARG VERSION
 COPY scripts/version.sh version.sh
 RUN bash ./version.sh ./web/index.html ${VERSION} && \
     rm -rf version.sh
