@@ -17,13 +17,15 @@ jobs:
 
       - run: echo "TAG=${GITHUB_REF/refs\/tags\//}" >> $GITHUB_ENV
 
+      - run: echo "V=$(./scripts/version.sh)" >> $GITHUB_ENV
+
       - uses: docker/build-push-action@v1
         with:
           username: ${{ github.repository_owner }}
           password: ${{ secrets.GITHUB_TOKEN }}
           add_git_labels: true
           tags: latest,${{ env.TAG }}
-          build_args: VERSION=$(./scripts/version.sh)
+          build_args: VERSION=${{ env.V }}
 
           registry: docker.pkg.github.com
           repository: ${{ github.REPOSITORY }}/cloud-game

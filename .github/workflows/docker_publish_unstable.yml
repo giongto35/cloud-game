@@ -15,13 +15,15 @@ jobs:
     steps:
       - uses: actions/checkout@v2
 
+      - run: echo "V=$(./scripts/version.sh)" >> $GITHUB_ENV
+
       - uses: docker/build-push-action@v1
         with:
           username: ${{ github.repository_owner }}
           password: ${{ secrets.GITHUB_TOKEN }}
           add_git_labels: true
           tags: dev
-          build_args: VERSION=$(./scripts/version.sh)
+          build_args: VERSION=${{ env.V }}
 
           registry: docker.pkg.github.com
           repository: ${{ github.REPOSITORY }}/cloud-game
