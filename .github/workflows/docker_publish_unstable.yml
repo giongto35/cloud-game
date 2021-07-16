@@ -21,6 +21,7 @@ jobs:
           password: ${{ secrets.GITHUB_TOKEN }}
           add_git_labels: true
           tags: dev
+          build_args: VERSION=$(./scripts/version.sh)
 
           registry: docker.pkg.github.com
           repository: ${{ github.REPOSITORY }}/cloud-game

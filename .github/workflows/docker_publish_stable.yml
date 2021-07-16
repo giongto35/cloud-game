@@ -23,6 +23,7 @@ jobs:
           password: ${{ secrets.GITHUB_TOKEN }}
           add_git_labels: true
           tags: latest,${{ env.TAG }}
+          build_args: VERSION=$(./scripts/version.sh)
 
           registry: docker.pkg.github.com
           repository: ${{ github.REPOSITORY }}/cloud-game
@@ -30,7 +31,7 @@ jobs:
       - name: Install SSH Key
         uses: shimataro/ssh-key-action@v2
         with:
-          key: ${{ secrets.SSH_PRIVATE_KEY }} 
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
           known_hosts: 'PLACEHOLDER'
 
       - name: Redeploy all instances
