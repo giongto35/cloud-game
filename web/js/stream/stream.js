@@ -97,6 +97,12 @@ const stream = (() => {
                 canvas.style['image-rendering'] = 'pixelated';
                 canvas.classList.add('game-screen');
 
+                // stretch depending on the video orientation
+                // portrait -- vertically, landscape -- horizontally
+                const isPortrait = screen.videoWidth < screen.videoHeight;
+                canvas.style.width = isPortrait ? 'auto' : canvas.style.width;
+                canvas.style.height = isPortrait ? canvas.style.height : 'auto';
+
                 let surface = canvas.getContext('2d');
                 screen.parentNode.insertBefore(canvas, screen.nextSibling);
                 toggle(false)
