@@ -3,6 +3,7 @@ package worker
 import (
 	"crypto/tls"
 	"log"
+	"net/http"
 	"net/url"
 	"os"
 	"time"
@@ -220,4 +221,9 @@ func createOfflineStorage(path string) {
 	if err := os.MkdirAll(path, 0755); err != nil {
 		log.Println("Failed to create offline storage, err: ", err)
 	}
+}
+
+func echo(w http.ResponseWriter, _ *http.Request) {
+	w.Header().Set("Access-Control-Allow-Origin", "*")
+	log.Println(w, "echo")
 }

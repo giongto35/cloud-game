@@ -9,15 +9,15 @@ import (
 	"github.com/giongto35/cloud-game/v2/pkg/config/worker"
 	"github.com/giongto35/cloud-game/v2/pkg/lock"
 	"github.com/giongto35/cloud-game/v2/pkg/monitoring"
-	"github.com/giongto35/cloud-game/v2/pkg/network"
 	"github.com/giongto35/cloud-game/v2/pkg/network/httpx"
 	"github.com/giongto35/cloud-game/v2/pkg/server"
 )
 
 type Worker struct {
-	ctx      context.Context
 	conf     worker.Config
+	ctx      context.Context
 	services server.Services
+
 	// to pause initialization
 	lock *lock.TimeLock
 }
@@ -53,24 +53,20 @@ func (wrk *Worker) Run() {
 }
 
 func (wrk *Worker) init() {
-	conf := wrk.conf.Worker
+	conf := wrk.conf.Worker.Server
 
-	address := network.Address(conf.Server.Address)
-	if conf.Server.Https {
-		address = network.Address(conf.Server.Tls.Address)
+	address := conf.Address
+	if conf.Https {
+		address = conf.Tls.Address
 	}
-
 	httpx.NewServer(
-		string(address),
+		address,
 		func(serv *httpx.Server) http.Handler {
 			h := http.NewServeMux()
-			h.HandleFunc("/echo", func(w http.ResponseWriter, r *http.Request) {
-				w.Header().Set("Access-Control-Allow-Origin", "*")
-				log.Println(w, "echo")
-			})
+			h.HandleFunc("/echo", echo)
 			return h
 		},
-		httpx.WithServerConfig(conf.Server),
+		httpx.WithServerConfig(conf),
 		httpx.WithPortRoll(true),
 	).Start()
 }
