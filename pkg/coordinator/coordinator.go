@@ -35,11 +35,11 @@ func New(ctx context.Context, conf coordinator.Config) *Coordinator {
 func newServer(server *Server, redirectHTTPS bool) *http.Server {
 	h := http.NewServeMux()
 
-	base := index
+	base := index(server.cfg)
 	if redirectHTTPS {
-		base = redirect
+		base = redirect()
 	}
-	h.HandleFunc("/", base)
+	h.Handle("/", base)
 	h.Handle("/static/", static("./web"))
 	h.HandleFunc("/ws", server.WS)
 	h.HandleFunc("/wso", server.WSO)
