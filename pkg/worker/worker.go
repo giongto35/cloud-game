@@ -61,12 +61,14 @@ func (wrk *Worker) init() {
 	}
 	httpx.NewServer(
 		address,
-		func(serv *httpx.Server) http.Handler {
+		func(_ *httpx.Server) http.Handler {
 			h := http.NewServeMux()
 			h.HandleFunc("/echo", echo)
 			return h
 		},
 		httpx.WithServerConfig(conf),
+		// no need just for one route
+		httpx.HttpsRedirect(false),
 		httpx.WithPortRoll(true),
 	).Start()
 }
