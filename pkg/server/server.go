@@ -10,10 +10,22 @@ type Server interface {
 	Shutdown(ctx context.Context) error
 }
 
-type Services []Server
+type Services struct {
+	list []Server
+}
+
+func (svs *Services) AddIf(condition bool, services ...Server) *Services {
+	if !condition {
+		return svs
+	}
+	for _, s := range services {
+		svs.list = append(svs.list, s)
+	}
+	return svs
+}
 
 func (svs *Services) Start() {
-	for _, s := range *svs {
+	for _, s := range svs.list {
 		s := s
 		go func() {
 			if err := s.Run(); err != nil {
@@ -23,9 +35,9 @@ func (svs *Services) Start() {
 	}
 }
 
-// !to add a proper HTTP(S) server shutdown (cws/handler bad loop)
+// Shutdown !to add a proper HTTP(S) server shutdown (cws/handler bad loop)
 func (svs *Services) Shutdown(ctx context.Context) {
-	for _, s := range *svs {
+	for _, s := range svs.list {
 		if err := s.Shutdown(ctx); err != nil {
 			log.Printf("error: failed to stop [%s] because of %v", s, err)
 		}

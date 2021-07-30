@@ -3,99 +3,72 @@ package monitoring
 import (
 	"context"
 	"fmt"
+	"log"
 	"net/http"
 	"net/http/pprof"
-	"strings"
 
 	"github.com/giongto35/cloud-game/v2/pkg/config/monitoring"
-	"github.com/golang/glog"
+	"github.com/giongto35/cloud-game/v2/pkg/network/httpx"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 )
 
-type ServerMonitoring struct {
-	conf   monitoring.ServerMonitoringConfig
+type Monitoring struct {
+	conf   monitoring.Config
 	tag    string
-	server *http.Server
+	server *httpx.Server
 }
 
-// NewServerMonitoring creates new monitoring service.
+// New creates new monitoring service.
 // The tag param specifies owner label for logs.
-func NewServerMonitoring(conf monitoring.ServerMonitoringConfig, tag string) *ServerMonitoring {
-	return &ServerMonitoring{conf: validate(&conf), tag: tag}
+func New(conf monitoring.Config, tag string) *Monitoring {
+	serv := httpx.NewServer(
+		fmt.Sprintf(":%d", conf.Port),
+		func(serv *httpx.Server) http.Handler {
+			h := http.NewServeMux()
+
+			if conf.ProfilingEnabled {
+				prefix := fmt.Sprintf("%s/debug/pprof", conf.URLPrefix)
+				log.Printf("[%v] Profiling is enabled at %v", tag, serv.Addr+prefix)
+				h.HandleFunc(prefix+"/", pprof.Index)
+				h.HandleFunc(prefix+"/cmdline", pprof.Cmdline)
+				h.HandleFunc(prefix+"/profile", pprof.Profile)
+				h.HandleFunc(prefix+"/symbol", pprof.Symbol)
+				h.HandleFunc(prefix+"/trace", pprof.Trace)
+				// pprof handler for custom pprof path needs to be explicitly specified,
+				// according to: https://github.com/gin-contrib/pprof/issues/8.
+				// Don't know why this is not fired as ticket
+				// https://golang.org/src/net/http/pprof/pprof.go?s=7411:7461#L305 only render index page
+				h.Handle(prefix+"/allocs", pprof.Handler("allocs"))
+				h.Handle(prefix+"/block", pprof.Handler("block"))
+				h.Handle(prefix+"/goroutine", pprof.Handler("goroutine"))
+				h.Handle(prefix+"/heap", pprof.Handler("heap"))
+				h.Handle(prefix+"/mutex", pprof.Handler("mutex"))
+				h.Handle(prefix+"/threadcreate", pprof.Handler("threadcreate"))
+			}
+
+			if conf.MetricEnabled {
+				metricPath := fmt.Sprintf("%s/metrics", conf.URLPrefix)
+				log.Printf("[%v] Prometheus metric is enabled at %v", tag, serv.Addr+metricPath)
+				h.Handle(metricPath, promhttp.Handler())
+			}
+
+			return h
+		},
+	)
+	return &Monitoring{conf: conf, tag: tag, server: serv}
 }
 
-func (sm *ServerMonitoring) Run() error {
-	if sm.conf.ProfilingEnabled || sm.conf.MetricEnabled {
-		monitoringServerMux := http.NewServeMux()
-
-		srv := http.Server{
-			Addr:    fmt.Sprintf(":%d", sm.conf.Port),
-			Handler: monitoringServerMux,
-		}
-		sm.server = &srv
-		glog.Infof("[%v] Starting monitoring server at %v", sm.tag, srv.Addr)
-
-		if sm.conf.ProfilingEnabled {
-			pprofPath := fmt.Sprintf("%s/debug/pprof", sm.conf.URLPrefix)
-			glog.Infof("[%v] Profiling is enabled at %v", sm.tag, srv.Addr+pprofPath)
-			monitoringServerMux.Handle(pprofPath+"/", http.HandlerFunc(pprof.Index))
-			monitoringServerMux.Handle(pprofPath+"/cmdline", http.HandlerFunc(pprof.Cmdline))
-			monitoringServerMux.Handle(pprofPath+"/profile", http.HandlerFunc(pprof.Profile))
-			monitoringServerMux.Handle(pprofPath+"/symbol", http.HandlerFunc(pprof.Symbol))
-			monitoringServerMux.Handle(pprofPath+"/trace", http.HandlerFunc(pprof.Trace))
-			// pprof handler for custom pprof path needs to be explicitly specified, according to: https://github.com/gin-contrib/pprof/issues/8 . Don't know why this is not fired as ticket
-			// https://golang.org/src/net/http/pprof/pprof.go?s=7411:7461#L305 only render index page
-			monitoringServerMux.Handle(pprofPath+"/allocs", pprof.Handler("allocs"))
-			monitoringServerMux.Handle(pprofPath+"/block", pprof.Handler("block"))
-			monitoringServerMux.Handle(pprofPath+"/goroutine", pprof.Handler("goroutine"))
-			monitoringServerMux.Handle(pprofPath+"/heap", pprof.Handler("heap"))
-			monitoringServerMux.Handle(pprofPath+"/mutex", pprof.Handler("mutex"))
-			monitoringServerMux.Handle(pprofPath+"/threadcreate", pprof.Handler("threadcreate"))
-		}
-
-		if sm.conf.MetricEnabled {
-			metricPath := fmt.Sprintf("%s/metrics", sm.conf.URLPrefix)
-			glog.Infof("[%v] Prometheus metric is enabled at %v", sm.tag, srv.Addr+metricPath)
-			monitoringServerMux.Handle(metricPath, promhttp.Handler())
-		}
-
-		err := srv.ListenAndServe()
-		if err == http.ErrServerClosed {
-			glog.Infof("[%v] The main HTTP server has been closed", sm.tag)
-			return nil
-		}
-		return err
-	}
+func (m *Monitoring) Run() error {
+	log.Printf("[%v] Starting monitoring server at %v", m.tag, m.server.Addr)
+	m.server.Start()
 	return nil
 }
 
-func (sm *ServerMonitoring) Shutdown(ctx context.Context) error {
-	if sm.server == nil {
-		return nil
-	}
-
-	glog.Infof("[%v] Shutting down monitoring server", sm.tag)
-	return sm.server.Shutdown(ctx)
+func (m *Monitoring) Shutdown(ctx context.Context) error {
+	log.Printf("[%v] Shutting down monitoring server", m.tag)
+	return m.server.Shutdown(ctx)
 }
 
-func (sm *ServerMonitoring) String() string {
-	return fmt.Sprintf("monitoring::%s:%d", sm.conf.URLPrefix, sm.conf.Port)
-}
-
-func validate(conf *monitoring.ServerMonitoringConfig) monitoring.ServerMonitoringConfig {
-	if conf.Port == 0 {
-		conf.Port = 6365
-	}
-
-	if len(conf.URLPrefix) > 0 {
-		conf.URLPrefix = strings.TrimSpace(conf.URLPrefix)
-		if !strings.HasPrefix(conf.URLPrefix, "/") {
-			conf.URLPrefix = "/" + conf.URLPrefix
-		}
-
-		if strings.HasSuffix(conf.URLPrefix, "/") {
-			conf.URLPrefix = strings.TrimSuffix(conf.URLPrefix, "/")
-		}
-	}
-	return *conf
+func (m *Monitoring) String() string {
+	return fmt.Sprintf("monitoring::%s:%d", m.conf.URLPrefix, m.conf.Port)
 }
