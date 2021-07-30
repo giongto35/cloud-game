@@ -18,7 +18,7 @@ func TestAddressPort(t *testing.T) {
 	}
 
 	for _, test := range tests {
-		err, port := test.input.Port()
+		port, err := test.input.Port()
 		if port != test.port || (err != nil && test.err != err.Error()) {
 			t.Errorf("Test fail for expected port %v but got %v with error %v", test.port, port, err)
 		}

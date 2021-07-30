@@ -55,7 +55,7 @@ func (s *Server) Start() {
 	// hack: auto open listener on the next free port
 	var port int
 	address := network.Address(s.Addr)
-	if err, p := address.Port(); err == nil {
+	if p, err := address.Port(); err == nil {
 		port = p
 	} else {
 		log.Fatalf("error: couldn't extract port from %v", address)

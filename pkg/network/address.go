@@ -8,9 +8,9 @@ import (
 
 type Address string
 
-func (a *Address) Port() (error, int) {
+func (a *Address) Port() (int, error) {
 	if len(string(*a)) == 0 {
-		return errors.New("no address"), 0
+		return 0, errors.New("no address")
 	}
 	parts := strings.Split(string(*a), ":")
 	var port string
@@ -20,7 +20,7 @@ func (a *Address) Port() (error, int) {
 		port = parts[len(parts)-1]
 	}
 	if val, err := strconv.Atoi(port); err == nil {
-		return nil, val
+		return val, nil
 	}
-	return errors.New("port is not a number"), 0
+	return 0, errors.New("port is not a number")
 }
