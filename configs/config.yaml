@@ -37,8 +37,8 @@ coordinator:
   pingServer:
   # HTTP(S) server config
   server:
-    port: 8000
-    httpsPort: 443
+    address: :8000
+    httpsAddress: :443
     httpsKey:
     httpsChain:
   analytics:
@@ -59,8 +59,8 @@ worker:
     metricEnabled: true
     urlPrefix: /worker
   server:
-    port: 9000
-    httpsPort: 443
+    address: :9000
+    httpsAddress: :443
     httpsKey:
     httpsChain:
 

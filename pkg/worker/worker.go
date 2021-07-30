@@ -44,7 +44,7 @@ func (wrk *Worker) Run() {
 			h.RequestConfig()
 		}
 		h.Prepare()
-		wrk.spawnServer(wrk.conf.Worker.Server.Port)
+		wrk.spawnServer(wrk.conf.Worker.Server.Address)
 	}()
 	wrk.services.Start()
 }

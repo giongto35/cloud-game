@@ -2,10 +2,10 @@ package worker
 
 import (
 	"crypto/tls"
-	"fmt"
 	"log"
 	"net/http"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/giongto35/cloud-game/v2/pkg/environment"
@@ -49,7 +49,7 @@ func makeHTTPToHTTPSRedirectServer() *http.Server {
 	return makeServerFromMux(mux)
 }
 
-func (wrk *Worker) spawnServer(port int) {
+func (wrk *Worker) spawnServer(address string) {
 	var certManager *autocert.Manager
 	var httpsSrv *http.Server
 
@@ -57,7 +57,7 @@ func (wrk *Worker) spawnServer(port int) {
 	if mode.AnyOf(environment.Production, environment.Staging) {
 		serverConfig := wrk.conf.Worker.Server
 		httpsSrv = makeHTTPServer()
-		httpsSrv.Addr = fmt.Sprintf(":%d", serverConfig.HttpsPort)
+		httpsSrv.Addr = serverConfig.HttpsAddress
 
 		if serverConfig.HttpsChain == "" || serverConfig.HttpsKey == "" {
 			serverConfig.HttpsChain = ""
@@ -99,7 +99,13 @@ func (wrk *Worker) spawnServer(port int) {
 		httpSrv.Handler = certManager.HTTPHandler(httpSrv.Handler)
 	}
 
-	startServer(httpSrv, port)
+	// ":3833" -> 3833
+	port := strings.Split(address, ":")[0]
+	if start, err := strconv.Atoi(port); err != nil {
+		startServer(httpSrv, start)
+	} else {
+		log.Printf("error: couldn't extract port from %v", address)
+	}
 }
 
 func startServer(serv *http.Server, startPort int) {
