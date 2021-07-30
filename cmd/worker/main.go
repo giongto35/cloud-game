@@ -36,8 +36,8 @@ func run() {
 	glog.Infof("[worker] version: %v", Version)
 	glog.V(4).Info("[worker] Initialization")
 	glog.V(4).Infof("[worker] Local configuration %+v", conf)
-	wrk := worker.New(ctx, conf)
-	wrk.Run()
+	app := worker.New(ctx, conf)
+	app.Run()
 
 	signals := make(chan os.Signal, 1)
 	done := make(chan struct{}, 1)
@@ -51,7 +51,7 @@ func run() {
 	}()
 
 	<-done
-	wrk.Shutdown()
+	app.Shutdown()
 	cancelCtx()
 }
 

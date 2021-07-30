@@ -37,22 +37,22 @@ func New(ctx context.Context, cfg coordinator.Config) *Coordinator {
 	}
 }
 
-func (o *Coordinator) Run() error {
-	go o.initializeCoordinator()
-	go o.RunMonitoringServer()
+func (c *Coordinator) Run() error {
+	go c.initializeCoordinator()
+	go c.RunMonitoringServer()
 	return nil
 }
 
-func (o *Coordinator) RunMonitoringServer() {
+func (c *Coordinator) RunMonitoringServer() {
 	glog.Infoln("Starting monitoring server for coordinator")
-	err := o.monitoringServer.Run()
+	err := c.monitoringServer.Run()
 	if err != nil {
 		glog.Errorf("Failed to start monitoring server, reason %s", err)
 	}
 }
 
-func (o *Coordinator) Shutdown() {
-	if err := o.monitoringServer.Shutdown(o.ctx); err != nil {
+func (c *Coordinator) Shutdown() {
+	if err := c.monitoringServer.Shutdown(c.ctx); err != nil {
 		glog.Errorln("Failed to shutdown monitoring server")
 	}
 }
@@ -96,24 +96,24 @@ func makeHTTPToHTTPSRedirectServer(server *Server) *http.Server {
 }
 
 // initializeCoordinator setup an coordinator server
-func (o *Coordinator) initializeCoordinator() {
+func (c *Coordinator) initializeCoordinator() {
 	// init games library
-	libraryConf := o.cfg.Coordinator.Library
+	libraryConf := c.cfg.Coordinator.Library
 	if len(libraryConf.Supported) == 0 {
-		libraryConf.Supported = o.cfg.Emulator.GetSupportedExtensions()
+		libraryConf.Supported = c.cfg.Emulator.GetSupportedExtensions()
 	}
 	lib := games.NewLibrary(libraryConf)
 	lib.Scan()
 
-	server := NewServer(o.cfg, lib)
+	server := NewServer(c.cfg, lib)
 
 	var certManager *autocert.Manager
 	var httpsSrv *http.Server
 
 	log.Println("Initializing Coordinator Server")
-	mode := o.cfg.Environment.Get()
+	mode := c.cfg.Environment.Get()
 	if mode.AnyOf(environment.Production, environment.Staging) {
-		serverConfig := o.cfg.Coordinator.Server
+		serverConfig := c.cfg.Coordinator.Server
 		httpsSrv = makeHTTPServer(server)
 		httpsSrv.Addr = fmt.Sprintf(":%d", serverConfig.HttpsPort)
 
@@ -130,7 +130,7 @@ func (o *Coordinator) initializeCoordinator() {
 
 			certManager = &autocert.Manager{
 				Prompt:     autocert.AcceptTOS,
-				HostPolicy: autocert.HostWhitelist(o.cfg.Coordinator.PublicDomain),
+				HostPolicy: autocert.HostWhitelist(c.cfg.Coordinator.PublicDomain),
 				Cache:      autocert.DirCache("assets/cache"),
 				Client:     &acme.Client{DirectoryURL: leurl},
 			}
@@ -158,7 +158,7 @@ func (o *Coordinator) initializeCoordinator() {
 		httpSrv.Handler = certManager.HTTPHandler(httpSrv.Handler)
 	}
 
-	httpSrv.Addr = ":" + strconv.Itoa(o.cfg.Coordinator.Server.Port)
+	httpSrv.Addr = ":" + strconv.Itoa(c.cfg.Coordinator.Server.Port)
 	err := httpSrv.ListenAndServe()
 	if err != nil {
 		log.Fatalf("httpSrv.ListenAndServe() failed with %s", err)

@@ -33,8 +33,8 @@ func main() {
 	glog.Infof("[coordinator] version: %v", Version)
 	glog.Infof("Initializing coordinator server")
 	glog.V(4).Infof("Coordinator configs %v", conf)
-	o := coordinator.New(ctx, conf)
-	if err := o.Run(); err != nil {
+	app := coordinator.New(ctx, conf)
+	if err := app.Run(); err != nil {
 		glog.Errorf("Failed to run coordinator server, reason %v", err)
 		os.Exit(1)
 	}
@@ -51,6 +51,6 @@ func main() {
 	}()
 
 	<-done
-	o.Shutdown()
+	app.Shutdown()
 	cancelCtx()
 }
