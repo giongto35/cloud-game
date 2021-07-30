@@ -5,10 +5,10 @@ import (
 	"log"
 	"net/http"
 	"strconv"
-	"strings"
 	"time"
 
 	"github.com/giongto35/cloud-game/v2/pkg/environment"
+	"github.com/giongto35/cloud-game/v2/pkg/network"
 	"golang.org/x/crypto/acme"
 	"golang.org/x/crypto/acme/autocert"
 )
@@ -49,7 +49,9 @@ func makeHTTPToHTTPSRedirectServer() *http.Server {
 	return makeServerFromMux(mux)
 }
 
-func (wrk *Worker) spawnServer(address string) {
+func (wrk *Worker) spawnServer(addr string) {
+	address := network.Address(addr)
+
 	var certManager *autocert.Manager
 	var httpsSrv *http.Server
 
@@ -100,11 +102,11 @@ func (wrk *Worker) spawnServer(address string) {
 	}
 
 	// ":3833" -> 3833
-	port := strings.Split(address, ":")[0]
-	if start, err := strconv.Atoi(port); err != nil {
-		startServer(httpSrv, start)
+	if err, port := address.Port(); err == nil {
+		log.Printf("ADDR: %v, PORT: %v", address, port)
+		startServer(httpSrv, port)
 	} else {
-		log.Printf("error: couldn't extract port from %v", address)
+		log.Fatalf("error: couldn't extract port from %v", address)
 	}
 }
 
