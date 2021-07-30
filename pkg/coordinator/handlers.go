@@ -54,13 +54,18 @@ func NewServer(cfg coordinator.Config, library games.GameLibrary) *Server {
 }
 
 // GetWeb returns web frontend
-func (o *Server) GetWeb(w http.ResponseWriter, r *http.Request) {
-	tmpl, err := template.ParseFiles(index)
-	if err != nil {
-		log.Fatal(err)
-	}
+func (o *Server) GetWeb(conf coordinator.Config) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		tpl, err := template.ParseFiles(index)
+		if err != nil {
+			log.Fatal(err)
+		}
 
-	tmpl.Execute(w, struct{}{})
+		// render index page with some tpl values
+		if err = tpl.Execute(w, conf.Coordinator.Analytics); err != nil {
+			log.Fatal(err)
+		}
+	})
 }
 
 // getPingServer returns the server for latency check of a zone.
