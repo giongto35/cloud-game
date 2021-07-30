@@ -21,8 +21,6 @@ type Tls struct {
 	HttpsCert      string
 }
 
-func (tls *Tls) IsSelfCert() bool { return tls.HttpsCert != "" && tls.HttpsKey != "" }
-
 func (s *Server) WithFlags() {
 	flag.StringVar(&s.Address, "address", s.Address, "HTTP server address (host:port)")
 	flag.StringVar(&s.Tls.Address, "httpsAddress", s.Tls.Address, "HTTPS server address (host:port)")

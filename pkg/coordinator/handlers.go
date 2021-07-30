@@ -70,12 +70,6 @@ func index(conf coordinator.Config) http.Handler {
 	})
 }
 
-func redirect() http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		http.Redirect(w, r, "https://"+r.Host+r.URL.String(), http.StatusFound)
-	})
-}
-
 func static(dir string) http.Handler {
 	return http.StripPrefix("/static/", http.FileServer(http.Dir(dir)))
 }
@@ -87,7 +81,7 @@ func (s *Server) getPingServer(zone string) string {
 		return fmt.Sprintf("%s/echo", s.cfg.Coordinator.PingServer)
 	}
 
-	if s.cfg.Coordinator.Server.Https && !s.cfg.Coordinator.Server.Tls.IsSelfCert() {
+	if s.cfg.Coordinator.Server.Https && s.cfg.Coordinator.Server.Tls.Domain != "" {
 		return fmt.Sprintf(pingServerTemp, zone, s.cfg.Coordinator.Server.Tls.Domain)
 	}
 	return devPingServer
