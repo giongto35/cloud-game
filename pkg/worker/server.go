@@ -15,6 +15,8 @@ import (
 
 const stagingLEURL = "https://acme-staging-v02.api.letsencrypt.org/directory"
 
+var echo = []byte{0x65, 0x63, 0x68, 0x6f}
+
 func makeServerFromMux(mux *http.ServeMux) *http.Server {
 	// set timeouts so that a slow or malicious client doesn't
 	// hold resources forever
@@ -28,9 +30,9 @@ func makeServerFromMux(mux *http.ServeMux) *http.Server {
 
 func makeHTTPServer() *http.Server {
 	mux := &http.ServeMux{}
-	mux.HandleFunc("/echo", func(w http.ResponseWriter, r *http.Request) {
+	mux.HandleFunc("/echo", func(w http.ResponseWriter, _ *http.Request) {
 		w.Header().Set("Access-Control-Allow-Origin", "*")
-		log.Println(w, "echo")
+		_, _ = w.Write(echo)
 	})
 
 	return makeServerFromMux(mux)
