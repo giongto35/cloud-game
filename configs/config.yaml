@@ -41,6 +41,9 @@ coordinator:
     httpsPort: 443
     httpsKey:
     httpsChain:
+  analytics:
+    inject: false
+    gtag:
 
 worker:
   network:

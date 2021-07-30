@@ -12,6 +12,7 @@ import (
 
 type Config struct {
 	Coordinator struct {
+		Analytics    Analytics
 		PublicDomain string
 		PingServer   string
 		DebugHost    string
@@ -22,6 +23,12 @@ type Config struct {
 	Emulator    emulator.Emulator
 	Environment shared.Environment
 	Webrtc      webrtcConfig.Webrtc
+}
+
+// Analytics is optional Google Analytics
+type Analytics struct {
+	Inject bool
+	Gtag   string
 }
 
 // allows custom config path
