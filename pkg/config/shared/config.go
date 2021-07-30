@@ -8,17 +8,26 @@ import (
 type Environment environment.Env
 
 type Server struct {
-	Address      string
-	HttpsAddress string
-	HttpsKey     string
-	HttpsChain   string
+	Address string
+	Https   bool
+	Tls     Tls
 }
+
+type Tls struct {
+	Address        string
+	Domain         string
+	LetsencryptUrl string
+	HttpsKey       string
+	HttpsCert      string
+}
+
+func (tls *Tls) IsSelfCert() bool { return tls.HttpsCert != "" && tls.HttpsKey != "" }
 
 func (s *Server) WithFlags() {
 	flag.StringVar(&s.Address, "address", s.Address, "HTTP server address (host:port)")
-	flag.StringVar(&s.HttpsAddress, "httpsAddress", s.HttpsAddress, "HTTPS server address (host:port)")
-	flag.StringVar(&s.HttpsKey, "httpsKey", s.HttpsKey, "HTTPS key")
-	flag.StringVar(&s.HttpsChain, "httpsChain", s.HttpsChain, "HTTPS chain")
+	flag.StringVar(&s.Tls.Address, "httpsAddress", s.Tls.Address, "HTTPS server address (host:port)")
+	flag.StringVar(&s.Tls.HttpsKey, "httpsKey", s.Tls.HttpsKey, "HTTPS key")
+	flag.StringVar(&s.Tls.HttpsCert, "httpsCert", s.Tls.HttpsCert, "HTTPS chain")
 }
 
 func (env *Environment) Get() environment.Env {

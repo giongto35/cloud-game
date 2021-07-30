@@ -59,11 +59,11 @@ func (wrk *Worker) spawnServer(addr string) {
 	if mode.AnyOf(environment.Production, environment.Staging) {
 		serverConfig := wrk.conf.Worker.Server
 		httpsSrv = makeHTTPServer()
-		httpsSrv.Addr = serverConfig.HttpsAddress
+		httpsSrv.Addr = serverConfig.Tls.Address
 
-		if serverConfig.HttpsChain == "" || serverConfig.HttpsKey == "" {
-			serverConfig.HttpsChain = ""
-			serverConfig.HttpsKey = ""
+		if serverConfig.Tls.HttpsCert == "" || serverConfig.Tls.HttpsKey == "" {
+			serverConfig.Tls.HttpsCert = ""
+			serverConfig.Tls.HttpsKey = ""
 
 			var leurl string
 			if mode == environment.Staging {
@@ -87,7 +87,7 @@ func (wrk *Worker) spawnServer(addr string) {
 			if err != nil {
 				log.Printf("httpsSrv.ListendAndServeTLS() failed with %s", err)
 			}
-		}(serverConfig.HttpsChain, serverConfig.HttpsKey)
+		}(serverConfig.Tls.HttpsCert, serverConfig.Tls.HttpsKey)
 	}
 
 	var httpSrv *http.Server
