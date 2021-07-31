@@ -3,7 +3,6 @@ package coordinator
 import (
 	"encoding/json"
 	"errors"
-	"fmt"
 	"html/template"
 	"log"
 	"math"
@@ -74,19 +73,6 @@ func static(dir string) http.Handler {
 	return http.StripPrefix("/static/", http.FileServer(http.Dir(dir)))
 }
 
-// getPingServer returns the server for latency check of a zone.
-// In latency check to find best worker step, we use this server to find the closest worker.
-func (s *Server) getPingServer(zone string) string {
-	if s.cfg.Coordinator.PingServer != "" {
-		return fmt.Sprintf("%s/echo", s.cfg.Coordinator.PingServer)
-	}
-
-	if s.cfg.Coordinator.Server.Https && s.cfg.Coordinator.Server.Tls.Domain != "" {
-		return fmt.Sprintf(pingServerTemp, zone, s.cfg.Coordinator.Server.Tls.Domain)
-	}
-	return devPingServer
-}
-
 // WSO handles all connections from a new worker to coordinator
 func (s *Server) WSO(w http.ResponseWriter, r *http.Request) {
 	log.Println("Coordinator: A worker is connecting...")
@@ -115,17 +101,19 @@ func (s *Server) WSO(w http.ResponseWriter, r *http.Request) {
 
 	// Register to workersClients map the client connection
 	address := util.GetRemoteAddress(c)
-	wc.Println("Address:", address)
-	// Zone of the worker
-	zone := r.URL.Query().Get("zone")
-	wc.Printf("Is public: %v zone: %v", util.IsPublicIP(address), zone)
+	public := util.IsPublicIP(address)
 
-	pingServer := s.getPingServer(zone)
-
-	wc.Printf("Set ping server address: %s", pingServer)
+	connRt, err := GetConnectionRequest(r.URL.Query().Get("data"))
+	if err != nil {
+		wc.Printf("error: malformed request sent")
+	} else {
+		wc.Zone = connRt.Zone
+		wc.PingServer = connRt.PingAddr
+	}
+	wc.Printf("addr: %v | zone: %v | pub: %v | ping: %v", address, wc.Zone, public, wc.PingServer)
 
 	// In case worker and coordinator in the same host
-	if !util.IsPublicIP(address) && s.cfg.Environment.Get() == environment.Production {
+	if !public && s.cfg.Environment.Get() == environment.Production {
 		// Don't accept private IP for worker's address in prod mode
 		// However, if the worker in the same host with coordinator, we can get public IP of worker
 		wc.Printf("[!] Address %s is invalid", address)
@@ -143,8 +131,6 @@ func (s *Server) WSO(w http.ResponseWriter, r *http.Request) {
 	// Create a workerClient instance
 	wc.Address = address
 	wc.StunTurnServer = ice.ToJson(s.cfg.Webrtc.IceServers, ice.Replacement{From: "server-ip", To: address})
-	wc.Zone = zone
-	wc.PingServer = pingServer
 
 	// Attach to Server instance with workerID, add defer
 	s.workerClients[workerID] = wc

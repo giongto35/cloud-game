@@ -31,8 +31,6 @@ coordinator:
     profilingEnabled: false
     metricEnabled: false
     urlPrefix: /coordinator
-  # specify the worker address that the client can ping (with protocol and port)
-  pingServer:
   # HTTP(S) server config
   server:
     address: :8000
@@ -57,6 +55,8 @@ worker:
     coordinatorAddress: localhost:8000
     # where to connect
     endpoint: /wso
+    # ping endpoint
+    pingEndpoint: /echo
     # make coordinator connection secure (wss)
     secure: false
     # ISO Alpha-2 country code to group workers by zones

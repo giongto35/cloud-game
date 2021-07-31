@@ -3,6 +3,7 @@ package worker
 import (
 	"encoding/json"
 	"log"
+	"net/url"
 	"strings"
 
 	"github.com/giongto35/cloud-game/v2/pkg/config"
@@ -24,6 +25,7 @@ type Config struct {
 		Network    struct {
 			CoordinatorAddress string
 			Endpoint           string
+			PingEndpoint       string
 			Secure             bool
 			Zone               string
 		}
@@ -88,4 +90,22 @@ func (c *Config) expandSpecialTags() {
 			c.Emulator.Storage = strings.Replace(dir, tag, userHomeDir, -1)
 		}
 	}
+}
+
+// GetPingAddr returns the server for latency check of a zone.
+func (c *Config) GetPingAddr() string {
+	scheme := "http"
+	host := c.Worker.Server.Address
+	if c.Worker.Server.Https {
+		scheme = "https"
+		host = c.Worker.Server.Tls.Address
+	}
+	if strings.HasPrefix(host, ":") {
+		host = "localhost" + host
+	}
+	if c.Worker.Network.Zone != "" {
+		host = c.Worker.Network.Zone + "." + host
+	}
+	u := url.URL{Scheme: scheme, Host: host, Path: c.Worker.Network.PingEndpoint}
+	return u.String()
 }

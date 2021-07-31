@@ -1,11 +1,15 @@
 package worker
 
 import (
+	"encoding/base64"
+	"encoding/json"
 	"log"
 	"net/http"
 	"net/url"
 	"os"
 	"time"
+
+	api2 "github.com/giongto35/cloud-game/v2/pkg/api"
 
 	"github.com/giongto35/cloud-game/v2/pkg/config/worker"
 	"github.com/giongto35/cloud-game/v2/pkg/cws/api"
@@ -56,7 +60,7 @@ func NewHandler(cfg worker.Config, wrk *Worker) *Handler {
 func (h *Handler) Run() {
 	conf := h.cfg.Worker.Network
 	for {
-		conn, err := newCoordinatorConnection(conf.CoordinatorAddress, conf.Zone, h.cfg)
+		conn, err := newCoordinatorConnection(conf.CoordinatorAddress, h.cfg)
 		if err != nil {
 			log.Printf("Cannot connect to coordinator. %v Retrying...", err)
 			time.Sleep(time.Second)
@@ -98,19 +102,35 @@ func (h *Handler) Prepare() {
 	}
 }
 
-func newCoordinatorConnection(host string, zone string, conf worker.Config) (*CoordinatorClient, error) {
+func newCoordinatorConnection(host string, conf worker.Config) (*CoordinatorClient, error) {
 	scheme := "ws"
 	if conf.Worker.Network.Secure {
 		scheme = "wss"
 	}
-	address := url.URL{Scheme: scheme, Host: host, Path: conf.Worker.Network.Endpoint, RawQuery: "zone=" + zone}
-	log.Printf("[worker] connect to %v", address.String())
+	address := url.URL{Scheme: scheme, Host: host, Path: conf.Worker.Network.Endpoint}
+
+	req, err := MakeConnectionRequest(conf)
+	if req != "" && err == nil {
+		address.RawQuery = "data=" + req
+	}
 
 	conn, err := websocket.Connect(address)
 	if err != nil {
 		return nil, err
 	}
 	return NewCoordinatorClient(conn), nil
+}
+
+func MakeConnectionRequest(conf worker.Config) (string, error) {
+	req := api2.ConnectionRequest{
+		Zone:     conf.Worker.Network.Zone,
+		PingAddr: conf.GetPingAddr(),
+	}
+	rez, err := json.Marshal(req)
+	if err != nil {
+		return "", err
+	}
+	return base64.URLEncoding.EncodeToString(rez), nil
 }
 
 func (h *Handler) GetCoordinatorClient() *CoordinatorClient {
@@ -203,5 +223,5 @@ func createOfflineStorage(path string) {
 
 func echo(w http.ResponseWriter, _ *http.Request) {
 	w.Header().Set("Access-Control-Allow-Origin", "*")
-	_, _ = w.Write([]byte{0x65, 0x63, 0x68, 0x6f}) // hello
+	_, _ = w.Write([]byte{0x65, 0x63, 0x68, 0x6f}) // echo
 }

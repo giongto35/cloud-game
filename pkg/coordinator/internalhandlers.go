@@ -1,8 +1,11 @@
 package coordinator
 
 import (
+	"encoding/base64"
+	"encoding/json"
 	"log"
 
+	api2 "github.com/giongto35/cloud-game/v2/pkg/api"
 	"github.com/giongto35/cloud-game/v2/pkg/config/worker"
 	"github.com/giongto35/cloud-game/v2/pkg/cws"
 	"github.com/giongto35/cloud-game/v2/pkg/cws/api"
@@ -20,6 +23,19 @@ func (wc *WorkerClient) handleHeartbeat() cws.PacketHandler {
 	return func(resp cws.WSPacket) cws.WSPacket {
 		return resp
 	}
+}
+
+func GetConnectionRequest(data string) (api2.ConnectionRequest, error) {
+	req := api2.ConnectionRequest{}
+	if data == "" {
+		return req, nil
+	}
+	decodeString, err := base64.URLEncoding.DecodeString(data)
+	if err != nil {
+		return req, err
+	}
+	err = json.Unmarshal(decodeString, &req)
+	return req, err
 }
 
 // handleRegisterRoom event from a worker, when worker created a new room.

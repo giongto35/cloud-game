@@ -12,7 +12,6 @@ import (
 
 type Config struct {
 	Coordinator struct {
-		PingServer string
 		DebugHost  string
 		Library    games.Config
 		Monitoring monitoring.Config
