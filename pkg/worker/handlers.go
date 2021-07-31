@@ -1,7 +1,6 @@
 package worker
 
 import (
-	"crypto/tls"
 	"log"
 	"net/http"
 	"net/url"
@@ -11,12 +10,11 @@ import (
 	"github.com/giongto35/cloud-game/v2/pkg/config/worker"
 	"github.com/giongto35/cloud-game/v2/pkg/cws/api"
 	"github.com/giongto35/cloud-game/v2/pkg/emulator/libretro/manager/remotehttp"
-	"github.com/giongto35/cloud-game/v2/pkg/environment"
 	"github.com/giongto35/cloud-game/v2/pkg/games"
+	"github.com/giongto35/cloud-game/v2/pkg/network/websocket"
 	"github.com/giongto35/cloud-game/v2/pkg/webrtc"
 	storage "github.com/giongto35/cloud-game/v2/pkg/worker/cloud-storage"
 	"github.com/giongto35/cloud-game/v2/pkg/worker/room"
-	"github.com/gorilla/websocket"
 )
 
 type Handler struct {
@@ -58,7 +56,7 @@ func NewHandler(cfg worker.Config, wrk *Worker) *Handler {
 func (h *Handler) Run() {
 	conf := h.cfg.Worker.Network
 	for {
-		conn, err := setupCoordinatorConnection(conf.CoordinatorAddress, conf.Zone, h.cfg)
+		conn, err := newCoordinatorConnection(conf.CoordinatorAddress, conf.Zone, h.cfg)
 		if err != nil {
 			log.Printf("Cannot connect to coordinator. %v Retrying...", err)
 			time.Sleep(time.Second)
@@ -100,39 +98,19 @@ func (h *Handler) Prepare() {
 	}
 }
 
-func setupCoordinatorConnection(host string, zone string, cfg worker.Config) (*CoordinatorClient, error) {
-	var scheme string
-	env := cfg.Environment.Get()
-	if env.AnyOf(environment.Production, environment.Staging) {
+func newCoordinatorConnection(host string, zone string, conf worker.Config) (*CoordinatorClient, error) {
+	scheme := "ws"
+	if conf.Worker.Network.Secure {
 		scheme = "wss"
-	} else {
-		scheme = "ws"
 	}
+	address := url.URL{Scheme: scheme, Host: host, Path: conf.Worker.Network.Endpoint, RawQuery: "zone=" + zone}
+	log.Printf("[worker] connect to %v", address.String())
 
-	coordinatorURL := url.URL{Scheme: scheme, Host: host, Path: "/wso", RawQuery: "zone=" + zone}
-	log.Println("Worker connecting to coordinator:", coordinatorURL.String())
-
-	conn, err := createCoordinatorConnection(&coordinatorURL)
+	conn, err := websocket.Connect(address)
 	if err != nil {
 		return nil, err
 	}
 	return NewCoordinatorClient(conn), nil
-}
-
-func createCoordinatorConnection(url *url.URL) (*websocket.Conn, error) {
-	var d websocket.Dialer
-	if url.Scheme == "wss" {
-		d = websocket.Dialer{TLSClientConfig: &tls.Config{InsecureSkipVerify: true}}
-	} else {
-		d = websocket.Dialer{}
-	}
-
-	ws, _, err := d.Dial(url.String(), nil)
-	if err != nil {
-		return nil, err
-	}
-
-	return ws, nil
 }
 
 func (h *Handler) GetCoordinatorClient() *CoordinatorClient {
@@ -225,6 +203,5 @@ func createOfflineStorage(path string) {
 
 func echo(w http.ResponseWriter, _ *http.Request) {
 	w.Header().Set("Access-Control-Allow-Origin", "*")
-	// hello
-	_, _ = w.Write([]byte{0x65, 0x63, 0x68, 0x6f})
+	_, _ = w.Write([]byte{0x65, 0x63, 0x68, 0x6f}) // hello
 }

@@ -23,6 +23,8 @@ type Config struct {
 		Monitoring monitoring.Config
 		Network    struct {
 			CoordinatorAddress string
+			Endpoint           string
+			Secure             bool
 			Zone               string
 		}
 		Server shared.Server
