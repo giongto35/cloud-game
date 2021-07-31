@@ -1,7 +1,6 @@
 package worker
 
 import (
-	"encoding/json"
 	"log"
 	"strconv"
 
@@ -46,17 +45,8 @@ func (h *Handler) handleInitWebrtc() cws.PacketHandler {
 		peerconnection := webrtc.NewWebRTC().WithConfig(
 			webrtcConfig.Config{Encoder: h.cfg.Encoder, Webrtc: h.cfg.Webrtc},
 		)
-		var initPacket struct {
-			IsMobile bool `json:"is_mobile"`
-		}
-		err := json.Unmarshal([]byte(resp.Data), &initPacket)
-		if err != nil {
-			log.Println("Error: Cannot decode json:", err)
-			return cws.EmptyPacket
-		}
 
 		localSession, err := peerconnection.StartClient(
-			initPacket.IsMobile,
 			// send back candidate string to browser
 			func(cd string) { h.oClient.Send(api.IceCandidatePacket(cd, resp.SessionID), nil) },
 		)
@@ -76,10 +66,7 @@ func (h *Handler) handleInitWebrtc() cws.PacketHandler {
 			return cws.EmptyPacket
 		}
 
-		return cws.WSPacket{
-			ID:   "offer",
-			Data: localSession,
-		}
+		return cws.WSPacket{ID: "offer", Data: localSession}
 	}
 }
 

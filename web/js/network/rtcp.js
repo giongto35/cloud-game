@@ -45,10 +45,7 @@ const rtcp = (() => {
             mediaStream.addTrack(event.track);
         }
 
-        socket.send({
-            'id': 'init_webrtc',
-            'data': JSON.stringify({'is_mobile': env.isMobileDevice()}),
-        });
+        socket.send({'id': 'init_webrtc'});
     };
 
     async function addVoiceStream(connection) {
@@ -67,10 +64,7 @@ const rtcp = (() => {
             log.info(e)
 
         } finally {
-            socket.send({
-                'id': 'init_webrtc',
-                'data': JSON.stringify({'is_mobile': env.isMobileDevice()}),
-            });
+            socket.send({'id': 'init_webrtc'});
         }
     }
 
