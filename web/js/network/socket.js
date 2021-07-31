@@ -38,14 +38,13 @@ const socket = (() => {
         // Clear old roomID
         conn.onopen = () => {
             if (pingIntervalId > 0) return;
-
             log.info('[ws] <- open connection');
             log.info(`[ws] -> setting ping interval to ${pingIntervalMs}ms`);
             // !to add destructor if SPA
             pingIntervalId = setInterval(ping, pingIntervalMs)
         };
-        conn.onerror = error => log.error(`[ws] ${error}`);
-        conn.onclose = () => log.info('[ws] closed');
+        conn.onerror = () => log.error('[ws] some error!');
+        conn.onclose = (event) => log.info(`[ws] closed (${event.code})`);
         // Message received from server
         conn.onmessage = response => {
             const data = JSON.parse(response.data);
