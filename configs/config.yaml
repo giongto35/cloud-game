@@ -66,13 +66,13 @@ worker:
     port: 6602
     profilingEnabled: false
     # monitoring server URL prefix
-    metricEnabled: true
+    metricEnabled: false
     urlPrefix: /worker
   server:
     address: :9000
     https: false
     tls:
-      address: :443
+      address: :444
       # LetsEncrypt config
       # if empty will use URL from Go
       letsencryptUrl:
