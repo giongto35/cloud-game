@@ -34,44 +34,44 @@ func New(ctx context.Context, conf worker.Config) *Worker {
 	}
 }
 
-func (wrk *Worker) Run() {
+// !to add proper shutdown on app termination with cancellation ctx
+
+func (w *Worker) Run() {
 	go func() {
-		h := NewHandler(wrk.conf, wrk)
+		h := NewHandler(w)
 		defer func() {
 			log.Printf("[worker] Closing handler")
 			h.Close()
 		}()
 
 		go h.Run()
-		if !wrk.conf.Loaded {
-			wrk.lock.LockFor(time.Second * 10)
+		if !w.conf.Loaded {
+			w.lock.LockFor(time.Second * 10)
 			h.RequestConfig()
 		}
 		h.Prepare()
-		wrk.init()
+		w.init()
 	}()
-	wrk.services.Start()
+	w.services.Start()
 }
 
-func (wrk *Worker) init() {
-	conf := wrk.conf.Worker.Server
-
-	address := conf.Address
-	if conf.Https {
-		address = conf.Tls.Address
-	}
+func (w *Worker) init() {
+	conf := w.conf.Worker
 	httpx.NewServer(
-		address,
+		conf.Server.GetAddr(),
 		func(_ *httpx.Server) http.Handler {
 			h := http.NewServeMux()
-			h.HandleFunc("/echo", echo)
+			h.HandleFunc(conf.Network.PingEndpoint, func(w http.ResponseWriter, _ *http.Request) {
+				w.Header().Set("Access-Control-Allow-Origin", "*")
+				_, _ = w.Write([]byte{0x65, 0x63, 0x68, 0x6f}) // echo
+			})
 			return h
 		},
-		httpx.WithServerConfig(conf),
+		httpx.WithServerConfig(conf.Server),
 		// no need just for one route
 		httpx.HttpsRedirect(false),
 		httpx.WithPortRoll(true),
 	).Start()
 }
 
-func (wrk *Worker) Shutdown() { wrk.services.Shutdown(wrk.ctx) }
+func (w *Worker) Shutdown() { w.services.Shutdown(w.ctx) }

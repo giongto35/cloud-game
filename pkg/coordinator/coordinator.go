@@ -36,13 +36,9 @@ func (c *Coordinator) Run() {
 
 	srv := NewServer(c.conf, lib)
 
-	address := conf.Address
-	if conf.Https {
-		address = conf.Tls.Address
-	}
 	go httpx.NewServer(
-		address,
-		func(_ *httpx.Server) http.Handler {
+		conf.GetAddr(),
+		func(*httpx.Server) http.Handler {
 			h := http.NewServeMux()
 			h.Handle("/", index(c.conf))
 			h.Handle("/static/", static("./web"))
@@ -52,7 +48,6 @@ func (c *Coordinator) Run() {
 		},
 		httpx.WithServerConfig(conf),
 	).Start()
-
 	c.services.Start()
 }
 

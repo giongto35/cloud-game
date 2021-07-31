@@ -4,7 +4,6 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"log"
-	"net/http"
 	"net/url"
 	"os"
 	"time"
@@ -40,17 +39,17 @@ type Handler struct {
 }
 
 // NewHandler returns a new server
-func NewHandler(cfg worker.Config, wrk *Worker) *Handler {
+func NewHandler(wrk *Worker) *Handler {
 	// Create offline storage folder
-	createOfflineStorage(cfg.Emulator.Storage)
+	createOfflineStorage(wrk.conf.Emulator.Storage)
 
 	// Init online storage
 	onlineStorage := storage.NewInitClient()
 	return &Handler{
 		rooms:           map[string]*room.Room{},
 		sessions:        map[string]*Session{},
-		coordinatorHost: cfg.Worker.Network.CoordinatorAddress,
-		cfg:             cfg,
+		coordinatorHost: wrk.conf.Worker.Network.CoordinatorAddress,
+		cfg:             wrk.conf,
 		onlineStorage:   onlineStorage,
 		w:               wrk,
 	}
@@ -219,9 +218,4 @@ func createOfflineStorage(path string) {
 	if err := os.MkdirAll(path, 0755); err != nil {
 		log.Println("Failed to create offline storage, err: ", err)
 	}
-}
-
-func echo(w http.ResponseWriter, _ *http.Request) {
-	w.Header().Set("Access-Control-Allow-Origin", "*")
-	_, _ = w.Write([]byte{0x65, 0x63, 0x68, 0x6f}) // echo
 }

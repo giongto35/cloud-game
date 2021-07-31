@@ -28,6 +28,13 @@ func (s *Server) WithFlags() {
 	flag.StringVar(&s.Tls.HttpsCert, "httpsCert", s.Tls.HttpsCert, "HTTPS chain")
 }
 
+func (s *Server) GetAddr() string {
+	if s.Https {
+		return s.Tls.Address
+	}
+	return s.Address
+}
+
 func (env *Environment) Get() environment.Env {
 	return (environment.Env)(*env)
 }
