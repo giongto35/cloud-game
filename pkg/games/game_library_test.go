@@ -19,7 +19,7 @@ func TestLibraryScan(t *testing.T) {
 	}
 
 	for _, test := range tests {
-		library := NewLibrary(Config{
+		library := NewLib(Config{
 			BasePath:  test.directory,
 			Supported: []string{"gba", "zip", "nes"},
 			Ignored:   []string{"neogeo", "pgm"},

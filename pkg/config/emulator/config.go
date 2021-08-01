@@ -53,7 +53,7 @@ type LibretroCoreConfig struct {
 }
 
 // GetLibretroCoreConfig returns a core config with expanded paths.
-func (e *Emulator) GetLibretroCoreConfig(emulator string) LibretroCoreConfig {
+func (e Emulator) GetLibretroCoreConfig(emulator string) LibretroCoreConfig {
 	cores := e.Libretro.Cores
 	conf := cores.List[emulator]
 	conf.Lib = path.Join(cores.Paths.Libs, conf.Lib)
@@ -65,7 +65,7 @@ func (e *Emulator) GetLibretroCoreConfig(emulator string) LibretroCoreConfig {
 
 // GetEmulatorByRom returns emulator name by its supported ROM name.
 // !to cache into an optimized data structure
-func (e *Emulator) GetEmulatorByRom(rom string) string {
+func (e Emulator) GetEmulatorByRom(rom string) string {
 	for emu, core := range e.Libretro.Cores.List {
 		for _, romName := range core.Roms {
 			if rom == romName {
@@ -76,7 +76,7 @@ func (e *Emulator) GetEmulatorByRom(rom string) string {
 	return ""
 }
 
-func (e *Emulator) GetSupportedExtensions() []string {
+func (e Emulator) GetSupportedExtensions() []string {
 	var extensions []string
 	for _, core := range e.Libretro.Cores.List {
 		extensions = append(extensions, core.Roms...)

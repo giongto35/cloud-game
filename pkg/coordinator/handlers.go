@@ -40,6 +40,9 @@ const devPingServer = "http://localhost:9000/echo"
 var upgrader = websocket.Upgrader{}
 
 func NewServer(cfg coordinator.Config, library games.GameLibrary) *Server {
+	// scan the lib right away
+	library.Scan()
+
 	return &Server{
 		cfg:     cfg,
 		library: library,

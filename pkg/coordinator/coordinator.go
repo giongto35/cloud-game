@@ -10,11 +10,7 @@ import (
 )
 
 func New(conf coordinator.Config) (services service.Services) {
-	lib := getLibrary(conf)
-	lib.Scan()
-
-	srv := NewServer(conf, lib)
-
+	srv := NewServer(conf, games.NewLibWhitelisted(conf.Coordinator.Library, conf.Emulator))
 	services.Add(
 		srv,
 		NewHTTPServer(conf, func(mux *http.ServeMux) {
@@ -25,14 +21,4 @@ func New(conf coordinator.Config) (services service.Services) {
 		services.Add(monitoring.New(conf.Coordinator.Monitoring, "cord"))
 	}
 	return
-}
-
-// !to rewrite
-// getLibrary scans files with explicit extensions or
-// the extensions specified in the emulator config.
-func getLibrary(conf coordinator.Config) games.GameLibrary {
-	if len(conf.Coordinator.Library.Supported) == 0 {
-		conf.Coordinator.Library.Supported = conf.Emulator.GetSupportedExtensions()
-	}
-	return games.NewLibrary(conf.Coordinator.Library)
 }
