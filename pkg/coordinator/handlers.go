@@ -3,7 +3,6 @@ package coordinator
 import (
 	"encoding/json"
 	"errors"
-	"html/template"
 	"log"
 	"math"
 	"net/http"
@@ -15,12 +14,15 @@ import (
 	"github.com/giongto35/cloud-game/v2/pkg/environment"
 	"github.com/giongto35/cloud-game/v2/pkg/games"
 	"github.com/giongto35/cloud-game/v2/pkg/ice"
+	"github.com/giongto35/cloud-game/v2/pkg/service"
 	"github.com/giongto35/cloud-game/v2/pkg/util"
 	"github.com/gofrs/uuid"
 	"github.com/gorilla/websocket"
 )
 
 type Server struct {
+	service.Service
+
 	cfg coordinator.Config
 	// games library
 	library games.GameLibrary
@@ -48,29 +50,6 @@ func NewServer(cfg coordinator.Config, library games.GameLibrary) *Server {
 		// Mapping sessionID to browser
 		browserClients: map[string]*BrowserClient{},
 	}
-}
-
-func index(conf coordinator.Config) http.Handler {
-	tpl, err := template.ParseFiles("./web/index.html")
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		// return 404 on unknown
-		if r.URL.Path != "/" {
-			http.NotFound(w, r)
-			return
-		}
-		// render index page with some tpl values
-		if err = tpl.Execute(w, conf.Coordinator.Analytics); err != nil {
-			log.Fatal(err)
-		}
-	})
-}
-
-func static(dir string) http.Handler {
-	return http.StripPrefix("/static/", http.FileServer(http.Dir(dir)))
 }
 
 // WSO handles all connections from a new worker to coordinator

@@ -1,6 +1,7 @@
 package worker
 
 import (
+	"context"
 	"encoding/base64"
 	"encoding/json"
 	"log"
@@ -9,23 +10,23 @@ import (
 	"time"
 
 	api2 "github.com/giongto35/cloud-game/v2/pkg/api"
-
 	"github.com/giongto35/cloud-game/v2/pkg/config/worker"
 	"github.com/giongto35/cloud-game/v2/pkg/cws/api"
 	"github.com/giongto35/cloud-game/v2/pkg/emulator/libretro/manager/remotehttp"
 	"github.com/giongto35/cloud-game/v2/pkg/games"
 	"github.com/giongto35/cloud-game/v2/pkg/network/websocket"
+	"github.com/giongto35/cloud-game/v2/pkg/service"
 	"github.com/giongto35/cloud-game/v2/pkg/webrtc"
 	storage "github.com/giongto35/cloud-game/v2/pkg/worker/cloud-storage"
 	"github.com/giongto35/cloud-game/v2/pkg/worker/room"
 )
 
 type Handler struct {
+	service.RunnableService
+
 	// Client that connects to coordinator
 	oClient *CoordinatorClient
-	// Raw address of coordinator
-	coordinatorHost string
-	cfg             worker.Config
+	cfg     worker.Config
 	// Rooms map : RoomID -> Room
 	rooms map[string]*room.Room
 	// global ID of the current server
@@ -34,24 +35,19 @@ type Handler struct {
 	onlineStorage *storage.Client
 	// sessions handles all sessions server is handler (key is sessionID)
 	sessions map[string]*Session
-
-	w *Worker
 }
 
 // NewHandler returns a new server
-func NewHandler(wrk *Worker) *Handler {
+func NewHandler(conf worker.Config) *Handler {
 	// Create offline storage folder
-	createOfflineStorage(wrk.conf.Emulator.Storage)
-
+	createOfflineStorage(conf.Emulator.Storage)
 	// Init online storage
 	onlineStorage := storage.NewInitClient()
 	return &Handler{
-		rooms:           map[string]*room.Room{},
-		sessions:        map[string]*Session{},
-		coordinatorHost: wrk.conf.Worker.Network.CoordinatorAddress,
-		cfg:             wrk.conf,
-		onlineStorage:   onlineStorage,
-		w:               wrk,
+		cfg:           conf,
+		onlineStorage: onlineStorage,
+		rooms:         map[string]*room.Room{},
+		sessions:      map[string]*Session{},
 	}
 }
 
@@ -74,6 +70,8 @@ func (h *Handler) Run() {
 		// If cannot listen, reconnect to coordinator
 	}
 }
+
+func (h *Handler) Shutdown(context.Context) error { return nil }
 
 func (h *Handler) RequestConfig() {
 	log.Printf("[worker] asking for a config...")
