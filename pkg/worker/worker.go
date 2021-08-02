@@ -9,9 +9,10 @@ import (
 // !to add proper shutdown on app termination with cancellation ctx
 
 func New(conf worker.Config) (services service.Services) {
+	httpSrv := NewHTTPServer(conf)
 	services.Add(
-		NewHTTPServer(conf),
-		NewHandler(conf),
+		httpSrv,
+		NewHandler(conf, httpSrv.server.Addr),
 	)
 	if conf.Worker.Monitoring.IsEnabled() {
 		services.Add(monitoring.New(conf.Worker.Monitoring, "worker"))

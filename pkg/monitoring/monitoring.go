@@ -24,7 +24,7 @@ type Monitoring struct {
 // New creates new monitoring service.
 // The tag param specifies owner label for logs.
 func New(conf monitoring.Config, tag string) *Monitoring {
-	serv := httpx.NewServer(
+	serv, _ := httpx.NewServer(
 		fmt.Sprintf(":%d", conf.Port),
 		func(serv *httpx.Server) http.Handler {
 			h := http.NewServeMux()
@@ -63,7 +63,7 @@ func New(conf monitoring.Config, tag string) *Monitoring {
 
 func (m *Monitoring) Run() {
 	log.Printf("[%v] Starting monitoring server at %v", m.tag, m.server.Addr)
-	m.server.Start()
+	m.server.Run()
 }
 
 func (m *Monitoring) Shutdown(ctx context.Context) error {

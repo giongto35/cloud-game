@@ -24,6 +24,7 @@ import (
 type Handler struct {
 	service.RunnableService
 
+	address string
 	// Client that connects to coordinator
 	oClient *CoordinatorClient
 	cfg     worker.Config
@@ -38,12 +39,13 @@ type Handler struct {
 }
 
 // NewHandler returns a new server
-func NewHandler(conf worker.Config) *Handler {
+func NewHandler(conf worker.Config, address string) *Handler {
 	// Create offline storage folder
 	createOfflineStorage(conf.Emulator.Storage)
 	// Init online storage
 	onlineStorage := storage.NewInitClient()
 	return &Handler{
+		address:       address,
 		cfg:           conf,
 		onlineStorage: onlineStorage,
 		rooms:         map[string]*room.Room{},
@@ -55,7 +57,7 @@ func NewHandler(conf worker.Config) *Handler {
 func (h *Handler) Run() {
 	conf := h.cfg.Worker.Network
 	for {
-		conn, err := newCoordinatorConnection(conf.CoordinatorAddress, h.cfg)
+		conn, err := newCoordinatorConnection(conf.CoordinatorAddress, h.cfg, h.address)
 		if err != nil {
 			log.Printf("Cannot connect to coordinator. %v Retrying...", err)
 			time.Sleep(time.Second)
@@ -99,14 +101,14 @@ func (h *Handler) Prepare() {
 	}
 }
 
-func newCoordinatorConnection(host string, conf worker.Config) (*CoordinatorClient, error) {
+func newCoordinatorConnection(host string, conf worker.Config, addr string) (*CoordinatorClient, error) {
 	scheme := "ws"
 	if conf.Worker.Network.Secure {
 		scheme = "wss"
 	}
 	address := url.URL{Scheme: scheme, Host: host, Path: conf.Worker.Network.Endpoint}
 
-	req, err := MakeConnectionRequest(conf)
+	req, err := MakeConnectionRequest(conf, addr)
 	if req != "" && err == nil {
 		address.RawQuery = "data=" + req
 	}
@@ -118,10 +120,10 @@ func newCoordinatorConnection(host string, conf worker.Config) (*CoordinatorClie
 	return NewCoordinatorClient(conn), nil
 }
 
-func MakeConnectionRequest(conf worker.Config) (string, error) {
+func MakeConnectionRequest(conf worker.Config, address string) (string, error) {
 	req := api2.ConnectionRequest{
 		Zone:     conf.Worker.Network.Zone,
-		PingAddr: conf.GetPingAddr(),
+		PingAddr: conf.GetPingAddr(address),
 	}
 	rez, err := json.Marshal(req)
 	if err != nil {

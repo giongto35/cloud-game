@@ -16,7 +16,7 @@ type HTTPServer struct {
 }
 
 func NewHTTPServer(conf worker.Config) HTTPServer {
-	return HTTPServer{server: httpx.NewServer(
+	srv, _ := httpx.NewServer(
 		conf.Worker.Server.GetAddr(),
 		func(*httpx.Server) http.Handler {
 			h := http.NewServeMux()
@@ -30,9 +30,14 @@ func NewHTTPServer(conf worker.Config) HTTPServer {
 		// no need just for one route
 		httpx.HttpsRedirect(false),
 		httpx.WithPortRoll(true),
-	)}
+	)
+	return HTTPServer{server: srv}
 }
 
-func (s HTTPServer) Run() { go s.server.Start() }
+func (s HTTPServer) Run() {
+	s.server.Run()
+}
 
-func (s HTTPServer) Shutdown(ctx context.Context) error { return s.server.Shutdown(ctx) }
+func (s HTTPServer) Shutdown(ctx context.Context) error {
+	return s.server.Shutdown(ctx)
+}

@@ -33,7 +33,7 @@ coordinator:
     urlPrefix: /coordinator
   # HTTP(S) server config
   server:
-    address: :8000
+    address: localhost:8000
     https: false
     # Letsencrypt or self cert config
     tls:
@@ -69,7 +69,7 @@ worker:
     metricEnabled: false
     urlPrefix: /worker
   server:
-    address: :9000
+    address: localhost:9000
     https: false
     tls:
       address: :444

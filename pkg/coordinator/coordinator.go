@@ -11,12 +11,15 @@ import (
 
 func New(conf coordinator.Config) (services service.Services) {
 	srv := NewServer(conf, games.NewLibWhitelisted(conf.Coordinator.Library, conf.Emulator))
+	httpSrv := NewHTTPServer(conf, func(mux *http.ServeMux) {
+		mux.HandleFunc("/ws", srv.WS)
+		mux.HandleFunc("/wso", srv.WSO)
+	})
+
 	services.Add(
 		srv,
-		NewHTTPServer(conf, func(mux *http.ServeMux) {
-			mux.HandleFunc("/ws", srv.WS)
-			mux.HandleFunc("/wso", srv.WSO)
-		}))
+		httpSrv,
+	)
 	if conf.Coordinator.Monitoring.IsEnabled() {
 		services.Add(monitoring.New(conf.Coordinator.Monitoring, "cord"))
 	}

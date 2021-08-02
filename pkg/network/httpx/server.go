@@ -1,26 +1,27 @@
 package httpx
 
 import (
+	"context"
 	"log"
 	"net/http"
-	"strconv"
 	"time"
 
-	"github.com/giongto35/cloud-game/v2/pkg/network"
+	"github.com/giongto35/cloud-game/v2/pkg/service"
 	"golang.org/x/crypto/acme/autocert"
 )
 
-type NetworkServer interface {
-}
-
 type Server struct {
 	http.Server
+	service.RunnableService
 
 	autoCert *autocert.Manager
 	opts     Options
+
+	listener *Listener
+	redirect *Server
 }
 
-func NewServer(address string, handler func(serv *Server) http.Handler, options ...Option) *Server {
+func NewServer(address string, handler func(serv *Server) http.Handler, options ...Option) (*Server, error) {
 	opts := &Options{
 		Https:         false,
 		HttpsRedirect: true,
@@ -48,72 +49,79 @@ func NewServer(address string, handler func(serv *Server) http.Handler, options 
 		server.TLSConfig = server.autoCert.TLSConfig()
 	}
 
-	return server
+	listener, err := NewListener(server.Addr, server.opts.PortRoll)
+	if err != nil {
+		return nil, err
+	}
+	server.listener = listener
+	newAddr := listener.Addr().String()
+	log.Printf("[server] address was set to %v (%v)", newAddr, server.Addr)
+	server.Addr = newAddr
+
+	return server, nil
 }
 
-func (s *Server) Start() {
-	// hack: auto open listener on the next free port
-	var port int
-	address := network.Address(s.Addr)
-	if p, err := address.Port(); err == nil {
-		port = p
-	} else {
-		log.Fatalf("error: couldn't extract port from %v", address)
+func (s *Server) Run() {
+	if s == nil || s.listener == nil {
+		return
 	}
 
-	if s.opts.Https && s.opts.HttpsRedirect {
-		log.Printf("Starting HTTP->HTTPS redirection server on %s", s.Addr)
-		go NewServer(s.opts.HttpsRedirectAddress, func(serv *Server) http.Handler {
-			h := http.NewServeMux()
-			h.Handle("/", redirect())
-			// do we need this after all?
-			if serv.autoCert != nil {
-				return serv.autoCert.HTTPHandler(h)
-			}
-			return h
-		}).Start()
-	}
-
-	s.start(port)
-}
-
-func redirect() http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		http.Redirect(w, r, "https://"+r.Host+r.URL.String(), http.StatusFound)
-	})
-}
-
-func (s *Server) start(startPort int) {
 	protocol := "HTTP"
 	if s.opts.Https {
 		protocol = "HTTPS"
 	}
 
-	endPort := startPort + 1
-	if s.opts.PortRoll {
-		endPort += 42
+	log.Printf("Starting %s server on %s", protocol, s.Addr)
+
+	var err error
+	if s.opts.Https {
+		err = s.ServeTLS(s.listener, s.opts.HttpsCert, s.opts.HttpsKey)
+	} else {
+		err = s.Serve(s.listener)
+	}
+	switch err {
+	case http.ErrServerClosed:
+		log.Printf("%s server was closed", protocol)
+		return
+	default:
+		log.Printf("error: %s", err)
 	}
 
-	for port := startPort; port < endPort; port++ {
-		// !to make it with full address
-		s.Addr = ":" + strconv.Itoa(port)
-		log.Printf("Starting %s server on %s", protocol, s.Addr)
-		var err error
-		if s.opts.Https {
-			err = s.ListenAndServeTLS(s.opts.HttpsCert, s.opts.HttpsKey)
-		} else {
-			err = s.ListenAndServe()
-		}
-		switch err {
-		case http.ErrServerClosed:
-			log.Printf("%s server was closed", protocol)
-			return
-		default:
-			log.Printf("error: %s", err)
-		}
-
-		if s.opts.PortRoll && port+1 == endPort {
-			log.Fatalf("error: couldn't find an open port in range %v-%v\n", startPort, endPort)
-		}
+	if s.opts.Https && s.opts.HttpsRedirect {
+		s.redirect = s.redirection()
+		go s.redirect.Run()
 	}
+}
+
+func (s *Server) Shutdown(ctx context.Context) (err error) {
+	if s == nil {
+		return
+	}
+
+	if s.redirect != nil {
+		err = s.redirect.Shutdown(ctx)
+	}
+	//if s.listener != nil {
+	//	err = s.listener.Close()
+	//}
+	err = s.Server.Shutdown(ctx)
+	return
+}
+
+func (s *Server) redirection() *Server {
+	// !to handle error
+	serv, _ := NewServer(s.opts.HttpsRedirectAddress, func(serv *Server) http.Handler {
+		h := http.NewServeMux()
+		h.Handle("/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			http.Redirect(w, r, "https://"+r.Host+r.URL.String(), http.StatusFound)
+		}))
+		// do we need this after all?
+		if serv.autoCert != nil {
+			return serv.autoCert.HTTPHandler(h)
+		}
+		return h
+	})
+	log.Printf("Starting HTTP->HTTPS redirection server on %s", serv.Addr)
+
+	return serv
 }

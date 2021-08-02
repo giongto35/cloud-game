@@ -1,24 +1,20 @@
 package coordinator
 
 import (
-	"context"
 	"html/template"
 	"log"
 	"net/http"
 
 	"github.com/giongto35/cloud-game/v2/pkg/config/coordinator"
 	"github.com/giongto35/cloud-game/v2/pkg/network/httpx"
-	"github.com/giongto35/cloud-game/v2/pkg/service"
 )
 
 type HTTPServer struct {
-	service.RunnableService
-
-	server *httpx.Server
+	*httpx.Server
 }
 
 func NewHTTPServer(conf coordinator.Config, fnMux func(mux *http.ServeMux)) HTTPServer {
-	return HTTPServer{server: httpx.NewServer(
+	srv, _ := httpx.NewServer(
 		conf.Coordinator.Server.GetAddr(),
 		func(*httpx.Server) http.Handler {
 			h := http.NewServeMux()
@@ -28,12 +24,9 @@ func NewHTTPServer(conf coordinator.Config, fnMux func(mux *http.ServeMux)) HTTP
 			return h
 		},
 		httpx.WithServerConfig(conf.Coordinator.Server),
-	)}
+	)
+	return HTTPServer{srv}
 }
-
-func (s HTTPServer) Run() { go s.server.Start() }
-
-func (s HTTPServer) Shutdown(ctx context.Context) error { return s.server.Shutdown(ctx) }
 
 func index(conf coordinator.Config) http.Handler {
 	tpl, err := template.ParseFiles("./web/index.html")
