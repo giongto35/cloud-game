@@ -9,12 +9,8 @@ import (
 	"github.com/giongto35/cloud-game/v2/pkg/network/httpx"
 )
 
-type HTTPServer struct {
-	*httpx.Server
-}
-
-func NewHTTPServer(conf coordinator.Config, fnMux func(mux *http.ServeMux)) HTTPServer {
-	srv, _ := httpx.NewServer(
+func NewHTTPServer(conf coordinator.Config, fnMux func(mux *http.ServeMux)) (*httpx.Server, error) {
+	return httpx.NewServer(
 		conf.Coordinator.Server.GetAddr(),
 		func(*httpx.Server) http.Handler {
 			h := http.NewServeMux()
@@ -25,7 +21,6 @@ func NewHTTPServer(conf coordinator.Config, fnMux func(mux *http.ServeMux)) HTTP
 		},
 		httpx.WithServerConfig(conf.Coordinator.Server),
 	)
-	return HTTPServer{srv}
 }
 
 func index(conf coordinator.Config) http.Handler {

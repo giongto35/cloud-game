@@ -1,7 +1,6 @@
 package worker
 
 import (
-	"context"
 	"net/http"
 
 	"github.com/giongto35/cloud-game/v2/pkg/config/worker"
@@ -10,13 +9,12 @@ import (
 )
 
 type HTTPServer struct {
+	*httpx.Server
 	service.RunnableService
-
-	server *httpx.Server
 }
 
-func NewHTTPServer(conf worker.Config) HTTPServer {
-	srv, _ := httpx.NewServer(
+func NewHTTPServer(conf worker.Config) (*HTTPServer, error) {
+	srv, err := httpx.NewServer(
 		conf.Worker.Server.GetAddr(),
 		func(*httpx.Server) http.Handler {
 			h := http.NewServeMux()
@@ -31,13 +29,8 @@ func NewHTTPServer(conf worker.Config) HTTPServer {
 		httpx.HttpsRedirect(false),
 		httpx.WithPortRoll(true),
 	)
-	return HTTPServer{server: srv}
-}
-
-func (s HTTPServer) Run() {
-	s.server.Run()
-}
-
-func (s HTTPServer) Shutdown(ctx context.Context) error {
-	return s.server.Shutdown(ctx)
+	if err != nil {
+		return nil, err
+	}
+	return &HTTPServer{Server: srv}, nil
 }

@@ -11,15 +11,14 @@ import (
 
 func New(conf coordinator.Config) (services service.Services) {
 	srv := NewServer(conf, games.NewLibWhitelisted(conf.Coordinator.Library, conf.Emulator))
-	httpSrv := NewHTTPServer(conf, func(mux *http.ServeMux) {
+	httpSrv, err := NewHTTPServer(conf, func(mux *http.ServeMux) {
 		mux.HandleFunc("/ws", srv.WS)
 		mux.HandleFunc("/wso", srv.WSO)
 	})
-
-	services.Add(
-		srv,
-		httpSrv,
-	)
+	if err != nil {
+		panic("http failed: " + err.Error())
+	}
+	services.Add(srv, httpSrv)
 	if conf.Coordinator.Monitoring.IsEnabled() {
 		services.Add(monitoring.New(conf.Coordinator.Monitoring, "cord"))
 	}
