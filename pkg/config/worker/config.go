@@ -19,18 +19,20 @@ type Config struct {
 	Encoder     encoder.Encoder
 	Emulator    emulator.Emulator
 	Environment shared.Environment
-	Worker      struct {
-		Monitoring monitoring.Config
-		Network    struct {
-			CoordinatorAddress string
-			Endpoint           string
-			PingEndpoint       string
-			Secure             bool
-			Zone               string
-		}
-		Server shared.Server
+	Worker      Worker
+	Webrtc      webrtcConfig.Webrtc
+}
+
+type Worker struct {
+	Monitoring monitoring.Config
+	Network    struct {
+		CoordinatorAddress string
+		Endpoint           string
+		PingEndpoint       string
+		Secure             bool
+		Zone               string
 	}
-	Webrtc webrtcConfig.Webrtc
+	Server shared.Server
 }
 
 // allows custom config path
@@ -71,20 +73,15 @@ func (c *Config) expandSpecialTags() {
 	}
 }
 
+// GetAddr returns the actual server address.
+// May contain zone prefix.
+func (w *Worker) GetAddr() string { return w.Server.GetAddr() }
+
 // GetPingAddr returns the server for latency check of a zone.
-func (c *Config) GetPingAddr(address string) string {
-	scheme := "http"
-	host := c.Worker.Server.Address
-	if c.Worker.Server.Https {
-		scheme = "https"
-		host = c.Worker.Server.Tls.Address
+func (w *Worker) GetPingAddr(address string) string {
+	pingURL := url.URL{Scheme: "http", Host: address, Path: w.Network.PingEndpoint}
+	if w.Server.Https {
+		pingURL.Scheme = "https"
 	}
-	if strings.HasPrefix(host, ":") {
-		host = "localhost" + host
-	}
-	if c.Worker.Network.Zone != "" {
-		host = c.Worker.Network.Zone + "." + host
-	}
-	u := url.URL{Scheme: scheme, Host: address, Path: c.Worker.Network.PingEndpoint}
-	return u.String()
+	return pingURL.String()
 }

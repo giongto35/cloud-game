@@ -63,7 +63,7 @@ func NewServer(address string, handler func(serv *Server) http.Handler, options 
 	}
 	server.listener = listener
 
-	addr = mergeAddresses(server.Addr, *listener)
+	addr = buildAddress(server.Addr, opts.Zone, *listener)
 	log.Printf("[server] address was set to %v (%v)", addr, server.Addr)
 	server.Addr = addr
 

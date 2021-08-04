@@ -18,6 +18,7 @@ type (
 		IdleTimeout          time.Duration
 		ReadTimeout          time.Duration
 		WriteTimeout         time.Duration
+		Zone                 string
 	}
 	Option func(*Options)
 )
@@ -30,7 +31,9 @@ func (o *Options) override(options ...Option) {
 
 func (o *Options) IsAutoHttpsCert() bool { return !(o.HttpsCert != "" && o.HttpsKey != "") }
 
-func HttpsRedirect(redirect bool) Option { return func(opts *Options) { opts.HttpsRedirect = redirect } }
+func HttpsRedirect(redirect bool) Option {
+	return func(opts *Options) { opts.HttpsRedirect = redirect }
+}
 
 //func Https(is bool) Option                { return func(opts *Options) { opts.Https = is } }
 //func HttpsCert(cert string) Option        { return func(opts *Options) { opts.HttpsCert = cert } }
@@ -41,6 +44,7 @@ func HttpsRedirect(redirect bool) Option { return func(opts *Options) { opts.Htt
 //func WriteTimeout(t time.Duration) Option { return func(opts *Options) { opts.WriteTimeout = t } }
 
 func WithPortRoll(roll bool) Option { return func(opts *Options) { opts.PortRoll = roll } }
+func WithZone(zone string) Option   { return func(opts *Options) { opts.Zone = zone } }
 func WithServerConfig(conf shared.Server) Option {
 	return func(opts *Options) {
 		opts.Https = conf.Https

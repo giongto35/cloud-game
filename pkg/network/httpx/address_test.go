@@ -20,6 +20,7 @@ func NewTCP(port int) Listener {
 func TestMergeAddresses(t *testing.T) {
 	tests := []struct {
 		addr string
+		zone string
 		ls   Listener
 		rez  string
 	}{
@@ -30,6 +31,7 @@ func TestMergeAddresses(t *testing.T) {
 		{addr: ":8080", ls: NewTCP(8081), rez: "localhost:8081"},
 		{addr: "host:8080", ls: NewTCP(8080), rez: "host:8080"},
 		{addr: "host:8080", ls: NewTCP(8081), rez: "host:8081"},
+		{addr: "host:8080", zone: "test", ls: NewTCP(8081), rez: "test.host:8081"},
 		{addr: ":80", ls: NewTCP(80), rez: "localhost"},
 		{addr: ":", ls: NewTCP(344), rez: "localhost:344"},
 		{addr: "https://garbage.com:99a9a", rez: "https://garbage.com:99a9a"},
@@ -37,7 +39,7 @@ func TestMergeAddresses(t *testing.T) {
 	}
 
 	for _, test := range tests {
-		address := mergeAddresses(test.addr, test.ls)
+		address := buildAddress(test.addr, test.zone, test.ls)
 		if address != test.rez {
 			t.Errorf("expected %v, got %v", test.rez, address)
 		}

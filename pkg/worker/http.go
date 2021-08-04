@@ -5,17 +5,11 @@ import (
 
 	"github.com/giongto35/cloud-game/v2/pkg/config/worker"
 	"github.com/giongto35/cloud-game/v2/pkg/network/httpx"
-	"github.com/giongto35/cloud-game/v2/pkg/service"
 )
 
-type HTTPServer struct {
-	*httpx.Server
-	service.RunnableService
-}
-
-func NewHTTPServer(conf worker.Config) (*HTTPServer, error) {
+func NewHTTPServer(conf worker.Config) (*httpx.Server, error) {
 	srv, err := httpx.NewServer(
-		conf.Worker.Server.GetAddr(),
+		conf.Worker.GetAddr(),
 		func(*httpx.Server) http.Handler {
 			h := http.NewServeMux()
 			h.HandleFunc(conf.Worker.Network.PingEndpoint, func(w http.ResponseWriter, _ *http.Request) {
@@ -28,9 +22,10 @@ func NewHTTPServer(conf worker.Config) (*HTTPServer, error) {
 		// no need just for one route
 		httpx.HttpsRedirect(false),
 		httpx.WithPortRoll(true),
+		httpx.WithZone(conf.Worker.Network.Zone),
 	)
 	if err != nil {
 		return nil, err
 	}
-	return &HTTPServer{Server: srv}, nil
+	return srv, nil
 }

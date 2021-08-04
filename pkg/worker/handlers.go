@@ -54,15 +54,15 @@ func NewHandler(conf worker.Config, address string) *Handler {
 
 // Run starts a Handler running logic
 func (h *Handler) Run() {
-	conf := h.cfg.Worker.Network
+	coordinatorAddress := h.cfg.Worker.Network.CoordinatorAddress
 	for {
-		conn, err := newCoordinatorConnection(conf.CoordinatorAddress, h.cfg, h.address)
+		conn, err := newCoordinatorConnection(coordinatorAddress, h.cfg.Worker, h.address)
 		if err != nil {
 			log.Printf("Cannot connect to coordinator. %v Retrying...", err)
 			time.Sleep(time.Second)
 			continue
 		}
-		log.Printf("[worker] connected to: %v", conf.CoordinatorAddress)
+		log.Printf("[worker] connected to: %v", coordinatorAddress)
 
 		h.oClient = conn
 		go h.oClient.Heartbeat()
@@ -92,12 +92,12 @@ func (h *Handler) Prepare() {
 	}
 }
 
-func newCoordinatorConnection(host string, conf worker.Config, addr string) (*CoordinatorClient, error) {
+func newCoordinatorConnection(host string, conf worker.Worker, addr string) (*CoordinatorClient, error) {
 	scheme := "ws"
-	if conf.Worker.Network.Secure {
+	if conf.Network.Secure {
 		scheme = "wss"
 	}
-	address := url.URL{Scheme: scheme, Host: host, Path: conf.Worker.Network.Endpoint}
+	address := url.URL{Scheme: scheme, Host: host, Path: conf.Network.Endpoint}
 
 	req, err := MakeConnectionRequest(conf, addr)
 	if req != "" && err == nil {
@@ -111,9 +111,9 @@ func newCoordinatorConnection(host string, conf worker.Config, addr string) (*Co
 	return NewCoordinatorClient(conn), nil
 }
 
-func MakeConnectionRequest(conf worker.Config, address string) (string, error) {
+func MakeConnectionRequest(conf worker.Worker, address string) (string, error) {
 	req := api2.ConnectionRequest{
-		Zone:     conf.Worker.Network.Zone,
+		Zone:     conf.Network.Zone,
 		PingAddr: conf.GetPingAddr(address),
 	}
 	rez, err := json.Marshal(req)
