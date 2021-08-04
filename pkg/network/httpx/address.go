@@ -3,26 +3,27 @@ package httpx
 import (
 	"net"
 	"strconv"
-	"strings"
 )
 
-type Address string
-
-// SplitHostPort splits a network address of the form "host:port".
-// Works similarly to net.SplitHostPort except it returns port value as a number.
-func (a Address) SplitHostPort() (host string, port int) {
-	address := string(a)
-	// it's all an address without the colon
-	if !strings.Contains(address, ":") {
-		return address, 0
+// mergeAddresses joins network host from the first param
+// with the port value of a listener from the second param.
+//
+// As example, address host.com:8080 and listener 123.123.123.123:8888 will be
+// transformed to host.com:8888.
+func mergeAddresses(address string, l net.Listener) string {
+	addr, _, err := net.SplitHostPort(address)
+	if err != nil {
+		addr = address
+	}
+	if addr == "" {
+		addr = "localhost"
 	}
 
-	h, p, er := net.SplitHostPort(string(a))
-	if er == nil {
-		host = h
-		if val, er := strconv.Atoi(p); er == nil {
-			port = val
+	if l != nil {
+		tcp, ok := l.Addr().(*net.TCPAddr)
+		if ok && tcp != nil && tcp.Port > 0 && tcp.Port != 80 && tcp.Port != 443 {
+			addr += ":" + strconv.Itoa(tcp.Port)
 		}
 	}
-	return
+	return addr
 }

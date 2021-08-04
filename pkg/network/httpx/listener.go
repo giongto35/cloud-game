@@ -11,32 +11,34 @@ import (
 )
 
 const maxPortRollAttempts = 42
-const RollPorts = true
 
-type Listener struct {
-	net.Listener
-}
-
-func NewListener(address string, rollPorts bool) (*Listener, error) {
-	ls, err := net.Listen("tcp4", address)
-	if err != nil {
-		if rollPorts && isErrorAddressAlreadyInUse(err) {
-			host, port := Address(address).SplitHostPort()
-			for i := port + 1; i < port+maxPortRollAttempts; i++ {
-				log.Printf("ROLL %v %v", host, i)
-				ls, err = net.Listen("tcp4", host+":"+strconv.Itoa(i))
-				if err == nil {
-					return &Listener{ls}, err
-				}
-				log.Printf("ERR -> %v", err)
-			}
-		}
-		return nil, err
+func NewListener(address string, withNextFreePort bool) (net.Listener, error) {
+	listener, err := net.Listen("tcp", address)
+	if err == nil || !withNextFreePort || !isPortBusyError(err) {
+		return listener, err
 	}
-	return &Listener{ls}, err
+	// we will roll next available port
+	host, prt, err := net.SplitHostPort(address)
+	if err != nil {
+		return listener, err
+	}
+	// it should be impossible to get 0 port here
+	// or that's going to break otherwise
+	port, err := strconv.Atoi(prt)
+	if err != nil {
+		return listener, err
+	}
+	for i := port + 1; i < port+maxPortRollAttempts; i++ {
+		log.Printf("ROLL %v %v", host, i)
+		listener, err := net.Listen("tcp", host+":"+strconv.Itoa(i))
+		if err == nil {
+			return listener, nil
+		}
+	}
+	return nil, errors.New("no available ports")
 }
 
-func isErrorAddressAlreadyInUse(err error) bool {
+func isPortBusyError(err error) bool {
 	var eOsSyscall *os.SyscallError
 	if !errors.As(err, &eOsSyscall) {
 		return false

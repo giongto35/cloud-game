@@ -3,6 +3,7 @@ package httpx
 import (
 	"context"
 	"log"
+	"net"
 	"net/http"
 	"time"
 
@@ -17,7 +18,7 @@ type Server struct {
 	autoCert *autocert.Manager
 	opts     Options
 
-	listener *Listener
+	listener *net.Listener
 	redirect *Server
 }
 
@@ -25,10 +26,9 @@ func NewServer(address string, handler func(serv *Server) http.Handler, options 
 	opts := &Options{
 		Https:         false,
 		HttpsRedirect: true,
-		// timeouts negate slow / frozen clients
-		IdleTimeout:  120 * time.Second,
-		ReadTimeout:  5 * time.Second,
-		WriteTimeout: 5 * time.Second,
+		IdleTimeout:   120 * time.Second,
+		ReadTimeout:   5 * time.Second,
+		WriteTimeout:  5 * time.Second,
 	}
 	opts.override(options...)
 
@@ -49,14 +49,23 @@ func NewServer(address string, handler func(serv *Server) http.Handler, options 
 		server.TLSConfig = server.autoCert.TLSConfig()
 	}
 
-	listener, err := NewListener(server.Addr, server.opts.PortRoll)
+	addr := server.Addr
+	if server.Addr == "" {
+		addr = ":http"
+		if opts.Https {
+			addr = ":https"
+		}
+		log.Printf("Warning! Empty server address has been changed to %v", server.Addr)
+	}
+	listener, err := NewListener(addr, server.opts.PortRoll)
 	if err != nil {
 		return nil, err
 	}
-	server.listener = listener
-	newAddr := listener.Addr().String()
-	log.Printf("[server] address was set to %v (%v)", newAddr, server.Addr)
-	server.Addr = newAddr
+	server.listener = &listener
+
+	addr = mergeAddresses(server.Addr, listener)
+	log.Printf("[server] address was set to %v (%v)", addr, server.Addr)
+	server.Addr = addr
 
 	return server, nil
 }
@@ -75,9 +84,9 @@ func (s *Server) Run() {
 
 	var err error
 	if s.opts.Https {
-		err = s.ServeTLS(s.listener, s.opts.HttpsCert, s.opts.HttpsKey)
+		err = s.ServeTLS(*s.listener, s.opts.HttpsCert, s.opts.HttpsKey)
 	} else {
-		err = s.Serve(s.listener)
+		err = s.Serve(*s.listener)
 	}
 	switch err {
 	case http.ErrServerClosed:
@@ -97,13 +106,9 @@ func (s *Server) Shutdown(ctx context.Context) (err error) {
 	if s == nil {
 		return
 	}
-
 	if s.redirect != nil {
 		err = s.redirect.Shutdown(ctx)
 	}
-	//if s.listener != nil {
-	//	err = s.listener.Close()
-	//}
 	err = s.Server.Shutdown(ctx)
 	return
 }

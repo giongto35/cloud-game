@@ -1,33 +1,43 @@
 package httpx
 
 import (
+	"net"
 	"testing"
 )
 
-func TestSplitHostPort(t *testing.T) {
+type testListener struct {
+	addr net.TCPAddr
+}
+
+func (tl testListener) Accept() (net.Conn, error) { return nil, nil }
+func (tl testListener) Close() error              { return nil }
+func (tl testListener) Addr() net.Addr            { return &tl.addr }
+
+func NewTCP(port int) net.Listener { return testListener{addr: net.TCPAddr{Port: port}} }
+
+func TestMergeAddresses(t *testing.T) {
 	tests := []struct {
-		input Address
-		host  string
-		port  int
+		addr string
+		ls   net.Listener
+		rez  string
 	}{
-		{input: "", host: "", port: 0},
-		{input: ":", host: "", port: 0},
-		{input: "https://garbage.com:99a9a", host: "", port: 0},
-		{input: ":9000", host: "", port: 9000},
-		{input: "not-garbage:9999", host: "not-garbage", port: 9999},
-		{input: "[::1]", host: "", port: 0},
-		{input: ":90", host: "", port: 90},
-		{input: "localhost:90", host: "localhost", port: 90},
-		{input: "localhost:a8a", host: "localhost", port: 0},
+		{addr: "", rez: "localhost"},
+		{addr: ":", ls: NewTCP(0), rez: "localhost"},
+		{addr: "", ls: NewTCP(393), rez: "localhost:393"},
+		{addr: ":8080", ls: NewTCP(8080), rez: "localhost:8080"},
+		{addr: ":8080", ls: NewTCP(8081), rez: "localhost:8081"},
+		{addr: "host:8080", ls: NewTCP(8080), rez: "host:8080"},
+		{addr: "host:8080", ls: NewTCP(8081), rez: "host:8081"},
+		{addr: ":80", ls: NewTCP(80), rez: "localhost"},
+		{addr: ":", ls: NewTCP(344), rez: "localhost:344"},
+		{addr: "https://garbage.com:99a9a", rez: "https://garbage.com:99a9a"},
+		{addr: "[::]", rez: "[::]"},
 	}
 
 	for _, test := range tests {
-		host, port := test.input.SplitHostPort()
-		if host != test.host || port != test.port {
-			t.Errorf(
-				"Test fail for expected host %v port %v but got %v %v",
-				test.host, test.port, host, port,
-			)
+		address := mergeAddresses(test.addr, test.ls)
+		if address != test.rez {
+			t.Errorf("expected %v, got %v", test.rez, address)
 		}
 	}
 }
