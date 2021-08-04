@@ -2,7 +2,6 @@ package httpx
 
 import (
 	"errors"
-	"log"
 	"net"
 	"os"
 	"runtime"
@@ -10,7 +9,7 @@ import (
 	"syscall"
 )
 
-const maxPortRollAttempts = 42
+const listenAttempts = 42
 
 func NewListener(address string, withNextFreePort bool) (net.Listener, error) {
 	listener, err := net.Listen("tcp", address)
@@ -28,8 +27,7 @@ func NewListener(address string, withNextFreePort bool) (net.Listener, error) {
 	if err != nil {
 		return listener, err
 	}
-	for i := port + 1; i < port+maxPortRollAttempts; i++ {
-		log.Printf("ROLL %v %v", host, i)
+	for i := port + 1; i < port+listenAttempts; i++ {
 		listener, err := net.Listen("tcp", host+":"+strconv.Itoa(i))
 		if err == nil {
 			return listener, nil
