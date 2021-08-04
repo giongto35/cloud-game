@@ -4,6 +4,7 @@ import (
 	"context"
 	"log"
 	"net/http"
+	"net/url"
 	"time"
 
 	"github.com/giongto35/cloud-game/v2/pkg/service"
@@ -120,8 +121,10 @@ func (s *Server) redirection() (*Server, error) {
 	srv, err := NewServer(s.opts.HttpsRedirectAddress, func(serv *Server) http.Handler {
 		h := http.NewServeMux()
 		h.Handle("/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			log.Printf("Redirect: http:%v%v -> https:%v%v", r.Host, r.URL, s.Addr, r.URL)
-			http.Redirect(w, r, "https://"+s.Addr+r.URL.String(), http.StatusFound)
+			httpsURL := url.URL{Scheme: "https", Host: s.Addr, Path: r.URL.Path, RawQuery: r.URL.RawQuery}
+			rdr := httpsURL.String()
+			log.Printf("Redirect: http://%s%s -> %s", r.Host, r.URL.String(), rdr)
+			http.Redirect(w, r, rdr, http.StatusFound)
 		}))
 		// do we need this after all?
 		if serv.autoCert != nil {
