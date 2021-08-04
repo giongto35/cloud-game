@@ -95,17 +95,17 @@ func (c *Config) expandSpecialTags() {
 // GetPingAddr returns the server for latency check of a zone.
 func (c *Config) GetPingAddr(address string) string {
 	scheme := "http"
-	//host := c.Worker.Server.Address
+	host := c.Worker.Server.Address
 	if c.Worker.Server.Https {
 		scheme = "https"
-	//	host = c.Worker.Server.Tls.Address
+		host = c.Worker.Server.Tls.Address
 	}
-	//if strings.HasPrefix(host, ":") {
-	//	host = "localhost" + host
-	//}
-	//if c.Worker.Network.Zone != "" {
-	//	host = c.Worker.Network.Zone + "." + host
-	//}
+	if strings.HasPrefix(host, ":") {
+		host = "localhost" + host
+	}
+	if c.Worker.Network.Zone != "" {
+		host = c.Worker.Network.Zone + "." + host
+	}
 	u := url.URL{Scheme: scheme, Host: address, Path: c.Worker.Network.PingEndpoint}
 	return u.String()
 }
