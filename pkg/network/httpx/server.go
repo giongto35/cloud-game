@@ -82,7 +82,11 @@ func (s *Server) Run() {
 	log.Printf("Starting %s server on %s", protocol, s.Addr)
 
 	if s.opts.Https && s.opts.HttpsRedirect {
-		s.redirect = s.redirection()
+		rdr, err := s.redirection()
+		if err != nil {
+			panic("couldn't init redirection server: " + err.Error())
+		}
+		s.redirect = rdr
 		go s.redirect.Run()
 	}
 
@@ -112,12 +116,12 @@ func (s *Server) Shutdown(ctx context.Context) (err error) {
 	return
 }
 
-func (s *Server) redirection() *Server {
-	// !to handle error
-	serv, _ := NewServer(s.opts.HttpsRedirectAddress, func(serv *Server) http.Handler {
+func (s *Server) redirection() (*Server, error) {
+	srv, err := NewServer(s.opts.HttpsRedirectAddress, func(serv *Server) http.Handler {
 		h := http.NewServeMux()
 		h.Handle("/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			http.Redirect(w, r, "https://"+r.Host+r.URL.String(), http.StatusFound)
+			log.Printf("Redirect: http:%v%v -> https:%v%v", r.Host, r.URL, s.Addr, r.URL)
+			http.Redirect(w, r, "https://"+s.Addr+r.URL.String(), http.StatusFound)
 		}))
 		// do we need this after all?
 		if serv.autoCert != nil {
@@ -125,7 +129,6 @@ func (s *Server) redirection() *Server {
 		}
 		return h
 	})
-	log.Printf("Starting HTTP->HTTPS redirection server on %s", serv.Addr)
-
-	return serv
+	log.Printf("Starting HTTP->HTTPS redirection server on %s", srv.Addr)
+	return srv, err
 }
