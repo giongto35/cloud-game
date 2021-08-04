@@ -6,18 +6,9 @@ import (
 	"log"
 
 	api2 "github.com/giongto35/cloud-game/v2/pkg/api"
-	"github.com/giongto35/cloud-game/v2/pkg/config/worker"
 	"github.com/giongto35/cloud-game/v2/pkg/cws"
 	"github.com/giongto35/cloud-game/v2/pkg/cws/api"
 )
-
-func (wc *WorkerClient) handleConfigRequest() cws.PacketHandler {
-	return func(resp cws.WSPacket) cws.WSPacket {
-		// try to load worker config
-		conf := worker.NewConfig()
-		return api.ConfigRequestPacket(conf.Serialize())
-	}
-}
 
 func (wc *WorkerClient) handleHeartbeat() cws.PacketHandler {
 	return func(resp cws.WSPacket) cws.WSPacket {

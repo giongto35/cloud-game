@@ -11,7 +11,6 @@ import (
 
 	api2 "github.com/giongto35/cloud-game/v2/pkg/api"
 	"github.com/giongto35/cloud-game/v2/pkg/config/worker"
-	"github.com/giongto35/cloud-game/v2/pkg/cws/api"
 	"github.com/giongto35/cloud-game/v2/pkg/emulator/libretro/manager/remotehttp"
 	"github.com/giongto35/cloud-game/v2/pkg/games"
 	"github.com/giongto35/cloud-game/v2/pkg/network/websocket"
@@ -74,14 +73,6 @@ func (h *Handler) Run() {
 }
 
 func (h *Handler) Shutdown(context.Context) error { return nil }
-
-func (h *Handler) RequestConfig() {
-	log.Printf("[worker] asking for a config...")
-	response := h.oClient.SyncSend(api.ConfigPacket())
-	conf := worker.EmptyConfig()
-	conf.Deserialize([]byte(response.Data))
-	log.Printf("[worker] pulled config: %+v", conf)
-}
 
 func (h *Handler) Prepare() {
 	if !h.cfg.Emulator.Libretro.Cores.Repo.Sync {

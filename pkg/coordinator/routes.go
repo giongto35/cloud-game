@@ -7,7 +7,6 @@ func (s *Server) workerRoutes(wc *WorkerClient) {
 	if wc == nil {
 		return
 	}
-	wc.Receive(api.ConfigRequest, wc.handleConfigRequest())
 	wc.Receive(api.Heartbeat, wc.handleHeartbeat())
 	wc.Receive(api.RegisterRoom, wc.handleRegisterRoom(s))
 	wc.Receive(api.GetRoom, wc.handleGetRoom(s))
