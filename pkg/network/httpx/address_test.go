@@ -13,12 +13,14 @@ func (tl testListener) Accept() (net.Conn, error) { return nil, nil }
 func (tl testListener) Close() error              { return nil }
 func (tl testListener) Addr() net.Addr            { return &tl.addr }
 
-func NewTCP(port int) net.Listener { return testListener{addr: net.TCPAddr{Port: port}} }
+func NewTCP(port int) Listener {
+	return Listener{testListener{addr: net.TCPAddr{Port: port}}}
+}
 
 func TestMergeAddresses(t *testing.T) {
 	tests := []struct {
 		addr string
-		ls   net.Listener
+		ls   Listener
 		rez  string
 	}{
 		{addr: "", rez: "localhost"},

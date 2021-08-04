@@ -3,7 +3,6 @@ package httpx
 import (
 	"context"
 	"log"
-	"net"
 	"net/http"
 	"time"
 
@@ -18,7 +17,7 @@ type Server struct {
 	autoCert *autocert.Manager
 	opts     Options
 
-	listener *net.Listener
+	listener *Listener
 	redirect *Server
 }
 
@@ -61,9 +60,9 @@ func NewServer(address string, handler func(serv *Server) http.Handler, options 
 	if err != nil {
 		return nil, err
 	}
-	server.listener = &listener
+	server.listener = listener
 
-	addr = mergeAddresses(server.Addr, listener)
+	addr = mergeAddresses(server.Addr, *listener)
 	log.Printf("[server] address was set to %v (%v)", addr, server.Addr)
 	server.Addr = addr
 

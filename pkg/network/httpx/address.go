@@ -10,7 +10,7 @@ import (
 //
 // As example, address host.com:8080 and listener 123.123.123.123:8888 will be
 // transformed to host.com:8888.
-func mergeAddresses(address string, l net.Listener) string {
+func mergeAddresses(address string, l Listener) string {
 	addr, _, err := net.SplitHostPort(address)
 	if err != nil {
 		addr = address
@@ -19,11 +19,9 @@ func mergeAddresses(address string, l net.Listener) string {
 		addr = "localhost"
 	}
 
-	if l != nil {
-		tcp, ok := l.Addr().(*net.TCPAddr)
-		if ok && tcp != nil && tcp.Port > 0 && tcp.Port != 80 && tcp.Port != 443 {
-			addr += ":" + strconv.Itoa(tcp.Port)
-		}
+	port := l.GetPort()
+	if port > 0 && port != 80 && port != 443 {
+		addr += ":" + strconv.Itoa(port)
 	}
 	return addr
 }
