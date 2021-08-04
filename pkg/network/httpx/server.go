@@ -82,6 +82,11 @@ func (s *Server) Run() {
 
 	log.Printf("Starting %s server on %s", protocol, s.Addr)
 
+	if s.opts.Https && s.opts.HttpsRedirect {
+		s.redirect = s.redirection()
+		go s.redirect.Run()
+	}
+
 	var err error
 	if s.opts.Https {
 		err = s.ServeTLS(*s.listener, s.opts.HttpsCert, s.opts.HttpsKey)
@@ -94,11 +99,6 @@ func (s *Server) Run() {
 		return
 	default:
 		log.Printf("error: %s", err)
-	}
-
-	if s.opts.Https && s.opts.HttpsRedirect {
-		s.redirect = s.redirection()
-		go s.redirect.Run()
 	}
 }
 
