@@ -4,14 +4,21 @@ import (
 	"context"
 	"fmt"
 	"log"
+	"math"
+	"net"
 	"net/http"
 	"net/http/pprof"
+	"strconv"
+	"strings"
 
 	"github.com/giongto35/cloud-game/v2/pkg/config/monitoring"
 	"github.com/giongto35/cloud-game/v2/pkg/network/httpx"
 	"github.com/giongto35/cloud-game/v2/pkg/service"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 )
+
+const debugEndpoint = "/debug/pprof"
+const metricsEndpoint = "/metrics"
 
 type Monitoring struct {
 	service.RunnableService
@@ -23,24 +30,18 @@ type Monitoring struct {
 
 // New creates new monitoring service.
 // The tag param specifies owner label for logs.
-func New(conf monitoring.Config, tag string) *Monitoring {
-	serv, _ := httpx.NewServer(
-		fmt.Sprintf(":%d", conf.Port),
+func New(conf monitoring.Config, baseAddr string, tag string) *Monitoring {
+	serv, err := httpx.NewServer(
+		net.JoinHostPort(baseAddr, strconv.Itoa(conf.Port)),
 		func(serv *httpx.Server) http.Handler {
 			h := http.NewServeMux()
-
 			if conf.ProfilingEnabled {
-				prefix := fmt.Sprintf("%s/debug/pprof", conf.URLPrefix)
-				log.Printf("[%v] Profiling is enabled at %v", tag, serv.Addr+prefix)
+				prefix := conf.URLPrefix + debugEndpoint
 				h.HandleFunc(prefix+"/", pprof.Index)
 				h.HandleFunc(prefix+"/cmdline", pprof.Cmdline)
 				h.HandleFunc(prefix+"/profile", pprof.Profile)
 				h.HandleFunc(prefix+"/symbol", pprof.Symbol)
 				h.HandleFunc(prefix+"/trace", pprof.Trace)
-				// pprof handler for custom pprof path needs to be explicitly specified,
-				// according to: https://github.com/gin-contrib/pprof/issues/8.
-				// Don't know why this is not fired as ticket
-				// https://golang.org/src/net/http/pprof/pprof.go?s=7411:7461#L305 only render index page
 				h.Handle(prefix+"/allocs", pprof.Handler("allocs"))
 				h.Handle(prefix+"/block", pprof.Handler("block"))
 				h.Handle(prefix+"/goroutine", pprof.Handler("goroutine"))
@@ -48,21 +49,20 @@ func New(conf monitoring.Config, tag string) *Monitoring {
 				h.Handle(prefix+"/mutex", pprof.Handler("mutex"))
 				h.Handle(prefix+"/threadcreate", pprof.Handler("threadcreate"))
 			}
-
 			if conf.MetricEnabled {
-				metricPath := fmt.Sprintf("%s/metrics", conf.URLPrefix)
-				log.Printf("[%v] Prometheus metric is enabled at %v", tag, serv.Addr+metricPath)
-				h.Handle(metricPath, promhttp.Handler())
+				h.Handle(conf.URLPrefix+metricsEndpoint, promhttp.Handler())
 			}
-
 			return h
 		},
-	)
+		httpx.WithPortRoll(true))
+	if err != nil {
+		panic("couldn't start monitoring server: " + err.Error())
+	}
 	return &Monitoring{conf: conf, tag: tag, server: serv}
 }
 
 func (m *Monitoring) Run() {
-	log.Printf("[%v] Starting monitoring server at %v", m.tag, m.server.Addr)
+	m.printInfo()
 	m.server.Run()
 }
 
@@ -73,4 +73,41 @@ func (m *Monitoring) Shutdown(ctx context.Context) error {
 
 func (m *Monitoring) String() string {
 	return fmt.Sprintf("monitoring::%s:%d", m.conf.URLPrefix, m.conf.Port)
+}
+
+func (m *Monitoring) GetMetricsPublicAddress() string {
+	return m.server.GetProtocol() + "://" + m.server.Addr + m.conf.URLPrefix + metricsEndpoint
+}
+
+func (m *Monitoring) GetProfilingAddress() string {
+	return m.server.GetProtocol() + "://" + m.server.Addr + m.conf.URLPrefix + debugEndpoint
+}
+
+func (m *Monitoring) printInfo() {
+	length, pad := 42, 20
+	var table, records strings.Builder
+	table.Grow(length * 4)
+	records.Grow(length * 2)
+
+	if m.conf.ProfilingEnabled {
+		addr := m.GetProfilingAddress()
+		length = int(math.Max(float64(length), float64(len(addr)+pad)))
+		records.WriteString("    Profiling   " + addr + "\n")
+	}
+	if m.conf.MetricEnabled {
+		addr := m.GetMetricsPublicAddress()
+		length = int(math.Max(float64(length), float64(len(addr)+pad)))
+		records.WriteString("    Prometheus  " + addr + "\n")
+	}
+
+	title := "Monitoring"
+	center := strconv.Itoa(length / 2)
+	rPad := strconv.Itoa((length / 2) - (len(title) / 2) - 1)
+	table.WriteString(fmt.Sprintf("[%s]\n", m.tag))
+	table.WriteString(strings.Repeat("-", length) + "\n")
+	table.WriteString(fmt.Sprintf("---%"+center+"s%"+rPad+"s---\n", title, ""))
+	table.WriteString(strings.Repeat("-", length) + "\n")
+	table.WriteString(records.String())
+	table.WriteString(strings.Repeat("-", length))
+	log.Printf(table.String())
 }

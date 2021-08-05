@@ -75,11 +75,7 @@ func (s *Server) Run() {
 		return
 	}
 
-	protocol := "HTTP"
-	if s.opts.Https {
-		protocol = "HTTPS"
-	}
-
+	protocol := s.GetProtocol()
 	log.Printf("Starting %s server on %s", protocol, s.Addr)
 
 	if s.opts.Https && s.opts.HttpsRedirect {
@@ -115,6 +111,16 @@ func (s *Server) Shutdown(ctx context.Context) (err error) {
 	}
 	err = s.Server.Shutdown(ctx)
 	return
+}
+
+func (s *Server) GetHost() string { return extractHost(s.Addr) }
+
+func (s *Server) GetProtocol() string {
+	protocol := "http"
+	if s.opts.Https {
+		protocol = "https"
+	}
+	return protocol
 }
 
 func (s *Server) redirection() (*Server, error) {

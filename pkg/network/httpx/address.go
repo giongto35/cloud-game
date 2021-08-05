@@ -31,3 +31,11 @@ func buildAddress(address string, zone string, l Listener) string {
 
 	return addr
 }
+
+func extractHost(address string) string {
+	addr, _, err := net.SplitHostPort(address)
+	if err != nil {
+		addr = address
+	}
+	return addr
+}

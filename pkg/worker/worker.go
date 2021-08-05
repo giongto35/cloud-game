@@ -13,7 +13,7 @@ func New(conf worker.Config) (services service.Services) {
 	}
 	services.Add(httpSrv, NewHandler(conf, httpSrv.Addr))
 	if conf.Worker.Monitoring.IsEnabled() {
-		services.Add(monitoring.New(conf.Worker.Monitoring, "worker"))
+		services.Add(monitoring.New(conf.Worker.Monitoring, httpSrv.GetHost(), "worker"))
 	}
 	return
 }
