@@ -29,14 +29,13 @@ func run() {
 	logging.Init()
 	defer logging.Flush()
 
-	ctx, cancelCtx := context.WithCancel(context.Background())
-
 	glog.Infof("[worker] version: %v", Version)
 	glog.V(4).Infof("[worker] Local configuration %+v", conf)
 	wrk := worker.New(conf)
 	wrk.Start()
-	defer wrk.Shutdown(ctx)
 
+	ctx, cancelCtx := context.WithCancel(context.Background())
+	defer wrk.Shutdown(ctx)
 	<-os.ExpectTermination()
 	cancelCtx()
 }

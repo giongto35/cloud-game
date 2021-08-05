@@ -28,14 +28,13 @@ func main() {
 	logging.Init()
 	defer logging.Flush()
 
-	ctx, cancelCtx := context.WithCancel(context.Background())
-
 	glog.Infof("[coordinator] version: %v", Version)
 	glog.V(4).Infof("Coordinator configs %v", conf)
 	c := coordinator.New(conf)
 	c.Start()
-	defer c.Shutdown(ctx)
 
+	ctx, cancelCtx := context.WithCancel(context.Background())
+	defer c.Shutdown(ctx)
 	<-os.ExpectTermination()
 	cancelCtx()
 }

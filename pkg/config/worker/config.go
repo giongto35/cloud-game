@@ -73,11 +73,10 @@ func (c *Config) expandSpecialTags() {
 	}
 }
 
-// GetAddr returns the actual server address.
-// May contain zone prefix.
+// GetAddr returns defined in the config server address.
 func (w *Worker) GetAddr() string { return w.Server.GetAddr() }
 
-// GetPingAddr returns the server for latency check of a zone.
+// GetPingAddr returns exposed to clients server ping endpoint address.
 func (w *Worker) GetPingAddr(address string) string {
 	pingURL := url.URL{Scheme: "http", Host: address, Path: w.Network.PingEndpoint}
 	if w.Server.Https {
