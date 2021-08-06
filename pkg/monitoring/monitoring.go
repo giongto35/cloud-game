@@ -101,13 +101,11 @@ func (m *Monitoring) printInfo() {
 	}
 
 	title := "Monitoring"
-	center := strconv.Itoa(length / 2)
-	rPad := strconv.Itoa((length / 2) - (len(title) / 2) - 1)
+	edge := strings.Repeat("-", length)
+	c := (length-len(title)-3)/2 + 1 + len(title) - 3
 	table.WriteString(fmt.Sprintf("[%s]\n", m.tag))
-	table.WriteString(strings.Repeat("-", length) + "\n")
-	table.WriteString(fmt.Sprintf("---%"+center+"s%"+rPad+"s---\n", title, ""))
-	table.WriteString(strings.Repeat("-", length) + "\n")
+	table.WriteString(fmt.Sprintf("%s\n---%*s%*s\n%s\n", edge, c, title, length-(c+len(title))+6+1, "---", edge))
 	table.WriteString(records.String())
-	table.WriteString(strings.Repeat("-", length))
+	table.WriteString(edge)
 	log.Printf(table.String())
 }
