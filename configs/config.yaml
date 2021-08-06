@@ -3,6 +3,7 @@
 #
 
 # application environment (dev, staging, prod)
+# deprecated
 environment: dev
 
 coordinator:
@@ -38,9 +39,9 @@ coordinator:
     # Letsencrypt or self cert config
     tls:
       address: :443
-      # the public domain of the coordinator
-      domain: http://localhost:8000
       letsencryptUrl:
+      # allowed host name
+      domain:
       # if both are set then will use certs
       # and Letsencryt instead
       httpsCert:
@@ -74,6 +75,8 @@ worker:
     tls:
       address: :444
       # LetsEncrypt config
+      # allowed host name
+      domain:
       # if empty will use URL from Go
       letsencryptUrl:
       # Own certs config
