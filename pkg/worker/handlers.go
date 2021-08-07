@@ -115,6 +115,7 @@ func MakeConnectionRequest(conf worker.Worker, address string) (string, error) {
 	req := api2.ConnectionRequest{
 		Zone:     conf.Network.Zone,
 		PingAddr: conf.GetPingAddr(address),
+		IsHTTPS:  conf.Server.Https,
 	}
 	rez, err := json.Marshal(req)
 	if err != nil {

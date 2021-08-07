@@ -56,6 +56,16 @@ func NewServer(cfg coordinator.Config, library games.GameLibrary) *Server {
 func (s *Server) WSO(w http.ResponseWriter, r *http.Request) {
 	log.Println("Coordinator: A worker is connecting...")
 
+	connRt, err := GetConnectionRequest(r.URL.Query().Get("data"))
+	if err != nil {
+		log.Printf("Coordinator: got a malformed request: %v", err.Error())
+		return
+	}
+
+	if s.cfg.Coordinator.Server.Https && !connRt.IsHTTPS {
+		log.Printf("Warning! Unsecure connection. The worker may not work properly without HTTPS on its side!")
+	}
+
 	// be aware of ReadBufferSize, WriteBufferSize (default 4096)
 	// https://pkg.go.dev/github.com/gorilla/websocket?tab=doc#Upgrader
 	c, err := upgrader.Upgrade(w, r, nil)
@@ -77,18 +87,13 @@ func (s *Server) WSO(w http.ResponseWriter, r *http.Request) {
 	// Create a workerClient instance
 	wc := NewWorkerClient(c, workerID)
 	wc.Println("Generated worker ID")
+	wc.Zone = connRt.Zone
+	wc.PingServer = connRt.PingAddr
 
 	// Register to workersClients map the client connection
 	address := util.GetRemoteAddress(c)
 	public := util.IsPublicIP(address)
 
-	connRt, err := GetConnectionRequest(r.URL.Query().Get("data"))
-	if err != nil {
-		wc.Printf("error: malformed request sent")
-	} else {
-		wc.Zone = connRt.Zone
-		wc.PingServer = connRt.PingAddr
-	}
 	wc.Printf("addr: %v | zone: %v | pub: %v | ping: %v", address, wc.Zone, public, wc.PingServer)
 
 	// In case worker and coordinator in the same host
