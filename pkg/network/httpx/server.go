@@ -71,10 +71,6 @@ func NewServer(address string, handler func(serv *Server) http.Handler, options 
 }
 
 func (s *Server) Run() {
-	if s == nil || s.listener == nil {
-		return
-	}
-
 	protocol := s.GetProtocol()
 	log.Printf("Starting %s server on %s", protocol, s.Addr)
 
@@ -103,9 +99,6 @@ func (s *Server) Run() {
 }
 
 func (s *Server) Shutdown(ctx context.Context) (err error) {
-	if s == nil {
-		return
-	}
 	if s.redirect != nil {
 		err = s.redirect.Shutdown(ctx)
 	}
