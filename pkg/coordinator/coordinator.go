@@ -1,6 +1,7 @@
 package coordinator
 
 import (
+	"log"
 	"net/http"
 
 	"github.com/giongto35/cloud-game/v2/pkg/config/coordinator"
@@ -9,14 +10,14 @@ import (
 	"github.com/giongto35/cloud-game/v2/pkg/service"
 )
 
-func New(conf coordinator.Config) (services service.Services) {
+func New(conf coordinator.Config) (services service.Group) {
 	srv := NewServer(conf, games.NewLibWhitelisted(conf.Coordinator.Library, conf.Emulator))
 	httpSrv, err := NewHTTPServer(conf, func(mux *http.ServeMux) {
 		mux.HandleFunc("/ws", srv.WS)
 		mux.HandleFunc("/wso", srv.WSO)
 	})
 	if err != nil {
-		panic("http failed: " + err.Error())
+		log.Fatalf("http init fail: %v", err)
 	}
 	services.Add(srv, httpSrv)
 	if conf.Coordinator.Monitoring.IsEnabled() {

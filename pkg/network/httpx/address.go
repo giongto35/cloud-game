@@ -7,7 +7,7 @@ import (
 
 // buildAddress joins network host from the first param,
 // zone from the second, and
-// the port value of a listener from the second param.
+// the port value of a listener from the third param.
 //
 // As example, address host.com:8080 and listener 123.123.123.123:8888 will be
 // transformed to host.com:8888.
@@ -28,7 +28,6 @@ func buildAddress(address string, zone string, l Listener) string {
 	if zone != "" {
 		addr = zone + "." + addr
 	}
-
 	return addr
 }
 
