@@ -56,7 +56,7 @@ func New(conf monitoring.Config, baseAddr string, tag string) *Monitoring {
 		},
 		httpx.WithPortRoll(true))
 	if err != nil {
-		panic("couldn't start monitoring server: " + err.Error())
+		log.Fatalf("couldn't start monitoring server: %v", err)
 	}
 	return &Monitoring{conf: conf, tag: tag, server: serv}
 }

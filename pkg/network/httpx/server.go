@@ -77,7 +77,7 @@ func (s *Server) Run() {
 	if s.opts.Https && s.opts.HttpsRedirect {
 		rdr, err := s.redirection()
 		if err != nil {
-			panic("couldn't init redirection server: " + err.Error())
+			log.Fatalf("couldn't init redirection server: %v", err)
 		}
 		s.redirect = rdr
 		go s.redirect.Run()
