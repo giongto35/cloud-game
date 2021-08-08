@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"log"
 
-	api2 "github.com/giongto35/cloud-game/v2/pkg/api"
 	"github.com/giongto35/cloud-game/v2/pkg/cws"
 	"github.com/giongto35/cloud-game/v2/pkg/cws/api"
 )
@@ -16,8 +15,8 @@ func (wc *WorkerClient) handleHeartbeat() cws.PacketHandler {
 	}
 }
 
-func GetConnectionRequest(data string) (api2.ConnectionRequest, error) {
-	req := api2.ConnectionRequest{}
+func GetConnectionRequest(data string) (api.ConnectionRequest, error) {
+	req := api.ConnectionRequest{}
 	if data == "" {
 		return req, nil
 	}

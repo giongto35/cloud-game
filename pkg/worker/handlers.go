@@ -9,8 +9,8 @@ import (
 	"os"
 	"time"
 
-	api2 "github.com/giongto35/cloud-game/v2/pkg/api"
 	"github.com/giongto35/cloud-game/v2/pkg/config/worker"
+	"github.com/giongto35/cloud-game/v2/pkg/cws/api"
 	"github.com/giongto35/cloud-game/v2/pkg/emulator/libretro/manager/remotehttp"
 	"github.com/giongto35/cloud-game/v2/pkg/games"
 	"github.com/giongto35/cloud-game/v2/pkg/network/websocket"
@@ -112,7 +112,7 @@ func newCoordinatorConnection(host string, conf worker.Worker, addr string) (*Co
 }
 
 func MakeConnectionRequest(conf worker.Worker, address string) (string, error) {
-	req := api2.ConnectionRequest{
+	req := api.ConnectionRequest{
 		Zone:     conf.Network.Zone,
 		PingAddr: conf.GetPingAddr(address),
 		IsHTTPS:  conf.Server.Https,
