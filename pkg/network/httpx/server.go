@@ -22,7 +22,7 @@ type Server struct {
 	redirect *Server
 }
 
-func NewServer(address string, handler func(serv *Server) http.Handler, options ...Option) (*Server, error) {
+func NewServer(address string, handler func(*Server) http.Handler, options ...Option) (*Server, error) {
 	opts := &Options{
 		Https:         false,
 		HttpsRedirect: true,

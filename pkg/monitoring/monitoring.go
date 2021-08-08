@@ -33,7 +33,7 @@ type Monitoring struct {
 func New(conf monitoring.Config, baseAddr string, tag string) *Monitoring {
 	serv, err := httpx.NewServer(
 		net.JoinHostPort(baseAddr, strconv.Itoa(conf.Port)),
-		func(serv *httpx.Server) http.Handler {
+		func(*httpx.Server) http.Handler {
 			h := http.NewServeMux()
 			if conf.ProfilingEnabled {
 				prefix := conf.URLPrefix + debugEndpoint
