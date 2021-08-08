@@ -2,12 +2,9 @@
 #  Manual production deployment workflow
 # ------------------------------------------------------------
 
-name: Deploy
+name: deploy
 on:
   workflow_dispatch:
-    branding:
-      icon: 'upload-cloud'
-#   inputs:
 
 jobs:
   deploy:
