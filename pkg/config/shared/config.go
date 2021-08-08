@@ -10,15 +10,13 @@ type Environment environment.Env
 type Server struct {
 	Address string
 	Https   bool
-	Tls     Tls
-}
-
-type Tls struct {
-	Address        string
-	Domain         string
-	LetsencryptUrl string
-	HttpsKey       string
-	HttpsCert      string
+	Tls     struct {
+		Address        string
+		Domain         string
+		LetsencryptUrl string
+		HttpsKey       string
+		HttpsCert      string
+	}
 }
 
 func (s *Server) WithFlags() {
