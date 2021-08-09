@@ -1,8 +1,8 @@
 package worker
 
 import (
-	"encoding/json"
 	"log"
+	"net/url"
 	"strings"
 
 	"github.com/giongto35/cloud-game/v2/pkg/config"
@@ -19,31 +19,28 @@ type Config struct {
 	Encoder     encoder.Encoder
 	Emulator    emulator.Emulator
 	Environment shared.Environment
-	Worker      struct {
-		Monitoring monitoring.ServerMonitoringConfig
-		Network    struct {
-			CoordinatorAddress string
-			Zone               string
-		}
-		Server shared.Server
+	Worker      Worker
+	Webrtc      webrtcConfig.Webrtc
+}
+
+type Worker struct {
+	Monitoring monitoring.Config
+	Network    struct {
+		CoordinatorAddress string
+		Endpoint           string
+		PingEndpoint       string
+		Secure             bool
+		Zone               string
 	}
-	Webrtc webrtcConfig.Webrtc
-	Loaded bool
+	Server shared.Server
 }
 
 // allows custom config path
 var configPath string
 
 func NewConfig() (conf Config) {
-	if err := config.LoadConfig(&conf, configPath); err == nil {
-		conf.Loaded = true
-	}
+	_ = config.LoadConfig(&conf, configPath)
 	conf.expandSpecialTags()
-	return
-}
-
-func EmptyConfig() (conf Config) {
-	conf.Loaded = false
 	return
 }
 
@@ -60,18 +57,6 @@ func (c *Config) ParseFlags() {
 	flag.Parse()
 }
 
-func (c *Config) Serialize() []byte {
-	res, _ := json.Marshal(c)
-	return res
-}
-
-func (c *Config) Deserialize(data []byte) {
-	if err := json.Unmarshal(data, c); err == nil {
-		c.Loaded = true
-	}
-	c.expandSpecialTags()
-}
-
 // expandSpecialTags replaces all the special tags in the config.
 func (c *Config) expandSpecialTags() {
 	// home dir
@@ -86,4 +71,16 @@ func (c *Config) expandSpecialTags() {
 			c.Emulator.Storage = strings.Replace(dir, tag, userHomeDir, -1)
 		}
 	}
+}
+
+// GetAddr returns defined in the config server address.
+func (w *Worker) GetAddr() string { return w.Server.GetAddr() }
+
+// GetPingAddr returns exposed to clients server ping endpoint address.
+func (w *Worker) GetPingAddr(address string) string {
+	pingURL := url.URL{Scheme: "http", Host: address, Path: w.Network.PingEndpoint}
+	if w.Server.Https {
+		pingURL.Scheme = "https"
+	}
+	return pingURL.String()
 }

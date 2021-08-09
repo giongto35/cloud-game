@@ -4,13 +4,11 @@ import (
 	"context"
 	goflag "flag"
 	"math/rand"
-	"os"
-	"os/signal"
-	"syscall"
 	"time"
 
 	config "github.com/giongto35/cloud-game/v2/pkg/config/coordinator"
 	"github.com/giongto35/cloud-game/v2/pkg/coordinator"
+	"github.com/giongto35/cloud-game/v2/pkg/os"
 	"github.com/giongto35/cloud-game/v2/pkg/util/logging"
 	"github.com/golang/glog"
 	flag "github.com/spf13/pflag"
@@ -18,9 +16,11 @@ import (
 
 var Version = ""
 
-func main() {
+func init() {
 	rand.Seed(time.Now().UTC().UnixNano())
+}
 
+func main() {
 	conf := config.NewConfig()
 	flag.CommandLine.AddGoFlagSet(goflag.CommandLine)
 	conf.ParseFlags()
@@ -28,29 +28,13 @@ func main() {
 	logging.Init()
 	defer logging.Flush()
 
-	ctx, cancelCtx := context.WithCancel(context.Background())
-
 	glog.Infof("[coordinator] version: %v", Version)
-	glog.Infof("Initializing coordinator server")
 	glog.V(4).Infof("Coordinator configs %v", conf)
-	app := coordinator.New(ctx, conf)
-	if err := app.Run(); err != nil {
-		glog.Errorf("Failed to run coordinator server, reason %v", err)
-		os.Exit(1)
-	}
+	c := coordinator.New(conf)
+	c.Start()
 
-	signals := make(chan os.Signal, 1)
-	done := make(chan struct{}, 1)
-
-	signal.Notify(signals, os.Interrupt, syscall.SIGTERM)
-
-	go func() {
-		sig := <-signals
-		glog.V(4).Infof("[coordinator] Shutting down [os:%v]", sig)
-		done <- struct{}{}
-	}()
-
-	<-done
-	app.Shutdown()
+	ctx, cancelCtx := context.WithCancel(context.Background())
+	defer c.Shutdown(ctx)
+	<-os.ExpectTermination()
 	cancelCtx()
 }

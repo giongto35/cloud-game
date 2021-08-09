@@ -1,166 +1,27 @@
 package coordinator
 
 import (
-	"context"
-	"crypto/tls"
-	"fmt"
 	"log"
 	"net/http"
-	"strconv"
-	"time"
 
 	"github.com/giongto35/cloud-game/v2/pkg/config/coordinator"
-	"github.com/giongto35/cloud-game/v2/pkg/environment"
 	"github.com/giongto35/cloud-game/v2/pkg/games"
 	"github.com/giongto35/cloud-game/v2/pkg/monitoring"
-	"github.com/golang/glog"
-	"github.com/gorilla/mux"
-	"golang.org/x/crypto/acme"
-	"golang.org/x/crypto/acme/autocert"
+	"github.com/giongto35/cloud-game/v2/pkg/service"
 )
 
-const stagingLEURL = "https://acme-staging-v02.api.letsencrypt.org/directory"
-
-type Coordinator struct {
-	ctx context.Context
-	cfg coordinator.Config
-
-	monitoringServer *monitoring.ServerMonitoring
-}
-
-func New(ctx context.Context, cfg coordinator.Config) *Coordinator {
-	return &Coordinator{
-		ctx: ctx,
-		cfg: cfg,
-
-		monitoringServer: monitoring.NewServerMonitoring(cfg.Coordinator.Monitoring, "cord"),
-	}
-}
-
-func (c *Coordinator) Run() error {
-	go c.initializeCoordinator()
-	go c.RunMonitoringServer()
-	return nil
-}
-
-func (c *Coordinator) RunMonitoringServer() {
-	glog.Infoln("Starting monitoring server for coordinator")
-	err := c.monitoringServer.Run()
+func New(conf coordinator.Config) (services service.Group) {
+	srv := NewServer(conf, games.NewLibWhitelisted(conf.Coordinator.Library, conf.Emulator))
+	httpSrv, err := NewHTTPServer(conf, func(mux *http.ServeMux) {
+		mux.HandleFunc("/ws", srv.WS)
+		mux.HandleFunc("/wso", srv.WSO)
+	})
 	if err != nil {
-		glog.Errorf("Failed to start monitoring server, reason %s", err)
+		log.Fatalf("http init fail: %v", err)
 	}
-}
-
-func (c *Coordinator) Shutdown() {
-	if err := c.monitoringServer.Shutdown(c.ctx); err != nil {
-		glog.Errorln("Failed to shutdown monitoring server")
+	services.Add(srv, httpSrv)
+	if conf.Coordinator.Monitoring.IsEnabled() {
+		services.Add(monitoring.New(conf.Coordinator.Monitoring, httpSrv.GetHost(), "cord"))
 	}
-}
-
-func makeServerFromMux(mux *http.ServeMux) *http.Server {
-	// set timeouts so that a slow or malicious client doesn't
-	// hold resources forever
-	return &http.Server{
-		ReadTimeout:  5 * time.Second,
-		WriteTimeout: 5 * time.Second,
-		IdleTimeout:  120 * time.Second,
-		Handler:      mux,
-	}
-}
-
-func makeHTTPServer(server *Server) *http.Server {
-	r := mux.NewRouter()
-	r.HandleFunc("/ws", server.WS)
-	r.HandleFunc("/wso", server.WSO)
-	r.PathPrefix("/static/").Handler(http.StripPrefix("/static/", http.FileServer(http.Dir("./web"))))
-	r.PathPrefix("/").Handler(server.GetWeb(server.cfg))
-
-	svmux := &http.ServeMux{}
-	svmux.Handle("/", r)
-
-	return makeServerFromMux(svmux)
-}
-
-func makeHTTPToHTTPSRedirectServer(server *Server) *http.Server {
-	handleRedirect := func(w http.ResponseWriter, r *http.Request) {
-		newURI := "https://" + r.Host + r.URL.String()
-		http.Redirect(w, r, newURI, http.StatusFound)
-	}
-	r := mux.NewRouter()
-	r.PathPrefix("/").HandlerFunc(handleRedirect)
-
-	svmux := &http.ServeMux{}
-	svmux.Handle("/", r)
-
-	return makeServerFromMux(svmux)
-}
-
-// initializeCoordinator setup an coordinator server
-func (c *Coordinator) initializeCoordinator() {
-	// init games library
-	libraryConf := c.cfg.Coordinator.Library
-	if len(libraryConf.Supported) == 0 {
-		libraryConf.Supported = c.cfg.Emulator.GetSupportedExtensions()
-	}
-	lib := games.NewLibrary(libraryConf)
-	lib.Scan()
-
-	server := NewServer(c.cfg, lib)
-
-	var certManager *autocert.Manager
-	var httpsSrv *http.Server
-
-	log.Println("Initializing Coordinator Server")
-	mode := c.cfg.Environment.Get()
-	if mode.AnyOf(environment.Production, environment.Staging) {
-		serverConfig := c.cfg.Coordinator.Server
-		httpsSrv = makeHTTPServer(server)
-		httpsSrv.Addr = fmt.Sprintf(":%d", serverConfig.HttpsPort)
-
-		if serverConfig.HttpsChain == "" || serverConfig.HttpsKey == "" {
-			serverConfig.HttpsChain = ""
-			serverConfig.HttpsKey = ""
-
-			var leurl string
-			if mode == environment.Staging {
-				leurl = stagingLEURL
-			} else {
-				leurl = acme.LetsEncryptURL
-			}
-
-			certManager = &autocert.Manager{
-				Prompt:     autocert.AcceptTOS,
-				HostPolicy: autocert.HostWhitelist(c.cfg.Coordinator.PublicDomain),
-				Cache:      autocert.DirCache("assets/cache"),
-				Client:     &acme.Client{DirectoryURL: leurl},
-			}
-
-			httpsSrv.TLSConfig = &tls.Config{GetCertificate: certManager.GetCertificate}
-		}
-
-		go func(chain string, key string) {
-			fmt.Printf("Starting HTTPS server on %s\n", httpsSrv.Addr)
-			err := httpsSrv.ListenAndServeTLS(chain, key)
-			if err != nil {
-				log.Fatalf("httpsSrv.ListendAndServeTLS() failed with %s", err)
-			}
-		}(serverConfig.HttpsChain, serverConfig.HttpsKey)
-	}
-
-	var httpSrv *http.Server
-	if mode.AnyOf(environment.Production, environment.Staging) {
-		httpSrv = makeHTTPToHTTPSRedirectServer(server)
-	} else {
-		httpSrv = makeHTTPServer(server)
-	}
-
-	if certManager != nil {
-		httpSrv.Handler = certManager.HTTPHandler(httpSrv.Handler)
-	}
-
-	httpSrv.Addr = ":" + strconv.Itoa(c.cfg.Coordinator.Server.Port)
-	err := httpSrv.ListenAndServe()
-	if err != nil {
-		log.Fatalf("httpSrv.ListenAndServe() failed with %s", err)
-	}
+	return
 }

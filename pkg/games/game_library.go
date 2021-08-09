@@ -16,7 +16,7 @@ import (
 
 // Config is an external configuration
 type Config struct {
-	// some directory which is gonna be
+	// some directory which is going to be
 	// the root folder for the library
 	BasePath string
 	// a list of supported file extensions
@@ -64,6 +64,10 @@ type GameLibrary interface {
 	Scan()
 }
 
+type FileExtensionWhitelist interface {
+	GetSupportedExtensions() []string
+}
+
 type GameMetadata struct {
 	uid string
 	// the display name of the game
@@ -74,12 +78,20 @@ type GameMetadata struct {
 	Path string
 }
 
-func NewLibrary(conf Config) GameLibrary {
+func (c Config) GetSupportedExtensions() []string { return c.Supported }
+
+func NewLib(conf Config) GameLibrary { return NewLibWhitelisted(conf, conf) }
+
+func NewLibWhitelisted(conf Config, filter FileExtensionWhitelist) GameLibrary {
 	hasSource := true
 	dir, err := filepath.Abs(conf.BasePath)
 	if err != nil {
 		hasSource = false
 		log.Printf("[lib] invalid source: %v (%v)\n", conf.BasePath, err)
+	}
+
+	if len(conf.Supported) == 0 {
+		conf.Supported = filter.GetSupportedExtensions()
 	}
 
 	library := &library{

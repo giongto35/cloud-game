@@ -14,7 +14,7 @@ type WorkerClient struct {
 
 	WorkerID string
 	Address  string // ip address of worker
-	// public server used for ping check (Cannot use worker address because they are not publicly exposed)
+	// public server used for ping check
 	PingServer     string
 	StunTurnServer string
 	userCount      int // may be atomic

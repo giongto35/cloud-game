@@ -1,7 +1,9 @@
 package worker
 
 import (
-	"crypto/tls"
+	"context"
+	"encoding/base64"
+	"encoding/json"
 	"log"
 	"net/url"
 	"os"
@@ -10,20 +12,21 @@ import (
 	"github.com/giongto35/cloud-game/v2/pkg/config/worker"
 	"github.com/giongto35/cloud-game/v2/pkg/cws/api"
 	"github.com/giongto35/cloud-game/v2/pkg/emulator/libretro/manager/remotehttp"
-	"github.com/giongto35/cloud-game/v2/pkg/environment"
 	"github.com/giongto35/cloud-game/v2/pkg/games"
+	"github.com/giongto35/cloud-game/v2/pkg/network/websocket"
+	"github.com/giongto35/cloud-game/v2/pkg/service"
 	"github.com/giongto35/cloud-game/v2/pkg/webrtc"
 	storage "github.com/giongto35/cloud-game/v2/pkg/worker/cloud-storage"
 	"github.com/giongto35/cloud-game/v2/pkg/worker/room"
-	"github.com/gorilla/websocket"
 )
 
 type Handler struct {
+	service.RunnableService
+
+	address string
 	// Client that connects to coordinator
 	oClient *CoordinatorClient
-	// Raw address of coordinator
-	coordinatorHost string
-	cfg             worker.Config
+	cfg     worker.Config
 	// Rooms map : RoomID -> Room
 	rooms map[string]*room.Room
 	// global ID of the current server
@@ -32,38 +35,34 @@ type Handler struct {
 	onlineStorage *storage.Client
 	// sessions handles all sessions server is handler (key is sessionID)
 	sessions map[string]*Session
-
-	w *Worker
 }
 
 // NewHandler returns a new server
-func NewHandler(cfg worker.Config, wrk *Worker) *Handler {
+func NewHandler(conf worker.Config, address string) *Handler {
 	// Create offline storage folder
-	createOfflineStorage(cfg.Emulator.Storage)
-
+	createOfflineStorage(conf.Emulator.Storage)
 	// Init online storage
 	onlineStorage := storage.NewInitClient()
 	return &Handler{
-		rooms:           map[string]*room.Room{},
-		sessions:        map[string]*Session{},
-		coordinatorHost: cfg.Worker.Network.CoordinatorAddress,
-		cfg:             cfg,
-		onlineStorage:   onlineStorage,
-		w:               wrk,
+		address:       address,
+		cfg:           conf,
+		onlineStorage: onlineStorage,
+		rooms:         map[string]*room.Room{},
+		sessions:      map[string]*Session{},
 	}
 }
 
 // Run starts a Handler running logic
 func (h *Handler) Run() {
-	conf := h.cfg.Worker.Network
+	coordinatorAddress := h.cfg.Worker.Network.CoordinatorAddress
 	for {
-		conn, err := setupCoordinatorConnection(conf.CoordinatorAddress, conf.Zone, h.cfg)
+		conn, err := newCoordinatorConnection(coordinatorAddress, h.cfg.Worker, h.address)
 		if err != nil {
 			log.Printf("Cannot connect to coordinator. %v Retrying...", err)
 			time.Sleep(time.Second)
 			continue
 		}
-		log.Printf("[worker] connected to: %v", conf.CoordinatorAddress)
+		log.Printf("[worker] connected to: %v", coordinatorAddress)
 
 		h.oClient = conn
 		go h.oClient.Heartbeat()
@@ -73,13 +72,7 @@ func (h *Handler) Run() {
 	}
 }
 
-func (h *Handler) RequestConfig() {
-	log.Printf("[worker] asking for a config...")
-	response := h.oClient.SyncSend(api.ConfigPacket())
-	conf := worker.EmptyConfig()
-	conf.Deserialize([]byte(response.Data))
-	log.Printf("[worker] pulled config: %+v", conf)
-}
+func (h *Handler) Shutdown(context.Context) error { return nil }
 
 func (h *Handler) Prepare() {
 	if !h.cfg.Emulator.Libretro.Cores.Repo.Sync {
@@ -99,39 +92,36 @@ func (h *Handler) Prepare() {
 	}
 }
 
-func setupCoordinatorConnection(host string, zone string, cfg worker.Config) (*CoordinatorClient, error) {
-	var scheme string
-	env := cfg.Environment.Get()
-	if env.AnyOf(environment.Production, environment.Staging) {
+func newCoordinatorConnection(host string, conf worker.Worker, addr string) (*CoordinatorClient, error) {
+	scheme := "ws"
+	if conf.Network.Secure {
 		scheme = "wss"
-	} else {
-		scheme = "ws"
+	}
+	address := url.URL{Scheme: scheme, Host: host, Path: conf.Network.Endpoint}
+
+	req, err := MakeConnectionRequest(conf, addr)
+	if req != "" && err == nil {
+		address.RawQuery = "data=" + req
 	}
 
-	coordinatorURL := url.URL{Scheme: scheme, Host: host, Path: "/wso", RawQuery: "zone=" + zone}
-	log.Println("Worker connecting to coordinator:", coordinatorURL.String())
-
-	conn, err := createCoordinatorConnection(&coordinatorURL)
+	conn, err := websocket.Connect(address)
 	if err != nil {
 		return nil, err
 	}
 	return NewCoordinatorClient(conn), nil
 }
 
-func createCoordinatorConnection(url *url.URL) (*websocket.Conn, error) {
-	var d websocket.Dialer
-	if url.Scheme == "wss" {
-		d = websocket.Dialer{TLSClientConfig: &tls.Config{InsecureSkipVerify: true}}
-	} else {
-		d = websocket.Dialer{}
+func MakeConnectionRequest(conf worker.Worker, address string) (string, error) {
+	req := api.ConnectionRequest{
+		Zone:     conf.Network.Zone,
+		PingAddr: conf.GetPingAddr(address),
+		IsHTTPS:  conf.Server.Https,
 	}
-
-	ws, _, err := d.Dial(url.String(), nil)
+	rez, err := json.Marshal(req)
 	if err != nil {
-		return nil, err
+		return "", err
 	}
-
-	return ws, nil
+	return base64.URLEncoding.EncodeToString(rez), nil
 }
 
 func (h *Handler) GetCoordinatorClient() *CoordinatorClient {

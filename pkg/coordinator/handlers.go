@@ -3,8 +3,6 @@ package coordinator
 import (
 	"encoding/json"
 	"errors"
-	"fmt"
-	"html/template"
 	"log"
 	"math"
 	"net/http"
@@ -16,14 +14,15 @@ import (
 	"github.com/giongto35/cloud-game/v2/pkg/environment"
 	"github.com/giongto35/cloud-game/v2/pkg/games"
 	"github.com/giongto35/cloud-game/v2/pkg/ice"
+	"github.com/giongto35/cloud-game/v2/pkg/service"
 	"github.com/giongto35/cloud-game/v2/pkg/util"
 	"github.com/gofrs/uuid"
 	"github.com/gorilla/websocket"
 )
 
-const index = "./web/index.html"
-
 type Server struct {
+	service.Service
+
 	cfg coordinator.Config
 	// games library
 	library games.GameLibrary
@@ -35,12 +34,12 @@ type Server struct {
 	browserClients map[string]*BrowserClient
 }
 
-const pingServerTemp = "https://%s.%s/echo"
-const devPingServer = "http://localhost:9000/echo"
-
 var upgrader = websocket.Upgrader{}
 
 func NewServer(cfg coordinator.Config, library games.GameLibrary) *Server {
+	// scan the lib right away
+	library.Scan()
+
 	return &Server{
 		cfg:     cfg,
 		library: library,
@@ -53,38 +52,19 @@ func NewServer(cfg coordinator.Config, library games.GameLibrary) *Server {
 	}
 }
 
-// GetWeb returns web frontend
-func (s *Server) GetWeb(conf coordinator.Config) http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		tpl, err := template.ParseFiles(index)
-		if err != nil {
-			log.Fatal(err)
-		}
-
-		// render index page with some tpl values
-		if err = tpl.Execute(w, conf.Coordinator.Analytics); err != nil {
-			log.Fatal(err)
-		}
-	})
-}
-
-// getPingServer returns the server for latency check of a zone.
-// In latency check to find best worker step, we use this server to find the closest worker.
-func (s *Server) getPingServer(zone string) string {
-	if s.cfg.Coordinator.PingServer != "" {
-		return fmt.Sprintf("%s/echo", s.cfg.Coordinator.PingServer)
-	}
-
-	mode := s.cfg.Environment.Get()
-	if mode.AnyOf(environment.Production, environment.Staging) {
-		return fmt.Sprintf(pingServerTemp, zone, s.cfg.Coordinator.PublicDomain)
-	}
-	return devPingServer
-}
-
 // WSO handles all connections from a new worker to coordinator
 func (s *Server) WSO(w http.ResponseWriter, r *http.Request) {
 	log.Println("Coordinator: A worker is connecting...")
+
+	connRt, err := GetConnectionRequest(r.URL.Query().Get("data"))
+	if err != nil {
+		log.Printf("Coordinator: got a malformed request: %v", err.Error())
+		return
+	}
+
+	if s.cfg.Coordinator.Server.Https && !connRt.IsHTTPS {
+		log.Printf("Warning! Unsecure connection. The worker may not work properly without HTTPS on its side!")
+	}
 
 	// be aware of ReadBufferSize, WriteBufferSize (default 4096)
 	// https://pkg.go.dev/github.com/gorilla/websocket?tab=doc#Upgrader
@@ -107,20 +87,17 @@ func (s *Server) WSO(w http.ResponseWriter, r *http.Request) {
 	// Create a workerClient instance
 	wc := NewWorkerClient(c, workerID)
 	wc.Println("Generated worker ID")
+	wc.Zone = connRt.Zone
+	wc.PingServer = connRt.PingAddr
 
 	// Register to workersClients map the client connection
 	address := util.GetRemoteAddress(c)
-	wc.Println("Address:", address)
-	// Zone of the worker
-	zone := r.URL.Query().Get("zone")
-	wc.Printf("Is public: %v zone: %v", util.IsPublicIP(address), zone)
+	public := util.IsPublicIP(address)
 
-	pingServer := s.getPingServer(zone)
-
-	wc.Printf("Set ping server address: %s", pingServer)
+	wc.Printf("addr: %v | zone: %v | pub: %v | ping: %v", address, wc.Zone, public, wc.PingServer)
 
 	// In case worker and coordinator in the same host
-	if !util.IsPublicIP(address) && s.cfg.Environment.Get() == environment.Production {
+	if !public && s.cfg.Environment.Get() == environment.Production {
 		// Don't accept private IP for worker's address in prod mode
 		// However, if the worker in the same host with coordinator, we can get public IP of worker
 		wc.Printf("[!] Address %s is invalid", address)
@@ -138,8 +115,6 @@ func (s *Server) WSO(w http.ResponseWriter, r *http.Request) {
 	// Create a workerClient instance
 	wc.Address = address
 	wc.StunTurnServer = ice.ToJson(s.cfg.Webrtc.IceServers, ice.Replacement{From: "server-ip", To: address})
-	wc.Zone = zone
-	wc.PingServer = pingServer
 
 	// Attach to Server instance with workerID, add defer
 	s.workerClients[workerID] = wc

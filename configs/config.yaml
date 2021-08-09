@@ -3,6 +3,7 @@
 #
 
 # application environment (dev, staging, prod)
+# deprecated
 environment: dev
 
 coordinator:
@@ -31,16 +32,20 @@ coordinator:
     profilingEnabled: false
     metricEnabled: false
     urlPrefix: /coordinator
-  # the public domain of the coordinator
-  publicDomain: http://localhost:8000
-  # specify the worker address that the client can ping (with protocol and port)
-  pingServer:
   # HTTP(S) server config
   server:
-    port: 8000
-    httpsPort: 443
-    httpsKey:
-    httpsChain:
+    address: :8000
+    https: false
+    # Letsencrypt or self cert config
+    tls:
+      address: :443
+      letsencryptUrl:
+      # allowed host name
+      domain:
+      # if both are set then will use certs
+      # and Letsencryt instead
+      httpsCert:
+      httpsKey:
   analytics:
     inject: false
     gtag:
@@ -49,6 +54,12 @@ worker:
   network:
     # a coordinator address to connect to
     coordinatorAddress: localhost:8000
+    # where to connect
+    endpoint: /wso
+    # ping endpoint
+    pingEndpoint: /echo
+    # make coordinator connection secure (wss)
+    secure: false
     # ISO Alpha-2 country code to group workers by zones
     zone:
   monitoring:
@@ -56,13 +67,21 @@ worker:
     port: 6602
     profilingEnabled: false
     # monitoring server URL prefix
-    metricEnabled: true
+    metricEnabled: false
     urlPrefix: /worker
   server:
-    port: 9000
-    httpsPort: 443
-    httpsKey:
-    httpsChain:
+    address: :9000
+    https: false
+    tls:
+      address: :444
+      # LetsEncrypt config
+      # allowed host name
+      domain:
+      # if empty will use URL from Go
+      letsencryptUrl:
+      # Own certs config
+      httpsCert:
+      httpsKey:
 
 emulator:
   # set output viewport scale factor
