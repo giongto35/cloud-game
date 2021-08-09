@@ -58,6 +58,8 @@ worker:
     endpoint: /wso
     # ping endpoint
     pingEndpoint: /echo
+    # set public ping address (IP or hostname)
+    publicAddress:
     # make coordinator connection secure (wss)
     secure: false
     # ISO Alpha-2 country code to group workers by zones

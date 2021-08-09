@@ -2,6 +2,7 @@ package worker
 
 import (
 	"log"
+	"net"
 	"net/url"
 	"strings"
 
@@ -29,6 +30,7 @@ type Worker struct {
 		CoordinatorAddress string
 		Endpoint           string
 		PingEndpoint       string
+		PublicAddress      string
 		Secure             bool
 		Zone               string
 	}
@@ -78,6 +80,17 @@ func (w *Worker) GetAddr() string { return w.Server.GetAddr() }
 
 // GetPingAddr returns exposed to clients server ping endpoint address.
 func (w *Worker) GetPingAddr(address string) string {
+	if w.Network.PublicAddress != "" {
+		_, port, _ := net.SplitHostPort(address)
+		address = w.Network.PublicAddress
+		if w.Network.Zone != "" {
+			address = w.Network.Zone + "." + address
+		}
+		if port != "" && port != "80" && port != "443" && port != "0" {
+			address += ":" + port
+		}
+	}
+
 	pingURL := url.URL{Scheme: "http", Host: address, Path: w.Network.PingEndpoint}
 	if w.Server.Https {
 		pingURL.Scheme = "https"
