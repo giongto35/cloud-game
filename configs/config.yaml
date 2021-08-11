@@ -39,7 +39,6 @@ coordinator:
     # Letsencrypt or self cert config
     tls:
       address: :443
-      letsencryptUrl:
       # allowed host name
       domain:
       # if both are set then will use certs
@@ -79,8 +78,6 @@ worker:
       # LetsEncrypt config
       # allowed host name
       domain:
-      # if empty will use URL from Go
-      letsencryptUrl:
       # Own certs config
       httpsCert:
       httpsKey:
