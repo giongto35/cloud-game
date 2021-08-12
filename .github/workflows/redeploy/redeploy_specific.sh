@@ -1,4 +1,4 @@
-#! /bin/bash
+#!/bin/bash
 
 iplist=$1
 
@@ -10,14 +10,14 @@ do
 
     if [ "$ip_address" == "167.172.70.98" ] || [ "$ip_address" == "cloudretro.io" ]
     then
-        launchcommand="coordinator > /tmp/startup.log"
+        cmd="coordinator > /tmp/startup.log"
     else
-        launchcommand="Xvfb :99 & worker --coordinatorhost cloudretro.io --zone \$zone > /tmp/startup.log"
+        cmd="Xvfb :99 & worker --coordinatorhost cloudretro.io --zone \$zone > /tmp/startup.log"
     fi
 
     ssh root@$ip_address "mkdir -p /cloud-game"
     rsync ./.github/workflows/redeploy/.env root@$ip_address:/cloud-game/.env
-    run_content="'#! /bin/bash
+    run_content="'#!/bin/bash
     echo $PASSWORD | docker login https://docker.pkg.github.com --username $USERNAME --password-stdin;
     ufw disable;
     docker system prune -f;
@@ -34,7 +34,7 @@ do
       -v /cloud-game/cache:/usr/local/share/cloud-game/assets/cache \
       --name cloud-game \
       docker.pkg.github.com/giongto35/cloud-game/cloud-game \
-      bash -c \"$launchcommand\"'"
+      bash -c \"$cmd\"'"
 
     ssh root@$ip_address "echo $run_content > ~/run.sh"
     ssh root@$ip_address "chmod +x run.sh; ./run.sh"
