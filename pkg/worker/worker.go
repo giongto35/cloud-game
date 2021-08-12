@@ -13,9 +13,13 @@ func New(conf worker.Config) (services service.Group) {
 	if err != nil {
 		log.Fatalf("http init fail: %v", err)
 	}
+
+	mainHandler := NewHandler(conf, httpSrv.Addr)
+	mainHandler.Prepare()
+
 	services.Add(
 		httpSrv,
-		NewHandler(conf, httpSrv.Addr),
+		mainHandler,
 	)
 	if conf.Worker.Monitoring.IsEnabled() {
 		services.Add(monitoring.New(conf.Worker.Monitoring, httpSrv.GetHost(), "worker"))
