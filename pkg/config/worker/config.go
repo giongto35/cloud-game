@@ -80,12 +80,16 @@ func (w *Worker) GetAddr() string { return w.Server.GetAddr() }
 
 // GetPingAddr returns exposed to clients server ping endpoint address.
 func (w *Worker) GetPingAddr(address string) string {
+	_, srcPort, _ := net.SplitHostPort(w.GetAddr())
+	dstHost, _, _ := net.SplitHostPort(address)
+	address = net.JoinHostPort(dstHost, srcPort)
+
 	if w.Network.PublicAddress != "" {
-		_, port, _ := net.SplitHostPort(address)
 		address = w.Network.PublicAddress
 		if w.Network.Zone != "" {
 			address = w.Network.Zone + "." + address
 		}
+		port := srcPort
 		if port != "" && port != "80" && port != "443" && port != "0" {
 			address += ":" + port
 		}
