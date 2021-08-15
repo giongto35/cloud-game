@@ -35,7 +35,7 @@ RUN go mod download
 COPY pkg ./pkg
 COPY cmd ./cmd
 COPY Makefile .
-COPY scripts ./scripts
+COPY scripts/version.sh scripts/version.sh
 ARG VERSION
 RUN GIT_VERSION=${VERSION} make build
 

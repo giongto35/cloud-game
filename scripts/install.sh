@@ -13,4 +13,5 @@ apt-get -qq install --no-install-recommends -y \
     libx264-160 \
     libopus0 \
     libgl1-mesa-glx \
-    xvfb
+    xvfb \
+    xauth
