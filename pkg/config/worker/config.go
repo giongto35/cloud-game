@@ -61,17 +61,16 @@ func (c *Config) ParseFlags() {
 
 // expandSpecialTags replaces all the special tags in the config.
 func (c *Config) expandSpecialTags() {
-	// home dir
-	dir := c.Emulator.Storage
-	if dir != "" {
-		tag := "{user}"
-		if strings.Contains(dir, tag) {
-			userHomeDir, err := environment.GetUserHome()
-			if err != nil {
-				log.Fatalln("couldn't read user home directory", err)
-			}
-			c.Emulator.Storage = strings.Replace(dir, tag, userHomeDir, -1)
+	tag := "{user}"
+	for _, dir := range []*string{&c.Emulator.Storage, &c.Emulator.Libretro.Cores.Repo.ExtLock} {
+		if *dir == "" || !strings.Contains(*dir, tag) {
+			continue
 		}
+		userHomeDir, err := environment.GetUserHome()
+		if err != nil {
+			log.Fatalln("couldn't read user home directory", err)
+		}
+		*dir = strings.Replace(*dir, tag, userHomeDir, -1)
 	}
 }
 

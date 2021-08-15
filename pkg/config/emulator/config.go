@@ -24,6 +24,7 @@ type LibretroConfig struct {
 		}
 		Repo struct {
 			Sync      bool
+			ExtLock   string
 			Main      LibretroRepoConfig
 			Secondary LibretroRepoConfig
 		}

@@ -114,6 +114,8 @@ emulator:
       repo:
         # enable auto-download for the list of cores (list->lib)
         sync: true
+        # external cross-process mutex lock
+        extLock: "{user}/.cr/cloud-game.lock"
         main:
           type: buildbot
           url: https://buildbot.libretro.com/nightly

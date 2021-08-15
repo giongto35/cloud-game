@@ -26,7 +26,10 @@ type Manager struct {
 func NewRemoteHttpManager(conf emulator.LibretroConfig) Manager {
 	repoConf := conf.Cores.Repo.Main
 	// used for synchronization of multiple process
-	fileLock := os.TempDir() + string(os.PathSeparator) + "cloud_game.lock"
+	fileLock := conf.Cores.Repo.ExtLock
+	if fileLock == "" {
+		fileLock = os.TempDir() + string(os.PathSeparator) + "cloud_game.lock"
+	}
 
 	arch, err := core.GetCoreExt()
 	if err != nil {
