@@ -45,7 +45,7 @@ func NewServer(address string, handler func(*Server) http.Handler, options ...Op
 	server.Handler = handler(server)
 
 	if opts.Https && opts.IsAutoHttpsCert() {
-		server.autoCert = NewTLSConfig(opts.HttpsDomain).CertManager
+		server.autoCert = NewTLSConfig(withZonePrefix(opts.HttpsDomain, opts.Zone)).CertManager
 		server.TLSConfig = server.autoCert.TLSConfig()
 	}
 

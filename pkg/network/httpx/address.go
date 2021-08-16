@@ -25,10 +25,14 @@ func buildAddress(address string, zone string, l Listener) string {
 		addr += ":" + strconv.Itoa(port)
 	}
 
+	return withZonePrefix(addr, zone)
+}
+
+func withZonePrefix(host string, zone string) string {
 	if zone != "" {
-		addr = zone + "." + addr
+		return zone + "." + host
 	}
-	return addr
+	return host
 }
 
 func extractHost(address string) string {
