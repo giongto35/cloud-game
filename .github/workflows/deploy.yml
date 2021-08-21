@@ -22,5 +22,5 @@ jobs:
           PASSWORD: ${{ secrets.GITHUB_TOKEN }}
           DO_TOKEN: ${{ secrets.DO_TOKEN }}
         run: |
-          ./.github/workflows/cd/deploy-cloudretro.sh \
+          ./.github/workflows/cd/deploy-app.sh \
             --env-dir=./.github/workflows/cd/cloudretro.io
