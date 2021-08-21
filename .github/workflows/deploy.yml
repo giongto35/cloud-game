@@ -21,4 +21,6 @@ jobs:
           USERNAME: ${{ github.repository_owner }}
           PASSWORD: ${{ secrets.GITHUB_TOKEN }}
           DO_TOKEN: ${{ secrets.DO_TOKEN }}
-        run: ./.github/workflows/redeploy/redeploy.sh
+        run: |
+          ./.github/workflows/cd/deploy-cloudretro.sh \
+            --env-dir=./.github/workflows/cd/cloudretro.io
