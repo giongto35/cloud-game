@@ -27,10 +27,12 @@ if [[ ! -z "${ENV_DIR}" ]]; then
   f="$ENV_DIR/script.env"
   if [[ -e "$f" ]]
       then
-        echo "Setting script .env"
+        echo $'\n'"script.env:"
+        cat "$f"
         set -a
         source $f
         set +a
+        echo ""
       fi
 fi
 
@@ -149,8 +151,7 @@ for ip in $IP_LIST; do
       fi
     fi
   fi
-  echo "run.env:"
-  echo "$run_env"
+  echo $'\n'"run.env:"$'\n'"$run_env"$'\n'
 
   # optional ssh key param
   ssh_i=""
@@ -169,5 +170,3 @@ for ip in $IP_LIST; do
     chmod +x ./run.sh; \
     ./run.sh"
 done
-
-echo 'done'
