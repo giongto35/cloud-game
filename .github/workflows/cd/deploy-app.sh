@@ -19,6 +19,8 @@ do
     esac
 done
 
+# Environment merging
+#
 # Import optional script.env file.
 # This file contains script runtime params.
 if [[ ! -z "${ENV_DIR}" ]]; then
@@ -33,7 +35,7 @@ if [[ ! -z "${ENV_DIR}" ]]; then
 fi
 
 # ^._.^
-REQUIRED_PACKAGES="cat curl jq ssh"
+REQUIRED_PACKAGES="cat curl docker-compose jq ssh"
 
 # Deployment addresses
 #
@@ -61,10 +63,6 @@ echo "Docker tag:$DOCKER_IMAGE_TAG"
 # the total number of worker replicas to deploy
 WORKERS=${WORKERS:-5}
 
-# flags
-deploy_coordinator=1
-deploy_worker=1
-
 echo "Starting deployment"
 
 for pkg in $REQUIRED_PACKAGES; do
@@ -90,17 +88,31 @@ if [[ ! -z "${DO_TOKEN}" ]]; then
 fi
 echo "IPs:" $IP_LIST
 
+# Run command builder
+#
+# By default it will run docker-compose with both coordinator and worker apps.
+# With the SPLIT_HOSTS parameter specified, it will run either coordinator app
+# if the current server address is found in the IP_LIST variable, otherwise it
+# will run just the worker app.
+#
+# flags
+deploy_coordinator=1
+deploy_worker=1
+# build run command
+cmd="ZONE=\$zone docker-compose up -d --remove-orphans --scale worker=\${workers:-$WORKERS}"
+if [ ! -z "$SPLIT_HOSTS" ]; then
+  cmd+=" worker"
+  deploy_coordinator=0
+  deploy_worker=1
+fi
+
 for ip in $IP_LIST; do
   echo $ip
   ssh-keyscan -H $ip >> ~/.ssh/known_hosts
   sleep 2
 
-  cmd="ZONE=\$zone docker-compose up -d --remove-orphans --scale worker=\${workers:-$WORKERS}"
-
-  if [ ! $SINGLE_HOST == 1 ]; then
-    cmd+=" worker"
-    deploy_coordinator=0
-    deploy_worker=1
+  # override run command
+  if [ ! -z "$SPLIT_HOSTS" ]; then
     for addr in $COORDINATORS; do
        if [ "$ip" == $addr ]; then
          cmd="docker-compose up -d --remove-orphans coordinator"
@@ -119,19 +131,26 @@ for ip in $IP_LIST; do
   $cmd'"
   compose_src=$(cat $LOCAL_WORK_DIR/docker-compose.yml)
 
-  # copy Docker env files if the ENV_DIR is set
-  coordinator_env_file=""
-  worker_env_file=""
+  # build Docker container env file
+  run_env=""
   if [[ ! -z "${ENV_DIR}" ]]; then
     if [ $deploy_coordinator == 1 ]; then
-      echo "Copy coordinator .env"
-      coordinator_env_file=$(cat $ENV_DIR/coordinator.env)
+      env_f=$ENV_DIR/coordinator.env
+      if [[ -e "$env_f" ]]; then
+        echo "Merge coordinator .env -> run.env"
+        run_env+=$(cat $env_f)$'\n'
+      fi
     fi
-        if [ $deploy_worker == 1 ]; then
-          echo "Copy worker .env"
-          worker_env_file=$(cat $ENV_DIR/worker.env)
-        fi
+    if [ $deploy_worker == 1 ]; then
+      env_f=$ENV_DIR/worker.env
+      if [[ -e "$env_f" ]]; then
+        echo "Merge worker .env -> run.env"
+        run_env+=$(cat $env_f)
+      fi
+    fi
   fi
+  echo "run.env:"
+  echo "$run_env"
 
   # optional ssh key param
   ssh_i=""
@@ -143,8 +162,7 @@ for ip in $IP_LIST; do
     mkdir -p $REMOTE_WORK_DIR; \
     cd $REMOTE_WORK_DIR; \
     echo '$compose_src' > ./docker-compose.yml; \
-    echo '$coordinator_env_file' > ./coordinator.env; \
-    echo '$worker_env_file' > ./worker.env; \
+    echo '$run_env' > ./run.env; \
     docker system prune -f; \
     docker-compose pull; \
     echo $run > ./run.sh; \
