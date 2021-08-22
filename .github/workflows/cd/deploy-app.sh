@@ -109,9 +109,11 @@ if [ ! -z "$SPLIT_HOSTS" ]; then
 fi
 
 for ip in $IP_LIST; do
-  echo $ip
-  ssh-keyscan -H $ip >> ~/.ssh/known_hosts
-  sleep 2
+  echo "Processing "$ip
+  if ! ssh-keygen -q -F $ip &>/dev/null; then
+    echo "Adding new host to the known_hosts file"
+    ssh-keyscan $ip >> ~/.ssh/known_hosts
+  fi
 
   # override run command
   if [ ! -z "$SPLIT_HOSTS" ]; then
