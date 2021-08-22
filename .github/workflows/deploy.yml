@@ -18,8 +18,6 @@ jobs:
 
       - name: Deploy to all servers
         env:
-          USERNAME: ${{ github.repository_owner }}
-          PASSWORD: ${{ secrets.GITHUB_TOKEN }}
           DO_TOKEN: ${{ secrets.DO_TOKEN }}
         run: |
           ./.github/workflows/cd/deploy-app.sh \
