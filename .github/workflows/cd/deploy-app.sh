@@ -37,7 +37,7 @@ if [[ ! -z "${ENV_DIR}" ]]; then
 fi
 
 # ^._.^
-REQUIRED_PACKAGES="cat curl docker-compose jq ssh"
+REQUIRED_PACKAGES="cat jq ssh"
 
 # Deployment addresses
 #
@@ -67,10 +67,15 @@ WORKERS=${WORKERS:-5}
 
 echo "Starting deployment"
 
+if [[ ! -z "${DO_TOKEN}" ]]; then
+  REQUIRED_PACKAGES+=" curl"
+fi
+
 for pkg in $REQUIRED_PACKAGES; do
   which $pkg > /dev/null 2>&1
   if [ ! $? == 0 ]; then
     echo "Required package: $pkg is not installed"
+    echo "Please run: sudo apt-get -qq update && sudo apt-get -qq install -y $REQUIRED_PACKAGES"
     exit;
   fi
 done
@@ -160,6 +165,8 @@ for ip in $IP_LIST; do
   if [[ ! -z "${SSH_KEY}" ]]; then
     ssh_i="-i ${SSH_KEY}"
   fi
+
+  # !to add docker-compose install / warning
 
   ssh ubuntu@$ip ${ssh_i:-} "\
     mkdir -p $REMOTE_WORK_DIR; \
