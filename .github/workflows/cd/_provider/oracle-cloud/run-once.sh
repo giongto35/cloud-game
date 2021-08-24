@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/bash
 #sudo
 
 iptables -P INPUT ACCEPT
@@ -8,10 +8,8 @@ iptables -F
 
 iptables --flush
 
-iptables-save > /etc/iptables.conf
-
-f=~/.iptables.lock
-if [ ! -e "$f" ]; then
-  echo "iptables-restore < /etc/iptables.conf" > /etc/rc.local
-  touch "$f"
+which "iptables-persistent" > /dev/null 2>&1
+if [ $? = 0 ]; then
+  apt-get install iptables-persistent
 fi
+netfilter-persistent save
