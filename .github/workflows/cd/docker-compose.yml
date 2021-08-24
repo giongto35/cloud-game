@@ -1,0 +1,30 @@
+version: "3"
+
+x-params:
+  &default-params
+  env_file: run.env
+  image: ghcr.io/giongto35/cloud-game/cloud-game:${IMAGE_TAG:-latest}
+  network_mode: "host"
+  privileged: true
+  restart: always
+
+services:
+
+  coordinator:
+    <<: *default-params
+    command: coordinator --v=5
+    volumes:
+      - ${APP_DIR:-/cloud-game}/cache:/usr/local/share/cloud-game/assets/cache
+      - ${APP_DIR:-/cloud-game}/games:/usr/local/share/cloud-game/assets/games
+
+  worker:
+    <<: *default-params
+    environment:
+      - MESA_GL_VERSION_OVERRIDE=3.3
+    entrypoint: [ "/bin/sh", "-c", "xvfb-run -a $$@", "" ]
+    command: worker --v=5 --zone=${ZONE:-}
+    volumes:
+      - ${APP_DIR:-/cloud-game}/cache:/usr/local/share/cloud-game/assets/cache
+      - ${APP_DIR:-/cloud-game}/cores:/usr/local/share/cloud-game/assets/cores
+      - ${APP_DIR:-/cloud-game}/games:/usr/local/share/cloud-game/assets/games
+      - ${APP_DIR:-/cloud-game}/home:/root/.cr

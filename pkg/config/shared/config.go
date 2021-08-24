@@ -11,11 +11,10 @@ type Server struct {
 	Address string
 	Https   bool
 	Tls     struct {
-		Address        string
-		Domain         string
-		LetsencryptUrl string
-		HttpsKey       string
-		HttpsCert      string
+		Address   string
+		Domain    string
+		HttpsKey  string
+		HttpsCert string
 	}
 }
 

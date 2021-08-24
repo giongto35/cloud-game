@@ -1,21 +1,20 @@
 package httpx
 
-import (
-	"golang.org/x/crypto/acme"
-	"golang.org/x/crypto/acme/autocert"
-)
+import "golang.org/x/crypto/acme/autocert"
 
 type TLS struct {
 	CertManager *autocert.Manager
 }
 
-func NewTLSConfig(domain string) *TLS {
-	return &TLS{
+func NewTLSConfig(host string) *TLS {
+	tls := TLS{
 		CertManager: &autocert.Manager{
-			Prompt:     autocert.AcceptTOS,
-			HostPolicy: autocert.HostWhitelist(domain),
-			Cache:      autocert.DirCache("assets/cache"),
-			Client:     &acme.Client{DirectoryURL: acme.LetsEncryptURL},
+			Prompt: autocert.AcceptTOS,
+			Cache:  autocert.DirCache("assets/cache"),
 		},
 	}
+	if host != "" {
+		tls.CertManager.HostPolicy = autocert.HostWhitelist(host)
+	}
+	return &tls
 }
