@@ -8,6 +8,10 @@ do
         ENV_DIR="${arg#*=}"
         shift # Remove --ssh-key= from processing
         ;;
+        -p=*|--provider-dir=*)
+        PROVIDER_DIR="${arg#*=}"
+        shift
+        ;;
         -s=*|--ssh-key=*)
         SSH_KEY="${arg#*=}"
         shift # Remove --ssh-key= from processing
@@ -44,14 +48,11 @@ REQUIRED_PACKAGES="cat jq ssh"
 # The chose of deployment app is following:
 # - by default it will deploy worker app onto each server in the IP_LIST list
 # - if the current address is in the COORDINATORS list, then it will deploy coordinator app instead
-# - if the SINGLE_HOST param is set, then it will deploy both apps
 #
 # a list of machines to deploy to
 IP_LIST=${IP_LIST:-}
 # a list of machines mark some addresses to deploy only a coordinator there
 COORDINATORS=${COORDINATORS:-}
-# deploy everything on the same host
-SINGLE_HOST=${SINGLE_HOST:-0}
 
 # Digital Ocean operations
 #DO_TOKEN
@@ -132,12 +133,21 @@ for ip in $IP_LIST; do
      done
   fi
 
-  run="'#!/bin/bash
-  ufw disable 2> /dev/null;
-  source /etc/profile;
-  export IMAGE_TAG=$DOCKER_IMAGE_TAG;
-  export APP_DIR=$REMOTE_WORK_DIR;
-  $cmd'"
+  run="#!/bin/bash"$'\n'
+  # add a custom run script
+  if [[ ! -z "${PROVIDER_DIR}" ]]; then
+    f=$PROVIDER_DIR/run.sh
+    if [[ -e "$f" ]]; then
+      echo "A custom run script has been found"
+      run+=$(tail -n +2 $f)$'\n'
+    fi
+  fi
+  run+="IMAGE_TAG=$DOCKER_IMAGE_TAG APP_DIR=$REMOTE_WORK_DIR $cmd"
+
+  echo ""
+  echo "run.sh:"$'\n'"$run"
+  echo ""
+
   compose_src=$(cat $LOCAL_WORK_DIR/docker-compose.yml)
 
   # build Docker container env file
@@ -167,6 +177,16 @@ for ip in $IP_LIST; do
   fi
 
   # !to add docker-compose install / warning
+
+  # add a custom run script
+  if [[ ! -z "${PROVIDER_DIR}" ]]; then
+    f=$PROVIDER_DIR/run-once.sh
+    if [[ -e "$f" ]]; then
+      echo "A custom run once script has been found"
+      echo $'\n'"run-once.sh:"$'\n'"$(cat $f)"$'\n'
+      ssh ubuntu@$ip -t ${ssh_i:-} sudo sh < $f
+    fi
+  fi
 
   ssh ubuntu@$ip ${ssh_i:-} "\
     mkdir -p $REMOTE_WORK_DIR; \
