@@ -1,5 +1,4 @@
 #!/bin/bash
-#sudo
 
 iptables -P INPUT ACCEPT
 iptables -P OUTPUT ACCEPT

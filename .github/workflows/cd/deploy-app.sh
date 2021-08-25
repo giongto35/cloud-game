@@ -59,12 +59,37 @@ COORDINATORS=${COORDINATORS:-}
 DO_ADDRESS_LIST=${DO_ADDRESS_LIST:-}
 DO_API_ENDPOINT=${DO_API_ENDPOINT:-"https://api.digitalocean.com/v2/droplets?tag_name="}
 
-LOCAL_WORK_DIR=${LOCAL_WORK_DIR:-"./.github/workflows/cd"}
+LOCAL_WORK_DIR=${LOCAL_WORK_DIR:-"./"}
 REMOTE_WORK_DIR=${REMOTE_WORK_DIR:-"/cloud-game"}
 DOCKER_IMAGE_TAG=${DOCKER_IMAGE_TAG:-latest}
 echo "Docker tag:$DOCKER_IMAGE_TAG"
 # the total number of worker replicas to deploy
 WORKERS=${WORKERS:-5}
+
+compose_src=$(cat $LOCAL_WORK_DIR/docker-compose.yml)
+
+function remote_run_commands() {
+  ret=""
+  if [[ ! -z "$1" ]]; then
+    f=$1/run.sh
+    if [[ -e "$f" ]]; then
+      echo >&2 "A custom run script has been found"
+      ret=$(tail -n +2 $f)
+    fi
+  fi
+  echo "$ret"
+}
+
+# ip dir [ssh_key]
+function remote_sudo_run_once() {
+  if [[ ! -z "$2" ]]; then
+    f=$2/run-once.sh
+    if [[ -e "$f" ]]; then
+      echo >&2 "execute remotely $f:"$'\n'"$(cat $f)"$'\n'
+      ssh ubuntu@$1 -t $3 sudo sh < $f
+    fi
+  fi
+}
 
 echo "Starting deployment"
 
@@ -133,23 +158,6 @@ for ip in $IP_LIST; do
      done
   fi
 
-  run="#!/bin/bash"$'\n'
-  # add a custom run script
-  if [[ ! -z "${PROVIDER_DIR}" ]]; then
-    f=$PROVIDER_DIR/run.sh
-    if [[ -e "$f" ]]; then
-      echo "A custom run script has been found"
-      run+=$(tail -n +2 $f)$'\n'
-    fi
-  fi
-  run+="IMAGE_TAG=$DOCKER_IMAGE_TAG APP_DIR=$REMOTE_WORK_DIR $cmd"
-
-  echo ""
-  echo "run.sh:"$'\n'"$run"
-  echo ""
-
-  compose_src=$(cat $LOCAL_WORK_DIR/docker-compose.yml)
-
   # build Docker container env file
   run_env=""
   if [[ ! -z "${ENV_DIR}" ]]; then
@@ -176,17 +184,22 @@ for ip in $IP_LIST; do
     ssh_i="-i ${SSH_KEY}"
   fi
 
+  run="#!/bin/bash"$'\n'
+  run+=$(remote_run_commands "$ENV_DIR")$'\n'
+  run+=$(remote_run_commands "$PROVIDER_DIR")$'\n'
+  run+="IMAGE_TAG=$DOCKER_IMAGE_TAG APP_DIR=$REMOTE_WORK_DIR $cmd"
+
+  echo ""
+  echo "run.sh:"$'\n'"$run"
+  echo ""
+
   # !to add docker-compose install / warning
 
-  # add a custom run script
-  if [[ ! -z "${PROVIDER_DIR}" ]]; then
-    f=$PROVIDER_DIR/run-once.sh
-    if [[ -e "$f" ]]; then
-      echo "A custom run once script has been found"
-      echo $'\n'"run-once.sh:"$'\n'"$(cat $f)"$'\n'
-      ssh ubuntu@$ip -t ${ssh_i:-} sudo sh < $f
-    fi
-  fi
+  # custom scripts
+  remote_sudo_run_once $ip "$PROVIDER_DIR" "$ssh_i"
+  remote_sudo_run_once $ip "$ENV_DIR" "$ssh_i"
+
+  echo "Update the remote host"
 
   ssh ubuntu@$ip ${ssh_i:-} "\
     mkdir -p $REMOTE_WORK_DIR; \
