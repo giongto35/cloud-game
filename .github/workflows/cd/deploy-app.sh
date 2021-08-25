@@ -65,6 +65,7 @@ DOCKER_IMAGE_TAG=${DOCKER_IMAGE_TAG:-latest}
 echo "Docker tag:$DOCKER_IMAGE_TAG"
 # the total number of worker replicas to deploy
 WORKERS=${WORKERS:-5}
+USER=${USER:-root}
 
 compose_src=$(cat $LOCAL_WORK_DIR/docker-compose.yml)
 
@@ -86,7 +87,7 @@ function remote_sudo_run_once() {
     f=$2/run-once.sh
     if [[ -e "$f" ]]; then
       echo >&2 "execute remotely $f:"$'\n'"$(cat $f)"$'\n'
-      ssh ubuntu@$1 -t $3 sudo sh < $f
+      ssh $USER@$1 -t $3 sudo sh < $f
     fi
   fi
 }
@@ -201,7 +202,7 @@ for ip in $IP_LIST; do
 
   echo "Update the remote host"
 
-  ssh ubuntu@$ip ${ssh_i:-} "\
+  ssh $USER@$ip ${ssh_i:-} "\
     mkdir -p $REMOTE_WORK_DIR; \
     cd $REMOTE_WORK_DIR; \
     echo '$compose_src' > ./docker-compose.yml; \
