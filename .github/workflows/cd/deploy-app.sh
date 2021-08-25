@@ -200,10 +200,11 @@ for ip in $IP_LIST; do
   remote_sudo_run_once $ip "$PROVIDER_DIR" "$ssh_i"
   remote_sudo_run_once $ip "$ENV_DIR" "$ssh_i"
 
-  echo "Update the remote host"
+  echo "Update the remote host"$'\n'
+  echo "$compose_src"
 
   ssh -o ConnectTimeout=10 $USER@$ip ${ssh_i:-} "\
-    docker-compose -v \
+    docker-compose -v; \
     mkdir -p $REMOTE_WORK_DIR; \
     cd $REMOTE_WORK_DIR; \
     echo '$compose_src' > ./docker-compose.yml; \
