@@ -203,6 +203,7 @@ for ip in $IP_LIST; do
   echo "Update the remote host"
 
   ssh -o ConnectTimeout=10 $USER@$ip ${ssh_i:-} "\
+    docker-compose -v \
     mkdir -p $REMOTE_WORK_DIR; \
     cd $REMOTE_WORK_DIR; \
     echo '$compose_src' > ./docker-compose.yml; \
