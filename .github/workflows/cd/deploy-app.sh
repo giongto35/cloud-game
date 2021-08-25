@@ -112,7 +112,7 @@ if [[ ! -z "${DO_TOKEN}" ]]; then
     call=$(curl -Ss -X GET -H "Content-Type: application/json" -H "Authorization: Bearer $DO_TOKEN" $DO_API_ENDPOINT$tag)
     res=$?
     if test "$res" == "0"; then
-      IP_LIST+=$(echo "$call" | jq -r -j \
+      IP_LIST+=" "$(echo "$call" | jq -r -j \
         ".droplets[] | .networks.v4[] | select(.type | contains(\"public\")).ip_address, \" \"")
     else
       echo "curl failed with the code [$res]"
