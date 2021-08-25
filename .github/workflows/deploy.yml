@@ -16,6 +16,8 @@ jobs:
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           known_hosts: 'PLACEHOLDER'
 
+      - uses: actions/checkout@v2
+
       - name: Deploy to all servers
         env:
           DO_TOKEN: ${{ secrets.DO_TOKEN }}
