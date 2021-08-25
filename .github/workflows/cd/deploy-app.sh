@@ -87,7 +87,7 @@ function remote_sudo_run_once() {
     f=$2/run-once.sh
     if [[ -e "$f" ]]; then
       echo >&2 "execute remotely $f:"$'\n'"$(cat $f)"$'\n'
-      ssh $USER@$1 -t $3 sudo sh < $f
+      ssh -o ConnectTimeout=10 $USER@$1 -t $3 sudo sh < $f
     fi
   fi
 }
@@ -202,7 +202,7 @@ for ip in $IP_LIST; do
 
   echo "Update the remote host"
 
-  ssh $USER@$ip ${ssh_i:-} "\
+  ssh -o ConnectTimeout=10 $USER@$ip ${ssh_i:-} "\
     mkdir -p $REMOTE_WORK_DIR; \
     cd $REMOTE_WORK_DIR; \
     echo '$compose_src' > ./docker-compose.yml; \
