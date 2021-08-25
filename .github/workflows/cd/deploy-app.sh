@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/bash
 
 # parse commandline arguments
 for arg in "$@"
