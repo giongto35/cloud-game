@@ -21,7 +21,6 @@ jobs:
         with:
           username: ${{ github.repository_owner }}
           password: ${{ secrets.GITHUB_TOKEN }}
-          add_git_labels: true
           tags: dev
           build_args: VERSION=${{ env.V }}
 
