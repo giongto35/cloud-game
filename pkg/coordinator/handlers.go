@@ -62,6 +62,10 @@ func (s *Server) WSO(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	if connRt.PingAddr == "" {
+		log.Printf("Warning! Ping address is not set.")
+	}
+
 	if s.cfg.Coordinator.Server.Https && !connRt.IsHTTPS {
 		log.Printf("Warning! Unsecure connection. The worker may not work properly without HTTPS on its side!")
 	}

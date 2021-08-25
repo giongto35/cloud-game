@@ -55,7 +55,7 @@ func NewServer(address string, handler func(*Server) http.Handler, options ...Op
 		if opts.Https {
 			addr = ":https"
 		}
-		log.Printf("Warning! Empty server address has been changed to %v", server.Addr)
+		log.Printf("Warning! Empty server address has been changed to %v", addr)
 	}
 	listener, err := NewListener(addr, server.opts.PortRoll)
 	if err != nil {
@@ -126,9 +126,9 @@ func (s *Server) redirection() (*Server, error) {
 			http.Redirect(w, r, rdr, http.StatusFound)
 		}))
 		// do we need this after all?
-		//if serv.autoCert != nil {
-		//	return serv.autoCert.HTTPHandler(h)
-		//}
+		if serv.autoCert != nil {
+			return serv.autoCert.HTTPHandler(nil)
+		}
 		return h
 	})
 	log.Printf("Starting HTTP->HTTPS redirection server on %s", srv.Addr)
