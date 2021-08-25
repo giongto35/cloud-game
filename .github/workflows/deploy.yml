@@ -19,8 +19,8 @@ jobs:
       - name: Deploy to all servers
         env:
           DO_TOKEN: ${{ secrets.DO_TOKEN }}
+        working-directory: ./.github/workflows/cd
         run: |
-          cd ./.github/workflows/cd
           ./deploy-app.sh \
             --env-dir=./cloudretro.io \
             --provider-dir=./_provider/digital-ocean
