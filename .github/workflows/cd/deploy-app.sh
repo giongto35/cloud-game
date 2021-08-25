@@ -129,13 +129,6 @@ echo "IPs:" $IP_LIST
 # if the current server address is found in the IP_LIST variable, otherwise it
 # will run just the worker app.
 #
-# build run command
-cmd="ZONE=\$zone docker-compose up -d --remove-orphans --scale worker=\${workers:-$WORKERS}"
-if [ ! -z "$SPLIT_HOSTS" ]; then
-  cmd+=" worker"
-  deploy_coordinator=0
-  deploy_worker=1
-fi
 
 for ip in $IP_LIST; do
   # flags
@@ -146,6 +139,14 @@ for ip in $IP_LIST; do
   if ! ssh-keygen -q -F $ip &>/dev/null; then
     echo "Adding new host to the known_hosts file"
     ssh-keyscan $ip >> ~/.ssh/known_hosts
+  fi
+
+  # build run command
+  cmd="ZONE=\$zone docker-compose up -d --remove-orphans --scale worker=\${workers:-$WORKERS}"
+  if [ ! -z "$SPLIT_HOSTS" ]; then
+    cmd+=" worker"
+    deploy_coordinator=0
+    deploy_worker=1
   fi
 
   # override run command
