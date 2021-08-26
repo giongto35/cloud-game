@@ -121,7 +121,7 @@ GAMES_DIR = assets/games
 .PHONY: release
 .SILENT: release
 release: GIT_VERSION := $(shell ./scripts/version.sh)
-release:
+release: clean build
 	rm -rf ./$(RELEASE_DIR) && mkdir ./$(RELEASE_DIR)
 	mkdir -p $(COORDINATOR_DIR) && mkdir -p $(WORKER_DIR)
 	cp ./bin/coordinator $(COORDINATOR_DIR) && cp ./bin/worker $(WORKER_DIR)
