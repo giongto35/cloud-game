@@ -117,14 +117,14 @@ func (s *Server) GetProtocol() string {
 }
 
 func (s *Server) redirection() (*Server, error) {
+	address := s.Addr
+	if s.opts.HttpsDomain != "" {
+		address = s.opts.HttpsDomain
+	}
+	addr := buildAddress(address, s.opts.Zone, *s.listener)
+
 	srv, err := NewServer(s.opts.HttpsRedirectAddress, func(serv *Server) http.Handler {
 		h := http.NewServeMux()
-
-		address := s.Addr
-		if s.opts.HttpsDomain != "" {
-			address = s.opts.HttpsDomain
-		}
-		addr := buildAddress(address, s.opts.Zone, *s.listener)
 
 		h.Handle("/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			httpsURL := url.URL{Scheme: "https", Host: addr, Path: r.URL.Path, RawQuery: r.URL.RawQuery}
@@ -137,9 +137,8 @@ func (s *Server) redirection() (*Server, error) {
 		if serv.autoCert != nil {
 			return serv.autoCert.HTTPHandler(h)
 		}
-
 		return h
 	})
-	log.Printf("Starting HTTP->HTTPS redirection server on %s", srv.Addr)
+	log.Printf("Starting HTTP->HTTPS redirection server on %s", addr)
 	return srv, err
 }
