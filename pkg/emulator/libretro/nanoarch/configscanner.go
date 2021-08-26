@@ -19,7 +19,7 @@ func ScanConfigFile(filename string) ConfigProperties {
 	}
 	file, err := os.Open(filename)
 	if err != nil {
-		log.Fatal(err)
+		log.Printf("warning: couldn't find the %v config file", filename)
 		return config
 	}
 	defer file.Close()
