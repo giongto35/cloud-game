@@ -120,7 +120,7 @@ CORES_DIR = assets/cores
 GAMES_DIR = assets/games
 .PHONY: release
 .SILENT: release
-release: GIT_VERSION := "$(shell ./scripts/version.sh)"
+release: GIT_VERSION := $(shell ./scripts/version.sh)
 release: clean build
 	rm -rf ./$(RELEASE_DIR) && mkdir ./$(RELEASE_DIR)
 	mkdir -p $(COORDINATOR_DIR) && mkdir -p $(WORKER_DIR)
