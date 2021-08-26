@@ -132,10 +132,12 @@ func (s *Server) redirection() (*Server, error) {
 			log.Printf("Redirect: http://%s%s -> %s", r.Host, r.URL.String(), rdr)
 			http.Redirect(w, r, rdr, http.StatusFound)
 		}))
+
 		// do we need this after all?
-		//if serv.autoCert != nil {
-		//	return serv.autoCert.HTTPHandler(h)
-		//}
+		if serv.autoCert != nil {
+			return serv.autoCert.HTTPHandler(h)
+		}
+
 		return h
 	})
 	log.Printf("Starting HTTP->HTTPS redirection server on %s", srv.Addr)
