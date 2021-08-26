@@ -210,7 +210,7 @@ for ip in $IP_LIST; do
     cd $REMOTE_WORK_DIR; \
     echo '$compose_src' > ./docker-compose.yml; \
     echo '$run_env' > ./run.env; \
-    docker-compose pull; \
+    IMAGE_TAG=$DOCKER_IMAGE_TAG docker-compose pull; \
     echo '$run' > ./run.sh; \
     chmod +x ./run.sh; \
     ./run.sh"
