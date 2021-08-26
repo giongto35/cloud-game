@@ -121,7 +121,7 @@ GAMES_DIR = assets/games
 .PHONY: release
 .SILENT: release
 release: GIT_VERSION := $(shell ./scripts/version.sh)
-release: clean build
+release:
 	rm -rf ./$(RELEASE_DIR) && mkdir ./$(RELEASE_DIR)
 	mkdir -p $(COORDINATOR_DIR) && mkdir -p $(WORKER_DIR)
 	cp ./bin/coordinator $(COORDINATOR_DIR) && cp ./bin/worker $(WORKER_DIR)
@@ -135,7 +135,7 @@ release: clean build
     endif
 	cp -R ./web $(COORDINATOR_DIR)
 	# add version tag into index.html
-	shell ./scripts/version.sh $(COORDINATOR_DIR)/web/index.html
+	./scripts/version.sh $(COORDINATOR_DIR)/web/index.html
 	mkdir -p $(WORKER_DIR)/$(GAMES_DIR)
     ifneq (,$(wildcard ./$(GAMES_DIR)))
 		cp -R ./$(GAMES_DIR) $(WORKER_DIR)/assets
