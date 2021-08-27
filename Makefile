@@ -60,6 +60,7 @@ clean:
 	@go clean ./cmd/*
 
 build:
+	mkdir -p bin/
 	CGO_ENABLED=0 go build -ldflags "-w -s -X 'main.Version=$(GIT_VERSION)'" -o bin/ ./cmd/coordinator
 	go build -buildmode=exe -tags static -ldflags "-w -s -X 'main.Version=$(GIT_VERSION)'" $(EXT_WFLAGS) -o bin/ ./cmd/worker
 
@@ -69,6 +70,7 @@ verify-cores:
 dev.build: compile build
 
 dev.build-local:
+	mkdir -p bin/
 	CGO_ENABLED=0 go build -o bin/ ./cmd/coordinator
 	go build -buildmode=exe -o bin/ ./cmd/worker
 
