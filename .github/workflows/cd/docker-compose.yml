@@ -7,6 +7,12 @@ x-params:
   network_mode: "host"
   privileged: true
   restart: always
+  logging:
+    driver: "json-file"
+    options:
+      max-size: "64m"
+      max-file: "5"
+      compress: "true"
 
 services:
 
