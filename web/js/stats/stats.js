@@ -12,7 +12,7 @@ const stats = (() => {
     let tempHide = false;
 
     // internal rendering stuff
-    const drawFps = 32;
+    const fps = 30;
     let time = 0;
     let active = false;
 
@@ -25,7 +25,7 @@ const stats = (() => {
      */
     const graph = (parent, opts = {
         historySize: 60,
-        width: 60 * 2 + 4,
+        width: 60 * 2 + 2,
         height: 20,
         pad: 4,
         scale: 1,
@@ -178,7 +178,7 @@ const stats = (() => {
 
         let mean = 0;
         let length = 0;
-        let previous = Date.now();
+        let previous = 0;
         const window = 5;
 
         const ui = moduleUi('Ping', true);
@@ -229,7 +229,7 @@ const stats = (() => {
         let active = false;
 
         const measures = ['B', 'KB', 'MB', 'GB'];
-        const precision = Math.pow(10, 2);
+        const precision = 1;
         let mLog = 0;
 
         const ui = moduleUi('Memory', false, (x) => (x > 0) ? measures[mLog] : '');
@@ -324,7 +324,7 @@ const stats = (() => {
     function draw(timestamp) {
         if (!active) return;
 
-        const time_ = time + 1000 / drawFps;
+        const time_ = time + 1000 / fps;
 
         if (timestamp > time_) {
             time = timestamp;

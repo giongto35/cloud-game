@@ -704,7 +704,7 @@ body {
     flex-flow: wrap;
     justify-content: space-between;
 
-    margin-bottom: 1em;
+    margin-bottom: .7em;
 }
 
 #stats-overlay > div > div {
