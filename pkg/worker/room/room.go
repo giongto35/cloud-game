@@ -10,6 +10,7 @@ import (
 	"math"
 	"net"
 	"os"
+	"path/filepath"
 	"sync"
 
 	"github.com/giongto35/cloud-game/v2/pkg/config/worker"
@@ -157,8 +158,8 @@ func NewRoom(roomID string, game games.GameMetadata, onlineStorage *storage.Clie
 		// If not then load room or create room from local.
 		log.Printf("Room %s started. GameName: %s, WithGame: %t", roomID, game.Name, cfg.Encoder.WithoutGame)
 
-		// Spawn new emulator based on gameName and plug-in all channels
-		emuName := cfg.Emulator.GetEmulatorByRom(game.Type)
+		// Spawn new emulator and plug-in all channels
+		emuName := cfg.Emulator.GetEmulator(game.Type, game.Path)
 		libretroConfig := cfg.Emulator.GetLibretroCoreConfig(emuName)
 
 		if cfg.Encoder.WithoutGame {
@@ -176,7 +177,7 @@ func NewRoom(roomID string, game games.GameMetadata, onlineStorage *storage.Clie
 			room.audioChannel = audioChannel
 		}
 
-		gameMeta := room.director.LoadMeta(game.Path)
+		gameMeta := room.director.LoadMeta(filepath.Join(game.Base, game.Path))
 
 		// nwidth, nheight are the WebRTC output size
 		var nwidth, nheight int

@@ -205,6 +205,7 @@ func newGameStartCall(roomId string, data string, library games.GameLibrary) (ap
 
 	return api.GameStartCall{
 		Name: gameInfo.Name,
+		Base: gameInfo.Base,
 		Path: gameInfo.Path,
 		Type: gameInfo.Type,
 	}, nil

@@ -125,10 +125,19 @@ emulator:
           compression: zip
       # Libretro core configuration
       #
+      # The emulator selection will happen in this order:
+      #   - based on the folder name in the folder param
+      #   - based on the folder name (core name) in the list (i.e. nes, snes)
+      #   - based on the rom names in the roms param
+      #
       # Available config params:
       #   - lib (string)
       #   - config (string)
       #   - roms ([]string)
+      #   - folder (string)
+      #       By default emulator selection is based on the folder named as cores
+      #       in the list (i.e. nes, snes) but if you specify folder param,
+      #       then it will try to load the ROM file from that folder first.
       #   - width (int) -- broken
       #   - height (int) -- broken
       #   - ratio (float)
@@ -142,10 +151,15 @@ emulator:
         pcsx:
           lib: pcsx_rearmed_libretro
           roms: [ "cue" ]
+          # example of folder override
+          folder: psx
         # MAME core requires additional manual setup, please read:
         # https://docs.libretro.com/library/fbneo/
         mame:
           lib: fbneo_libretro
+          roms: [ "zip" ]
+        mame2003:
+          lib: mame2003_libretro
           roms: [ "zip" ]
         nes:
           lib: nestopia_libretro

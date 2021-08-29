@@ -123,6 +123,7 @@ func (h *Handler) handleGameStart() cws.PacketHandler {
 		gameMeta := games.GameMetadata{
 			Name: startPacket.Name,
 			Type: startPacket.Type,
+			Base: startPacket.Base,
 			Path: startPacket.Path,
 		}
 

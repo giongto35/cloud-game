@@ -1,7 +1,6 @@
 package games
 
 import (
-	"reflect"
 	"testing"
 )
 
@@ -31,7 +30,19 @@ func TestLibraryScan(t *testing.T) {
 			return meta.Name
 		})
 
-		if !reflect.DeepEqual(test.expected, list) {
+		// ^2 complexity (;
+		all := true
+		for _, expect := range test.expected {
+			found := false
+			for _, game := range list {
+				if game == expect {
+					found = true
+					break
+				}
+			}
+			all = all && found
+		}
+		if !all {
 			t.Errorf("Test fail for dir %v with %v != %v", test.directory, list, test.expected)
 		}
 	}
