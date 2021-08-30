@@ -158,9 +158,6 @@ emulator:
         mame:
           lib: fbneo_libretro
           roms: [ "zip" ]
-        mame2003:
-          lib: mame2003_libretro
-          roms: [ "zip" ]
         nes:
           lib: nestopia_libretro
           roms: [ "nes" ]
