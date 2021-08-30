@@ -30,6 +30,7 @@ func (packet *GameStartRequest) From(data string) error { return from(packet, da
 
 type GameStartCall struct {
 	Name string `json:"name"`
+	Base string `json:"base"`
 	Path string `json:"path"`
 	Type string `json:"type"`
 }

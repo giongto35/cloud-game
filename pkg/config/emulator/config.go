@@ -3,6 +3,7 @@ package emulator
 import (
 	"path"
 	"path/filepath"
+	"strings"
 )
 
 type Emulator struct {
@@ -42,6 +43,7 @@ type LibretroCoreConfig struct {
 	Lib         string
 	Config      string
 	Roms        []string
+	Folder      string
 	Width       int
 	Height      int
 	Ratio       float64
@@ -64,17 +66,24 @@ func (e Emulator) GetLibretroCoreConfig(emulator string) LibretroCoreConfig {
 	return conf
 }
 
-// GetEmulatorByRom returns emulator name by its supported ROM name.
-// !to cache into an optimized data structure
-func (e Emulator) GetEmulatorByRom(rom string) string {
+// GetEmulator tries to find a suitable emulator.
+// !to remove quadratic complexity
+func (e Emulator) GetEmulator(rom string, path string) string {
+	found := ""
 	for emu, core := range e.Libretro.Cores.List {
 		for _, romName := range core.Roms {
 			if rom == romName {
-				return emu
+				found = emu
+				if p := strings.SplitN(filepath.ToSlash(path), "/", 2); len(p) > 1 {
+					folder := p[0]
+					if (folder != "" && folder == core.Folder) || folder == emu {
+						return emu
+					}
+				}
 			}
 		}
 	}
-	return ""
+	return found
 }
 
 func (e Emulator) GetSupportedExtensions() []string {

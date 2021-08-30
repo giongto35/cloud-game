@@ -74,6 +74,7 @@ type GameMetadata struct {
 	Name string
 	// the game file extension (e.g. nes, n64)
 	Type string
+	Base string
 	// the game path relative to the library base path
 	Path string
 }
@@ -126,8 +127,8 @@ func (lib *library) GetAll() []GameMetadata {
 func (lib *library) FindGameByName(name string) GameMetadata {
 	var game GameMetadata
 	if val, ok := lib.games[name]; ok {
-		val.Path = filepath.Join(lib.config.path, val.Path)
-		game = val
+		val.Base = lib.config.path
+		return val
 	}
 	return game
 }
