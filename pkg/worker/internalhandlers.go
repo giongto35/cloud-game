@@ -110,29 +110,21 @@ func (h *Handler) handleGameStart() cws.PacketHandler {
 		log.Println("Received a start request from coordinator")
 		session := h.getSession(resp.SessionID)
 		if session == nil {
-			log.Printf("Error: No session for ID: %s\n", resp.SessionID)
+			log.Printf("error: no session with id: %s", resp.SessionID)
 			return cws.EmptyPacket
 		}
 
-		peerconnection := session.peerconnection
 		// TODO: Standardize for all types of packet. Make WSPacket generic
-		startPacket := api.GameStartCall{}
-		if err := startPacket.From(resp.Data); err != nil {
+		rom := api.GameStartCall{}
+		if err := rom.From(resp.Data); err != nil {
 			return cws.EmptyPacket
 		}
-		gameMeta := games.GameMetadata{
-			Name: startPacket.Name,
-			Type: startPacket.Type,
-			Base: startPacket.Base,
-			Path: startPacket.Path,
-		}
-
-		room := h.startGameHandler(gameMeta, resp.RoomID, resp.PlayerIndex, peerconnection)
+		game := games.GameMetadata{Name: rom.Name, Type: rom.Type, Base: rom.Base, Path: rom.Path}
+		room := h.startGameHandler(game, resp.RoomID, resp.PlayerIndex, session.peerconnection)
 		session.RoomID = room.ID
-		// TODO: can data race
+		// TODO: can data race (and it does)
 		h.rooms[room.ID] = room
-
-		return cws.WSPacket{ID: "start", RoomID: room.ID}
+		return cws.WSPacket{ID: api.GameStart, RoomID: room.ID}
 	}
 }
 
