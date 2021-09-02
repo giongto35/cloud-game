@@ -710,7 +710,6 @@ body {
 #stats-overlay > div > div {
     display: inline-block;
     font-weight: 500;
-    width: 4em;
 }
 
 #stats-overlay .graph {

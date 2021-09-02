@@ -8,7 +8,7 @@
  * @version 1
  */
 const stats = (() => {
-    const modules = [];
+    const _modules = [];
     let tempHide = false;
 
     // internal rendering stuff
@@ -181,7 +181,7 @@ const stats = (() => {
         let previous = 0;
         const window = 5;
 
-        const ui = moduleUi('Ping', true);
+        const ui = moduleUi('Ping(c)', true);
 
         const onPingRequest = (data) => previous = data.time;
 
@@ -262,6 +262,39 @@ const stats = (() => {
         return {get, enable, disable, render}
     })(moduleUi, performance, window);
 
+
+    const webRTCStats_ = (() => {
+        let interval = null
+
+        function getStats() {
+            if (!rtcp.isConnected()) return;
+            rtcp.getConnection().getStats(null).then(stats => {
+                let frameStatValue = '?';
+                stats.forEach(report => {
+                    if (report["framesReceived"] !== undefined && report["framesDecoded"] !== undefined && report["framesDropped"] !== undefined) {
+                        frameStatValue = report["framesReceived"] - report["framesDecoded"] - report["framesDropped"];
+                        event.pub('STATS_WEBRTC_FRAME_STATS', frameStatValue)
+                    } else if (report["framerateMean"] !== undefined) {
+                        frameStatValue = Math.round(report["framerateMean"] * 100) / 100;
+                        event.pub('STATS_WEBRTC_FRAME_STATS', frameStatValue)
+                    }
+
+                    if (report["nominated"] && report["currentRoundTripTime"] !== undefined) {
+                        event.pub('STATS_WEBRTC_ICE_RTT', report["currentRoundTripTime"] * 1000);
+                    }
+                });
+            });
+        }
+
+        const enable = () => {
+            interval = window.setInterval(getStats, 1000);
+        }
+
+        const disable = () => window.clearInterval(interval);
+
+        return {enable, disable, internal: true}
+    })(event, rtcp, window);
+
     /**
      * User agent frame stats.
      *
@@ -273,49 +306,71 @@ const stats = (() => {
      *
      * @version 1
      */
-    const webRTCStats = (() => {
+    const webRTCFrameStats = (() => {
         let value = 0;
-        let interval = null
+        let listener;
 
-        let browser = env.getBrowser();
-        let label = 'FrameDelay'
-        if (browser === 'firefox') {
-            label = 'FramerateMean'
-        }
+        const label = env.getBrowser() === 'firefox' ? 'FramerateMean' : 'FrameDelay';
         const ui = moduleUi(label, false, () => '');
 
         const get = () => ui.el;
 
         const enable = () => {
-            interval = window.setInterval(getStats, 1000);
+            listener = event.sub('STATS_WEBRTC_FRAME_STATS', onStats);
         }
 
         const disable = () => {
-            window.clearInterval(interval);
             value = 0;
+            if (listener) listener.unsub();
         }
 
         const render = () => ui.update(value);
 
-        function getStats() {
-            if (!active || !rtcp.isConnected()) return;
-            rtcp.getConnection().getStats(null).then(stats => {
-                stats.forEach(report => {
-                    if (report["framesReceived"] !== undefined && report["framesDecoded"] !== undefined && report["framesDropped"] !== undefined) {
-                        value = report["framesReceived"] - report["framesDecoded"] - report["framesDropped"];
-                    } else if (report["framerateMean"] !== undefined) {
-                        value = Math.round(report["framerateMean"]*100)/100;
-                    }
-                });
-            });
+        function onStats(val) {
+            value = val;
         }
 
         return {get, enable, disable, render}
-    })(moduleUi, window);
+    })(moduleUi, rtcp, window);
+
+    const webRTCRttStats = (() => {
+        let value = 0;
+        let listener;
+
+        const ui = moduleUi('RTT(w)', true, () => 'ms');
+
+        const get = () => ui.el;
+
+        const enable = () => {
+            listener = event.sub('STATS_WEBRTC_ICE_RTT', onStats);
+        }
+
+        const disable = () => {
+            value = 0;
+            if (listener) listener.unsub();
+        }
+
+        const render = () => ui.update(value);
+
+        function onStats(val) {
+            value = val;
+        }
+
+        return {get, enable, disable, render}
+    })(moduleUi, rtcp, window);
+
+    const modules = (fn, force = true) => {
+        _modules.forEach(m => {
+                if (force || !m.internal) {
+                    fn(m);
+                }
+            }
+        )
+    }
 
     const enable = () => {
         active = true;
-        modules.forEach(m => m.enable());
+        modules(m => m.enable())
         render();
         draw();
         _show();
@@ -336,7 +391,7 @@ const stats = (() => {
 
     const disable = () => {
         active = false;
-        modules.forEach(m => m.disable());
+        modules(m => m.disable());
         _hide();
     }
 
@@ -366,18 +421,20 @@ const stats = (() => {
         }
     }
 
-    const render = () => modules.forEach(m => m.render());
+    const render = () => modules(m => m.render(), false);
 
     // add submodules
-    modules.push(
+    _modules.push(
+        webRTCRttStats,
         latency,
         clientMemory,
-        webRTCStats
+        webRTCStats_,
+        webRTCFrameStats
     );
-    modules.forEach(m => statsOverlayEl.append(m.get()));
+    modules(m => statsOverlayEl.append(m.get()), false);
 
     event.sub(STATS_TOGGLE, onToggle);
     event.sub(HELP_OVERLAY_TOGGLED, onHelpOverlayToggle)
 
     return {enable, disable}
-})(document, env, event, log, window);
+})(document, env, event, log, rtcp, window);
