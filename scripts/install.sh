@@ -8,7 +8,8 @@ then
 fi
 
 apt-get -qq update
-apt-get -qq install --no-install-recommends -y \
+apt-get -qq install -y \
+    ca-certificates \
     libvpx6 \
     libx264-160 \
     libopus0 \
