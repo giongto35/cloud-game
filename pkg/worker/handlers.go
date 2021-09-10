@@ -42,7 +42,7 @@ func NewHandler(conf worker.Config, address string) *Handler {
 	// Create offline storage folder
 	createOfflineStorage(conf.Emulator.Storage)
 	// Init online storage
-	onlineStorage := storage.NewInitClient()
+	onlineStorage := storage.NewClient()
 	return &Handler{
 		address:       address,
 		cfg:           conf,

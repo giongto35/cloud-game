@@ -238,7 +238,7 @@ func getRoomMock(cfg roomMockConfig) roomMock {
 	}
 	conf.Encoder.Video.Codec = string(cfg.vCodec)
 
-	room := NewRoom(cfg.roomName, cfg.game, storage.NewInitClient(), conf)
+	room := NewRoom(cfg.roomName, cfg.game, storage.NewClient(), conf)
 
 	// loop-wait the room initialization
 	var init sync.WaitGroup

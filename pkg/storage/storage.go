@@ -11,49 +11,31 @@ import (
 	"cloud.google.com/go/storage"
 )
 
-// TODO: Add interface, abstract out Gstorage
+// TODO: Add interface, abstract out Google Storage
+
 type Client struct {
-	bucket  *storage.BucketHandle
-	gclient *storage.Client
+	bucket *storage.BucketHandle
+	// ! not used
+	client *storage.Client
 }
 
-// NewInitClient returns nil of client is not initialized
-func NewInitClient() *Client {
+// NewClient returns a Google Cloud Storage client or nil if the client is not initialized.
+func NewClient() *Client {
 	bucketName := "game-save"
-
-	client, err := NewClient(bucketName)
+	client, err := storage.NewClient(context.Background())
 	if err != nil {
-		log.Printf("Warn: Failed to create client: %v", err)
-	} else {
-		log.Println("Online storage is initialized")
+		log.Printf("warn: failed to create Google Cloud Storage client: %v", err)
+		return nil
 	}
-
-	return client
-}
-
-// NewClient inits a new Client accessing to GCP
-func NewClient(bucketName string) (*Client, error) {
-	ctx := context.Background()
-
-	// Sets your Google Cloud Platform project ID.
-
-	// Creates a client.
-	gclient, err := storage.NewClient(ctx)
-	if err != nil {
-		return nil, err
-	}
-
-	// Creates a Bucket instance.
-	bucket := gclient.Bucket(bucketName)
-
+	bucket := client.Bucket(bucketName)
 	return &Client{
-		bucket:  bucket,
-		gclient: gclient,
-	}, nil
+		bucket: bucket,
+		client: client,
+	}
 }
 
-// Savefile save srcFile to GCP
-func (c *Client) SaveFile(name string, srcFile string) (err error) {
+// Save saves a file to GCS.
+func (c *Client) Save(name string, srcFile string) (err error) {
 	// Bypass if client is nil
 	if c == nil {
 		return nil
@@ -64,7 +46,6 @@ func (c *Client) SaveFile(name string, srcFile string) (err error) {
 		return err
 	}
 
-	// Copy source file to GCP
 	wc := c.bucket.Object(name).NewWriter(context.Background())
 	if _, err = io.Copy(wc, reader); err != nil {
 		return err
@@ -76,8 +57,8 @@ func (c *Client) SaveFile(name string, srcFile string) (err error) {
 	return nil
 }
 
-// Loadfile loads file from GCP
-func (c *Client) LoadFile(name string) (data []byte, err error) {
+// Load loads file from GCS.
+func (c *Client) Load(name string) (data []byte, err error) {
 	// Bypass if client is nil
 	if c == nil {
 		return nil, errors.New("cloud storage was not initialized")
@@ -87,7 +68,9 @@ func (c *Client) LoadFile(name string) (data []byte, err error) {
 	if err != nil {
 		return nil, err
 	}
-	defer rc.Close()
+	defer func(rc *storage.Reader) {
+		err = rc.Close()
+	}(rc)
 
 	data, err = ioutil.ReadAll(rc)
 	if err != nil {

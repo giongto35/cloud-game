@@ -353,7 +353,7 @@ func (r *Room) Close() {
 
 func (r *Room) isRoomExisted() bool {
 	// Check if room is in online storage
-	_, err := r.onlineStorage.LoadFile(r.ID)
+	_, err := r.onlineStorage.Load(r.ID)
 	if err == nil {
 		return true
 	}
@@ -364,7 +364,7 @@ func (r *Room) isRoomExisted() bool {
 func (r *Room) SaveGame() error {
 	onlineSaveFunc := func() error {
 		// Try to save the game to gCloud
-		if err := r.onlineStorage.SaveFile(r.ID, r.director.GetHashPath()); err != nil {
+		if err := r.onlineStorage.Save(r.ID, r.director.GetHashPath()); err != nil {
 			return err
 		}
 
@@ -385,7 +385,7 @@ func (r *Room) saveOnlineRoomToLocal(roomID string, savePath string) error {
 	log.Println("Check if game is on cloud storage")
 	// If the game is not on local server
 	// Try to load from gcloud
-	data, err := r.onlineStorage.LoadFile(roomID)
+	data, err := r.onlineStorage.Load(roomID)
 	if err != nil {
 		return err
 	}
