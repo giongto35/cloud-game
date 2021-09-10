@@ -19,8 +19,8 @@ import (
 	"github.com/giongto35/cloud-game/v2/pkg/encoder"
 	"github.com/giongto35/cloud-game/v2/pkg/games"
 	"github.com/giongto35/cloud-game/v2/pkg/session"
+	"github.com/giongto35/cloud-game/v2/pkg/storage"
 	"github.com/giongto35/cloud-game/v2/pkg/webrtc"
-	storage "github.com/giongto35/cloud-game/v2/pkg/worker/cloud-storage"
 )
 
 // Room is a game session. multi webRTC sessions can connect to a same game.
