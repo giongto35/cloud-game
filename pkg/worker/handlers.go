@@ -32,7 +32,7 @@ type Handler struct {
 	// global ID of the current server
 	serverID string
 	// onlineStorage is client accessing to online storage (GCP)
-	onlineStorage *storage.Client
+	onlineStorage storage.CloudStorage
 	// sessions handles all sessions server is handler (key is sessionID)
 	sessions map[string]*Session
 }
@@ -42,7 +42,12 @@ func NewHandler(conf worker.Config, address string) *Handler {
 	// Create offline storage folder
 	createOfflineStorage(conf.Emulator.Storage)
 	// Init online storage
-	onlineStorage := storage.NewClient()
+	var onlineStorage storage.CloudStorage
+	onlineStorage, err := storage.NewGoogleCloudClient()
+	if err != nil {
+		log.Printf("Switching to noop cloud save")
+		onlineStorage, _ = storage.NewNoopCloudStorage()
+	}
 	return &Handler{
 		address:       address,
 		cfg:           conf,

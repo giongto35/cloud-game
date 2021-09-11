@@ -51,7 +51,7 @@ type Room struct {
 	// Director is emulator
 	director emulator.CloudEmulator
 	// Cloud storage to store room state online
-	onlineStorage *storage.Client
+	onlineStorage storage.CloudStorage
 
 	vPipe *encoder.VideoPipe
 }
@@ -119,7 +119,7 @@ func NewVideoImporter(roomID string) chan nanoarch.GameFrame {
 }
 
 // NewRoom creates a new room
-func NewRoom(roomID string, game games.GameMetadata, onlineStorage *storage.Client, cfg worker.Config) *Room {
+func NewRoom(roomID string, game games.GameMetadata, onlineStorage storage.CloudStorage, cfg worker.Config) *Room {
 	if roomID == "" {
 		roomID = session.GenerateRoomID(game.Name)
 	}

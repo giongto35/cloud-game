@@ -8,7 +8,7 @@ import (
 )
 
 func TestSaveGame(t *testing.T) {
-	client := NewClient()
+	client, _ := NewGoogleCloudClient()
 	if client == nil {
 		t.Skip("Cloud storage is not initialized")
 	}

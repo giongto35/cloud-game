@@ -238,7 +238,8 @@ func getRoomMock(cfg roomMockConfig) roomMock {
 	}
 	conf.Encoder.Video.Codec = string(cfg.vCodec)
 
-	room := NewRoom(cfg.roomName, cfg.game, storage.NewClient(), conf)
+	cloudStore, _ := storage.NewNoopCloudStorage()
+	room := NewRoom(cfg.roomName, cfg.game, cloudStore, conf)
 
 	// loop-wait the room initialization
 	var init sync.WaitGroup
