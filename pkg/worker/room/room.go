@@ -146,7 +146,7 @@ func NewRoom(roomID string, game games.GameMetadata, onlineStorage *storage.Clie
 	go func(game games.GameMetadata, roomID string) {
 		store := nanoarch.Storage{
 			Path:     cfg.Emulator.Storage,
-			MainSave: roomID + ".dat",
+			MainSave: roomID,
 		}
 
 		// Check room is on local or fetch from server
