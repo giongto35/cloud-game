@@ -9,7 +9,7 @@ func (na *naEmulator) Save() (err error) {
 	defer na.Unlock()
 
 	if sramState := getSaveRAM(); sramState != nil {
-		err = toFile(na.storage.GetSRAMPath(), sramState)
+		err = toFile(na.GetSRAMPath(), sramState)
 	}
 	if saveState, err := getSaveState(); err == nil {
 		return toFile(na.GetHashPath(), saveState)
