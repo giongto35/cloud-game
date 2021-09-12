@@ -203,6 +203,14 @@ encoder:
   # (experimental)
   withoutGame: false
 
+storage:
+  # cloud storage provider:
+  #   - empty
+  #   - coordinator (CloudRetro coordinator as a storage)
+  #   - google (Google Cloud Storage)
+  #   - oracle (Oracle Object Storage)
+  provider:
+
 webrtc:
   # turn off default Pion interceptors for performance reasons
   # (experimental)

@@ -37,17 +37,9 @@ type Handler struct {
 	sessions map[string]*Session
 }
 
-// NewHandler returns a new server
 func NewHandler(conf worker.Config, address string) *Handler {
-	// Create offline storage folder
 	createOfflineStorage(conf.Emulator.Storage)
-	// Init online storage
-	var onlineStorage storage.CloudStorage
-	onlineStorage, err := storage.NewGoogleCloudClient()
-	if err != nil {
-		log.Printf("Switching to noop cloud save")
-		onlineStorage, _ = storage.NewNoopCloudStorage()
-	}
+	onlineStorage := initCloudStorage(conf)
 	return &Handler{
 		address:       address,
 		cfg:           conf,
@@ -95,6 +87,24 @@ func (h *Handler) Prepare() {
 	if err := coreManager.Sync(); err != nil {
 		log.Printf("error: cores sync has failed, %v", err)
 	}
+}
+
+func initCloudStorage(conf worker.Config) storage.CloudStorage {
+	var onlineStorage storage.CloudStorage
+	var onlineStorageErr error
+	switch conf.Storage.Provider {
+	case "google":
+		onlineStorage, onlineStorageErr = storage.NewGoogleCloudClient()
+	case "coordinator":
+	case "oracle":
+	default:
+		onlineStorage, _ = storage.NewNoopCloudStorage()
+	}
+	if onlineStorageErr != nil {
+		log.Printf("Switching to noop cloud save")
+		onlineStorage, _ = storage.NewNoopCloudStorage()
+	}
+	return onlineStorage
 }
 
 func newCoordinatorConnection(host string, conf worker.Worker, addr string) (*CoordinatorClient, error) {
