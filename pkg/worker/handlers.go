@@ -90,21 +90,22 @@ func (h *Handler) Prepare() {
 }
 
 func initCloudStorage(conf worker.Config) storage.CloudStorage {
-	var onlineStorage storage.CloudStorage
-	var onlineStorageErr error
+	var st storage.CloudStorage
+	var err error
 	switch conf.Storage.Provider {
 	case "google":
-		onlineStorage, onlineStorageErr = storage.NewGoogleCloudClient()
-	case "coordinator":
+		st, err = storage.NewGoogleCloudClient()
 	case "oracle":
+		st, err = storage.NewOracleDataStorageClient(conf.Storage.Key)
+	case "coordinator":
 	default:
-		onlineStorage, _ = storage.NewNoopCloudStorage()
+		st, _ = storage.NewNoopCloudStorage()
 	}
-	if onlineStorageErr != nil {
+	if err != nil {
 		log.Printf("Switching to noop cloud save")
-		onlineStorage, _ = storage.NewNoopCloudStorage()
+		st, _ = storage.NewNoopCloudStorage()
 	}
-	return onlineStorage
+	return st
 }
 
 func newCoordinatorConnection(host string, conf worker.Worker, addr string) (*CoordinatorClient, error) {

@@ -3,6 +3,7 @@ package room
 import (
 	"bytes"
 	"encoding/gob"
+	"errors"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -150,9 +151,9 @@ func NewRoom(roomID string, game games.GameMetadata, onlineStorage storage.Cloud
 		}
 
 		// Check room is on local or fetch from server
-		log.Printf("Check %s on online storage: %v", roomID, isGameOnLocal(store.MainSave))
-		if err := room.saveOnlineRoomToLocal(roomID, store.MainSave); err != nil {
-			log.Printf("Warn: Room %s is not in online storage, error %s", roomID, err)
+		log.Printf("Check for %s in the online storage", roomID)
+		if err := room.saveOnlineRoomToLocal(roomID, store.GetSavePath()); err != nil {
+			log.Printf("warn: room %s is not in the online storage, error %s", roomID, err)
 		}
 
 		// If not then load room or create room from local.
@@ -227,8 +228,13 @@ func resizeToAspect(ratio float64, sw int, sh int) (dw int, dh int) {
 }
 
 func isGameOnLocal(path string) bool {
-	_, err := os.Open(path)
-	return err == nil
+	file, err := os.Open(path)
+	if err == nil {
+		defer func() {
+			_ = file.Close()
+		}()
+	}
+	return !errors.Is(err, os.ErrNotExist)
 }
 
 func (r *Room) AddConnectionToRoom(peerconnection *webrtc.WebRTC) {
@@ -383,15 +389,13 @@ func (r *Room) SaveGame() error {
 // !Supports only one file of main save state.
 func (r *Room) saveOnlineRoomToLocal(roomID string, savePath string) error {
 	log.Println("Check if game is on cloud storage")
-	// If the game is not on local server
-	// Try to load from gcloud
 	data, err := r.onlineStorage.Load(roomID)
 	if err != nil {
 		return err
 	}
-	// Save the data fetched from gcloud to local server
+	// Save the data fetched from a cloud provider to the local server
 	if data != nil {
-		_ = ioutil.WriteFile(savePath, data, 0644)
+		err = ioutil.WriteFile(savePath, data, 0644)
 	}
 	return nil
 }

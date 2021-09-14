@@ -179,7 +179,11 @@ func (na *naEmulator) SetViewport(width int, height int) {
 }
 
 func (na *naEmulator) Start() {
-	na.playGame()
+	err := na.LoadGame()
+	if err != nil {
+		log.Printf("error: couldn't load a save, %v", err)
+	}
+
 	ticker := time.NewTicker(time.Second / time.Duration(na.meta.Fps))
 
 	for range ticker.C {
@@ -200,23 +204,19 @@ func (na *naEmulator) Start() {
 	}
 }
 
-func (na *naEmulator) playGame() {
-	// When start game, we also try loading if there was a saved state
-	na.LoadGame()
-}
-
 func (na *naEmulator) SaveGame(saveExtraFunc func() error) error {
 	if na.roomID != "" {
 		err := na.Save()
 		if err != nil {
 			return err
 		}
+		na.Lock()
+		defer na.Unlock()
 		err = saveExtraFunc()
 		if err != nil {
 			return err
 		}
 	}
-
 	return nil
 }
 
@@ -224,11 +224,9 @@ func (na *naEmulator) LoadGame() error {
 	if na.roomID != "" {
 		err := na.Load()
 		if err != nil {
-			log.Println("Error: Cannot load", err)
 			return err
 		}
 	}
-
 	return nil
 }
 
@@ -236,7 +234,6 @@ func (na *naEmulator) ToggleMultitap() error {
 	if na.roomID != "" {
 		toggleMultitap()
 	}
-
 	return nil
 }
 

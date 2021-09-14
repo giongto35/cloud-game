@@ -62,9 +62,9 @@ func (c *GoogleCloudClient) Load(name string) (data []byte, err error) {
 	if err != nil {
 		return nil, err
 	}
-	defer func(rc *storage.Reader) {
-		err = rc.Close()
-	}(rc)
+	defer func() {
+		_ = rc.Close()
+	}()
 
 	data, err = ioutil.ReadAll(rc)
 	if err != nil {

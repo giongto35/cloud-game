@@ -205,11 +205,14 @@ encoder:
 
 storage:
   # cloud storage provider:
-  #   - empty
-  #   - coordinator (CloudRetro coordinator as a storage)
+  #   - empty (No op storage stub)
+  #   - [not implemented] coordinator (CloudRetro coordinator as a storage)
   #   - google (Google Cloud Storage)
   #   - oracle (Oracle Object Storage)
   provider:
+  # this value contains arbitrary key attribute:
+  #   - oracle: pre-authenticated URL
+  key:
 
 webrtc:
   # turn off default Pion interceptors for performance reasons
