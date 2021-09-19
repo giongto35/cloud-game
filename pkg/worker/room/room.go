@@ -366,29 +366,23 @@ func (r *Room) isRoomExisted() bool {
 	return isGameOnLocal(r.director.GetHashPath())
 }
 
-// SaveGame will save game to local and trigger a callback to store game on onlineStorage, so the game can be accessed later
+// SaveGame writes save state on the disk as well as
+// uploads it to a cloud storage.
 func (r *Room) SaveGame() error {
-	onlineSaveFunc := func() error {
-		// Try to save the game to gCloud
-		if err := r.onlineStorage.Save(r.ID, r.director.GetHashPath()); err != nil {
-			return err
-		}
-
-		return nil
-	}
-
 	// TODO: Move to game view
-	if err := r.director.SaveGame(onlineSaveFunc); err != nil {
+	if err := r.director.SaveGame(); err != nil {
 		return err
 	}
-
+	if err := r.onlineStorage.Save(r.ID, r.director.GetHashPath()); err != nil {
+		return err
+	}
+	log.Printf("success, cloud save")
 	return nil
 }
 
 // saveOnlineRoomToLocal save online room to local.
 // !Supports only one file of main save state.
 func (r *Room) saveOnlineRoomToLocal(roomID string, savePath string) error {
-	log.Println("Check if game is on cloud storage")
 	data, err := r.onlineStorage.Load(roomID)
 	if err != nil {
 		return err
@@ -396,6 +390,7 @@ func (r *Room) saveOnlineRoomToLocal(roomID string, savePath string) error {
 	// Save the data fetched from a cloud provider to the local server
 	if data != nil {
 		err = ioutil.WriteFile(savePath, data, 0644)
+		log.Printf("successfully downloaded cloud save")
 	}
 	return nil
 }

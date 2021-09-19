@@ -160,7 +160,7 @@ func (h *Handler) handleGameSave() cws.PacketHandler {
 			}
 			err := room.SaveGame()
 			if err != nil {
-				log.Println("[!] Cannot save game state: ", err)
+				log.Printf("error, cannot save game: %v", err)
 				req.Data = "error"
 			}
 		} else {

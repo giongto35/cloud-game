@@ -204,18 +204,9 @@ func (na *naEmulator) Start() {
 	}
 }
 
-func (na *naEmulator) SaveGame(saveExtraFunc func() error) error {
+func (na *naEmulator) SaveGame() error {
 	if na.roomID != "" {
-		err := na.Save()
-		if err != nil {
-			return err
-		}
-		na.Lock()
-		defer na.Unlock()
-		err = saveExtraFunc()
-		if err != nil {
-			return err
-		}
+		return na.Save()
 	}
 	return nil
 }

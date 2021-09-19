@@ -12,8 +12,8 @@ type CloudEmulator interface {
 	SetViewport(width int, height int)
 	// GetViewport debug encoder image
 	GetViewport() interface{}
-	// SaveGame save game state, saveExtraFunc is callback to do extra step. Ex: save to google cloud
-	SaveGame(saveExtraFunc func() error) error
+	// SaveGame save game state
+	SaveGame() error
 	// LoadGame load game state
 	LoadGame() error
 	// GetHashPath returns the path emulator will save state to

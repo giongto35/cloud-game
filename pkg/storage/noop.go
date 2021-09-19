@@ -10,10 +10,10 @@ func NewNoopCloudStorage() (*NoopCloudStorage, error) {
 	return nil, noopErr
 }
 
-func (n *NoopCloudStorage) Save(name string, localPath string) (err error) {
+func (n *NoopCloudStorage) Save(_ string, _ string) (err error) {
 	return nil
 }
 
-func (n *NoopCloudStorage) Load(name string) (data []byte, err error) {
+func (n *NoopCloudStorage) Load(_ string) (data []byte, err error) {
 	return nil, noopErr
 }

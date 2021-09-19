@@ -2,8 +2,8 @@ package storage
 
 import (
 	"io/ioutil"
-	"log"
 	"net/http"
+	"os"
 	"strings"
 	"testing"
 )
@@ -19,9 +19,7 @@ func newTestClient(fn rtFunc) *http.Client {
 }
 
 func TestOracleSave(t *testing.T) {
-
 	client, err := NewOracleDataStorageClient("test-url/")
-
 	client.client = newTestClient(func(req *http.Request) *http.Response {
 		return &http.Response{
 			StatusCode: 200,
@@ -34,8 +32,15 @@ func TestOracleSave(t *testing.T) {
 
 	tempFile, err := ioutil.TempFile("", "oracle_test.file")
 	if err != nil {
-		log.Fatal(err)
+		t.Errorf("%v", err)
 	}
+	defer func() {
+		_ = tempFile.Close()
+		err := os.Remove(tempFile.Name())
+		if err != nil {
+			t.Errorf("%v", err)
+		}
+	}()
 
 	_, err = tempFile.WriteString("test")
 	if err != nil {

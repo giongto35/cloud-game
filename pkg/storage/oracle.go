@@ -7,7 +7,6 @@ import (
 	"errors"
 	"fmt"
 	"io/ioutil"
-	"log"
 	"net/http"
 	"time"
 )
@@ -84,9 +83,7 @@ func (s *OracleDataStorageClient) Load(name string) (data []byte, err error) {
 		return nil, errors.New(res.Status)
 	}
 
-	log.Printf("Read body")
 	dat, err := ioutil.ReadAll(res.Body)
-	log.Printf("Done read body")
 	if err != nil {
 		return nil, err
 	}
