@@ -15,8 +15,8 @@ import (
 	"github.com/giongto35/cloud-game/v2/pkg/games"
 	"github.com/giongto35/cloud-game/v2/pkg/network/websocket"
 	"github.com/giongto35/cloud-game/v2/pkg/service"
+	"github.com/giongto35/cloud-game/v2/pkg/storage"
 	"github.com/giongto35/cloud-game/v2/pkg/webrtc"
-	storage "github.com/giongto35/cloud-game/v2/pkg/worker/cloud-storage"
 	"github.com/giongto35/cloud-game/v2/pkg/worker/room"
 )
 
@@ -32,17 +32,14 @@ type Handler struct {
 	// global ID of the current server
 	serverID string
 	// onlineStorage is client accessing to online storage (GCP)
-	onlineStorage *storage.Client
+	onlineStorage storage.CloudStorage
 	// sessions handles all sessions server is handler (key is sessionID)
 	sessions map[string]*Session
 }
 
-// NewHandler returns a new server
 func NewHandler(conf worker.Config, address string) *Handler {
-	// Create offline storage folder
 	createOfflineStorage(conf.Emulator.Storage)
-	// Init online storage
-	onlineStorage := storage.NewInitClient()
+	onlineStorage := initCloudStorage(conf)
 	return &Handler{
 		address:       address,
 		cfg:           conf,
@@ -90,6 +87,25 @@ func (h *Handler) Prepare() {
 	if err := coreManager.Sync(); err != nil {
 		log.Printf("error: cores sync has failed, %v", err)
 	}
+}
+
+func initCloudStorage(conf worker.Config) storage.CloudStorage {
+	var st storage.CloudStorage
+	var err error
+	switch conf.Storage.Provider {
+	case "google":
+		st, err = storage.NewGoogleCloudClient()
+	case "oracle":
+		st, err = storage.NewOracleDataStorageClient(conf.Storage.Key)
+	case "coordinator":
+	default:
+		st, _ = storage.NewNoopCloudStorage()
+	}
+	if err != nil {
+		log.Printf("Switching to noop cloud save")
+		st, _ = storage.NewNoopCloudStorage()
+	}
+	return st
 }
 
 func newCoordinatorConnection(host string, conf worker.Worker, addr string) (*CoordinatorClient, error) {

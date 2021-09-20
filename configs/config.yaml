@@ -203,6 +203,17 @@ encoder:
   # (experimental)
   withoutGame: false
 
+storage:
+  # cloud storage provider:
+  #   - empty (No op storage stub)
+  #   - google [Google Cloud Storage](https://cloud.google.com/storage)
+  #   - oracle [Oracle Object Storage](https://www.oracle.com/cloud/storage/object-storage.html)
+  provider:
+  # this value contains arbitrary key attribute:
+  #   - google: not used (see: https://cloud.google.com/docs/authentication/production#create_service_account)
+  #   - oracle: pre-authenticated URL (see: https://docs.oracle.com/en-us/iaas/Content/Object/Tasks/usingpreauthenticatedrequests.htm)
+  key:
+
 webrtc:
   # turn off default Pion interceptors for performance reasons
   # (experimental)

@@ -2,7 +2,7 @@ package emulator
 
 import "github.com/giongto35/cloud-game/v2/pkg/emulator/image"
 
-// CloudEmulator is the interface of cloud emulator. Currently NES emulator and RetroArch implements this in codebase
+// CloudEmulator is the interface of cloud emulator.
 type CloudEmulator interface {
 	// LoadMeta returns meta data of emulator. Refer below
 	LoadMeta(path string) Metadata
@@ -12,8 +12,8 @@ type CloudEmulator interface {
 	SetViewport(width int, height int)
 	// GetViewport debug encoder image
 	GetViewport() interface{}
-	// SaveGame save game state, saveExtraFunc is callback to do extra step. Ex: save to google cloud
-	SaveGame(saveExtraFunc func() error) error
+	// SaveGame save game state
+	SaveGame() error
 	// LoadGame load game state
 	LoadGame() error
 	// GetHashPath returns the path emulator will save state to

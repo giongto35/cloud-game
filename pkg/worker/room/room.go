@@ -3,6 +3,7 @@ package room
 import (
 	"bytes"
 	"encoding/gob"
+	"errors"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -19,8 +20,8 @@ import (
 	"github.com/giongto35/cloud-game/v2/pkg/encoder"
 	"github.com/giongto35/cloud-game/v2/pkg/games"
 	"github.com/giongto35/cloud-game/v2/pkg/session"
+	"github.com/giongto35/cloud-game/v2/pkg/storage"
 	"github.com/giongto35/cloud-game/v2/pkg/webrtc"
-	storage "github.com/giongto35/cloud-game/v2/pkg/worker/cloud-storage"
 )
 
 // Room is a game session. multi webRTC sessions can connect to a same game.
@@ -51,7 +52,7 @@ type Room struct {
 	// Director is emulator
 	director emulator.CloudEmulator
 	// Cloud storage to store room state online
-	onlineStorage *storage.Client
+	onlineStorage storage.CloudStorage
 
 	vPipe *encoder.VideoPipe
 }
@@ -119,7 +120,7 @@ func NewVideoImporter(roomID string) chan nanoarch.GameFrame {
 }
 
 // NewRoom creates a new room
-func NewRoom(roomID string, game games.GameMetadata, onlineStorage *storage.Client, cfg worker.Config) *Room {
+func NewRoom(roomID string, game games.GameMetadata, onlineStorage storage.CloudStorage, cfg worker.Config) *Room {
 	if roomID == "" {
 		roomID = session.GenerateRoomID(game.Name)
 	}
@@ -146,13 +147,13 @@ func NewRoom(roomID string, game games.GameMetadata, onlineStorage *storage.Clie
 	go func(game games.GameMetadata, roomID string) {
 		store := nanoarch.Storage{
 			Path:     cfg.Emulator.Storage,
-			MainSave: roomID + ".dat",
+			MainSave: roomID,
 		}
 
 		// Check room is on local or fetch from server
-		log.Printf("Check %s on online storage: %v", roomID, isGameOnLocal(store.MainSave))
-		if err := room.saveOnlineRoomToLocal(roomID, store.MainSave); err != nil {
-			log.Printf("Warn: Room %s is not in online storage, error %s", roomID, err)
+		log.Printf("Check for %s in the online storage", roomID)
+		if err := room.saveOnlineRoomToLocal(roomID, store.GetSavePath()); err != nil {
+			log.Printf("warn: room %s is not in the online storage, error %s", roomID, err)
 		}
 
 		// If not then load room or create room from local.
@@ -227,8 +228,13 @@ func resizeToAspect(ratio float64, sw int, sh int) (dw int, dh int) {
 }
 
 func isGameOnLocal(path string) bool {
-	_, err := os.Open(path)
-	return err == nil
+	file, err := os.Open(path)
+	if err == nil {
+		defer func() {
+			_ = file.Close()
+		}()
+	}
+	return !errors.Is(err, os.ErrNotExist)
 }
 
 func (r *Room) AddConnectionToRoom(peerconnection *webrtc.WebRTC) {
@@ -353,45 +359,38 @@ func (r *Room) Close() {
 
 func (r *Room) isRoomExisted() bool {
 	// Check if room is in online storage
-	_, err := r.onlineStorage.LoadFile(r.ID)
+	_, err := r.onlineStorage.Load(r.ID)
 	if err == nil {
 		return true
 	}
 	return isGameOnLocal(r.director.GetHashPath())
 }
 
-// SaveGame will save game to local and trigger a callback to store game on onlineStorage, so the game can be accessed later
+// SaveGame writes save state on the disk as well as
+// uploads it to a cloud storage.
 func (r *Room) SaveGame() error {
-	onlineSaveFunc := func() error {
-		// Try to save the game to gCloud
-		if err := r.onlineStorage.SaveFile(r.ID, r.director.GetHashPath()); err != nil {
-			return err
-		}
-
-		return nil
-	}
-
 	// TODO: Move to game view
-	if err := r.director.SaveGame(onlineSaveFunc); err != nil {
+	if err := r.director.SaveGame(); err != nil {
 		return err
 	}
-
+	if err := r.onlineStorage.Save(r.ID, r.director.GetHashPath()); err != nil {
+		return err
+	}
+	log.Printf("success, cloud save")
 	return nil
 }
 
 // saveOnlineRoomToLocal save online room to local.
 // !Supports only one file of main save state.
 func (r *Room) saveOnlineRoomToLocal(roomID string, savePath string) error {
-	log.Println("Check if game is on cloud storage")
-	// If the game is not on local server
-	// Try to load from gcloud
-	data, err := r.onlineStorage.LoadFile(roomID)
+	data, err := r.onlineStorage.Load(roomID)
 	if err != nil {
 		return err
 	}
-	// Save the data fetched from gcloud to local server
+	// Save the data fetched from a cloud provider to the local server
 	if data != nil {
-		_ = ioutil.WriteFile(savePath, data, 0644)
+		err = ioutil.WriteFile(savePath, data, 0644)
+		log.Printf("successfully downloaded cloud save")
 	}
 	return nil
 }

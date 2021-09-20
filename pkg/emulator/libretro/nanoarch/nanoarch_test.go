@@ -69,7 +69,7 @@ func GetEmulatorMock(room string, system string) *EmulatorMock {
 
 	store := Storage{
 		Path:     os.TempDir(),
-		MainSave: room + ".dat",
+		MainSave: room,
 	}
 
 	// an emu
@@ -134,6 +134,11 @@ func (emu *EmulatorMock) loadRom(game string) {
 	fmt.Printf("%v %v\n", emu.paths.cores, emu.core)
 	coreLoad(emulator.Metadata{LibPath: emu.paths.cores + emu.core})
 	coreLoadGame(emu.paths.games + game)
+
+	if emu.canvas.Rect.Dx() == 0 || emu.canvas.Rect.Dy() == 0 {
+		emu.canvas = image.NewRGBA(image.Rect(0, 0, emu.meta.BaseWidth, emu.meta.BaseHeight))
+		outputImg = emu.canvas
+	}
 }
 
 // shutdownEmulator closes the emulator and cleans its resources.

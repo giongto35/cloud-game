@@ -11,6 +11,7 @@ import (
 	"github.com/giongto35/cloud-game/v2/pkg/config/encoder"
 	"github.com/giongto35/cloud-game/v2/pkg/config/monitoring"
 	"github.com/giongto35/cloud-game/v2/pkg/config/shared"
+	"github.com/giongto35/cloud-game/v2/pkg/config/storage"
 	webrtcConfig "github.com/giongto35/cloud-game/v2/pkg/config/webrtc"
 	"github.com/giongto35/cloud-game/v2/pkg/environment"
 	flag "github.com/spf13/pflag"
@@ -20,6 +21,7 @@ type Config struct {
 	Encoder     encoder.Encoder
 	Emulator    emulator.Emulator
 	Environment shared.Environment
+	Storage     storage.Storage
 	Worker      Worker
 	Webrtc      webrtcConfig.Webrtc
 }
