@@ -267,8 +267,8 @@ const stats = (() => {
         let interval = null
 
         function getStats() {
-            if (!rtcp.isConnected()) return;
-            rtcp.getConnection().getStats(null).then(stats => {
+            if (!webrtc.isConnected()) return;
+            webrtc.getConnection().getStats(null).then(stats => {
                 let frameStatValue = '?';
                 stats.forEach(report => {
                     if (report["framesReceived"] !== undefined && report["framesDecoded"] !== undefined && report["framesDropped"] !== undefined) {
@@ -293,7 +293,7 @@ const stats = (() => {
         const disable = () => window.clearInterval(interval);
 
         return {enable, disable, internal: true}
-    })(event, rtcp, window);
+    })(event, webrtc, window);
 
     /**
      * User agent frame stats.
@@ -331,7 +331,7 @@ const stats = (() => {
         }
 
         return {get, enable, disable, render}
-    })(moduleUi, rtcp, window);
+    })(env, event, moduleUi);
 
     const webRTCRttStats = (() => {
         let value = 0;
@@ -357,7 +357,7 @@ const stats = (() => {
         }
 
         return {get, enable, disable, render}
-    })(moduleUi, rtcp, window);
+    })(event, moduleUi);
 
     const modules = (fn, force = true) => {
         _modules.forEach(m => {
@@ -437,4 +437,4 @@ const stats = (() => {
     event.sub(HELP_OVERLAY_TOGGLED, onHelpOverlayToggle)
 
     return {enable, disable}
-})(document, env, event, log, rtcp, window);
+})(document, env, event, log, webrtc, window);

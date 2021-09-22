@@ -165,9 +165,8 @@ const touch = (() => {
         }, 30);
     }
 
-    // !to rewrite slider completely
     function handlePlayerSlider() {
-        event.pub(GAME_PLAYER_IDX_CHANGE, {index: +this.value - 1})
+        event.pub(GAME_PLAYER_IDX, {index: this.value - 1});
     }
 
     // Touch menu

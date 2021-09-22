@@ -22,7 +22,7 @@
 
 <body>
 <div id="gamebody">
-    <div class="app-button" id="w" title="Workers">W</div>
+    <!--<div id="ui-emulator-bg"></div>-->
 
     <div id="circle-pad-holder">
         <div id="btn-up" class="dpad" value="up"></div>
@@ -46,8 +46,6 @@
             <div id="menu-item-choice"></div>
         </div>
     </div>
-
-    <div id="servers"></div>
 
     <div id="guide-txt"><b>Arrows</b>(move),<b>ZXCVAS</b>(game ABXYLR),<b>1/2</b>(1st/2nd player),<b>Shift/Enter/K/L</b>(select/start/save/load),<b>F</b>(fullscreen),<b>share</b>(copy
         sharelink to clipboard)
@@ -89,11 +87,6 @@
         <div id="help-overlay-detail"></div>
     </div>
     <div id="btn-help" class="btn unselectable" value="help"></div>
-    {{if .Recording.Enabled}}
-    <input id="user-name" type="text" data-lpignore="true" spellcheck="false" placeholder="user"
-           class="record-user unselectable">
-    <div id="btn-rec" class="btn unselectable" value="rec"></div>
-    {{end}}
 </div>
 
 <div id="app-settings" class="modal-window">
@@ -112,38 +105,39 @@
     </div>
 </div>
 
-<div class="source">
-    <span id="v">69ff8ae</span>
-    <a rel="noopener noreferrer" target="_blank" href="https://github.com/giongto35/cloud-game">
-        Source code on GitHub
-    </a>
+<a id="ribbon" style="position: fixed; right: 0; top: 0;" href="https://github.com/giongto35/cloud-game"><img
+        width="149" height="149"
+        src="https://github.blog/wp-content/uploads/2008/12/forkme_right_gray_6d6d6d.png?resize=149%2C149"
+        class="attachment-full size-full" alt="Fork me on GitHub" data-recalc-dims="1"></a>
+
+<div id="version">
+    <span id="v"></span>
 </div>
 
-<script src="/static/js/gui/gui.js?v=2"></script>
+<script src="/static/js/gui/gui.js?v=1"></script>
 <script src="/static/js/utils.js?v1"></script>
 <script src="/static/js/gui/message.js?v=1"></script>
-<script src="/static/js/log.js?v=6"></script>
-<script src="/static/js/event/event.js?v=6"></script>
-<script src="/static/js/network/socket.js?v=4"></script>
+<script src="/static/js/log.js?v=5"></script>
+<script src="/static/js/event/event.js?v=5"></script>
 <script src="/static/js/input/keys.js?v=3"></script>
 <script src="/static/js/settings/opts.js?v=1"></script>
-<script src="/static/js/settings/settings.js?v=3"></script>
+<script src="/static/js/settings/settings.js?v=2"></script>
 <script src="/static/js/env.js?v=5"></script>
 <script src="/static/js/input/input.js?v=3"></script>
 <script src="/static/js/gameList.js?v=3"></script>
 <script src="/static/js/stream/stream.js?v=2"></script>
 <script src="/static/js/room.js?v=3"></script>
 <script src="/static/js/network/ajax.js?v=3"></script>
-<script src="/static/js/network/rtcp.js?v=4"></script>
-<script src="/static/js/workerManager.js?v=1"></script>
-<script src="/static/js/recording.js?v=1"></script>
-<script src="/static/js/stats/stats.js?v=2"></script>
-<script src="/static/js/controller.js?v=8"></script>
+<script src="/static/js/network/socket.js?v=4"></script>
+<script src="/static/js/network/webrtc.js?v=1"></script>
+<script src="/static/js/api/api.js?v=2"></script>
+<script src="/static/js/stats/stats.js?v=1"></script>
+<script src="/static/js/controller.js?v=6"></script>
 <script src="/static/js/input/keyboard.js?v=5"></script>
 <script src="/static/js/input/touch.js?v=3"></script>
 <script src="/static/js/input/joystick.js?v=3"></script>
 
-<script src="/static/js/init.js?v=6"></script>
+<script src="/static/js/init.js?v=5"></script>
 
 {{if .Analytics.Inject}}
 <script async src="https://www.googletagmanager.com/gtag/js?id={{.Analytics.Gtag}}"></script>

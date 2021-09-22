@@ -22,9 +22,9 @@ type Webrtc struct {
 }
 
 type IceServer struct {
-	Url        string
-	Username   string
-	Credential string
+	Urls       string `json:"urls,omitempty"`
+	Username   string `json:"username,omitempty"`
+	Credential string `json:"credential,omitempty"`
 }
 
 type Config struct {

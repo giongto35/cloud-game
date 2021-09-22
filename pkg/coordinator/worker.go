@@ -1,68 +1,69 @@
 package coordinator
 
 import (
-	"fmt"
-	"github.com/rs/xid"
 	"log"
 	"sync"
 
-	"github.com/giongto35/cloud-game/v2/pkg/cws"
-	"github.com/gorilla/websocket"
+	"github.com/giongto35/cloud-game/v2/pkg/api"
+	"github.com/giongto35/cloud-game/v2/pkg/cache"
+	"github.com/giongto35/cloud-game/v2/pkg/client"
+	"github.com/giongto35/cloud-game/v2/pkg/ipc"
 )
 
-type WorkerClient struct {
-	*cws.Client
+type Worker struct {
+	client.DefaultClient
+	client.RegionalClient
 
-	Id xid.ID
-
-	WorkerID string
-	Addr     string
-	// public server used for ping check
-	PingServer     string
-	Port           string
-	StunTurnServer string
-	Tag            string
-	userCount      int // may be atomic
-	Zone           string
+	Address    string // ip address of worker
+	PingServer string
+	userCount  int // may be atomic
+	Zone       string
 
 	mu sync.Mutex
 }
 
-// NewWorkerClient returns a client connecting to worker.
-// This connection exchanges information between workers and server.
-func NewWorkerClient(c *websocket.Conn, workerID string) *WorkerClient {
-	return &WorkerClient{
-		Client:   cws.NewClient(c),
-		WorkerID: workerID,
-	}
+func NewWorker(conn *ipc.Client) Worker { return Worker{DefaultClient: client.New(conn, "worker")} }
+
+func (w *Worker) HandleRequests(rooms *cache.Cache, crowd *cache.Cache) {
+	w.DefaultClient.OnPacket(func(p ipc.InPacket) {
+		switch p.T {
+		case api.RegisterRoom:
+			log.Printf("Received registerRoom room %s from worker %s", p.Payload, w.Id())
+			w.HandleRegisterRoom(p.Payload, rooms)
+			log.Printf("Current room list is: %+v", rooms.List())
+		case api.CloseRoom:
+			log.Printf("Received closeRoom room %s from worker %s", p.Payload, w.Id())
+			w.HandleCloseRoom(p.Payload, rooms)
+			log.Printf("Current room list is: %+v", rooms.List())
+		case api.IceCandidate:
+			w.Printf("relay IceCandidate to useragent")
+			w.HandleIceCandidate(p.Payload, crowd)
+		}
+	})
 }
+
+// In say whether some worker from this region.
+// Empty region always returns true.
+func (w *Worker) In(region string) bool { return region == "" || region == w.Zone }
 
 // ChangeUserQuantityBy increases or decreases the total amount of
 // users connected to the current worker.
 // We count users to determine when the worker becomes new game ready.
-func (wc *WorkerClient) ChangeUserQuantityBy(n int) {
-	wc.mu.Lock()
-	wc.userCount += n
+func (w *Worker) ChangeUserQuantityBy(n int) {
+	w.mu.Lock()
+	w.userCount += n
 	// just to be on a safe side
-	if wc.userCount < 0 {
-		wc.userCount = 0
+	if w.userCount < 0 {
+		w.userCount = 0
 	}
-	wc.mu.Unlock()
+	w.mu.Unlock()
 }
 
 // HasGameSlot tells whether the current worker has a
 // free slot to start a new game.
 // Workers support only one game at a time.
-func (wc *WorkerClient) HasGameSlot() bool {
-	wc.mu.Lock()
-	defer wc.mu.Unlock()
-	return wc.userCount == 0
-}
-
-func (wc *WorkerClient) Printf(format string, args ...interface{}) {
-	log.Printf(fmt.Sprintf("Worker %s] %s", wc.WorkerID, format), args...)
-}
-
-func (wc *WorkerClient) Println(args ...interface{}) {
-	log.Println(fmt.Sprintf("Worker %s] %s", wc.WorkerID, fmt.Sprint(args...)))
+func (w *Worker) HasGameSlot() bool {
+	w.mu.Lock()
+	defer w.mu.Unlock()
+	return w.userCount == 0
 }

@@ -63,18 +63,19 @@ const GET_SERVER_LIST = 'getServerList';
 const GAME_ROOM_AVAILABLE = 'gameRoomAvailable';
 const GAME_SAVED = 'gameSaved';
 const GAME_LOADED = 'gameLoaded';
-// used to transfer the index value between touch and controller
-const GAME_PLAYER_IDX_CHANGE = 'gamePlayerIndexChange';
 const GAME_PLAYER_IDX = 'gamePlayerIndex';
+const GAME_PLAYER_IDX_SET = 'gamePlayerIndexSet'
 
-const CONNECTION_READY = 'connectionReady';
-const CONNECTION_CLOSED = 'connectionClosed';
+const WEBRTC_CONNECTION_CLOSED = 'webrtcConnectionClosed';
+const WEBRTC_CONNECTION_READY = 'webrtcConnectionReady';
+const WEBRTC_ICE_CANDIDATE_FOUND = 'webrtcIceCandidateFound'
+const WEBRTC_ICE_CANDIDATE_RECEIVED = 'webrtcIceCandidateReceived';
+const WEBRTC_ICE_CANDIDATES_FLUSH = 'webrtcIceCandidatesFlush';
+const WEBRTC_NEW_CONNECTION = 'webrtcNewConnection';
+const WEBRTC_SDP_ANSWER = 'webrtcSdpAnswer'
+const WEBRTC_SDP_OFFER = 'webrtcSdpOffer';
 
-const MEDIA_STREAM_INITIALIZED = 'mediaStreamInitialized';
-const MEDIA_STREAM_SDP_AVAILABLE = 'mediaStreamSdpAvailable';
-const MEDIA_STREAM_CANDIDATE_ADD = 'mediaStreamCandidateAdd';
-const MEDIA_STREAM_CANDIDATE_FLUSH = 'mediaStreamCandidateFlush';
-const MEDIA_STREAM_READY = 'mediaStreamReady';
+const MESSAGE = 'message'
 
 const GAMEPAD_CONNECTED = 'gamepadConnected';
 const GAMEPAD_DISCONNECTED = 'gamepadDisconnected';

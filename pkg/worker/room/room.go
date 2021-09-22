@@ -348,8 +348,8 @@ func (r *Room) RemoveSession(w *webrtc.WebRTC) {
 	log.Println("Cleaning session: ", w.ID)
 	// TODO: get list of r.rtcSessions in lock
 	for i, s := range r.rtcSessions {
-		log.Println("found session: ", w.ID)
 		if s.ID == w.ID {
+			log.Println("found session: ", w.ID)
 			r.rtcSessions = append(r.rtcSessions[:i], r.rtcSessions[i+1:]...)
 			s.RoomID = ""
 			log.Println("Removed session ", s.ID, " from room: ", r.ID)
@@ -383,6 +383,9 @@ func (r *Room) Close() {
 
 	r.IsRunning = false
 	log.Println("Closing room and director of room ", r.ID)
+
+	// check room save before close
+	log.Printf("CHEKC BEFORE QUIT, room %v in local %v", r.ID, isGameOnLocal(r.ID))
 
 	// Save game before quit. Only save for game which was previous saved to avoid flooding database
 	if r.isRoomExisted() {
@@ -461,8 +464,7 @@ func (r *Room) ToggleMultitap() error { return r.director.ToggleMultitap() }
 
 func (r *Room) IsEmpty() bool { return len(r.rtcSessions) == 0 }
 
-func (r *Room) IsRunningSessions() bool {
-	// If there is running session
+func (r *Room) HasRunningSessions() bool {
 	for _, s := range r.rtcSessions {
 		if s.IsConnected() {
 			return true

@@ -10,6 +10,9 @@
     // first user interaction
     let interacted = false;
 
+    // ping-pong
+    const pingPong = true;
+
     const DIR = (() => {
         return {
             IDLE: 'idle',
@@ -63,7 +66,19 @@
         message.show('Now you can share you game!');
     };
 
+    const onWebrtcMessage = () => {
+        event.pub(PING_RESPONSE);
+    };
+
     const onConnectionReady = () => {
+        // ping / pong
+        if (pingPong) {
+            setInterval(() => {
+                webrtc.message('x');
+                event.pub(PING_REQUEST, {time: Date.now()})
+            }, 10000);
+        }
+
         // start a game right away or show the menu
         if (room.getId()) {
             startGame();
@@ -72,12 +87,22 @@
         }
     };
 
-    const onLatencyCheck = async (data) => {
+    const onLatencyCheck = (data) => {
         message.show('Connecting to fastest server...');
-        const servers = await workerManager.checkLatencies(data);
-        const latencies = Object.assign({}, ...servers);
-        log.info('[ping] <->', latencies);
-        socket.latency(latencies, data.packetId);
+        const timeoutMs = 1111;
+        // deduplicate
+        const addresses = [...new Set(data.addresses || [])];
+
+        Promise.all(addresses.map(address => {
+            const start = Date.now();
+            return ajax.fetch(`${address}?_=${start}`, {method: "GET", redirect: "follow"}, timeoutMs)
+                .then(() => ({[address]: Date.now() - start}))
+                .catch(() => ({[address]: 9999}));
+        })).then(servers => {
+            const latencies = Object.assign({}, ...servers);
+            log.info('[ping] <->', latencies);
+            api.server.latencyCheck(data.packetId, latencies);
+        });
     };
 
     const helpScreen = {
@@ -119,12 +144,12 @@
     };
 
     const startGame = () => {
-        if (!rtcp.isConnected()) {
+        if (!webrtc.isConnected()) {
             message.show('Game cannot load. Please refresh');
             return;
         }
 
-        if (!rtcp.isInputReady()) {
+        if (!webrtc.isInputReady()) {
             message.show('Game is not ready yet. Please wait');
             return;
         }
@@ -140,13 +165,8 @@
         // currently it's a game with the index 1
         // on the server this game is ignored and the actual game will be extracted from the share link
         // so there's no point in doing this and this' really confusing
-        socket.startGame(
-            gameList.getCurrentGame(),
-            env.isMobileDevice(),
-            room.getId(),
-            recording.isActive(),
-            recording.getUser(),
-            +playerIndex.value - 1);
+
+        api.game.start(gameList.getCurrentGame(), room.getId(), +playerIndex.value - 1);
 
         // clear menu screen
         input.poll().disable();
@@ -158,8 +178,37 @@
         input.poll().enable();
     };
 
-    const saveGame = utils.debounce(socket.saveGame, 1000);
-    const loadGame = utils.debounce(socket.loadGame, 1000);
+    const saveGame = utils.debounce(() => api.game.save(), 1000);
+    const loadGame = utils.debounce(() => api.game.load(), 1000);
+
+    const onMessage = (message) => {
+        const {id, t, p: payload} = message;
+        switch (t) {
+            case api.endpoint.INIT:
+                event.pub(WEBRTC_NEW_CONNECTION, payload);
+                break;
+            case api.endpoint.OFFER:
+                event.pub(WEBRTC_SDP_OFFER, {sdp: payload});
+                break;
+            case api.endpoint.ICE_CANDIDATE:
+                event.pub(WEBRTC_ICE_CANDIDATE_RECEIVED, {candidate: payload});
+                break;
+            case api.endpoint.GAME_START:
+                event.pub(GAME_ROOM_AVAILABLE, {roomId: payload});
+                break;
+            case api.endpoint.GAME_SAVE:
+                event.pub(GAME_SAVED);
+                break;
+            case api.endpoint.GAME_LOAD:
+                event.pub(GAME_LOADED);
+                break;
+            case api.endpoint.GAME_SET_PLAYER_INDEX:
+                event.pub(GAME_PLAYER_IDX_SET, payload);
+                break;
+            case api.endpoint.LATENCY_CHECK:
+                event.pub(LATENCY_CHECK_REQUESTED, {packetId: id, addresses: payload});
+        }
+    }
 
     const _dpadArrowKeys = [KEY.UP, KEY.DOWN, KEY.LEFT, KEY.RIGHT];
 
@@ -209,7 +258,7 @@
 
     const updatePlayerIndex = idx => {
         playerIndex.value = idx + 1;
-        socket.updatePlayerIndex(idx);
+        api.game.setPlayerIndex(idx);
     };
 
     // noop function for the state
@@ -228,28 +277,10 @@
     };
 
     const handleToggle = () => {
-        let toggle = document.getElementById('dpad-toggle');
+        const toggle = document.getElementById('dpad-toggle');
         toggle.checked = !toggle.checked;
         event.pub(DPAD_TOGGLE, {checked: toggle.checked});
     };
-
-    const handleRecording = (data) => {
-        const {recording, userName} = data;
-        socket.toggleRecording(recording, userName);
-    }
-
-    const handleRecordingStatus = (data) => {
-        if (data === 'ok') {
-            message.show(`Recording ${recording.isActive() ? 'on' : 'off'}`)
-            if (recording.isActive()) {
-                recording.setIndicator(true)
-            }
-        } else {
-            message.show(`Recording failed ):`)
-            recording.setIndicator(false)
-        }
-        console.log("recording is ", recording.isActive())
-    }
 
     const app = {
         state: {
@@ -387,15 +418,15 @@
 
                         // toggle multitap
                         case KEY.MULTITAP:
-                            socket.toggleMultitap();
+                            api.game.toggleMultitap();
                             break;
 
                         // quit
                         case KEY.QUIT:
                             input.poll().disable();
 
-                            // TODO: Stop game
-                            socket.quitGame(room.getId());
+                            // TODO: Stop game / SPA
+                            api.game.quit(room.getId());
                             room.reset();
 
                             message.show('Quit!');
@@ -417,30 +448,34 @@
     };
 
     // subscriptions
+    event.sub(MESSAGE, onMessage);
+
     event.sub(GAME_ROOM_AVAILABLE, onGameRoomAvailable, 2);
     event.sub(GAME_SAVED, () => message.show('Saved'));
     event.sub(GAME_LOADED, () => message.show('Loaded'));
-    event.sub(GAME_PLAYER_IDX_CHANGE, data => {
-        updatePlayerIndex(data.index);
+    event.sub(GAME_PLAYER_IDX, data => {
+        updatePlayerIndex(+data.index);
     });
-    event.sub(GAME_PLAYER_IDX, idx => {
+    event.sub(GAME_PLAYER_IDX_SET, idx => {
         if (!isNaN(+idx)) message.show(+idx + 1);
     });
-
-    event.sub(MEDIA_STREAM_INITIALIZED, (data) => {
-        workerManager.whoami(data.xid);
-        rtcp.start(data.stunturn);
+    event.sub(WEBRTC_NEW_CONNECTION, (data) => {
+        if (pingPong) {
+            webrtc.setMessageHandler(onWebrtcMessage);
+        }
+        webrtc.start(data.ice);
+        api.server.initWebrtc()
         gameList.set(data.games);
     });
-    event.sub(MEDIA_STREAM_SDP_AVAILABLE, (data) => rtcp.setRemoteDescription(data.sdp, stream.video.el()));
-    event.sub(MEDIA_STREAM_CANDIDATE_ADD, (data) => rtcp.addCandidate(data.candidate));
-    event.sub(MEDIA_STREAM_CANDIDATE_FLUSH, () => rtcp.flushCandidate());
-    event.sub(MEDIA_STREAM_READY, () => rtcp.start());
-    event.sub(CONNECTION_READY, onConnectionReady);
-    event.sub(CONNECTION_CLOSED, () => {
+    event.sub(WEBRTC_ICE_CANDIDATE_FOUND, (data) => api.server.sendIceCandidate(data.candidate));
+    event.sub(WEBRTC_SDP_ANSWER, (data) => api.server.sendSdp(data.sdp));
+    event.sub(WEBRTC_SDP_OFFER, (data) => webrtc.setRemoteDescription(data.sdp, stream.video.el()));
+    event.sub(WEBRTC_ICE_CANDIDATE_RECEIVED, (data) => webrtc.addCandidate(data.candidate));
+    event.sub(WEBRTC_ICE_CANDIDATES_FLUSH, () => webrtc.flushCandidates());
+    // event.sub(MEDIA_STREAM_READY, () => rtcp.start());
+    event.sub(WEBRTC_CONNECTION_READY, onConnectionReady);
+    event.sub(WEBRTC_CONNECTION_CLOSED, () => {
         input.poll().disable();
-        socket.abort();
-        rtcp.stop();
     });
     event.sub(LATENCY_CHECK_REQUESTED, onLatencyCheck);
     event.sub(GAMEPAD_CONNECTED, () => message.show('Gamepad connected'));
@@ -451,16 +486,13 @@
     });
     event.sub(KEY_PRESSED, onKeyPress);
     event.sub(KEY_RELEASED, onKeyRelease);
-    event.sub(KEY_STATE_UPDATED, data => rtcp.input(data));
+    event.sub(KEY_STATE_UPDATED, data => webrtc.input(data));
     event.sub(SETTINGS_CHANGED, () => message.show('Settings have been updated'));
     event.sub(SETTINGS_CLOSED, () => {
         state.keyRelease(KEY.SETTINGS);
     });
     event.sub(AXIS_CHANGED, onAxisChanged);
-    event.sub(CONTROLLER_UPDATED, data => rtcp.input(data));
-    // recording
-    event.sub(RECORDING_TOGGLED, handleRecording);
-    event.sub(RECORDING_STATUS_CHANGED, handleRecordingStatus);
+    event.sub(CONTROLLER_UPDATED, data => webrtc.input(data));
 
     event.sub(SETTINGS_CHANGED, () => {
         const newValue = settings.get()[opts.LOG_LEVEL];
@@ -471,4 +503,4 @@
 
     // initial app state
     setState(app.state.eden);
-})(document, event, env, gameList, input, KEY, log, message, recording, room, rtcp, settings, socket, stats, stream, utils, workerManager);
+})(document, event, env, gameList, input, KEY, log, message, room, settings, socket, stats, stream, utils);

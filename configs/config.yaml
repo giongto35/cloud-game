@@ -2,10 +2,15 @@
 # Application configuration file
 #
 
+# application environment (dev, staging, prod)
+# deprecated
+environment: dev
+
 coordinator:
-  # debugging switch
-  #   - allows selecting worker instances
-  debug: false
+  # address if the server want to connect directly to debug
+  debugHost:
+  # get any free workers unconditionally on user connection
+  roundRobin: false
   # games library
   library:
     # some directory which is gonna be the root folder for the library
@@ -85,8 +90,6 @@ worker:
       # Own certs config
       httpsCert:
       httpsKey:
-  # optional server tag
-  tag:
 
 emulator:
   # set output viewport scale factor
@@ -269,7 +272,7 @@ webrtc:
   dtlsRole:
   # a list of STUN/TURN servers to use
   iceServers:
-    - url: stun:stun.l.google.com:19302
+    - urls: stun:stun.l.google.com:19302
   # configures whether the ice agent should be a lite agent (true/false)
   # (performance)
   # don't use iceServers when enabled
