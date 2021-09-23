@@ -21,7 +21,7 @@ func New(conf coordinator.Config) (services service.Group) {
 	}
 	services.Add(hub, httpSrv)
 	if conf.Coordinator.Monitoring.IsEnabled() {
-		services.Add(monitoring.New(conf.Coordinator.Monitoring, httpSrv.GetHost(), "cord"))
+		services.Add(monitoring.New(conf.Coordinator.Monitoring, httpSrv.GetHost(), "coordinator"))
 	}
 	return
 }

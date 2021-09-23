@@ -72,8 +72,8 @@ func (u *User) HandleStartGame(data json.RawMessage, launcher launcher.Launcher)
 		return
 	}
 	// Response from worker contains initialized roomID. Set roomID to the session
-	u.AssignRoom(workerResp.RoomId)
-	u.Printf("Received room response from worker: ", workerResp.RoomId)
+	u.AssignRoom(workerResp.Id)
+	u.Printf("Received room response from worker: ", workerResp.Id)
 
 	if err = u.StartGame(); err != nil {
 		u.Printf("can't send back start request")
@@ -88,7 +88,7 @@ func (u *User) HandleQuitGame(data json.RawMessage) {
 		u.Printf("error: broken game quit request %v", err)
 		return
 	}
-	u.Worker.QuitGame(u.Id(), req.RoomId)
+	u.Worker.QuitGame(u.Id(), req.Room.Id)
 }
 
 func (u *User) HandleSaveGame() {

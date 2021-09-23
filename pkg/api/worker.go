@@ -1,58 +1,64 @@
 package api
 
 type (
-	ChangePlayerRequest = struct {
-		StatefulRequest
-		RoomId string `json:"room_id"`
-		Index  string `json:"index"`
-	}
-	ChangePlayerResponse = string
-	GameInfo             struct {
+	GameInfo struct {
 		Name string `json:"name"`
 		Base string `json:"base"`
 		Path string `json:"path"`
 		Type string `json:"type"`
 	}
-	GameQuitRequest struct {
-		StatefulRequest
-		RoomId string `json:"room_id"`
+	Room struct {
+		Id string `json:"room_id"`
+	}
+)
+
+type (
+	ChangePlayerRequest = struct {
+		Stateful
+		Room
+		Index string `json:"index"`
+	}
+	ChangePlayerResponse = string
+	GameQuitRequest      struct {
+		Stateful
+		Room
 	}
 	LoadGameRequest struct {
-		StatefulRequest
-		RoomId string `json:"room_id"`
+		Stateful
+		Room
 	}
 	LoadGameResponse = string
 	SaveGameRequest  struct {
-		StatefulRequest
-		RoomId string `json:"room_id"`
+		Stateful
+		Room
 	}
 	SaveGameResponse = string
 	StartGameRequest struct {
-		StatefulRequest
+		Stateful
+		Room
 		Game        GameInfo `json:"game"`
-		RoomId      string   `json:"room_id"`
 		PlayerIndex int      `json:"player_index"`
 	}
 	StartGameResponse struct {
-		RoomId string `json:"room_id"`
+		Room
 	}
 	TerminateSessionRequest struct {
-		StatefulRequest
+		Stateful
 	}
 	ToggleMultitapRequest struct {
-		StatefulRequest
-		RoomId string `json:"room_id"`
+		Stateful
+		Room
 	}
 	WebrtcAnswerRequest struct {
-		StatefulRequest
+		Stateful
 		Sdp string `json:"sdp"`
 	}
 	WebrtcIceCandidateRequest struct {
-		StatefulRequest
+		Stateful
 		Candidate string `json:"candidate"`
 	}
 	WebrtcInitRequest struct {
-		StatefulRequest
+		Stateful
 	}
 	WebrtcInitResponse = string
 )

@@ -9,7 +9,7 @@ import (
 )
 
 func (w *Worker) WebrtcInit(id network.Uid) (api.WebrtcInitResponse, error) {
-	data, err := w.Send(api.WebrtcInit, api.WebrtcInitRequest{StatefulRequest: api.StatefulRequest{Id: id}})
+	data, err := w.Send(api.WebrtcInit, api.WebrtcInitRequest{Stateful: api.Stateful{Id: id}})
 	var resp string
 	if err != nil {
 		return resp, err
@@ -20,28 +20,23 @@ func (w *Worker) WebrtcInit(id network.Uid) (api.WebrtcInitResponse, error) {
 
 func (w *Worker) WebrtcAnswer(id network.Uid, sdp string) {
 	_ = w.SendAndForget(api.WebrtcAnswer, api.WebrtcAnswerRequest{
-		StatefulRequest: api.StatefulRequest{Id: id},
-		Sdp:             sdp,
+		Stateful: api.Stateful{Id: id},
+		Sdp:      sdp,
 	})
 }
 
 func (w *Worker) WebrtcIceCandidate(id network.Uid, candidate string) {
 	_ = w.SendAndForget(api.WebrtcIceCandidate, api.WebrtcIceCandidateRequest{
-		StatefulRequest: api.StatefulRequest{Id: id},
-		Candidate:       candidate,
+		Stateful:  api.Stateful{Id: id},
+		Candidate: candidate,
 	})
 }
 
-func (w *Worker) StartGame(id network.Uid, roomId string, idx int, game launcher.AppMeta) (api.StartGameResponse, error) {
+func (w *Worker) StartGame(id network.Uid, roomId string, idx int, app launcher.AppMeta) (api.StartGameResponse, error) {
 	data, err := w.Send(api.StartGame, api.StartGameRequest{
-		StatefulRequest: api.StatefulRequest{Id: id},
-		Game: api.GameInfo{
-			Name: game.Name,
-			Base: game.Base,
-			Path: game.Path,
-			Type: game.Type,
-		},
-		RoomId:      roomId,
+		Stateful:    api.Stateful{Id: id},
+		Game:        api.GameInfo{Name: app.Name, Base: app.Base, Path: app.Path, Type: app.Type},
+		Room:        api.Room{Id: roomId},
 		PlayerIndex: idx,
 	})
 	var resp api.StartGameResponse
@@ -54,15 +49,15 @@ func (w *Worker) StartGame(id network.Uid, roomId string, idx int, game launcher
 
 func (w *Worker) QuitGame(id network.Uid, roomId string) {
 	_ = w.SendAndForget(api.QuitGame, api.GameQuitRequest{
-		StatefulRequest: api.StatefulRequest{Id: id},
-		RoomId:          roomId,
+		Stateful: api.Stateful{Id: id},
+		Room:     api.Room{Id: roomId},
 	})
 }
 
 func (w *Worker) SaveGame(id network.Uid, roomId string) (api.SaveGameResponse, error) {
 	data, err := w.Send(api.SaveGame, api.SaveGameRequest{
-		StatefulRequest: api.StatefulRequest{Id: id},
-		RoomId:          roomId,
+		Stateful: api.Stateful{Id: id},
+		Room:     api.Room{Id: roomId},
 	})
 	var resp api.SaveGameResponse
 	if err != nil {
@@ -74,8 +69,8 @@ func (w *Worker) SaveGame(id network.Uid, roomId string) (api.SaveGameResponse, 
 
 func (w *Worker) LoadGame(id network.Uid, roomId string) (api.LoadGameResponse, error) {
 	data, err := w.Send(api.LoadGame, api.LoadGameRequest{
-		StatefulRequest: api.StatefulRequest{Id: id},
-		RoomId:          roomId,
+		Stateful: api.Stateful{Id: id},
+		Room:     api.Room{Id: roomId},
 	})
 	var resp api.LoadGameResponse
 	if err != nil {
@@ -87,9 +82,9 @@ func (w *Worker) LoadGame(id network.Uid, roomId string) (api.LoadGameResponse, 
 
 func (w *Worker) ChangePlayer(id network.Uid, roomId string, index string) (api.ChangePlayerResponse, error) {
 	data, err := w.Send(api.ChangePlayer, api.ChangePlayerRequest{
-		StatefulRequest: api.StatefulRequest{Id: id},
-		RoomId:          roomId,
-		Index:           index,
+		Stateful: api.Stateful{Id: id},
+		Room:     api.Room{Id: roomId},
+		Index:    index,
 	})
 	var resp api.ChangePlayerResponse
 	if err != nil {
@@ -101,11 +96,11 @@ func (w *Worker) ChangePlayer(id network.Uid, roomId string, index string) (api.
 
 func (w *Worker) ToggleMultitap(id network.Uid, roomId string) {
 	_, _ = w.Send(api.ToggleMultitap, api.ToggleMultitapRequest{
-		StatefulRequest: api.StatefulRequest{Id: id},
-		RoomId:          roomId,
+		Stateful: api.Stateful{Id: id},
+		Room:     api.Room{Id: roomId},
 	})
 }
 
 func (w *Worker) TerminateSession(id network.Uid) {
-	_, _ = w.Send(api.TerminateSession, api.TerminateSessionRequest{StatefulRequest: api.StatefulRequest{Id: id}})
+	_, _ = w.Send(api.TerminateSession, api.TerminateSessionRequest{Stateful: api.Stateful{Id: id}})
 }

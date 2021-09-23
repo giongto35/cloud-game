@@ -39,13 +39,11 @@ func (c DefaultClient) OnPacket(fn func(packet ipc.InPacket)) {
 }
 
 func (c DefaultClient) Printf(format string, args ...interface{}) {
-	log.Printf(fmt.Sprintf("[%s | %s]: %s", c.tag, c.id.Short(), format), args...)
+	log.Printf(fmt.Sprintf("[%s:%s] %s", c.tag, c.id.Short(), format), args...)
 }
 
-func (c DefaultClient) Listen() {
-	<-c.wire.Conn.Done
-}
+func (c DefaultClient) Listen() { <-c.wire.Conn.Done }
 
-func (c DefaultClient) Close() {
-	c.wire.Close()
-}
+func (c DefaultClient) Close() { c.wire.Close() }
+
+func (c DefaultClient) String() string { return c.tag + ":" + c.Id().Short() }

@@ -77,9 +77,6 @@ func (h *Hub) handleWebsocketUserConnection(w http.ResponseWriter, r *http.Reque
 
 	usr.AssignWorker(wkr)
 
-	wkr.ChangeUserQuantityBy(1)
-	defer wkr.ChangeUserQuantityBy(-1)
-
 	h.crowd.Add(uid, &usr)
 	defer h.crowd.Remove(uid)
 	usr.HandleRequests(h.launcher)

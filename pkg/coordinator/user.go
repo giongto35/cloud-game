@@ -14,9 +14,7 @@ type User struct {
 	Worker *Worker
 }
 
-func NewUser(conn *ipc.Client) User {
-	return User{DefaultClient: client.New(conn, "user")}
-}
+func NewUser(conn *ipc.Client) User { return User{DefaultClient: client.New(conn, "u")} }
 
 func (u *User) AssignWorker(w *Worker) {
 	u.Worker = w
@@ -32,10 +30,6 @@ func (u *User) HandleRequests(launcher launcher.Launcher) {
 		switch p.T {
 		case api.WebrtcInit:
 			u.Printf("Received init_webrtc request -> relay to worker: %s", u.Worker.Id())
-			// initWebrtc now only sends signal to worker, asks it to createOffer
-			// relay request to target worker
-			// worker creates a PeerConnection, and createOffer
-			// send SDP back to browser
 			u.HandleWebrtcInit()
 			u.Printf("Received SDP from worker -> sending back to browser")
 		case api.WebrtcAnswer:

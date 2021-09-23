@@ -310,21 +310,6 @@ func (r *Room) startWebRTCSession(peerconnection *webrtc.WebRTC) {
 	}()
 
 	log.Println("Start WebRTC session")
-	//go func() {
-	//
-	//	// set up voice input and output. A room has multiple voice input and only one combined voice output.
-	//	for voiceInput := range peerconnection.VoiceInChannel {
-	//		// NOTE: when room is no longer running. InputChannel needs to have extra event to go inside the loop
-	//		if peerconnection.Done || !peerconnection.IsConnected() || !r.IsRunning {
-	//			break
-	//		}
-	//
-	//		if peerconnection.IsConnected() {
-	//			r.voiceInChannel <- voiceInput
-	//		}
-	//
-	//	}
-	//}()
 
 	// bug: when input channel here = nil, skip and finish
 	for input := range peerconnection.InputChannel {
@@ -345,14 +330,12 @@ func (r *Room) startWebRTCSession(peerconnection *webrtc.WebRTC) {
 
 // RemoveSession removes a peerconnection from room and return true if there is no more room
 func (r *Room) RemoveSession(w *webrtc.WebRTC) {
-	log.Println("Cleaning session: ", w.ID)
 	// TODO: get list of r.rtcSessions in lock
 	for i, s := range r.rtcSessions {
 		if s.ID == w.ID {
-			log.Println("found session: ", w.ID)
 			r.rtcSessions = append(r.rtcSessions[:i], r.rtcSessions[i+1:]...)
 			s.RoomID = ""
-			log.Println("Removed session ", s.ID, " from room: ", r.ID)
+			log.Printf("Session [%v] was removed from room [%v]", s.ID, r.ID)
 			break
 		}
 	}

@@ -26,6 +26,6 @@ const (
 	TerminateSession uint8 = 5
 )
 
-type StatefulRequest struct {
+type Stateful struct {
 	Id network.Uid `json:"id"`
 }

@@ -22,7 +22,7 @@ type Worker struct {
 	mu sync.Mutex
 }
 
-func NewWorker(conn *ipc.Client) Worker { return Worker{DefaultClient: client.New(conn, "worker")} }
+func NewWorker(conn *ipc.Client) Worker { return Worker{DefaultClient: client.New(conn, "w")} }
 
 func (w *Worker) HandleRequests(rooms *cache.Cache, crowd *cache.Cache) {
 	w.DefaultClient.OnPacket(func(p ipc.InPacket) {
@@ -30,7 +30,7 @@ func (w *Worker) HandleRequests(rooms *cache.Cache, crowd *cache.Cache) {
 		case api.RegisterRoom:
 			log.Printf("Received registerRoom room %s from worker %s", p.Payload, w.Id())
 			w.HandleRegisterRoom(p.Payload, rooms)
-			log.Printf("Current room list is: %+v", rooms.List())
+			log.Printf("Rooms: %+v", rooms.List())
 		case api.CloseRoom:
 			log.Printf("Received closeRoom room %s from worker %s", p.Payload, w.Id())
 			w.HandleCloseRoom(p.Payload, rooms)

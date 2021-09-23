@@ -110,18 +110,18 @@ func (c *Coordinator) HandleGameStart(packet ipc.InPacket, h *Handler) {
 		_ = h.cord.SendPacket(packet.Proxy(""))
 		return
 	}
-	session := h.sessions.Get(resp.Id)
+	session := h.sessions.Get(resp.Stateful.Id)
 	if session == nil {
-		log.Printf("error: no session for ID: %s", resp.Id)
+		log.Printf("error: no session for ID: %s", resp.Stateful.Id)
 		_ = h.cord.SendPacket(packet.Proxy(""))
 		return
 	}
 
 	gameMeta := games.GameMetadata{Name: resp.Game.Name, Base: resp.Game.Base, Type: resp.Game.Type, Path: resp.Game.Path}
-	gameRoom := h.startGameHandler(gameMeta, resp.RoomId, resp.PlayerIndex, session.peerconnection)
+	gameRoom := h.startGameHandler(gameMeta, resp.Room.Id, resp.PlayerIndex, session.peerconnection)
 	session.RoomID = gameRoom.ID
 	h.rooms.Add(gameRoom)
-	_ = h.cord.SendPacket(packet.Proxy(api.StartGameResponse{RoomId: gameRoom.ID}))
+	_ = h.cord.SendPacket(packet.Proxy(api.StartGameResponse{Room: api.Room{Id: gameRoom.ID}}))
 }
 
 // startGameHandler starts a game if roomID is given, if not create new room
@@ -168,7 +168,7 @@ func (c *Coordinator) HandleQuitGame(packet ipc.InPacket, h *Handler) {
 		log.Printf("error: broken game quit request %v", err)
 		return
 	}
-	session := h.sessions.Get(resp.Id)
+	session := h.sessions.Get(resp.Stateful.Id)
 	if session != nil {
 		rm := h.rooms.Get(session.RoomID)
 		// Defensive coding, check if the peerconnection is in room
@@ -176,7 +176,7 @@ func (c *Coordinator) HandleQuitGame(packet ipc.InPacket, h *Handler) {
 			h.detachPeerConn(session.peerconnection)
 		}
 	} else {
-		log.Printf("error: no session for ID: %s", resp.Id)
+		log.Printf("error: no session for ID: %s", resp.Stateful.Id)
 	}
 }
 
@@ -187,10 +187,10 @@ func (c *Coordinator) HandleSaveGame(packet ipc.InPacket, h *Handler) {
 		log.Printf("error: broken game save request %v", err)
 		return
 	}
-	log.Printf("RoomID: %v", resp.RoomId)
+	log.Printf("RoomID: %v", resp.Room.Id)
 	rez := "ok"
-	if resp.RoomId != "" {
-		rm := h.rooms.Get(resp.RoomId)
+	if resp.Room.Id != "" {
+		rm := h.rooms.Get(resp.Room.Id)
 		if rm == nil {
 			return
 		}
@@ -214,8 +214,8 @@ func (c *Coordinator) HandleLoadGame(packet ipc.InPacket, h *Handler) {
 		return
 	}
 	rez := "ok"
-	if resp.RoomId != "" {
-		rm := h.rooms.Get(resp.RoomId)
+	if resp.Room.Id != "" {
+		rm := h.rooms.Get(resp.Room.Id)
 		if rm == nil {
 			return
 		}
@@ -237,9 +237,9 @@ func (c *Coordinator) HandleChangePlayer(packet ipc.InPacket, h *Handler) {
 		return
 	}
 
-	session := h.sessions.Get(resp.Id)
+	session := h.sessions.Get(resp.Stateful.Id)
 	idx, err := strconv.Atoi(resp.Index)
-	rm := h.rooms.Get(resp.RoomId)
+	rm := h.rooms.Get(resp.Room.Id)
 	if rm == nil {
 		return
 	}
@@ -262,8 +262,8 @@ func (c *Coordinator) HandleToggleMultitap(packet ipc.InPacket, h *Handler) {
 	}
 
 	rez := "ok"
-	if resp.RoomId != "" {
-		rm := h.rooms.Get(resp.RoomId)
+	if resp.Room.Id != "" {
+		rm := h.rooms.Get(resp.Room.Id)
 		if rm == nil {
 			return
 		}

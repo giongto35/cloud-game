@@ -30,7 +30,7 @@ func newCoordinatorConnection(host string, conf worker.Worker, addr string) (Coo
 	if err != nil {
 		return Coordinator{}, err
 	}
-	return Coordinator{DefaultClient: client.New(conn, "cord")}, nil
+	return Coordinator{DefaultClient: client.New(conn, "c")}, nil
 }
 
 func (c *Coordinator) HandleRequests(h *Handler) {
@@ -77,7 +77,7 @@ func (c *Coordinator) RegisterRoom(id string) { _ = c.SendAndForget(api.Register
 
 func (c *Coordinator) IceCandidate(candidate string, sessionId string) {
 	_ = c.SendAndForget(api.IceCandidate, api.WebrtcIceCandidateRequest{
-		StatefulRequest: api.StatefulRequest{Id: network.Uid(sessionId)},
-		Candidate:       candidate,
+		Stateful:  api.Stateful{Id: network.Uid(sessionId)},
+		Candidate: candidate,
 	})
 }
