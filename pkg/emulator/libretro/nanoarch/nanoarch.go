@@ -288,7 +288,7 @@ func coreEnvironment(cmd C.unsigned, data unsafe.Pointer) C.bool {
 			ccw respectively.
 		*/
 	case C.RETRO_ENVIRONMENT_SET_ROTATION:
-		setRotation(*(*int)(data) % 4)
+		setRotation(*(*uint)(data) % 4)
 		return true
 	case C.RETRO_ENVIRONMENT_GET_VARIABLE:
 		variable := (*C.struct_retro_variable)(data)
@@ -663,12 +663,12 @@ func videoSetPixelFormat(format uint32) C.bool {
 	return true
 }
 
-func setRotation(rotation int) {
-	if rotation == int(video.rotation) {
+func setRotation(rotation uint) {
+	if rotation == uint(video.rotation) {
 		return
 	}
 	video.rotation = image.Angle(rotation)
 	rotationFn = image.GetRotation(video.rotation)
 	NAEmulator.meta.Rotation = rotationFn
-	log.Printf("[Env]: the game video is rotated %v°", map[int]int{0: 0, 1: 90, 2: 180, 3: 270}[rotation])
+	log.Printf("[Env]: the game video is rotated %v°", map[uint]uint{0: 0, 1: 90, 2: 180, 3: 270}[rotation])
 }
