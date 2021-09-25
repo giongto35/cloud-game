@@ -5,7 +5,7 @@ import (
 	"encoding/json"
 
 	"github.com/giongto35/cloud-game/v2/pkg/api"
-	"github.com/giongto35/cloud-game/v2/pkg/cache"
+	"github.com/giongto35/cloud-game/v2/pkg/client"
 )
 
 func GetConnectionRequest(data string) (api.ConnectionRequest, error) {
@@ -21,27 +21,27 @@ func GetConnectionRequest(data string) (api.ConnectionRequest, error) {
 	return req, err
 }
 
-func (w *Worker) HandleRegisterRoom(data json.RawMessage, rooms *cache.Cache) {
+func (w *Worker) HandleRegisterRoom(data json.RawMessage, rooms *client.NetMap) {
 	var req api.RegisterRoomRequest
 	err := json.Unmarshal(data, &req)
 	if err != nil {
 		w.Printf("error: broken room register request %v", err)
 		return
 	}
-	rooms.Add(req, w)
+	rooms.Put(req, w)
 }
 
-func (w *Worker) HandleCloseRoom(data json.RawMessage, rooms *cache.Cache) {
+func (w *Worker) HandleCloseRoom(data json.RawMessage, rooms *client.NetMap) {
 	var req api.CloseRoomRequest
 	err := json.Unmarshal(data, &req)
 	if err != nil {
 		w.Printf("error: broken room remove request %v", err)
 		return
 	}
-	rooms.Remove(req)
+	rooms.RemoveByKey(req)
 }
 
-func (w *Worker) HandleIceCandidate(data json.RawMessage, crowd *cache.Cache) {
+func (w *Worker) HandleIceCandidate(data json.RawMessage, crowd *client.NetMap) {
 	var req api.WebrtcIceCandidateRequest
 	err := json.Unmarshal(data, &req)
 	if err != nil {

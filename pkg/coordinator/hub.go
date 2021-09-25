@@ -4,7 +4,6 @@ import (
 	"log"
 	"net/http"
 
-	"github.com/giongto35/cloud-game/v2/pkg/cache"
 	"github.com/giongto35/cloud-game/v2/pkg/client"
 	"github.com/giongto35/cloud-game/v2/pkg/config/coordinator"
 	"github.com/giongto35/cloud-game/v2/pkg/environment"
@@ -18,23 +17,23 @@ import (
 type Hub struct {
 	service.Service
 
-	cfg      coordinator.Config
+	conf     coordinator.Config
 	launcher launcher.Launcher
-	crowd    cache.Cache // stores users
-	guild    Guild       // stores workers
-	rooms    cache.Cache // stores user rooms
+	crowd    client.NetMap // stores users
+	guild    Guild         // stores workers
+	rooms    client.NetMap // stores user rooms
 }
 
-func NewHub(cfg coordinator.Config, lib games.GameLibrary) *Hub {
+func NewHub(conf coordinator.Config, lib games.GameLibrary) *Hub {
 	// scan the lib right away
 	lib.Scan()
 
 	return &Hub{
-		cfg:      cfg,
+		conf:     conf,
 		launcher: launcher.NewGameLauncher(lib),
-		crowd:    cache.New(make(map[string]client.NetClient, 42)),
+		crowd:    client.NewNetMap(make(map[string]client.NetClient, 42)),
 		guild:    NewGuild(),
-		rooms:    cache.New(make(map[string]client.NetClient, 10)),
+		rooms:    client.NewNetMap(make(map[string]client.NetClient, 10)),
 	}
 }
 
@@ -52,7 +51,6 @@ func (h *Hub) handleWebsocketUserConnection(w http.ResponseWriter, r *http.Reque
 	}
 	usr := NewUser(conn)
 	defer usr.Close()
-	uid := string(usr.Id())
 	usr.Printf("Connected")
 
 	roomId := r.URL.Query().Get("room_id")
@@ -62,8 +60,8 @@ func (h *Hub) handleWebsocketUserConnection(w http.ResponseWriter, r *http.Reque
 	var wkr *Worker
 	if wkr = h.findWorkerByRoom(roomId, region); wkr != nil {
 		usr.Printf("An existing worker has been found for room [%v]", roomId)
-	} else if wkr = h.findWorkerByIp(h.cfg.Coordinator.DebugHost); wkr != nil {
-		usr.Printf("The worker has been found with provided address: %v", h.cfg.Coordinator.DebugHost)
+	} else if wkr = h.findWorkerByIp(h.conf.Coordinator.DebugHost); wkr != nil {
+		usr.Printf("The worker has been found with provided address: %v", h.conf.Coordinator.DebugHost)
 		if wkr = h.findAnyFreeWorker(region); wkr != nil {
 			usr.Printf("A free worker has been found right away")
 		}
@@ -77,10 +75,10 @@ func (h *Hub) handleWebsocketUserConnection(w http.ResponseWriter, r *http.Reque
 
 	usr.AssignWorker(wkr)
 
-	h.crowd.Add(uid, &usr)
-	defer h.crowd.Remove(uid)
+	h.crowd.Add(&usr)
+	defer h.crowd.Remove(&usr)
 	usr.HandleRequests(h.launcher)
-	usr.InitSession(h.cfg.Webrtc.IceServers, h.launcher.GetAppNames())
+	usr.InitSession(h.conf.Webrtc.IceServers, h.launcher.GetAppNames())
 
 	usr.Listen()
 	usr.RetainWorker()
@@ -106,7 +104,7 @@ func (h *Hub) handleWebsocketWorkerConnection(w http.ResponseWriter, r *http.Req
 		log.Printf("Warning! Ping address is not set.")
 	}
 
-	if h.cfg.Coordinator.Server.Https && !connRt.IsHTTPS {
+	if h.conf.Coordinator.Server.Https && !connRt.IsHTTPS {
 		log.Printf("Warning! Unsecure connection. The worker may not work properly without HTTPS on its side!")
 	}
 
@@ -126,7 +124,7 @@ func (h *Hub) handleWebsocketWorkerConnection(w http.ResponseWriter, r *http.Req
 
 	// !to rewrite
 	// In case wkr and coordinator in the same host
-	if !public && h.cfg.Environment.Get() == environment.Production {
+	if !public && h.conf.Environment.Get() == environment.Production {
 		// Don't accept private IP for wkr's address in prod mode
 		// However, if the wkr in the same host with coordinator, we can get public IP of wkr
 		backend.Printf("[!] Address %s is invalid", address)
@@ -146,7 +144,7 @@ func (h *Hub) handleWebsocketWorkerConnection(w http.ResponseWriter, r *http.Req
 	h.guild.add(&backend)
 	defer func() {
 		h.guild.Remove(&backend)
-		h.rooms.RemoveAllWithId(string(backend.Id()))
+		h.rooms.RemoveAll(&backend)
 	}()
 
 	backend.Listen()

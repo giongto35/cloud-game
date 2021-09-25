@@ -1,22 +1,19 @@
 package coordinator
 
-import (
-	"github.com/giongto35/cloud-game/v2/pkg/cache"
-	"github.com/giongto35/cloud-game/v2/pkg/client"
-)
+import "github.com/giongto35/cloud-game/v2/pkg/client"
 
 // Guild is an abstraction over list of workers and their jobs.
 type Guild struct {
-	cache.Cache
+	client.NetMap
 }
 
 func NewGuild() Guild {
-	return Guild{cache.New(make(map[string]client.NetClient, 10))}
+	return Guild{client.NewNetMap(make(map[string]client.NetClient, 10))}
 }
 
-func (g *Guild) add(worker *Worker) { g.Add(string(worker.Id()), worker) }
+func (g *Guild) add(worker *Worker) { g.Add(worker) }
 
-func (g *Guild) Remove(w *Worker) { g.Cache.Remove(string(w.Id())) }
+func (g *Guild) Remove(w *Worker) { g.NetMap.Remove(w) }
 
 func (g *Guild) findFreeByIp(addr string) *Worker {
 	worker, err := g.FindBy(func(cl client.NetClient) bool {

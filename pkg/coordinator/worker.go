@@ -5,7 +5,6 @@ import (
 	"sync"
 
 	"github.com/giongto35/cloud-game/v2/pkg/api"
-	"github.com/giongto35/cloud-game/v2/pkg/cache"
 	"github.com/giongto35/cloud-game/v2/pkg/client"
 	"github.com/giongto35/cloud-game/v2/pkg/ipc"
 )
@@ -24,7 +23,7 @@ type Worker struct {
 
 func NewWorker(conn *ipc.Client) Worker { return Worker{DefaultClient: client.New(conn, "w")} }
 
-func (w *Worker) HandleRequests(rooms *cache.Cache, crowd *cache.Cache) {
+func (w *Worker) HandleRequests(rooms *client.NetMap, crowd *client.NetMap) {
 	w.DefaultClient.OnPacket(func(p ipc.InPacket) {
 		switch p.T {
 		case api.RegisterRoom:

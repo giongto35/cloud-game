@@ -8,7 +8,7 @@ func (h *Hub) findWorkerByRoom(id string, region string) *Worker {
 		if w.(client.RegionalClient).In(region) {
 			return w.(*Worker)
 		}
-		// if there is zone param, we need to ensure ther worker in that zone
+		// if there is zone param, we need to ensure the worker in that zone,
 		// if not we consider the room is missing
 	}
 	return nil
