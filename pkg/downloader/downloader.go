@@ -14,7 +14,6 @@ type Downloader struct {
 	pipe []Process
 }
 
-
 type Process func(string, []string) []string
 
 func NewDefaultDownloader() Downloader {

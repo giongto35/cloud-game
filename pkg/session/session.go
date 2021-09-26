@@ -24,4 +24,3 @@ func GenerateRoomID(gameName string) string {
 	roomID := strconv.FormatInt(rand.Int63(), 16) + separator + gameName
 	return roomID
 }
-

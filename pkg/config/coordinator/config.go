@@ -20,16 +20,12 @@ type Config struct {
 
 type Coordinator struct {
 	RoundRobin bool
-		DebugHost  string
-		Library    games.Config
-		Monitoring monitoring.Config
-		Origin     struct {
-			UserWs   string
-			WorkerWs string
-		}
-		Server    shared.Server
-		Analytics Analytics
-	}
+	DebugHost  string
+	Library    games.Config
+	Monitoring monitoring.Config
+	Server     shared.Server
+	Analytics  Analytics
+}
 
 // Analytics is optional Google Analytics
 type Analytics struct {
