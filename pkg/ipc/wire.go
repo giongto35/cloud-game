@@ -20,6 +20,13 @@ type OutPacket struct {
 
 type PacketType = uint8
 
+// Proxy copies InPacket's identity (id, type) into the OutPacket.
 func (p InPacket) Proxy(payload interface{}) OutPacket {
 	return OutPacket{Id: p.Id, T: p.T, Payload: payload}
 }
+
+var (
+	EmptyPacket = ""
+	ErrPacket   = "err"
+	OkPacket    = "ok"
+)

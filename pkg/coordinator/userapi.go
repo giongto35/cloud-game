@@ -11,7 +11,6 @@ import (
 // CheckLatency sends a list of server addresses to the user
 // and waits get back this list with tested ping times for each server.
 func (u *User) CheckLatency(req api.CheckLatencyUserResponse) (api.CheckLatencyUserRequest, error) {
-	u.Printf("servers to ping: %v", req)
 	var response api.CheckLatencyUserRequest
 	data, err := u.Send(api.CheckLatency, req)
 	if err != nil || data == nil {
@@ -23,8 +22,7 @@ func (u *User) CheckLatency(req api.CheckLatencyUserResponse) (api.CheckLatencyU
 // InitSession signals the user that the app is ready to go.
 func (u *User) InitSession(ice []webrtc.IceServer, games []string) {
 	_ = u.SendAndForget(api.InitSession, api.InitSessionUserResponse{
-		// don't do this at home
-		Ice:   *(*[]api.IceServer)(unsafe.Pointer(&ice)),
+		Ice:   *(*[]api.IceServer)(unsafe.Pointer(&ice)), // don't do this at home
 		Games: games,
 	})
 }

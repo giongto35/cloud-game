@@ -7,7 +7,7 @@ import (
 	"strconv"
 
 	"github.com/giongto35/cloud-game/v2/pkg/api"
-	webrtcConfig "github.com/giongto35/cloud-game/v2/pkg/config/webrtc"
+	webrtcConf "github.com/giongto35/cloud-game/v2/pkg/config/webrtc"
 	"github.com/giongto35/cloud-game/v2/pkg/config/worker"
 	"github.com/giongto35/cloud-game/v2/pkg/games"
 	"github.com/giongto35/cloud-game/v2/pkg/ipc"
@@ -31,10 +31,10 @@ func MakeConnectionRequest(conf worker.Worker, address string) (string, error) {
 func (c *Coordinator) HandleTerminateSession(data json.RawMessage, h *Handler) {
 	resp, err := c.terminateSession(data)
 	if err != nil {
-		c.Printf("error: broken terminate session request %v", err)
+		c.Logf("error: broken terminate session request %v", err)
 		return
 	}
-	c.Printf("Received a terminate session ", resp.Id)
+	c.Logf("Received a terminate session -> %v", resp.Id)
 	session := h.sessions.Get(resp.Id)
 	if session != nil {
 		session.Close()
@@ -43,24 +43,23 @@ func (c *Coordinator) HandleTerminateSession(data json.RawMessage, h *Handler) {
 	} else {
 		log.Printf("Error: No session for ID: %s\n", resp.Id)
 	}
-	c.Printf("SESSIONS AFTER DELETE: %v", h.sessions.store)
 }
 
 func (c *Coordinator) HandleWebrtcInit(packet ipc.InPacket, h *Handler) {
 	resp, err := c.webrtcInit(packet.Payload)
 	if err != nil {
-		c.Printf("error: broken webrtc init request %v", err)
+		c.Logf("error: broken webrtc init request %v", err)
 		return
 	}
 
-	peerconnection := webrtc.NewWebRTC().WithConfig(webrtcConfig.Config{Encoder: h.cfg.Encoder, Webrtc: h.cfg.Webrtc})
+	peerconnection := webrtc.NewWebRTC().WithConfig(webrtcConf.Config{Encoder: h.cfg.Encoder, Webrtc: h.cfg.Webrtc})
 
 	// send back candidate string to browser
 	localSDP, err := peerconnection.StartClient(func(cd string) { h.cord.IceCandidate(cd, string(resp.Id)) })
 
 	if err != nil {
 		log.Println("error: cannot create new webrtc session", err)
-		_ = h.cord.SendPacket(packet.Proxy(""))
+		_ = h.cord.SendPacket(packet.Proxy(ipc.EmptyPacket))
 	}
 
 	// Create new sessions when we have new peerconnection initialized
@@ -107,13 +106,13 @@ func (c *Coordinator) HandleGameStart(packet ipc.InPacket, h *Handler) {
 	err := fromJson(packet.Payload, &resp)
 	if err != nil {
 		log.Printf("error: broken game start request %v", err)
-		_ = h.cord.SendPacket(packet.Proxy(""))
+		_ = h.cord.SendPacket(packet.Proxy(ipc.EmptyPacket))
 		return
 	}
 	session := h.sessions.Get(resp.Stateful.Id)
 	if session == nil {
 		log.Printf("error: no session for ID: %s", resp.Stateful.Id)
-		_ = h.cord.SendPacket(packet.Proxy(""))
+		_ = h.cord.SendPacket(packet.Proxy(ipc.EmptyPacket))
 		return
 	}
 
@@ -188,7 +187,7 @@ func (c *Coordinator) HandleSaveGame(packet ipc.InPacket, h *Handler) {
 		return
 	}
 	log.Printf("RoomID: %v", resp.Room.Id)
-	rez := "ok"
+	rez := ipc.OkPacket
 	if resp.Room.Id != "" {
 		rm := h.rooms.Get(resp.Room.Id)
 		if rm == nil {
@@ -197,10 +196,10 @@ func (c *Coordinator) HandleSaveGame(packet ipc.InPacket, h *Handler) {
 		err := rm.SaveGame()
 		if err != nil {
 			log.Println("[!] Cannot save game state: ", err)
-			rez = "error"
+			rez = ipc.ErrPacket
 		}
 	} else {
-		rez = "error"
+		rez = ipc.ErrPacket
 	}
 	_ = h.cord.SendPacket(packet.Proxy(rez))
 }
@@ -213,7 +212,7 @@ func (c *Coordinator) HandleLoadGame(packet ipc.InPacket, h *Handler) {
 		log.Printf("error: broken game load request %v", err)
 		return
 	}
-	rez := "ok"
+	rez := ipc.OkPacket
 	if resp.Room.Id != "" {
 		rm := h.rooms.Get(resp.Room.Id)
 		if rm == nil {
@@ -221,10 +220,10 @@ func (c *Coordinator) HandleLoadGame(packet ipc.InPacket, h *Handler) {
 		}
 		if err := rm.LoadGame(); err != nil {
 			log.Println("[!] Cannot load game state: ", err)
-			rez = "error"
+			rez = ipc.ErrPacket
 		}
 	} else {
-		rez = "error"
+		rez = ipc.ErrPacket
 	}
 	_ = h.cord.SendPacket(packet.Proxy(rez))
 }
@@ -248,7 +247,7 @@ func (c *Coordinator) HandleChangePlayer(packet ipc.InPacket, h *Handler) {
 		rm.UpdatePlayerIndex(session.peerconnection, idx)
 		rez = strconv.Itoa(idx)
 	} else {
-		rez = "error"
+		rez = ipc.ErrPacket
 	}
 	_ = h.cord.SendPacket(packet.Proxy(rez))
 }
@@ -261,7 +260,7 @@ func (c *Coordinator) HandleToggleMultitap(packet ipc.InPacket, h *Handler) {
 		return
 	}
 
-	rez := "ok"
+	rez := ipc.OkPacket
 	if resp.Room.Id != "" {
 		rm := h.rooms.Get(resp.Room.Id)
 		if rm == nil {
@@ -269,10 +268,10 @@ func (c *Coordinator) HandleToggleMultitap(packet ipc.InPacket, h *Handler) {
 		}
 		if err := rm.ToggleMultitap(); err != nil {
 			log.Println("[!] Could not toggle multitap state: ", err)
-			rez = "error"
+			rez = ipc.ErrPacket
 		}
 	} else {
-		rez = "error"
+		rez = ipc.ErrPacket
 	}
 	_ = h.cord.SendPacket(packet.Proxy(rez))
 }

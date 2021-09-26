@@ -26,7 +26,6 @@ type Handler struct {
 	sessions      Sessions
 }
 
-// NewHandler returns a new server
 func NewHandler(conf worker.Config, address string) *Handler {
 	createOfflineStorage(conf.Emulator.Storage)
 	onlineStorage := initCloudStorage(conf)
@@ -48,7 +47,7 @@ func (h *Handler) Run() {
 			time.Sleep(time.Second)
 			continue
 		}
-		conn.Printf("Connected at %v", coordinatorAddress)
+		conn.Logf("Connected at %v", coordinatorAddress)
 		h.cord = conn
 		h.cord.HandleRequests(h)
 		h.cord.Listen()

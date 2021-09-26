@@ -25,7 +25,7 @@ func (w *Worker) HandleRegisterRoom(data json.RawMessage, rooms *client.NetMap) 
 	var req api.RegisterRoomRequest
 	err := json.Unmarshal(data, &req)
 	if err != nil {
-		w.Printf("error: broken room register request %v", err)
+		w.Logf("error: broken room register request %v", err)
 		return
 	}
 	rooms.Put(req, w)
@@ -35,7 +35,7 @@ func (w *Worker) HandleCloseRoom(data json.RawMessage, rooms *client.NetMap) {
 	var req api.CloseRoomRequest
 	err := json.Unmarshal(data, &req)
 	if err != nil {
-		w.Printf("error: broken room remove request %v", err)
+		w.Logf("error: broken room remove request %v", err)
 		return
 	}
 	rooms.RemoveByKey(req)
@@ -45,7 +45,7 @@ func (w *Worker) HandleIceCandidate(data json.RawMessage, crowd *client.NetMap) 
 	var req api.WebrtcIceCandidateRequest
 	err := json.Unmarshal(data, &req)
 	if err != nil {
-		w.Printf("error: broken ice candidate request %v", err)
+		w.Logf("error: broken ice candidate request %v", err)
 		return
 	}
 	usr, err := crowd.Find(string(req.Id))
@@ -53,6 +53,6 @@ func (w *Worker) HandleIceCandidate(data json.RawMessage, crowd *client.NetMap) 
 		u := usr.(*User)
 		u.SendWebrtcIceCandidate(req.Candidate)
 	} else {
-		w.Printf("error: unknown session: %v", req.Id)
+		w.Logf("error: unknown session: %v", req.Id)
 	}
 }

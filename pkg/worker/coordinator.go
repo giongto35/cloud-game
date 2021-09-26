@@ -11,7 +11,7 @@ import (
 )
 
 type Coordinator struct {
-	client.DefaultClient
+	client.SocketClient
 }
 
 func newCoordinatorConnection(host string, conf worker.Worker, addr string) (Coordinator, error) {
@@ -30,7 +30,7 @@ func newCoordinatorConnection(host string, conf worker.Worker, addr string) (Coo
 	if err != nil {
 		return Coordinator{}, err
 	}
-	return Coordinator{DefaultClient: client.New(conn, "c")}, nil
+	return Coordinator{SocketClient: client.New(conn, "c")}, nil
 }
 
 func (c *Coordinator) HandleRequests(h *Handler) {
@@ -39,34 +39,34 @@ func (c *Coordinator) HandleRequests(h *Handler) {
 		case api.TerminateSession:
 			c.HandleTerminateSession(p.Payload, h)
 		case api.WebrtcInit:
-			c.Printf("Received a request to createOffer from browser via coordinator")
+			c.Logf("Received a request to createOffer from browser via coordinator")
 			c.HandleWebrtcInit(p, h)
 		case api.WebrtcAnswer:
-			c.Printf("Received answer SDP from browser")
+			c.Logf("Received answer SDP from browser")
 			c.HandleWebrtcAnswer(p, h)
 		case api.WebrtcIceCandidate:
-			c.Printf("Received remote Ice Candidate from browser")
+			c.Logf("Received remote Ice Candidate from browser")
 			c.HandleWebrtcIceCandidate(p, h)
 		case api.StartGame:
-			c.Printf("Received game start request")
+			c.Logf("Received game start request")
 			c.HandleGameStart(p, h)
 		case api.QuitGame:
-			c.Printf("Received game quit request")
+			c.Logf("Received game quit request")
 			c.HandleQuitGame(p, h)
 		case api.SaveGame:
-			c.Printf("Received a save game from coordinator")
+			c.Logf("Received a save game from coordinator")
 			c.HandleSaveGame(p, h)
 		case api.LoadGame:
-			c.Printf("Received load game request")
+			c.Logf("Received load game request")
 			c.HandleLoadGame(p, h)
 		case api.ChangePlayer:
-			c.Printf("Received an update player index request")
+			c.Logf("Received an update player index request")
 			c.HandleChangePlayer(p, h)
 		case api.ToggleMultitap:
-			c.Printf("Received multitap toggle request")
+			c.Logf("Received multitap toggle request")
 			c.HandleToggleMultitap(p, h)
 		default:
-			c.Printf("warning: unhandled packet type %v", p.T)
+			c.Logf("warning: unhandled packet type %v", p.T)
 		}
 	})
 }

@@ -49,41 +49,38 @@ func (h *Hub) handleWebsocketUserConnection(w http.ResponseWriter, r *http.Reque
 	if err != nil {
 		log.Fatalf("error: couldn't init user connection")
 	}
-	usr := NewUser(conn)
+	usr := NewUserClient(conn)
+	defer usr.Logf("Disconnected")
 	defer usr.Close()
-	usr.Printf("Connected")
+	usr.Logf("Connected")
 
 	roomId := r.URL.Query().Get("room_id")
 	region := r.URL.Query().Get("zone")
 
-	usr.Printf("Searching for a free worker")
+	usr.Logf("Searching for a free worker")
 	var wkr *Worker
 	if wkr = h.findWorkerByRoom(roomId, region); wkr != nil {
-		usr.Printf("An existing worker has been found for room [%v]", roomId)
+		usr.Logf("An existing worker has been found for room [%v]", roomId)
 	} else if wkr = h.findWorkerByIp(h.conf.Coordinator.DebugHost); wkr != nil {
-		usr.Printf("The worker has been found with provided address: %v", h.conf.Coordinator.DebugHost)
+		usr.Logf("The worker has been found with provided address: %v", h.conf.Coordinator.DebugHost)
 		if wkr = h.findAnyFreeWorker(region); wkr != nil {
-			usr.Printf("A free worker has been found right away")
+			usr.Logf("A free worker has been found right away")
 		}
 	} else if wkr = h.findFastestWorker(region,
 		func(servers []string) (map[string]int64, error) { return usr.CheckLatency(servers) }); wkr != nil {
-		usr.Printf("The fastest worker has been found")
+		usr.Logf("The fastest worker has been found")
 	} else {
-		usr.Printf("error: no workers")
+		usr.Logf("error: no workers")
 		return
 	}
 
-	usr.AssignWorker(wkr)
-
+	usr.SetWorker(wkr)
+	defer usr.FreeWorker()
 	h.crowd.Add(&usr)
 	defer h.crowd.Remove(&usr)
 	usr.HandleRequests(h.launcher)
 	usr.InitSession(h.conf.Webrtc.IceServers, h.launcher.GetAppNames())
-
 	usr.Listen()
-	usr.RetainWorker()
-	usr.Worker.TerminateSession(usr.Id())
-	usr.Printf("Disconnected")
 }
 
 // handleWebsocketWorkerConnection handles all connections from a new worker to coordinator.
@@ -112,41 +109,39 @@ func (h *Hub) handleWebsocketWorkerConnection(w http.ResponseWriter, r *http.Req
 	if err != nil {
 		log.Fatalf("error: couldn't init worker connection")
 	}
-	backend := NewWorker(conn)
-	backend.Printf("Connect")
+	backend := NewWorkerClient(conn)
+	backend.Logf("Connect")
+	defer backend.Logf("Disconnect")
 	defer backend.Close()
 
 	address := util.GetRemoteAddress(conn.GetRemoteAddr())
 	public := util.IsPublicIP(address)
 	backend.Zone = connRt.Zone
 	backend.PingServer = connRt.PingAddr
-	backend.Printf("addr: %v | zone: %v | pub: %v | ping: %v", address, backend.Zone, public, backend.PingServer)
+	backend.Logf("addr: %v | zone: %v | pub: %v | ping: %v", address, backend.Zone, public, backend.PingServer)
 
 	// !to rewrite
 	// In case wkr and coordinator in the same host
 	if !public && h.conf.Environment.Get() == environment.Production {
 		// Don't accept private IP for wkr's address in prod mode
 		// However, if the wkr in the same host with coordinator, we can get public IP of wkr
-		backend.Printf("[!] Address %s is invalid", address)
+		backend.Logf("[!] Address %s is invalid", address)
 
 		address = util.GetHostPublicIP()
-		backend.Printf("Find public address: %s", address)
+		backend.Logf("Find public address: %s", address)
 
 		if address == "" || !util.IsPublicIP(address) {
 			// Skip this wkr because we cannot find public IP
-			backend.Printf("[!] Unable to find public address, reject wkr")
+			backend.Logf("[!] Unable to find public address, reject wkr")
 			return
 		}
 	}
 	backend.Address = address
 	backend.HandleRequests(&h.rooms, &h.crowd)
-
 	h.guild.add(&backend)
 	defer func() {
 		h.guild.Remove(&backend)
 		h.rooms.RemoveAll(&backend)
 	}()
-
 	backend.Listen()
-	backend.Printf("Disconnect")
 }
