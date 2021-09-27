@@ -8,7 +8,7 @@ import (
 // See: https://gist.github.com/asukakenji/f15ba7e588ac42795f421b48b8aede63.
 var libretroOsArchMap = map[string]ArchInfo{
 	"linux:amd64":   {Os: "linux", Arch: "x86_64", LibExt: ".so"},
-	"linux:arm":     {Os: "linux", Arch: "armv7-neon-hf", LibExt: ".armv7-neon-hf.so"},
+	"linux:arm":     {Os: "linux", Arch: "armv7-neon-hf", LibExt: ".so"},
 	"windows:amd64": {Os: "windows", Arch: "x86_64", LibExt: ".dll"},
 	"darwin:amd64":  {Os: "osx", Arch: "x86_64", Vendor: "apple", LibExt: ".dylib"},
 }
