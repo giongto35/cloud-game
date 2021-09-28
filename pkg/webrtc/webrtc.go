@@ -1,4 +1,3 @@
-// credit to https://github.com/poi5305/go-yuv2webRTC/blob/master/webrtc/webrtc.go
 package webrtc
 
 import (
@@ -39,17 +38,8 @@ type WebRTC struct {
 	InputChannel chan []byte
 
 	Done bool
-	//lastTime time.Time
-	//curFPS   int
 
-	RoomID string
-
-	// store thing related to game
-	GameMeta GameMeta
-}
-
-// Game Meta
-type GameMeta struct {
+	RoomID      string
 	PlayerIndex int
 }
 
@@ -118,15 +108,14 @@ func (w *WebRTC) StartClient(iceCB OnIceCallback) (string, error) {
 
 	log.Println("=== StartClient ===")
 
-	videoCodec := w.getVideoCodec()
 	w.tsInterceptor = itc.ReTime{}
-	w.connection, err = NewInterceptedPeerConnection(w.cfg.Webrtc, []interceptor.Interceptor{&w.tsInterceptor}, videoCodec)
+	w.connection, err = NewInterceptedPeerConnection(w.cfg.Webrtc, []interceptor.Interceptor{&w.tsInterceptor})
 	if err != nil {
 		return "", err
 	}
 
 	// add video track
-	rtpCodec := webrtc.RTPCodecCapability{MimeType: videoCodec}
+	rtpCodec := webrtc.RTPCodecCapability{MimeType: w.getVideoCodec()}
 	if videoTrack, err = webrtc.NewTrackLocalStaticSample(rtpCodec, "video", "game-video"); err != nil {
 		return "", err
 	}
@@ -301,10 +290,10 @@ func (w *WebRTC) StopClient() {
 		return
 	}
 
-	log.Println("===StopClient===")
 	w.isConnected = false
 	if w.connection != nil {
-		w.connection.Close()
+		err := w.connection.Close()
+		log.Printf("error: couldn't close WebRTC connection, %v", err)
 	}
 	w.connection = nil
 	//close(w.InputChannel)
@@ -314,12 +303,10 @@ func (w *WebRTC) StopClient() {
 	close(w.AudioChannel)
 	//close(w.VoiceInChannel)
 	//close(w.VoiceOutChannel)
+	log.Println("===StopClient===")
 }
 
-// IsConnected comment
-func (w *WebRTC) IsConnected() bool {
-	return w.isConnected
-}
+func (w *WebRTC) IsConnected() bool { return w.isConnected }
 
 func (w *WebRTC) startStreaming(vp8Track *webrtc.TrackLocalStaticSample, opusTrack *webrtc.TrackLocalStaticSample) {
 	log.Println("Start streaming")
@@ -383,11 +370,3 @@ func (w *WebRTC) startStreaming(vp8Track *webrtc.TrackLocalStaticSample, opusTra
 	//	}
 	//}()
 }
-
-//func (w *WebRTC) calculateFPS() int {
-//	elapsedTime := time.Now().Sub(w.lastTime)
-//	w.lastTime = time.Now()
-//	curFPS := time.Second / elapsedTime
-//	w.curFPS = int(float32(w.curFPS)*0.9 + float32(curFPS)*0.1)
-//	return w.curFPS
-//}

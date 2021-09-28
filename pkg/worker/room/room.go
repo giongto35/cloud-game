@@ -246,7 +246,7 @@ func (r *Room) AddConnectionToRoom(peerconnection *webrtc.WebRTC) {
 
 func (r *Room) UpdatePlayerIndex(peerconnection *webrtc.WebRTC, playerIndex int) {
 	log.Println("Updated player Index to: ", playerIndex)
-	peerconnection.GameMeta.PlayerIndex = playerIndex
+	peerconnection.PlayerIndex = playerIndex
 }
 
 func (r *Room) startWebRTCSession(peerconnection *webrtc.WebRTC) {
@@ -282,7 +282,7 @@ func (r *Room) startWebRTCSession(peerconnection *webrtc.WebRTC) {
 
 		if peerconnection.IsConnected() {
 			select {
-			case r.inputChannel <- nanoarch.InputEvent{RawState: input, PlayerIdx: peerconnection.GameMeta.PlayerIndex, ConnID: peerconnection.ID}:
+			case r.inputChannel <- nanoarch.InputEvent{RawState: input, PlayerIdx: peerconnection.PlayerIndex, ConnID: peerconnection.ID}:
 			default:
 			}
 		}
