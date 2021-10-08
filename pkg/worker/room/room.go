@@ -389,7 +389,9 @@ func (r *Room) saveOnlineRoomToLocal(roomID string, savePath string) error {
 	}
 	// Save the data fetched from a cloud provider to the local server
 	if data != nil {
-		err = ioutil.WriteFile(savePath, data, 0644)
+		if err := ioutil.WriteFile(savePath, data, 0644); err != nil {
+			return err
+		}
 		log.Printf("successfully downloaded cloud save")
 	}
 	return nil
