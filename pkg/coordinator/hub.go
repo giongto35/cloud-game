@@ -10,8 +10,8 @@ import (
 	"github.com/giongto35/cloud-game/v2/pkg/games"
 	"github.com/giongto35/cloud-game/v2/pkg/ipc"
 	"github.com/giongto35/cloud-game/v2/pkg/launcher"
+	"github.com/giongto35/cloud-game/v2/pkg/network"
 	"github.com/giongto35/cloud-game/v2/pkg/service"
-	"github.com/giongto35/cloud-game/v2/pkg/util"
 )
 
 type Hub struct {
@@ -54,8 +54,9 @@ func (h *Hub) handleWebsocketUserConnection(w http.ResponseWriter, r *http.Reque
 	defer usr.Close()
 	usr.Logf("Connected")
 
-	roomId := r.URL.Query().Get("room_id")
-	region := r.URL.Query().Get("zone")
+	q := r.URL.Query()
+	roomId := q.Get("room_id")
+	region := q.Get("zone")
 
 	usr.Logf("Searching for a free worker")
 	var wkr *Worker
@@ -114,8 +115,8 @@ func (h *Hub) handleWebsocketWorkerConnection(w http.ResponseWriter, r *http.Req
 	defer backend.Logf("Disconnect")
 	defer backend.Close()
 
-	address := util.GetRemoteAddress(conn.GetRemoteAddr())
-	public := util.IsPublicIP(address)
+	address := network.GetRemoteAddress(conn.GetRemoteAddr())
+	public := network.IsPublicIP(address)
 	backend.Zone = connRt.Zone
 	backend.PingServer = connRt.PingAddr
 	backend.Logf("addr: %v | zone: %v | pub: %v | ping: %v", address, backend.Zone, public, backend.PingServer)
@@ -127,10 +128,10 @@ func (h *Hub) handleWebsocketWorkerConnection(w http.ResponseWriter, r *http.Req
 		// However, if the wkr in the same host with coordinator, we can get public IP of wkr
 		backend.Logf("[!] Address %s is invalid", address)
 
-		address = util.GetHostPublicIP()
+		address = network.GetHostPublicIP()
 		backend.Logf("Find public address: %s", address)
 
-		if address == "" || !util.IsPublicIP(address) {
+		if address == "" || !network.IsPublicIP(address) {
 			// Skip this wkr because we cannot find public IP
 			backend.Logf("[!] Unable to find public address, reject wkr")
 			return
