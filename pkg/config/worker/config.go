@@ -27,6 +27,7 @@ type Config struct {
 }
 
 type Worker struct {
+	Debug      bool
 	Monitoring monitoring.Config
 	Network    struct {
 		CoordinatorAddress string

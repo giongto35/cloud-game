@@ -8,9 +8,9 @@ import (
 
 	config "github.com/giongto35/cloud-game/v2/pkg/config/coordinator"
 	"github.com/giongto35/cloud-game/v2/pkg/coordinator"
+	"github.com/giongto35/cloud-game/v2/pkg/logger"
 	"github.com/giongto35/cloud-game/v2/pkg/os"
 	"github.com/giongto35/cloud-game/v2/pkg/util/logging"
-	"github.com/golang/glog"
 	flag "github.com/spf13/pflag"
 )
 
@@ -25,16 +25,17 @@ func main() {
 	flag.CommandLine.AddGoFlagSet(goflag.CommandLine)
 	conf.ParseFlags()
 
+	log := logger.NewConsole(conf.Coordinator.Debug, "c")
 	logging.Init()
 	defer logging.Flush()
 
-	glog.Infof("[coordinator] version: %v", Version)
-	glog.V(4).Infof("[coordinator] Local configuration %+v", conf)
-	c := coordinator.New(conf)
+	log.Info().Msgf("version: %s", Version)
+	log.Debug().Msgf("config: %+v", conf)
+	c := coordinator.New(conf, log)
 	c.Start()
 
-	ctx, cancelCtx := context.WithCancel(context.Background())
+	ctx, cancel := context.WithCancel(context.Background())
 	defer c.Shutdown(ctx)
 	<-os.ExpectTermination()
-	cancelCtx()
+	cancel()
 }

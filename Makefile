@@ -75,7 +75,7 @@ dev.build-local:
 	go build -o bin/ ./cmd/worker
 
 dev.run: dev.build-local
-	./bin/coordinator --v=5 &
+	./bin/coordinator &
 	./bin/worker --v=5
 
 dev.run-docker:
