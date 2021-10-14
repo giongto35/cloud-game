@@ -7,6 +7,7 @@ import (
 	"log"
 	"runtime/debug"
 	"sync/atomic"
+	"sync/atomic"
 	"time"
 
 	"github.com/giongto35/cloud-game/v2/pkg/codec"
@@ -84,6 +85,7 @@ func NewWebRTC(conf webrtcConfig.Config, log *logger.Logger) (*WebRTC, error) {
 		log:          log,
 		cfg:          conf,
 	}
+
 	conn, err := DefaultPeerConnection(w.cfg.Webrtc, &w.globalVideoFrameTimestamp)
 	if err != nil {
 		return nil, err
@@ -110,10 +112,9 @@ func (w *WebRTC) StartClient(iceCB OnIceCallback) (string, error) {
 	}
 
 	w.log.Info().Msg("Start WebRTC")
-
 	w.connection, err = w.defaultConnection.NewConnection()
 	if err != nil {
-		return "", nil
+		return "", err
 	}
 
 	// add video track
