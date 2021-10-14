@@ -33,17 +33,25 @@ func NewConsole(isDebug bool, tag string) *Logger {
 	}
 	zerolog.SetGlobalLevel(logLevel)
 	zerolog.TimeFieldFormat = time.RFC3339Nano
-	output := zerolog.ConsoleWriter{Out: os.Stdout, TimeFormat: "15:04:05.0000"}
+	output := zerolog.ConsoleWriter{Out: os.Stdout, TimeFormat: "15:04:05.0000", NoColor: false}
 	output.FormatMessage = func(i interface{}) string {
-		// todo format pid length
 		if output.NoColor {
-			return fmt.Sprintf("%d %s   %v", pid, tag, i)
+			return fmt.Sprintf("%s %v", tag, i)
 		}
-		return fmt.Sprintf("\x1b[%dm%d\x1b[0m \x1b[%dm%s\x1b[0m   %v", 90, pid, 36, tag, i)
+		return fmt.Sprintf("\x1b[%dm%s\x1b[0m %v", 36, tag, i)
 	}
-	logger := zerolog.New(output).With().Timestamp().Logger()
-	return &Logger{logger: &logger}
+	//multi := zerolog.MultiLevelWriter(output, os.Stdout)
+	logger := zerolog.New(output).With().
+		Int("pid", pid).
+		Str("tag", tag).
+		Timestamp().Logger()
+	return &Logger{&logger}
 }
+
+func Default() *Logger { return &Logger{zerolog.DefaultContextLogger} }
+
+// GetLevel returns the current Level of l.
+func (l *Logger) GetLevel() zerolog.Level { return l.logger.GetLevel() }
 
 // Output duplicates the global logger and sets w as its output.
 func (l *Logger) Output(w io.Writer) zerolog.Logger { return l.logger.Output(w) }
@@ -105,3 +113,8 @@ func (l *Logger) Printf(format string, v ...interface{}) { l.logger.Printf(forma
 // Ctx returns the Logger associated with the ctx. If no logger
 // is associated, a disabled logger is returned.
 func (l *Logger) Ctx(ctx context.Context) *Logger { return &Logger{logger: zerolog.Ctx(ctx)} }
+
+func (l *Logger) Wrap(ctx zerolog.Context) *Logger {
+	logger := ctx.Logger()
+	return &Logger{&logger}
+}

@@ -2,11 +2,12 @@ package httpx
 
 import (
 	"context"
-	"log"
+	"fmt"
 	"net/http"
 	"net/url"
 	"time"
 
+	"github.com/giongto35/cloud-game/v2/pkg/logger"
 	"github.com/giongto35/cloud-game/v2/pkg/service"
 	"golang.org/x/crypto/acme/autocert"
 )
@@ -20,6 +21,7 @@ type Server struct {
 
 	listener *Listener
 	redirect *Server
+	log      *logger.Logger
 }
 
 func NewServer(address string, handler func(*Server) http.Handler, options ...Option) (*Server, error) {
@@ -32,6 +34,10 @@ func NewServer(address string, handler func(*Server) http.Handler, options ...Op
 	}
 	opts.override(options...)
 
+	if opts.Logger == nil {
+		opts.Logger = logger.Default()
+	}
+
 	server := &Server{
 		Server: http.Server{
 			Addr:         address,
@@ -40,6 +46,7 @@ func NewServer(address string, handler func(*Server) http.Handler, options ...Op
 			WriteTimeout: opts.WriteTimeout,
 		},
 		opts: *opts,
+		log:  opts.Logger,
 	}
 	// (╯°□°)╯︵ ┻━┻
 	server.Handler = handler(server)
@@ -55,7 +62,7 @@ func NewServer(address string, handler func(*Server) http.Handler, options ...Op
 		if opts.Https {
 			addr = ":https"
 		}
-		log.Printf("Warning! Empty server address has been changed to %v", addr)
+		opts.Logger.Warn().Msgf("Empty server address has been changed to %v", addr)
 	}
 	listener, err := NewListener(addr, server.opts.PortRoll)
 	if err != nil {
@@ -64,7 +71,7 @@ func NewServer(address string, handler func(*Server) http.Handler, options ...Op
 	server.listener = listener
 
 	addr = buildAddress(server.Addr, opts.Zone, *listener)
-	log.Printf("[server] address was set to %v (%v)", addr, server.Addr)
+	opts.Logger.Info().Msgf("Server address was set to %v (%v)", addr, server.Addr)
 	server.Addr = addr
 
 	return server, nil
@@ -72,12 +79,12 @@ func NewServer(address string, handler func(*Server) http.Handler, options ...Op
 
 func (s *Server) Run() {
 	protocol := s.GetProtocol()
-	log.Printf("Starting %s server on %s", protocol, s.Addr)
+	s.log.Debug().Msgf("Starting %s server on %s", protocol, s.Addr)
 
 	if s.opts.Https && s.opts.HttpsRedirect {
 		rdr, err := s.redirection()
 		if err != nil {
-			log.Fatalf("couldn't init redirection server: %v", err)
+			s.log.Error().Err(err).Msg("couldn't init redirection server")
 		}
 		s.redirect = rdr
 		go s.redirect.Run()
@@ -91,10 +98,10 @@ func (s *Server) Run() {
 	}
 	switch err {
 	case http.ErrServerClosed:
-		log.Printf("%s server was closed", protocol)
+		s.log.Error().Msgf("%s server was closed", protocol)
 		return
 	default:
-		log.Printf("error: %s", err)
+		s.log.Error().Err(err)
 	}
 }
 
@@ -125,20 +132,24 @@ func (s *Server) redirection() (*Server, error) {
 
 	srv, err := NewServer(s.opts.HttpsRedirectAddress, func(serv *Server) http.Handler {
 		h := http.NewServeMux()
-
 		h.Handle("/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			httpsURL := url.URL{Scheme: "https", Host: addr, Path: r.URL.Path, RawQuery: r.URL.RawQuery}
 			rdr := httpsURL.String()
-			log.Printf("Redirect: http://%s%s -> %s", r.Host, r.URL.String(), rdr)
+			if s.log.GetLevel() < 1 {
+				s.log.Debug().
+					Str("from", fmt.Sprintf("http://%s%s", r.Host, r.URL.String())).
+					Str("to", rdr).
+					Msg("Redirect")
+			}
 			http.Redirect(w, r, rdr, http.StatusFound)
 		}))
-
-		// do we need this after all?
 		if serv.autoCert != nil {
 			return serv.autoCert.HTTPHandler(h)
 		}
 		return h
-	})
-	log.Printf("Starting HTTP->HTTPS redirection server on %s", addr)
+	},
+		WithLogger(s.log),
+	)
+	s.log.Info().Str("addr", addr).Msg("Start HTTPS redirect server")
 	return srv, err
 }

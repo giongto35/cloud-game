@@ -4,6 +4,7 @@ import (
 	"log"
 	"net"
 	"net/url"
+	"path/filepath"
 	"strings"
 
 	"github.com/giongto35/cloud-game/v2/pkg/config"
@@ -45,7 +46,10 @@ type Worker struct {
 var configPath string
 
 func NewConfig() (conf Config) {
-	_ = config.LoadConfig(&conf, configPath)
+	err := config.LoadConfig(&conf, configPath)
+	if err != nil {
+		panic(err)
+	}
 	conf.expandSpecialTags()
 	// with ICE lite we clear ICE servers
 	if !conf.Webrtc.IceLite {
@@ -80,6 +84,7 @@ func (c *Config) expandSpecialTags() {
 			log.Fatalln("couldn't read user home directory", err)
 		}
 		*dir = strings.Replace(*dir, tag, userHomeDir, -1)
+		*dir = filepath.FromSlash(*dir)
 	}
 }
 

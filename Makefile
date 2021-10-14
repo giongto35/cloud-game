@@ -75,8 +75,7 @@ dev.build-local:
 	go build -o bin/ ./cmd/worker
 
 dev.run: dev.build-local
-	./bin/coordinator &
-	./bin/worker --v=5
+	./bin/coordinator &	./bin/worker
 
 dev.run-docker:
 	docker rm cloud-game-local -f || true

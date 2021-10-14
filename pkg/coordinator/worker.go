@@ -1,12 +1,12 @@
 package coordinator
 
 import (
-	"log"
 	"sync/atomic"
 
 	"github.com/giongto35/cloud-game/v2/pkg/api"
 	"github.com/giongto35/cloud-game/v2/pkg/client"
 	"github.com/giongto35/cloud-game/v2/pkg/ipc"
+	"github.com/giongto35/cloud-game/v2/pkg/logger"
 )
 
 type Worker struct {
@@ -16,24 +16,29 @@ type Worker struct {
 	Address    string
 	PingServer string
 	users      int32
+	log        *logger.Logger
 	Zone       string
 }
 
-func NewWorkerClient(conn *ipc.Client) Worker { return Worker{SocketClient: client.New(conn, "w")} }
+func NewWorkerClient(conn *ipc.Client, log *logger.Logger) Worker {
+	c := client.New(conn, "w", log)
+	defer c.GetLogger().Info().Msg("Connect")
+	return Worker{SocketClient: c, log: c.GetLogger()}
+}
 
 func (w *Worker) HandleRequests(rooms *client.NetMap, crowd *client.NetMap) {
 	w.SocketClient.OnPacket(func(p ipc.InPacket) {
 		switch p.T {
 		case api.RegisterRoom:
-			w.Logf("Received room register call %s", p.Payload)
+			w.log.Info().Msgf("Received room register call %s", p.Payload)
 			w.HandleRegisterRoom(p.Payload, rooms)
-			log.Printf("Rooms: %+v", rooms.List())
+			w.log.Debug().Msgf("Rooms: %+v", rooms.List())
 		case api.CloseRoom:
-			w.Logf("Received room close call %s", p.Payload)
+			w.log.Info().Msgf("Received room close call %s", p.Payload)
 			w.HandleCloseRoom(p.Payload, rooms)
-			log.Printf("Current room list is: %+v", rooms.List())
+			w.log.Debug().Msgf("Current room list is: %+v", rooms.List())
 		case api.IceCandidate:
-			w.Logf("relay IceCandidate to useragent")
+			w.log.Info().Msgf("Relay Ice candidate to useragent")
 			w.HandleIceCandidate(p.Payload, crowd)
 		}
 	})
@@ -56,3 +61,8 @@ func (w *Worker) ChangeUserQuantityBy(n int) {
 // HasGameSlot checks if the current worker has a free slot to start a new game.
 // Workers support only one game at a time.
 func (w *Worker) HasGameSlot() bool { return atomic.LoadInt32(&w.users) == 0 }
+
+func (w *Worker) Close() {
+	w.SocketClient.Close()
+	w.log.Info().Msg("Disconnect")
+}

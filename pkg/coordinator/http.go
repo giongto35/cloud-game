@@ -1,6 +1,7 @@
 package coordinator
 
 import (
+	"github.com/giongto35/cloud-game/v2/pkg/logger"
 	"html/template"
 	"log"
 	"net/http"
@@ -10,7 +11,7 @@ import (
 	"github.com/giongto35/cloud-game/v2/pkg/network/httpx"
 )
 
-func NewHTTPServer(conf coordinator.Config, fnMux func(mux *http.ServeMux)) (*httpx.Server, error) {
+func NewHTTPServer(conf coordinator.Config, log *logger.Logger, fnMux func(mux *http.ServeMux)) (*httpx.Server, error) {
 	return httpx.NewServer(
 		conf.Coordinator.Server.GetAddr(),
 		func(*httpx.Server) http.Handler {
@@ -21,6 +22,7 @@ func NewHTTPServer(conf coordinator.Config, fnMux func(mux *http.ServeMux)) (*ht
 			return h
 		},
 		httpx.WithServerConfig(conf.Coordinator.Server),
+		httpx.WithLogger(log),
 	)
 }
 

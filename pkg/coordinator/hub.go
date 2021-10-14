@@ -1,7 +1,6 @@
 package coordinator
 
 import (
-	"log"
 	"net/http"
 
 	"github.com/giongto35/cloud-game/v2/pkg/client"
@@ -10,6 +9,7 @@ import (
 	"github.com/giongto35/cloud-game/v2/pkg/games"
 	"github.com/giongto35/cloud-game/v2/pkg/ipc"
 	"github.com/giongto35/cloud-game/v2/pkg/launcher"
+	"github.com/giongto35/cloud-game/v2/pkg/logger"
 	"github.com/giongto35/cloud-game/v2/pkg/network"
 	"github.com/giongto35/cloud-game/v2/pkg/service"
 )
@@ -22,18 +22,20 @@ type Hub struct {
 	crowd    client.NetMap // stores users
 	guild    Guild         // stores workers
 	rooms    client.NetMap // stores user rooms
+	log      *logger.Logger
 }
 
-func NewHub(conf coordinator.Config, lib games.GameLibrary) *Hub {
+func NewHub(conf coordinator.Config, lib games.GameLibrary, log *logger.Logger) *Hub {
 	// scan the lib right away
 	lib.Scan()
 
 	return &Hub{
 		conf:     conf,
-		launcher: launcher.NewGameLauncher(lib),
 		crowd:    client.NewNetMap(make(map[string]client.NetClient, 42)),
 		guild:    NewGuild(),
+		launcher: launcher.NewGameLauncher(lib),
 		rooms:    client.NewNetMap(make(map[string]client.NetClient, 10)),
+		log:      log,
 	}
 }
 
@@ -41,37 +43,36 @@ func NewHub(conf coordinator.Config, lib games.GameLibrary) *Hub {
 func (h *Hub) handleWebsocketUserConnection(w http.ResponseWriter, r *http.Request) {
 	defer func() {
 		if r := recover(); r != nil {
-			log.Printf("error: recovered user client from (%v)", r)
+			h.log.Error().Msgf("recovered user client from (%v)", r)
 		}
 	}()
 
 	conn, err := ipc.NewClientServer(w, r)
 	if err != nil {
-		log.Fatalf("error: couldn't init user connection")
+		h.log.Error().Err(err).Msg("couldn't init user connection")
 	}
-	usr := NewUserClient(conn)
-	defer usr.Logf("Disconnected")
+	usr := NewUserClient(conn, h.log)
 	defer usr.Close()
-	usr.Logf("Connected")
 
 	q := r.URL.Query()
 	roomId := q.Get("room_id")
 	region := q.Get("zone")
 
-	usr.Logf("Searching for a free worker")
+	usr.GetLogger().Info().Msg("Searching for a free worker")
 	var wkr *Worker
 	if wkr = h.findWorkerByRoom(roomId, region); wkr != nil {
-		usr.Logf("An existing worker has been found for room [%v]", roomId)
+		usr.GetLogger().Info().Str("room", roomId).Msg("An existing worker has been found")
 	} else if wkr = h.findWorkerByIp(h.conf.Coordinator.DebugHost); wkr != nil {
-		usr.Logf("The worker has been found with provided address: %v", h.conf.Coordinator.DebugHost)
+		usr.GetLogger().Info().Str("debug.addr", h.conf.Coordinator.DebugHost).
+			Msg("The worker has been found with the provided address")
 		if wkr = h.findAnyFreeWorker(region); wkr != nil {
-			usr.Logf("A free worker has been found right away")
+			usr.GetLogger().Info().Msg("A free worker has been found right away")
 		}
 	} else if wkr = h.findFastestWorker(region,
 		func(servers []string) (map[string]int64, error) { return usr.CheckLatency(servers) }); wkr != nil {
-		usr.Logf("The fastest worker has been found")
+		usr.GetLogger().Info().Msg("The fastest worker has been found")
 	} else {
-		usr.Logf("error: no workers")
+		usr.GetLogger().Warn().Msg("no free workers")
 		return
 	}
 
@@ -88,52 +89,57 @@ func (h *Hub) handleWebsocketUserConnection(w http.ResponseWriter, r *http.Reque
 func (h *Hub) handleWebsocketWorkerConnection(w http.ResponseWriter, r *http.Request) {
 	defer func() {
 		if r := recover(); r != nil {
-			log.Printf("error: recovered worker client from (%v)", r)
+			h.log.Error().Msgf("recovered worker client from (%v)", r)
 		}
 	}()
 
 	connRt, err := GetConnectionRequest(r.URL.Query().Get("data"))
 	if err != nil {
-		log.Printf("error: got a malformed request, %v", err.Error())
+		h.log.Error().Err(err).Msg("got a malformed request")
 		return
 	}
 
 	if connRt.PingAddr == "" {
-		log.Printf("Warning! Ping address is not set.")
+		h.log.Warn().Msg("Ping address is not set")
 	}
 
 	if h.conf.Coordinator.Server.Https && !connRt.IsHTTPS {
-		log.Printf("Warning! Unsecure connection. The worker may not work properly without HTTPS on its side!")
+		h.log.Warn().Msg("Unsecure connection. The worker may not work properly without HTTPS on its side!")
 	}
 
 	conn, err := ipc.NewClientServer(w, r)
 	if err != nil {
-		log.Fatalf("error: couldn't init worker connection")
+		h.log.Error().Err(err).Msg("couldn't init worker connection")
 	}
-	backend := NewWorkerClient(conn)
-	backend.Logf("Connect")
-	defer backend.Logf("Disconnect")
+	backend := NewWorkerClient(conn, h.log)
 	defer backend.Close()
 
 	address := network.GetRemoteAddress(conn.GetRemoteAddr())
 	public := network.IsPublicIP(address)
 	backend.Zone = connRt.Zone
 	backend.PingServer = connRt.PingAddr
-	backend.Logf("addr: %v | zone: %v | pub: %v | ping: %v", address, backend.Zone, public, backend.PingServer)
+	h.log.Info().
+		Fields(map[string]interface{}{
+			"pub":  public,
+			"addr": address,
+			"zone": backend.Zone,
+			"ping": backend.PingServer,
+		}).
+		Msg("Worker info")
 
 	// !to rewrite
 	// In case wkr and coordinator in the same host
 	if !public && h.conf.Environment.Get() == environment.Production {
 		// Don't accept private IP for wkr's address in prod mode
 		// However, if the wkr in the same host with coordinator, we can get public IP of wkr
-		backend.Logf("[!] Address %s is invalid", address)
+		backend.GetLogger().Warn().Msgf("Invalid address [%s]", address)
 
 		address = network.GetHostPublicIP()
-		backend.Logf("Find public address: %s", address)
+		backend.GetLogger().Info().Msgf("Find public address [%s]", address)
 
 		if address == "" || !network.IsPublicIP(address) {
 			// Skip this wkr because we cannot find public IP
-			backend.Logf("[!] Unable to find public address, reject wkr")
+			backend.GetLogger().Error().Msg("unable to find public address, rejecting worker")
 			return
 		}
 	}

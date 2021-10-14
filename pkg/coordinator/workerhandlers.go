@@ -23,9 +23,8 @@ func GetConnectionRequest(data string) (api.ConnectionRequest, error) {
 
 func (w *Worker) HandleRegisterRoom(data json.RawMessage, rooms *client.NetMap) {
 	var req api.RegisterRoomRequest
-	err := json.Unmarshal(data, &req)
-	if err != nil {
-		w.Logf("error: broken room register request %v", err)
+	if err := json.Unmarshal(data, &req); err != nil {
+		w.log.Error().Err(err).Msg("malformed room register request")
 		return
 	}
 	rooms.Put(req, w)
@@ -33,9 +32,8 @@ func (w *Worker) HandleRegisterRoom(data json.RawMessage, rooms *client.NetMap) 
 
 func (w *Worker) HandleCloseRoom(data json.RawMessage, rooms *client.NetMap) {
 	var req api.CloseRoomRequest
-	err := json.Unmarshal(data, &req)
-	if err != nil {
-		w.Logf("error: broken room remove request %v", err)
+	if err := json.Unmarshal(data, &req); err != nil {
+		w.log.Error().Err(err).Msg("malformed room remove request")
 		return
 	}
 	rooms.RemoveByKey(req)
@@ -43,9 +41,8 @@ func (w *Worker) HandleCloseRoom(data json.RawMessage, rooms *client.NetMap) {
 
 func (w *Worker) HandleIceCandidate(data json.RawMessage, crowd *client.NetMap) {
 	var req api.WebrtcIceCandidateRequest
-	err := json.Unmarshal(data, &req)
-	if err != nil {
-		w.Logf("error: broken ice candidate request %v", err)
+	if err := json.Unmarshal(data, &req); err != nil {
+		w.log.Error().Err(err).Msg("malformed Ice candidate request")
 		return
 	}
 	usr, err := crowd.Find(string(req.Id))
@@ -53,6 +50,6 @@ func (w *Worker) HandleIceCandidate(data json.RawMessage, crowd *client.NetMap) 
 		u := usr.(*User)
 		u.SendWebrtcIceCandidate(req.Candidate)
 	} else {
-		w.Logf("error: unknown session: %v", req.Id)
+		w.log.Warn().Str("id", req.Id.String()).Msg("unknown session")
 	}
 }

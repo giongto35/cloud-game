@@ -2,7 +2,8 @@ package service
 
 import (
 	"context"
-	"log"
+	"errors"
+	"fmt"
 )
 
 // Service defines a generic service.
@@ -37,12 +38,17 @@ func (g *Group) Start() {
 }
 
 // Shutdown terminates a group of services.
-func (g *Group) Shutdown(ctx context.Context) {
+func (g *Group) Shutdown(ctx context.Context) (err error) {
+	var errs []error
 	for _, s := range g.list {
 		if v, ok := s.(RunnableService); ok {
 			if err := v.Shutdown(ctx); err != nil && err != context.Canceled {
-				log.Printf("error: failed to stop [%s] because of %v", s, err)
+				errs = append(errs, fmt.Errorf("error: failed to stop [%s] because of %v", s, err))
 			}
 		}
 	}
+	if len(errs) > 0 {
+		err = errors.New(fmt.Sprintf("%s", errs))
+	}
+	return
 }

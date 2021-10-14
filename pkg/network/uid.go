@@ -18,3 +18,5 @@ func NewUid() Uid {
 
 // Short returns Github-like short ID version (i.e. 81cef7d).
 func (u Uid) Short() string { return strings.ToLower(string(u[0:6])) }
+
+func (u Uid) String() string { return string(u) }

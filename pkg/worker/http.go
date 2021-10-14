@@ -4,10 +4,11 @@ import (
 	"net/http"
 
 	"github.com/giongto35/cloud-game/v2/pkg/config/worker"
+	"github.com/giongto35/cloud-game/v2/pkg/logger"
 	"github.com/giongto35/cloud-game/v2/pkg/network/httpx"
 )
 
-func NewHTTPServer(conf worker.Config) (*httpx.Server, error) {
+func NewHTTPServer(conf worker.Config, log *logger.Logger) (*httpx.Server, error) {
 	srv, err := httpx.NewServer(
 		conf.Worker.GetAddr(),
 		func(*httpx.Server) http.Handler {
@@ -23,6 +24,7 @@ func NewHTTPServer(conf worker.Config) (*httpx.Server, error) {
 		httpx.HttpsRedirect(false),
 		httpx.WithPortRoll(true),
 		httpx.WithZone(conf.Worker.Network.Zone),
+		httpx.WithLogger(log),
 	)
 	if err != nil {
 		return nil, err

@@ -4,7 +4,6 @@ import (
 	"crypto/md5"
 	"fmt"
 	"io"
-	"log"
 	"os"
 	"path/filepath"
 	"strings"
@@ -12,6 +11,7 @@ import (
 	"time"
 
 	"github.com/fsnotify/fsnotify"
+	"github.com/giongto35/cloud-game/v2/pkg/logger"
 )
 
 // Config is an external configuration
@@ -49,6 +49,7 @@ type library struct {
 	// game name -> game meta
 	// games with duplicate names are merged
 	games map[string]GameMetadata
+	log   *logger.Logger
 
 	// to restrict parallel execution
 	// or throttling
@@ -81,14 +82,14 @@ type GameMetadata struct {
 
 func (c Config) GetSupportedExtensions() []string { return c.Supported }
 
-func NewLib(conf Config) GameLibrary { return NewLibWhitelisted(conf, conf) }
+func NewLib(conf Config, log *logger.Logger) GameLibrary { return NewLibWhitelisted(conf, conf, log) }
 
-func NewLibWhitelisted(conf Config, filter FileExtensionWhitelist) GameLibrary {
+func NewLibWhitelisted(conf Config, filter FileExtensionWhitelist, log *logger.Logger) GameLibrary {
 	hasSource := true
 	dir, err := filepath.Abs(conf.BasePath)
 	if err != nil {
 		hasSource = false
-		log.Printf("[lib] invalid source: %v (%v)\n", conf.BasePath, err)
+		log.Error().Err(err).Str("dir", conf.BasePath).Msg("Lib has invalid source")
 	}
 
 	if len(conf.Supported) == 0 {
@@ -106,6 +107,7 @@ func NewLibWhitelisted(conf Config, filter FileExtensionWhitelist) GameLibrary {
 		mu:        sync.Mutex{},
 		games:     map[string]GameMetadata{},
 		hasSource: hasSource,
+		log:       log,
 	}
 
 	if conf.WatchMode && hasSource {
@@ -135,7 +137,7 @@ func (lib *library) FindGameByName(name string) GameMetadata {
 
 func (lib *library) Scan() {
 	if !lib.hasSource {
-		log.Printf("[lib] scan... skipped (no source)\n")
+		lib.log.Info().Msg("Lib scan... skipped (no source)")
 		return
 	}
 
@@ -144,13 +146,13 @@ func (lib *library) Scan() {
 	if lib.isScanning {
 		defer lib.mu.Unlock()
 		lib.isScanningDelayed = true
-		log.Printf("[lib] scan... delayed\n")
+		lib.log.Debug().Msg("Lib scan... delayed")
 		return
 	}
 	lib.isScanning = true
 	lib.mu.Unlock()
 
-	log.Printf("[lib] scan... started\n")
+	lib.log.Debug().Msg("Lib scan... started")
 
 	start := time.Now()
 	var games []GameMetadata
@@ -172,7 +174,7 @@ func (lib *library) Scan() {
 	})
 
 	if err != nil {
-		log.Printf("[lib] scan error with %q: %v\n", dir, err)
+		lib.log.Error().Err(err).Str("dir", dir).Msgf("Lib scan error")
 	}
 
 	if len(games) > 0 {
@@ -193,7 +195,7 @@ func (lib *library) Scan() {
 		go lib.Scan()
 	}
 
-	log.Printf("[lib] scan... completed\n")
+	lib.log.Info().Msg("Lib scan... completed")
 }
 
 // watch adds the ability to rescan the entire library
@@ -202,7 +204,7 @@ func (lib *library) Scan() {
 func (lib *library) watch() {
 	watcher, err := fsnotify.NewWatcher()
 	if err != nil {
-		log.Printf("[lib] watcher has failed: %v", err)
+		lib.log.Error().Err(err).Msg("Lib watcher has failed")
 		return
 	}
 
@@ -228,11 +230,11 @@ func (lib *library) watch() {
 	}(lib)
 
 	if err = watcher.Add(lib.config.path); err != nil {
-		log.Printf("[lib] watch error %v", err)
+		lib.log.Error().Err(err).Msg("Lib watch error")
 	}
 	<-done
 	_ = watcher.Close()
-	log.Printf("[lib] the watch has ended\n")
+	lib.log.Info().Msg("Lib watch has ended")
 }
 
 func (lib *library) set(games []GameMetadata) {
@@ -271,14 +273,14 @@ func (lib *library) dumpLibrary() {
 		gameList.WriteString("    " + game.Name + " (" + game.Path + ")" + "\n")
 	}
 
-	log.Printf("\n"+
+	lib.log.Debug().Msgf("Lib dump\n"+
 		"--------------------------------------------\n"+
 		"--- The Library of ROMs                  ---\n"+
 		"--------------------------------------------\n"+
 		"%v"+
 		"--------------------------------------------\n"+
 		"--- ROMs: %03d %26s ---\n"+
-		"--------------------------------------------\n",
+		"--------------------------------------------",
 		gameList.String(), len(lib.games), lib.lastScanDuration)
 }
 

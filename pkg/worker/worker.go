@@ -1,25 +1,25 @@
 package worker
 
 import (
-	"log"
-
 	"github.com/giongto35/cloud-game/v2/pkg/config/worker"
+	"github.com/giongto35/cloud-game/v2/pkg/logger"
 	"github.com/giongto35/cloud-game/v2/pkg/monitoring"
 	"github.com/giongto35/cloud-game/v2/pkg/service"
 )
 
-func New(conf worker.Config) (services service.Group) {
-	httpSrv, err := NewHTTPServer(conf)
+func New(conf worker.Config, log *logger.Logger) (services service.Group) {
+	httpSrv, err := NewHTTPServer(conf, log)
 	if err != nil {
-		log.Fatalf("http init fail: %v", err)
+		log.Error().Err(err).Msg("http init fail")
+		return
 	}
 
-	mainHandler := NewHandler(conf, httpSrv.Addr)
+	mainHandler := NewHandler(conf, httpSrv.Addr, log)
 	mainHandler.Prepare()
 
 	services.Add(httpSrv, mainHandler)
 	if conf.Worker.Monitoring.IsEnabled() {
-		services.Add(monitoring.New(conf.Worker.Monitoring, httpSrv.GetHost(), "worker"))
+		services.Add(monitoring.New(conf.Worker.Monitoring, httpSrv.GetHost(), log))
 	}
 	return
 }
