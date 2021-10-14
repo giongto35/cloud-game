@@ -6,13 +6,12 @@ import (
 	"fmt"
 	"log"
 	"runtime/debug"
+	"sync/atomic"
 	"time"
 
 	"github.com/giongto35/cloud-game/v2/pkg/codec"
 	webrtcConfig "github.com/giongto35/cloud-game/v2/pkg/config/webrtc"
-	itc "github.com/giongto35/cloud-game/v2/pkg/webrtc/interceptor"
 	"github.com/gofrs/uuid"
-	"github.com/pion/interceptor"
 	"github.com/pion/webrtc/v3"
 	"github.com/pion/webrtc/v3/pkg/media"
 )
@@ -26,10 +25,11 @@ type WebFrame struct {
 type WebRTC struct {
 	ID string
 
-	connection    *webrtc.PeerConnection
-	cfg           webrtcConfig.Config
-	tsInterceptor itc.ReTime
-	isConnected   bool
+	connection                *webrtc.PeerConnection
+	cfg                       webrtcConfig.Config
+	globalVideoFrameTimestamp uint32
+	defaultConnection         *PeerConnection
+	isConnected               bool
 	// for yuvI420 image
 	ImageChannel chan WebFrame
 	AudioChannel chan []byte
@@ -71,7 +71,7 @@ func Decode(in string, obj interface{}) error {
 }
 
 // NewWebRTC create
-func NewWebRTC() *WebRTC {
+func NewWebRTC() (*WebRTC, error) {
 	w := &WebRTC{
 		ID: uuid.Must(uuid.NewV4()).String(),
 
@@ -81,7 +81,12 @@ func NewWebRTC() *WebRTC {
 		//VoiceOutChannel: make(chan []byte, 1),
 		InputChannel: make(chan []byte, 100),
 	}
-	return w
+	conn, err := DefaultPeerConnection(w.cfg.Webrtc, &w.globalVideoFrameTimestamp)
+	if err != nil {
+		return nil, err
+	}
+	w.defaultConnection = conn
+	return w, nil
 }
 
 func (w *WebRTC) WithConfig(conf webrtcConfig.Config) *WebRTC {
@@ -108,10 +113,9 @@ func (w *WebRTC) StartClient(iceCB OnIceCallback) (string, error) {
 
 	log.Println("=== StartClient ===")
 
-	w.tsInterceptor = itc.ReTime{}
-	w.connection, err = NewInterceptedPeerConnection(w.cfg.Webrtc, []interceptor.Interceptor{&w.tsInterceptor})
+	w.connection, err = w.defaultConnection.NewConnection()
 	if err != nil {
-		return "", err
+		return "", nil
 	}
 
 	// add video track
@@ -320,7 +324,7 @@ func (w *WebRTC) startStreaming(vp8Track *webrtc.TrackLocalStaticSample, opusTra
 		}()
 
 		for data := range w.ImageChannel {
-			w.tsInterceptor.SetTimestamp(data.Timestamp)
+			atomic.StoreUint32(&w.globalVideoFrameTimestamp, data.Timestamp)
 			if err := vp8Track.WriteSample(media.Sample{Data: data.Data}); err != nil {
 				log.Println("Warn: Err write sample: ", err)
 				break

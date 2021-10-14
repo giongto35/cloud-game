@@ -6,7 +6,12 @@ import (
 	pion "github.com/pion/webrtc/v3"
 )
 
-func NewInterceptedPeerConnection(conf conf.Webrtc, ics []interceptor.Interceptor) (*pion.PeerConnection, error) {
+type PeerConnection struct {
+	api    *pion.API
+	config *pion.Configuration
+}
+
+func DefaultPeerConnection(conf conf.Webrtc, ts *uint32) (*PeerConnection, error) {
 	m := &pion.MediaEngine{}
 	if err := m.RegisterDefaultCodecs(); err != nil {
 		return nil, err
@@ -18,9 +23,7 @@ func NewInterceptedPeerConnection(conf conf.Webrtc, ics []interceptor.Intercepto
 			return nil, err
 		}
 	}
-	for _, itc := range ics {
-		i.Add(itc)
-	}
+	i.Add(&ReTimeInterceptor{timestamp: ts})
 
 	settingEngine := pion.SettingEngine{}
 	if conf.IcePorts.Min > 0 && conf.IcePorts.Max > 0 {
@@ -41,10 +44,17 @@ func NewInterceptedPeerConnection(conf conf.Webrtc, ics []interceptor.Intercepto
 		})
 	}
 
-	api := pion.NewAPI(
-		pion.WithMediaEngine(m),
-		pion.WithInterceptorRegistry(i),
-		pion.WithSettingEngine(settingEngine),
-	)
-	return api.NewPeerConnection(peerConf)
+	conn := PeerConnection{
+		api: pion.NewAPI(
+			pion.WithMediaEngine(m),
+			pion.WithInterceptorRegistry(i),
+			pion.WithSettingEngine(settingEngine),
+		),
+		config: &peerConf,
+	}
+	return &conn, nil
+}
+
+func (p *PeerConnection) NewConnection() (*pion.PeerConnection, error) {
+	return p.api.NewPeerConnection(*p.config)
 }
