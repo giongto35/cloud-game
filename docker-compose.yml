@@ -15,7 +15,7 @@ services:
     volumes:
       # keep cores persistent in the cloud-game_cores volume
       - cores:/usr/local/share/cloud-game/assets/cores
-      - ${CLOUD_GAME_GAMES_PATH}:/usr/local/share/cloud-game/assets/games
+      - ${CLOUD_GAME_GAMES_PATH:-./assets/games}:/usr/local/share/cloud-game/assets/games
 
 volumes:
   cores:
