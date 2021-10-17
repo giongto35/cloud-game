@@ -2,6 +2,8 @@ package games
 
 import (
 	"testing"
+
+	"github.com/giongto35/cloud-game/v2/pkg/logger"
 )
 
 func TestLibraryScan(t *testing.T) {
@@ -17,12 +19,13 @@ func TestLibraryScan(t *testing.T) {
 		},
 	}
 
+	l := logger.NewConsole(false, "w", true)
 	for _, test := range tests {
 		library := NewLib(Config{
 			BasePath:  test.directory,
 			Supported: []string{"gba", "zip", "nes"},
 			Ignored:   []string{"neogeo", "pgm"},
-		})
+		}, l)
 		library.Scan()
 		games := library.GetAll()
 
