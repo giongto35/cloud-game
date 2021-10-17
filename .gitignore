@@ -45,6 +45,11 @@ Network Trash Folder
 Temporary Items
 .apdisk
 
+### SSL
+*.crt
+*.csr
+*.key
+
 ### Production
 DockerfileProd
 key.json
@@ -64,3 +69,9 @@ release/
 vendor/
 
 .dockerignore
+
+### Libretro
+fbneo/
+hi/
+nvram/
+*.mcd

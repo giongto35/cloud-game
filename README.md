@@ -17,11 +17,10 @@ Discord: [Join Us](https://discord.gg/sXRQZa2zeP)
 run any offline games/application on browser in Cloud Gaming
 approach: [https://github.com/giongto35/cloud-morph](https://github.com/giongto35/cloud-morph))**
 
-
 ## Introduction
 
 CloudRetro provides an open-source cloud gaming platform for retro games. It started as an experiment for testing cloud
-gaming performance with [WebRTC](https://github.com/pion/webrtc/) and [libretro](https://www.libretro.com/), and now it
+gaming performance with [WebRTC](https://github.com/pion/webrtc/) and [Libretro](https://www.libretro.com/), and now it
 aims to deliver the most modern and convenient gaming experience through the technology.
 
 Theoretically, in cloud gaming, games are run on remote servers and media are streamed to the player optimally to ensure
@@ -29,6 +28,7 @@ the most comfortable user interaction. It opens the ability to play any retro ga
 fully compatible with multi-platform like Desktop, Android, ~~IOS~~.
 
 ## Try the service at **[cloudretro.io](https://cloudretro.io)**
+
 Direct play an existing
 game: **[Pokemon Emerald](https://cloudretro.io/?id=4a5073a4b05ad0fe___Pokemon%20-%20Emerald%20Version%20(U))**
 
@@ -40,7 +40,7 @@ a better sense of performance.
 |                   Screenshot                   |                   Screenshot                   |
 | :--------------------------------------------: | :--------------------------------------------: |
 | ![screenshot](docs/img/landing-page-ps-hm.png) | ![screenshot](docs/img/landing-page-ps-x4.png) |
-|  ![screenshot](docs/img/landing-page-gb.png)   | ![screenshot](docs/img/landing-page-front.png) |
+| ![screenshot](docs/img/landing-page-gb.png)    | ![screenshot](docs/img/landing-page-front.png) |
 
 ## Feature
 
@@ -63,8 +63,7 @@ a better sense of performance.
 
 ## Development environment
 
-* Install Golang https://golang.org/doc/install.
-
+* Install [Go](https://golang.org/doc/install)
 * Install [libvpx](https://www.webmproject.org/code/), [libx264](https://www.videolan.org/developers/x264.html)
   , [libopus](http://opus-codec.org/), [pkg-config](https://www.freedesktop.org/wiki/Software/pkg-config/)
   , [sdl2](https://wiki.libsdl.org/Installation)
@@ -96,8 +95,6 @@ Because the coordinator and workers need to run simultaneously. Workers connect 
 __Additionally, you may install and configure an `X Server` display in order to be able to run OpenGL cores.__
 __See the `docker-compose.yml` file for Xvfb example config.__
 
-__Minimum supported libx264 (x264 codec) version is v160!__
-
 ## Run with Docker
 
 Use makefile script: `make dev.run-docker` or Docker Compose directly: `docker-compose up --build`
@@ -113,9 +110,10 @@ apps.
 
 ## Deployment
 
-See an example of [deployment scripts](.github/workflows/cd) if you want to try to host your own cloud-retro copy in the cloud.
-This script (deploy-app.sh) allows pushing configured application to the group of servers automatically.
-The cloud server should be any Debian-based system with the docker-compose application [installed](https://docs.docker.com/compose/install/).
+See an example of [deployment scripts](.github/workflows/cd) if you want to try to host your own cloud-retro copy in the
+cloud. This script (deploy-app.sh) allows pushing configured application to the group of servers automatically. The
+cloud server should be any Debian-based system with the docker-compose
+application [installed](https://docs.docker.com/compose/install/).
 
 ## Technical documents
 
@@ -158,7 +156,8 @@ Thanks:
 
 * [Pion](https://github.com/pion) team for the incredible Golang WebRTC library and their support.
 * [Libretro](https://www.libretro.com) team for the greatest emulation lib.
-* [kivutar](https://github.com/kivutar) for [go-nanoarch](https://github.com/libretro/go-nanoarch), [ludo](https://github.com/libretro/ludo), and all.
+* [kivutar](https://github.com/kivutar) for [go-nanoarch](https://github.com/libretro/go-nanoarch)
+  and [ludo](https://github.com/libretro/ludo).
 * [gen2brain](https://github.com/gen2brain) for the [h264](https://github.com/gen2brain/x264-go) and VPX encoder.
 * [poi5305](https://github.com/poi5305) for the [YUV video encoding](https://github.com/poi5305/go-yuv2webRTC).
 * [fogleman](https://github.com/fogleman) for the [NES emulator](https://github.com/fogleman/nes).
@@ -174,10 +173,10 @@ Thanks:
 ## Team
 
 Authors:
+
 - Nguyen Huu Thanh (https://www.linkedin.com/in/huuthanhnguyen)
 - Tri Dang Minh (https://trich.im)
 
 Maintainers:
+
 - Sergey Stepanov (https://github.com/sergystepanov)
-
-
