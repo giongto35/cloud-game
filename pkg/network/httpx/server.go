@@ -135,7 +135,7 @@ func (s *Server) redirection() (*Server, error) {
 		h.Handle("/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			httpsURL := url.URL{Scheme: "https", Host: addr, Path: r.URL.Path, RawQuery: r.URL.RawQuery}
 			rdr := httpsURL.String()
-			if s.log.GetLevel() < 1 {
+			if s.log.GetLevel() < logger.InfoLevel {
 				s.log.Debug().
 					Str("from", fmt.Sprintf("http://%s%s", r.Host, r.URL.String())).
 					Str("to", rdr).

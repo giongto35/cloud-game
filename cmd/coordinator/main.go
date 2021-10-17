@@ -21,7 +21,7 @@ func main() {
 	log := logger.NewConsole(conf.Coordinator.Debug, "c")
 
 	log.Info().Msgf("version %s", Version)
-	if log.GetLevel() < 1 {
+	if log.GetLevel() < logger.InfoLevel {
 		log.Debug().Msgf("config: %+v", conf)
 	}
 	c := coordinator.New(conf, log)

@@ -5,10 +5,61 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"strconv"
 	"time"
 
 	"github.com/rs/zerolog"
 )
+
+// Level defines log levels.
+type Level int8
+
+const (
+	// DebugLevel defines debug log level.
+	DebugLevel Level = iota
+	// InfoLevel defines info log level.
+	InfoLevel
+	// WarnLevel defines warn log level.
+	WarnLevel
+	// ErrorLevel defines error log level.
+	ErrorLevel
+	// FatalLevel defines fatal log level.
+	FatalLevel
+	// PanicLevel defines panic log level.
+	PanicLevel
+	// NoLevel defines an absent log level.
+	NoLevel
+	// Disabled disables the logger.
+	Disabled
+
+	// TraceLevel defines trace log level.
+	TraceLevel Level = -1
+	// Values less than TraceLevel are handled as numbers.
+)
+
+func (l Level) String() string {
+	switch l {
+	case TraceLevel:
+		return zerolog.LevelTraceValue
+	case DebugLevel:
+		return zerolog.LevelDebugValue
+	case InfoLevel:
+		return zerolog.LevelInfoValue
+	case WarnLevel:
+		return zerolog.LevelWarnValue
+	case ErrorLevel:
+		return zerolog.LevelErrorValue
+	case FatalLevel:
+		return zerolog.LevelFatalValue
+	case PanicLevel:
+		return zerolog.LevelPanicValue
+	case Disabled:
+		return "disabled"
+	case NoLevel:
+		return ""
+	}
+	return strconv.Itoa(int(l))
+}
 
 var pid = os.Getpid()
 
@@ -51,7 +102,7 @@ func NewConsole(isDebug bool, tag string) *Logger {
 func Default() *Logger { return &Logger{zerolog.DefaultContextLogger} }
 
 // GetLevel returns the current Level of l.
-func (l *Logger) GetLevel() zerolog.Level { return l.logger.GetLevel() }
+func (l *Logger) GetLevel() Level { return Level(l.logger.GetLevel()) }
 
 // Output duplicates the global logger and sets w as its output.
 func (l *Logger) Output(w io.Writer) zerolog.Logger { return l.logger.Output(w) }
