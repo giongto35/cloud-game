@@ -97,14 +97,14 @@ func initCloudStorage(conf worker.Config) storage.CloudStorage {
 
 // detachPeerConn detaches a peerconnection from the current room.
 func (h *Handler) detachPeerConn(pc *webrtc.WebRTC) {
-	h.log.Info().Msg("closing peer connection")
+	h.log.Info().Msg("Closing peer connection")
 	rm := h.rooms.Get(pc.RoomID)
 	if rm == nil || rm.IsEmpty() {
 		return
 	}
 	rm.RemoveSession(pc)
 	if rm.IsEmpty() {
-		h.log.Info().Msg("closing an empty room")
+		h.log.Info().Msg("Closing an empty room")
 		rm.Close()
 		pc.InputChannel <- []byte{0xFF, 0xFF}
 		close(pc.InputChannel)
@@ -116,7 +116,7 @@ func (h *Handler) createRoom(id string, game games.GameMetadata) *room.Room {
 	// If the roomID doesn't have any running sessions (room was closed)
 	// we spawn a new room
 	if h.rooms.noSessions(id) {
-		newRoom := room.NewRoom(id, game, h.onlineStorage, h.cfg)
+		newRoom := room.NewRoom(id, game, h.onlineStorage, h.cfg, h.log)
 		h.rooms.Add(newRoom)
 		return newRoom
 	}

@@ -91,6 +91,5 @@ func (m *Monitoring) printInfo() {
 	if m.conf.MetricEnabled {
 		message = message.Str("prometheus", m.GetMetricsPublicAddress())
 	}
-
 	message.Msg("Monitoring")
 }

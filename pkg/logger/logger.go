@@ -77,14 +77,14 @@ func New(isDebug bool) *Logger {
 	return &Logger{logger: &logger}
 }
 
-func NewConsole(isDebug bool, tag string) *Logger {
+func NewConsole(isDebug bool, tag string, noColor bool) *Logger {
 	logLevel := zerolog.InfoLevel
 	if isDebug {
 		logLevel = zerolog.DebugLevel
 	}
 	zerolog.SetGlobalLevel(logLevel)
 	zerolog.TimeFieldFormat = time.RFC3339Nano
-	output := zerolog.ConsoleWriter{Out: os.Stdout, TimeFormat: "15:04:05.0000", NoColor: false}
+	output := zerolog.ConsoleWriter{Out: os.Stdout, TimeFormat: "15:04:05.0000", NoColor: noColor}
 	output.FormatMessage = func(i interface{}) string {
 		if output.NoColor {
 			return fmt.Sprintf("%s %v", tag, i)

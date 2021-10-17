@@ -19,7 +19,7 @@ func run() {
 	flag.CommandLine.AddGoFlagSet(goflag.CommandLine)
 	conf.ParseFlags()
 
-	log := logger.NewConsole(conf.Worker.Debug, "w")
+	log := logger.NewConsole(conf.Worker.Debug, "w", true)
 	log.Info().Msgf("version %s", Version)
 	if log.GetLevel() < logger.InfoLevel {
 		log.Debug().Msgf("config: %+v", conf)
