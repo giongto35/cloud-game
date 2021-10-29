@@ -67,7 +67,7 @@ func (h *Handler) Prepare() {
 	}
 
 	h.log.Info().Msg("Starting Libretro cores sync...")
-	coreManager := remotehttp.NewRemoteHttpManager(h.cfg.Emulator.Libretro)
+	coreManager := remotehttp.NewRemoteHttpManager(h.cfg.Emulator.Libretro, h.log)
 	// make a dir for cores
 	dir := coreManager.Conf.GetCoresStorePath()
 	if err := os.MkdirAll(dir, os.ModeDir); err != nil {

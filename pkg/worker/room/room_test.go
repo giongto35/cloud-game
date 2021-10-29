@@ -232,15 +232,16 @@ func getRoomMock(cfg roomMockConfig) roomMock {
 		panic(err)
 	}
 	fixEmulators(&conf, cfg.autoGlContext)
+	l := logger.NewConsole(conf.Worker.Debug, "w", true)
+
 	// sync cores
-	coreManager := remotehttp.NewRemoteHttpManager(conf.Emulator.Libretro)
+	coreManager := remotehttp.NewRemoteHttpManager(conf.Emulator.Libretro, l)
 	if err := coreManager.Sync(); err != nil {
 		log.Printf("error: cores sync has failed, %v", err)
 	}
 	conf.Encoder.Video.Codec = string(cfg.vCodec)
 
 	cloudStore, _ := storage.NewNoopCloudStorage()
-	l := logger.NewConsole(conf.Worker.Debug, "w", true)
 	room := NewRoom(cfg.roomName, cfg.game, cloudStore, conf, l)
 
 	// loop-wait the room initialization

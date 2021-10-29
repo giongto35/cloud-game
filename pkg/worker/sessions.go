@@ -1,9 +1,10 @@
 package worker
 
 import (
+	"sync"
+
 	"github.com/giongto35/cloud-game/v2/pkg/network"
 	"github.com/giongto35/cloud-game/v2/pkg/webrtc"
-	"sync"
 )
 
 // Session represents a session connected from the browser to the current server

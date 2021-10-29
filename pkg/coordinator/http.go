@@ -1,13 +1,12 @@
 package coordinator
 
 import (
-	"github.com/giongto35/cloud-game/v2/pkg/logger"
 	"html/template"
 	"log"
 	"net/http"
 
 	"github.com/giongto35/cloud-game/v2/pkg/config/coordinator"
-	"github.com/giongto35/cloud-game/v2/pkg/config/shared"
+	"github.com/giongto35/cloud-game/v2/pkg/logger"
 	"github.com/giongto35/cloud-game/v2/pkg/network/httpx"
 )
 
@@ -39,11 +38,7 @@ func index(conf coordinator.Config) http.Handler {
 			return
 		}
 		// render index page with some tpl values
-		tplData := struct {
-			Analytics coordinator.Analytics
-			Recording shared.Recording
-		}{conf.Coordinator.Analytics, conf.Recording}
-		if err = tpl.Execute(w, tplData); err != nil {
+		if err = tpl.Execute(w, conf.Coordinator.Analytics); err != nil {
 			log.Fatal(err)
 		}
 	})

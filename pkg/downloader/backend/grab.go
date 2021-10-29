@@ -6,26 +6,27 @@ import (
 	"net/http"
 
 	"github.com/cavaliercoder/grab"
+	"github.com/giongto35/cloud-game/v2/pkg/logger"
 )
 
 type GrabDownloader struct {
 	client      *grab.Client
-	concurrency int
+	parallelism int
+	log         *logger.Logger
 }
 
 func NewGrabDownloader() GrabDownloader {
-	client := grab.Client{
-		UserAgent: "Cloud-Game/2.2",
-		HTTPClient: &http.Client{
-			Transport: &http.Transport{
-				Proxy:           http.ProxyFromEnvironment,
-				TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
+	return GrabDownloader{
+		client: &grab.Client{
+			UserAgent: "Cloud-Game/2.2",
+			HTTPClient: &http.Client{
+				Transport: &http.Transport{
+					Proxy:           http.ProxyFromEnvironment,
+					TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
+				},
 			},
 		},
-	}
-	return GrabDownloader{
-		client:      &client,
-		concurrency: 5,
+		parallelism: 5,
 	}
 }
 
@@ -42,7 +43,7 @@ func (d GrabDownloader) Request(dest string, urls ...Download) (ok []string, noo
 	}
 
 	// check each response
-	for resp := range d.client.DoBatch(d.concurrency, reqs...) {
+	for resp := range d.client.DoBatch(d.parallelism, reqs...) {
 		r := resp.Request
 		if err := resp.Err(); err != nil {
 			log.Printf("error: download [%s] %s failed: %v\n", r.Label, r.URL(), err)

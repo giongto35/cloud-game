@@ -1,8 +1,9 @@
 package worker
 
 import (
-	"github.com/giongto35/cloud-game/v2/pkg/worker/room"
 	"sync"
+
+	"github.com/giongto35/cloud-game/v2/pkg/worker/room"
 )
 
 type Rooms struct {
