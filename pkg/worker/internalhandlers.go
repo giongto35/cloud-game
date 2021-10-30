@@ -40,13 +40,11 @@ func (h *Handler) handleInitWebrtc() cws.PacketHandler {
 	return func(resp cws.WSPacket) (req cws.WSPacket) {
 		log.Println("Received a request to createOffer from browser via coordinator")
 
-		peerconnection, err := webrtc.NewWebRTC()
+		peerconnection, err := webrtc.NewWebRTC(webrtcConfig.Config{Encoder: h.cfg.Encoder, Webrtc: h.cfg.Webrtc})
 		if err != nil {
 			log.Println("error: Cannot create new WebRTC connection", err)
 			return cws.EmptyPacket
 		}
-		peerconnection = peerconnection.WithConfig(webrtcConfig.Config{Encoder: h.cfg.Encoder, Webrtc: h.cfg.Webrtc})
-
 		localSession, err := peerconnection.StartClient(
 			// send back candidate string to browser
 			func(cd string) { h.oClient.Send(api.IceCandidatePacket(cd, resp.SessionID), nil) },

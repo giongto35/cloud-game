@@ -71,7 +71,7 @@ func Decode(in string, obj interface{}) error {
 }
 
 // NewWebRTC create
-func NewWebRTC() (*WebRTC, error) {
+func NewWebRTC(conf webrtcConfig.Config) (*WebRTC, error) {
 	w := &WebRTC{
 		ID: uuid.Must(uuid.NewV4()).String(),
 
@@ -80,6 +80,7 @@ func NewWebRTC() (*WebRTC, error) {
 		//VoiceInChannel:  make(chan []byte, 1),
 		//VoiceOutChannel: make(chan []byte, 1),
 		InputChannel: make(chan []byte, 100),
+		cfg:          conf,
 	}
 	conn, err := DefaultPeerConnection(w.cfg.Webrtc, &w.globalVideoFrameTimestamp)
 	if err != nil {
@@ -87,11 +88,6 @@ func NewWebRTC() (*WebRTC, error) {
 	}
 	w.defaultConnection = conn
 	return w, nil
-}
-
-func (w *WebRTC) WithConfig(conf webrtcConfig.Config) *WebRTC {
-	w.cfg = conf
-	return w
 }
 
 // StartClient start webrtc

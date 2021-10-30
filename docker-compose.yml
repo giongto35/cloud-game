@@ -5,11 +5,17 @@ services:
     build: .
     image: cloud-game-local
     container_name: cloud-game-local
-    privileged: true
+#    privileged: true
     environment:
       - DISPLAY=:99
       - MESA_GL_VERSION_OVERRIDE=3.3
-    network_mode: "host"
+      - CLOUD_GAME_WEBRTC_SINGLEPORT=8443
+      - CLOUD_GAME_WEBRTC_ICEIPMAP=127.0.0.1
+    ports:
+      - 8000:8000
+      - 9000:9000
+      - 0.0.0.0:8443:8443/udp
+#    network_mode: "host"
     command: >
       bash -c "Xvfb :99 & coordinator --v=5 & worker --coordinatorhost localhost:8000"
     volumes:

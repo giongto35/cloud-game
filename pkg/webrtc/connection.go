@@ -1,6 +1,10 @@
 package webrtc
 
 import (
+	"log"
+	"net"
+	"sync"
+
 	conf "github.com/giongto35/cloud-game/v2/pkg/config/webrtc"
 	"github.com/pion/interceptor"
 	pion "github.com/pion/webrtc/v3"
@@ -10,6 +14,11 @@ type PeerConnection struct {
 	api    *pion.API
 	config *pion.Configuration
 }
+
+var (
+	UDPMuxOnce sync.Once
+	udpConn    *net.UDPConn
+)
 
 func DefaultPeerConnection(conf conf.Webrtc, ts *uint32) (*PeerConnection, error) {
 	m := &pion.MediaEngine{}
@@ -33,6 +42,27 @@ func DefaultPeerConnection(conf conf.Webrtc, ts *uint32) (*PeerConnection, error
 	}
 	if conf.IceIpMap != "" {
 		settingEngine.SetNAT1To1IPs([]string{conf.IceIpMap}, pion.ICECandidateTypeHost)
+	}
+	if conf.SinglePort > 0 {
+		UDPMuxOnce.Do(func() {
+			// Listen on UDP Port, will be used for all WebRTC traffic
+			udpListener, err := net.ListenUDP("udp4",
+				&net.UDPAddr{
+					//IP:   net.IP{172, 18, 0, 2},
+					Port: int(conf.SinglePort),
+				},
+			)
+			if err != nil {
+				panic(err)
+			}
+			_ = udpListener.SetReadBuffer(16_777_216)
+			_ = udpListener.SetWriteBuffer(16_777_216)
+			log.Printf("---------------------------------")
+			log.Printf("Listening for WebRTC traffic at %s\n", udpListener.LocalAddr())
+			udpConn = udpListener
+		})
+		settingEngine.SetICEUDPMux(pion.NewICEUDPMux(nil, udpConn))
+		settingEngine.SetNetworkTypes([]pion.NetworkType{pion.NetworkTypeUDP4})
 	}
 
 	peerConf := pion.Configuration{ICEServers: []pion.ICEServer{}}

@@ -230,3 +230,4 @@ webrtc:
   # override ICE candidate IP, see: https://github.com/pion/webrtc/issues/835,
   # can be used for Docker bridged network internal IP override
   iceIpMap:
+  singlePort: 8443
