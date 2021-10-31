@@ -15,9 +15,11 @@ type PeerConnection struct {
 	config *pion.Configuration
 }
 
+const udpBufferSize = 16 * 1024 * 1024
+
 var (
-	UDPMuxOnce sync.Once
-	udpConn    *net.UDPConn
+	settingsOnce sync.Once
+	settings     pion.SettingEngine
 )
 
 func DefaultPeerConnection(conf conf.Webrtc, ts *uint32) (*PeerConnection, error) {
@@ -34,36 +36,29 @@ func DefaultPeerConnection(conf conf.Webrtc, ts *uint32) (*PeerConnection, error
 	}
 	i.Add(&ReTimeInterceptor{timestamp: ts})
 
-	settingEngine := pion.SettingEngine{}
-	if conf.IcePorts.Min > 0 && conf.IcePorts.Max > 0 {
-		if err := settingEngine.SetEphemeralUDPPortRange(conf.IcePorts.Min, conf.IcePorts.Max); err != nil {
-			return nil, err
-		}
-	}
-	if conf.IceIpMap != "" {
-		settingEngine.SetNAT1To1IPs([]string{conf.IceIpMap}, pion.ICECandidateTypeHost)
-	}
-	if conf.SinglePort > 0 {
-		UDPMuxOnce.Do(func() {
-			// Listen on UDP Port, will be used for all WebRTC traffic
-			udpListener, err := net.ListenUDP("udp4",
-				&net.UDPAddr{
-					//IP:   net.IP{172, 18, 0, 2},
-					Port: int(conf.SinglePort),
-				},
-			)
-			if err != nil {
+	settingsOnce.Do(func() {
+		settingEngine := pion.SettingEngine{}
+		if conf.IcePorts.Min > 0 && conf.IcePorts.Max > 0 {
+			if err := settingEngine.SetEphemeralUDPPortRange(conf.IcePorts.Min, conf.IcePorts.Max); err != nil {
 				panic(err)
 			}
-			_ = udpListener.SetReadBuffer(16_777_216)
-			_ = udpListener.SetWriteBuffer(16_777_216)
-			log.Printf("---------------------------------")
-			log.Printf("Listening for WebRTC traffic at %s\n", udpListener.LocalAddr())
-			udpConn = udpListener
-		})
-		settingEngine.SetICEUDPMux(pion.NewICEUDPMux(nil, udpConn))
-		settingEngine.SetNetworkTypes([]pion.NetworkType{pion.NetworkTypeUDP4})
-	}
+		} else {
+			if conf.SinglePort > 0 {
+				udpListener, err := net.ListenUDP("udp", &net.UDPAddr{Port: int(conf.SinglePort)})
+				if err != nil {
+					panic(err)
+				}
+				_ = udpListener.SetReadBuffer(udpBufferSize)
+				_ = udpListener.SetWriteBuffer(udpBufferSize)
+				log.Printf("Listening for WebRTC traffic at %s\n", udpListener.LocalAddr())
+				settingEngine.SetICEUDPMux(pion.NewICEUDPMux(nil, udpListener))
+			}
+		}
+		if conf.IceIpMap != "" {
+			settingEngine.SetNAT1To1IPs([]string{conf.IceIpMap}, pion.ICECandidateTypeHost)
+		}
+		settings = settingEngine
+	})
 
 	peerConf := pion.Configuration{ICEServers: []pion.ICEServer{}}
 	for _, server := range conf.IceServers {
@@ -78,7 +73,7 @@ func DefaultPeerConnection(conf conf.Webrtc, ts *uint32) (*PeerConnection, error
 		api: pion.NewAPI(
 			pion.WithMediaEngine(m),
 			pion.WithInterceptorRegistry(i),
-			pion.WithSettingEngine(settingEngine),
+			pion.WithSettingEngine(settings),
 		),
 		config: &peerConf,
 	}
