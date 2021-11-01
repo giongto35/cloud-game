@@ -6,6 +6,7 @@ import (
 	"sync"
 
 	conf "github.com/giongto35/cloud-game/v2/pkg/config/webrtc"
+	"github.com/giongto35/cloud-game/v2/pkg/network/socket"
 	"github.com/pion/interceptor"
 	pion "github.com/pion/webrtc/v3"
 )
@@ -14,8 +15,6 @@ type PeerConnection struct {
 	api    *pion.API
 	config *pion.Configuration
 }
-
-const udpBufferSize = 16 * 1024 * 1024
 
 var (
 	settingsOnce sync.Once
@@ -44,13 +43,13 @@ func DefaultPeerConnection(conf conf.Webrtc, ts *uint32) (*PeerConnection, error
 			}
 		} else {
 			if conf.SinglePort > 0 {
-				udpListener, err := net.ListenUDP("udp", &net.UDPAddr{Port: int(conf.SinglePort)})
+				l, err := socket.NewSocket(socket.UDP, conf.SinglePort)
 				if err != nil {
 					panic(err)
 				}
-				_ = udpListener.SetReadBuffer(udpBufferSize)
-				_ = udpListener.SetWriteBuffer(udpBufferSize)
-				log.Printf("Listening for WebRTC traffic at %s\n", udpListener.LocalAddr())
+				udpListener := l.(*net.UDPConn)
+				log.Println("-----------------------------------")
+				log.Printf("Listening for WebRTC traffic at %s", udpListener.LocalAddr())
 				settingEngine.SetICEUDPMux(pion.NewICEUDPMux(nil, udpListener))
 			}
 		}

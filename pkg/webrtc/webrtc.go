@@ -292,8 +292,9 @@ func (w *WebRTC) StopClient() {
 
 	w.isConnected = false
 	if w.connection != nil {
-		err := w.connection.Close()
-		log.Printf("error: couldn't close WebRTC connection, %v", err)
+		if err := w.connection.Close(); err != nil {
+			log.Printf("error: couldn't close WebRTC connection, %v", err)
+		}
 	}
 	w.connection = nil
 	//close(w.InputChannel)

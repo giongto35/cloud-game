@@ -3,10 +3,9 @@ package httpx
 import (
 	"errors"
 	"net"
-	"os"
-	"runtime"
 	"strconv"
-	"syscall"
+
+	"github.com/giongto35/cloud-game/v2/pkg/network/socket"
 )
 
 const listenAttempts = 42
@@ -25,7 +24,7 @@ func NewListener(address string, withNextFreePort bool) (*Listener, error) {
 
 func listener(address string, withNextFreePort bool) (net.Listener, error) {
 	listener, err := net.Listen("tcp", address)
-	if err == nil || !withNextFreePort || !isPortBusyError(err) {
+	if err == nil || !withNextFreePort || !socket.IsPortBusyError(err) {
 		return listener, err
 	}
 	// we will roll next available port
@@ -57,23 +56,4 @@ func (l Listener) GetPort() int {
 		return tcp.Port
 	}
 	return 0
-}
-
-func isPortBusyError(err error) bool {
-	var eOsSyscall *os.SyscallError
-	if !errors.As(err, &eOsSyscall) {
-		return false
-	}
-	var errErrno syscall.Errno
-	if !errors.As(eOsSyscall, &errErrno) {
-		return false
-	}
-	if errErrno == syscall.EADDRINUSE {
-		return true
-	}
-	const WSAEADDRINUSE = 10048
-	if runtime.GOOS == "windows" && errErrno == WSAEADDRINUSE {
-		return true
-	}
-	return false
 }

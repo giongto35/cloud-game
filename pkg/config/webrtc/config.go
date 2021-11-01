@@ -10,7 +10,7 @@ type Webrtc struct {
 		Max uint16
 	}
 	IceIpMap   string
-	SinglePort uint16
+	SinglePort int
 }
 
 type IceServer struct {
