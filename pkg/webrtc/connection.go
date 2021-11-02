@@ -36,13 +36,8 @@ func DefaultPeerConnection(conf conf.Webrtc, ts *uint32, log *logger.Logger) (*P
 	i.Add(&ReTimeInterceptor{timestamp: ts})
 
 	settingsOnce.Do(func() {
-		customLogger := logger.PionLogger{}
-		customLogger.SetRootLogger(log)
-		customLogger.SetLevel(conf.LogLevel)
-
-		settingEngine := pion.SettingEngine{
-			LoggerFactory: customLogger,
-		}
+		customLogger := logger.NewPionLogger(log, conf.LogLevel)
+		settingEngine := pion.SettingEngine{LoggerFactory: customLogger}
 		if conf.DtlsRole > 0 {
 			log.Printf("A custom DTLS role [%v]", conf.DtlsRole)
 			if err := settingEngine.SetAnsweringDTLSRole(pion.DTLSRole(conf.DtlsRole)); err != nil {
