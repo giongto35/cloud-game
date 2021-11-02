@@ -51,11 +51,10 @@ func (c *Coordinator) HandleWebrtcInit(packet ipc.InPacket, h *Handler) {
 		return
 	}
 
-	peerconnection, err := webrtc.NewWebRTC(c.log)
+	peerconnection, err := webrtc.NewWebRTC(webrtcConf.Config{Encoder: h.cfg.Encoder, Webrtc: h.cfg.Webrtc}, c.log)
 	if err != nil {
 		c.log.Error().Err(err).Msg("WebRTC connection init fail")
 	}
-	peerconnection = peerconnection.WithConfig(webrtcConf.Config{Encoder: h.cfg.Encoder, Webrtc: h.cfg.Webrtc})
 	localSDP, err := peerconnection.StartClient(func(cd string) { h.cord.IceCandidate(cd, string(resp.Id)) })
 	if err != nil {
 		c.log.Error().Err(err).Msg("cannot create new webrtc session")

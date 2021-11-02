@@ -11,13 +11,13 @@ require (
 	github.com/go-gl/gl v0.0.0-20210905235341-f7a045908259
 	github.com/gofrs/flock v0.8.1
 	github.com/gofrs/uuid v4.0.0+incompatible
-	github.com/golang/glog v1.0.0
 	github.com/golang/groupcache v0.0.0-20210331224755-41bb18bfe9da // indirect
 	github.com/gorilla/websocket v1.4.2
 	github.com/kkyr/fig v0.3.0
 	github.com/mitchellh/mapstructure v1.4.2 // indirect
 	github.com/pelletier/go-toml v1.9.4 // indirect
 	github.com/pion/interceptor v0.1.0
+	github.com/pion/logging v0.2.2
 	github.com/pion/rtp v1.7.2
 	github.com/pion/webrtc/v3 v3.1.3
 	github.com/prometheus/client_golang v1.11.0

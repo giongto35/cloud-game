@@ -25,16 +25,13 @@ type WebRTC struct {
 	ID string
 
 	connection                *webrtc.PeerConnection
-	cfg                       webrtcConfig.Config
+	conf                      webrtcConfig.Config
 	globalVideoFrameTimestamp uint32
 	defaultConnection         *PeerConnection
 	isConnected               bool
-	// for yuvI420 image
-	ImageChannel chan WebFrame
-	AudioChannel chan []byte
-	//VoiceInChannel  chan []byte
-	//VoiceOutChannel chan []byte
-	InputChannel chan []byte
+	ImageChannel              chan WebFrame
+	AudioChannel              chan []byte
+	InputChannel              chan []byte
 
 	Done bool
 
@@ -73,18 +70,15 @@ func Decode(in string, obj interface{}) error {
 // NewWebRTC create
 func NewWebRTC(conf webrtcConfig.Config, log *logger.Logger) (*WebRTC, error) {
 	w := &WebRTC{
-		ID: string(network.NewUid()),
-
+		ID:           string(network.NewUid()),
 		ImageChannel: make(chan WebFrame, 30),
 		AudioChannel: make(chan []byte, 1),
-		//VoiceInChannel:  make(chan []byte, 1),
-		//VoiceOutChannel: make(chan []byte, 1),
 		InputChannel: make(chan []byte, 100),
+		conf:         conf,
 		log:          log,
 		cfg:          conf,
 	}
-
-	conn, err := DefaultPeerConnection(w.cfg.Webrtc, &w.globalVideoFrameTimestamp)
+	conn, err := DefaultPeerConnection(w.conf.Webrtc, &w.globalVideoFrameTimestamp, log)
 	if err != nil {
 		return nil, err
 	}
@@ -218,7 +212,7 @@ func (w *WebRTC) StartClient(iceCB OnIceCallback) (string, error) {
 }
 
 func (w *WebRTC) getVideoCodec() string {
-	switch w.cfg.Encoder.Video.Codec {
+	switch w.conf.Encoder.Video.Codec {
 	case string(codec.H264):
 		return webrtc.MimeTypeH264
 	case string(codec.VPX):
@@ -280,13 +274,8 @@ func (w *WebRTC) StopClient() {
 		}
 	}
 	w.connection = nil
-	//close(w.InputChannel)
-	// webrtc is producer, so we close
-	// NOTE: ImageChannel is waiting for input. Close in writer is not correct for this
 	close(w.ImageChannel)
 	close(w.AudioChannel)
-	//close(w.VoiceInChannel)
-	//close(w.VoiceOutChannel)
 	w.log.Info().Msg("WebRTC stop")
 }
 
@@ -319,7 +308,7 @@ func (w *WebRTC) startStreaming(vp8Track *webrtc.TrackLocalStaticSample, opusTra
 			}
 		}()
 
-		audioDuration := time.Duration(w.cfg.Encoder.Audio.Frame) * time.Millisecond
+		audioDuration := time.Duration(w.conf.Encoder.Audio.Frame) * time.Millisecond
 		for data := range w.AudioChannel {
 			if !w.isConnected {
 				return

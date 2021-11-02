@@ -1,11 +1,11 @@
 package webrtc
 
 import (
-	"log"
 	"net"
 	"sync"
 
 	conf "github.com/giongto35/cloud-game/v2/pkg/config/webrtc"
+	"github.com/giongto35/cloud-game/v2/pkg/logger"
 	"github.com/giongto35/cloud-game/v2/pkg/network/socket"
 	"github.com/pion/interceptor"
 	pion "github.com/pion/webrtc/v3"
@@ -21,7 +21,7 @@ var (
 	settings     pion.SettingEngine
 )
 
-func DefaultPeerConnection(conf conf.Webrtc) (*PeerConnection, error) {
+func DefaultPeerConnection(conf conf.Webrtc, ts *uint32, log *logger.Logger) (*PeerConnection, error) {
 	m := &pion.MediaEngine{}
 	if err := m.RegisterDefaultCodecs(); err != nil {
 		return nil, err
@@ -33,9 +33,16 @@ func DefaultPeerConnection(conf conf.Webrtc) (*PeerConnection, error) {
 			return nil, err
 		}
 	}
+	i.Add(&ReTimeInterceptor{timestamp: ts})
 
 	settingsOnce.Do(func() {
-		settingEngine := pion.SettingEngine{}
+		customLogger := logger.PionLogger{}
+		customLogger.SetRootLogger(log)
+		customLogger.SetLevel(conf.LogLevel)
+
+		settingEngine := pion.SettingEngine{
+			LoggerFactory: customLogger,
+		}
 		if conf.DtlsRole > 0 {
 			log.Printf("A custom DTLS role [%v]", conf.DtlsRole)
 			if err := settingEngine.SetAnsweringDTLSRole(pion.DTLSRole(conf.DtlsRole)); err != nil {
@@ -56,8 +63,8 @@ func DefaultPeerConnection(conf conf.Webrtc) (*PeerConnection, error) {
 					panic(err)
 				}
 				udpListener := l.(*net.UDPConn)
-				log.Printf("Listening for WebRTC traffic at %s", udpListener.LocalAddr())
-				settingEngine.SetICEUDPMux(pion.NewICEUDPMux(nil, udpListener))
+				log.Info().Msgf("Listening for WebRTC traffic at %s", udpListener.LocalAddr())
+				settingEngine.SetICEUDPMux(pion.NewICEUDPMux(customLogger, udpListener))
 			}
 		}
 		if conf.IceIpMap != "" {
