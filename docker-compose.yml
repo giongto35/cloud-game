@@ -5,20 +5,18 @@ services:
     build: .
     image: cloud-game-local
     container_name: cloud-game-local
-#    privileged: true
     environment:
       - DISPLAY=:99
       - MESA_GL_VERSION_OVERRIDE=3.3
       - CLOUD_GAME_WEBRTC_SINGLEPORT=8443
       - CLOUD_GAME_WEBRTC_ICEIPMAP=127.0.0.1
-      - PION_LOG_TRACE=all
+      # - PION_LOG_TRACE=all
     ports:
       - 8000:8000
       - 9000:9000
       - 8443:8443/udp
-#    network_mode: "host"
     command: >
-      bash -c "Xvfb :99 & coordinator --v=5 & worker --coordinatorhost localhost:8000"
+      bash -c "Xvfb :99 & coordinator --v=5 & worker --v=5"
     volumes:
       # keep cores persistent in the cloud-game_cores volume
       - cores:/usr/local/share/cloud-game/assets/cores
