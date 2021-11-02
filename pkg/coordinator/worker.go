@@ -28,23 +28,23 @@ func NewWorkerClient(conn *ipc.Client, log *logger.Logger) Worker {
 
 func (w *Worker) HandleRequests(rooms *client.NetMap, crowd *client.NetMap) {
 	w.SocketClient.OnPacket(func(p ipc.InPacket) {
-		switch p.T {
-		case api.RegisterRoom:
-			w.log.Info().Msgf("Received room register call %s", p.Payload)
-			go func() {
+		go func() {
+			switch p.T {
+			case api.RegisterRoom:
+				w.log.Info().Msgf("Received room register call %s", p.Payload)
 				w.HandleRegisterRoom(p.Payload, rooms)
 				w.log.Debug().Msgf("Rooms: %+v", rooms.List())
-			}()
-		case api.CloseRoom:
-			w.log.Info().Msgf("Received room close call %s", p.Payload)
-			go func() {
+			case api.CloseRoom:
+				w.log.Info().Msgf("Received room close call %s", p.Payload)
 				w.HandleCloseRoom(p.Payload, rooms)
 				w.log.Debug().Msgf("Current room list is: %+v", rooms.List())
-			}()
-		case api.IceCandidate:
-			w.log.Info().Msgf("Relay Ice candidate to useragent")
-			go w.HandleIceCandidate(p.Payload, crowd)
-		}
+			case api.IceCandidate:
+				w.log.Info().Msgf("Relay Ice candidate to useragent")
+				w.HandleIceCandidate(p.Payload, crowd)
+			default:
+				w.log.Warn().Msgf("Unknown packet: %+v", p)
+			}
+		}()
 	})
 }
 
