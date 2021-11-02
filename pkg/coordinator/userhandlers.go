@@ -88,7 +88,6 @@ func (u *User) HandleQuitGame(data json.RawMessage) {
 }
 
 func (u *User) HandleSaveGame() {
-	// TODO: Async
 	resp, err := u.Worker.SaveGame(u.Id(), u.RoomID)
 	if err != nil {
 		u.log.Error().Err(err).Msg("malformed game save request")
@@ -98,7 +97,6 @@ func (u *User) HandleSaveGame() {
 }
 
 func (u *User) HandleLoadGame() {
-	// TODO: Async
 	resp, err := u.Worker.LoadGame(u.Id(), u.RoomID)
 	if err != nil {
 		u.log.Error().Err(err).Msg("malformed game load request")
@@ -113,7 +111,6 @@ func (u *User) HandleChangePlayer(data json.RawMessage) {
 		u.log.Error().Err(err).Msg("malformed player change request")
 		return
 	}
-	// TODO: Async
 	resp, err := u.Worker.ChangePlayer(u.Id(), u.RoomID, req)
 	if err != nil || resp == "error" {
 		u.log.Error().Err(err).Msg("player switch failed for some reason")
@@ -126,7 +123,4 @@ func (u *User) HandleChangePlayer(data json.RawMessage) {
 	u.Notify(api.ChangePlayer, idx)
 }
 
-func (u *User) HandleToggleMultitap() {
-	// TODO: Async
-	u.Worker.ToggleMultitap(u.Id(), u.RoomID)
-}
+func (u *User) HandleToggleMultitap() { u.Worker.ToggleMultitap(u.Id(), u.RoomID) }

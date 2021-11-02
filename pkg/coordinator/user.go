@@ -41,32 +41,34 @@ func (u *User) HandleRequests(launcher launcher.Launcher) {
 		switch p.T {
 		case api.WebrtcInit:
 			u.log.Info().Msgf("Received init_webrtc request -> relay to worker: %s", u.Worker.Id())
-			u.HandleWebrtcInit()
-			u.log.Info().Msg("Received SDP from worker -> sending back to browser")
+			go func() {
+				u.HandleWebrtcInit()
+				u.log.Info().Msg("Received SDP from worker -> sending back to browser")
+			}()
 		case api.WebrtcAnswer:
 			u.log.Info().Msg("Received browser answered SDP -> relay to worker")
-			u.HandleWebrtcAnswer(p.Payload)
+			go u.HandleWebrtcAnswer(p.Payload)
 		case api.WebrtcIceCandidate:
 			u.log.Info().Msg("Received IceCandidate from browser -> relay to worker")
-			u.HandleWebrtcIceCandidate(p.Payload)
+			go u.HandleWebrtcIceCandidate(p.Payload)
 		case api.StartGame:
 			u.log.Info().Msg("Received start request from a browser -> relay to worker")
-			u.HandleStartGame(p.Payload, launcher)
+			go u.HandleStartGame(p.Payload, launcher)
 		case api.QuitGame:
 			u.log.Info().Msg("Received quit request from a browser -> relay to worker")
-			u.HandleQuitGame(p.Payload)
+			go u.HandleQuitGame(p.Payload)
 		case api.SaveGame:
 			u.log.Info().Msg("Received save request from a browser -> relay to worker")
-			u.HandleSaveGame()
+			go u.HandleSaveGame()
 		case api.LoadGame:
 			u.log.Info().Msg("Received load request from a browser -> relay to worker")
-			u.HandleLoadGame()
+			go u.HandleLoadGame()
 		case api.ChangePlayer:
 			u.log.Info().Msg("Received update player index request from a browser -> relay to worker")
-			u.HandleChangePlayer(p.Payload)
+			go u.HandleChangePlayer(p.Payload)
 		case api.ToggleMultitap:
 			u.log.Info().Msg("Received multitap request from a browser -> relay to worker")
-			u.HandleToggleMultitap()
+			go u.HandleToggleMultitap()
 		}
 	})
 }
