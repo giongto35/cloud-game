@@ -215,18 +215,22 @@ storage:
   key:
 
 webrtc:
-  # turn off default Pion interceptors for performance reasons
-  # (experimental)
+  # turn off default Pion interceptors (see: https://github.com/pion/interceptor)
+  # (performance)
   disableDefaultInterceptors:
-  # a list of STUN/TURN servers for the client
+  # a list of STUN/TURN servers to use
   iceServers:
     - url: stun:stun.l.google.com:19302
-  # instead of random unlimited port range for
-  # WebRTC UDP connections, these params
-  # define ICE candidates port range explicitly
+  # ICE configuration
+  # by default, ICE ports are random and unlimited
+  # alternatives:
+  #   1. instead of random unlimited port range for
+  #   WebRTC connections, these params limit port range of ICE connections
   icePorts:
     min:
     max:
+  #  2. select a single port to forward all ICE connections there
+  singlePort:
   # override ICE candidate IP, see: https://github.com/pion/webrtc/issues/835,
   # can be used for Docker bridged network internal IP override
   iceIpMap:
