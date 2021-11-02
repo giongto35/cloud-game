@@ -76,7 +76,6 @@ func NewWebRTC(conf webrtcConfig.Config, log *logger.Logger) (*WebRTC, error) {
 		InputChannel: make(chan []byte, 100),
 		conf:         conf,
 		log:          log,
-		cfg:          conf,
 	}
 	conn, err := DefaultPeerConnection(w.conf.Webrtc, &w.globalVideoFrameTimestamp, log)
 	if err != nil {
