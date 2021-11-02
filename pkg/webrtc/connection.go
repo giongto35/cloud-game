@@ -43,12 +43,11 @@ func DefaultPeerConnection(conf conf.Webrtc, ts *uint32) (*PeerConnection, error
 			}
 		} else {
 			if conf.SinglePort > 0 {
-				l, err := socket.NewSocket(socket.UDP, conf.SinglePort)
+				l, err := socket.NewSocketPortRoll("udp", conf.SinglePort)
 				if err != nil {
 					panic(err)
 				}
 				udpListener := l.(*net.UDPConn)
-				log.Println("-----------------------------------")
 				log.Printf("Listening for WebRTC traffic at %s", udpListener.LocalAddr())
 				settingEngine.SetICEUDPMux(pion.NewICEUDPMux(nil, udpListener))
 			}

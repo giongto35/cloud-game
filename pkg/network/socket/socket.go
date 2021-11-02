@@ -8,22 +8,26 @@ import (
 	"syscall"
 )
 
-type ProtoType string
-
-const (
-	UDP  ProtoType = "udp"
-	UDP4 ProtoType = "udp4"
-	UDP6 ProtoType = "udp6"
-	TCP  ProtoType = "tcp"
-	TCP4 ProtoType = "tcp4"
-	TCP6 ProtoType = "tcp6"
-)
-
 const listenAttempts = 42
 const udpBufferSize = 16 * 1024 * 1024
 
-func NewSocket(proto ProtoType, port int) (listener interface{}, err error) {
-	if listener, err = socket(proto, port); err == nil {
+// NewSocket creates either TCP or UDP socket listener on a given port.
+// The proto param supports on of these values:
+// udp, udp4, udp6, tcp, tcp4, tcp6
+// The function result will be either *net.UDPConn for UDPs or
+// *net.TCPListener for TCPs.
+func NewSocket(proto string, port int) (interface{}, error) {
+	if listener, err := socket(proto, port); err != nil {
+		return nil, err
+	} else {
+		return listener, nil
+	}
+}
+
+// NewSocketPortRoll creates either TCP or UDP socket listener on the next free port.
+// See: NewSocket.
+func NewSocketPortRoll(proto string, port int) (listener interface{}, err error) {
+	if listener, err = NewSocket(proto, port); err == nil {
 		return listener, nil
 	}
 	if IsPortBusyError(err) {
@@ -38,18 +42,18 @@ func NewSocket(proto ProtoType, port int) (listener interface{}, err error) {
 	return nil, err
 }
 
-func socket(proto ProtoType, port int) (interface{}, error) {
+func socket(proto string, port int) (interface{}, error) {
 	switch proto {
-	case UDP, UDP4, UDP6:
-		if l, err := net.ListenUDP(string(proto), &net.UDPAddr{Port: port}); err == nil {
+	case "udp", "udp4", "udp6":
+		if l, err := net.ListenUDP(proto, &net.UDPAddr{Port: port}); err == nil {
 			_ = l.SetReadBuffer(udpBufferSize)
 			_ = l.SetWriteBuffer(udpBufferSize)
 			return l, nil
 		} else {
 			return nil, err
 		}
-	case TCP, TCP4, TCP6:
-		if l, err := net.ListenTCP(string(proto), &net.TCPAddr{Port: port}); err == nil {
+	case "tcp", "tcp4", "tcp6":
+		if l, err := net.ListenTCP(proto, &net.TCPAddr{Port: port}); err == nil {
 			return l, nil
 		} else {
 			return nil, err
@@ -58,6 +62,8 @@ func socket(proto ProtoType, port int) (interface{}, error) {
 	return nil, errors.New("socket error")
 }
 
+// IsPortBusyError tests if the given error is one of
+// the port busy errors.
 func IsPortBusyError(err error) bool {
 	if err == nil {
 		return false
