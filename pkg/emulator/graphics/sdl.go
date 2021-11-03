@@ -65,10 +65,10 @@ func Init(cfg Config) {
 	thread.Main(createWindow)
 
 	BindContext()
-
 	initContext(sdl.GLGetProcAddress)
-	PrintDriverInfo()
-	initFramebuffer(cfg.W, cfg.H, cfg.Gl.HasDepth, cfg.Gl.HasStencil)
+	if err := initFramebuffer(cfg.W, cfg.H, cfg.Gl.HasDepth, cfg.Gl.HasStencil); err != nil {
+		log.Fatal(err)
+	}
 }
 
 // Deinit destroys SDL/OpenGL context.
@@ -79,7 +79,7 @@ func Deinit() {
 	// In OSX 10.14+ window deletion must happen in the main thread
 	thread.Main(destroyWindow)
 	sdl.Quit()
-	log.Printf("[SDL] [OpenGL] deinitialized (%v, %v)", sdl.GetError(), getDriverError())
+	log.Printf("[SDL] [OpenGL] deinitialized (%v, %v)", sdl.GetError(), GetGLError())
 }
 
 // createWindow creates fake SDL window for OpenGL initialization purposes.
@@ -117,13 +117,9 @@ func BindContext() {
 	}
 }
 
-func GetGlFbo() uint32 {
-	return getFbo()
-}
+func GetGlFbo() uint32 { return getFbo() }
 
-func GetGlProcAddress(proc string) unsafe.Pointer {
-	return sdl.GLGetProcAddress(proc)
-}
+func GetGlProcAddress(proc string) unsafe.Pointer { return sdl.GLGetProcAddress(proc) }
 
 func setAttribute(attr sdl.GLattr, value int) {
 	if err := sdl.GLSetAttribute(attr, value); err != nil {

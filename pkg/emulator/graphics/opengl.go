@@ -1,33 +1,30 @@
 package graphics
 
 import (
-	"log"
+	"errors"
+	"fmt"
 	"unsafe"
 
-	"github.com/giongto35/cloud-game/v2/pkg/emulator/backend/gl"
+	"github.com/go-gl/gl/v2.1/gl"
 )
 
-type offscreenSetup struct {
-	tex uint32
-	fbo uint32
-	rbo uint32
+type (
+	offscreenSetup struct {
+		tex uint32
+		fbo uint32
+		rbo uint32
 
-	width  int32
-	height int32
+		width  int32
+		height int32
 
-	pixType   uint32
-	pixFormat uint32
+		pixType   uint32
+		pixFormat uint32
 
-	hasDepth   bool
-	hasStencil bool
-}
-
-var (
-	opt = offscreenSetup{}
-	buf []byte
+		hasDepth   bool
+		hasStencil bool
+	}
+	PixelFormat int
 )
-
-type PixelFormat int
 
 const (
 	UnsignedShort5551 PixelFormat = iota
@@ -35,13 +32,15 @@ const (
 	UnsignedInt8888Rev
 )
 
+var opt = offscreenSetup{}
+
 func initContext(getProcAddr func(name string) unsafe.Pointer) {
 	if err := gl.InitWithProcAddrFunc(getProcAddr); err != nil {
 		panic(err)
 	}
 }
 
-func initFramebuffer(w int, h int, hasDepth bool, hasStencil bool) {
+func initFramebuffer(w int, h int, hasDepth bool, hasStencil bool) error {
 	opt.width = int32(w)
 	opt.height = int32(h)
 	opt.hasDepth = hasDepth
@@ -77,15 +76,10 @@ func initFramebuffer(w int, h int, hasDepth bool, hasStencil bool) {
 		gl.BindRenderbuffer(gl.RENDERBUFFER, 0)
 	}
 
-	status := gl.CheckFramebufferStatus(gl.FRAMEBUFFER)
-	if status != gl.FRAMEBUFFER_COMPLETE {
-		if e := gl.GetError(); e != gl.NO_ERROR {
-			log.Printf("[OpenGL] GL error: 0x%X, Frame status: 0x%X", e, status)
-			panic("OpenGL error")
-		}
-		log.Printf("[OpenGL] frame status: 0x%X", status)
-		panic("OpenGL framebuffer is invalid")
+	if status := gl.CheckFramebufferStatus(gl.FRAMEBUFFER); status != gl.FRAMEBUFFER_COMPLETE {
+		return fmt.Errorf("invalid framebuffer (0x%X)", status)
 	}
+	return nil
 }
 
 func destroyFramebuffer() {
@@ -97,18 +91,16 @@ func destroyFramebuffer() {
 }
 
 func ReadFramebuffer(bytes int, w int, h int) []byte {
-	data := buf[:bytes]
+	data := make([]byte, bytes)
 	gl.BindFramebuffer(gl.FRAMEBUFFER, opt.fbo)
-	gl.ReadPixels(0, 0, int32(w), int32(h), opt.pixType, opt.pixFormat, unsafe.Pointer(&data[0]))
+	gl.ReadPixels(0, 0, int32(w), int32(h), opt.pixType, opt.pixFormat, gl.Ptr(&data[0]))
 	gl.BindFramebuffer(gl.FRAMEBUFFER, 0)
 	return data
 }
 
 func getFbo() uint32 { return opt.fbo }
 
-func SetBuffer(size int) { buf = make([]byte, size) }
-
-func SetPixelFormat(format PixelFormat) {
+func SetPixelFormat(format PixelFormat) error {
 	switch format {
 	case UnsignedShort5551:
 		opt.pixFormat = gl.UNSIGNED_SHORT_5_5_5_1
@@ -120,21 +112,15 @@ func SetPixelFormat(format PixelFormat) {
 		opt.pixFormat = gl.UNSIGNED_INT_8_8_8_8_REV
 		opt.pixType = gl.BGRA
 	default:
-		log.Fatalf("[opengl] Error! Unknown pixel type %v", format)
+		return errors.New("unknown pixel format")
 	}
+	return nil
 }
 
-// PrintDriverInfo prints OpenGL information.
-func PrintDriverInfo() {
-	// OpenGL info
-	log.Printf("[OpenGL] Version: %v", get(gl.VERSION))
-	log.Printf("[OpenGL] Vendor: %v", get(gl.VENDOR))
-	// This string is often the name of the GPU.
-	// In the case of Mesa3d, it would be i.e "Gallium 0.4 on NVA8".
-	// It might even say "Direct3D" if the Windows Direct3D wrapper is being used.
-	log.Printf("[OpenGL] Renderer: %v", get(gl.RENDERER))
-	log.Printf("[OpenGL] GLSL Version: %v", get(gl.SHADING_LANGUAGE_VERSION))
-}
+func GetGLVersionInfo() string  { return get(gl.VERSION) }
+func GetGLVendorInfo() string   { return get(gl.VENDOR) }
+func GetGLRendererInfo() string { return get(gl.RENDERER) }
+func GetGLSLInfo() string       { return get(gl.SHADING_LANGUAGE_VERSION) }
+func GetGLError() uint32        { return gl.GetError() }
 
 func get(name uint32) string { return gl.GoStr(gl.GetString(name)) }
-func getDriverError() uint32 { return gl.GetError() }

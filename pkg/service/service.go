@@ -2,7 +2,6 @@ package service
 
 import (
 	"context"
-	"errors"
 	"fmt"
 )
 
@@ -48,7 +47,7 @@ func (g *Group) Shutdown(ctx context.Context) (err error) {
 		}
 	}
 	if len(errs) > 0 {
-		err = errors.New(fmt.Sprintf("%s", errs))
+		err = fmt.Errorf("%s", errs)
 	}
 	return
 }

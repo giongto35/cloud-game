@@ -2,7 +2,6 @@ package nanoarch
 
 import (
 	"bufio"
-	"fmt"
 	"log"
 	"os"
 	"os/user"
@@ -58,8 +57,8 @@ void bridge_execute(void *f);
 */
 import "C"
 
-var mu sync.Mutex
-var lastFrameTime int64
+var mu, fmu sync.Mutex
+var lastFrameTime time.Time
 
 var video struct {
 	pitch    uint32
@@ -79,7 +78,7 @@ var video struct {
 
 // default core pix format converter
 var pixelFormatConverterFn = image.Rgb565
-var rotationFn *image.Rotate
+var rotationFn = image.GetRotation(image.Angle(0))
 
 //const joypadNumKeys = int(C.RETRO_DEVICE_ID_JOYPAD_R3 + 1)
 //var joy [joypadNumKeys]bool
@@ -128,6 +127,12 @@ type CloudEmulator interface {
 
 //export coreVideoRefresh
 func coreVideoRefresh(data unsafe.Pointer, width C.unsigned, height C.unsigned, pitch C.size_t) {
+	t := time.Now()
+	fmu.Lock()
+	dt := t.Sub(lastFrameTime)
+	lastFrameTime = t
+	fmu.Unlock()
+
 	// some cores can return nothing
 	// !to add duplicate if can dup
 	if data == nil {
@@ -152,7 +157,7 @@ func coreVideoRefresh(data unsafe.Pointer, width C.unsigned, height C.unsigned, 
 	}
 
 	// the image is being resized and de-rotated
-	frame := image.DrawRgbaImage(
+	img := image.DrawRgbaImage(
 		pixelFormatConverterFn,
 		rotationFn,
 		image.ScaleNearestNeighbour,
@@ -161,15 +166,12 @@ func coreVideoRefresh(data unsafe.Pointer, width C.unsigned, height C.unsigned, 
 		data_,
 		NAEmulator.vw,
 		NAEmulator.vh,
-		NAEmulator.th,
 	)
 
-	t := time.Now().UnixNano()
-	dt := time.Duration(t - lastFrameTime)
-	lastFrameTime = t
-
+	// the image is pushed into a channel
+	// where it will be distributed with fan-out
 	select {
-	case NAEmulator.imageChannel <- GameFrame{Data: frame, Duration: dt}:
+	case NAEmulator.imageChannel <- GameFrame{Data: img, Duration: dt}:
 	default:
 	}
 }
@@ -209,9 +211,13 @@ func coreInputState(port C.unsigned, device C.unsigned, index C.unsigned, id C.u
 }
 
 func audioWrite(buf unsafe.Pointer, frames C.size_t) C.size_t {
-	samples := int(frames) << 1
-	pcm := (*[4096]int16)(buf)[:samples:samples]
+	// !to make it mono/stereo independent
+	samples := int(frames) * 2
+	pcm := (*[(1 << 30) - 1]int16)(buf)[:samples:samples]
+
 	p := make([]int16, samples)
+	// copy because pcm slice refer to buf underlying pointer,
+	// and buf pointer is the same in continuous frames
 	copy(p, pcm)
 
 	select {
@@ -368,6 +374,7 @@ func initVideo() {
 		},
 	})
 	C.bridge_context_reset(video.hw.context_reset)
+	printOpenGLDriverInfo()
 }
 
 //export deinitVideo
@@ -477,8 +484,6 @@ func slurp(path string, size int64) ([]byte, error) {
 }
 
 func coreLoadGame(filename string) {
-	lastFrameTime = 0
-
 	file, err := os.Open(filename)
 	if err != nil {
 		panic(err)
@@ -509,7 +514,7 @@ func coreLoadGame(filename string) {
 	log.Printf("  block_extract: %v", bool(si.block_extract))
 
 	if !si.need_fullpath {
-		bytes, err := os.ReadFile(filename)
+		bytes, err := slurp(filename, size)
 		if err != nil {
 			panic(err)
 		}
@@ -557,9 +562,6 @@ func coreLoadGame(filename string) {
 	video.baseWidth = int32(avi.geometry.base_width)
 	video.baseHeight = int32(avi.geometry.base_height)
 	if video.isGl {
-		bufS := int(video.maxWidth * video.maxHeight * int32(video.bpp))
-		graphics.SetBuffer(bufS)
-		log.Printf("Set buffer: %v", byteCountBinary(int64(bufS)))
 		if usesLibCo {
 			C.bridge_execute(C.initVideo_cgo)
 		} else {
@@ -625,7 +627,6 @@ func nanoarchShutdown() {
 	for _, element := range coreConfig {
 		C.free(unsafe.Pointer(element))
 	}
-	image.Clear()
 }
 
 func nanoarchRun() {
@@ -648,18 +649,24 @@ func videoSetPixelFormat(format uint32) C.bool {
 	switch format {
 	case C.RETRO_PIXEL_FORMAT_0RGB1555:
 		video.pixFmt = image.BitFormatShort5551
-		graphics.SetPixelFormat(graphics.UnsignedShort5551)
+		if err := graphics.SetPixelFormat(graphics.UnsignedShort5551); err != nil {
+			log.Fatalf("unknown pixel format %v", video.pixFmt)
+		}
 		video.bpp = 2
 		// format is not implemented
 		pixelFormatConverterFn = nil
 	case C.RETRO_PIXEL_FORMAT_XRGB8888:
 		video.pixFmt = image.BitFormatInt8888Rev
-		graphics.SetPixelFormat(graphics.UnsignedInt8888Rev)
+		if err := graphics.SetPixelFormat(graphics.UnsignedInt8888Rev); err != nil {
+			log.Fatalf("unknown pixel format %v", video.pixFmt)
+		}
 		video.bpp = 4
 		pixelFormatConverterFn = image.Rgba8888
 	case C.RETRO_PIXEL_FORMAT_RGB565:
 		video.pixFmt = image.BitFormatShort565
-		graphics.SetPixelFormat(graphics.UnsignedShort565)
+		if err := graphics.SetPixelFormat(graphics.UnsignedShort565); err != nil {
+			log.Fatalf("unknown pixel format %v", video.pixFmt)
+		}
 		video.bpp = 2
 		pixelFormatConverterFn = image.Rgb565
 	default:
@@ -673,25 +680,17 @@ func setRotation(rotation uint) {
 		return
 	}
 	video.rotation = image.Angle(rotation)
-	r := image.GetRotation(video.rotation)
-	if rotation > 0 {
-		rotationFn = &r
-	} else {
-		rotationFn = nil
-	}
-	NAEmulator.meta.Rotation = r
+	rotationFn = image.GetRotation(video.rotation)
+	NAEmulator.meta.Rotation = rotationFn
 	log.Printf("[Env]: the game video is rotated %v°", map[uint]uint{0: 0, 1: 90, 2: 180, 3: 270}[rotation])
 }
 
-func byteCountBinary(b int64) string {
-	const unit = 1024
-	if b < unit {
-		return fmt.Sprintf("%d B", b)
-	}
-	div, exp := int64(unit), 0
-	for n := b / unit; n >= unit; n /= unit {
-		div *= unit
-		exp++
-	}
-	return fmt.Sprintf("%.1f %ciB", float64(b)/float64(div), "KMGTPE"[exp])
+func printOpenGLDriverInfo() {
+	log.Printf("[OpenGL] Version: %v", graphics.GetGLVersionInfo())
+	log.Printf("[OpenGL] Vendor: %v", graphics.GetGLVendorInfo())
+	// This string is often the name of the GPU.
+	// In the case of Mesa3d, it would be i.e "Gallium 0.4 on NVA8".
+	// It might even say "Direct3D" if the Windows Direct3D wrapper is being used.
+	log.Printf("[OpenGL] Renderer: %v", graphics.GetGLRendererInfo())
+	log.Printf("[OpenGL] GLSL Version: %v", graphics.GetGLSLInfo())
 }
