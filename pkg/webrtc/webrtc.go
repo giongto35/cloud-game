@@ -7,8 +7,8 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/giongto35/cloud-game/v2/pkg/codec"
 	webrtcConfig "github.com/giongto35/cloud-game/v2/pkg/config/webrtc"
+	"github.com/giongto35/cloud-game/v2/pkg/encoder"
 	"github.com/giongto35/cloud-game/v2/pkg/logger"
 	"github.com/giongto35/cloud-game/v2/pkg/network"
 	"github.com/pion/webrtc/v3"
@@ -212,9 +212,9 @@ func (w *WebRTC) StartClient(iceCB OnIceCallback) (string, error) {
 
 func (w *WebRTC) getVideoCodec() string {
 	switch w.conf.Encoder.Video.Codec {
-	case string(codec.H264):
+	case string(encoder.H264):
 		return webrtc.MimeTypeH264
-	case string(codec.VPX):
+	case string(encoder.VPX):
 		return webrtc.MimeTypeVP8
 	default:
 		return webrtc.MimeTypeH264

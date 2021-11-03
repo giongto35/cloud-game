@@ -1,7 +1,6 @@
 package room
 
 import (
-	"github.com/giongto35/cloud-game/v2/pkg/codec"
 	encoderConfig "github.com/giongto35/cloud-game/v2/pkg/config/encoder"
 	"github.com/giongto35/cloud-game/v2/pkg/encoder"
 	"github.com/giongto35/cloud-game/v2/pkg/encoder/h264"
@@ -45,7 +44,7 @@ func (r *Room) startVideo(width, height int, video encoderConfig.Video) {
 	var err error
 
 	r.log.Info().Msgf("Video codec: %v", video.Codec)
-	if video.Codec == string(codec.H264) {
+	if video.Codec == string(encoder.H264) {
 		enc, err = h264.NewEncoder(width, height, h264.WithOptions(h264.Options{
 			Crf:      video.H264.Crf,
 			Tune:     video.H264.Tune,

@@ -6,7 +6,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/giongto35/cloud-game/v2/pkg/codec"
 	"github.com/giongto35/cloud-game/v2/pkg/encoder"
 	"github.com/giongto35/cloud-game/v2/pkg/encoder/h264"
 	"github.com/giongto35/cloud-game/v2/pkg/encoder/vpx"
@@ -16,11 +15,11 @@ func TestEncoders(t *testing.T) {
 	tests := []struct {
 		n      int
 		w, h   int
-		codec  codec.VideoCodec
+		codec  encoder.VideoCodec
 		frames int
 	}{
-		{n: 3, w: 1920, h: 1080, codec: codec.H264, frames: 60 * 2},
-		{n: 3, w: 1920, h: 1080, codec: codec.VPX, frames: 60 * 2},
+		{n: 3, w: 1920, h: 1080, codec: encoder.H264, frames: 60 * 2},
+		{n: 3, w: 1920, h: 1080, codec: encoder.VPX, frames: 60 * 2},
 	}
 
 	for _, test := range tests {
@@ -32,12 +31,12 @@ func TestEncoders(t *testing.T) {
 	}
 }
 
-func BenchmarkH264(b *testing.B) { run(1920, 1080, codec.H264, b.N, nil, nil, b) }
-func BenchmarkVP8(b *testing.B)  { run(1920, 1080, codec.VPX, b.N, nil, nil, b) }
+func BenchmarkH264(b *testing.B) { run(1920, 1080, encoder.H264, b.N, nil, nil, b) }
+func BenchmarkVP8(b *testing.B)  { run(1920, 1080, encoder.VPX, b.N, nil, nil, b) }
 
-func run(w, h int, cod codec.VideoCodec, count int, a *image.RGBA, b *image.RGBA, backend testing.TB) {
+func run(w, h int, cod encoder.VideoCodec, count int, a *image.RGBA, b *image.RGBA, backend testing.TB) {
 	var enc encoder.Encoder
-	if cod == codec.H264 {
+	if cod == encoder.H264 {
 		enc, _ = h264.NewEncoder(w, h)
 	} else {
 		enc, _ = vpx.NewEncoder(w, h)

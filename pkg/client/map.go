@@ -14,9 +14,7 @@ type NetMap struct {
 // ErrNotFound is returned by NetMap when some value is not present.
 var ErrNotFound = errors.New("not found")
 
-func NewNetMap(m map[string]NetClient) NetMap {
-	return NetMap{m: m}
-}
+func NewNetMap(m map[string]NetClient) NetMap { return NetMap{m: m} }
 
 // Add adds a new NetClient value with its id value as the key.
 func (m *NetMap) Add(client NetClient) { m.Put(string(client.Id()), client) }

@@ -1,4 +1,4 @@
-package codec
+package encoder
 
 type VideoCodec string
 
