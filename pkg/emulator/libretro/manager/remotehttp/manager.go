@@ -44,7 +44,7 @@ func NewRemoteHttpManager(conf emulator.LibretroConfig, log *logger.Logger) Mana
 		},
 		arch:   arch,
 		repo:   repo.New(repoConf.Type, repoConf.Url, repoConf.Compression, "buildbot"),
-		client: downloader.NewDefaultDownloader(),
+		client: downloader.NewDefaultDownloader(log),
 		fmu:    flock.New(fileLock),
 		log:    log,
 	}

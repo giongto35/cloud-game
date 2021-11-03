@@ -2,7 +2,6 @@ package coordinator
 
 import (
 	"html/template"
-	"log"
 	"net/http"
 
 	"github.com/giongto35/cloud-game/v2/pkg/config/coordinator"
@@ -15,7 +14,7 @@ func NewHTTPServer(conf coordinator.Config, log *logger.Logger, fnMux func(mux *
 		conf.Coordinator.Server.GetAddr(),
 		func(*httpx.Server) http.Handler {
 			h := http.NewServeMux()
-			h.Handle("/", index(conf))
+			h.Handle("/", index(conf, log))
 			h.Handle("/static/", static("./web"))
 			fnMux(h)
 			return h
@@ -25,12 +24,11 @@ func NewHTTPServer(conf coordinator.Config, log *logger.Logger, fnMux func(mux *
 	)
 }
 
-func index(conf coordinator.Config) http.Handler {
+func index(conf coordinator.Config, log *logger.Logger) http.Handler {
 	tpl, err := template.ParseFiles("./web/index.html")
 	if err != nil {
-		log.Fatal(err)
+		log.Fatal().Err(err).Msg("error with the HTML index page")
 	}
-
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		// return 404 on unknown
 		if r.URL.Path != "/" {
@@ -39,7 +37,7 @@ func index(conf coordinator.Config) http.Handler {
 		}
 		// render index page with some tpl values
 		if err = tpl.Execute(w, conf.Coordinator.Analytics); err != nil {
-			log.Fatal(err)
+			log.Fatal().Err(err).Msg("error with the analytics template file")
 		}
 	})
 }

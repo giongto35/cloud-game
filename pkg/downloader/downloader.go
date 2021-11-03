@@ -3,6 +3,7 @@ package downloader
 import (
 	"github.com/giongto35/cloud-game/v2/pkg/downloader/backend"
 	"github.com/giongto35/cloud-game/v2/pkg/downloader/pipe"
+	"github.com/giongto35/cloud-game/v2/pkg/logger"
 )
 
 type Downloader struct {
@@ -16,9 +17,9 @@ type Downloader struct {
 
 type Process func(string, []string) []string
 
-func NewDefaultDownloader() Downloader {
+func NewDefaultDownloader(log *logger.Logger) Downloader {
 	return Downloader{
-		backend: backend.NewGrabDownloader(),
+		backend: backend.NewGrabDownloader(log),
 		pipe: []Process{
 			pipe.Unpack,
 			pipe.Delete,
