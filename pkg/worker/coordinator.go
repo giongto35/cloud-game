@@ -29,7 +29,7 @@ func newCoordinatorConnection(host string, conf worker.Worker, addr string, log 
 		address.RawQuery = "data=" + req
 	}
 
-	conn, err := ipc.NewClient(address)
+	conn, err := ipc.NewClient(address, log)
 	if err != nil {
 		return Coordinator{}, err
 	}
