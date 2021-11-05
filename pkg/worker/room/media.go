@@ -65,7 +65,7 @@ func (r *Room) startVideo(width, height int, video encoderConfig.Video) {
 		return
 	}
 
-	r.vPipe = encoder.NewVideoPipe(enc, width, height)
+	r.vPipe = encoder.NewVideoPipe(enc, width, height, r.log)
 	einput, eoutput := r.vPipe.Input, r.vPipe.Output
 
 	go r.vPipe.Start()

@@ -1,9 +1,10 @@
 package encoder
 
 import (
-	"log"
+	"fmt"
 
 	"github.com/giongto35/cloud-game/v2/pkg/encoder/yuv"
+	"github.com/giongto35/cloud-game/v2/pkg/logger"
 )
 
 type VideoPipe struct {
@@ -15,6 +16,7 @@ type VideoPipe struct {
 
 	// frame size
 	w, h int
+	log  *logger.Logger
 }
 
 // NewVideoPipe returns new video encoder pipe.
@@ -22,7 +24,7 @@ type VideoPipe struct {
 // converts them into YUV I420 format,
 // encodes with provided video encoder, and
 // puts the result into the output channel.
-func NewVideoPipe(enc Encoder, w, h int) *VideoPipe {
+func NewVideoPipe(enc Encoder, w, h int, log *logger.Logger) *VideoPipe {
 	return &VideoPipe{
 		Input:  make(chan InFrame, 1),
 		Output: make(chan OutFrame, 2),
@@ -30,8 +32,9 @@ func NewVideoPipe(enc Encoder, w, h int) *VideoPipe {
 
 		encoder: enc,
 
-		w: w,
-		h: h,
+		w:   w,
+		h:   h,
+		log: log,
 	}
 }
 
@@ -39,8 +42,8 @@ func NewVideoPipe(enc Encoder, w, h int) *VideoPipe {
 // Should be wrapped into a goroutine.
 func (vp *VideoPipe) Start() {
 	defer func() {
-		if r := recover(); r != nil {
-			log.Println("Warn: Recovered panic in encoding ", r)
+		if err := recover(); err != nil {
+			vp.log.Error().Err(fmt.Errorf("%v", err)).Send()
 		}
 		close(vp.Output)
 		close(vp.done)
@@ -60,6 +63,6 @@ func (vp *VideoPipe) Stop() {
 	close(vp.Input)
 	<-vp.done
 	if err := vp.encoder.Shutdown(); err != nil {
-		log.Println("error: failed to close the encoder")
+		vp.log.Error().Err(err).Msg("failed to close the encoder")
 	}
 }
