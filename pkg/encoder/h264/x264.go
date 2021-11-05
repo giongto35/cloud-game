@@ -1,10 +1,7 @@
 package h264
 
 import "C"
-import (
-	"fmt"
-	"log"
-)
+import "fmt"
 
 type H264 struct {
 	ref *T
@@ -21,14 +18,10 @@ type H264 struct {
 }
 
 func NewEncoder(width, height int, options ...Option) (encoder *H264, err error) {
-	libVersion := int(Build)
+	libVersion := LibVersion()
 
 	if libVersion < 150 {
 		return nil, fmt.Errorf("x264: the library version should be newer than v150, you have got version %v", libVersion)
-	}
-
-	if libVersion < 160 {
-		log.Printf("x264: warning, installed version of libx264 %v is older than minimally supported v160, expect bugs", libVersion)
 	}
 
 	opts := &Options{
@@ -40,10 +33,6 @@ func NewEncoder(width, height int, options ...Option) (encoder *H264, err error)
 
 	for _, opt := range options {
 		opt(opts)
-	}
-
-	if opts.LogLevel > 0 {
-		log.Printf("x264: build v%v", Build)
 	}
 
 	param := Param{}
@@ -91,6 +80,8 @@ func NewEncoder(width, height int, options ...Option) (encoder *H264, err error)
 	return
 }
 
+func LibVersion() int { return int(Build) }
+
 func (e *H264) Encode(yuv []byte) []byte {
 	var picIn, picOut Picture
 
@@ -115,7 +106,6 @@ func (e *H264) Encode(yuv []byte) []byte {
 
 	if ret := EncoderEncode(e.ref, e.nals, &e.nnals, &picIn, &picOut); ret > 0 {
 		return C.GoBytes(e.nals[0].PPayload, C.int(ret))
-		// ret should be equal to writer writes
 	}
 	return []byte{}
 }

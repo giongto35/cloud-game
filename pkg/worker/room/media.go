@@ -45,6 +45,7 @@ func (r *Room) startVideo(width, height int, video encoderConfig.Video) {
 
 	r.log.Info().Msgf("Video codec: %v", video.Codec)
 	if video.Codec == string(encoder.H264) {
+		r.log.Debug().Msgf("x264: build v%v", h264.LibVersion())
 		enc, err = h264.NewEncoder(width, height, h264.WithOptions(h264.Options{
 			Crf:      video.H264.Crf,
 			Tune:     video.H264.Tune,
