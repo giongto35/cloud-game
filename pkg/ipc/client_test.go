@@ -13,7 +13,7 @@ import (
 	"github.com/giongto35/cloud-game/v2/pkg/network/websocket"
 )
 
-var log = logger.New(false)
+var log = logger.Default()
 
 func TestPackets(t *testing.T) {
 	r, err := json.Marshal(OutPacket{Payload: "asd"})
@@ -110,7 +110,6 @@ func testWebsocket(t *testing.T) {
 	}
 	wait.Wait()
 
-	// teardown
 	client.Close()
 
 	<-socket.Done

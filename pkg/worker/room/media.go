@@ -1,7 +1,7 @@
 package room
 
 import (
-	encoderConfig "github.com/giongto35/cloud-game/v2/pkg/config/encoder"
+	conf "github.com/giongto35/cloud-game/v2/pkg/config/encoder"
 	"github.com/giongto35/cloud-game/v2/pkg/encoder"
 	"github.com/giongto35/cloud-game/v2/pkg/encoder/h264"
 	"github.com/giongto35/cloud-game/v2/pkg/encoder/opus"
@@ -9,12 +9,12 @@ import (
 	"github.com/giongto35/cloud-game/v2/pkg/webrtc"
 )
 
-func (r *Room) startAudio(sampleRate int, audio encoderConfig.Audio) {
+func (r *Room) startAudio(sampleRate int, conf conf.Audio) {
 	sound, err := opus.NewEncoder(
 		sampleRate,
-		audio.Frequency,
-		audio.Channels,
-		opus.SampleBuffer(audio.Frame, sampleRate != audio.Frequency),
+		conf.Frequency,
+		conf.Channels,
+		opus.SampleBuffer(conf.Frame, sampleRate != conf.Frequency),
 		// we use callback on full buffer in order to
 		// send data to all the clients ASAP
 		opus.CallbackOnFullBuffer(r.broadcastAudio),
@@ -39,24 +39,24 @@ func (r *Room) broadcastAudio(audio []byte) {
 }
 
 // startVideo processes imageChannel images with an encoder (codec) then pushes the result to WebRTC.
-func (r *Room) startVideo(width, height int, video encoderConfig.Video) {
+func (r *Room) startVideo(width, height int, conf conf.Video) {
 	var enc encoder.Encoder
 	var err error
 
-	r.log.Info().Msgf("Video codec: %v", video.Codec)
-	if video.Codec == string(encoder.H264) {
+	r.log.Info().Msgf("Video codec: %v", conf.Codec)
+	if conf.Codec == string(encoder.H264) {
 		r.log.Debug().Msgf("x264: build v%v", h264.LibVersion())
 		enc, err = h264.NewEncoder(width, height, h264.WithOptions(h264.Options{
-			Crf:      video.H264.Crf,
-			Tune:     video.H264.Tune,
-			Preset:   video.H264.Preset,
-			Profile:  video.H264.Profile,
-			LogLevel: int32(video.H264.LogLevel),
+			Crf:      conf.H264.Crf,
+			Tune:     conf.H264.Tune,
+			Preset:   conf.H264.Preset,
+			Profile:  conf.H264.Profile,
+			LogLevel: int32(conf.H264.LogLevel),
 		}))
 	} else {
 		enc, err = vpx.NewEncoder(width, height, vpx.WithOptions(vpx.Options{
-			Bitrate:     video.Vpx.Bitrate,
-			KeyframeInt: video.Vpx.KeyframeInterval,
+			Bitrate:     conf.Vpx.Bitrate,
+			KeyframeInt: conf.Vpx.KeyframeInterval,
 		}))
 	}
 
