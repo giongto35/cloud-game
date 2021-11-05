@@ -9,6 +9,8 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+
+	"github.com/giongto35/cloud-game/v2/pkg/logger"
 )
 
 const Ext = ".zip"
@@ -18,9 +20,15 @@ var (
 	ErrorInvalidName = errors.New("invalid name")
 )
 
-type Extractor struct{}
+type Extractor struct {
+	log *logger.Logger
+}
 
-func New() Extractor { return Extractor{} }
+func New(log *logger.Logger) Extractor {
+	return Extractor{
+		log: log,
+	}
+}
 
 // Compress compresses the bytes (a single file) with a name specified into a ZIP file (as bytes).
 func Compress(data []byte, name string) ([]byte, error) {

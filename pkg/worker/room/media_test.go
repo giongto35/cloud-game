@@ -42,7 +42,7 @@ func run(w, h int, cod encoder.VideoCodec, count int, a *image.RGBA, b *image.RG
 		enc, _ = vpx.NewEncoder(w, h)
 	}
 
-	pipe := encoder.NewVideoPipe(enc, w, h)
+	pipe := encoder.NewVideoPipe(enc, w, h, nil)
 	go pipe.Start()
 	defer pipe.Stop()
 

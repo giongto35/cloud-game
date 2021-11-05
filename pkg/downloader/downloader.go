@@ -13,9 +13,10 @@ type Downloader struct {
 	// each operation will return a list of
 	// successfully processed files
 	pipe []Process
+	log  *logger.Logger
 }
 
-type Process func(string, []string) []string
+type Process func(string, []string, *logger.Logger) []string
 
 func NewDefaultDownloader(log *logger.Logger) Downloader {
 	return Downloader{
@@ -23,7 +24,9 @@ func NewDefaultDownloader(log *logger.Logger) Downloader {
 		pipe: []Process{
 			pipe.Unpack,
 			pipe.Delete,
-		}}
+		},
+		log: log,
+	}
 }
 
 // Download tries to download specified with URLs list of files and
@@ -33,7 +36,7 @@ func NewDefaultDownloader(log *logger.Logger) Downloader {
 func (d *Downloader) Download(dest string, urls ...backend.Download) ([]string, []string) {
 	files, fails := d.backend.Request(dest, urls...)
 	for _, op := range d.pipe {
-		files = op(dest, files)
+		files = op(dest, files, d.log)
 	}
 	return files, fails
 }
