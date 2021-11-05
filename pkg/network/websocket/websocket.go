@@ -2,13 +2,13 @@ package websocket
 
 import (
 	"crypto/tls"
-	"log"
 	"net"
 	"net/http"
 	"net/url"
 	"sync"
 	"time"
 
+	"github.com/giongto35/cloud-game/v2/pkg/logger"
 	"github.com/gorilla/websocket"
 )
 
@@ -31,6 +31,7 @@ type WS struct {
 	once     sync.Once
 	Done     chan struct{}
 	closed   bool
+	log      *logger.Logger
 }
 
 type WSMessageHandler func(message []byte, err error)
@@ -73,12 +74,12 @@ func (ws *WS) reader() {
 		message, err := ws.conn.read()
 		if err != nil {
 			if websocket.IsUnexpectedCloseError(err, websocket.CloseGoingAway, websocket.CloseAbnormalClosure) {
-				log.Printf("error: %v", err)
+				ws.log.Error().Err(err).Msg("unexpected error")
+			} else {
+				ws.log.Error().Err(err).Msg("read error")
 			}
-			log.Printf("read error: %v", err)
 			break
 		}
-		//log.Printf("%v [ws] READ: %v", ws.id.Short(), string(message))
 		ws.OnMessage(message, err)
 	}
 }
@@ -127,7 +128,6 @@ func (ws *WS) handleMessage(message []byte, ok bool) bool {
 		_ = ws.conn.write(websocket.CloseMessage, []byte{})
 		return false
 	}
-	//log.Printf("%v [ws] WRITE: %v", ws.id.Short(), string(message))
 	if err := ws.conn.write(websocket.TextMessage, message); err != nil {
 		return false
 	}
@@ -135,15 +135,15 @@ func (ws *WS) handleMessage(message []byte, ok bool) bool {
 }
 
 // NewServer initializes new websocket peer requests handler.
-func NewServer(w http.ResponseWriter, r *http.Request) (*WS, error) {
+func NewServer(w http.ResponseWriter, r *http.Request, log *logger.Logger) (*WS, error) {
 	conn, err := upgrader.Upgrade(w, r, nil)
 	if err != nil {
 		return nil, err
 	}
-	return newSocket(conn, true), nil
+	return newSocket(conn, true, log), nil
 }
 
-func NewClient(address url.URL) (*WS, error) {
+func NewClient(address url.URL, log *logger.Logger) (*WS, error) {
 	dialer := websocket.DefaultDialer
 	if address.Scheme == "wss" {
 		dialer.TLSClientConfig = &tls.Config{InsecureSkipVerify: true}
@@ -152,10 +152,10 @@ func NewClient(address url.URL) (*WS, error) {
 	if err != nil {
 		return nil, err
 	}
-	return newSocket(conn, false), nil
+	return newSocket(conn, false, log), nil
 }
 
-func newSocket(conn *websocket.Conn, pingPong bool) *WS {
+func newSocket(conn *websocket.Conn, pingPong bool, log *logger.Logger) *WS {
 	// graceful shutdown ( ಠ_ಠ )
 	shut := sync.WaitGroup{}
 	shut.Add(2)
@@ -170,6 +170,7 @@ func newSocket(conn *websocket.Conn, pingPong bool) *WS {
 		Done:      make(chan struct{}, 1),
 		pingPong:  pingPong,
 		OnMessage: func(message []byte, err error) {},
+		log:       log,
 	}
 
 	go ws.writer()
@@ -184,19 +185,15 @@ func (ws *WS) Write(data []byte) {
 	}
 }
 
-func (ws *WS) Close() {
-	_ = ws.conn.write(websocket.CloseMessage, []byte{})
-}
+func (ws *WS) Close() { _ = ws.conn.write(websocket.CloseMessage, []byte{}) }
 
 func (ws *WS) close() {
 	ws.shutdown.Wait()
 	ws.once.Do(func() {
 		_ = ws.conn.close()
 		ws.Done <- struct{}{}
-		log.Printf("ws should be closed now")
+		ws.log.Debug().Msg("WebSocket should be closed now")
 	})
 }
 
-func (ws *WS) GetRemoteAddr() net.Addr {
-	return ws.conn.sock.RemoteAddr()
-}
+func (ws *WS) GetRemoteAddr() net.Addr { return ws.conn.sock.RemoteAddr() }

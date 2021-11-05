@@ -9,8 +9,11 @@ import (
 	"testing"
 	"time"
 
+	"github.com/giongto35/cloud-game/v2/pkg/logger"
 	"github.com/giongto35/cloud-game/v2/pkg/network/websocket"
 )
+
+var log = logger.New(false)
 
 func TestPackets(t *testing.T) {
 	r, err := json.Marshal(OutPacket{Payload: "asd"})
@@ -38,7 +41,7 @@ func testWebsocket(t *testing.T) {
 	// socket handler
 	var socket *websocket.WS
 	http.HandleFunc("/ws", func(w http.ResponseWriter, r *http.Request) {
-		sock, err := websocket.NewServer(w, r)
+		sock, err := websocket.NewServer(w, r, log)
 		if err != nil {
 			t.Fatalf("couldn't init socket server")
 		}
@@ -116,7 +119,7 @@ func testWebsocket(t *testing.T) {
 }
 
 func newClient(t *testing.T, addr url.URL) *Client {
-	conn, err := NewClient(addr)
+	conn, err := NewClient(addr, log)
 	if err != nil {
 		t.Fatalf("error: couldn't connect to %v because of %v", addr.String(), err)
 	}

@@ -9,6 +9,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/giongto35/cloud-game/v2/pkg/logger"
 	"github.com/giongto35/cloud-game/v2/pkg/network"
 	"github.com/giongto35/cloud-game/v2/pkg/network/websocket"
 )
@@ -31,10 +32,12 @@ type Client struct {
 	OnPacket func(packet InPacket)
 }
 
-func NewClient(address url.URL) (*Client, error) { return connect(websocket.NewClient(address)) }
+func NewClient(address url.URL, log *logger.Logger) (*Client, error) {
+	return connect(websocket.NewClient(address, log))
+}
 
-func NewClientServer(w http.ResponseWriter, r *http.Request) (*Client, error) {
-	return connect(websocket.NewServer(w, r))
+func NewClientServer(w http.ResponseWriter, r *http.Request, log *logger.Logger) (*Client, error) {
+	return connect(websocket.NewServer(w, r, log))
 }
 
 func connect(conn *websocket.WS, err error) (*Client, error) {

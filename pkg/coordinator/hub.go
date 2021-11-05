@@ -47,7 +47,7 @@ func (h *Hub) handleWebsocketUserConnection(w http.ResponseWriter, r *http.Reque
 		}
 	}()
 
-	conn, err := ipc.NewClientServer(w, r)
+	conn, err := ipc.NewClientServer(w, r, h.log)
 	if err != nil {
 		h.log.Error().Err(err).Msg("couldn't init user connection")
 	}
@@ -107,7 +107,7 @@ func (h *Hub) handleWebsocketWorkerConnection(w http.ResponseWriter, r *http.Req
 		h.log.Warn().Msg("Unsecure connection. The worker may not work properly without HTTPS on its side!")
 	}
 
-	conn, err := ipc.NewClientServer(w, r)
+	conn, err := ipc.NewClientServer(w, r, h.log)
 	if err != nil {
 		h.log.Error().Err(err).Msg("couldn't init worker connection")
 	}
