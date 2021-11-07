@@ -112,12 +112,9 @@ func (ws *WS) writer() {
 			}
 		}
 	} else {
-		for {
-			select {
-			case message, ok := <-ws.send:
-				if !ws.handleMessage(message, ok) {
-					return
-				}
+		for message := range ws.send {
+			if !ws.handleMessage(message, true) {
+				return
 			}
 		}
 	}

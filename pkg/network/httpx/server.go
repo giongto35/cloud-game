@@ -105,12 +105,11 @@ func (s *Server) Run() {
 	}
 }
 
-func (s *Server) Shutdown(ctx context.Context) (err error) {
+func (s *Server) Shutdown(ctx context.Context) error {
 	if s.redirect != nil {
-		err = s.redirect.Shutdown(ctx)
+		_ = s.redirect.Shutdown(ctx)
 	}
-	err = s.Server.Shutdown(ctx)
-	return
+	return s.Server.Shutdown(ctx)
 }
 
 func (s *Server) GetHost() string { return extractHost(s.Addr) }

@@ -21,11 +21,7 @@ type Group struct {
 	list []Service
 }
 
-func (g *Group) Add(services ...Service) {
-	for _, s := range services {
-		g.list = append(g.list, s)
-	}
-}
+func (g *Group) Add(services ...Service) { g.list = append(g.list, services...) }
 
 // Start starts each service in the group.
 func (g *Group) Start() {

@@ -19,7 +19,7 @@ func newTestClient(fn rtFunc) *http.Client {
 }
 
 func TestOracleSave(t *testing.T) {
-	client, err := NewOracleDataStorageClient("test-url/")
+	client, _ := NewOracleDataStorageClient("test-url/")
 	client.client = newTestClient(func(req *http.Request) *http.Response {
 		return &http.Response{
 			StatusCode: 200,
