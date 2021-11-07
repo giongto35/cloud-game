@@ -5,7 +5,6 @@ import (
 	"bytes"
 	"errors"
 	"io"
-	"log"
 	"os"
 	"path/filepath"
 	"strings"
@@ -93,34 +92,34 @@ func (e Extractor) Extract(src string, dest string) (files []string, err error) 
 
 		// negate ZipSlip vulnerability (http://bit.ly/2MsjAWE)
 		if !strings.HasPrefix(path, filepath.Clean(dest)+string(os.PathSeparator)) {
-			log.Printf("warning: %s is illegal path", path)
+			e.log.Warn().Msgf("%s is illegal path", path)
 			continue
 		}
 		// remake directory
 		if f.FileInfo().IsDir() {
 			if err := os.MkdirAll(path, os.ModePerm); err != nil {
-				log.Printf("error: %v", err)
+				e.log.Error().Err(err)
 			}
 			continue
 		}
 		// make file
 		if err := os.MkdirAll(filepath.Dir(path), os.ModePerm); err != nil {
-			log.Printf("error: %v", err)
+			e.log.Error().Err(err)
 			continue
 		}
 		out, err := os.OpenFile(path, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, f.Mode())
 		if err != nil {
-			log.Printf("error: %v", err)
+			e.log.Error().Err(err)
 			continue
 		}
 		rc, err := f.Open()
 		if err != nil {
-			log.Printf("error: %v", err)
+			e.log.Error().Err(err)
 			continue
 		}
 
 		if _, err = io.Copy(out, rc); err != nil {
-			log.Printf("error: %v", err)
+			e.log.Error().Err(err)
 			_ = out.Close()
 			_ = rc.Close()
 			continue

@@ -405,10 +405,14 @@ var (
 )
 
 func coreLoad(meta emulator.Metadata) {
+	var err error
 	isGlAllowed = meta.IsGlAllowed
 	usesLibCo = meta.UsesLibCo
 	video.autoGlContext = meta.AutoGlContext
-	coreConfig = ScanConfigFile(meta.ConfigPath)
+	coreConfig, err = ScanConfigFile(meta.ConfigPath)
+	if err != nil {
+		log.Printf("warning: %v", err)
+	}
 
 	multitap.supported = meta.HasMultitap
 	multitap.enabled = false
@@ -422,7 +426,6 @@ func coreLoad(meta emulator.Metadata) {
 	}
 
 	mu.Lock()
-	var err error
 	retroHandle, err = loadLib(filePath)
 	// fallback to sequential lib loader (first successfully loaded)
 	if err != nil {
@@ -473,7 +476,9 @@ func slurp(path string, size int64) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
-	defer f.Close()
+	defer func() {
+		_ = f.Close()
+	}()
 	bytes := make([]byte, size)
 	buffer := bufio.NewReader(f)
 	_, err = buffer.Read(bytes)

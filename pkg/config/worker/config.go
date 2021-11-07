@@ -1,7 +1,7 @@
 package worker
 
 import (
-	"log"
+	"fmt"
 	"net"
 	"net/url"
 	"path/filepath"
@@ -81,7 +81,7 @@ func (c *Config) expandSpecialTags() {
 		}
 		userHomeDir, err := os.GetUserHome()
 		if err != nil {
-			log.Fatalln("couldn't read user home directory", err)
+			panic(fmt.Sprintf("couldn't read user home directory, %v", err))
 		}
 		*dir = strings.Replace(*dir, tag, userHomeDir, -1)
 		*dir = filepath.FromSlash(*dir)

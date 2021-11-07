@@ -2,7 +2,7 @@ package nanoarch
 
 import (
 	"bufio"
-	"log"
+	"fmt"
 	"os"
 	"strings"
 )
@@ -11,18 +11,20 @@ import "C"
 
 type ConfigProperties map[string]*C.char
 
-func ScanConfigFile(filename string) ConfigProperties {
+func ScanConfigFile(filename string) (ConfigProperties, error) {
 	config := ConfigProperties{}
 
 	if len(filename) == 0 {
-		return config
+		return config, nil
 	}
+
 	file, err := os.Open(filename)
 	if err != nil {
-		log.Printf("warning: couldn't find the %v config file", filename)
-		return config
+		return config, fmt.Errorf("couldn't find the %v config file", filename)
 	}
-	defer file.Close()
+	defer func() {
+		_ = file.Close()
+	}()
 
 	scanner := bufio.NewScanner(file)
 	for scanner.Scan() {
@@ -37,10 +39,8 @@ func ScanConfigFile(filename string) ConfigProperties {
 			}
 		}
 	}
-
 	if err := scanner.Err(); err != nil {
-		log.Fatal(err)
+		panic(err)
 	}
-
-	return config
+	return config, nil
 }

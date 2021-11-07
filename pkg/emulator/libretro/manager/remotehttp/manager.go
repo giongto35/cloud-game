@@ -57,7 +57,10 @@ func (m *Manager) Sync() error {
 	m.fmu.Lock()
 	defer m.fmu.Unlock()
 
-	installed := m.GetInstalled()
+	installed, err := m.GetInstalled()
+	if err != nil {
+		m.log.Warn().Err(err).Msg("something's up with installed cores")
+	}
 	download := diff(declared, installed)
 
 	_, failed := m.download(download)
@@ -83,9 +86,7 @@ func (m *Manager) getCoreUrls(names []string, repo repo.Repository) (urls []back
 	return
 }
 
-func (m *Manager) setRepo(repo repo.Repository) {
-	m.repo = repo
-}
+func (m *Manager) setRepo(repo repo.Repository) { m.repo = repo }
 
 func (m *Manager) download(cores []string) (succeeded []string, failed []string) {
 	if len(cores) > 0 && m.repo != nil {
