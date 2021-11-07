@@ -1,6 +1,8 @@
 package room
 
 import (
+	"fmt"
+
 	conf "github.com/giongto35/cloud-game/v2/pkg/config/encoder"
 	"github.com/giongto35/cloud-game/v2/pkg/encoder"
 	"github.com/giongto35/cloud-game/v2/pkg/encoder/h264"
@@ -73,8 +75,8 @@ func (r *Room) startVideo(width, height int, conf conf.Video) {
 
 	go func() {
 		defer func() {
-			if rc := recover(); rc != nil {
-				r.log.Error().Msgf("recovered video pipe from (%v)", rc)
+			if err := recover(); err != nil {
+				r.log.Error().Err(fmt.Errorf("%v", err)).Msg("video pipe crashed")
 			}
 		}()
 

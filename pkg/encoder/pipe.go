@@ -43,7 +43,7 @@ func NewVideoPipe(enc Encoder, w, h int, log *logger.Logger) *VideoPipe {
 func (vp *VideoPipe) Start() {
 	defer func() {
 		if err := recover(); err != nil {
-			vp.log.Error().Err(fmt.Errorf("%v", err)).Send()
+			vp.log.Error().Err(fmt.Errorf("%v", err)).Msg("video pipe crashed")
 		}
 		close(vp.Output)
 		close(vp.done)

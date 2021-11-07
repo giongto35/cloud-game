@@ -1,6 +1,7 @@
 package coordinator
 
 import (
+	"fmt"
 	"net/http"
 
 	"github.com/giongto35/cloud-game/v2/pkg/client"
@@ -42,8 +43,8 @@ func NewHub(conf coordinator.Config, lib games.GameLibrary, log *logger.Logger) 
 // handleWebsocketUserConnection handles all connections from user/frontend.
 func (h *Hub) handleWebsocketUserConnection(w http.ResponseWriter, r *http.Request) {
 	defer func() {
-		if r := recover(); r != nil {
-			h.log.Error().Msgf("recovered user client from (%v)", r)
+		if err := recover(); err != nil {
+			h.log.Error().Err(fmt.Errorf("%v", err)).Msg("user client crashed")
 		}
 	}()
 
@@ -88,8 +89,8 @@ func (h *Hub) handleWebsocketUserConnection(w http.ResponseWriter, r *http.Reque
 // handleWebsocketWorkerConnection handles all connections from a new worker to coordinator.
 func (h *Hub) handleWebsocketWorkerConnection(w http.ResponseWriter, r *http.Request) {
 	defer func() {
-		if r := recover(); r != nil {
-			h.log.Error().Msgf("recovered worker client from (%v)", r)
+		if err := recover(); err != nil {
+			h.log.Error().Err(fmt.Errorf("%v", err)).Msg("worker client crashed")
 		}
 	}()
 

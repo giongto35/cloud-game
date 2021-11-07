@@ -275,8 +275,8 @@ func (r *Room) UpdatePlayerIndex(peerconnection *webrtc.WebRTC, playerIndex int)
 
 func (r *Room) startWebRTCSession(peerconnection *webrtc.WebRTC) {
 	defer func() {
-		if rc := recover(); rc != nil {
-			r.log.Warn().Msg("Recovered when sent to close inputChannel")
+		if err := recover(); err != nil {
+			r.log.Warn().Err(fmt.Errorf("%v", err)).Msg("input channel crashed")
 		}
 	}()
 

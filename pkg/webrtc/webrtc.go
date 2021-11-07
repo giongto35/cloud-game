@@ -89,7 +89,7 @@ func NewWebRTC(conf webrtcConfig.Config, log *logger.Logger) (*WebRTC, error) {
 func (w *WebRTC) StartClient(iceCB OnIceCallback) (string, error) {
 	defer func() {
 		if err := recover(); err != nil {
-			w.log.Error().Msg(fmt.Sprintf("%v", err))
+			w.log.Error().Err(fmt.Errorf("%v", err)).Msg("WebRTC connection crashed")
 			w.StopClient()
 		}
 	}()
@@ -285,8 +285,8 @@ func (w *WebRTC) startStreaming(vp8Track *webrtc.TrackLocalStaticSample, opusTra
 	// receive frame buffer
 	go func() {
 		defer func() {
-			if r := recover(); r != nil {
-				w.log.Error().Stack().Msg(fmt.Sprintf("%v", r))
+			if err := recover(); err != nil {
+				w.log.Error().Err(fmt.Errorf("%v", err)).Msg("WebRTC stream crashed")
 			}
 		}()
 
@@ -302,8 +302,8 @@ func (w *WebRTC) startStreaming(vp8Track *webrtc.TrackLocalStaticSample, opusTra
 	// send audio
 	go func() {
 		defer func() {
-			if r := recover(); r != nil {
-				w.log.Error().Stack().Msg(fmt.Sprintf("%v", r))
+			if err := recover(); err != nil {
+				w.log.Error().Err(fmt.Errorf("%v", err)).Msg("WebRTC audio crashed")
 			}
 		}()
 
