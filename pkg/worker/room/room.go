@@ -37,11 +37,6 @@ type Room struct {
 	// inputChannel is input stream send to director. This inputChannel is combined
 	// input from webRTC + connection info (player index)
 	inputChannel chan<- nanoarch.InputEvent
-	// voiceInChannel is voice stream received from users
-	//voiceInChannel chan []byte
-	// voiceOutChannel is voice stream routed to all users
-	//voiceOutChannel chan []byte
-	//voiceSample     [][]byte
 	// State of room
 	IsRunning bool
 	// Done channel is to fire exit event when room is closed
@@ -162,19 +157,12 @@ func NewRoom(id string, game games.GameMetadata, storage storage.CloudStorage, c
 		emuName := cfg.Emulator.GetEmulator(game.Type, game.Path)
 		libretroConfig := cfg.Emulator.GetLibretroCoreConfig(emuName)
 
+		// Run without game, image stream is communicated over a unix socket
 		if cfg.Encoder.WithoutGame {
-			// Run without game, image stream is communicated over a unix socket
-			imageChannel := NewVideoImporter(roomID, log)
-			director, _, audioChannel := nanoarch.Init(roomID, false, inputChannel, store, libretroConfig)
-			room.imageChannel = imageChannel
-			room.director = director
-			room.audioChannel = audioChannel
+			room.imageChannel = NewVideoImporter(roomID, log)
+			room.director, _, room.audioChannel = nanoarch.Init(roomID, false, inputChannel, store, libretroConfig, log)
 		} else {
-			// Run without game, image stream is communicated over image channel
-			director, imageChannel, audioChannel := nanoarch.Init(roomID, true, inputChannel, store, libretroConfig)
-			room.imageChannel = imageChannel
-			room.director = director
-			room.audioChannel = audioChannel
+			room.director, room.imageChannel, room.audioChannel = nanoarch.Init(roomID, true, inputChannel, store, libretroConfig, log)
 		}
 
 		gameMeta := room.director.LoadMeta(filepath.Join(game.Base, game.Path))
@@ -206,10 +194,8 @@ func NewRoom(id string, game games.GameMetadata, storage storage.CloudStorage, c
 
 		room.director.SetViewport(encoderW, encoderH)
 
-		// Spawn video and audio encoding for webRTC
 		go room.startVideo(encoderW, encoderH, cfg.Encoder.Video)
 		go room.startAudio(gameMeta.AudioSampleRate, cfg.Encoder.Audio)
-		//go room.startVoice()
 
 		if cfg.Emulator.AutosaveSec > 0 {
 			go room.enableAutosave(cfg.Emulator.AutosaveSec)
@@ -317,8 +303,8 @@ func (r *Room) RemoveSession(w *webrtc.WebRTC) {
 	}
 }
 
-// TODO: Reuse for remove Session
 func (r *Room) IsPCInRoom(w *webrtc.WebRTC) bool {
+	// TODO: Reuse for remove Session
 	if r == nil {
 		return false
 	}
@@ -341,7 +327,7 @@ func (r *Room) Close() {
 	// Save game before quit. Only save for game which was previous saved to avoid flooding database
 	if r.isRoomExisted() {
 		r.log.Debug().Msg("Save game before closing room")
-		// use goroutine here because SaveGame attempt to acquire a emulator lock.
+		// use goroutine here because SaveGame attempt to acquire an emulator lock.
 		// the lock is holding before coming to close, so it will cause deadlock if SaveGame is synchronous
 		go func() {
 			// Save before close, so save can have correct state (Not sure) may again cause deadlock

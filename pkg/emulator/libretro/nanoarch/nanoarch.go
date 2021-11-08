@@ -2,10 +2,12 @@ package nanoarch
 
 import (
 	"bufio"
-	"log"
+	"fmt"
+	"math/rand"
 	"os"
 	"os/user"
 	"runtime"
+	"strings"
 	"sync"
 	"time"
 	"unsafe"
@@ -14,6 +16,7 @@ import (
 	"github.com/giongto35/cloud-game/v2/pkg/emulator/graphics"
 	"github.com/giongto35/cloud-game/v2/pkg/emulator/image"
 	"github.com/giongto35/cloud-game/v2/pkg/emulator/libretro/core"
+	"github.com/giongto35/cloud-game/v2/pkg/logger"
 	"github.com/giongto35/cloud-game/v2/pkg/thread"
 )
 
@@ -57,8 +60,15 @@ void bridge_execute(void *f);
 */
 import "C"
 
-var mu, fmu sync.Mutex
-var lastFrameTime time.Time
+var mu sync.Mutex
+
+// Libretro is a custom Libretro frontend struct.
+type Libretro struct {
+	log *logger.Logger
+}
+
+var libretroLogger = logger.Default()
+var sdlCtx *graphics.SDL
 
 var video struct {
 	pitch    uint32
@@ -97,6 +107,8 @@ var systemDirectory = C.CString("./pkg/emulator/libretro/system")
 var saveDirectory = C.CString(".")
 var currentUser *C.char
 
+var seed = rand.New(rand.NewSource(time.Now().UnixNano())).Uint32()
+
 var bindKeysMap = map[int]int{
 	C.RETRO_DEVICE_ID_JOYPAD_A:      0,
 	C.RETRO_DEVICE_ID_JOYPAD_B:      1,
@@ -127,17 +139,16 @@ type CloudEmulator interface {
 
 //export coreVideoRefresh
 func coreVideoRefresh(data unsafe.Pointer, width C.unsigned, height C.unsigned, pitch C.size_t) {
-	t := time.Now()
-	fmu.Lock()
-	dt := t.Sub(lastFrameTime)
-	lastFrameTime = t
-	fmu.Unlock()
-
 	// some cores can return nothing
 	// !to add duplicate if can dup
 	if data == nil {
 		return
 	}
+
+	// divide by 8333 to give us the equivalent of a 120fps resolution
+	timestamp := uint32(time.Now().UnixNano()/8333) + seed
+	// if Libretro renders frame with OpenGL context
+	isOpenGLRender := data == C.RETRO_HW_FRAME_BUFFER_VALID
 
 	// calculate real frame width in pixels from packed data (realWidth >= width)
 	packedWidth := int(uint32(pitch) / video.bpp)
@@ -147,8 +158,6 @@ func coreVideoRefresh(data unsafe.Pointer, width C.unsigned, height C.unsigned, 
 	// calculate space for the video frame
 	bytes := int(height) * packedWidth * int(video.bpp)
 
-	// if Libretro renders frame with OpenGL context
-	isOpenGLRender := data == C.RETRO_HW_FRAME_BUFFER_VALID
 	var data_ []byte
 	if isOpenGLRender {
 		data_ = graphics.ReadFramebuffer(bytes, int(width), int(height))
@@ -157,23 +166,19 @@ func coreVideoRefresh(data unsafe.Pointer, width C.unsigned, height C.unsigned, 
 	}
 
 	// the image is being resized and de-rotated
-	img := image.DrawRgbaImage(
+	image.DrawRgbaImage(
 		pixelFormatConverterFn,
 		rotationFn,
 		image.ScaleNearestNeighbour,
 		isOpenGLRender,
 		int(width), int(height), packedWidth, int(video.bpp),
 		data_,
-		NAEmulator.vw,
-		NAEmulator.vh,
+		outputImg,
 	)
 
 	// the image is pushed into a channel
 	// where it will be distributed with fan-out
-	select {
-	case NAEmulator.imageChannel <- GameFrame{Data: img, Duration: dt}:
-	default:
-	}
+	NAEmulator.imageChannel <- GameFrame{Image: outputImg, Timestamp: timestamp}
 }
 
 //export coreInputPoll
@@ -241,13 +246,12 @@ func coreAudioSampleBatch(data unsafe.Pointer, frames C.size_t) C.size_t {
 
 //export coreLog
 func coreLog(_ C.enum_retro_log_level, msg *C.char) {
-	log.Printf("[Log] %v", C.GoString(msg))
+	message := strings.TrimRight(C.GoString(msg), "\n")
+	libretroLogger.Debug().Msg(message)
 }
 
 //export coreGetCurrentFramebuffer
-func coreGetCurrentFramebuffer() C.uintptr_t {
-	return (C.uintptr_t)(graphics.GetGlFbo())
-}
+func coreGetCurrentFramebuffer() C.uintptr_t { return (C.uintptr_t)(graphics.GetGlFbo()) }
 
 //export coreGetProcAddress
 func coreGetProcAddress(sym *C.char) C.retro_proc_address_t {
@@ -275,7 +279,11 @@ func coreEnvironment(cmd C.unsigned, data unsafe.Pointer) C.bool {
 		bval := (*C.bool)(data)
 		*bval = C.bool(true)
 	case C.RETRO_ENVIRONMENT_SET_PIXEL_FORMAT:
-		return videoSetPixelFormat(*(*C.enum_retro_pixel_format)(data))
+		res, err := videoSetPixelFormat(*(*C.enum_retro_pixel_format)(data))
+		if err != nil {
+			libretroLogger.Fatal().Err(err).Msg("pix format failed")
+		}
+		return res
 	case C.RETRO_ENVIRONMENT_GET_SYSTEM_DIRECTORY:
 		path := (**C.char)(data)
 		*path = systemDirectory
@@ -299,11 +307,10 @@ func coreEnvironment(cmd C.unsigned, data unsafe.Pointer) C.bool {
 		variable := (*C.struct_retro_variable)(data)
 		key := C.GoString(variable.key)
 		if val, ok := coreConfig[key]; ok {
-			log.Printf("[Env]: get variable: key:%v value:%v", key, C.GoString(val))
 			variable.value = val
+			libretroLogger.Debug().Msgf("Set %s=%v", key, C.GoString(val))
 			return true
 		}
-		// fmt.Printf("[Env]: get variable: key:%v not found\n", key)
 		return false
 	case C.RETRO_ENVIRONMENT_SET_HW_RENDER:
 		video.isGl = isGlAllowed
@@ -331,7 +338,6 @@ func coreEnvironment(cmd C.unsigned, data unsafe.Pointer) C.bool {
 		}
 		return false
 	default:
-		//fmt.Println("[Env]: command not implemented", cmd)
 		return false
 	}
 	return true
@@ -361,26 +367,33 @@ func initVideo() {
 		context = graphics.CtxUnknown
 	}
 
-	graphics.Init(graphics.Config{
-		Ctx: context,
-		W:   int(video.maxWidth),
-		H:   int(video.maxHeight),
-		Gl: graphics.GlConfig{
-			AutoContext:  video.autoGlContext,
-			VersionMajor: uint(video.hw.version_major),
-			VersionMinor: uint(video.hw.version_minor),
-			HasDepth:     bool(video.hw.depth),
-			HasStencil:   bool(video.hw.stencil),
-		},
-	})
+	sdl, err := graphics.NewSDLContext(graphics.Config{
+		Ctx:            context,
+		W:              int(video.maxWidth),
+		H:              int(video.maxHeight),
+		GLAutoContext:  video.autoGlContext,
+		GLVersionMajor: uint(video.hw.version_major),
+		GLVersionMinor: uint(video.hw.version_minor),
+		GLHasDepth:     bool(video.hw.depth),
+		GLHasStencil:   bool(video.hw.stencil),
+	}, libretroLogger)
+	if err != nil {
+		panic(err)
+	}
+	sdlCtx = sdl
+
 	C.bridge_context_reset(video.hw.context_reset)
-	printOpenGLDriverInfo()
+	if libretroLogger.GetLevel() < logger.InfoLevel {
+		printOpenGLDriverInfo()
+	}
 }
 
 //export deinitVideo
 func deinitVideo() {
 	C.bridge_context_reset(video.hw.context_destroy)
-	graphics.Deinit()
+	if err := sdlCtx.Deinit(); err != nil {
+		libretroLogger.Error().Err(err).Msg("deinit fail")
+	}
 	video.isGl = false
 	video.autoGlContext = false
 }
@@ -404,6 +417,8 @@ var (
 	retroUnloadGame              unsafe.Pointer
 )
 
+func SetLibretroLogger(log *logger.Logger) { libretroLogger = log }
+
 func coreLoad(meta emulator.Metadata) {
 	var err error
 	isGlAllowed = meta.IsGlAllowed
@@ -411,7 +426,7 @@ func coreLoad(meta emulator.Metadata) {
 	video.autoGlContext = meta.AutoGlContext
 	coreConfig, err = ScanConfigFile(meta.ConfigPath)
 	if err != nil {
-		log.Printf("warning: %v", err)
+		libretroLogger.Warn().Err(err).Msg("config scan has been failed")
 	}
 
 	multitap.supported = meta.HasMultitap
@@ -422,7 +437,7 @@ func coreLoad(meta emulator.Metadata) {
 	if arch, err := core.GetCoreExt(); err == nil {
 		filePath = filePath + arch.LibExt
 	} else {
-		log.Printf("warning: %v", err)
+		libretroLogger.Warn().Err(err).Msg("system arch guesser failed")
 	}
 
 	mu.Lock()
@@ -431,7 +446,7 @@ func coreLoad(meta emulator.Metadata) {
 	if err != nil {
 		retroHandle, err = loadLibRollingRollingRolling(filePath)
 		if err != nil {
-			log.Fatalf("error core load: %s, %v", filePath, err)
+			libretroLogger.Fatal().Err(err).Msgf("core load: %s, %v", filePath, err)
 		}
 	}
 
@@ -468,7 +483,7 @@ func coreLoad(meta emulator.Metadata) {
 	C.bridge_retro_init(retroInit)
 
 	v := C.bridge_retro_api_version(retroAPIVersion)
-	log.Printf("Libretro API version: %v", v)
+	libretroLogger.Debug().Msgf("Libretro API version: %v", v)
 }
 
 func slurp(path string, size int64) ([]byte, error) {
@@ -501,7 +516,7 @@ func coreLoadGame(filename string) {
 	_ = file.Close()
 
 	size := fi.Size()
-	log.Printf("ROM size: %v", size)
+	libretroLogger.Debug().Msgf("ROM size: %v", size)
 
 	csFilename := C.CString(filename)
 	defer C.free(unsafe.Pointer(csFilename))
@@ -512,11 +527,9 @@ func coreLoadGame(filename string) {
 
 	si := C.struct_retro_system_info{}
 	C.bridge_retro_get_system_info(retroGetSystemInfo, &si)
-	log.Printf("  library_name: %v", C.GoString(si.library_name))
-	log.Printf("  library_version: %v", C.GoString(si.library_version))
-	log.Printf("  valid_extensions: %v", C.GoString(si.valid_extensions))
-	log.Printf("  need_fullpath: %v", bool(si.need_fullpath))
-	log.Printf("  block_extract: %v", bool(si.block_extract))
+	if libretroLogger.GetLevel() < logger.InfoLevel {
+		printSystemInfo(si)
+	}
 
 	if !si.need_fullpath {
 		bytes, err := slurp(filename, size)
@@ -528,9 +541,8 @@ func coreLoadGame(filename string) {
 		gi.data = unsafe.Pointer(cstr)
 	}
 
-	ok := C.bridge_retro_load_game(retroLoadGame, &gi)
-	if !ok {
-		log.Fatal("The core failed to load the content.")
+	if ok := C.bridge_retro_load_game(retroLoadGame, &gi); !ok {
+		libretroLogger.Fatal().Msg("The core failed to load the content.")
 	}
 
 	avi := C.struct_retro_system_av_info{}
@@ -551,16 +563,9 @@ func coreLoadGame(filename string) {
 	}
 	NAEmulator.meta.Ratio = ratio
 
-	log.Printf("-----------------------------------")
-	log.Printf("---  Core audio and video info  ---")
-	log.Printf("-----------------------------------")
-	log.Printf("  Frame: %vx%v (%vx%v)",
-		avi.geometry.base_width, avi.geometry.base_height,
-		avi.geometry.max_width, avi.geometry.max_height)
-	log.Printf("  AR:    %v", ratio)
-	log.Printf("  FPS:   %v", avi.timing.fps)
-	log.Printf("  Audio: %vHz", avi.timing.sample_rate)
-	log.Printf("-----------------------------------")
+	if libretroLogger.GetLevel() < logger.InfoLevel {
+		printCoreInfo(avi, ratio)
+	}
 
 	video.maxWidth = int32(avi.geometry.max_width)
 	video.maxHeight = int32(avi.geometry.max_height)
@@ -612,7 +617,9 @@ func nanoarchShutdown() {
 			thread.Main(func() {
 				// running inside a go routine, lock the thread to make sure the OpenGL context stays current
 				runtime.LockOSThread()
-				graphics.BindContext()
+				if err := sdlCtx.BindContext(); err != nil {
+					libretroLogger.Error().Err(err).Msg("ctx switch fail")
+				}
 			})
 		}
 		C.bridge_retro_unload_game(retroUnloadGame)
@@ -627,7 +634,7 @@ func nanoarchShutdown() {
 
 	setRotation(0)
 	if err := closeLib(retroHandle); err != nil {
-		log.Printf("error when close: %v", err)
+		libretroLogger.Error().Err(err).Msg("lib close failed")
 	}
 	for _, element := range coreConfig {
 		C.free(unsafe.Pointer(element))
@@ -641,7 +648,9 @@ func nanoarchRun() {
 		if video.isGl {
 			// running inside a go routine, lock the thread to make sure the OpenGL context stays current
 			runtime.LockOSThread()
-			graphics.BindContext()
+			if err := sdlCtx.BindContext(); err != nil {
+				libretroLogger.Error().Err(err).Msg("ctx bind fail")
+			}
 		}
 		C.bridge_retro_run(retroRun)
 		if video.isGl {
@@ -650,12 +659,12 @@ func nanoarchRun() {
 	}
 }
 
-func videoSetPixelFormat(format uint32) C.bool {
+func videoSetPixelFormat(format uint32) (C.bool, error) {
 	switch format {
 	case C.RETRO_PIXEL_FORMAT_0RGB1555:
 		video.pixFmt = image.BitFormatShort5551
 		if err := graphics.SetPixelFormat(graphics.UnsignedShort5551); err != nil {
-			log.Fatalf("unknown pixel format %v", video.pixFmt)
+			return false, fmt.Errorf("unknown pixel format %v", video.pixFmt)
 		}
 		video.bpp = 2
 		// format is not implemented
@@ -663,21 +672,21 @@ func videoSetPixelFormat(format uint32) C.bool {
 	case C.RETRO_PIXEL_FORMAT_XRGB8888:
 		video.pixFmt = image.BitFormatInt8888Rev
 		if err := graphics.SetPixelFormat(graphics.UnsignedInt8888Rev); err != nil {
-			log.Fatalf("unknown pixel format %v", video.pixFmt)
+			return false, fmt.Errorf("unknown pixel format %v", video.pixFmt)
 		}
 		video.bpp = 4
 		pixelFormatConverterFn = image.Rgba8888
 	case C.RETRO_PIXEL_FORMAT_RGB565:
 		video.pixFmt = image.BitFormatShort565
 		if err := graphics.SetPixelFormat(graphics.UnsignedShort565); err != nil {
-			log.Fatalf("unknown pixel format %v", video.pixFmt)
+			return false, fmt.Errorf("unknown pixel format %v", video.pixFmt)
 		}
 		video.bpp = 2
 		pixelFormatConverterFn = image.Rgb565
 	default:
-		log.Fatalf("Unknown pixel type %v", format)
+		return false, fmt.Errorf("unknown pixel type %v", format)
 	}
-	return true
+	return true, nil
 }
 
 func setRotation(rotation uint) {
@@ -687,15 +696,45 @@ func setRotation(rotation uint) {
 	video.rotation = image.Angle(rotation)
 	rotationFn = image.GetRotation(video.rotation)
 	NAEmulator.meta.Rotation = rotationFn
-	log.Printf("[Env]: the game video is rotated %v°", map[uint]uint{0: 0, 1: 90, 2: 180, 3: 270}[rotation])
+	libretroLogger.Debug().Msgf("[Env]: the game video is rotated %v°", map[uint]uint{0: 0, 1: 90, 2: 180, 3: 270}[rotation])
+}
+
+func printCoreInfo(avi C.struct_retro_system_av_info, ratio float64) {
+	var coreInfo strings.Builder
+	coreInfo.Grow(32)
+	coreInfo.WriteString("\n-----------------------------------\n")
+	coreInfo.WriteString("---  Core audio and video info  ---\n")
+	coreInfo.WriteString("-----------------------------------\n")
+	coreInfo.WriteString(fmt.Sprintf("  Frame: %vx%v (%vx%v)\n",
+		avi.geometry.base_width, avi.geometry.base_height,
+		avi.geometry.max_width, avi.geometry.max_height))
+	coreInfo.WriteString(fmt.Sprintf("  AR:    %v\n", ratio))
+	coreInfo.WriteString(fmt.Sprintf("  FPS:   %v\n", avi.timing.fps))
+	coreInfo.WriteString(fmt.Sprintf("  Audio: %vHz\n", avi.timing.sample_rate))
+	coreInfo.WriteString("-----------------------------------")
+	libretroLogger.Debug().Msg(coreInfo.String())
+}
+
+func printSystemInfo(si C.struct_retro_system_info) {
+	var libInfo strings.Builder
+	libInfo.Grow(128)
+	libInfo.WriteString(fmt.Sprintf("\n  library_name: %v\n", C.GoString(si.library_name)))
+	libInfo.WriteString(fmt.Sprintf("  library_version: %v\n", C.GoString(si.library_version)))
+	libInfo.WriteString(fmt.Sprintf("  valid_extensions: %v\n", C.GoString(si.valid_extensions)))
+	libInfo.WriteString(fmt.Sprintf("  need_fullpath: %v\n", bool(si.need_fullpath)))
+	libInfo.WriteString(fmt.Sprintf("  block_extract: %v", bool(si.block_extract)))
+	libretroLogger.Debug().Msg(libInfo.String())
 }
 
 func printOpenGLDriverInfo() {
-	log.Printf("[OpenGL] Version: %v", graphics.GetGLVersionInfo())
-	log.Printf("[OpenGL] Vendor: %v", graphics.GetGLVendorInfo())
+	var openGLInfo strings.Builder
+	openGLInfo.Grow(128)
+	openGLInfo.WriteString(fmt.Sprintf("\n[OpenGL] Version: %v\n", graphics.GetGLVersionInfo()))
+	openGLInfo.WriteString(fmt.Sprintf("[OpenGL] Vendor: %v\n", graphics.GetGLVendorInfo()))
 	// This string is often the name of the GPU.
 	// In the case of Mesa3d, it would be i.e "Gallium 0.4 on NVA8".
 	// It might even say "Direct3D" if the Windows Direct3D wrapper is being used.
-	log.Printf("[OpenGL] Renderer: %v", graphics.GetGLRendererInfo())
-	log.Printf("[OpenGL] GLSL Version: %v", graphics.GetGLSLInfo())
+	openGLInfo.WriteString(fmt.Sprintf("[OpenGL] Renderer: %v\n", graphics.GetGLRendererInfo()))
+	openGLInfo.WriteString(fmt.Sprintf("[OpenGL] GLSL Version: %v", graphics.GetGLSLInfo()))
+	libretroLogger.Debug().Msg(openGLInfo.String())
 }

@@ -13,6 +13,7 @@ import (
 	"github.com/giongto35/cloud-game/v2/pkg/config"
 	"github.com/giongto35/cloud-game/v2/pkg/config/worker"
 	"github.com/giongto35/cloud-game/v2/pkg/emulator"
+	"github.com/giongto35/cloud-game/v2/pkg/logger"
 )
 
 type testRun struct {
@@ -63,6 +64,8 @@ func GetEmulatorMock(room string, system string) *EmulatorMock {
 	images := make(chan GameFrame, 30)
 	audio := make(chan []int16, 30)
 	inputs := make(chan InputEvent, 100)
+
+	SetLibretroLogger(logger.Default())
 
 	// an emu
 	emu := &EmulatorMock{

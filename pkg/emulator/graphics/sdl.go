@@ -1,128 +1,139 @@
 package graphics
 
 import (
-	"log"
+	"fmt"
 	"unsafe"
 
+	"github.com/giongto35/cloud-game/v2/pkg/logger"
 	"github.com/giongto35/cloud-game/v2/pkg/thread"
 	"github.com/veandco/go-sdl2/sdl"
 )
 
-type data struct {
-	w      *sdl.Window
+type SDL struct {
 	glWCtx sdl.GLContext
+	w      *sdl.Window
+	log    *logger.Logger
 }
-
-// singleton state for SDL
-var state = data{}
 
 type Config struct {
-	Ctx Context
-	W   int
-	H   int
-	Gl  GlConfig
-}
-type GlConfig struct {
-	AutoContext  bool
-	VersionMajor uint
-	VersionMinor uint
-	HasDepth     bool
-	HasStencil   bool
+	Ctx            Context
+	W              int
+	H              int
+	GLAutoContext  bool
+	GLVersionMajor uint
+	GLVersionMinor uint
+	GLHasDepth     bool
+	GLHasStencil   bool
 }
 
-// Init initializes SDL/OpenGL context.
+// NewSDLContext initializes SDL/OpenGL context.
 // Uses main thread lock (see thread/mainthread).
-func Init(cfg Config) {
-	log.Printf("[SDL] [OpenGL] initialization...")
+func NewSDLContext(cfg Config, log *logger.Logger) (*SDL, error) {
+	log.Debug().Msg("[SDL/OpenGL] initialization...")
+
 	if err := sdl.Init(sdl.INIT_VIDEO); err != nil {
-		log.Printf("[SDL] error: %v", err)
-		panic("SDL initialization failed")
+		return nil, fmt.Errorf("SDL initialization fail: %w", err)
 	}
 
-	if cfg.Gl.AutoContext {
-		log.Printf("[OpenGL] CONTEXT_AUTO (type: %v v%v.%v)", cfg.Ctx, cfg.Gl.VersionMajor, cfg.Gl.VersionMinor)
+	display := SDL{log: log}
+
+	if cfg.GLAutoContext {
+		log.Debug().Msgf("[OpenGL] CONTEXT_AUTO (type: %v v%v.%v)", cfg.Ctx, cfg.GLVersionMajor, cfg.GLVersionMinor)
 	} else {
 		switch cfg.Ctx {
 		case CtxOpenGlCore:
-			setAttribute(sdl.GL_CONTEXT_PROFILE_MASK, sdl.GL_CONTEXT_PROFILE_CORE)
-			log.Printf("[OpenGL] CONTEXT_PROFILE_CORE")
+			display.setAttribute(sdl.GL_CONTEXT_PROFILE_MASK, sdl.GL_CONTEXT_PROFILE_CORE)
+			log.Debug().Msgf("[OpenGL] CONTEXT_PROFILE_CORE")
 		case CtxOpenGlEs2:
-			setAttribute(sdl.GL_CONTEXT_PROFILE_MASK, sdl.GL_CONTEXT_PROFILE_ES)
-			setAttribute(sdl.GL_CONTEXT_MAJOR_VERSION, 3)
-			setAttribute(sdl.GL_CONTEXT_MINOR_VERSION, 0)
-			log.Printf("[OpenGL] CONTEXT_PROFILE_ES 3.0")
+			display.setAttribute(sdl.GL_CONTEXT_PROFILE_MASK, sdl.GL_CONTEXT_PROFILE_ES)
+			display.setAttribute(sdl.GL_CONTEXT_MAJOR_VERSION, 3)
+			display.setAttribute(sdl.GL_CONTEXT_MINOR_VERSION, 0)
+			log.Debug().Msgf("[OpenGL] CONTEXT_PROFILE_ES 3.0")
 		case CtxOpenGl:
-			if cfg.Gl.VersionMajor >= 3 {
-				setAttribute(sdl.GL_CONTEXT_PROFILE_MASK, sdl.GL_CONTEXT_PROFILE_COMPATIBILITY)
+			if cfg.GLVersionMajor >= 3 {
+				display.setAttribute(sdl.GL_CONTEXT_PROFILE_MASK, sdl.GL_CONTEXT_PROFILE_COMPATIBILITY)
 			}
-			log.Printf("[OpenGL] CONTEXT_PROFILE_COMPATIBILITY")
+			log.Debug().Msgf("[OpenGL] CONTEXT_PROFILE_COMPATIBILITY")
 		default:
-			log.Printf("Unsupported hw context: %v", cfg.Ctx)
+			log.Error().Msgf("[OpenGL] Unsupported hw context: %v", cfg.Ctx)
 		}
 	}
 
+	var err error
 	// In OSX 10.14+ window creation and context creation must happen in the main thread
-	thread.Main(createWindow)
-
-	BindContext()
-	initContext(sdl.GLGetProcAddress)
-	if err := initFramebuffer(cfg.W, cfg.H, cfg.Gl.HasDepth, cfg.Gl.HasStencil); err != nil {
-		log.Fatal(err)
+	thread.MainMaybe(func() { display.w, display.glWCtx, err = createWindow() })
+	if err != nil {
+		return nil, fmt.Errorf("window fail: %w", err)
 	}
+
+	if err := display.BindContext(); err != nil {
+		return nil, fmt.Errorf("bind context fail: %w", err)
+	}
+	initContext(sdl.GLGetProcAddress)
+	if err := initFramebuffer(cfg.W, cfg.H, cfg.GLHasDepth, cfg.GLHasStencil); err != nil {
+		return nil, fmt.Errorf("OpenGL initialization fail: %w", err)
+	}
+	return &display, nil
 }
 
 // Deinit destroys SDL/OpenGL context.
 // Uses main thread lock (see thread/mainthread).
-func Deinit() {
-	log.Printf("[SDL] [OpenGL] deinitialization...")
+func (s *SDL) Deinit() error {
+	s.log.Debug().Msg("[SDL/OpenGL] deinitialization...")
 	destroyFramebuffer()
+	var err error
 	// In OSX 10.14+ window deletion must happen in the main thread
-	thread.Main(destroyWindow)
+	thread.MainMaybe(func() {
+		err = s.destroyWindow()
+	})
+	if err != nil {
+		return fmt.Errorf("[SDL/OpenGL] deinit fail: %w", err)
+	}
 	sdl.Quit()
-	log.Printf("[SDL] [OpenGL] deinitialized (%v, %v)", sdl.GetError(), GetGLError())
+	s.log.Debug().Msgf("[SDL/OpenGL] deinitialized codes:(%v, %v)", sdl.GetError(), GetGLError())
+	return nil
 }
 
-// createWindow creates fake SDL window for OpenGL initialization purposes.
-func createWindow() {
-	var winTitle = "CloudRetro dummy window"
-	var winWidth, winHeight int32 = 1, 1
-
-	var err error
-	if state.w, err = sdl.CreateWindow(
-		winTitle,
+// createWindow creates a fake SDL window just for OpenGL initialization purposes.
+func createWindow() (*sdl.Window, sdl.GLContext, error) {
+	w, err := sdl.CreateWindow(
+		"CloudRetro dummy window",
 		sdl.WINDOWPOS_UNDEFINED, sdl.WINDOWPOS_UNDEFINED,
-		winWidth, winHeight,
+		1, 1,
 		sdl.WINDOW_OPENGL|sdl.WINDOW_HIDDEN,
-	); err != nil {
-		panic(err)
+	)
+	if err != nil {
+		return nil, nil, fmt.Errorf("window creation fail: %w", err)
 	}
-	if state.glWCtx, err = state.w.GLCreateContext(); err != nil {
-		panic(err)
+	glWCtx, err := w.GLCreateContext()
+	if err != nil {
+		return nil, nil, fmt.Errorf("window OpenGL context fail: %w", err)
 	}
+	return w, glWCtx, nil
 }
 
 // destroyWindow destroys previously created SDL window.
-func destroyWindow() {
-	BindContext()
-	sdl.GLDeleteContext(state.glWCtx)
-	if err := state.w.Destroy(); err != nil {
-		log.Printf("[SDL] couldn't destroy the window, error: %v", err)
+func (s *SDL) destroyWindow() error {
+	if err := s.BindContext(); err != nil {
+		return err
 	}
+	sdl.GLDeleteContext(s.glWCtx)
+	if err := s.w.Destroy(); err != nil {
+		return fmt.Errorf("window destroy fail: %w", err)
+	}
+	return nil
 }
 
 // BindContext explicitly binds context to current thread.
-func BindContext() {
-	if err := state.w.GLMakeCurrent(state.glWCtx); err != nil {
-		log.Printf("[SDL] error: %v", err)
+func (s *SDL) BindContext() error { return s.w.GLMakeCurrent(s.glWCtx) }
+
+// setAttribute tries to set a GL attribute or prints error.
+func (s *SDL) setAttribute(attr sdl.GLattr, value int) {
+	if err := sdl.GLSetAttribute(attr, value); err != nil {
+		s.log.Error().Err(err).Msg("[SDL] attribute")
 	}
 }
 
 func GetGlFbo() uint32 { return getFbo() }
 
 func GetGlProcAddress(proc string) unsafe.Pointer { return sdl.GLGetProcAddress(proc) }
-
-func setAttribute(attr sdl.GLattr, value int) {
-	if err := sdl.GLSetAttribute(attr, value); err != nil {
-		log.Printf("[SDL] attribute error: %v", err)
-	}
-}
