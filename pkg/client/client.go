@@ -27,7 +27,7 @@ type SocketClient struct {
 
 func New(conn *ipc.Client, tag string, log *logger.Logger) SocketClient {
 	id := network.NewUid()
-	l := log.Wrap(log.With().Str("c-uid", id.Short()).Str("c-tag", tag))
+	l := log.Extend(log.With().Str("c-uid", id.Short()).Str("c-tag", tag))
 	return SocketClient{id: id, wire: conn, tag: tag, log: l}
 }
 

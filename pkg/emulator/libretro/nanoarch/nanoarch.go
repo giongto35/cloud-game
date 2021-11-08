@@ -399,7 +399,7 @@ func deinitVideo() {
 }
 
 var (
-	retroAPIVersion              unsafe.Pointer
+	//retroAPIVersion              unsafe.Pointer
 	retroDeinit                  unsafe.Pointer
 	retroGetSystemAVInfo         unsafe.Pointer
 	retroGetSystemInfo           unsafe.Pointer
@@ -452,7 +452,7 @@ func coreLoad(meta emulator.Metadata) {
 
 	retroInit = loadFunction(retroHandle, "retro_init")
 	retroDeinit = loadFunction(retroHandle, "retro_deinit")
-	retroAPIVersion = loadFunction(retroHandle, "retro_api_version")
+	//retroAPIVersion = loadFunction(retroHandle, "retro_api_version")
 	retroGetSystemInfo = loadFunction(retroHandle, "retro_get_system_info")
 	retroGetSystemAVInfo = loadFunction(retroHandle, "retro_get_system_av_info")
 	retroSetEnvironment = loadFunction(retroHandle, "retro_set_environment")
@@ -481,9 +481,6 @@ func coreLoad(meta emulator.Metadata) {
 	C.bridge_retro_set_audio_sample_batch(retroSetAudioSampleBatch, C.coreAudioSampleBatch_cgo)
 
 	C.bridge_retro_init(retroInit)
-
-	v := C.bridge_retro_api_version(retroAPIVersion)
-	libretroLogger.Debug().Msgf("Libretro API version: %v", v)
 }
 
 func slurp(path string, size int64) ([]byte, error) {
@@ -528,7 +525,11 @@ func coreLoadGame(filename string) {
 	si := C.struct_retro_system_info{}
 	C.bridge_retro_get_system_info(retroGetSystemInfo, &si)
 	if libretroLogger.GetLevel() < logger.InfoLevel {
-		printSystemInfo(si)
+		libretroLogger.Debug().Msgf("Core: %s %s (%s)",
+			C.GoString(si.library_name),
+			C.GoString(si.library_version),
+			C.GoString(si.valid_extensions),
+		)
 	}
 
 	if !si.need_fullpath {
@@ -564,7 +565,11 @@ func coreLoadGame(filename string) {
 	NAEmulator.meta.Ratio = ratio
 
 	if libretroLogger.GetLevel() < logger.InfoLevel {
-		printCoreInfo(avi, ratio)
+		libretroLogger.Debug().Msgf("Core media info: %vx%v (%vx%v), [%vfps], AR [%v], audio [%vHz]",
+			avi.geometry.base_width, avi.geometry.base_height,
+			avi.geometry.max_width, avi.geometry.max_height,
+			avi.timing.fps, ratio, avi.timing.sample_rate,
+		)
 	}
 
 	video.maxWidth = int32(avi.geometry.max_width)
@@ -696,34 +701,7 @@ func setRotation(rotation uint) {
 	video.rotation = image.Angle(rotation)
 	rotationFn = image.GetRotation(video.rotation)
 	NAEmulator.meta.Rotation = rotationFn
-	libretroLogger.Debug().Msgf("[Env]: the game video is rotated %v°", map[uint]uint{0: 0, 1: 90, 2: 180, 3: 270}[rotation])
-}
-
-func printCoreInfo(avi C.struct_retro_system_av_info, ratio float64) {
-	var coreInfo strings.Builder
-	coreInfo.Grow(32)
-	coreInfo.WriteString("\n-----------------------------------\n")
-	coreInfo.WriteString("---  Core audio and video info  ---\n")
-	coreInfo.WriteString("-----------------------------------\n")
-	coreInfo.WriteString(fmt.Sprintf("  Frame: %vx%v (%vx%v)\n",
-		avi.geometry.base_width, avi.geometry.base_height,
-		avi.geometry.max_width, avi.geometry.max_height))
-	coreInfo.WriteString(fmt.Sprintf("  AR:    %v\n", ratio))
-	coreInfo.WriteString(fmt.Sprintf("  FPS:   %v\n", avi.timing.fps))
-	coreInfo.WriteString(fmt.Sprintf("  Audio: %vHz\n", avi.timing.sample_rate))
-	coreInfo.WriteString("-----------------------------------")
-	libretroLogger.Debug().Msg(coreInfo.String())
-}
-
-func printSystemInfo(si C.struct_retro_system_info) {
-	var libInfo strings.Builder
-	libInfo.Grow(128)
-	libInfo.WriteString(fmt.Sprintf("\n  library_name: %v\n", C.GoString(si.library_name)))
-	libInfo.WriteString(fmt.Sprintf("  library_version: %v\n", C.GoString(si.library_version)))
-	libInfo.WriteString(fmt.Sprintf("  valid_extensions: %v\n", C.GoString(si.valid_extensions)))
-	libInfo.WriteString(fmt.Sprintf("  need_fullpath: %v\n", bool(si.need_fullpath)))
-	libInfo.WriteString(fmt.Sprintf("  block_extract: %v", bool(si.block_extract)))
-	libretroLogger.Debug().Msg(libInfo.String())
+	libretroLogger.Debug().Msgf("Image rotated %v°", map[uint]uint{0: 0, 1: 90, 2: 180, 3: 270}[rotation])
 }
 
 func printOpenGLDriverInfo() {

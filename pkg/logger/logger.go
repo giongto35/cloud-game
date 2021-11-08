@@ -165,7 +165,8 @@ func (l *Logger) Printf(format string, v ...interface{}) { l.logger.Printf(forma
 // is associated, a disabled logger is returned.
 func (l *Logger) Ctx(ctx context.Context) *Logger { return &Logger{logger: zerolog.Ctx(ctx)} }
 
-func (l *Logger) Wrap(ctx zerolog.Context) *Logger {
+// Extend adds some additional context to the existing logger.
+func (l *Logger) Extend(ctx zerolog.Context) *Logger {
 	logger := ctx.Logger()
 	return &Logger{&logger}
 }

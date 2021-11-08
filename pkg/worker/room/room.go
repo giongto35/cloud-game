@@ -118,8 +118,8 @@ func NewRoom(id string, game games.GameMetadata, storage storage.CloudStorage, c
 	if id == "" {
 		id = session.GenerateRoomID(game.Name)
 	}
-	log = log.Wrap(log.With().Str("room", id))
-	log.Info().Str("game", game.Name).Send()
+	log = log.Extend(log.With().Str("room", id[:5]))
+	log.Info().Str("game", game.Name).Msg("")
 
 	inputChannel := make(chan nanoarch.InputEvent, 100)
 	room := &Room{

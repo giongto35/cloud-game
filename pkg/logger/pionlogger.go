@@ -10,11 +10,11 @@ type PionLogger struct {
 }
 
 func NewPionLogger(root *Logger, level int) *PionLogger {
-	return &PionLogger{log: root.Wrap(root.Level(zerolog.Level(level)).With())}
+	return &PionLogger{log: root.Extend(root.Level(zerolog.Level(level)).With())}
 }
 
 func (p PionLogger) NewLogger(scope string) logging.LeveledLogger {
-	return PionLogger{log: p.log.Wrap(p.log.With().Str("mod", scope))}
+	return PionLogger{log: p.log.Extend(p.log.With().Str("mod", scope))}
 }
 
 func (p PionLogger) Trace(msg string) { p.log.WithLevel(zerolog.Level(TraceLevel)).Msg(msg) }

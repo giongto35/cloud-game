@@ -10,12 +10,12 @@ package nanoarch
 void coreLog(enum retro_log_level level, const char *msg);
 
 void bridge_retro_init(void *f) {
-	coreLog(RETRO_LOG_INFO, "[Libretro] Initialization...\n");
+	coreLog(RETRO_LOG_INFO, "Initialization...\n");
 	return ((void (*)(void))f)();
 }
 
 void bridge_retro_deinit(void *f) {
-	coreLog(RETRO_LOG_INFO, "[Libretro] Deinitialiazation...\n");
+	coreLog(RETRO_LOG_INFO, "Deinitialiazation...\n");
 	return ((void (*)(void))f)();
 }
 
@@ -56,12 +56,12 @@ void bridge_retro_set_audio_sample_batch(void *f, void *callback) {
 }
 
 bool bridge_retro_load_game(void *f, struct retro_game_info *gi) {
-  coreLog(RETRO_LOG_INFO, "[Libretro] Loading the game...\n");
+  coreLog(RETRO_LOG_INFO, "Loading the game...\n");
   return ((bool (*)(struct retro_game_info *))f)(gi);
 }
 
 void bridge_retro_unload_game(void *f) {
-	coreLog(RETRO_LOG_INFO, "[Libretro] Unloading the game...\n");
+	coreLog(RETRO_LOG_INFO, "Unloading the game...\n");
 	return ((void (*)(void))f)();
 }
 

@@ -91,6 +91,7 @@ func NewNAEmulator(roomID string, inputChannel <-chan InputEvent, storage Storag
 	imageChannel := make(chan GameFrame, 30)
 	audioChannel := make(chan []int16, 30)
 
+	log = log.Extend(log.With().Str("[m]", "Libretro"))
 	SetLibretroLogger(log)
 
 	return &naEmulator{
