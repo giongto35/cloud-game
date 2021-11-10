@@ -117,56 +117,29 @@ func (w *WebRTC) StartClient(iceCB OnIceCallback) (string, error) {
 	if _, err = w.connection.AddTrack(videoTrack); err != nil {
 		return "", err
 	}
-	w.log.Info().Msg("Add video track")
+	w.log.Debug().Msg("Add video track")
 
 	// add audio track
-	opusTrack, err := webrtc.NewTrackLocalStaticSample(webrtc.RTPCodecCapability{MimeType: webrtc.MimeTypeOpus}, "audio", "game-audio")
+	audioTrack, err := webrtc.NewTrackLocalStaticSample(webrtc.RTPCodecCapability{MimeType: webrtc.MimeTypeOpus}, "audio", "game-audio")
 	if err != nil {
 		return "", err
 	}
-	_, err = w.connection.AddTrack(opusTrack)
-	if err != nil {
-		return "", err
-	}
-
-	//_, err = w.connection.AddTransceiverFromKind(webrtc.RTPCodecTypeAudio, webrtc.RtpTransceiverInit{Direction: webrtc.RTPTransceiverDirectionRecvonly})
-
-	// create data channel for input, and register callbacks
-	// order: true, negotiated: false, id: random
-	inputTrack, err := w.connection.CreateDataChannel("game-input", nil)
+	_, err = w.connection.AddTrack(audioTrack)
 	if err != nil {
 		return "", err
 	}
 
-	inputTrack.OnOpen(func() {
-		w.log.Debug().Str("label", inputTrack.Label()).Uint16("id", *inputTrack.ID()).Msg("Data channel opened")
-	})
+	// plug in the [input] data channel
+	if err = w.handleInputChannel(); err != nil {
+		return "", err
+	}
 
-	// Register text message handling
-	inputTrack.OnMessage(func(msg webrtc.DataChannelMessage) {
-		if msg.IsString {
-			_ = inputTrack.Send([]byte{0x42})
-			return
-		}
-		// TODO: Can add recover here
-		w.InputChannel <- msg.Data
-	})
-
-	inputTrack.OnClose(func() {
-		w.log.Info().Msg("Data channel closed")
-		w.log.Info().Msg("Closed webrtc")
-	})
-
-	// WebRTC state callback
 	w.connection.OnICEConnectionStateChange(func(connectionState webrtc.ICEConnectionState) {
-		w.log.Info().Str("state", connectionState.String()).Msg("Ice new state")
+		w.log.Debug().Str("state", connectionState.String()).Msg("Ice new state")
 		if connectionState == webrtc.ICEConnectionStateConnected {
-			go func() {
-				w.isConnected = true
-				w.log.Debug().Str("state", "ConnectionStateConnected").Msg("Ice state")
-				w.startStreaming(videoTrack, opusTrack)
-			}()
-
+			w.isConnected = true
+			w.log.Debug().Str("state", "ConnectionStateConnected").Msg("Ice state")
+			w.startStreaming(videoTrack, audioTrack)
 		}
 		if connectionState == webrtc.ICEConnectionStateFailed || connectionState == webrtc.ICEConnectionStateClosed || connectionState == webrtc.ICEConnectionStateDisconnected {
 			w.log.Info().Str("id", w.ID).Str("room", w.RoomID).Msg("WebRTC")
@@ -221,9 +194,7 @@ func (w *WebRTC) getVideoCodec() string {
 	}
 }
 
-func (w *WebRTC) AttachRoomID(roomID string) {
-	w.RoomID = roomID
-}
+func (w *WebRTC) AttachRoomID(roomID string) { w.RoomID = roomID }
 
 func (w *WebRTC) SetRemoteSDP(remoteSDP string) error {
 	var answer webrtc.SessionDescription

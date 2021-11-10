@@ -59,6 +59,7 @@ func (c *Coordinator) HandleWebrtcInit(packet ipc.InPacket, h *Handler) {
 	if err != nil {
 		c.log.Error().Err(err).Msg("cannot create new webrtc session")
 		_ = h.cord.SendPacket(packet.Proxy(ipc.EmptyPacket))
+		return
 	}
 
 	// Create new sessions when we have new peerconnection initialized
