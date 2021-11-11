@@ -1,7 +1,6 @@
 package worker
 
 import (
-	"encoding/base64"
 	"encoding/json"
 	"strconv"
 
@@ -15,16 +14,11 @@ import (
 )
 
 func MakeConnectionRequest(conf worker.Worker, address string) (string, error) {
-	req := api.ConnectionRequest{
+	return toBase64Json(api.ConnectionRequest{
 		Zone:     conf.Network.Zone,
 		PingAddr: conf.GetPingAddr(address),
 		IsHTTPS:  conf.Server.Https,
-	}
-	rez, err := json.Marshal(req)
-	if err != nil {
-		return "", err
-	}
-	return base64.URLEncoding.EncodeToString(rez), nil
+	})
 }
 
 func (c *Coordinator) HandleTerminateSession(data json.RawMessage, h *Handler) {
@@ -55,9 +49,22 @@ func (c *Coordinator) HandleWebrtcInit(packet ipc.InPacket, h *Handler) {
 	if err != nil {
 		c.log.Error().Err(err).Msg("WebRTC connection init fail")
 	}
-	localSDP, err := peerconnection.StartClient(func(cd string) { h.cord.IceCandidate(cd, string(resp.Id)) })
+	localSDP, err := peerconnection.InitConnection(func(data interface{}) {
+		candidate, err := toBase64Json(data)
+		if err != nil {
+			c.log.Error().Err(err).Msgf("ICE candidate encode fail for [%v]", data)
+			return
+		}
+		h.cord.IceCandidate(candidate, string(resp.Id))
+	})
 	if err != nil {
 		c.log.Error().Err(err).Msg("cannot create new webrtc session")
+		_ = h.cord.SendPacket(packet.Proxy(ipc.EmptyPacket))
+		return
+	}
+	sdp, err := toBase64Json(localSDP)
+	if err != nil {
+		c.log.Error().Err(err).Msgf("SDP encode fail fro [%v]", localSDP)
 		_ = h.cord.SendPacket(packet.Proxy(ipc.EmptyPacket))
 		return
 	}
@@ -66,18 +73,17 @@ func (c *Coordinator) HandleWebrtcInit(packet ipc.InPacket, h *Handler) {
 	h.sessions.Add(resp.Id, &Session{peerconnection: peerconnection})
 	c.log.Info().Msgf("Start peerconnection [%v]", resp.Id)
 
-	_ = h.cord.SendPacket(packet.Proxy(localSDP))
+	_ = h.cord.SendPacket(packet.Proxy(sdp))
 }
 
 func (c *Coordinator) HandleWebrtcAnswer(packet ipc.InPacket, h *Handler) {
 	var resp api.WebrtcAnswerRequest
-	err := fromJson(packet.Payload, &resp)
-	if err != nil {
+	if err := fromJson(packet.Payload, &resp); err != nil {
 		c.log.Error().Err(err).Msg("malformed WebRTC answer")
 		return
 	}
 	if session := h.sessions.Get(resp.Id); session != nil {
-		if err := session.peerconnection.SetRemoteSDP(resp.Sdp); err != nil {
+		if err := session.peerconnection.SetRemoteSDP(resp.Sdp, fromBase64Json); err != nil {
 			c.log.Error().Err(err).Msgf("cannot set remote SDP of client [%v]", resp.Id)
 		}
 	} else {
@@ -87,13 +93,12 @@ func (c *Coordinator) HandleWebrtcAnswer(packet ipc.InPacket, h *Handler) {
 
 func (c *Coordinator) HandleWebrtcIceCandidate(packet ipc.InPacket, h *Handler) {
 	var resp api.WebrtcIceCandidateRequest
-	err := fromJson(packet.Payload, &resp)
-	if err != nil {
+	if err := fromJson(packet.Payload, &resp); err != nil {
 		c.log.Error().Err(err).Msg("malformed WebRTC candidate request")
 		return
 	}
 	if session := h.sessions.Get(resp.Id); session != nil {
-		if err := session.peerconnection.AddCandidate(resp.Candidate); err != nil {
+		if err := session.peerconnection.AddCandidate(resp.Candidate, fromBase64Json); err != nil {
 			c.log.Error().Err(err).Msgf("cannot add Ice candidate of client [%v]", resp.Id)
 		}
 	} else {
@@ -103,8 +108,7 @@ func (c *Coordinator) HandleWebrtcIceCandidate(packet ipc.InPacket, h *Handler) 
 
 func (c *Coordinator) HandleGameStart(packet ipc.InPacket, h *Handler) {
 	var resp api.StartGameRequest
-	err := fromJson(packet.Payload, &resp)
-	if err != nil {
+	if err := fromJson(packet.Payload, &resp); err != nil {
 		c.log.Error().Err(err).Msg("malformed game start request")
 		_ = h.cord.SendPacket(packet.Proxy(ipc.EmptyPacket))
 		return
@@ -162,13 +166,11 @@ func (h *Handler) startGameHandler(game games.GameMetadata, existedRoomID string
 
 func (c *Coordinator) HandleQuitGame(packet ipc.InPacket, h *Handler) {
 	var resp api.GameQuitRequest
-	err := fromJson(packet.Payload, &resp)
-	if err != nil {
+	if err := fromJson(packet.Payload, &resp); err != nil {
 		c.log.Error().Err(err).Msg("malformed game quit request")
 		return
 	}
-	session := h.sessions.Get(resp.Stateful.Id)
-	if session != nil {
+	if session := h.sessions.Get(resp.Stateful.Id); session != nil {
 		rm := h.rooms.Get(session.RoomID)
 		// Defensive coding, check if the peerconnection is in room
 		if rm != nil && rm.IsPCInRoom(session.peerconnection) {
@@ -181,8 +183,7 @@ func (c *Coordinator) HandleQuitGame(packet ipc.InPacket, h *Handler) {
 
 func (c *Coordinator) HandleSaveGame(packet ipc.InPacket, h *Handler) {
 	var resp api.SaveGameRequest
-	err := fromJson(packet.Payload, &resp)
-	if err != nil {
+	if err := fromJson(packet.Payload, &resp); err != nil {
 		c.log.Error().Err(err).Msg("malformed game save request")
 		return
 	}
@@ -207,8 +208,7 @@ func (c *Coordinator) HandleSaveGame(packet ipc.InPacket, h *Handler) {
 func (c *Coordinator) HandleLoadGame(packet ipc.InPacket, h *Handler) {
 	c.log.Info().Msg("Loading game state")
 	var resp api.LoadGameRequest
-	err := fromJson(packet.Payload, &resp)
-	if err != nil {
+	if err := fromJson(packet.Payload, &resp); err != nil {
 		c.log.Error().Err(err).Msg("malformed game load request")
 		return
 	}
@@ -230,8 +230,7 @@ func (c *Coordinator) HandleLoadGame(packet ipc.InPacket, h *Handler) {
 
 func (c *Coordinator) HandleChangePlayer(packet ipc.InPacket, h *Handler) {
 	var resp api.ChangePlayerRequest
-	err := fromJson(packet.Payload, &resp)
-	if err != nil {
+	if err := fromJson(packet.Payload, &resp); err != nil {
 		c.log.Error().Err(err).Msg("malformed change player request")
 		return
 	}
@@ -254,8 +253,7 @@ func (c *Coordinator) HandleChangePlayer(packet ipc.InPacket, h *Handler) {
 
 func (c *Coordinator) HandleToggleMultitap(packet ipc.InPacket, h *Handler) {
 	var resp api.ToggleMultitapRequest
-	err := fromJson(packet.Payload, &resp)
-	if err != nil {
+	if err := fromJson(packet.Payload, &resp); err != nil {
 		c.log.Error().Err(err).Msg("malformed toggle multitap request")
 		return
 	}

@@ -1,12 +1,6 @@
 package webrtc
 
-import (
-	"log"
-	"strings"
-
-	"github.com/giongto35/cloud-game/v2/pkg/config"
-	"github.com/giongto35/cloud-game/v2/pkg/config/encoder"
-)
+import "github.com/giongto35/cloud-game/v2/pkg/config/encoder"
 
 type Webrtc struct {
 	DisableDefaultInterceptors bool
@@ -33,22 +27,6 @@ type Config struct {
 	Webrtc  Webrtc
 }
 
-func (w *Webrtc) AddIceServersEnv() {
-	cfg := Config{Webrtc: Webrtc{IceServers: []IceServer{{}, {}, {}, {}, {}}}}
-	_ = config.LoadConfigEnv(&cfg)
-	for i, ice := range cfg.Webrtc.IceServers {
-		if ice.Url == "" {
-			continue
-		}
-		if strings.HasPrefix(ice.Url, "turn:") || strings.HasPrefix(ice.Url, "turns:") {
-			if ice.Username == "" || ice.Credential == "" {
-				log.Fatalf("TURN or TURNS servers should have both username and credential: %+v", ice)
-			}
-		}
-		if i > len(w.IceServers)-1 {
-			w.IceServers = append(w.IceServers, ice)
-		} else {
-			w.IceServers[i] = ice
-		}
-	}
-}
+func (w Webrtc) HasPortRange() bool  { return w.IcePorts.Min > 0 && w.IcePorts.Max > 0 }
+func (w Webrtc) HasSinglePort() bool { return w.SinglePort > 0 }
+func (w Webrtc) HasIceIpMap() bool   { return w.IceIpMap != "" }

@@ -1,6 +1,7 @@
 package webrtc
 
 import (
+	"fmt"
 	"net"
 	"sync"
 
@@ -11,7 +12,7 @@ import (
 	pion "github.com/pion/webrtc/v3"
 )
 
-type PeerConnection struct {
+type Peer struct {
 	api    *pion.API
 	config *pion.Configuration
 }
@@ -21,7 +22,7 @@ var (
 	settings     pion.SettingEngine
 )
 
-func DefaultPeerConnection(conf conf.Webrtc, ts *uint32, log *logger.Logger) (*PeerConnection, error) {
+func DefaultPeerConnection(conf conf.Webrtc, ts *uint32, log *logger.Logger) (*Peer, error) {
 	m := &pion.MediaEngine{}
 	if err := m.RegisterDefaultCodecs(); err != nil {
 		return nil, err
@@ -33,6 +34,7 @@ func DefaultPeerConnection(conf conf.Webrtc, ts *uint32, log *logger.Logger) (*P
 			return nil, err
 		}
 	}
+	// todo add re-time only for the main streamer with a game
 	i.Add(&ReTimeInterceptor{timestamp: ts})
 
 	settingsOnce.Do(func() {
@@ -47,23 +49,26 @@ func DefaultPeerConnection(conf conf.Webrtc, ts *uint32, log *logger.Logger) (*P
 		if conf.IceLite {
 			settingEngine.SetLite(conf.IceLite)
 		}
-		if conf.IcePorts.Min > 0 && conf.IcePorts.Max > 0 {
+		if conf.HasPortRange() {
 			if err := settingEngine.SetEphemeralUDPPortRange(conf.IcePorts.Min, conf.IcePorts.Max); err != nil {
 				panic(err)
 			}
-		} else {
-			if conf.SinglePort > 0 {
-				l, err := socket.NewSocketPortRoll("udp", conf.SinglePort)
-				if err != nil {
-					panic(err)
-				}
-				udpListener := l.(*net.UDPConn)
-				log.Info().Msgf("Listening for WebRTC traffic at %s", udpListener.LocalAddr())
-				settingEngine.SetICEUDPMux(pion.NewICEUDPMux(customLogger, udpListener))
-			}
 		}
-		if conf.IceIpMap != "" {
+		if conf.HasSinglePort() {
+			l, err := socket.NewSocketPortRoll("udp", conf.SinglePort)
+			if err != nil {
+				panic(err)
+			}
+			udp, ok := l.(*net.UDPConn)
+			if !ok {
+				panic(fmt.Errorf("use of not a UDP socket"))
+			}
+			settingEngine.SetICEUDPMux(pion.NewICEUDPMux(customLogger, udp))
+			log.Info().Msgf("The single port mode is active for %s", udp.LocalAddr())
+		}
+		if conf.HasIceIpMap() {
 			settingEngine.SetNAT1To1IPs([]string{conf.IceIpMap}, pion.ICECandidateTypeHost)
+			log.Info().Msgf("The NAT mapping is active for %v", conf.IceIpMap)
 		}
 		settings = settingEngine
 	})
@@ -77,17 +82,10 @@ func DefaultPeerConnection(conf conf.Webrtc, ts *uint32, log *logger.Logger) (*P
 		})
 	}
 
-	conn := PeerConnection{
-		api: pion.NewAPI(
-			pion.WithMediaEngine(m),
-			pion.WithInterceptorRegistry(i),
-			pion.WithSettingEngine(settings),
-		),
+	return &Peer{
+		api:    pion.NewAPI(pion.WithMediaEngine(m), pion.WithInterceptorRegistry(i), pion.WithSettingEngine(settings)),
 		config: &peerConf,
-	}
-	return &conn, nil
+	}, nil
 }
 
-func (p *PeerConnection) NewConnection() (*pion.PeerConnection, error) {
-	return p.api.NewPeerConnection(*p.config)
-}
+func (p *Peer) NewPeer() (*pion.PeerConnection, error) { return p.api.NewPeerConnection(*p.config) }
