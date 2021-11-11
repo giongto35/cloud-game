@@ -72,19 +72,15 @@ func (ws *WS) reader() {
 	})
 	for {
 		message, err := ws.conn.read()
-		if err != nil {
-			if websocket.IsUnexpectedCloseError(err, websocket.CloseGoingAway, websocket.CloseAbnormalClosure) {
-				ws.log.Error().Err(err).Msg("unexpected error")
-			} else {
-				ws.log.Error().Err(err).Msg("read error")
-			}
+		if err != nil && websocket.IsUnexpectedCloseError(err, websocket.CloseNormalClosure, websocket.CloseGoingAway) {
+			ws.log.Error().Err(err).Msg("")
 			break
 		}
 		ws.OnMessage(message, err)
 	}
 }
 
-// writer pumps messages from the send channel to the websocket connection.
+// writer pumps messages from the sender channel to the websocket connection.
 // Blocking, must be called as goroutine. Serializes all websocket writes.
 func (ws *WS) writer() {
 	var ticker *time.Ticker
