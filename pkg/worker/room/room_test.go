@@ -78,7 +78,7 @@ func TestRoom(t *testing.T) {
 				Type: "nes",
 				Path: "Super Mario Bros.nes",
 			},
-			vCodec: encoder.VPX,
+			vCodec: encoder.VP8,
 			frames: 5,
 		},
 	}
@@ -110,7 +110,7 @@ func TestRoomWithGL(t *testing.T) {
 				Type: "n64",
 				Path: "Sample Demo by Florian (PD).z64",
 			},
-			vCodec: encoder.VPX,
+			vCodec: encoder.VP8,
 			frames: 50,
 		},
 	}
@@ -158,7 +158,7 @@ func TestAllEmulatorRooms(t *testing.T) {
 		room := getRoomMock(roomMockConfig{
 			gamesPath:     whereIsGames,
 			game:          test.game,
-			vCodec:        encoder.VPX,
+			vCodec:        encoder.VP8,
 			autoGlContext: autoGlContext,
 		})
 		t.Logf("The game [%v] has been loaded", test.game.Name)
@@ -341,7 +341,7 @@ func BenchmarkRoom(b *testing.B) {
 				Type: "gba",
 				Path: "Sushi The Cat.gba",
 			},
-			codecs: []encoder.VideoCodec{encoder.VPX},
+			codecs: []encoder.VideoCodec{encoder.VP8},
 			frames: 50,
 		},
 		{
@@ -351,7 +351,7 @@ func BenchmarkRoom(b *testing.B) {
 				Type: "gba",
 				Path: "Sushi The Cat.gba",
 			},
-			codecs: []encoder.VideoCodec{encoder.VPX, encoder.H264},
+			codecs: []encoder.VideoCodec{encoder.VP8, encoder.H264},
 			frames: 100,
 		},
 		{
@@ -361,7 +361,7 @@ func BenchmarkRoom(b *testing.B) {
 				Type: "nes",
 				Path: "Super Mario Bros.nes",
 			},
-			codecs: []encoder.VideoCodec{encoder.VPX, encoder.H264},
+			codecs: []encoder.VideoCodec{encoder.VP8, encoder.H264},
 			frames: 100,
 		},
 	}

@@ -7,6 +7,7 @@ type Encoder struct {
 }
 
 type Audio struct {
+	Codec     string
 	Channels  int
 	Frame     int
 	Frequency int
@@ -27,5 +28,4 @@ type Video struct {
 	}
 }
 
-func (a *Audio) GetFrameSize() int          { return a.GetFrameSizeFor(a.Frequency) }
-func (a *Audio) GetFrameSizeFor(hz int) int { return hz * a.Frame / 1000 * a.Channels }
+func (a *Audio) GetFrameDuration() int { return a.Frequency * a.Frame / 1000 * a.Channels }

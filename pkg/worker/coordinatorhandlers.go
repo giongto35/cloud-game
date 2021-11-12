@@ -5,7 +5,6 @@ import (
 	"strconv"
 
 	"github.com/giongto35/cloud-game/v2/pkg/api"
-	webrtcConf "github.com/giongto35/cloud-game/v2/pkg/config/webrtc"
 	"github.com/giongto35/cloud-game/v2/pkg/config/worker"
 	"github.com/giongto35/cloud-game/v2/pkg/games"
 	"github.com/giongto35/cloud-game/v2/pkg/ipc"
@@ -44,12 +43,12 @@ func (c *Coordinator) HandleWebrtcInit(packet ipc.InPacket, h *Handler) {
 		c.log.Error().Err(err).Msg("malformed WebRTC init request")
 		return
 	}
-
-	peerconnection, err := webrtc.NewWebRTC(webrtcConf.Config{Encoder: h.cfg.Encoder, Webrtc: h.cfg.Webrtc}, c.log)
+	enc := h.cfg.Encoder
+	peer, err := webrtc.NewWebRTC(h.cfg.Webrtc, c.log)
 	if err != nil {
 		c.log.Error().Err(err).Msg("WebRTC connection init fail")
 	}
-	localSDP, err := peerconnection.InitConnection(func(data interface{}) {
+	localSDP, err := peer.NewCall(enc.Video.Codec, enc.Audio.Codec, func(data interface{}) {
 		candidate, err := toBase64Json(data)
 		if err != nil {
 			c.log.Error().Err(err).Msgf("ICE candidate encode fail for [%v]", data)
@@ -70,8 +69,8 @@ func (c *Coordinator) HandleWebrtcInit(packet ipc.InPacket, h *Handler) {
 	}
 
 	// Create new sessions when we have new peerconnection initialized
-	h.sessions.Add(resp.Id, &Session{peerconnection: peerconnection})
-	c.log.Info().Msgf("Start peerconnection [%v]", resp.Id)
+	h.sessions.Add(resp.Id, &Session{peerconnection: peer})
+	c.log.Info().Str("id", resp.Id.Short()).Msgf("Peer connection (uid:%s)", resp.Id)
 
 	_ = h.cord.SendPacket(packet.Proxy(sdp))
 }
@@ -119,7 +118,6 @@ func (c *Coordinator) HandleGameStart(packet ipc.InPacket, h *Handler) {
 		_ = h.cord.SendPacket(packet.Proxy(ipc.EmptyPacket))
 		return
 	}
-
 	gameMeta := games.GameMetadata{Name: resp.Game.Name, Base: resp.Game.Base, Type: resp.Game.Type, Path: resp.Game.Path}
 	gameRoom := h.startGameHandler(gameMeta, resp.Room.Id, resp.PlayerIndex, session.peerconnection)
 	session.RoomID = gameRoom.ID
@@ -234,7 +232,6 @@ func (c *Coordinator) HandleChangePlayer(packet ipc.InPacket, h *Handler) {
 		c.log.Error().Err(err).Msg("malformed change player request")
 		return
 	}
-
 	session := h.sessions.Get(resp.Stateful.Id)
 	idx, err := strconv.Atoi(resp.Index)
 	rm := h.rooms.Get(resp.Room.Id)
@@ -257,7 +254,6 @@ func (c *Coordinator) HandleToggleMultitap(packet ipc.InPacket, h *Handler) {
 		c.log.Error().Err(err).Msg("malformed toggle multitap request")
 		return
 	}
-
 	rez := ipc.OkPacket
 	if resp.Room.Id != "" {
 		rm := h.rooms.Get(resp.Room.Id)

@@ -19,7 +19,7 @@ func TestEncoders(t *testing.T) {
 		frames int
 	}{
 		{n: 3, w: 1920, h: 1080, codec: encoder.H264, frames: 60 * 2},
-		{n: 3, w: 1920, h: 1080, codec: encoder.VPX, frames: 60 * 2},
+		{n: 3, w: 1920, h: 1080, codec: encoder.VP8, frames: 60 * 2},
 	}
 
 	for _, test := range tests {
@@ -32,7 +32,7 @@ func TestEncoders(t *testing.T) {
 }
 
 func BenchmarkH264(b *testing.B) { run(1920, 1080, encoder.H264, b.N, nil, nil, b) }
-func BenchmarkVP8(b *testing.B)  { run(1920, 1080, encoder.VPX, b.N, nil, nil, b) }
+func BenchmarkVP8(b *testing.B)  { run(1920, 1080, encoder.VP8, b.N, nil, nil, b) }
 
 func run(w, h int, cod encoder.VideoCodec, count int, a *image.RGBA, b *image.RGBA, backend testing.TB) {
 	var enc encoder.Encoder

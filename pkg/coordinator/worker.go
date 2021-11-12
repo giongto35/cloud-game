@@ -31,15 +31,15 @@ func (w *Worker) HandleRequests(rooms *client.NetMap, crowd *client.NetMap) {
 		go func() {
 			switch p.T {
 			case api.RegisterRoom:
-				w.log.Info().Msgf("Received room register call %s", p.Payload)
+				w.log.Debug().Msgf("Received room register call %s", p.Payload)
 				w.HandleRegisterRoom(p.Payload, rooms)
 				w.log.Debug().Msgf("Rooms: %+v", rooms.List())
 			case api.CloseRoom:
-				w.log.Info().Msgf("Received room close call %s", p.Payload)
+				w.log.Debug().Msgf("Received room close call %s", p.Payload)
 				w.HandleCloseRoom(p.Payload, rooms)
 				w.log.Debug().Msgf("Current room list is: %+v", rooms.List())
 			case api.IceCandidate:
-				w.log.Info().Msgf("Relay Ice candidate to useragent")
+				w.log.Debug().Msgf("Pass ICE candidate to a user")
 				w.HandleIceCandidate(p.Payload, crowd)
 			default:
 				w.log.Warn().Msgf("Unknown packet: %+v", p)

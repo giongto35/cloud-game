@@ -198,6 +198,7 @@ emulator:
 
 encoder:
   audio:
+    codec: opus
     channels: 2
     # audio frame duration needed for WebRTC (Opus)
     frame: 20

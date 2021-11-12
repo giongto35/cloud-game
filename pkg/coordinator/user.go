@@ -41,7 +41,7 @@ func (u *User) HandleRequests(launcher launcher.Launcher) {
 		go func() {
 			switch p.T {
 			case api.WebrtcInit:
-				u.log.Info().Msgf("Received init_webrtc request -> relay to worker: %s", u.Worker.Id())
+				u.log.Info().Msgf("Received WebRTC init request -> relay to worker: %s", u.Worker.Id().Short())
 				u.HandleWebrtcInit()
 				u.log.Info().Msg("Received SDP from worker -> sending back to browser")
 			case api.WebrtcAnswer:

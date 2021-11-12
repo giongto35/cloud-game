@@ -2,6 +2,7 @@ package room
 
 import (
 	"fmt"
+	"time"
 
 	conf "github.com/giongto35/cloud-game/v2/pkg/config/encoder"
 	"github.com/giongto35/cloud-game/v2/pkg/encoder"
@@ -19,7 +20,7 @@ func (r *Room) startAudio(sampleRate int, conf conf.Audio) {
 		opus.SampleBuffer(conf.Frame, sampleRate != conf.Frequency),
 		// we use callback on full buffer in order to
 		// send data to all the clients ASAP
-		opus.CallbackOnFullBuffer(r.broadcastAudio),
+		opus.CallbackOnFullBuffer(r.broadcastAudio(conf.Frame)),
 	)
 	if err != nil {
 		r.log.Fatal().Err(err).Msg("couldn't create audio encoder")
@@ -31,11 +32,15 @@ func (r *Room) startAudio(sampleRate int, conf conf.Audio) {
 	r.log.Info().Msg("Audio channel has been closed")
 }
 
-func (r *Room) broadcastAudio(audio []byte) {
-	for _, webRTC := range r.rtcSessions {
-		if webRTC.IsConnected() {
+func (r *Room) broadcastAudio(frameDuration int) func([]byte) {
+	dur := time.Duration(frameDuration) * time.Millisecond
+	return func(audio []byte) {
+		for _, p2p := range r.rtcSessions {
+			if !p2p.IsConnected() {
+				continue
+			}
 			// NOTE: can block here
-			webRTC.AudioChannel <- audio
+			p2p.AudioChannel <- webrtc.AudioFrame{Data: audio, Duration: dur}
 		}
 	}
 }
@@ -90,7 +95,7 @@ func (r *Room) startVideo(width, height int, conf conf.Video) {
 				// encode frame
 				// fanout imageChannel
 				// NOTE: can block here
-				webRTC.ImageChannel <- webrtc.WebFrame{Data: data.Data, Timestamp: data.Timestamp}
+				webRTC.ImageChannel <- webrtc.VideoFrame{Data: data.Data, Timestamp: data.Timestamp}
 			}
 		}
 	}()

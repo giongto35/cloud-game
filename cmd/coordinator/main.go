@@ -3,6 +3,8 @@ package main
 import (
 	"context"
 	goflag "flag"
+	"math/rand"
+	"time"
 
 	config "github.com/giongto35/cloud-game/v2/pkg/config/coordinator"
 	"github.com/giongto35/cloud-game/v2/pkg/coordinator"
@@ -14,6 +16,7 @@ import (
 var Version = "?"
 
 func main() {
+	rand.Seed(time.Now().UTC().UnixNano())
 	conf := config.NewConfig()
 	flag.CommandLine.AddGoFlagSet(goflag.CommandLine)
 	conf.ParseFlags()

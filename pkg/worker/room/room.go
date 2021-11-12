@@ -270,7 +270,7 @@ func (r *Room) startWebRTCSession(peerconnection *webrtc.WebRTC) {
 	// bug: when input channel here = nil, skip and finish
 	for input := range peerconnection.InputChannel {
 		// NOTE: when room is no longer running. InputChannel needs to have extra event to go inside the loop
-		if peerconnection.Done || !peerconnection.IsConnected() || !r.IsRunning {
+		if !peerconnection.IsConnected() || !r.IsRunning {
 			break
 		}
 

@@ -1,7 +1,5 @@
 package webrtc
 
-import "github.com/giongto35/cloud-game/v2/pkg/config/encoder"
-
 type Webrtc struct {
 	DisableDefaultInterceptors bool
 	DtlsRole                   byte
@@ -20,11 +18,6 @@ type IceServer struct {
 	Urls       string `json:"urls,omitempty"`
 	Username   string `json:"username,omitempty"`
 	Credential string `json:"credential,omitempty"`
-}
-
-type Config struct {
-	Encoder encoder.Encoder
-	Webrtc  Webrtc
 }
 
 func (w Webrtc) HasPortRange() bool  { return w.IcePorts.Min > 0 && w.IcePorts.Max > 0 }
