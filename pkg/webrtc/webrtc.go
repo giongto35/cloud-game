@@ -36,6 +36,7 @@ type WebRTC struct {
 	InputChannel              chan []byte
 	RoomID                    string
 	PlayerIndex               int
+	done                      chan struct{}
 	log                       *logger.Logger
 }
 
@@ -47,6 +48,7 @@ func NewWebRTC(conf conf.Webrtc, log *logger.Logger) (*WebRTC, error) {
 		ImageChannel: make(chan VideoFrame, 30),
 		AudioChannel: make(chan AudioFrame, 1),
 		InputChannel: make(chan []byte, 100),
+		done:         make(chan struct{}, 1),
 		conf:         conf,
 		log:          log,
 	}
@@ -94,7 +96,7 @@ func (w *WebRTC) NewCall(vCodec, aCodec string, onICECandidate func(ice interfac
 	}
 	w.log.Debug().Msg("Added input channel ")
 
-	w.connection.OnICEConnectionStateChange(w.handleICEState(func() { w.Stream(video, audio) }))
+	w.connection.OnICEConnectionStateChange(w.handleICEState(func() { go w.Stream(video, audio) }))
 	// Stream provider supposes to send offer
 	offer, err := w.connection.CreateOffer(nil)
 	if err != nil {
@@ -209,48 +211,41 @@ func (w *WebRTC) Disconnect() {
 	w.connection = nil
 	close(w.ImageChannel)
 	close(w.AudioChannel)
+	close(w.done)
 	w.log.Info().Msg("WebRTC stop")
 }
 
 func (w *WebRTC) IsConnected() bool { return w.isConnected }
 
 func (w *WebRTC) Stream(videoTrack, audioTrack *webrtc.TrackLocalStaticSample) {
-	w.log.Info().Msg("Start streaming")
-
-	go func() {
-		defer func() {
-			if err := recover(); err != nil {
-				w.log.Error().Err(fmt.Errorf("%v", err)).Msg("WebRTC stream crashed")
-			}
-		}()
-
-		for data := range w.ImageChannel {
-			atomic.StoreUint32(&w.globalVideoFrameTimestamp, data.Timestamp)
-			if err := videoTrack.WriteSample(media.Sample{Data: data.Data}); err != nil {
-				w.log.Error().Err(err).Msg("Audio sample error")
-				break
-			}
+	defer func() {
+		w.log.Info().Msg("Stop streaming")
+		if err := recover(); err != nil {
+			w.log.Error().Err(fmt.Errorf("%v", err)).Msg("WebRTC stream crashed")
 		}
 	}()
-
-	go func() {
-		defer func() {
-			if err := recover(); err != nil {
-				w.log.Error().Err(fmt.Errorf("%v", err)).Msg("WebRTC audio crashed")
+	w.log.Info().Msg("Start streaming")
+	for {
+		select {
+		case <-w.done:
+			return
+		case image := <-w.ImageChannel:
+			atomic.StoreUint32(&w.globalVideoFrameTimestamp, image.Timestamp)
+			if err := videoTrack.WriteSample(media.Sample{Data: image.Data}); err != nil {
+				w.log.Error().Err(err).Msg("Audio sample error")
+				return
 			}
-		}()
-
-		for frame := range w.AudioChannel {
+		case audio := <-w.AudioChannel:
 			if !w.IsConnected() {
 				return
 			}
-			err := audioTrack.WriteSample(media.Sample{Data: frame.Data, Duration: frame.Duration})
+			err := audioTrack.WriteSample(media.Sample{Data: audio.Data, Duration: audio.Duration})
 			if err != nil {
 				w.log.Error().Err(err).Msg("Opus sample error")
-				break
+				return
 			}
 		}
-	}()
+	}
 }
 
 // addInputChannel creates a new WebRTC data channel for user input.

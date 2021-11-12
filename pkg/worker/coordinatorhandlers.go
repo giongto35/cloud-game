@@ -126,7 +126,7 @@ func (c *Coordinator) HandleGameStart(packet ipc.InPacket, h *Handler) {
 }
 
 // startGameHandler starts a game if roomID is given, if not create new room
-func (h *Handler) startGameHandler(game games.GameMetadata, existedRoomID string, playerIndex int, peerconnection *webrtc.WebRTC) *room.Room {
+func (h *Handler) startGameHandler(game games.GameMetadata, existedRoomID string, playerIndex int, peer *webrtc.WebRTC) *room.Room {
 	h.log.Info().Str("game", game.Name).Msg("Start load game")
 	// If we are connecting to coordinator, request corresponding serverID based on roomID
 	// TODO: check if existedRoomID is in the current server
@@ -136,7 +136,7 @@ func (h *Handler) startGameHandler(game games.GameMetadata, existedRoomID string
 		h.log.Info().Str("room", existedRoomID).Msg("Create room")
 		// Create new room and update player index
 		gameRoom = h.createRoom(existedRoomID, game)
-		gameRoom.UpdatePlayerIndex(peerconnection, playerIndex)
+		gameRoom.UpdatePlayerIndex(peer, playerIndex)
 
 		// Wait for done signal from room
 		go func() {
@@ -149,10 +149,11 @@ func (h *Handler) startGameHandler(game games.GameMetadata, existedRoomID string
 	}
 
 	// Attach peerconnection to room. If PC is already in room, don't detach
-	h.log.Info().Msgf("The peer is in the room: %v", gameRoom.IsPCInRoom(peerconnection))
-	if !gameRoom.IsPCInRoom(peerconnection) {
-		h.detachPeerConn(peerconnection)
-		gameRoom.AddConnectionToRoom(peerconnection)
+	h.log.Info().Msgf("The peer is in the room: %v", gameRoom.IsPCInRoom(peer))
+	if !gameRoom.IsPCInRoom(peer) {
+		h.detachPeerConn(peer)
+		gameRoom.AddConnectionToRoom(peer)
+		go gameRoom.PollUserInput(peer)
 	}
 
 	// Register room to coordinator if we are connecting to coordinator

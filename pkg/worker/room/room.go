@@ -247,10 +247,9 @@ func isGameOnLocal(path string) bool {
 	return !errors.Is(err, os.ErrNotExist)
 }
 
-func (r *Room) AddConnectionToRoom(peerconnection *webrtc.WebRTC) {
-	peerconnection.SetRoom(r.ID)
-	r.rtcSessions = append(r.rtcSessions, peerconnection)
-	go r.startWebRTCSession(peerconnection)
+func (r *Room) AddConnectionToRoom(peer *webrtc.WebRTC) {
+	r.rtcSessions = append(r.rtcSessions, peer)
+	peer.SetRoom(r.ID)
 }
 
 func (r *Room) UpdatePlayerIndex(peerconnection *webrtc.WebRTC, playerIndex int) {
@@ -258,22 +257,14 @@ func (r *Room) UpdatePlayerIndex(peerconnection *webrtc.WebRTC, playerIndex int)
 	peerconnection.PlayerIndex = playerIndex
 }
 
-func (r *Room) startWebRTCSession(peerconnection *webrtc.WebRTC) {
-	defer func() {
-		if err := recover(); err != nil {
-			r.log.Warn().Err(fmt.Errorf("%v", err)).Msg("input channel crashed")
-		}
-	}()
-
-	r.log.Info().Msg("Starting WebRTC session")
-
+func (r *Room) PollUserInput(peerconnection *webrtc.WebRTC) {
+	r.log.Debug().Msg("Start user input poll")
 	// bug: when input channel here = nil, skip and finish
 	for input := range peerconnection.InputChannel {
 		// NOTE: when room is no longer running. InputChannel needs to have extra event to go inside the loop
 		if !peerconnection.IsConnected() || !r.IsRunning {
 			break
 		}
-
 		if peerconnection.IsConnected() {
 			select {
 			case r.inputChannel <- nanoarch.InputEvent{RawState: input, PlayerIdx: peerconnection.PlayerIndex, ConnID: peerconnection.GetId()}:
@@ -281,7 +272,7 @@ func (r *Room) startWebRTCSession(peerconnection *webrtc.WebRTC) {
 			}
 		}
 	}
-	r.log.Info().Msg("WebRTC session has been closed")
+	r.log.Debug().Msg("Stop user input poll")
 }
 
 // RemoveSession removes a peerconnection from room and return true if there is no more room
