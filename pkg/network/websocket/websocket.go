@@ -27,11 +27,10 @@ type WS struct {
 
 	pingPong bool
 
-	shutdown *sync.WaitGroup
-	once     sync.Once
-	Done     chan struct{}
-	closed   bool
-	log      *logger.Logger
+	once   sync.Once
+	Done   chan struct{}
+	closed bool
+	log    *logger.Logger
 }
 
 type WSMessageHandler func(message []byte, err error)
@@ -48,8 +47,7 @@ func (ws *WS) reader() {
 	defer func() {
 		ws.closed = true
 		close(ws.send)
-		ws.shutdown.Done()
-		ws.close()
+		ws.shutdown()
 	}()
 
 	ws.conn.setup(func(conn *websocket.Conn) {
@@ -93,8 +91,7 @@ func (ws *WS) writer() {
 		if ticker != nil {
 			ticker.Stop()
 		}
-		ws.shutdown.Done()
-		ws.close()
+		ws.shutdown()
 	}()
 	if ws.pingPong {
 		for {
@@ -160,7 +157,6 @@ func newSocket(conn *websocket.Conn, pingPong bool, log *logger.Logger) *WS {
 	ws := &WS{
 		conn:      safeConn,
 		send:      make(chan []byte),
-		shutdown:  &shut,
 		once:      sync.Once{},
 		Done:      make(chan struct{}, 1),
 		pingPong:  pingPong,
@@ -168,10 +164,12 @@ func newSocket(conn *websocket.Conn, pingPong bool, log *logger.Logger) *WS {
 		log:       log,
 	}
 
+	return ws
+}
+
+func (ws *WS) Listen() {
 	go ws.writer()
 	go ws.reader()
-
-	return ws
 }
 
 func (ws *WS) Write(data []byte) {
@@ -182,8 +180,7 @@ func (ws *WS) Write(data []byte) {
 
 func (ws *WS) Close() { _ = ws.conn.write(websocket.CloseMessage, []byte{}) }
 
-func (ws *WS) close() {
-	ws.shutdown.Wait()
+func (ws *WS) shutdown() {
 	ws.once.Do(func() {
 		_ = ws.conn.close()
 		close(ws.Done)

@@ -194,8 +194,28 @@ func NewRoom(id string, game games.GameMetadata, storage storage.CloudStorage, c
 
 		room.director.SetViewport(encoderW, encoderH)
 
-		go room.startVideo(encoderW, encoderH, cfg.Encoder.Video)
-		go room.startAudio(gameMeta.AudioSampleRate, cfg.Encoder.Audio)
+		go room.startVideo(encoderW, encoderH, func(frame encoder.OutFrame) {
+			// TODO: r.rtcSessions is rarely updated. Lock will hold down perf
+			// todo fix these races ffs rwmutex
+			for _, webRTC := range room.rtcSessions {
+				if !webRTC.IsConnected() {
+					break
+				}
+				// NOTE: can block here
+				webRTC.ImageChannel <- webrtc.VideoFrame{Data: frame.Data, Timestamp: frame.Timestamp}
+			}
+		}, cfg.Encoder.Video)
+
+		dur := time.Duration(cfg.Encoder.Audio.Frame) * time.Millisecond
+		go room.startAudio(gameMeta.AudioSampleRate, func(audio []byte) {
+			for _, p2p := range room.rtcSessions {
+				if !p2p.IsConnected() {
+					continue
+				}
+				// NOTE: can block here
+				p2p.AudioChannel <- webrtc.AudioFrame{Data: audio, Duration: dur}
+			}
+		}, cfg.Encoder.Audio)
 
 		if cfg.Emulator.AutosaveSec > 0 {
 			go room.enableAutosave(cfg.Emulator.AutosaveSec)
@@ -260,19 +280,21 @@ func (r *Room) UpdatePlayerIndex(peerconnection *webrtc.WebRTC, playerIndex int)
 func (r *Room) PollUserInput(peerconnection *webrtc.WebRTC) {
 	r.log.Debug().Msg("Start user input poll")
 	// bug: when input channel here = nil, skip and finish
-	for input := range peerconnection.InputChannel {
-		// NOTE: when room is no longer running. InputChannel needs to have extra event to go inside the loop
-		if !peerconnection.IsConnected() || !r.IsRunning {
-			break
-		}
-		if peerconnection.IsConnected() {
+	for {
+		select {
+		case <-r.Done:
+			r.log.Debug().Msg("Stop user input poll")
+			return
+		case input := <-peerconnection.InputChannel:
+			if !peerconnection.IsConnected() {
+				break
+			}
 			select {
 			case r.inputChannel <- nanoarch.InputEvent{RawState: input, PlayerIdx: peerconnection.PlayerIndex, ConnID: peerconnection.GetId()}:
 			default:
 			}
 		}
 	}
-	r.log.Debug().Msg("Stop user input poll")
 }
 
 // RemoveSession removes a peerconnection from room and return true if there is no more room

@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/rs/zerolog"
+	"github.com/rs/zerolog/log"
 )
 
 // Level defines log levels.
@@ -99,7 +100,7 @@ func NewConsole(isDebug bool, tag string, noColor bool) *Logger {
 	return &Logger{&logger}
 }
 
-func Default() *Logger { return &Logger{zerolog.DefaultContextLogger} }
+func Default() *Logger { return &Logger{&log.Logger} }
 
 // GetLevel returns the current Level of l.
 func (l *Logger) GetLevel() Level { return Level(l.logger.GetLevel()) }

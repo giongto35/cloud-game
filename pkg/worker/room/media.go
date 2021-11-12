@@ -1,18 +1,14 @@
 package room
 
 import (
-	"fmt"
-	"time"
-
 	conf "github.com/giongto35/cloud-game/v2/pkg/config/encoder"
 	"github.com/giongto35/cloud-game/v2/pkg/encoder"
 	"github.com/giongto35/cloud-game/v2/pkg/encoder/h264"
 	"github.com/giongto35/cloud-game/v2/pkg/encoder/opus"
 	"github.com/giongto35/cloud-game/v2/pkg/encoder/vpx"
-	"github.com/giongto35/cloud-game/v2/pkg/webrtc"
 )
 
-func (r *Room) startAudio(sampleRate int, conf conf.Audio) {
+func (r *Room) startAudio(sampleRate int, onAudio func([]byte), conf conf.Audio) {
 	sound, err := opus.NewEncoder(
 		sampleRate,
 		conf.Frequency,
@@ -20,33 +16,26 @@ func (r *Room) startAudio(sampleRate int, conf conf.Audio) {
 		opus.SampleBuffer(conf.Frame, sampleRate != conf.Frequency),
 		// we use callback on full buffer in order to
 		// send data to all the clients ASAP
-		opus.CallbackOnFullBuffer(r.broadcastAudio(conf.Frame)),
+		opus.CallbackOnFullBuffer(onAudio),
 	)
 	if err != nil {
 		r.log.Fatal().Err(err).Msg("couldn't create audio encoder")
 	}
 	r.log.Debug().Msgf("OPUS: %v", sound.GetInfo())
-	for samples := range r.audioChannel {
-		sound.BufferWrite(samples)
-	}
-	r.log.Info().Msg("Audio channel has been closed")
-}
 
-func (r *Room) broadcastAudio(frameDuration int) func([]byte) {
-	dur := time.Duration(frameDuration) * time.Millisecond
-	return func(audio []byte) {
-		for _, p2p := range r.rtcSessions {
-			if !p2p.IsConnected() {
-				continue
-			}
-			// NOTE: can block here
-			p2p.AudioChannel <- webrtc.AudioFrame{Data: audio, Duration: dur}
+	for {
+		select {
+		case <-r.Done:
+			r.log.Info().Msg("Audio channel has been closed")
+			return
+		case samples := <-r.audioChannel:
+			sound.BufferWrite(samples)
 		}
 	}
 }
 
 // startVideo processes imageChannel images with an encoder (codec) then pushes the result to WebRTC.
-func (r *Room) startVideo(width, height int, conf conf.Video) {
+func (r *Room) startVideo(width, height int, onFrame func(encoder.OutFrame), conf conf.Video) {
 	var enc encoder.Encoder
 	var err error
 
@@ -78,32 +67,17 @@ func (r *Room) startVideo(width, height int, conf conf.Video) {
 	go r.vPipe.Start()
 	defer r.vPipe.Stop()
 
-	go func() {
-		defer func() {
-			if err := recover(); err != nil {
-				r.log.Error().Err(fmt.Errorf("%v", err)).Msg("video pipe crashed")
+	for {
+		select {
+		case <-r.Done:
+			r.log.Info().Msg("Video channel has been closed")
+			return
+		case image := <-r.imageChannel:
+			if len(einput) < cap(einput) {
+				einput <- encoder.InFrame{Image: image.Image, Timestamp: image.Timestamp}
 			}
-		}()
-
-		// fanout Screen
-		for data := range eoutput {
-			// TODO: r.rtcSessions is rarely updated. Lock will hold down perf
-			for _, webRTC := range r.rtcSessions {
-				if !webRTC.IsConnected() {
-					continue
-				}
-				// encode frame
-				// fanout imageChannel
-				// NOTE: can block here
-				webRTC.ImageChannel <- webrtc.VideoFrame{Data: data.Data, Timestamp: data.Timestamp}
-			}
-		}
-	}()
-
-	for image := range r.imageChannel {
-		if len(einput) < cap(einput) {
-			einput <- encoder.InFrame{Image: image.Image, Timestamp: image.Timestamp}
+		case frame := <-eoutput:
+			onFrame(frame)
 		}
 	}
-	r.log.Info().Msg("Video channel has been closed")
 }

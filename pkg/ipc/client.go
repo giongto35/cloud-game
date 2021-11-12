@@ -14,7 +14,6 @@ import (
 	"github.com/giongto35/cloud-game/v2/pkg/network/websocket"
 )
 
-// !todo revamp termination hold
 const callTimeout = 5 * time.Second
 
 type call struct {
@@ -29,7 +28,7 @@ type Client struct {
 	// !to check leaks
 	queue    map[network.Uid]*call
 	mu       sync.Mutex
-	OnPacket func(packet InPacket)
+	onPacket func(packet InPacket)
 }
 
 func NewClient(address url.URL, log *logger.Logger) (*Client, error) {
@@ -44,10 +43,14 @@ func connect(conn *websocket.WS, err error) (*Client, error) {
 	if err != nil {
 		return nil, err
 	}
-	client := &Client{Conn: conn, queue: make(map[network.Uid]*call, 1), OnPacket: func(packet InPacket) {}}
+	client := &Client{Conn: conn, queue: make(map[network.Uid]*call, 1)}
 	client.Conn.OnMessage = client.handleMessage
 	return client, nil
 }
+
+func (c *Client) OnPacket(fn func(packet InPacket)) { c.mu.Lock(); c.onPacket = fn; c.mu.Unlock() }
+
+func (c *Client) Listen() { c.mu.Lock(); c.Conn.Listen(); c.mu.Unlock() }
 
 // !to handle error
 func (c *Client) Close() {
@@ -111,7 +114,7 @@ func (c *Client) handleMessage(message []byte, err error) {
 			return
 		}
 	}
-	c.OnPacket(res)
+	c.onPacket(res)
 }
 
 func (c *Client) pop(id network.Uid) *call {

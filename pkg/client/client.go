@@ -39,11 +39,15 @@ func (c SocketClient) SendPacket(packet ipc.OutPacket) error { return c.wire.Sen
 
 func (c SocketClient) SendAndForget(t uint8, data interface{}) error { return c.wire.Send(t, data) }
 
-func (c SocketClient) OnPacket(fn func(p ipc.InPacket)) { c.wire.OnPacket = fn }
+func (c SocketClient) OnPacket(fn func(ipc.InPacket)) { c.wire.OnPacket(fn) }
 
 func (c SocketClient) GetLogger() *logger.Logger { return c.log }
 
-func (c SocketClient) Listen() { <-c.wire.Conn.Done }
+func (c SocketClient) ProcessMessages() { c.wire.Listen() }
+
+func (c SocketClient) Wait() { <-c.wire.Conn.Done }
+
+func (c SocketClient) Listen() { c.ProcessMessages(); c.Wait() }
 
 func (c SocketClient) Close() { c.wire.Close() }
 

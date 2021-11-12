@@ -50,6 +50,7 @@ func testWebsocket(t *testing.T) {
 			// echo response
 			socket.Write(message)
 		}
+		socket.Listen()
 	})
 	// http handler
 	var wg sync.WaitGroup
@@ -64,6 +65,7 @@ func testWebsocket(t *testing.T) {
 	wg.Wait()
 
 	client := newClient(t, url.URL{Scheme: "ws", Host: "localhost:8080", Path: "/ws"})
+	client.Listen()
 
 	calls := []struct {
 		typ        uint8

@@ -53,7 +53,9 @@ func (h *Hub) handleWebsocketUserConnection(w http.ResponseWriter, r *http.Reque
 		h.log.Error().Err(err).Msg("couldn't init user connection")
 	}
 	usr := NewUserClient(conn, h.log)
+	usr.HandleRequests(h.launcher)
 	defer usr.Close()
+	usr.ProcessMessages()
 
 	q := r.URL.Query()
 	roomId := q.Get("room_id")
@@ -81,9 +83,8 @@ func (h *Hub) handleWebsocketUserConnection(w http.ResponseWriter, r *http.Reque
 	defer usr.FreeWorker()
 	h.crowd.Add(&usr)
 	defer h.crowd.Remove(&usr)
-	usr.HandleRequests(h.launcher)
 	usr.InitSession(h.conf.Webrtc.IceServers, h.launcher.GetAppNames())
-	usr.Listen()
+	usr.Wait()
 }
 
 // handleWebsocketWorkerConnection handles all connections from a new worker to coordinator.
