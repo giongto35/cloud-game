@@ -186,7 +186,7 @@ func (ws *WS) close() {
 	ws.shutdown.Wait()
 	ws.once.Do(func() {
 		_ = ws.conn.close()
-		ws.Done <- struct{}{}
+		close(ws.Done)
 		ws.log.Debug().Msg("WebSocket should be closed now")
 	})
 }
