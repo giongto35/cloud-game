@@ -52,7 +52,7 @@ const (
 func NewYuvImgProcessor(w, h int, options ...Option) ImgProcessor {
 	opts := &Options{
 		ChromaP:  BetweenFour,
-		Threaded: true,
+		Threaded: false,
 		Threads:  runtime.NumCPU(),
 	}
 	opts.override(options...)
