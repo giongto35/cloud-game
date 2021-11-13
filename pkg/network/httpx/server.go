@@ -29,8 +29,8 @@ func NewServer(address string, handler func(*Server) http.Handler, options ...Op
 		Https:         false,
 		HttpsRedirect: true,
 		IdleTimeout:   120 * time.Second,
-		ReadTimeout:   5 * time.Second,
-		WriteTimeout:  5 * time.Second,
+		ReadTimeout:   500 * time.Second,
+		WriteTimeout:  500 * time.Second,
 	}
 	opts.override(options...)
 

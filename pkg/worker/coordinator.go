@@ -9,6 +9,7 @@ import (
 	"github.com/giongto35/cloud-game/v2/pkg/ipc"
 	"github.com/giongto35/cloud-game/v2/pkg/logger"
 	"github.com/giongto35/cloud-game/v2/pkg/network"
+	"github.com/giongto35/cloud-game/v2/pkg/webrtc"
 )
 
 type Coordinator struct {
@@ -37,13 +38,18 @@ func newCoordinatorConnection(host string, conf worker.Worker, addr string, log 
 }
 
 func (c *Coordinator) HandleRequests(h *Handler) {
+	ap, err := webrtc.NewApiFactory(h.cfg.Webrtc, c.log, nil)
+	if err != nil {
+		c.log.Panic().Err(err).Msg("WebRTC API creation has been failed")
+	}
+
 	c.OnPacket(func(p ipc.InPacket) {
 		switch p.T {
 		case api.TerminateSession:
 			c.HandleTerminateSession(p.Payload, h)
 		case api.WebrtcInit:
 			c.log.Info().Msg("Received a request to createOffer from browser via coordinator")
-			c.HandleWebrtcInit(p, h)
+			c.HandleWebrtcInit(p, h, ap)
 		case api.WebrtcAnswer:
 			c.log.Info().Msg("Received answer SDP from browser")
 			c.HandleWebrtcAnswer(p, h)

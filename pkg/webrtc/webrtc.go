@@ -3,8 +3,6 @@ package webrtc
 import (
 	"fmt"
 	"strings"
-	"sync/atomic"
-	"time"
 
 	conf "github.com/giongto35/cloud-game/v2/pkg/config/webrtc"
 	"github.com/giongto35/cloud-game/v2/pkg/logger"
@@ -13,51 +11,30 @@ import (
 	"github.com/pion/webrtc/v3/pkg/media"
 )
 
-type (
-	AudioFrame struct {
-		Data     []byte
-		Duration time.Duration
-	}
-	VideoFrame struct {
-		Data      []byte
-		Timestamp uint32
-	}
-)
-
 type WebRTC struct {
-	id                        network.Uid
-	conf                      conf.Webrtc
-	connection                *webrtc.PeerConnection
-	connectionBase            *Peer
-	globalVideoFrameTimestamp uint32
-	isConnected               bool
-	ImageChannel              chan VideoFrame
-	AudioChannel              chan AudioFrame
-	InputChannel              chan []byte
-	RoomID                    string
-	PlayerIndex               int
-	done                      chan struct{}
-	log                       *logger.Logger
+	id          network.Uid
+	api         *ApiFactory
+	conf        conf.Webrtc
+	connection  *webrtc.PeerConnection
+	isConnected bool
+	RoomID      string
+	PlayerIndex int
+	log         *logger.Logger
+	vTrack      *webrtc.TrackLocalStaticSample
+	aTrack      *webrtc.TrackLocalStaticSample
+	dTrack      *webrtc.DataChannel
+	OnMessage   func(data []byte)
 }
 
 type Decoder func(data string, obj interface{}) error
 
-func NewWebRTC(conf conf.Webrtc, log *logger.Logger) (*WebRTC, error) {
-	w := &WebRTC{
-		id:           network.NewUid(),
-		ImageChannel: make(chan VideoFrame, 30),
-		AudioChannel: make(chan AudioFrame, 1),
-		InputChannel: make(chan []byte, 100),
-		done:         make(chan struct{}, 1),
-		conf:         conf,
-		log:          log,
+func NewWebRTC(conf conf.Webrtc, log *logger.Logger, api *ApiFactory) *WebRTC {
+	return &WebRTC{
+		id:   network.NewUid(),
+		api:  api,
+		conf: conf,
+		log:  log,
 	}
-	conn, err := DefaultPeerConnection(conf, &w.globalVideoFrameTimestamp, log)
-	if err != nil {
-		return nil, err
-	}
-	w.connectionBase = conn
-	return w, nil
 }
 
 func (w *WebRTC) NewCall(vCodec, aCodec string, onICECandidate func(ice interface{})) (sdp interface{}, err error) {
@@ -66,7 +43,7 @@ func (w *WebRTC) NewCall(vCodec, aCodec string, onICECandidate func(ice interfac
 		return
 	}
 	w.log.Info().Str("id", w.id.Short()).Msgf("WebRTC start (uid:%s)", w.id)
-	if w.connection, err = w.connectionBase.NewPeer(); err != nil {
+	if w.connection, err = w.api.NewPeer(); err != nil {
 		return "", err
 	}
 	w.connection.OnICECandidate(w.handleICECandidate(onICECandidate))
@@ -78,6 +55,7 @@ func (w *WebRTC) NewCall(vCodec, aCodec string, onICECandidate func(ice interfac
 	if _, err = w.connection.AddTrack(video); err != nil {
 		return "", err
 	}
+	w.vTrack = video
 	w.log.Debug().Msgf("Added [%s] track", video.Codec().MimeType)
 
 	// plug in the [audio] track (out)
@@ -89,6 +67,7 @@ func (w *WebRTC) NewCall(vCodec, aCodec string, onICECandidate func(ice interfac
 		return "", err
 	}
 	w.log.Debug().Msgf("Added [%s] track", audio.Codec().MimeType)
+	w.aTrack = audio
 
 	// plug in the [input] data channel (in)
 	if err = w.addInputChannel("game-input"); err != nil {
@@ -96,7 +75,9 @@ func (w *WebRTC) NewCall(vCodec, aCodec string, onICECandidate func(ice interfac
 	}
 	w.log.Debug().Msg("Added input channel ")
 
-	w.connection.OnICEConnectionStateChange(w.handleICEState(func() { go w.Stream(video, audio) }))
+	w.connection.OnICEConnectionStateChange(w.handleICEState(func() {
+		w.log.Info().Msg("Start streaming")
+	}))
 	// Stream provider supposes to send offer
 	offer, err := w.connection.CreateOffer(nil)
 	if err != nil {
@@ -126,6 +107,16 @@ func (w *WebRTC) SetRemoteSDP(sdp string, decoder Decoder) error {
 	}
 	w.log.Debug().Msg("Set Remote Description")
 	return nil
+}
+
+func (w *WebRTC) WriteVideoFrame(sample media.Sample) error { return w.vTrack.WriteSample(sample) }
+
+func (w *WebRTC) WriteAudio(sample media.Sample) {
+	if !w.IsConnected() {
+		return
+	}
+	w.logx(w.aTrack.WriteSample(sample))
+	return
 }
 
 func newTrack(id string, label string, codec string) (*webrtc.TrackLocalStaticSample, error) {
@@ -209,44 +200,12 @@ func (w *WebRTC) Disconnect() {
 		}
 	}
 	w.connection = nil
-	close(w.ImageChannel)
-	close(w.AudioChannel)
-	close(w.done)
 	w.log.Info().Msg("WebRTC stop")
 }
 
 func (w *WebRTC) IsConnected() bool { return w.isConnected }
 
-func (w *WebRTC) Stream(videoTrack, audioTrack *webrtc.TrackLocalStaticSample) {
-	defer func() {
-		w.log.Info().Msg("Stop streaming")
-		if err := recover(); err != nil {
-			w.log.Error().Err(fmt.Errorf("%v", err)).Msg("WebRTC stream crashed")
-		}
-	}()
-	w.log.Info().Msg("Start streaming")
-	for {
-		select {
-		case <-w.done:
-			return
-		case image := <-w.ImageChannel:
-			atomic.StoreUint32(&w.globalVideoFrameTimestamp, image.Timestamp)
-			if err := videoTrack.WriteSample(media.Sample{Data: image.Data}); err != nil {
-				w.log.Error().Err(err).Msg("Audio sample error")
-				return
-			}
-		case audio := <-w.AudioChannel:
-			if !w.IsConnected() {
-				return
-			}
-			err := audioTrack.WriteSample(media.Sample{Data: audio.Data, Duration: audio.Duration})
-			if err != nil {
-				w.log.Error().Err(err).Msg("Opus sample error")
-				return
-			}
-		}
-	}
-}
+func (w *WebRTC) SendMessage(data []byte) { _ = w.dTrack.Send(data) }
 
 // addInputChannel creates a new WebRTC data channel for user input.
 // Default params -- ordered: true, negotiated: false.
@@ -258,16 +217,18 @@ func (w *WebRTC) addInputChannel(label string) error {
 	ch.OnOpen(func() {
 		w.log.Debug().Str("label", ch.Label()).Uint16("id", *ch.ID()).Msg("Data channel [input] opened")
 	})
-	ch.OnError(func(err error) { w.log.Error().Err(err).Msg("Data channel [input]") })
-	ch.OnMessage(func(message webrtc.DataChannelMessage) {
-		if message.IsString {
-			// todo wtf is this magic byte
-			_ = ch.Send([]byte{0x42})
+	ch.OnError(w.logx)
+	ch.OnMessage(func(mess webrtc.DataChannelMessage) {
+		// echo string messages (e.g. ping/pong)
+		if mess.IsString {
+			w.logx(ch.Send(mess.Data))
 			return
 		}
-		// TODO: Can add recover here
-		w.InputChannel <- message.Data
+		w.OnMessage(mess.Data)
 	})
+	w.dTrack = ch
 	ch.OnClose(func() { w.log.Debug().Msg("Data channel [input] has been closed") })
 	return nil
 }
+
+func (w *WebRTC) logx(err error) { w.log.Error().Err(err) }

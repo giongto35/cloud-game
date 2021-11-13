@@ -79,8 +79,8 @@ type VideoExporter struct {
 
 // GameFrame contains image and timeframe
 type GameFrame struct {
-	Image     *image.RGBA
-	Timestamp uint32
+	Data     *image.RGBA
+	Duration time.Duration
 }
 
 var NAEmulator *naEmulator
@@ -184,6 +184,8 @@ func (na *naEmulator) Start() {
 	}
 
 	ticker := time.NewTicker(time.Second / time.Duration(na.meta.Fps))
+
+	frameTime = time.Now().UnixNano()
 
 	for range ticker.C {
 		select {

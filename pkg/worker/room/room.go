@@ -23,6 +23,7 @@ import (
 	"github.com/giongto35/cloud-game/v2/pkg/session"
 	"github.com/giongto35/cloud-game/v2/pkg/storage"
 	"github.com/giongto35/cloud-game/v2/pkg/webrtc"
+	"github.com/pion/webrtc/v3/pkg/media"
 )
 
 // Room is a game session. multi webRTC sessions can connect to a same game.
@@ -197,23 +198,22 @@ func NewRoom(id string, game games.GameMetadata, storage storage.CloudStorage, c
 		go room.startVideo(encoderW, encoderH, func(frame encoder.OutFrame) {
 			// TODO: r.rtcSessions is rarely updated. Lock will hold down perf
 			// todo fix these races ffs rwmutex
-			for _, webRTC := range room.rtcSessions {
-				if !webRTC.IsConnected() {
+			for _, peer := range room.rtcSessions {
+				if !peer.IsConnected() {
 					break
 				}
-				// NOTE: can block here
-				webRTC.ImageChannel <- webrtc.VideoFrame{Data: frame.Data, Timestamp: frame.Timestamp}
+				log.Warn().Msgf("time: %v", frame.Duration)
+				_ = peer.WriteVideoFrame(media.Sample{Data: frame.Data, Duration: frame.Duration})
 			}
 		}, cfg.Encoder.Video)
 
 		dur := time.Duration(cfg.Encoder.Audio.Frame) * time.Millisecond
 		go room.startAudio(gameMeta.AudioSampleRate, func(audio []byte) {
-			for _, p2p := range room.rtcSessions {
-				if !p2p.IsConnected() {
+			for _, peer := range room.rtcSessions {
+				if !peer.IsConnected() {
 					continue
 				}
-				// NOTE: can block here
-				p2p.AudioChannel <- webrtc.AudioFrame{Data: audio, Duration: dur}
+				peer.WriteAudio(media.Sample{Data: audio, Duration: dur})
 			}
 		}, cfg.Encoder.Audio)
 
@@ -280,19 +280,10 @@ func (r *Room) UpdatePlayerIndex(peerconnection *webrtc.WebRTC, playerIndex int)
 func (r *Room) PollUserInput(peerconnection *webrtc.WebRTC) {
 	r.log.Debug().Msg("Start user input poll")
 	// bug: when input channel here = nil, skip and finish
-	for {
+	peerconnection.OnMessage = func(data []byte) {
 		select {
-		case <-r.Done:
-			r.log.Debug().Msg("Stop user input poll")
-			return
-		case input := <-peerconnection.InputChannel:
-			if !peerconnection.IsConnected() {
-				break
-			}
-			select {
-			case r.inputChannel <- nanoarch.InputEvent{RawState: input, PlayerIdx: peerconnection.PlayerIndex, ConnID: peerconnection.GetId()}:
-			default:
-			}
+		case r.inputChannel <- nanoarch.InputEvent{RawState: data, PlayerIdx: peerconnection.PlayerIndex, ConnID: peerconnection.GetId()}:
+		default:
 		}
 	}
 }

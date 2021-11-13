@@ -106,8 +106,7 @@ func (h *Handler) detachPeerConn(pc *webrtc.WebRTC) {
 	if rm.IsEmpty() {
 		h.log.Info().Msg("Closing an empty room")
 		rm.Close()
-		pc.InputChannel <- []byte{0xFF, 0xFF}
-		close(pc.InputChannel)
+		pc.SendMessage([]byte{0xFF, 0xFF})
 	}
 }
 

@@ -72,9 +72,9 @@ func (r *Room) startVideo(width, height int, onFrame func(encoder.OutFrame), con
 		case <-r.Done:
 			r.log.Info().Msg("Video channel has been closed")
 			return
-		case image := <-r.imageChannel:
+		case frame := <-r.imageChannel:
 			if len(einput) < cap(einput) {
-				einput <- encoder.InFrame{Image: image.Image, Timestamp: image.Timestamp}
+				einput <- encoder.InFrame{Image: frame.Data, Duration: frame.Duration}
 			}
 		case frame := <-eoutput:
 			onFrame(frame)

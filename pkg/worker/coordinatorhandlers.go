@@ -37,17 +37,14 @@ func (c *Coordinator) HandleTerminateSession(data json.RawMessage, h *Handler) {
 	}
 }
 
-func (c *Coordinator) HandleWebrtcInit(packet ipc.InPacket, h *Handler) {
+func (c *Coordinator) HandleWebrtcInit(packet ipc.InPacket, h *Handler, connApi *webrtc.ApiFactory) {
 	resp, err := c.webrtcInit(packet.Payload)
 	if err != nil {
 		c.log.Error().Err(err).Msg("malformed WebRTC init request")
 		return
 	}
 	enc := h.cfg.Encoder
-	peer, err := webrtc.NewWebRTC(h.cfg.Webrtc, c.log)
-	if err != nil {
-		c.log.Error().Err(err).Msg("WebRTC connection init fail")
-	}
+	peer := webrtc.NewWebRTC(h.cfg.Webrtc, c.log, connApi)
 	localSDP, err := peer.NewCall(enc.Video.Codec, enc.Audio.Codec, func(data interface{}) {
 		candidate, err := toBase64Json(data)
 		if err != nil {
@@ -153,7 +150,7 @@ func (h *Handler) startGameHandler(game games.GameMetadata, existedRoomID string
 	if !gameRoom.IsPCInRoom(peer) {
 		h.detachPeerConn(peer)
 		gameRoom.AddConnectionToRoom(peer)
-		go gameRoom.PollUserInput(peer)
+		gameRoom.PollUserInput(peer)
 	}
 
 	// Register room to coordinator if we are connecting to coordinator

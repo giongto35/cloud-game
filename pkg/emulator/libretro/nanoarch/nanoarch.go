@@ -3,7 +3,6 @@ package nanoarch
 import (
 	"bufio"
 	"fmt"
-	"math/rand"
 	"os"
 	"os/user"
 	"runtime"
@@ -62,13 +61,9 @@ import "C"
 
 var mu sync.Mutex
 
-// Libretro is a custom Libretro frontend struct.
-type Libretro struct {
-	log *logger.Logger
-}
-
 var libretroLogger = logger.Default()
 var sdlCtx *graphics.SDL
+var frameTime int64
 
 var video struct {
 	pitch    uint32
@@ -107,7 +102,7 @@ var systemDirectory = C.CString("./pkg/emulator/libretro/system")
 var saveDirectory = C.CString(".")
 var currentUser *C.char
 
-var seed = rand.New(rand.NewSource(time.Now().UnixNano())).Uint32()
+//var seed = rand.New(rand.NewSource(time.Now().UnixNano())).Uint32()
 
 var bindKeysMap = map[int]int{
 	C.RETRO_DEVICE_ID_JOYPAD_A:      0,
@@ -128,15 +123,6 @@ var bindKeysMap = map[int]int{
 	C.RETRO_DEVICE_ID_JOYPAD_L3:     15,
 }
 
-type CloudEmulator interface {
-	Start(path string)
-	SaveGame(saveExtraFunc func() error) error
-	LoadGame() error
-	GetHashPath() string
-	Close()
-	ToggleMultitap() error
-}
-
 //export coreVideoRefresh
 func coreVideoRefresh(data unsafe.Pointer, width C.unsigned, height C.unsigned, pitch C.size_t) {
 	// some cores can return nothing
@@ -145,8 +131,8 @@ func coreVideoRefresh(data unsafe.Pointer, width C.unsigned, height C.unsigned, 
 		return
 	}
 
-	// divide by 8333 to give us the equivalent of a 120fps resolution
-	timestamp := uint32(time.Now().UnixNano()/8333) + seed
+	t := time.Now().UnixNano()
+
 	// if Libretro renders frame with OpenGL context
 	isOpenGLRender := data == C.RETRO_HW_FRAME_BUFFER_VALID
 
@@ -176,9 +162,15 @@ func coreVideoRefresh(data unsafe.Pointer, width C.unsigned, height C.unsigned, 
 		outputImg,
 	)
 
+	delta := t - frameTime
+	frameTime = t
+
 	// the image is pushed into a channel
 	// where it will be distributed with fan-out
-	NAEmulator.imageChannel <- GameFrame{Image: outputImg, Timestamp: timestamp}
+	select {
+	case NAEmulator.imageChannel <- GameFrame{Data: outputImg, Duration: time.Duration(delta)}:
+	default:
+	}
 }
 
 //export coreInputPoll
