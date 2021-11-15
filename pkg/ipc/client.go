@@ -16,6 +16,11 @@ import (
 
 const callTimeout = 5 * time.Second
 
+var (
+	errConnClosed = errors.New("connection closed")
+	errTimeout    = errors.New("timeout")
+)
+
 type call struct {
 	done     chan struct{}
 	err      error
@@ -55,7 +60,7 @@ func (c *Client) Listen() { c.mu.Lock(); c.Conn.Listen(); c.mu.Unlock() }
 // !to handle error
 func (c *Client) Close() {
 	c.Conn.Close()
-	c.releaseQueue(errors.New("connection closed"))
+	c.releaseQueue(errConnClosed)
 }
 
 // !to expose channel instead of results
@@ -76,7 +81,7 @@ func (c *Client) Call(type_ uint8, payload interface{}) ([]byte, error) {
 	select {
 	case <-call.done:
 	case <-time.After(callTimeout):
-		call.err = errors.New("timeout")
+		call.err = errTimeout
 	}
 	return call.Response.Payload, call.err
 }
@@ -134,6 +139,4 @@ func (c *Client) releaseQueue(err error) {
 	}
 }
 
-func (c *Client) GetRemoteAddr() net.Addr {
-	return c.Conn.GetRemoteAddr()
-}
+func (c *Client) GetRemoteAddr() net.Addr { return c.Conn.GetRemoteAddr() }
