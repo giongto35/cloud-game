@@ -65,7 +65,7 @@ build:
 	go build -buildmode=exe -tags static -ldflags "-w -s -X 'main.Version=$(GIT_VERSION)'" $(EXT_WFLAGS) -o bin/ ./cmd/worker
 
 verify-cores:
-	go test -run TestAllEmulatorRooms ./pkg/worker/room -v -renderFrames $(GL_CTX) -outputPath "../../../_rendered"
+	go test -run TestAllEmulatorRooms ./pkg/worker -v -renderFrames $(GL_CTX) -outputPath "../../_rendered"
 
 dev.build: compile build
 
