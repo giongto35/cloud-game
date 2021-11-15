@@ -11,7 +11,6 @@ import (
 	"net"
 	"os"
 	"path/filepath"
-	"sync"
 	"time"
 
 	"github.com/giongto35/cloud-game/v2/pkg/config/worker"
@@ -44,8 +43,6 @@ type Room struct {
 	Done chan struct{}
 	// List of peer connections in the room
 	rtcSessions []*webrtc.WebRTC
-	// NOTE: Not in use, lock rtcSessions
-	sessionsLock *sync.Mutex
 	// Director is emulator
 	director emulator.CloudEmulator
 	// Cloud storage to store room state online
@@ -115,7 +112,7 @@ func NewVideoImporter(id string, log *logger.Logger) chan nanoarch.GameFrame {
 }
 
 // NewRoom creates a new room
-func NewRoom(id string, game games.GameMetadata, storage storage.CloudStorage, cfg worker.Config, log *logger.Logger) *Room {
+func NewRoom(id string, game games.GameMetadata, storage storage.CloudStorage, conf worker.Config, log *logger.Logger) *Room {
 	if id == "" {
 		id = session.GenerateRoomID(game.Name)
 	}
@@ -128,7 +125,6 @@ func NewRoom(id string, game games.GameMetadata, storage storage.CloudStorage, c
 		inputChannel:  inputChannel,
 		imageChannel:  nil,
 		rtcSessions:   []*webrtc.WebRTC{},
-		sessionsLock:  &sync.Mutex{},
 		IsRunning:     true,
 		onlineStorage: storage,
 		Done:          make(chan struct{}, 1),
@@ -138,7 +134,7 @@ func NewRoom(id string, game games.GameMetadata, storage storage.CloudStorage, c
 	// Check if room is on local storage, if not, pull from GCS to local storage
 	go func(game games.GameMetadata, roomID string) {
 		var store nanoarch.Storage = &nanoarch.StateStorage{
-			Path:     cfg.Emulator.Storage,
+			Path:     conf.Emulator.Storage,
 			MainSave: roomID,
 		}
 		if cfg.Emulator.Libretro.SaveCompression {
@@ -155,11 +151,11 @@ func NewRoom(id string, game games.GameMetadata, storage storage.CloudStorage, c
 		log.Info().Str("game", game.Name).Msg("The room is opened")
 
 		// Spawn new emulator and plug-in all channels
-		emuName := cfg.Emulator.GetEmulator(game.Type, game.Path)
-		libretroConfig := cfg.Emulator.GetLibretroCoreConfig(emuName)
+		emuName := conf.Emulator.GetEmulator(game.Type, game.Path)
+		libretroConfig := conf.Emulator.GetLibretroCoreConfig(emuName)
 
 		// Run without game, image stream is communicated over a unix socket
-		if cfg.Encoder.WithoutGame {
+		if conf.Encoder.WithoutGame {
 			room.imageChannel = NewVideoImporter(roomID, log)
 			room.director, _, room.audioChannel = nanoarch.Init(roomID, false, inputChannel, store, libretroConfig, log)
 		} else {
@@ -170,7 +166,7 @@ func NewRoom(id string, game games.GameMetadata, storage storage.CloudStorage, c
 
 		// nwidth, nheight are the WebRTC output size
 		var nwidth, nheight int
-		emu, ar := cfg.Emulator, cfg.Emulator.AspectRatio
+		emu, ar := conf.Emulator, conf.Emulator.AspectRatio
 
 		if ar.Keep {
 			baseAspectRatio := float64(gameMeta.BaseWidth) / float64(ar.Height)
@@ -198,24 +194,26 @@ func NewRoom(id string, game games.GameMetadata, storage storage.CloudStorage, c
 		go room.startVideo(encoderW, encoderH, func(frame encoder.OutFrame) {
 			// TODO: r.rtcSessions is rarely updated. Lock will hold down perf
 			// todo fix these races ffs rwmutex
+			sample := media.Sample{Data: frame.Data, Duration: frame.Duration}
 			for _, peer := range room.rtcSessions {
 				if !peer.IsConnected() {
 					break
 				}
-				log.Warn().Msgf("time: %v", frame.Duration)
-				_ = peer.WriteVideoFrame(media.Sample{Data: frame.Data, Duration: frame.Duration})
+				//log.Warn().Msgf("time: %v", frame.Duration)
+				_ = peer.WriteVideo(sample)
 			}
-		}, cfg.Encoder.Video)
+		}, conf.Encoder.Video)
 
-		dur := time.Duration(cfg.Encoder.Audio.Frame) * time.Millisecond
+		dur := time.Duration(conf.Encoder.Audio.Frame) * time.Millisecond
 		go room.startAudio(gameMeta.AudioSampleRate, func(audio []byte) {
+			sample := media.Sample{Data: audio, Duration: dur}
 			for _, peer := range room.rtcSessions {
 				if !peer.IsConnected() {
 					continue
 				}
-				peer.WriteAudio(media.Sample{Data: audio, Duration: dur})
+				_ = peer.WriteAudio(sample)
 			}
-		}, cfg.Encoder.Audio)
+		}, conf.Encoder.Audio)
 
 		if cfg.Emulator.AutosaveSec > 0 {
 			go room.enableAutosave(cfg.Emulator.AutosaveSec)
@@ -272,17 +270,16 @@ func (r *Room) AddConnectionToRoom(peer *webrtc.WebRTC) {
 	peer.SetRoom(r.ID)
 }
 
-func (r *Room) UpdatePlayerIndex(peerconnection *webrtc.WebRTC, playerIndex int) {
-	r.log.Info().Msgf("Updated player index to: %d", playerIndex)
-	peerconnection.PlayerIndex = playerIndex
+func (r *Room) UpdatePlayerIndex(user *webrtc.WebRTC, index int) {
+	r.log.Info().Msgf("Updated player index to: %d", index)
+	user.PlayerIndex = index
 }
 
-func (r *Room) PollUserInput(peerconnection *webrtc.WebRTC) {
+func (r *Room) PollUserInput(user *webrtc.WebRTC) {
 	r.log.Debug().Msg("Start user input poll")
-	// bug: when input channel here = nil, skip and finish
-	peerconnection.OnMessage = func(data []byte) {
+	user.OnMessage = func(data []byte) {
 		select {
-		case r.inputChannel <- nanoarch.InputEvent{RawState: data, PlayerIdx: peerconnection.PlayerIndex, ConnID: peerconnection.GetId()}:
+		case r.inputChannel <- nanoarch.InputEvent{RawState: data, PlayerIdx: user.PlayerIndex, ConnID: user.GetId()}:
 		default:
 		}
 	}

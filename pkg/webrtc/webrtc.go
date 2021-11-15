@@ -109,15 +109,9 @@ func (w *WebRTC) SetRemoteSDP(sdp string, decoder Decoder) error {
 	return nil
 }
 
-func (w *WebRTC) WriteVideoFrame(sample media.Sample) error { return w.vTrack.WriteSample(sample) }
+func (w *WebRTC) WriteVideo(sample media.Sample) error { return w.vTrack.WriteSample(sample) }
 
-func (w *WebRTC) WriteAudio(sample media.Sample) {
-	if !w.IsConnected() {
-		return
-	}
-	w.logx(w.aTrack.WriteSample(sample))
-	return
-}
+func (w *WebRTC) WriteAudio(sample media.Sample) error { return w.aTrack.WriteSample(sample) }
 
 func newTrack(id string, label string, codec string) (*webrtc.TrackLocalStaticSample, error) {
 	codec = strings.ToLower(codec)
