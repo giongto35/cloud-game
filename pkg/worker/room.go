@@ -1,4 +1,4 @@
-package room
+package worker
 
 import (
 	"bytes"
@@ -21,7 +21,6 @@ import (
 	"github.com/giongto35/cloud-game/v2/pkg/logger"
 	"github.com/giongto35/cloud-game/v2/pkg/session"
 	"github.com/giongto35/cloud-game/v2/pkg/storage"
-	"github.com/giongto35/cloud-game/v2/pkg/webrtc"
 	"github.com/pion/webrtc/v3/pkg/media"
 )
 
@@ -41,8 +40,8 @@ type Room struct {
 	IsRunning bool
 	// Done channel is to fire exit event when room is closed
 	Done chan struct{}
-	// List of peer connections in the room
-	rtcSessions []*webrtc.WebRTC
+	// List of users in the room
+	users Sessions
 	// Director is emulator
 	director emulator.CloudEmulator
 	// Cloud storage to store room state online
@@ -124,7 +123,7 @@ func NewRoom(id string, game games.GameMetadata, storage storage.CloudStorage, c
 		ID:            id,
 		inputChannel:  inputChannel,
 		imageChannel:  nil,
-		rtcSessions:   []*webrtc.WebRTC{},
+		users:         NewSessions(),
 		IsRunning:     true,
 		onlineStorage: storage,
 		Done:          make(chan struct{}, 1),
@@ -192,27 +191,22 @@ func NewRoom(id string, game games.GameMetadata, storage storage.CloudStorage, c
 		room.director.SetViewport(encoderW, encoderH)
 
 		go room.startVideo(encoderW, encoderH, func(frame encoder.OutFrame) {
-			// TODO: r.rtcSessions is rarely updated. Lock will hold down perf
-			// todo fix these races ffs rwmutex
 			sample := media.Sample{Data: frame.Data, Duration: frame.Duration}
-			for _, peer := range room.rtcSessions {
-				if !peer.IsConnected() {
-					break
+			room.users.ForEach(func(s *Session) {
+				if s.IsConnected() {
+					_ = s.SendVideo(sample)
 				}
-				//log.Warn().Msgf("time: %v", frame.Duration)
-				_ = peer.WriteVideo(sample)
-			}
+			})
 		}, conf.Encoder.Video)
 
 		dur := time.Duration(conf.Encoder.Audio.Frame) * time.Millisecond
 		go room.startAudio(gameMeta.AudioSampleRate, func(audio []byte) {
 			sample := media.Sample{Data: audio, Duration: dur}
-			for _, peer := range room.rtcSessions {
-				if !peer.IsConnected() {
-					continue
+			room.users.ForEach(func(s *Session) {
+				if s.IsConnected() {
+					_ = s.SendAudio(sample)
 				}
-				_ = peer.WriteAudio(sample)
-			}
+			})
 		}, conf.Encoder.Audio)
 
 		if cfg.Emulator.AutosaveSec > 0 {
@@ -265,55 +259,39 @@ func isGameOnLocal(path string) bool {
 	return !errors.Is(err, os.ErrNotExist)
 }
 
-func (r *Room) AddConnectionToRoom(peer *webrtc.WebRTC) {
-	r.rtcSessions = append(r.rtcSessions, peer)
-	peer.SetRoom(r.ID)
-}
-
-func (r *Room) UpdatePlayerIndex(user *webrtc.WebRTC, index int) {
-	r.log.Info().Msgf("Updated player index to: %d", index)
-	user.PlayerIndex = index
-}
-
-func (r *Room) PollUserInput(user *webrtc.WebRTC) {
+func (r *Room) PollUserInput(user *Session) {
 	r.log.Debug().Msg("Start user input poll")
-	user.OnMessage = func(data []byte) {
+	user.GetPeerConn().OnMessage = func(data []byte) {
 		select {
-		case r.inputChannel <- nanoarch.InputEvent{RawState: data, PlayerIdx: user.PlayerIndex, ConnID: user.GetId()}:
+		case r.inputChannel <- nanoarch.InputEvent{RawState: data, PlayerIdx: user.GetPlayerIndex(), ConnID: user.GetId()}:
 		default:
 		}
 	}
 }
 
-// RemoveSession removes a peerconnection from room and return true if there is no more room
-func (r *Room) RemoveSession(w *webrtc.WebRTC) {
-	// TODO: get list of r.rtcSessions in lock
-	for i, s := range r.rtcSessions {
-		if s.GetId() == w.GetId() {
-			r.rtcSessions = append(r.rtcSessions[:i], r.rtcSessions[i+1:]...)
-			s.RoomID = ""
-			r.log.Debug().Str("session", s.GetId()).Msg("Session has been removed")
-			break
-		}
-	}
+func (r *Room) AddUser(user *Session) {
+	r.users.Add(user.id, user)
+	user.SetRoom(r)
+}
+
+// RemoveUser removes a user from the room.
+func (r *Room) RemoveUser(user *Session) {
+	user.SetRoom(nil)
+	r.users.Remove(user.id)
+	r.log.Debug().Str("user", user.GetShortId()).Msg("User has left the room")
 	// Detach input. Send end signal
 	select {
-	case r.inputChannel <- nanoarch.InputEvent{RawState: []byte{0xFF, 0xFF}, ConnID: w.GetId()}:
+	case r.inputChannel <- nanoarch.InputEvent{RawState: []byte{0xFF, 0xFF}, ConnID: user.GetId()}:
 	default:
 	}
 }
 
-func (r *Room) IsPCInRoom(w *webrtc.WebRTC) bool {
+func (r *Room) HasUser(u *Session) bool {
 	// TODO: Reuse for remove Session
 	if r == nil {
 		return false
 	}
-	for _, s := range r.rtcSessions {
-		if s.GetId() == w.GetId() {
-			return true
-		}
-	}
-	return false
+	return r.users.Get(u.id) != nil
 }
 
 func (r *Room) Close() {
@@ -390,13 +368,15 @@ func (r *Room) LoadGame() error { return r.director.LoadGame() }
 
 func (r *Room) ToggleMultitap() error { return r.director.ToggleMultitap() }
 
-func (r *Room) IsEmpty() bool { return len(r.rtcSessions) == 0 }
+func (r *Room) IsEmpty() bool { return r.users.IsEmpty() }
 
-func (r *Room) HasRunningSessions() bool {
-	for _, s := range r.rtcSessions {
+func (r *Room) HasRunningSessions() (has bool) {
+	has = false
+	r.users.ForEach(func(s *Session) {
 		if s.IsConnected() {
-			return true
+			has = true
+			return
 		}
-	}
-	return false
+	})
+	return
 }

@@ -1,4 +1,4 @@
-package room
+package worker
 
 import (
 	conf "github.com/giongto35/cloud-game/v2/pkg/config/encoder"

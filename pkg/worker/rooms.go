@@ -1,27 +1,21 @@
 package worker
 
-import (
-	"sync"
-
-	"github.com/giongto35/cloud-game/v2/pkg/worker/room"
-)
+import "sync"
 
 type Rooms struct {
 	mu    sync.Mutex
-	store map[string]*room.Room
+	store map[string]*Room
 }
 
-func NewRooms() Rooms {
-	return Rooms{store: make(map[string]*room.Room, 10)}
-}
+func NewRooms() Rooms { return Rooms{store: make(map[string]*Room, 10)} }
 
-func (r *Rooms) Add(room *room.Room) {
+func (r *Rooms) Add(room *Room) {
 	r.mu.Lock()
 	r.store[room.ID] = room
 	r.mu.Unlock()
 }
 
-func (r *Rooms) Get(id string) *room.Room {
+func (r *Rooms) Get(id string) *Room {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 	return r.store[id]

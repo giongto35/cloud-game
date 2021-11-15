@@ -9,7 +9,6 @@ import (
 	"github.com/giongto35/cloud-game/v2/pkg/games"
 	"github.com/giongto35/cloud-game/v2/pkg/ipc"
 	"github.com/giongto35/cloud-game/v2/pkg/webrtc"
-	"github.com/giongto35/cloud-game/v2/pkg/worker/room"
 )
 
 func MakeConnectionRequest(conf worker.Worker, address string) (string, error) {
@@ -31,7 +30,7 @@ func (c *Coordinator) HandleTerminateSession(data json.RawMessage, h *Handler) {
 	if session != nil {
 		session.Close()
 		h.sessions.Remove(resp.Id)
-		h.detachPeerConn(session.peerconnection)
+		h.removeUser(session)
 	} else {
 		c.log.Warn().Msgf("No session for id [%v]", resp.Id)
 	}
@@ -65,9 +64,9 @@ func (c *Coordinator) HandleWebrtcInit(packet ipc.InPacket, h *Handler, connApi 
 		return
 	}
 
-	// Create new sessions when we have new peerconnection initialized
-	h.sessions.Add(resp.Id, &Session{peerconnection: peer})
-	c.log.Info().Str("id", resp.Id.Short()).Msgf("Peer connection (uid:%s)", resp.Id)
+	session := NewSession(peer)
+	h.sessions.Add(resp.Id, session)
+	c.log.Info().Str("id", resp.Id.Short()).Msgf("Peer connection (uid:%s)", session.GetId())
 
 	_ = h.cord.SendPacket(packet.Proxy(sdp))
 }
@@ -79,7 +78,7 @@ func (c *Coordinator) HandleWebrtcAnswer(packet ipc.InPacket, h *Handler) {
 		return
 	}
 	if session := h.sessions.Get(resp.Id); session != nil {
-		if err := session.peerconnection.SetRemoteSDP(resp.Sdp, fromBase64Json); err != nil {
+		if err := session.GetPeerConn().SetRemoteSDP(resp.Sdp, fromBase64Json); err != nil {
 			c.log.Error().Err(err).Msgf("cannot set remote SDP of client [%v]", resp.Id)
 		}
 	} else {
@@ -94,7 +93,7 @@ func (c *Coordinator) HandleWebrtcIceCandidate(packet ipc.InPacket, h *Handler) 
 		return
 	}
 	if session := h.sessions.Get(resp.Id); session != nil {
-		if err := session.peerconnection.AddCandidate(resp.Candidate, fromBase64Json); err != nil {
+		if err := session.GetPeerConn().AddCandidate(resp.Candidate, fromBase64Json); err != nil {
 			c.log.Error().Err(err).Msgf("cannot add Ice candidate of client [%v]", resp.Id)
 		}
 	} else {
@@ -116,14 +115,14 @@ func (c *Coordinator) HandleGameStart(packet ipc.InPacket, h *Handler) {
 		return
 	}
 	gameMeta := games.GameMetadata{Name: resp.Game.Name, Base: resp.Game.Base, Type: resp.Game.Type, Path: resp.Game.Path}
-	gameRoom := h.startGameHandler(gameMeta, resp.Room.Id, resp.PlayerIndex, session.peerconnection)
-	session.RoomID = gameRoom.ID
+	gameRoom := h.startGameHandler(gameMeta, resp.Room.Id, resp.PlayerIndex, session)
+	session.SetRoom(gameRoom)
 	h.rooms.Add(gameRoom)
 	_ = h.cord.SendPacket(packet.Proxy(api.StartGameResponse{Room: api.Room{Id: gameRoom.ID}}))
 }
 
 // startGameHandler starts a game if roomID is given, if not create new room
-func (h *Handler) startGameHandler(game games.GameMetadata, existedRoomID string, playerIndex int, peer *webrtc.WebRTC) *room.Room {
+func (h *Handler) startGameHandler(game games.GameMetadata, existedRoomID string, playerIndex int, user *Session) *Room {
 	h.log.Info().Str("game", game.Name).Msg("Start load game")
 	// If we are connecting to coordinator, request corresponding serverID based on roomID
 	// TODO: check if existedRoomID is in the current server
@@ -133,7 +132,8 @@ func (h *Handler) startGameHandler(game games.GameMetadata, existedRoomID string
 		h.log.Info().Str("room", existedRoomID).Msg("Create room")
 		// Create new room and update player index
 		gameRoom = h.createRoom(existedRoomID, game)
-		gameRoom.UpdatePlayerIndex(peer, playerIndex)
+		user.SetPlayerIndex(playerIndex)
+		h.log.Info().Msgf("Updated player index to: %d", playerIndex)
 
 		// Wait for done signal from room
 		go func() {
@@ -146,11 +146,12 @@ func (h *Handler) startGameHandler(game games.GameMetadata, existedRoomID string
 	}
 
 	// Attach peerconnection to room. If PC is already in room, don't detach
-	h.log.Info().Msgf("The peer is in the room: %v", gameRoom.IsPCInRoom(peer))
-	if !gameRoom.IsPCInRoom(peer) {
-		h.detachPeerConn(peer)
-		gameRoom.AddConnectionToRoom(peer)
-		gameRoom.PollUserInput(peer)
+	userInRoom := gameRoom.HasUser(user)
+	h.log.Info().Msgf("The peer is in the room: %v", userInRoom)
+	if !gameRoom.HasUser(user) {
+		h.removeUser(user)
+		gameRoom.AddUser(user)
+		gameRoom.PollUserInput(user)
 	}
 
 	// Register room to coordinator if we are connecting to coordinator
@@ -167,10 +168,10 @@ func (c *Coordinator) HandleQuitGame(packet ipc.InPacket, h *Handler) {
 		return
 	}
 	if session := h.sessions.Get(resp.Stateful.Id); session != nil {
-		rm := h.rooms.Get(session.RoomID)
+		rm := h.rooms.Get(session.GetId())
 		// Defensive coding, check if the peerconnection is in room
-		if rm != nil && rm.IsPCInRoom(session.peerconnection) {
-			h.detachPeerConn(session.peerconnection)
+		if rm != nil && rm.HasUser(session) {
+			h.removeUser(session)
 		}
 	} else {
 		c.log.Error().Msgf("no session for id [%v]", resp.Stateful.Id)
@@ -238,7 +239,8 @@ func (c *Coordinator) HandleChangePlayer(packet ipc.InPacket, h *Handler) {
 	}
 	var rez api.ChangePlayerResponse
 	if session != nil && err == nil {
-		rm.UpdatePlayerIndex(session.peerconnection, idx)
+		session.SetPlayerIndex(idx)
+		h.log.Info().Msgf("Updated player index to: %d", idx)
 		rez = strconv.Itoa(idx)
 	} else {
 		rez = ipc.ErrPacket

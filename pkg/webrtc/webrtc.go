@@ -6,22 +6,18 @@ import (
 
 	conf "github.com/giongto35/cloud-game/v2/pkg/config/webrtc"
 	"github.com/giongto35/cloud-game/v2/pkg/logger"
-	"github.com/giongto35/cloud-game/v2/pkg/network"
 	"github.com/pion/webrtc/v3"
 	"github.com/pion/webrtc/v3/pkg/media"
 )
 
 type WebRTC struct {
-	id          network.Uid
 	api         *ApiFactory
 	conf        conf.Webrtc
 	connection  *webrtc.PeerConnection
 	isConnected bool
-	RoomID      string
-	PlayerIndex int
 	log         *logger.Logger
-	vTrack      *webrtc.TrackLocalStaticSample
 	aTrack      *webrtc.TrackLocalStaticSample
+	vTrack      *webrtc.TrackLocalStaticSample
 	dTrack      *webrtc.DataChannel
 	OnMessage   func(data []byte)
 }
@@ -29,12 +25,7 @@ type WebRTC struct {
 type Decoder func(data string, obj interface{}) error
 
 func NewWebRTC(conf conf.Webrtc, log *logger.Logger, api *ApiFactory) *WebRTC {
-	return &WebRTC{
-		id:   network.NewUid(),
-		api:  api,
-		conf: conf,
-		log:  log,
-	}
+	return &WebRTC{api: api, conf: conf, log: log}
 }
 
 func (w *WebRTC) NewCall(vCodec, aCodec string, onICECandidate func(ice interface{})) (sdp interface{}, err error) {
@@ -42,7 +33,7 @@ func (w *WebRTC) NewCall(vCodec, aCodec string, onICECandidate func(ice interfac
 		w.log.Warn().Msg("Strange multiple init connection calls with the same peer")
 		return
 	}
-	w.log.Info().Str("id", w.id.Short()).Msgf("WebRTC start (uid:%s)", w.id)
+	w.log.Info().Msg("WebRTC start")
 	if w.connection, err = w.api.NewPeer(); err != nil {
 		return "", err
 	}
@@ -92,9 +83,6 @@ func (w *WebRTC) NewCall(vCodec, aCodec string, onICECandidate func(ice interfac
 
 	return offer, nil
 }
-
-// SetRoom sets room identifier for the current WebRTC connection.
-func (w *WebRTC) SetRoom(id string) { w.RoomID = id }
 
 func (w *WebRTC) SetRemoteSDP(sdp string, decoder Decoder) error {
 	var answer webrtc.SessionDescription
@@ -152,7 +140,7 @@ func (w *WebRTC) handleICECandidate(callback func(interface{})) func(*webrtc.ICE
 
 func (w *WebRTC) handleICEState(onConnect func()) func(webrtc.ICEConnectionState) {
 	return func(state webrtc.ICEConnectionState) {
-		w.log.Debug().Str("id", w.id.Short()).Str(".state", state.String()).Msg("ICE")
+		w.log.Debug().Str(".state", state.String()).Msg("ICE")
 		switch state {
 		case webrtc.ICEConnectionStateChecking:
 			// nothing
@@ -168,8 +156,6 @@ func (w *WebRTC) handleICEState(onConnect func()) func(webrtc.ICEConnectionState
 		}
 	}
 }
-
-func (w *WebRTC) GetId() string { return w.id.String() }
 
 func (w *WebRTC) AddCandidate(candidate string, decoder Decoder) error {
 	var iceCandidate webrtc.ICECandidateInit

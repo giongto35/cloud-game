@@ -11,8 +11,6 @@ import (
 	"github.com/giongto35/cloud-game/v2/pkg/logger"
 	"github.com/giongto35/cloud-game/v2/pkg/service"
 	"github.com/giongto35/cloud-game/v2/pkg/storage"
-	"github.com/giongto35/cloud-game/v2/pkg/webrtc"
-	"github.com/giongto35/cloud-game/v2/pkg/worker/room"
 )
 
 type Handler struct {
@@ -95,27 +93,34 @@ func initCloudStorage(conf worker.Config) storage.CloudStorage {
 	return st
 }
 
-// detachPeerConn detaches a peerconnection from the current room.
-func (h *Handler) detachPeerConn(pc *webrtc.WebRTC) {
+// removeUser removes the user from the room.
+func (h *Handler) removeUser(user *Session) {
 	h.log.Info().Msg("Closing peer connection")
-	rm := h.rooms.Get(pc.RoomID)
+
+	// todo use backreference (bi-map)
+	room := user.GetRoom()
+	id := ""
+	if room != nil {
+		id = room.ID
+	}
+	rm := h.rooms.Get(id)
 	if rm == nil || rm.IsEmpty() {
 		return
 	}
-	rm.RemoveSession(pc)
+	rm.RemoveUser(user)
 	if rm.IsEmpty() {
 		h.log.Info().Msg("Closing an empty room")
 		rm.Close()
-		pc.SendMessage([]byte{0xFF, 0xFF})
+		user.GetPeerConn().SendMessage([]byte{0xFF, 0xFF})
 	}
 }
 
 // createRoom creates a new room or returns nil for existing.
-func (h *Handler) createRoom(id string, game games.GameMetadata) *room.Room {
+func (h *Handler) createRoom(id string, game games.GameMetadata) *Room {
 	// If the roomID doesn't have any running sessions (room was closed)
 	// we spawn a new room
 	if h.rooms.noSessions(id) {
-		newRoom := room.NewRoom(id, game, h.onlineStorage, h.cfg, h.log)
+		newRoom := NewRoom(id, game, h.onlineStorage, h.cfg, h.log)
 		h.rooms.Add(newRoom)
 		return newRoom
 	}
