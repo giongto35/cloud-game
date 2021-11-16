@@ -38,7 +38,7 @@ func newCoordinatorConnection(host string, conf worker.Worker, addr string, log 
 }
 
 func (c *Coordinator) HandleRequests(h *Handler) {
-	ap, err := webrtc.NewApiFactory(h.cfg.Webrtc, c.log, nil)
+	ap, err := webrtc.NewApiFactory(h.conf.Webrtc, c.log, nil)
 	if err != nil {
 		c.log.Panic().Err(err).Msg("WebRTC API creation has been failed")
 	}

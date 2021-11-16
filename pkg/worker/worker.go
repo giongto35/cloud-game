@@ -14,7 +14,7 @@ func New(conf worker.Config, log *logger.Logger) (services service.Group) {
 		return
 	}
 
-	mainHandler := NewHandler(conf, httpSrv.Addr, log)
+	mainHandler := NewHandler(httpSrv.Addr, conf, log)
 	mainHandler.Prepare()
 
 	services.Add(httpSrv)

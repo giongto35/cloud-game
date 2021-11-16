@@ -293,13 +293,7 @@ func (r *Room) RemoveUser(user *Session) {
 	}
 }
 
-func (r *Room) HasUser(u *Session) bool {
-	// TODO: Reuse for remove Session
-	if r == nil {
-		return false
-	}
-	return r.users.Get(u.id) != nil
-}
+func (r *Room) HasUser(u *Session) bool { return r != nil && r.users.Get(u.id) != nil }
 
 func (r *Room) Close() {
 	if !r.IsRunning {

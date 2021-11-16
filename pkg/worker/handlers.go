@@ -17,7 +17,7 @@ type Handler struct {
 	service.RunnableService
 
 	address       string
-	cfg           worker.Config
+	conf          worker.Config
 	cord          Coordinator
 	onlineStorage storage.CloudStorage
 	rooms         Rooms
@@ -25,12 +25,12 @@ type Handler struct {
 	log           *logger.Logger
 }
 
-func NewHandler(conf worker.Config, address string, log *logger.Logger) *Handler {
+func NewHandler(address string, conf worker.Config, log *logger.Logger) *Handler {
 	createLocalStorage(conf.Emulator.Storage, log)
 	onlineStorage := initCloudStorage(conf)
 	return &Handler{
 		address:       address,
-		cfg:           conf,
+		conf:          conf,
 		onlineStorage: onlineStorage,
 		rooms:         NewRooms(),
 		sessions:      NewSessions(),
@@ -39,33 +39,32 @@ func NewHandler(conf worker.Config, address string, log *logger.Logger) *Handler
 }
 
 func (h *Handler) Run() {
-	coordinatorAddress := h.cfg.Worker.Network.CoordinatorAddress
+	var err error
+	coordinatorAddress := h.conf.Worker.Network.CoordinatorAddress
 	for {
-		conn, err := newCoordinatorConnection(coordinatorAddress, h.cfg.Worker, h.address, h.log)
-		if err != nil {
-			h.log.Printf("Cannot connect to coordinator. %v Retrying...", err)
+		if h.cord, err = newCoordinatorConnection(coordinatorAddress, h.conf.Worker, h.address, h.log); err != nil {
+			h.log.Error().Err(err).Msg("Cannot connect to coordinator. %v Retrying...")
 			time.Sleep(time.Second)
 			continue
 		}
-		conn.GetLogger().Info().Msgf("Connected at %v", coordinatorAddress)
-		h.cord = conn
+		h.cord.GetLogger().Info().Msgf("Connected at %v", coordinatorAddress)
 		h.cord.HandleRequests(h)
 		h.cord.Listen()
 
 		h.cord.Close()
-		h.rooms.CloseAll()
+		h.rooms.Close()
 	}
 }
 
 func (h *Handler) Shutdown(context.Context) error { return nil }
 
 func (h *Handler) Prepare() {
-	if !h.cfg.Emulator.Libretro.Cores.Repo.Sync {
+	if !h.conf.Emulator.Libretro.Cores.Repo.Sync {
 		return
 	}
 
 	h.log.Info().Msg("Starting Libretro cores sync...")
-	coreManager := remotehttp.NewRemoteHttpManager(h.cfg.Emulator.Libretro, h.log)
+	coreManager := remotehttp.NewRemoteHttpManager(h.conf.Emulator.Libretro, h.log)
 	// make a dir for cores
 	dir := coreManager.Conf.GetCoresStorePath()
 	if err := os.MkdirAll(dir, os.ModeDir); err != nil {
@@ -120,7 +119,7 @@ func (h *Handler) createRoom(id string, game games.GameMetadata, onClose func(*R
 	// If the roomID doesn't have any running sessions (room was closed)
 	// we spawn a new room
 	if h.rooms.noSessions(id) {
-		newRoom := NewRoom(id, game, h.onlineStorage, onClose, h.cfg, h.log)
+		newRoom := NewRoom(id, game, h.onlineStorage, onClose, h.conf, h.log)
 		h.rooms.Add(newRoom)
 		return newRoom
 	}

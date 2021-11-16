@@ -41,7 +41,7 @@ func (r *Rooms) Remove(id string) {
 	r.mu.Unlock()
 }
 
-func (r *Rooms) CloseAll() {
+func (r *Rooms) Close() {
 	for _, r := range r.store {
 		r.Close()
 	}

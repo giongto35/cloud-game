@@ -42,8 +42,8 @@ func (c *Coordinator) HandleWebrtcInit(packet ipc.InPacket, h *Handler, connApi 
 		c.log.Error().Err(err).Msg("malformed WebRTC init request")
 		return
 	}
-	enc := h.cfg.Encoder
-	peer := webrtc.NewWebRTC(h.cfg.Webrtc, c.log, connApi)
+	enc := h.conf.Encoder
+	peer := webrtc.NewWebRTC(h.conf.Webrtc, c.log, connApi)
 	localSDP, err := peer.NewCall(enc.Video.Codec, enc.Audio.Codec, func(data interface{}) {
 		candidate, err := toBase64Json(data)
 		if err != nil {
@@ -108,9 +108,9 @@ func (c *Coordinator) HandleGameStart(packet ipc.InPacket, h *Handler) {
 		_ = h.cord.SendPacket(packet.Proxy(ipc.EmptyPacket))
 		return
 	}
-	session := h.sessions.Get(resp.Stateful.Id)
-	if session == nil {
-		c.log.Error().Msgf("no session [%v]", resp.Stateful.Id)
+	user := h.sessions.Get(resp.Stateful.Id)
+	if user == nil {
+		c.log.Error().Msgf("no user [%v]", resp.Stateful.Id)
 		_ = h.cord.SendPacket(packet.Proxy(ipc.EmptyPacket))
 		return
 	}
@@ -129,22 +129,22 @@ func (c *Coordinator) HandleGameStart(packet ipc.InPacket, h *Handler) {
 				h.log.Debug().Msgf("Room close has been called %v", room.ID)
 			},
 		)
-		session.SetPlayerIndex(resp.PlayerIndex)
+		user.SetPlayerIndex(resp.PlayerIndex)
 		h.log.Info().Msgf("Updated player index to: %d", resp.PlayerIndex)
 	}
 	// Attach peerconnection to room. If PC is already in room, don't detach
-	userInRoom := playRoom.HasUser(session)
+	userInRoom := playRoom.HasUser(user)
 	if !userInRoom {
 		h.log.Info().Msgf("The peer is not in the room: %v", userInRoom)
-		h.removeUser(session)
-		playRoom.AddUser(session)
-		playRoom.PollUserInput(session)
+		h.removeUser(user)
+		playRoom.AddUser(user)
+		playRoom.PollUserInput(user)
 	}
 	// Register room to coordinator if we are connecting to coordinator
 	if playRoom != nil {
 		h.cord.RegisterRoom(playRoom.ID)
 	}
-	session.SetRoom(playRoom)
+	user.SetRoom(playRoom)
 	h.rooms.Add(playRoom)
 	_ = h.cord.SendPacket(packet.Proxy(api.StartGameResponse{Room: api.Room{Id: playRoom.ID}}))
 }
