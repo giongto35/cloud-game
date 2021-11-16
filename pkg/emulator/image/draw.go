@@ -8,11 +8,7 @@ type imageCache struct {
 	h     int
 }
 
-var canvas = imageCache{
-	image.NewRGBA(image.Rectangle{}),
-	0,
-	0,
-}
+var canvas = imageCache{image.NewRGBA(image.Rectangle{}), 0, 0}
 
 func DrawRgbaImage(pixFormat Format, rotationFn Rotate, scaleType int, flipV bool, w, h, packedW, bpp int,
 	data []byte, dw, dh int) *image.RGBA {

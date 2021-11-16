@@ -240,4 +240,9 @@ func (na *naEmulator) GetSRAMPath() string { return na.storage.GetSRAMPath() }
 
 func (*naEmulator) GetViewport() interface{} { return outputImg }
 
-func (na *naEmulator) Close() { close(na.done) }
+func (na *naEmulator) Close() {
+	na.Lock()
+	na.SetViewport(0, 0)
+	na.Unlock()
+	close(na.done)
+}
