@@ -283,7 +283,7 @@ func fixEmulators(config *worker.Config, autoGlContext bool) {
 
 // getRootPath returns absolute path to the assets directory.
 func getRootPath() string {
-	p, _ := filepath.Abs("../../../")
+	p, _ := filepath.Abs("../../")
 	return p + string(filepath.Separator)
 }
 
