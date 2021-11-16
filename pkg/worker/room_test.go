@@ -37,7 +37,7 @@ var (
 )
 
 type roomMock struct {
-	Room
+	*Room
 }
 
 type roomMockConfig struct {
@@ -241,7 +241,7 @@ func getRoomMock(cfg roomMockConfig) roomMock {
 	conf.Encoder.Video.Codec = string(cfg.vCodec)
 
 	cloudStore, _ := storage.NewNoopCloudStorage()
-	room := NewRoom(cfg.roomName, cfg.game, cloudStore, conf, l)
+	room := NewRoom(cfg.roomName, cfg.game, cloudStore, nil, conf, l)
 
 	// loop-wait the room initialization
 	var init sync.WaitGroup
@@ -259,8 +259,7 @@ func getRoomMock(cfg roomMockConfig) roomMock {
 		init.Done()
 	}()
 	init.Wait()
-
-	return roomMock{*room}
+	return roomMock{room}
 }
 
 // fixEmulators makes absolute game paths in global GameList and passes GL context config.

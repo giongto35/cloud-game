@@ -47,6 +47,8 @@ type Room struct {
 	// Cloud storage to store room state online
 	onlineStorage storage.CloudStorage
 
+	onClose func(self *Room)
+
 	vPipe *encoder.VideoPipe
 	log   *logger.Logger
 }
@@ -111,12 +113,16 @@ func NewVideoImporter(id string, log *logger.Logger) chan nanoarch.GameFrame {
 }
 
 // NewRoom creates a new room
-func NewRoom(id string, game games.GameMetadata, storage storage.CloudStorage, conf worker.Config, log *logger.Logger) *Room {
+func NewRoom(id string, game games.GameMetadata, storage storage.CloudStorage, onClose func(*Room), conf worker.Config, log *logger.Logger) *Room {
 	if id == "" {
 		id = session.GenerateRoomID(game.Name)
 	}
 	log = log.Extend(log.With().Str("room", id[:5]))
 	log.Info().Str("game", game.Name).Msg("")
+
+	if onClose == nil {
+		onClose = func(*Room) {}
+	}
 
 	inputChannel := make(chan nanoarch.InputEvent, 100)
 	room := &Room{
@@ -128,6 +134,7 @@ func NewRoom(id string, game games.GameMetadata, storage storage.CloudStorage, c
 		onlineStorage: storage,
 		Done:          make(chan struct{}, 1),
 		log:           log,
+		onClose:       onClose,
 	}
 
 	// Check if room is on local storage, if not, pull from GCS to local storage
@@ -320,6 +327,9 @@ func (r *Room) Close() {
 	r.log.Debug().Msg("Closing input of the room ")
 	close(r.inputChannel)
 	close(r.Done)
+
+	r.onClose(r)
+
 	// Close here is a bit wrong because this read channel
 	// Just don't close it, let it be gc
 }

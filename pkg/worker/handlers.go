@@ -116,11 +116,11 @@ func (h *Handler) removeUser(user *Session) {
 }
 
 // createRoom creates a new room or returns nil for existing.
-func (h *Handler) createRoom(id string, game games.GameMetadata) *Room {
+func (h *Handler) createRoom(id string, game games.GameMetadata, onClose func(*Room)) *Room {
 	// If the roomID doesn't have any running sessions (room was closed)
 	// we spawn a new room
 	if h.rooms.noSessions(id) {
-		newRoom := NewRoom(id, game, h.onlineStorage, h.cfg, h.log)
+		newRoom := NewRoom(id, game, h.onlineStorage, onClose, h.cfg, h.log)
 		h.rooms.Add(newRoom)
 		return newRoom
 	}

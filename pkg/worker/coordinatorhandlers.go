@@ -110,55 +110,43 @@ func (c *Coordinator) HandleGameStart(packet ipc.InPacket, h *Handler) {
 	}
 	session := h.sessions.Get(resp.Stateful.Id)
 	if session == nil {
-		c.log.Error().Msgf("no session for id [%v]", resp.Stateful.Id)
+		c.log.Error().Msgf("no session [%v]", resp.Stateful.Id)
 		_ = h.cord.SendPacket(packet.Proxy(ipc.EmptyPacket))
 		return
 	}
-	gameMeta := games.GameMetadata{Name: resp.Game.Name, Base: resp.Game.Base, Type: resp.Game.Type, Path: resp.Game.Path}
-	gameRoom := h.startGameHandler(gameMeta, resp.Room.Id, resp.PlayerIndex, session)
-	session.SetRoom(gameRoom)
-	h.rooms.Add(gameRoom)
-	_ = h.cord.SendPacket(packet.Proxy(api.StartGameResponse{Room: api.Room{Id: gameRoom.ID}}))
-}
-
-// startGameHandler starts a game if roomID is given, if not create new room
-func (h *Handler) startGameHandler(game games.GameMetadata, existedRoomID string, playerIndex int, user *Session) *Room {
-	h.log.Info().Str("game", game.Name).Msg("Start load game")
-	// If we are connecting to coordinator, request corresponding serverID based on roomID
-	// TODO: check if existedRoomID is in the current server
-	gameRoom := h.rooms.Get(existedRoomID)
-	// If room is not running
-	if gameRoom == nil {
-		h.log.Info().Str("room", existedRoomID).Msg("Create room")
-		// Create new room and update player index
-		gameRoom = h.createRoom(existedRoomID, game)
-		user.SetPlayerIndex(playerIndex)
-		h.log.Info().Msgf("Updated player index to: %d", playerIndex)
-
-		// Wait for done signal from room
-		go func() {
-			<-gameRoom.Done
-			h.rooms.Remove(gameRoom.ID)
-			// TODO add proper non-crash close logic
-			// send signal to coordinator that the room is closed, coordinator will remove that room
-			h.cord.CloseRoom(gameRoom.ID)
-		}()
+	h.log.Info().Str("game", resp.Game.Name).Msg("Starting the game")
+	// trying to find existing room with that id
+	playRoom := h.rooms.Get(resp.Room.Id)
+	if playRoom == nil {
+		h.log.Info().Str("room", resp.Room.Id).Msg("Create room")
+		playRoom = h.createRoom(
+			resp.Room.Id,
+			games.GameMetadata{Name: resp.Game.Name, Base: resp.Game.Base, Type: resp.Game.Type, Path: resp.Game.Path},
+			func(room *Room) {
+				h.rooms.Remove(room.ID)
+				// send signal to coordinator that the room is closed, coordinator will remove that room
+				h.cord.CloseRoom(room.ID)
+				h.log.Debug().Msgf("Room close has been called %v", room.ID)
+			},
+		)
+		session.SetPlayerIndex(resp.PlayerIndex)
+		h.log.Info().Msgf("Updated player index to: %d", resp.PlayerIndex)
 	}
-
 	// Attach peerconnection to room. If PC is already in room, don't detach
-	userInRoom := gameRoom.HasUser(user)
-	h.log.Info().Msgf("The peer is in the room: %v", userInRoom)
-	if !gameRoom.HasUser(user) {
-		h.removeUser(user)
-		gameRoom.AddUser(user)
-		gameRoom.PollUserInput(user)
+	userInRoom := playRoom.HasUser(session)
+	if !userInRoom {
+		h.log.Info().Msgf("The peer is not in the room: %v", userInRoom)
+		h.removeUser(session)
+		playRoom.AddUser(session)
+		playRoom.PollUserInput(session)
 	}
-
 	// Register room to coordinator if we are connecting to coordinator
-	if gameRoom != nil {
-		h.cord.RegisterRoom(gameRoom.ID)
+	if playRoom != nil {
+		h.cord.RegisterRoom(playRoom.ID)
 	}
-	return gameRoom
+	session.SetRoom(playRoom)
+	h.rooms.Add(playRoom)
+	_ = h.cord.SendPacket(packet.Proxy(api.StartGameResponse{Room: api.Room{Id: playRoom.ID}}))
 }
 
 func (c *Coordinator) HandleQuitGame(packet ipc.InPacket, h *Handler) {
