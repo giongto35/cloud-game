@@ -58,3 +58,5 @@ func getCanvas(w, h int) *image.RGBA {
 
 	return canvas.image
 }
+
+func Clear() { getCanvas(0, 0) }

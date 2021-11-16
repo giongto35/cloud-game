@@ -636,6 +636,7 @@ func nanoarchShutdown() {
 	for _, element := range coreConfig {
 		C.free(unsafe.Pointer(element))
 	}
+	image.Clear()
 }
 
 func nanoarchRun() {

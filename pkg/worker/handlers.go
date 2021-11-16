@@ -16,25 +16,22 @@ import (
 type Handler struct {
 	service.RunnableService
 
-	address       string
-	conf          worker.Config
-	cord          Coordinator
-	onlineStorage storage.CloudStorage
-	rooms         Rooms
-	sessions      Sessions
-	log           *logger.Logger
+	address string
+	conf    worker.Config
+	cord    Coordinator
+	log     *logger.Logger
+	storage storage.CloudStorage
+	router  Router
 }
 
 func NewHandler(address string, conf worker.Config, log *logger.Logger) *Handler {
 	createLocalStorage(conf.Emulator.Storage, log)
-	onlineStorage := initCloudStorage(conf)
 	return &Handler{
-		address:       address,
-		conf:          conf,
-		onlineStorage: onlineStorage,
-		rooms:         NewRooms(),
-		sessions:      NewSessions(),
-		log:           log,
+		address: address,
+		conf:    conf,
+		log:     log,
+		storage: initCloudStorage(conf),
+		router:  NewRouter(),
 	}
 }
 
@@ -52,7 +49,7 @@ func (h *Handler) Run() {
 		h.cord.Listen()
 
 		h.cord.Close()
-		h.rooms.Close()
+		h.router.Close()
 	}
 }
 
@@ -94,22 +91,15 @@ func initCloudStorage(conf worker.Config) storage.CloudStorage {
 
 // removeUser removes the user from the room.
 func (h *Handler) removeUser(user *Session) {
-	h.log.Info().Msg("Closing peer connection")
-
-	// todo use backreference (bi-map)
 	room := user.GetRoom()
-	id := ""
-	if room != nil {
-		id = room.ID
-	}
-	rm := h.rooms.Get(id)
-	if rm == nil || rm.IsEmpty() {
+	if room == nil || room.IsEmpty() {
 		return
 	}
-	rm.RemoveUser(user)
-	if rm.IsEmpty() {
+	room.RemoveUser(user)
+	h.log.Info().Msg("Closing peer connection")
+	if room.IsEmpty() {
 		h.log.Info().Msg("Closing an empty room")
-		rm.Close()
+		room.Close()
 		user.GetPeerConn().SendMessage([]byte{0xFF, 0xFF})
 	}
 }
@@ -118,9 +108,9 @@ func (h *Handler) removeUser(user *Session) {
 func (h *Handler) createRoom(id string, game games.GameMetadata, onClose func(*Room)) *Room {
 	// If the roomID doesn't have any running sessions (room was closed)
 	// we spawn a new room
-	if h.rooms.noSessions(id) {
-		newRoom := NewRoom(id, game, h.onlineStorage, onClose, h.conf, h.log)
-		h.rooms.Add(newRoom)
+	if h.router.IsRoomEmpty(id) {
+		newRoom := NewRoom(id, game, h.storage, onClose, h.conf, h.log)
+		h.router.AddRoom(newRoom)
 		return newRoom
 	}
 	return nil
@@ -131,4 +121,10 @@ func createLocalStorage(path string, log *logger.Logger) {
 	if err := os.MkdirAll(path, 0755); err != nil {
 		log.Error().Err(err).Msgf("failed to create local storage path: %v", path)
 	}
+}
+
+func (h *Handler) TerminateSession(session *Session) {
+	session.Close()
+	h.router.RemoveUser(session)
+	h.removeUser(session)
 }

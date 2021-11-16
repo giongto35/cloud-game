@@ -26,13 +26,8 @@ func (c *Coordinator) HandleTerminateSession(data json.RawMessage, h *Handler) {
 		return
 	}
 	c.log.Info().Msgf("Received a terminate session [%v]", resp.Id)
-	session := h.sessions.Get(resp.Id)
-	if session != nil {
-		session.Close()
-		h.sessions.Remove(resp.Id)
-		h.removeUser(session)
-	} else {
-		c.log.Warn().Msgf("No session for id [%v]", resp.Id)
+	if session := h.router.GetUser(resp.Id); session != nil {
+		h.TerminateSession(session)
 	}
 }
 
@@ -64,9 +59,10 @@ func (c *Coordinator) HandleWebrtcInit(packet ipc.InPacket, h *Handler, connApi 
 		return
 	}
 
-	session := NewSession(peer)
-	h.sessions.Add(resp.Id, session)
-	c.log.Info().Str("id", resp.Id.Short()).Msgf("Peer connection (uid:%s)", session.GetId())
+	// use user uid from the coordinator
+	user := NewSession(peer, resp.Id)
+	h.router.AddUser(user)
+	c.log.Info().Str("id", resp.Id.Short()).Msgf("Peer connection (uid:%s)", user.GetId())
 
 	_ = h.cord.SendPacket(packet.Proxy(sdp))
 }
@@ -77,12 +73,10 @@ func (c *Coordinator) HandleWebrtcAnswer(packet ipc.InPacket, h *Handler) {
 		c.log.Error().Err(err).Msg("malformed WebRTC answer")
 		return
 	}
-	if session := h.sessions.Get(resp.Id); session != nil {
-		if err := session.GetPeerConn().SetRemoteSDP(resp.Sdp, fromBase64Json); err != nil {
+	if user := h.router.GetUser(resp.Id); user != nil {
+		if err := user.GetPeerConn().SetRemoteSDP(resp.Sdp, fromBase64Json); err != nil {
 			c.log.Error().Err(err).Msgf("cannot set remote SDP of client [%v]", resp.Id)
 		}
-	} else {
-		c.log.Error().Msgf("no session for id [%v]", resp.Id)
 	}
 }
 
@@ -92,12 +86,10 @@ func (c *Coordinator) HandleWebrtcIceCandidate(packet ipc.InPacket, h *Handler) 
 		c.log.Error().Err(err).Msg("malformed WebRTC candidate request")
 		return
 	}
-	if session := h.sessions.Get(resp.Id); session != nil {
-		if err := session.GetPeerConn().AddCandidate(resp.Candidate, fromBase64Json); err != nil {
+	if user := h.router.GetUser(resp.Id); user != nil {
+		if err := user.GetPeerConn().AddCandidate(resp.Candidate, fromBase64Json); err != nil {
 			c.log.Error().Err(err).Msgf("cannot add Ice candidate of client [%v]", resp.Id)
 		}
-	} else {
-		c.log.Error().Msgf("no session for id [%v]", resp.Id)
 	}
 }
 
@@ -108,7 +100,7 @@ func (c *Coordinator) HandleGameStart(packet ipc.InPacket, h *Handler) {
 		_ = h.cord.SendPacket(packet.Proxy(ipc.EmptyPacket))
 		return
 	}
-	user := h.sessions.Get(resp.Stateful.Id)
+	user := h.router.GetUser(resp.Stateful.Id)
 	if user == nil {
 		c.log.Error().Msgf("no user [%v]", resp.Stateful.Id)
 		_ = h.cord.SendPacket(packet.Proxy(ipc.EmptyPacket))
@@ -116,14 +108,14 @@ func (c *Coordinator) HandleGameStart(packet ipc.InPacket, h *Handler) {
 	}
 	h.log.Info().Str("game", resp.Game.Name).Msg("Starting the game")
 	// trying to find existing room with that id
-	playRoom := h.rooms.Get(resp.Room.Id)
+	playRoom := h.router.GetRoom(resp.Room.Id)
 	if playRoom == nil {
 		h.log.Info().Str("room", resp.Room.Id).Msg("Create room")
 		playRoom = h.createRoom(
 			resp.Room.Id,
 			games.GameMetadata{Name: resp.Game.Name, Base: resp.Game.Base, Type: resp.Game.Type, Path: resp.Game.Path},
 			func(room *Room) {
-				h.rooms.Remove(room.ID)
+				h.router.RemoveRoom(room)
 				// send signal to coordinator that the room is closed, coordinator will remove that room
 				h.cord.CloseRoom(room.ID)
 				h.log.Debug().Msgf("Room close has been called %v", room.ID)
@@ -145,7 +137,7 @@ func (c *Coordinator) HandleGameStart(packet ipc.InPacket, h *Handler) {
 		h.cord.RegisterRoom(playRoom.ID)
 	}
 	user.SetRoom(playRoom)
-	h.rooms.Add(playRoom)
+	h.router.AddRoom(playRoom)
 	_ = h.cord.SendPacket(packet.Proxy(api.StartGameResponse{Room: api.Room{Id: playRoom.ID}}))
 }
 
@@ -155,14 +147,12 @@ func (c *Coordinator) HandleQuitGame(packet ipc.InPacket, h *Handler) {
 		c.log.Error().Err(err).Msg("malformed game quit request")
 		return
 	}
-	if session := h.sessions.Get(resp.Stateful.Id); session != nil {
-		rm := h.rooms.Get(session.GetId())
-		// Defensive coding, check if the peerconnection is in room
-		if rm != nil && rm.HasUser(session) {
-			h.removeUser(session)
+	if user := h.router.GetUser(resp.Stateful.Id); user != nil {
+		if room := h.router.GetRoom(resp.Room.Id); room != nil {
+			if room.HasUser(user) {
+				h.removeUser(user)
+			}
 		}
-	} else {
-		c.log.Error().Msgf("no session for id [%v]", resp.Stateful.Id)
 	}
 }
 
@@ -175,11 +165,11 @@ func (c *Coordinator) HandleSaveGame(packet ipc.InPacket, h *Handler) {
 	c.log.Info().Str("room", resp.Room.Id).Msg("Got room")
 	rez := ipc.OkPacket
 	if resp.Room.Id != "" {
-		rm := h.rooms.Get(resp.Room.Id)
-		if rm == nil {
+		room := h.router.GetRoom(resp.Room.Id)
+		if room == nil {
 			return
 		}
-		err := rm.SaveGame()
+		err := room.SaveGame()
 		if err != nil {
 			c.log.Error().Err(err).Msg("cannot save game state")
 			rez = ipc.ErrPacket
@@ -199,7 +189,7 @@ func (c *Coordinator) HandleLoadGame(packet ipc.InPacket, h *Handler) {
 	}
 	rez := ipc.OkPacket
 	if resp.Room.Id != "" {
-		rm := h.rooms.Get(resp.Room.Id)
+		rm := h.router.GetRoom(resp.Room.Id)
 		if rm == nil {
 			return
 		}
@@ -219,15 +209,14 @@ func (c *Coordinator) HandleChangePlayer(packet ipc.InPacket, h *Handler) {
 		c.log.Error().Err(err).Msg("malformed change player request")
 		return
 	}
-	session := h.sessions.Get(resp.Stateful.Id)
+	user := h.router.GetUser(resp.Stateful.Id)
 	idx, err := strconv.Atoi(resp.Index)
-	rm := h.rooms.Get(resp.Room.Id)
-	if rm == nil {
+	if h.router.GetRoom(resp.Room.Id) == nil {
 		return
 	}
 	var rez api.ChangePlayerResponse
-	if session != nil && err == nil {
-		session.SetPlayerIndex(idx)
+	if user != nil && err == nil {
+		user.SetPlayerIndex(idx)
 		h.log.Info().Msgf("Updated player index to: %d", idx)
 		rez = strconv.Itoa(idx)
 	} else {
@@ -244,11 +233,11 @@ func (c *Coordinator) HandleToggleMultitap(packet ipc.InPacket, h *Handler) {
 	}
 	rez := ipc.OkPacket
 	if resp.Room.Id != "" {
-		rm := h.rooms.Get(resp.Room.Id)
-		if rm == nil {
+		room := h.router.GetRoom(resp.Room.Id)
+		if room == nil {
 			return
 		}
-		if err := rm.ToggleMultitap(); err != nil {
+		if err := room.ToggleMultitap(); err != nil {
 			c.log.Error().Err(err).Msg("could not toggle multitap state")
 			rez = ipc.ErrPacket
 		}

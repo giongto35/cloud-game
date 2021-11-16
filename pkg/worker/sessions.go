@@ -27,8 +27,8 @@ type Sessions struct {
 	store map[network.Uid]*Session
 }
 
-func NewSession(connection *webrtc.WebRTC) *Session {
-	return &Session{id: network.NewUid(), connection: connection}
+func NewSession(connection *webrtc.WebRTC, id network.Uid) *Session {
+	return &Session{id: id, connection: connection}
 }
 
 func (s *Session) GetId() string { return s.id.String() }
@@ -72,9 +72,9 @@ func (ss *Sessions) Add(id network.Uid, value *Session) {
 	ss.mu.Unlock()
 }
 
-func (ss *Sessions) Remove(id network.Uid) {
+func (ss *Sessions) Remove(s *Session) {
 	ss.mu.Lock()
-	delete(ss.store, id)
+	delete(ss.store, s.id)
 	ss.mu.Unlock()
 }
 

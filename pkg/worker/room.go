@@ -284,7 +284,7 @@ func (r *Room) AddUser(user *Session) {
 // RemoveUser removes a user from the room.
 func (r *Room) RemoveUser(user *Session) {
 	user.SetRoom(nil)
-	r.users.Remove(user.id)
+	r.users.Remove(user)
 	r.log.Debug().Str("user", user.GetShortId()).Msg("User has left the room")
 	// Detach input. Send end signal
 	select {
