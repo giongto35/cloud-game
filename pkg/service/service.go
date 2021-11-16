@@ -27,7 +27,7 @@ func (g *Group) Add(services ...Service) { g.list = append(g.list, services...) 
 func (g *Group) Start() {
 	for _, s := range g.list {
 		if v, ok := s.(RunnableService); ok {
-			go v.Run()
+			v.Run()
 		}
 	}
 }

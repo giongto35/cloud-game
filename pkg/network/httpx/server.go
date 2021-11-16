@@ -77,7 +77,9 @@ func NewServer(address string, handler func(*Server) http.Handler, options ...Op
 	return server, nil
 }
 
-func (s *Server) Run() {
+func (s *Server) Run() { go s.run() }
+
+func (s *Server) run() {
 	protocol := s.GetProtocol()
 	s.log.Debug().Msgf("Starting %s server on %s", protocol, s.Addr)
 

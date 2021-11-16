@@ -17,9 +17,10 @@ func New(conf worker.Config, log *logger.Logger) (services service.Group) {
 	mainHandler := NewHandler(conf, httpSrv.Addr, log)
 	mainHandler.Prepare()
 
-	services.Add(httpSrv, mainHandler)
+	services.Add(httpSrv)
 	if conf.Worker.Monitoring.IsEnabled() {
 		services.Add(monitoring.New(conf.Worker.Monitoring, httpSrv.GetHost(), log))
 	}
+	services.Add(mainHandler)
 	return
 }
