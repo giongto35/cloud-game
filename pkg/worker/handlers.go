@@ -104,16 +104,16 @@ func (h *Handler) removeUser(user *Session) {
 	}
 }
 
-// createRoom creates a new room or returns nil for existing.
-func (h *Handler) createRoom(id string, game games.GameMetadata, onClose func(*Room)) *Room {
+// CreateRoom creates a new room or returns nil for existing.
+func (h *Handler) CreateRoom(id string, game games.GameMetadata, onClose func(*Room)) *Room {
 	// If the roomID doesn't have any running sessions (room was closed)
 	// we spawn a new room
-	if h.router.IsRoomEmpty(id) {
-		newRoom := NewRoom(id, game, h.storage, onClose, h.conf, h.log)
-		h.router.AddRoom(newRoom)
-		return newRoom
+	old := h.router.GetRoom(id)
+	exists := old != nil && old.HasRunningSessions()
+	if exists {
+		return nil
 	}
-	return nil
+	return NewRoom(id, game, h.storage, onClose, h.conf, h.log)
 }
 
 func createLocalStorage(path string, log *logger.Logger) {

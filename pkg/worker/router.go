@@ -26,8 +26,6 @@ func (r *Router) RemoveRoom(room *Room) { r.rooms.Remove(room.ID) }
 
 func (r *Router) RemoveUser(user *Session) { r.sessions.Remove(user) }
 
-func (r *Router) IsRoomEmpty(id string) bool { return r.rooms.noSessions(id) }
-
 func (r *Router) Close() {
 	r.rooms.Close()
 }

@@ -111,7 +111,7 @@ func (c *Coordinator) HandleGameStart(packet ipc.InPacket, h *Handler) {
 	playRoom := h.router.GetRoom(resp.Room.Id)
 	if playRoom == nil {
 		h.log.Info().Str("room", resp.Room.Id).Msg("Create room")
-		playRoom = h.createRoom(
+		playRoom = h.CreateRoom(
 			resp.Room.Id,
 			games.GameMetadata{Name: resp.Game.Name, Base: resp.Game.Base, Type: resp.Game.Type, Path: resp.Game.Path},
 			func(room *Room) {
@@ -121,6 +121,7 @@ func (c *Coordinator) HandleGameStart(packet ipc.InPacket, h *Handler) {
 				h.log.Debug().Msgf("Room close has been called %v", room.ID)
 			},
 		)
+		h.router.AddRoom(playRoom)
 		user.SetPlayerIndex(resp.PlayerIndex)
 		h.log.Info().Msgf("Updated player index to: %d", resp.PlayerIndex)
 	}

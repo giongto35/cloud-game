@@ -21,20 +21,6 @@ func (r *Rooms) Get(id string) *Room {
 	return r.store[id]
 }
 
-// noSessions checks if a room has a running session.
-// TODO: If we remove sessions from room anytime a session is closed,
-// we can check if the sessions list is empty or not.
-func (r *Rooms) noSessions(id string) bool {
-	if id == "" {
-		return true
-	}
-	rm := r.Get(id)
-	if rm == nil {
-		return true
-	}
-	return !rm.HasRunningSessions()
-}
-
 func (r *Rooms) Remove(id string) {
 	r.mu.Lock()
 	delete(r.store, id)
