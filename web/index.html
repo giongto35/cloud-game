@@ -87,6 +87,9 @@
         <div id="help-overlay-detail"></div>
     </div>
     <div id="btn-help" class="btn unselectable" value="help"></div>
+    {{if .Recording.Enabled}}
+    <div>RECORD!</div>
+    {{end}}
 </div>
 
 <div id="app-settings" class="modal-window">
@@ -138,13 +141,13 @@
 
 <script src="/static/js/init.js?v=5"></script>
 
-{{if .Inject}}
-<script async src="https://www.googletagmanager.com/gtag/js?id={{.Gtag}}"></script>
+{{if .Analytics.Inject}}
+<script async src="https://www.googletagmanager.com/gtag/js?id={{.Analytics.Gtag}}"></script>
 <script>
     window.dataLayer = window.dataLayer || [];
     function gtag() { dataLayer.push(arguments); }
     gtag('js', new Date());
-    gtag('config', '{{.Gtag}}');
+    gtag('config', '{{.Analytics.Gtag}}');
 </script>
 {{end}}
 

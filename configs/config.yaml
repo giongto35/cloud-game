@@ -203,6 +203,9 @@ encoder:
   # (experimental)
   withoutGame: false
 
+recording:
+  enabled: false
+
 storage:
   # cloud storage provider:
   #   - empty (No op storage stub)
