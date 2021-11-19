@@ -86,6 +86,8 @@ const socket = (() => {
                     curPacketId = data.packet_id;
                     const addresses = data.data.split(',');
                     event.pub(LATENCY_CHECK_REQUESTED, {packetId: curPacketId, addresses: addresses});
+                case 'record':
+                    event.pub(RECORDING_STATUS_CHANGED);
             }
         };
     };
@@ -120,16 +122,22 @@ const socket = (() => {
     const saveGame = () => send({"id": "save", "data": ""});
     const loadGame = () => send({"id": "load", "data": ""});
     const updatePlayerIndex = (idx) => send({"id": "player_index", "data": idx.toString()});
-    const startGame = (gameName, isMobile, roomId, playerIndex) => send({
+    const startGame = (gameName, isMobile, roomId, record, playerIndex) => send({
         "id": "start",
         "data": JSON.stringify({
             "game_name": gameName,
         }),
         "room_id": roomId != null ? roomId : '',
+        "record": record,
         "player_index": playerIndex
     });
     const quitGame = (roomId) => send({"id": "quit", "data": "", "room_id": roomId});
     const toggleMultitap = () => send({"id": "multitap", "data": ""});
+    const toggleRecording = (active = false, userName = '') => send({
+        "id": "recording",
+        "data": active,
+        "user": userName
+    })
 
     return {
         init: init,
@@ -142,5 +150,6 @@ const socket = (() => {
         startGame: startGame,
         quitGame: quitGame,
         toggleMultitap: toggleMultitap,
+        toggleRecording: toggleRecording,
     }
 })(event, log);

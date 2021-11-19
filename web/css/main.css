@@ -13,7 +13,7 @@ body {
     overflow: hidden;
     display: block;
     width: 556px;
-    height: 278px;
+    height: 286px;
 
     /*-webkit-box-shadow: inset 0px 0px 2px 2px rgba(219, 222, 222, 1);*/
     /*-moz-box-shadow: inset 0px 0px 2px 2px rgba(219, 222, 222, 1);*/
@@ -88,7 +88,7 @@ body {
 #guide-txt {
     color: #bababa;
     font-size: 8px;
-    top: 263px;
+    top: 269px;
     left: 30px;
     width: 1000px;
     position: absolute;
@@ -180,7 +180,7 @@ body {
     width: 256px;
     height: 240px;
     position: absolute;
-    top: 20px;
+    top: 23px;
     left: 150px;
     overflow: hidden;
     background-color: #333;
@@ -265,6 +265,49 @@ body {
     height: 25px;
 
     background-image: url('/static/img/ui/bt QUIT.png');
+}
+
+#btn-rec {
+    width: 36px;
+    top: 2px;
+    left: 373px;
+    height: 9px;
+
+    background-image: url('/static/img/ui/bt REC.png');
+}
+
+.record {}
+
+.record-user {
+    position: absolute;
+    padding-left: 6px;
+    font-size: 12px;
+    width: 109px;
+    top: 4px;
+    left: 262px;
+    color: #888888;
+    -moz-border-radius: 6px;
+    -webkit-border-radius: 6px;
+    border-radius: 6px;
+    outline: none;
+    border-top-style: hidden;
+    border-right-style: hidden;
+    border-left-style: hidden;
+    border-bottom-style: hidden;
+    background-image: url(/static/img/ui/FrameTEXT.png);
+    background-size: cover;
+}
+
+.record:before {
+    position: absolute;
+    content: '';
+    background-color: #FF0000;
+    border-radius: 50%;
+    width: 5px;
+    height: 5px;
+    pointer-events: none;
+    left: 4px;
+    top: 7px;
 }
 
 #btn-select {

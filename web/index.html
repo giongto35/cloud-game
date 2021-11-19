@@ -88,7 +88,9 @@
     </div>
     <div id="btn-help" class="btn unselectable" value="help"></div>
     {{if .Recording.Enabled}}
-    <div>RECORD!</div>
+    <input id="user-name" type="text" data-lpignore="true" spellcheck="false" placeholder="user"
+           class="record-user unselectable">
+    <div id="btn-rec" class="btn unselectable" value="rec"></div>
     {{end}}
 </div>
 
@@ -133,6 +135,7 @@
 <script src="/static/js/network/ajax.js?v=3"></script>
 <script src="/static/js/network/socket.js?v=4"></script>
 <script src="/static/js/network/rtcp.js?v=3"></script>
+<script src="/static/js/recording.js?v=1"></script>
 <script src="/static/js/stats/stats.js?v=2"></script>
 <script src="/static/js/controller.js?v=6"></script>
 <script src="/static/js/input/keyboard.js?v=5"></script>
@@ -145,7 +148,11 @@
 <script async src="https://www.googletagmanager.com/gtag/js?id={{.Analytics.Gtag}}"></script>
 <script>
     window.dataLayer = window.dataLayer || [];
-    function gtag() { dataLayer.push(arguments); }
+
+    function gtag() {
+        dataLayer.push(arguments);
+    }
+
     gtag('js', new Date());
     gtag('config', '{{.Analytics.Gtag}}');
 </script>

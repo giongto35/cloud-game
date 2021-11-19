@@ -150,7 +150,7 @@
         // currently it's a game with the index 1
         // on the server this game is ignored and the actual game will be extracted from the share link
         // so there's no point in doing this and this' really confusing
-        socket.startGame(gameList.getCurrentGame(), env.isMobileDevice(), room.getId(), +playerIndex.value - 1);
+        socket.startGame(gameList.getCurrentGame(), env.isMobileDevice(), room.getId(), recording.isActive(), +playerIndex.value - 1);
 
         // clear menu screen
         input.poll().disable();
@@ -232,10 +232,21 @@
     };
 
     const handleToggle = () => {
-        var toggle = document.getElementById('dpad-toggle');
+        let toggle = document.getElementById('dpad-toggle');
         toggle.checked = !toggle.checked;
         event.pub(DPAD_TOGGLE, {checked: toggle.checked});
     };
+
+    const handleRecording = (data) => {
+        const {recording, userName} = data;
+        console.log(recording, userName);
+        socket.toggleRecording(recording, userName);
+    }
+
+    const handleRecordingStatus = (data) => {
+        const recording = true
+        message.show(`Recording ${recording ? 'on' : 'off'}`)
+    }
 
     const app = {
         state: {
@@ -407,7 +418,7 @@
     event.sub(GAME_SAVED, () => message.show('Saved'));
     event.sub(GAME_LOADED, () => message.show('Loaded'));
     event.sub(GAME_PLAYER_IDX_CHANGE, data => {
-       updatePlayerIndex(data.index);
+        updatePlayerIndex(data.index);
     });
     event.sub(GAME_PLAYER_IDX, idx => {
         if (!isNaN(+idx)) message.show(+idx + 1);
@@ -442,6 +453,8 @@
     });
     event.sub(AXIS_CHANGED, onAxisChanged);
     event.sub(CONTROLLER_UPDATED, data => rtcp.input(data));
+    // recording
+    event.sub(RECORDING_TOGGLED, handleRecording);
 
     // initial app state
     setState(app.state.eden);

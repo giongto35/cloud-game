@@ -204,7 +204,7 @@ encoder:
   withoutGame: false
 
 recording:
-  enabled: false
+  enabled: true
 
 storage:
   # cloud storage provider:
