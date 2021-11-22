@@ -129,7 +129,7 @@ func (r *Room) startVideo(width, height int, video encoderConfig.Video) {
 	for frame := range r.imageChannel {
 		if len(einput) < cap(einput) {
 			if r.rec.active {
-				go r.rec.SaveImage(frame.Image, time.Second)
+				go r.rec.SaveImage(frame.Data, time.Second)
 			}
 			einput <- encoder.InFrame{Image: frame.Data, Duration: frame.Duration}
 		}
