@@ -205,6 +205,8 @@ encoder:
 
 recording:
   enabled: true
+  name: "%date%_%user%_%game%"
+  folder: ./recording
 
 storage:
   # cloud storage provider:

@@ -75,7 +75,7 @@ func (bc *BrowserClient) handleGameStart(o *Server) cws.PacketHandler {
 		}
 
 		// +injects game data into the original game request
-		gameStartCall, err := newGameStartCall(resp.RoomID, resp.Data, o.library)
+		gameStartCall, err := newGameStartCall(resp.RoomID, resp.Data, o.library, o.cfg.Recording.Enabled)
 		if err != nil {
 			return cws.EmptyPacket
 		}
@@ -85,7 +85,6 @@ func (bc *BrowserClient) handleGameStart(o *Server) cws.PacketHandler {
 			resp.Data = packet
 		}
 		workerResp := wc.SyncSend(resp)
-
 		// Response from worker contains initialized roomID. Set roomID to the session
 		bc.RoomID = workerResp.RoomID
 		bc.Println("Received room response from browser: ", workerResp.RoomID)
@@ -179,8 +178,41 @@ func (bc *BrowserClient) handleGameMultitap(o *Server) cws.PacketHandler {
 	}
 }
 
+func (bc *BrowserClient) handleGameRecording(o *Server) cws.PacketHandler {
+	return func(resp cws.WSPacket) (req cws.WSPacket) {
+		bc.Println("Received recording request from a browser -> relay to worker")
+
+		if !o.cfg.Recording.Enabled {
+			bc.Printf("Recording should be disabled!")
+			return cws.EmptyPacket
+		}
+
+		request := api.GameRecordingRequest{}
+		if err := request.From(resp.Data); err != nil {
+			return cws.EmptyPacket
+		}
+
+		bc.Printf("Session: %v, room: %v, rec: %v user: %v", bc.SessionID, bc.RoomID, request.Active, request.User)
+
+		if bc.RoomID == "" {
+			bc.Printf("Recording in the empty room is not allowed!")
+			return cws.EmptyPacket
+		}
+
+		resp.SessionID = bc.SessionID
+		resp.RoomID = bc.RoomID
+		wc, ok := o.workerClients[bc.WorkerID]
+		if !ok {
+			return cws.EmptyPacket
+		}
+		resp = wc.SyncSend(resp)
+
+		return resp
+	}
+}
+
 // newGameStartCall gathers data for a new game start call of the worker
-func newGameStartCall(roomId string, data string, library games.GameLibrary) (api.GameStartCall, error) {
+func newGameStartCall(roomId string, data string, library games.GameLibrary, recording bool) (api.GameStartCall, error) {
 	request := api.GameStartRequest{}
 	if err := request.From(data); err != nil {
 		return api.GameStartCall{}, errors.New("invalid request")
@@ -203,10 +235,15 @@ func newGameStartCall(roomId string, data string, library games.GameLibrary) (ap
 		return api.GameStartCall{}, fmt.Errorf("couldn't find game info for the game %v", game)
 	}
 
-	return api.GameStartCall{
+	call := api.GameStartCall{
 		Name: gameInfo.Name,
 		Base: gameInfo.Base,
 		Path: gameInfo.Path,
 		Type: gameInfo.Type,
-	}, nil
+	}
+	if recording {
+		call.Record = request.Record
+		call.RecordUser = request.RecordUser
+	}
+	return call, nil
 }

@@ -58,6 +58,7 @@ const recording = (() => {
         })
     })
     return {
-        isActive: () => state._recording
+        isActive: () => state._recording,
+        getUser: () => state.userName,
     }
 })(document, event, localStorage, utils);

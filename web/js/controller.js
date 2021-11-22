@@ -150,7 +150,13 @@
         // currently it's a game with the index 1
         // on the server this game is ignored and the actual game will be extracted from the share link
         // so there's no point in doing this and this' really confusing
-        socket.startGame(gameList.getCurrentGame(), env.isMobileDevice(), room.getId(), recording.isActive(), +playerIndex.value - 1);
+        socket.startGame(
+            gameList.getCurrentGame(),
+            env.isMobileDevice(),
+            room.getId(),
+            recording.isActive(),
+            recording.getUser(),
+            +playerIndex.value - 1);
 
         // clear menu screen
         input.poll().disable();
@@ -246,6 +252,7 @@
     const handleRecordingStatus = (data) => {
         const recording = true
         message.show(`Recording ${recording ? 'on' : 'off'}`)
+        console.info('rec', data)
     }
 
     const app = {
@@ -455,6 +462,7 @@
     event.sub(CONTROLLER_UPDATED, data => rtcp.input(data));
     // recording
     event.sub(RECORDING_TOGGLED, handleRecording);
+    event.sub(RECORDING_STATUS_CHANGED, handleRecordingStatus);
 
     // initial app state
     setState(app.state.eden);

@@ -21,6 +21,7 @@ type Config struct {
 	Encoder     encoder.Encoder
 	Emulator    emulator.Emulator
 	Environment shared.Environment
+	Recording   shared.Recording
 	Storage     storage.Storage
 	Worker      Worker
 	Webrtc      webrtcConfig.Webrtc

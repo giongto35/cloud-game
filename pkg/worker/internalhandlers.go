@@ -121,6 +121,14 @@ func (h *Handler) handleGameStart() cws.PacketHandler {
 			return cws.EmptyPacket
 		}
 		game := games.GameMetadata{Name: rom.Name, Type: rom.Type, Base: rom.Base, Path: rom.Path}
+
+		// recording
+		if h.cfg.Recording.Enabled {
+			log.Printf("RECORD: %v %v", rom.Record, rom.RecordUser)
+		} else {
+			log.Printf("RECORD OFF")
+		}
+
 		room := h.startGameHandler(game, resp.RoomID, resp.PlayerIndex, session.peerconnection)
 		session.RoomID = room.ID
 		// TODO: can data race (and it does)
@@ -226,6 +234,46 @@ func (h *Handler) handleGameMultitap() cws.PacketHandler {
 				log.Println("[!] Could not toggle multitap state: ", err)
 				req.Data = "error"
 			}
+		} else {
+			req.Data = "error"
+		}
+
+		return req
+	}
+}
+
+func (h *Handler) handleGameRecording() cws.PacketHandler {
+	return func(resp cws.WSPacket) (req cws.WSPacket) {
+		log.Printf("Received recording request from coordinator: %v", resp)
+
+		req.ID = api.GameRecording
+		req.Data = "ok"
+
+		if !h.cfg.Recording.Enabled {
+			req.Data = "error"
+			return req
+		}
+
+		if resp.RoomID != "" {
+			r := h.getRoom(resp.RoomID)
+			if r == nil {
+				req.Data = "error"
+				return req
+			}
+
+			request := api.GameRecordingRequest{}
+			if err := request.From(resp.Data); err != nil {
+				req.Data = "error"
+				return req
+			}
+
+			r.ToggleRecording(request.Active, request.User)
+
+			//err := room.ToggleMultitap()
+			//if err != nil {
+			//	log.Println("[!] Could not toggle multitap state: ", err)
+			//	req.Data = "error"
+			//}
 		} else {
 			req.Data = "error"
 		}
