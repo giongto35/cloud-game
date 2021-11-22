@@ -1,15 +1,18 @@
 package encoder
 
-import "image"
+import (
+	"image"
+	"time"
+)
 
 type InFrame struct {
-	Image     *image.RGBA
-	Timestamp uint32
+	Image    *image.RGBA
+	Duration time.Duration
 }
 
 type OutFrame struct {
-	Data      []byte
-	Timestamp uint32
+	Data     []byte
+	Duration time.Duration
 }
 
 type Encoder interface {

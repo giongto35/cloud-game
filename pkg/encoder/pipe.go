@@ -18,7 +18,7 @@ type VideoPipe struct {
 }
 
 // NewVideoPipe returns new video encoder pipe.
-// By default it waits for RGBA images on the input channel,
+// By default, it waits for RGBA images on the input channel,
 // converts them into YUV I420 format,
 // encodes with provided video encoder, and
 // puts the result into the output channel.
@@ -51,7 +51,7 @@ func (vp *VideoPipe) Start() {
 		yCbCr := yuvProc.Process(img.Image).Get()
 		frame := vp.encoder.Encode(yCbCr)
 		if len(frame) > 0 {
-			vp.Output <- OutFrame{Data: frame, Timestamp: img.Timestamp}
+			vp.Output <- OutFrame{Data: frame, Duration: img.Duration}
 		}
 	}
 }

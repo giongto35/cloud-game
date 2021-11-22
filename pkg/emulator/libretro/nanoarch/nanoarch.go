@@ -59,6 +59,7 @@ void bridge_execute(void *f);
 import "C"
 
 var mu sync.Mutex
+var frameTime int64
 
 var video struct {
 	pitch    uint32
@@ -135,8 +136,7 @@ func coreVideoRefresh(data unsafe.Pointer, width C.unsigned, height C.unsigned, 
 		return
 	}
 
-	// divide by 8333 to give us the equivalent of a 120fps resolution
-	timestamp := uint32(time.Now().UnixNano()/8333) + seed
+	t := time.Now().UnixNano()
 	// if Libretro renders frame with OpenGL context
 	isOpenGLRender := data == C.RETRO_HW_FRAME_BUFFER_VALID
 
@@ -166,9 +166,15 @@ func coreVideoRefresh(data unsafe.Pointer, width C.unsigned, height C.unsigned, 
 		outputImg,
 	)
 
+	delta := t - frameTime
+	frameTime = t
+
 	// the image is pushed into a channel
 	// where it will be distributed with fan-out
-	NAEmulator.imageChannel <- GameFrame{Image: outputImg, Timestamp: timestamp}
+	select {
+	case NAEmulator.imageChannel <- GameFrame{Data: outputImg, Duration: time.Duration(delta)}:
+	default:
+	}
 }
 
 //export coreInputPoll

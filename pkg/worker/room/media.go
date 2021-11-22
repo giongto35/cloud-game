@@ -117,14 +117,14 @@ func (r *Room) startVideo(width, height int, video encoderConfig.Video) {
 				// encode frame
 				// fanout imageChannel
 				// NOTE: can block here
-				webRTC.ImageChannel <- webrtc.WebFrame{Data: data.Data, Timestamp: data.Timestamp}
+				webRTC.ImageChannel <- webrtc.WebFrame{Data: data.Data, Duration: data.Duration}
 			}
 		}
 	}()
 
-	for image := range r.imageChannel {
+	for frame := range r.imageChannel {
 		if len(einput) < cap(einput) {
-			einput <- encoder.InFrame{Image: image.Image, Timestamp: image.Timestamp}
+			einput <- encoder.InFrame{Image: frame.Data, Duration: frame.Duration}
 		}
 	}
 	log.Println("Room ", r.ID, " video channel closed")

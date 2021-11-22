@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"log"
 	"runtime/debug"
-	"sync/atomic"
 	"time"
 
 	"github.com/giongto35/cloud-game/v2/pkg/codec"
@@ -17,19 +16,18 @@ import (
 )
 
 type WebFrame struct {
-	Data      []byte
-	Timestamp uint32
+	Data     []byte
+	Duration time.Duration
 }
 
 // WebRTC connection
 type WebRTC struct {
 	ID string
 
-	connection                *webrtc.PeerConnection
-	cfg                       webrtcConfig.Config
-	globalVideoFrameTimestamp uint32
-	defaultConnection         *PeerConnection
-	isConnected               bool
+	connection        *webrtc.PeerConnection
+	cfg               webrtcConfig.Config
+	defaultConnection *PeerConnection
+	isConnected       bool
 	// for yuvI420 image
 	ImageChannel chan WebFrame
 	AudioChannel chan []byte
@@ -82,7 +80,7 @@ func NewWebRTC(conf webrtcConfig.Config) (*WebRTC, error) {
 		InputChannel: make(chan []byte, 100),
 		cfg:          conf,
 	}
-	conn, err := DefaultPeerConnection(w.cfg.Webrtc, &w.globalVideoFrameTimestamp)
+	conn, err := DefaultPeerConnection(w.cfg.Webrtc)
 	if err != nil {
 		return nil, err
 	}
@@ -321,8 +319,7 @@ func (w *WebRTC) startStreaming(vp8Track *webrtc.TrackLocalStaticSample, opusTra
 		}()
 
 		for data := range w.ImageChannel {
-			atomic.StoreUint32(&w.globalVideoFrameTimestamp, data.Timestamp)
-			if err := vp8Track.WriteSample(media.Sample{Data: data.Data}); err != nil {
+			if err := vp8Track.WriteSample(media.Sample{Data: data.Data, Duration: data.Duration}); err != nil {
 				log.Println("Warn: Err write sample: ", err)
 				break
 			}

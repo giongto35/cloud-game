@@ -21,7 +21,7 @@ var (
 	settings     pion.SettingEngine
 )
 
-func DefaultPeerConnection(conf conf.Webrtc, ts *uint32) (*PeerConnection, error) {
+func DefaultPeerConnection(conf conf.Webrtc) (*PeerConnection, error) {
 	m := &pion.MediaEngine{}
 	if err := m.RegisterDefaultCodecs(); err != nil {
 		return nil, err
@@ -33,7 +33,6 @@ func DefaultPeerConnection(conf conf.Webrtc, ts *uint32) (*PeerConnection, error
 			return nil, err
 		}
 	}
-	i.Add(&ReTimeInterceptor{timestamp: ts})
 
 	settingsOnce.Do(func() {
 		settingEngine := pion.SettingEngine{}
