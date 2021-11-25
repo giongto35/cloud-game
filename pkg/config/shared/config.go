@@ -19,9 +19,10 @@ type Server struct {
 }
 
 type Recording struct {
-	Enabled bool
-	Name    string
-	Folder  string
+	Enabled       bool
+	CompressLevel int
+	Name          string
+	Folder        string
 }
 
 func (s *Server) WithFlags() {

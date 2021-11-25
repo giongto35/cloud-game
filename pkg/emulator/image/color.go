@@ -31,6 +31,6 @@ func Rgba8888(data []byte, index int) color.RGBA {
 		R: data[index+2],
 		G: data[index+1],
 		B: data[index],
-		A: data[index+3],
+		A: 255,
 	}
 }

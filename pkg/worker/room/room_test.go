@@ -176,15 +176,6 @@ func TestAllEmulatorRooms(t *testing.T) {
 	}
 }
 
-// enforce image.RGBA to remove alpha channel when encoding PNGs
-type opaqueRGBA struct {
-	*image.RGBA
-}
-
-func (*opaqueRGBA) Opaque() bool {
-	return true
-}
-
 func dumpCanvas(f *image.RGBA, name string, caption string, path string) {
 	frame := *f
 
@@ -213,7 +204,7 @@ func dumpCanvas(f *image.RGBA, name string, caption string, path string) {
 	}
 
 	if f, err := os.Create(filepath.Join(outPath, name+".png")); err == nil {
-		if err = png.Encode(f, &opaqueRGBA{&frame}); err != nil {
+		if err = png.Encode(f, &frame); err != nil {
 			log.Printf("Couldn't encode the image, %v", err)
 		}
 		_ = f.Close()

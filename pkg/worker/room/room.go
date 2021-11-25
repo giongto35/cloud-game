@@ -5,6 +5,7 @@ import (
 	"encoding/gob"
 	"errors"
 	"fmt"
+	"github.com/giongto35/cloud-game/v2/pkg/recorder"
 	"io"
 	"io/ioutil"
 	"log"
@@ -54,7 +55,7 @@ type Room struct {
 	// Cloud storage to store room state online
 	onlineStorage storage.CloudStorage
 
-	rec Recording
+	rec recorder.Recording
 
 	vPipe *encoder.VideoPipe
 }
@@ -142,8 +143,6 @@ func NewRoom(roomID string, game games.GameMetadata, onlineStorage storage.Cloud
 		IsRunning:     true,
 		onlineStorage: onlineStorage,
 
-		rec: NewRecording(game.Name, cfg.Recording),
-
 		Done: make(chan struct{}, 1),
 	}
 
@@ -208,6 +207,9 @@ func NewRoom(roomID string, game games.GameMetadata, onlineStorage storage.Cloud
 		if gameMeta.Rotation.IsEven {
 			encoderW, encoderH = nheight, nwidth
 		}
+
+		room.rec = recorder.NewRecording(game.Name, gameMeta.AudioSampleRate, cfg.Recording)
+		room.rec.Start()
 
 		room.director.SetViewport(encoderW, encoderH)
 

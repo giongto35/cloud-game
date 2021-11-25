@@ -3,7 +3,8 @@ package room
 import (
 	"fmt"
 	"log"
-	"time"
+
+	"github.com/giongto35/cloud-game/v2/pkg/recorder"
 
 	"github.com/giongto35/cloud-game/v2/pkg/codec"
 	encoderConfig "github.com/giongto35/cloud-game/v2/pkg/config/encoder"
@@ -54,8 +55,8 @@ func (r *Room) startAudio(sampleRate int, audio encoderConfig.Audio) {
 	log.Printf("OPUS: %v", sound.GetInfo())
 
 	for samples := range r.audioChannel {
-		if r.rec.active {
-			r.rec.SaveAudio(samples)
+		if r.rec.IsActive() {
+			r.rec.WriteAudio(recorder.Audio{Samples: &samples})
 		}
 		sound.BufferWrite(samples)
 	}
@@ -128,8 +129,8 @@ func (r *Room) startVideo(width, height int, video encoderConfig.Video) {
 
 	for frame := range r.imageChannel {
 		if len(einput) < cap(einput) {
-			if r.rec.active {
-				go r.rec.SaveImage(frame.Data, time.Second)
+			if r.rec.IsActive() {
+				go r.rec.WriteVideo(recorder.Video{Image: frame.Data, Duration: frame.Duration})
 			}
 			einput <- encoder.InFrame{Image: frame.Data, Duration: frame.Duration}
 		}

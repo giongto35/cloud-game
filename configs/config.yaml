@@ -204,7 +204,8 @@ encoder:
   withoutGame: false
 
 recording:
-  enabled: true
+  enabled: false
+  compressLevel: 0
   name: "%date%_%user%_%game%"
   folder: ./recording
 
