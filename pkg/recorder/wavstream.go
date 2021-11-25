@@ -3,6 +3,8 @@ package recorder
 import (
 	"encoding/binary"
 	"log"
+
+	"github.com/hashicorp/go-multierror"
 )
 
 type wavStream struct {
@@ -35,29 +37,28 @@ func NewWavStream(dir string, frequency int) (*wavStream, error) {
 }
 
 func (w *wavStream) Start() {
-	go func() {
-		for audio := range w.buf {
-			if err := w.Save(*audio.Samples); err != nil {
-				log.Printf("wav write err: %v", err)
-			}
+	for audio := range w.buf {
+		if err := w.Save(*audio.Samples); err != nil {
+			log.Printf("wav write err: %v", err)
 		}
-	}()
+	}
 }
 
-func (w *wavStream) Stop() (err error) {
+func (w *wavStream) Stop() error {
+	var result *multierror.Error
 	close(w.buf)
-	err = w.wav.Flush()
+	result = multierror.Append(result, w.wav.Flush())
 	size, er := w.wav.Size()
 	if er != nil {
-		err = er
+		result = multierror.Append(result, er)
 	}
 	if size > 0 {
 		// write actual RIFF header
-		err = w.wav.WriteAtStart(rIFFWavHeader(uint32(size), w.frequency))
-		err = w.wav.Flush()
+		result = multierror.Append(result, w.wav.WriteAtStart(rIFFWavHeader(uint32(size), w.frequency)))
+		result = multierror.Append(result, w.wav.Flush())
 	}
-	err = w.wav.Close()
-	return
+	result = multierror.Append(result, w.wav.Close())
+	return result.ErrorOrNil()
 }
 
 func (w *wavStream) Pause() {}

@@ -6,14 +6,16 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"sync"
 )
 
 type fileStream struct {
 	io.Closer
-	bufio.Writer
 	Stream
 
-	f *os.File
+	f  *os.File
+	w  *bufio.Writer
+	mu *sync.Mutex
 }
 
 func newFileStream(dir string, name string) (*fileStream, error) {
@@ -21,12 +23,20 @@ func newFileStream(dir string, name string) (*fileStream, error) {
 	if err != nil {
 		return nil, err
 	}
-	return &fileStream{f: f, Writer: *bufio.NewWriter(f)}, nil
+	return &fileStream{f: f, w: bufio.NewWriter(f), mu: &sync.Mutex{}}, nil
+}
+
+func (f *fileStream) Flush() error {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	return f.w.Flush()
 }
 
 func (f *fileStream) Close() error { return f.f.Close() }
 
 func (f *fileStream) Size() (int64, error) {
+	f.mu.Lock()
+	defer f.mu.Unlock()
 	inf, err := f.f.Stat()
 	if err != nil {
 		return -1, err
@@ -35,11 +45,13 @@ func (f *fileStream) Size() (int64, error) {
 }
 
 func (f *fileStream) Write(data []byte) error {
-	n, err := f.f.Write(data)
-	if n < len(data) {
-		return fmt.Errorf("write size mismatch [%v!=%v]", n, len(data))
-	}
+	f.mu.Lock()
+	n, err := f.w.Write(data)
+	f.mu.Unlock()
 	if err != nil {
+		if n < len(data) {
+			return fmt.Errorf("write size mismatch [%v!=%v], %v", n, len(data), err)
+		}
 		return err
 	}
 	return nil
@@ -52,4 +64,10 @@ func (f *fileStream) WriteAtStart(data []byte) error {
 		return err
 	}
 	return f.Write(data)
+}
+
+func (f *fileStream) WriteString(s string) (int, error) {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	return f.w.WriteString(s)
 }

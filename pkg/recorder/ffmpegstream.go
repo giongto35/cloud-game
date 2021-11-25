@@ -7,7 +7,6 @@ import (
 	"image/color"
 	"image/draw"
 	"image/png"
-	"io"
 	"log"
 	"os"
 	"path/filepath"
@@ -15,13 +14,13 @@ import (
 	"sync/atomic"
 	"time"
 
+	"github.com/hashicorp/go-multierror"
 	"golang.org/x/image/font"
 	"golang.org/x/image/font/basicfont"
 	"golang.org/x/image/math/fixed"
 )
 
 type ffmpegStream struct {
-	io.Writer
 	Stream
 
 	demux *fileStream
@@ -60,22 +59,21 @@ func NewFfmpegStream(dir, game string, frequency int, compress int) (*ffmpegStre
 
 func (f *ffmpegStream) Start() {
 	f.startTime = time.Now()
-	go func() {
-		for frame := range f.buf {
-			if err := f.Save(&frame.Image, frame.Duration); err != nil {
-				log.Printf("image write err: %v", err)
-			}
+	for frame := range f.buf {
+		if err := f.Save(frame.Image, frame.Duration); err != nil {
+			log.Printf("image write err: %v", err)
 		}
-	}()
+	}
 }
 
-func (f *ffmpegStream) Stop() (err error) {
+func (f *ffmpegStream) Stop() error {
+	var result *multierror.Error
 	close(f.buf)
 	f.resetImageNum()
-	err = f.demux.Flush()
-	err = f.demux.Close()
+	result = multierror.Append(result, f.demux.Flush())
+	result = multierror.Append(result, f.demux.Close())
 	f.wg.Wait()
-	return
+	return result.ErrorOrNil()
 }
 
 func addLabel(img *image.RGBA, x, y int, label string) {
@@ -98,7 +96,7 @@ func CloneToRGBA(src image.Image) *image.RGBA {
 	return dst
 }
 
-func (f *ffmpegStream) Save(img *image.Image, dur time.Duration) error {
+func (f *ffmpegStream) Save(img image.Image, dur time.Duration) error {
 	fileName := fmt.Sprintf(videoFile, f.nextImageNum())
 	f.wg.Add(1)
 	go f.saveImage(fileName, img)
@@ -110,13 +108,13 @@ func (f *ffmpegStream) Save(img *image.Image, dur time.Duration) error {
 	return nil
 }
 
-func (f *ffmpegStream) saveImage(fileName string, img *image.Image) {
+func (f *ffmpegStream) saveImage(fileName string, img image.Image) {
 	defer f.wg.Done()
 
 	// copy the image
 	//imgg := CloneToRGBA(*img)
 	var buf bytes.Buffer
-	x, y := (*img).Bounds().Dx(), (*img).Bounds().Dy()
+	x, y := (img).Bounds().Dx(), (img).Bounds().Dy()
 	buf.Grow(x * y * 4)
 
 	//now := time.Now()
@@ -126,7 +124,7 @@ func (f *ffmpegStream) saveImage(fileName string, img *image.Image) {
 	//log.Printf(time_)
 	//time_ := fmt.Sprintf("%0f:%0f:%0f.%000d", timeDiff.Hours(), timeDiff.Minutes(), timeDiff.Seconds(), timeDiff.Milliseconds())
 	//addLabel(imgg, 100, y-21, time_)
-	if err := f.pnge.Encode(&buf, *img); err != nil {
+	if err := f.pnge.Encode(&buf, img); err != nil {
 		log.Printf("p err: %v", err)
 	}
 	file, err := os.Create(filepath.Join(f.dir, fileName))

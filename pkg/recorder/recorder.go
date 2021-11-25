@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/giongto35/cloud-game/v2/pkg/config/shared"
+	"github.com/hashicorp/go-multierror"
 )
 
 type Recording struct {
@@ -79,26 +80,25 @@ func NewRecording(game string, frequency int, conf shared.Recording) *Recording 
 		log.Fatal(err)
 	}
 
-	return &Recording{
-		audioStream: *audio,
-		videoStream: *video,
-	}
+	return &Recording{audioStream: *audio, videoStream: *video}
 }
 
 func (r *Recording) Start() {
 	r.Lock()
 	defer r.Unlock()
-	r.audioStream.Start()
-	r.videoStream.Start()
+	r.active = true
+	go r.audioStream.Start()
+	go r.videoStream.Start()
 }
 
-func (r *Recording) Stop() (err error) {
+func (r *Recording) Stop() error {
+	var result *multierror.Error
 	r.Lock()
 	defer r.Unlock()
 	r.active = false
-	err = r.audioStream.Stop()
-	err = r.videoStream.Stop()
-	return
+	result = multierror.Append(result, r.audioStream.Stop())
+	result = multierror.Append(result, r.videoStream.Stop())
+	return result.ErrorOrNil()
 }
 
 func (r *Recording) Set(active bool, user string) {

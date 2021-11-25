@@ -19,6 +19,7 @@ require (
 	github.com/golang/glog v1.0.0
 	github.com/golang/groupcache v0.0.0-20210331224755-41bb18bfe9da // indirect
 	github.com/gorilla/websocket v1.4.2
+	github.com/hashicorp/go-multierror v1.1.1 // indirect
 	github.com/kkyr/fig v0.3.0
 	github.com/mitchellh/mapstructure v1.4.2 // indirect
 	github.com/pelletier/go-toml v1.9.4 // indirect

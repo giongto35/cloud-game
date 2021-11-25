@@ -58,19 +58,13 @@ func TestName(t *testing.T) {
 }
 
 func BenchmarkNewRecording100x100(b *testing.B) {
-	log.SetOutput(ioutil.Discard)
-	os.Stdout, _ = os.Open(os.DevNull)
 	benchmarkRecorder(100, 100, 0, b)
 }
 
 func BenchmarkNewRecording320x240_compressed(b *testing.B) {
-	log.SetOutput(ioutil.Discard)
-	os.Stdout, _ = os.Open(os.DevNull)
 	benchmarkRecorder(320, 240, 0, b)
 }
 func BenchmarkNewRecording320x240_nocompression(b *testing.B) {
-	log.SetOutput(ioutil.Discard)
-	os.Stdout, _ = os.Open(os.DevNull)
 	benchmarkRecorder(320, 240, -1, b)
 }
 
