@@ -47,7 +47,7 @@ type (
 //   		 -ac 2 -channel_layout stereo -i "./recording/psxtest/audio.wav" \
 //  		 -b:a 128K -r 60 -crf 30 -preset faster -pix_fmt yuv420p out.mp4
 //
-func NewRecording(game string, frequency int, conf shared.Recording) Recording {
+func NewRecording(game string, frequency int, conf shared.Recording) *Recording {
 	// todo flush all files on record stop not on room close
 	date := time.Now().Format("20060102")
 	savePath, err := filepath.Abs(conf.Folder)
@@ -70,7 +70,7 @@ func NewRecording(game string, frequency int, conf shared.Recording) Recording {
 		}
 	}
 
-	audio, err := NewWavAudioStream(path, frequency)
+	audio, err := NewWavStream(path, frequency)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -79,7 +79,7 @@ func NewRecording(game string, frequency int, conf shared.Recording) Recording {
 		log.Fatal(err)
 	}
 
-	return Recording{
+	return &Recording{
 		audioStream: *audio,
 		videoStream: *video,
 	}

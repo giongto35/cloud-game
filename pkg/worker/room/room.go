@@ -55,7 +55,7 @@ type Room struct {
 	// Cloud storage to store room state online
 	onlineStorage storage.CloudStorage
 
-	rec recorder.Recording
+	rec *recorder.Recording
 
 	vPipe *encoder.VideoPipe
 }
@@ -208,8 +208,10 @@ func NewRoom(roomID string, game games.GameMetadata, onlineStorage storage.Cloud
 			encoderW, encoderH = nheight, nwidth
 		}
 
-		room.rec = recorder.NewRecording(game.Name, gameMeta.AudioSampleRate, cfg.Recording)
-		room.rec.Start()
+		if cfg.Recording.Enabled {
+			room.rec = recorder.NewRecording(game.Name, gameMeta.AudioSampleRate, cfg.Recording)
+			room.rec.Start()
+		}
 
 		room.director.SetViewport(encoderW, encoderH)
 
@@ -361,7 +363,11 @@ func (r *Room) Close() {
 	// Just dont close it, let it be gc
 	//close(r.imageChannel)
 	//close(r.audioChannel)
-	r.rec.Stop()
+	if r.rec != nil {
+		if err := r.rec.Stop(); err != nil {
+			log.Printf("record close err, %v", err)
+		}
+	}
 }
 
 func (r *Room) isRoomExisted() bool {
@@ -421,4 +427,9 @@ func (r *Room) IsRunningSessions() bool {
 	return false
 }
 
-func (r *Room) ToggleRecording(active bool, user string) { r.rec.Set(active, user) }
+func (r *Room) ToggleRecording(active bool, user string) {
+	if r.rec == nil {
+		return
+	}
+	r.rec.Set(active, user)
+}
