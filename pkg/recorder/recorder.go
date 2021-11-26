@@ -115,6 +115,11 @@ func (r *Recording) Stop() error {
 
 func (r *Recording) Set(active bool, user string) {
 	r.Lock()
+	if r.active == false && active {
+		r.Unlock()
+		r.Start()
+		r.Lock()
+	}
 	r.active = active
 	r.User = user
 	r.Unlock()

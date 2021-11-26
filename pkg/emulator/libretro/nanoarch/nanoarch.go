@@ -60,6 +60,7 @@ import "C"
 
 var mu sync.Mutex
 var frameTime int64
+var fmu sync.Mutex
 
 var video struct {
 	pitch    uint32
@@ -130,13 +131,18 @@ type CloudEmulator interface {
 
 //export coreVideoRefresh
 func coreVideoRefresh(data unsafe.Pointer, width C.unsigned, height C.unsigned, pitch C.size_t) {
+	t := time.Now().UnixNano()
+	fmu.Lock()
+	ft := frameTime
+	frameTime = t
+	fmu.Unlock()
+	delta := t - ft
 	// some cores can return nothing
 	// !to add duplicate if can dup
 	if data == nil {
 		return
 	}
 
-	t := time.Now().UnixNano()
 	// if Libretro renders frame with OpenGL context
 	isOpenGLRender := data == C.RETRO_HW_FRAME_BUFFER_VALID
 
@@ -165,9 +171,6 @@ func coreVideoRefresh(data unsafe.Pointer, width C.unsigned, height C.unsigned, 
 		data_,
 		outputImg,
 	)
-
-	delta := t - frameTime
-	frameTime = t
 
 	// the image is pushed into a channel
 	// where it will be distributed with fan-out

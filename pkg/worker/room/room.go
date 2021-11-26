@@ -5,7 +5,6 @@ import (
 	"encoding/gob"
 	"errors"
 	"fmt"
-	"github.com/giongto35/cloud-game/v2/pkg/recorder"
 	"io"
 	"io/ioutil"
 	"log"
@@ -20,6 +19,7 @@ import (
 	"github.com/giongto35/cloud-game/v2/pkg/emulator/libretro/nanoarch"
 	"github.com/giongto35/cloud-game/v2/pkg/encoder"
 	"github.com/giongto35/cloud-game/v2/pkg/games"
+	"github.com/giongto35/cloud-game/v2/pkg/recorder"
 	"github.com/giongto35/cloud-game/v2/pkg/session"
 	"github.com/giongto35/cloud-game/v2/pkg/storage"
 	"github.com/giongto35/cloud-game/v2/pkg/webrtc"
@@ -210,7 +210,10 @@ func NewRoom(roomID string, game games.GameMetadata, onlineStorage storage.Cloud
 
 		if cfg.Recording.Enabled {
 			room.rec = recorder.NewRecording(game.Name, gameMeta.AudioSampleRate, cfg.Recording)
-			room.rec.Start()
+			// todo enable right away if
+			if room.rec.IsActive() {
+				room.rec.Start()
+			}
 		}
 
 		room.director.SetViewport(encoderW, encoderH)
