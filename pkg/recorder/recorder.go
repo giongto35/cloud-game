@@ -19,14 +19,23 @@ type Recording struct {
 	active bool
 	User   string
 
-	audioStream wavStream
-	videoStream ffmpegStream
+	audio AudioStream
+	video VideoStream
 }
 
 // Stream represent an output stream of the recording.
 type Stream interface {
 	Start()
 	Stop() error
+}
+
+type AudioStream interface {
+	Stream
+	Write(data Audio)
+}
+type VideoStream interface {
+	Stream
+	Write(data Video)
 }
 
 type (
@@ -47,6 +56,9 @@ type (
 //    ffmpeg -f concat -i "./recording/psxtest/input.txt" \
 //   		 -ac 2 -channel_layout stereo -i "./recording/psxtest/audio.wav" \
 //  		 -b:a 128K -r 60 -crf 30 -preset faster -pix_fmt yuv420p out.mp4
+
+// ffmpeg -r 60 -f concat -i "./recording/20211126_Sushi The Cat/input.txt" -ac 2 -channel_layout stereo -i "./recording
+// 20211126_Sushi The Cat/audio.wav" -b:a 128K -r 60 -crf 16 -preset faster -pix_fmt yuv420p -ar 44100 -shortest out.mp4
 //
 func NewRecording(game string, frequency int, conf shared.Recording) *Recording {
 	// todo flush all files on record stop not on room close
@@ -80,15 +92,15 @@ func NewRecording(game string, frequency int, conf shared.Recording) *Recording 
 		log.Fatal(err)
 	}
 
-	return &Recording{audioStream: *audio, videoStream: *video}
+	return &Recording{audio: audio, video: video}
 }
 
 func (r *Recording) Start() {
 	r.Lock()
 	defer r.Unlock()
 	r.active = true
-	go r.audioStream.Start()
-	go r.videoStream.Start()
+	go r.audio.Start()
+	go r.video.Start()
 }
 
 func (r *Recording) Stop() error {
@@ -96,8 +108,8 @@ func (r *Recording) Stop() error {
 	r.Lock()
 	defer r.Unlock()
 	r.active = false
-	result = multierror.Append(result, r.audioStream.Stop())
-	result = multierror.Append(result, r.videoStream.Stop())
+	result = multierror.Append(result, r.audio.Stop())
+	result = multierror.Append(result, r.video.Stop())
 	return result.ErrorOrNil()
 }
 
@@ -114,6 +126,5 @@ func (r *Recording) IsActive() bool {
 	return r.active
 }
 
-func (r *Recording) WriteVideo(frame Video) { r.videoStream.buf <- frame }
-
-func (r *Recording) WriteAudio(audio Audio) { r.audioStream.buf <- audio }
+func (r *Recording) WriteVideo(frame Video) { r.video.Write(frame) }
+func (r *Recording) WriteAudio(audio Audio) { r.audio.Write(audio) }

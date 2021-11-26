@@ -21,7 +21,7 @@ import (
 )
 
 type ffmpegStream struct {
-	Stream
+	VideoStream
 
 	demux *fileStream
 
@@ -79,7 +79,7 @@ func (f *ffmpegStream) Start() {
 func (f *ffmpegStream) Stop() error {
 	var result *multierror.Error
 	close(f.buf)
-	f.resetImageNum()
+	f.resetSeq()
 	result = multierror.Append(result, f.demux.Flush())
 	result = multierror.Append(result, f.demux.Close())
 	f.wg.Wait()
@@ -107,13 +107,13 @@ func CloneToRGBA(src image.Image) *image.RGBA {
 }
 
 func (f *ffmpegStream) Save(img image.Image, dur time.Duration) error {
-	fileName := fmt.Sprintf(videoFile, f.nextImageNum())
+	fileName := fmt.Sprintf(videoFile, f.nextSeq())
 	f.wg.Add(1)
 	go f.saveImage(fileName, img)
-	// ffmpeg concat demuxer
-	// see: https://ffmpeg.org/ffmpeg-formats.html#concat
-	if _, err := f.demux.WriteString(fmt.Sprintf("file %v\nduration %v\n", fileName, dur.Seconds())); err != nil {
-		log.Printf("dmx err: %v", err)
+	// ffmpeg concat demuxer, see: https://ffmpeg.org/ffmpeg-formats.html#concat
+	inf := fmt.Sprintf("file %v\nduration %v\n", fileName, dur.Seconds())
+	if _, err := f.demux.WriteString(inf); err != nil {
+		return err
 	}
 	return nil
 }
@@ -136,19 +136,21 @@ func (f *ffmpegStream) saveImage(fileName string, img image.Image) {
 	//addLabel(imgg, 100, y-21, time_)
 	if err := f.pnge.Encode(&buf, img); err != nil {
 		log.Printf("p err: %v", err)
-	}
-	file, err := os.Create(filepath.Join(f.dir, fileName))
-	if err != nil {
-		log.Printf("c err: %v", err)
-	}
-	if _, err = file.Write(buf.Bytes()); err != nil {
-		log.Printf("f err: %v", err)
-	}
-	if err = file.Close(); err != nil {
-		log.Printf("fc err: %v", err)
+	} else {
+		file, err := os.Create(filepath.Join(f.dir, fileName))
+		if err != nil {
+			log.Printf("c err: %v", err)
+		}
+		if _, err = file.Write(buf.Bytes()); err != nil {
+			log.Printf("f err: %v", err)
+		}
+		if err = file.Close(); err != nil {
+			log.Printf("fc err: %v", err)
+		}
 	}
 }
 
-func (f *ffmpegStream) GetCounter() uint32   { return atomic.LoadUint32(&f.sequence) }
-func (f *ffmpegStream) nextImageNum() uint32 { return atomic.AddUint32(&f.sequence, 1) }
-func (f *ffmpegStream) resetImageNum()       { atomic.AddUint32(&f.sequence, 1) }
+func (f *ffmpegStream) nextSeq() uint32 { return atomic.AddUint32(&f.sequence, 1) }
+func (f *ffmpegStream) resetSeq()       { atomic.StoreUint32(&f.sequence, 0) }
+
+func (f *ffmpegStream) Write(data Video) { f.buf <- data }

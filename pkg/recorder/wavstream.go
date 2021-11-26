@@ -8,7 +8,7 @@ import (
 )
 
 type wavStream struct {
-	Stream
+	AudioStream
 
 	buf       chan Audio
 	frequency int
@@ -113,3 +113,5 @@ func rIFFWavHeader(fSize uint32, fq int) []byte {
 	}
 	return header[:]
 }
+
+func (w *wavStream) Write(data Audio) { w.buf <- data }
