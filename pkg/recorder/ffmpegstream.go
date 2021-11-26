@@ -38,6 +38,14 @@ const (
 	videoFile = "f%v.png"
 )
 
+type pool struct{ sync.Pool }
+
+func newPool() *pool {
+	return &pool{sync.Pool{New: func() interface{} { return &png.EncoderBuffer{} }}}
+}
+func (p *pool) Get() *png.EncoderBuffer  { return p.Pool.Get().(*png.EncoderBuffer) }
+func (p *pool) Put(b *png.EncoderBuffer) { p.Pool.Put(b) }
+
 func NewFfmpegStream(dir, game string, frequency int, compress int) (*ffmpegStream, error) {
 	demux, err := newFileStream(dir, demuxFile)
 	if err != nil {
@@ -51,9 +59,11 @@ func NewFfmpegStream(dir, game string, frequency int, compress int) (*ffmpegStre
 		buf:   make(chan Video, 1),
 		dir:   dir,
 		demux: demux,
-		// todo use png buffer
-		pnge: &png.Encoder{CompressionLevel: png.CompressionLevel(compress)},
-		wg:   &sync.WaitGroup{},
+		pnge: &png.Encoder{
+			CompressionLevel: png.CompressionLevel(compress),
+			BufferPool:       newPool(),
+		},
+		wg: &sync.WaitGroup{},
 	}, nil
 }
 
