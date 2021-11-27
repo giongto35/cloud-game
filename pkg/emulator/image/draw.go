@@ -16,9 +16,10 @@ var canvas = imageCache{
 	0,
 }
 
-func DrawRgbaImage(pixFormat Format, rotationFn Rotate, scaleType int, flipV bool, w, h, packedW, bpp int, data []byte, dest *image.RGBA) {
+func DrawRgbaImage(pixFormat Format, rotationFn Rotate, scaleType int, flipV bool, w, h, packedW, bpp int,
+	data []byte, dw, dh int) *image.RGBA {
 	if pixFormat == nil {
-		dest = nil
+		return nil
 	}
 
 	// !to implement own image interfaces img.Pix = bytes[]
@@ -29,7 +30,9 @@ func DrawRgbaImage(pixFormat Format, rotationFn Rotate, scaleType int, flipV boo
 	src := getCanvas(ww, hh)
 
 	drawImage(pixFormat, w, h, packedW, bpp, flipV, rotationFn, data, src)
-	Resize(scaleType, src, dest)
+	out := image.NewRGBA(image.Rect(0,0, dw, dh))
+	Resize(scaleType, src, out)
+	return out
 }
 
 func drawImage(toRGBA Format, w, h, packedW, bpp int, flipV bool, rotationFn Rotate, data []byte, image *image.RGBA) {

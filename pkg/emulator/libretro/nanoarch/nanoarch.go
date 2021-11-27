@@ -3,7 +3,6 @@ package nanoarch
 import (
 	"bufio"
 	"log"
-	"math/rand"
 	"os"
 	"os/user"
 	"runtime"
@@ -58,9 +57,8 @@ void bridge_execute(void *f);
 */
 import "C"
 
-var mu sync.Mutex
-var frameTime int64
-var fmu sync.Mutex
+var mu, fmu sync.Mutex
+var lastFrameTime time.Time
 
 var video struct {
 	pitch    uint32
@@ -99,8 +97,6 @@ var systemDirectory = C.CString("./pkg/emulator/libretro/system")
 var saveDirectory = C.CString(".")
 var currentUser *C.char
 
-var seed = rand.New(rand.NewSource(time.Now().UnixNano())).Uint32()
-
 var bindKeysMap = map[int]int{
 	C.RETRO_DEVICE_ID_JOYPAD_A:      0,
 	C.RETRO_DEVICE_ID_JOYPAD_B:      1,
@@ -131,20 +127,17 @@ type CloudEmulator interface {
 
 //export coreVideoRefresh
 func coreVideoRefresh(data unsafe.Pointer, width C.unsigned, height C.unsigned, pitch C.size_t) {
-	t := time.Now().UnixNano()
+	t := time.Now()
 	fmu.Lock()
-	ft := frameTime
-	frameTime = t
+	dt := t.Sub(lastFrameTime)
+	lastFrameTime = t
 	fmu.Unlock()
-	delta := t - ft
+
 	// some cores can return nothing
 	// !to add duplicate if can dup
 	if data == nil {
 		return
 	}
-
-	// if Libretro renders frame with OpenGL context
-	isOpenGLRender := data == C.RETRO_HW_FRAME_BUFFER_VALID
 
 	// calculate real frame width in pixels from packed data (realWidth >= width)
 	packedWidth := int(uint32(pitch) / video.bpp)
@@ -154,6 +147,8 @@ func coreVideoRefresh(data unsafe.Pointer, width C.unsigned, height C.unsigned, 
 	// calculate space for the video frame
 	bytes := int(height) * packedWidth * int(video.bpp)
 
+	// if Libretro renders frame with OpenGL context
+	isOpenGLRender := data == C.RETRO_HW_FRAME_BUFFER_VALID
 	var data_ []byte
 	if isOpenGLRender {
 		data_ = graphics.ReadFramebuffer(bytes, int(width), int(height))
@@ -162,20 +157,21 @@ func coreVideoRefresh(data unsafe.Pointer, width C.unsigned, height C.unsigned, 
 	}
 
 	// the image is being resized and de-rotated
-	image.DrawRgbaImage(
+	img := image.DrawRgbaImage(
 		pixelFormatConverterFn,
 		rotationFn,
 		image.ScaleNearestNeighbour,
 		isOpenGLRender,
 		int(width), int(height), packedWidth, int(video.bpp),
 		data_,
-		outputImg,
+		NAEmulator.vw,
+		NAEmulator.vh,
 	)
 
 	// the image is pushed into a channel
 	// where it will be distributed with fan-out
 	select {
-	case NAEmulator.imageChannel <- GameFrame{Data: outputImg, Duration: time.Duration(delta)}:
+	case NAEmulator.imageChannel <- GameFrame{Data: img, Duration: dt}:
 	default:
 	}
 }

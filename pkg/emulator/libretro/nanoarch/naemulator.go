@@ -65,6 +65,9 @@ type naEmulator struct {
 	isSavingLoading bool
 	storage         Storage
 
+	// out frame size
+	vw, vh int
+
 	players Players
 
 	done chan struct{}
@@ -83,7 +86,6 @@ type GameFrame struct {
 }
 
 var NAEmulator *naEmulator
-var outputImg *image.RGBA
 
 // NAEmulator implements CloudEmulator interface based on NanoArch(golang RetroArch)
 func NewNAEmulator(roomID string, inputChannel <-chan InputEvent, storage Storage, conf config.LibretroCoreConfig) (*naEmulator, chan GameFrame, chan []int16) {
@@ -173,10 +175,7 @@ func (na *naEmulator) LoadMeta(path string) emulator.Metadata {
 	return na.meta
 }
 
-func (na *naEmulator) SetViewport(width int, height int) {
-	// outputImg is tmp img used for decoding and reuse in encoding flow
-	outputImg = image.NewRGBA(image.Rect(0, 0, width, height))
-}
+func (na *naEmulator) SetViewport(width int, height int) { na.vw, na.vh = width, height }
 
 func (na *naEmulator) Start() {
 	err := na.LoadGame()
@@ -186,7 +185,7 @@ func (na *naEmulator) Start() {
 
 	ticker := time.NewTicker(time.Second / time.Duration(na.meta.Fps))
 
-	frameTime = time.Now().UnixNano()
+	lastFrameTime = time.Now()
 
 	for range ticker.C {
 		select {
@@ -233,10 +232,6 @@ func (na *naEmulator) ToggleMultitap() error {
 func (na *naEmulator) GetHashPath() string { return na.storage.GetSavePath() }
 
 func (na *naEmulator) GetSRAMPath() string { return na.storage.GetSRAMPath() }
-
-func (*naEmulator) GetViewport() interface{} {
-	return outputImg
-}
 
 func (na *naEmulator) Close() {
 	close(na.done)
