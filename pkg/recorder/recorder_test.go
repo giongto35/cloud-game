@@ -86,9 +86,8 @@ func benchmarkRecorder(w, h int, comp int, b *testing.B) {
 
 	var bytes int64 = 0
 
-	var imgWg, audioWg sync.WaitGroup
-	imgWg.Add(b.N)
-	audioWg.Add(b.N)
+	var ticks sync.WaitGroup
+	ticks.Add(b.N * 2)
 
 	b.StartTimer()
 
@@ -103,19 +102,18 @@ func benchmarkRecorder(w, h int, comp int, b *testing.B) {
 		if i%2 == 0 {
 			im = image2
 		}
-		go func(img image.Image) {
-			recorder.WriteVideo(Video{Image: img, Duration: 16 * time.Millisecond})
-			atomic.AddInt64(&bytes, int64(len(img.(*image.RGBA).Pix)))
-			imgWg.Done()
-		}(im)
+		go func() {
+			recorder.WriteVideo(Video{Image: im, Duration: 16 * time.Millisecond})
+			atomic.AddInt64(&bytes, int64(len(im.(*image.RGBA).Pix)))
+			ticks.Done()
+		}()
 		go func() {
 			recorder.WriteAudio(Audio{&samples})
 			atomic.AddInt64(&bytes, int64(len(samples)*2))
-			audioWg.Done()
+			ticks.Done()
 		}()
 	}
-	imgWg.Wait()
-	audioWg.Wait()
+	ticks.Wait()
 	b.SetBytes(bytes / int64(b.N))
 	if err := recorder.Stop(); err != nil {
 		b.Fatal(err)

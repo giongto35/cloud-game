@@ -25,12 +25,11 @@ type ffmpegStream struct {
 
 	demux *fileStream
 
-	buf       chan Video
-	dir       string
-	pnge      *png.Encoder
-	sequence  uint32
-	startTime time.Time
-	wg        *sync.WaitGroup
+	buf      chan Video
+	dir      string
+	pnge     *png.Encoder
+	sequence uint32
+	wg       sync.WaitGroup
 }
 
 const (
@@ -40,9 +39,7 @@ const (
 
 type pool struct{ sync.Pool }
 
-func newPool() *pool {
-	return &pool{sync.Pool{New: func() interface{} { return &png.EncoderBuffer{} }}}
-}
+func pngBuf() *pool                      { return &pool{sync.Pool{New: func() interface{} { return &png.EncoderBuffer{} }}} }
 func (p *pool) Get() *png.EncoderBuffer  { return p.Pool.Get().(*png.EncoderBuffer) }
 func (p *pool) Put(b *png.EncoderBuffer) { p.Pool.Put(b) }
 
@@ -61,14 +58,12 @@ func NewFfmpegStream(dir, game string, frequency int, compress int) (*ffmpegStre
 		demux: demux,
 		pnge: &png.Encoder{
 			CompressionLevel: png.CompressionLevel(compress),
-			BufferPool:       newPool(),
+			BufferPool:       pngBuf(),
 		},
-		wg: &sync.WaitGroup{},
 	}, nil
 }
 
 func (f *ffmpegStream) Start() {
-	f.startTime = time.Now()
 	for frame := range f.buf {
 		if err := f.Save(frame.Image, frame.Duration); err != nil {
 			log.Printf("image write err: %v", err)
