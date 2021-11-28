@@ -183,25 +183,28 @@ func (na *naEmulator) Start() {
 		log.Printf("error: couldn't load a save, %v", err)
 	}
 
+	framerate := 1 / na.meta.Fps
+	log.Printf("framerate: %vms", framerate)
 	ticker := time.NewTicker(time.Second / time.Duration(na.meta.Fps))
+	defer ticker.Stop()
 
 	lastFrameTime = time.Now()
 
-	for range ticker.C {
+	for {
+		na.Lock()
+		nanoarchRun()
+		na.Unlock()
+
 		select {
-		// Slow response here
+		case <-ticker.C:
+			continue
 		case <-na.done:
 			nanoarchShutdown()
 			close(na.imageChannel)
 			close(na.audioChannel)
 			log.Println("Closed Director")
 			return
-		default:
 		}
-
-		na.Lock()
-		nanoarchRun()
-		na.Unlock()
 	}
 }
 
