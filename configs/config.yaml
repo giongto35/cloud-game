@@ -203,10 +203,28 @@ encoder:
   # (experimental)
   withoutGame: false
 
+# game recording
+# (experimental)
+# recording allows export RAW a/v streams of games
+# by default, it will export audio as WAV files,
+# video as a list of PNG-encoded images, and
+# one additional FFMPEG concat demux file
 recording:
   enabled: false
+  # output images compression level:
+  #   0 - default compression
+  #	 -1 - no compression
+  #	 -2 - best speed
+  #	 -3 - best compression
   compressLevel: 0
-  name: "%date%_%user%_%game%"
+  # name contains the name of the recording dir (or zip)
+  # format:
+  # %date:go_time_format% -- refer: https://go.dev/src/time/format.go
+  # %user% -- user name who started the recording
+  # %game% -- game name (game ROM name)
+  # as example: 20210101101010_user1_badApple
+  name: "%date:20060102150405%_%user%_%game%"
+  # save directory name
   folder: ./recording
 
 storage:

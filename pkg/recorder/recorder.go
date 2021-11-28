@@ -1,11 +1,11 @@
 package recorder
 
 import (
-	"fmt"
 	"image"
 	"log"
 	"os"
 	"path/filepath"
+	"regexp"
 	"sync"
 	"time"
 
@@ -21,7 +21,21 @@ type Recording struct {
 
 	audio AudioStream
 	video VideoStream
+
+	path     string
+	game     string
+	fps      float64
+	compress int
+	freq     int
+	name     string
 }
+
+// naming regexp
+var (
+	reDate = regexp.MustCompile(`%date:(.*?)%`)
+	reUser = regexp.MustCompile(`%user%`)
+	reGame = regexp.MustCompile(`%game%`)
+)
 
 // Stream represent an output stream of the recording.
 type Stream interface {
@@ -60,9 +74,7 @@ type (
 // ffmpeg -r 60 -f concat -i "./recording/20211126_Sushi The Cat/input.txt" -ac 2 -channel_layout stereo -i "./recording
 // 20211126_Sushi The Cat/audio.wav" -b:a 128K -r 60 -crf 16 -preset faster -pix_fmt yuv420p -ar 44100 -shortest out.mp4
 //
-func NewRecording(game string, frequency int, conf shared.Recording) *Recording {
-	// todo flush all files on record stop not on room close
-	date := time.Now().Format("20060102")
+func NewRecording(game string, user string, fps float64, frequency int, conf shared.Recording) *Recording {
 	savePath, err := filepath.Abs(conf.Folder)
 	if err != nil {
 		log.Fatal(err)
@@ -72,10 +84,27 @@ func NewRecording(game string, frequency int, conf shared.Recording) *Recording 
 			log.Fatal(err)
 		}
 	}
-	saveFolder := fmt.Sprintf("%v_%v", date, game)
-	path := filepath.Join(savePath, saveFolder)
 
-	log.Printf("[recording] path is [%v]", path)
+	return &Recording{
+		name:     conf.Name,
+		User:     user,
+		path:     savePath,
+		game:     game,
+		fps:      fps,
+		freq:     frequency,
+		compress: conf.CompressLevel,
+	}
+}
+
+func (r *Recording) Start() {
+	r.Lock()
+	defer r.Unlock()
+	r.active = true
+
+	saveFolder := parseName(r.name, r.game, r.User)
+	path := filepath.Join(r.path, saveFolder)
+
+	log.Printf("[recording] path will be [%v]", path)
 
 	if _, err := os.Stat(path); os.IsNotExist(err) {
 		if err = os.Mkdir(path, os.ModeDir); err != nil {
@@ -83,22 +112,17 @@ func NewRecording(game string, frequency int, conf shared.Recording) *Recording 
 		}
 	}
 
-	audio, err := NewWavStream(path, frequency)
+	audio, err := NewWavStream(path, r.freq)
 	if err != nil {
 		log.Fatal(err)
 	}
-	video, err := NewFfmpegStream(path, game, frequency, conf.CompressLevel)
+	r.audio = audio
+	video, err := NewFfmpegStream(path, r.game, r.freq, r.fps, r.compress)
 	if err != nil {
 		log.Fatal(err)
 	}
+	r.video = video
 
-	return &Recording{audio: audio, video: video}
-}
-
-func (r *Recording) Start() {
-	r.Lock()
-	defer r.Unlock()
-	r.active = true
 	go r.audio.Start()
 	go r.video.Start()
 }
@@ -115,10 +139,18 @@ func (r *Recording) Stop() error {
 
 func (r *Recording) Set(active bool, user string) {
 	r.Lock()
-	if r.active == false && active {
+	if !r.active && active {
 		r.Unlock()
 		r.Start()
 		r.Lock()
+	} else {
+		if r.active && !active {
+			r.Unlock()
+			if err := r.Stop(); err != nil {
+				log.Printf("failed to stop recording, %v", err)
+			}
+			r.Lock()
+		}
 	}
 	r.active = active
 	r.User = user
@@ -133,3 +165,12 @@ func (r *Recording) IsActive() bool {
 
 func (r *Recording) WriteVideo(frame Video) { r.video.Write(frame) }
 func (r *Recording) WriteAudio(audio Audio) { r.audio.Write(audio) }
+
+func parseName(name, game, user string) (out string) {
+	if d := reDate.FindStringSubmatch(name); d != nil {
+		out = reDate.ReplaceAllString(name, time.Now().Format(d[1]))
+	}
+	out = reUser.ReplaceAllString(out, user)
+	out = reGame.ReplaceAllString(out, game)
+	return
+}

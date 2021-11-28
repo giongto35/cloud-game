@@ -245,14 +245,15 @@
 
     const handleRecording = (data) => {
         const {recording, userName} = data;
-        console.log(recording, userName);
         socket.toggleRecording(recording, userName);
     }
 
     const handleRecordingStatus = (data) => {
-        const recording = true
-        message.show(`Recording ${recording ? 'on' : 'off'}`)
-        console.info('rec', data)
+        if (data === 'ok') {
+            message.show(`Recording ${recording.isActive() ? 'on' : 'off'}`)
+        } else {
+            message.show(`Recording failed ):`)
+        }
     }
 
     const app = {

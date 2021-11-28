@@ -28,7 +28,7 @@ func TestName(t *testing.T) {
 	defer os.RemoveAll(dir)
 
 	config := shared.Recording{Enabled: true, Name: "", Folder: dir}
-	recorder := NewRecording(fmt.Sprintf("test_game_%v", rand.Int()), 100, config)
+	recorder := NewRecording(fmt.Sprintf("test_game_%v", rand.Int()), "test", 60, 100, config)
 	recorder.Set(true, "test_user")
 	recorder.Start()
 
@@ -92,7 +92,7 @@ func benchmarkRecorder(w, h int, comp int, b *testing.B) {
 	b.StartTimer()
 
 	config := shared.Recording{Enabled: true, Name: "", Folder: dir, CompressLevel: comp}
-	recorder := NewRecording(fmt.Sprintf("test_game_%v", rand.Int()), 100, config)
+	recorder := NewRecording(fmt.Sprintf("test_game_%v", rand.Int()), "test", 60, 100, config)
 	recorder.Set(true, "test_user")
 	recorder.Start()
 	samples := []int16{0, 0, 0, 0, 0, 1, 11, 11, 11, 1}

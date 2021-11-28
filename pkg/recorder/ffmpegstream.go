@@ -43,14 +43,17 @@ func pngBuf() *pool                      { return &pool{sync.Pool{New: func() in
 func (p *pool) Get() *png.EncoderBuffer  { return p.Pool.Get().(*png.EncoderBuffer) }
 func (p *pool) Put(b *png.EncoderBuffer) { p.Pool.Put(b) }
 
-func NewFfmpegStream(dir, game string, frequency int, compress int) (*ffmpegStream, error) {
+func NewFfmpegStream(dir, game string, frequency int, fps float64, compress int) (*ffmpegStream, error) {
 	demux, err := newFileStream(dir, demuxFile)
 	if err != nil {
 		return nil, err
 	}
 
-	_, err = demux.WriteString(fmt.Sprintf("ffconcat version 1.0\n# d: %v, g: %v, f: %vhz\n\n",
-		time.Now().Format("20060102"), game, frequency))
+	_, err = demux.WriteString(
+		fmt.Sprintf("ffconcat version 1.0\n"+
+			"# v: 1\n"+
+			"# date: %v, game: %v, fps: %v, freq (hz): %v\n\n",
+			time.Now().Format("20060102"), game, fps, frequency))
 
 	return &ffmpegStream{
 		buf:   make(chan Video, 1),

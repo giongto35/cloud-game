@@ -88,7 +88,7 @@ const socket = (() => {
                     event.pub(LATENCY_CHECK_REQUESTED, {packetId: curPacketId, addresses: addresses});
                     break;
                 case 'recording':
-                    event.pub(RECORDING_STATUS_CHANGED);
+                    event.pub(RECORDING_STATUS_CHANGED, data.data);
                     break;
             }
         };
