@@ -29,6 +29,7 @@ type ffmpegStream struct {
 	dir      string
 	pnge     *png.Encoder
 	sequence uint32
+	fps      float64
 	wg       sync.WaitGroup
 }
 
@@ -51,14 +52,14 @@ func NewFfmpegStream(dir, game string, frequency int, fps float64, compress int)
 
 	_, err = demux.WriteString(
 		fmt.Sprintf("ffconcat version 1.0\n"+
-			"# v: 1\n"+
-			"# date: %v, game: %v, fps: %v, freq (hz): %v\n\n",
+			"# v: 1, date: %v, game: %v, fps: %v, freq (hz): %v\n\n",
 			time.Now().Format("20060102"), game, fps, frequency))
 
 	return &ffmpegStream{
 		buf:   make(chan Video, 1),
 		dir:   dir,
 		demux: demux,
+		fps:   fps,
 		pnge: &png.Encoder{
 			CompressionLevel: png.CompressionLevel(compress),
 			BufferPool:       pngBuf(),
@@ -109,7 +110,7 @@ func (f *ffmpegStream) Save(img image.Image, dur time.Duration) error {
 	f.wg.Add(1)
 	go f.saveImage(fileName, img)
 	// ffmpeg concat demuxer, see: https://ffmpeg.org/ffmpeg-formats.html#concat
-	inf := fmt.Sprintf("file %v\nduration %v\n", fileName, dur.Seconds())
+	inf := fmt.Sprintf("file %v\nduration %v\n#delta %v\n", fileName, 1/f.fps, dur.Seconds())
 	if _, err := f.demux.WriteString(inf); err != nil {
 		return err
 	}
