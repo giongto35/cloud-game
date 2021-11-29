@@ -53,15 +53,13 @@ func (w *wavStream) Stop() error {
 		result = multierror.Append(result, er)
 	}
 	if size > 0 {
-		// write actual RIFF header
+		// write an actual RIFF header
 		result = multierror.Append(result, w.wav.WriteAtStart(rIFFWavHeader(uint32(size), w.frequency)))
 		result = multierror.Append(result, w.wav.Flush())
 	}
 	result = multierror.Append(result, w.wav.Close())
 	return result.ErrorOrNil()
 }
-
-func (w *wavStream) Pause() {}
 
 func (w *wavStream) Save(pcm []int16) error {
 	bs := make([]byte, len(pcm)*2)

@@ -4,8 +4,6 @@ import (
 	"bytes"
 	"fmt"
 	"image"
-	"image/color"
-	"image/draw"
 	"image/png"
 	"log"
 	"os"
@@ -15,9 +13,6 @@ import (
 	"time"
 
 	"github.com/hashicorp/go-multierror"
-	"golang.org/x/image/font"
-	"golang.org/x/image/font/basicfont"
-	"golang.org/x/image/math/fixed"
 )
 
 type ffmpegStream struct {
@@ -85,26 +80,6 @@ func (f *ffmpegStream) Stop() error {
 	return result.ErrorOrNil()
 }
 
-func addLabel(img *image.RGBA, x, y int, label string) {
-	col := color.RGBA{R: 255, G: 255, B: 255, A: 255}
-	point := fixed.Point26_6{X: fixed.Int26_6(x * 64), Y: fixed.Int26_6(y * 64)}
-
-	d := &font.Drawer{
-		Dst:  img,
-		Src:  image.NewUniform(col),
-		Face: basicfont.Face7x13,
-		Dot:  point,
-	}
-	d.DrawString(label)
-}
-
-func CloneToRGBA(src image.Image) *image.RGBA {
-	b := src.Bounds()
-	dst := image.NewRGBA(b)
-	draw.Draw(dst, b, src, b.Min, draw.Src)
-	return dst
-}
-
 func (f *ffmpegStream) Save(img image.Image, dur time.Duration) error {
 	fileName := fmt.Sprintf(videoFile, f.nextSeq())
 	f.wg.Add(1)
@@ -120,19 +95,10 @@ func (f *ffmpegStream) Save(img image.Image, dur time.Duration) error {
 func (f *ffmpegStream) saveImage(fileName string, img image.Image) {
 	defer f.wg.Done()
 
-	// copy the image
-	//imgg := CloneToRGBA(*img)
 	var buf bytes.Buffer
 	x, y := (img).Bounds().Dx(), (img).Bounds().Dy()
 	buf.Grow(x * y * 4)
 
-	//now := time.Now()
-	//timeDiff := now.Sub(f.startTime)
-	//
-	//time_ := fmt.Sprintf("%s", timeDiff)
-	//log.Printf(time_)
-	//time_ := fmt.Sprintf("%0f:%0f:%0f.%000d", timeDiff.Hours(), timeDiff.Minutes(), timeDiff.Seconds(), timeDiff.Milliseconds())
-	//addLabel(imgg, 100, y-21, time_)
 	if err := f.pnge.Encode(&buf, img); err != nil {
 		log.Printf("p err: %v", err)
 	} else {
