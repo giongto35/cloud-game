@@ -6,7 +6,7 @@ const recording = (() => {
     const userName = document.getElementById('user-name'),
         recButton = document.getElementById('btn-rec');
 
-    if (userName === undefined || recButton === undefined) {
+    if (!userName || !recButton) {
         return {}
     }
 
@@ -49,7 +49,7 @@ const recording = (() => {
     })
 
     // button
-    recButton.addEventListener('click', ev => {
+    recButton.addEventListener('click', () => {
         state._recording = !state._recording
         recButton.classList.toggle('record', state._recording);
         event.pub(RECORDING_TOGGLED, {
