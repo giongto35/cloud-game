@@ -9,6 +9,8 @@ import (
 	"sync"
 )
 
+var defaultBufferSize = 4096
+
 type fileStream struct {
 	io.Closer
 	sync.Mutex
@@ -23,7 +25,7 @@ func newFileStream(dir string, name string) (*fileStream, error) {
 	if err != nil {
 		return nil, err
 	}
-	return &fileStream{f: f, w: bufio.NewWriter(f)}, nil
+	return &fileStream{f: f, w: bufio.NewWriterSize(f, defaultBufferSize)}, nil
 }
 
 func (f *fileStream) Flush() error {

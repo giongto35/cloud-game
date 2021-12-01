@@ -16,10 +16,6 @@ import (
 	"github.com/giongto35/cloud-game/v2/pkg/config/shared"
 )
 
-func init() {
-	rand.Seed(time.Now().UnixNano())
-}
-
 func TestName(t *testing.T) {
 	dir, err := ioutil.TempDir("", "rec_test_")
 	if err != nil {
@@ -94,7 +90,6 @@ func benchmarkRecorder(w, h int, comp int, b *testing.B) {
 	config := shared.Recording{Enabled: true, Name: "", Folder: dir, CompressLevel: comp}
 	recorder := NewRecording(fmt.Sprintf("test_game_%v", rand.Int()), "test", 60, 100, config)
 	recorder.Set(true, "test_user")
-	recorder.Start()
 	samples := []int16{0, 0, 0, 0, 0, 1, 11, 11, 11, 1}
 
 	for i := 0; i < b.N; i++ {
