@@ -123,7 +123,7 @@ func NewVideoImporter(roomID string) chan nanoarch.GameFrame {
 }
 
 // NewRoom creates a new room
-func NewRoom(roomID string, game games.GameMetadata, recUser string, onlineStorage storage.CloudStorage, cfg worker.Config) *Room {
+func NewRoom(roomID string, game games.GameMetadata, recUser string, rec bool, onlineStorage storage.CloudStorage, cfg worker.Config) *Room {
 	if roomID == "" {
 		roomID = session.GenerateRoomID(game.Name)
 	}
@@ -211,6 +211,7 @@ func NewRoom(roomID string, game games.GameMetadata, recUser string, onlineStora
 		if cfg.Recording.Enabled {
 			room.rec = recorder.NewRecording(game.Name, recUser, gameMeta.Fps, gameMeta.AudioSampleRate, cfg.Recording)
 			// todo enable right away if
+			room.ToggleRecording(rec, recUser)
 			if room.rec.IsActive() {
 				room.rec.Start()
 			}

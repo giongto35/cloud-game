@@ -250,10 +250,15 @@
 
     const handleRecordingStatus = (data) => {
         if (data === 'ok') {
-            message.show(`Recording ${recording.isActive() ? 'on' : 'off'}`)
+            message.show(`Recording ${recording.isActive() ? 'on' : 'off'}`, true)
+            if (recording.isActive()) {
+                recording.setIndicator(true)
+            }
         } else {
             message.show(`Recording failed ):`)
+            recording.setIndicator(false)
         }
+        console.log("recording is ", recording.isActive())
     }
 
     const app = {

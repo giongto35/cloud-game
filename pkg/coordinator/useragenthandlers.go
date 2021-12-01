@@ -89,6 +89,19 @@ func (bc *BrowserClient) handleGameStart(o *Server) cws.PacketHandler {
 		bc.RoomID = workerResp.RoomID
 		bc.Println("Received room response from browser: ", workerResp.RoomID)
 
+		if o.cfg.Recording.Enabled && gameStartCall.Record {
+			bc.Send(cws.WSPacket{
+				ID:          api.GameRecording,
+				Data:        "ok",
+				RoomID:      workerResp.RoomID,
+				PlayerIndex: workerResp.PlayerIndex,
+				PacketID:    workerResp.PacketID,
+				SessionID:   workerResp.SessionID,
+			}, func(response cws.WSPacket) {
+
+			})
+		}
+
 		return workerResp
 	}
 }

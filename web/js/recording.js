@@ -1,3 +1,7 @@
+const RECORDING_ON = 1;
+const RECORDING_OFF = 0;
+const RECORDING_REC = 2;
+
 /**
  * Recording module.
  * @version 1
@@ -12,7 +16,7 @@ const recording = (() => {
 
     let state = {
         userName: '',
-        _recording: false
+        state: RECORDING_OFF,
     };
 
     const restoreLastState = () => {
@@ -25,6 +29,13 @@ const recording = (() => {
         }
         userName.value = state.userName
     }
+
+    const setRec = (val) => {
+        recButton.classList.toggle('record', val);
+    }
+    const setIndicator = (val) => {
+        recButton.classList.toggle('blink', val);
+    };
 
     // persistence
     const saveLastState = () => {
@@ -39,6 +50,8 @@ const recording = (() => {
     }, 500)
 
     restoreLastState();
+    setIndicator(false);
+    setRec(state.state === RECORDING_ON)
 
     // text
     userName.addEventListener('focus', () => event.pub(KEYBOARD_TOGGLE_FILTER_MODE))
@@ -50,15 +63,15 @@ const recording = (() => {
 
     // button
     recButton.addEventListener('click', () => {
-        state._recording = !state._recording
-        recButton.classList.toggle('record', state._recording);
-        event.pub(RECORDING_TOGGLED, {
-            userName: state.userName,
-            recording: state._recording,
-        })
+        state.state = (state.state + 1) % 2
+        const active = state.state === RECORDING_ON
+        setRec(active)
+        saveLastState()
+        event.pub(RECORDING_TOGGLED, {userName: state.userName, recording: active})
     })
     return {
-        isActive: () => state._recording,
+        isActive: () => state.state > 0,
         getUser: () => state.userName,
+        setIndicator: setIndicator,
     }
 })(document, event, localStorage, utils);

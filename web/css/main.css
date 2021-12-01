@@ -310,6 +310,18 @@ body {
     top: 7px;
 }
 
+
+.record.blink:before {
+    animation: blinker 1s linear infinite;
+}
+
+@keyframes blinker {
+    50% {
+        opacity: 0;
+    }
+}
+
+
 #btn-select {
     width: 46px;
     top: 100px;

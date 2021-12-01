@@ -129,7 +129,7 @@ func (h *Handler) handleGameStart() cws.PacketHandler {
 			log.Printf("RECORD OFF")
 		}
 
-		room := h.startGameHandler(game, rom.RecordUser, resp.RoomID, resp.PlayerIndex, session.peerconnection)
+		room := h.startGameHandler(game, rom.RecordUser, rom.Record, resp.RoomID, resp.PlayerIndex, session.peerconnection)
 		session.RoomID = room.ID
 		// TODO: can data race (and it does)
 		h.rooms[room.ID] = room
@@ -277,7 +277,7 @@ func (h *Handler) handleGameRecording() cws.PacketHandler {
 }
 
 // startGameHandler starts a game if roomID is given, if not create new room
-func (h *Handler) startGameHandler(game games.GameMetadata, recUser string, existedRoomID string, playerIndex int, peerconnection *webrtc.WebRTC) *room.Room {
+func (h *Handler) startGameHandler(game games.GameMetadata, recUser string, rec bool, existedRoomID string, playerIndex int, peerconnection *webrtc.WebRTC) *room.Room {
 	log.Printf("Loading game: %v\n", game.Name)
 	// If we are connecting to coordinator, request corresponding serverID based on roomID
 	// TODO: check if existedRoomID is in the current server
@@ -286,7 +286,7 @@ func (h *Handler) startGameHandler(game games.GameMetadata, recUser string, exis
 	if room == nil {
 		log.Println("Got Room from local ", room, " ID: ", existedRoomID)
 		// Create new room and update player index
-		room = h.createNewRoom(game, recUser, existedRoomID)
+		room = h.createNewRoom(game, recUser, rec, existedRoomID)
 		room.UpdatePlayerIndex(peerconnection, playerIndex)
 
 		// Wait for done signal from room

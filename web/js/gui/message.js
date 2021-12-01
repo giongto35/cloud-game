@@ -38,7 +38,13 @@ const message = (() => {
         _popup();
     }
 
-    const show = utils.throttle(_proceed, 1000);
+    const show = (text, force = false) => {
+        if (!force) {
+            utils.throttle(() => _proceed(text), 1000);
+        } else {
+            _proceed(text)
+        }
+    }
 
     return Object.freeze({
         show: show

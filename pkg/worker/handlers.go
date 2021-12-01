@@ -185,11 +185,11 @@ func (h *Handler) detachRoom(roomID string) {
 
 // createNewRoom creates a new room
 // Return nil in case of room is existed
-func (h *Handler) createNewRoom(game games.GameMetadata, recUser string, roomID string) *room.Room {
+func (h *Handler) createNewRoom(game games.GameMetadata, recUser string, rec bool, roomID string) *room.Room {
 	// If the roomID doesn't have any running sessions (room was closed)
 	// we spawn a new room
 	if !h.isRoomBusy(roomID) {
-		newRoom := room.NewRoom(roomID, game, recUser, h.onlineStorage, h.cfg)
+		newRoom := room.NewRoom(roomID, game, recUser, rec, h.onlineStorage, h.cfg)
 		// TODO: Might have race condition (and it has (:)
 		h.rooms[newRoom.ID] = newRoom
 		return newRoom
