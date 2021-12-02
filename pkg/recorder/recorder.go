@@ -3,9 +3,11 @@ package recorder
 import (
 	"image"
 	"log"
+	"math/rand"
 	"os"
 	"path/filepath"
 	"regexp"
+	"strconv"
 	"sync"
 	"time"
 
@@ -33,6 +35,7 @@ var (
 	reDate = regexp.MustCompile(`%date:(.*?)%`)
 	reUser = regexp.MustCompile(`%user%`)
 	reGame = regexp.MustCompile(`%game%`)
+	reRand = regexp.MustCompile(`%rand:(\d+)%`)
 )
 
 // Stream represent an output stream of the recording.
@@ -59,6 +62,10 @@ type (
 		Duration time.Duration
 	}
 )
+
+func init() {
+	rand.Seed(time.Now().UnixNano())
+}
 
 // NewRecording creates new recorder of the emulator.
 //
@@ -170,7 +177,24 @@ func parseName(name, game, user string) (out string) {
 	} else {
 		out = name
 	}
+	if rnd := reRand.FindStringSubmatch(out); rnd != nil {
+		out = reRand.ReplaceAllString(out, random(rnd[1]))
+	}
 	out = reUser.ReplaceAllString(out, user)
 	out = reGame.ReplaceAllString(out, game)
 	return
+}
+
+const letterBytes = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
+
+func random(num string) string {
+	n, err := strconv.Atoi(num)
+	if err != nil {
+		return ""
+	}
+	b := make([]byte, n)
+	for i := range b {
+		b[i] = letterBytes[rand.Int63()%int64(len(letterBytes))]
+	}
+	return string(b)
 }

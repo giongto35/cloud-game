@@ -218,7 +218,7 @@ func NewRoom(roomID string, game games.GameMetadata, recUser string, rec bool, o
 					Game:                  game.Name,
 					ImageCompressionLevel: cfg.Recording.CompressLevel,
 					Name:                  cfg.Recording.Name,
-					//Zip:                   true,
+					Zip:                   true,
 				})
 			room.ToggleRecording(rec, recUser)
 		}
