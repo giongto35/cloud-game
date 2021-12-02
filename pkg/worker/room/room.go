@@ -209,12 +209,18 @@ func NewRoom(roomID string, game games.GameMetadata, recUser string, rec bool, o
 		}
 
 		if cfg.Recording.Enabled {
-			room.rec = recorder.NewRecording(game.Name, recUser, gameMeta.Fps, gameMeta.AudioSampleRate, cfg.Recording)
-			// todo enable right away if
+			room.rec = recorder.NewRecording(
+				recorder.Meta{UserName: recUser},
+				recorder.Options{
+					Dir:                   cfg.Recording.Folder,
+					Fps:                   gameMeta.Fps,
+					Frequency:             gameMeta.AudioSampleRate,
+					Game:                  game.Name,
+					ImageCompressionLevel: cfg.Recording.CompressLevel,
+					Name:                  cfg.Recording.Name,
+					//Zip:                   true,
+				})
 			room.ToggleRecording(rec, recUser)
-			if room.rec.IsActive() {
-				room.rec.Start()
-			}
 		}
 
 		room.director.SetViewport(encoderW, encoderH)

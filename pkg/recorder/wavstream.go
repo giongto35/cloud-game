@@ -12,7 +12,7 @@ type wavStream struct {
 
 	buf       chan Audio
 	frequency int
-	wav       *fileStream
+	wav       *file
 }
 
 const (
@@ -20,8 +20,8 @@ const (
 	audioFileRIFFSize = 44
 )
 
-func NewWavStream(dir string, frequency int) (*wavStream, error) {
-	wav, err := newFileStream(dir, audioFile)
+func NewWavStream(dir string, opts Options) (*wavStream, error) {
+	wav, err := newFile(dir, audioFile)
 	if err != nil {
 		return nil, err
 	}
@@ -30,7 +30,7 @@ func NewWavStream(dir string, frequency int) (*wavStream, error) {
 		return nil, err
 	}
 	return &wavStream{
-		frequency: frequency,
+		frequency: opts.Frequency,
 		wav:       wav,
 		buf:       make(chan Audio, 1),
 	}, nil

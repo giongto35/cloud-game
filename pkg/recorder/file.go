@@ -11,32 +11,31 @@ import (
 
 var defaultBufferSize = 4096
 
-type fileStream struct {
+type file struct {
 	io.Closer
 	sync.Mutex
-	Stream
 
 	f *os.File
 	w *bufio.Writer
 }
 
-func newFileStream(dir string, name string) (*fileStream, error) {
+func newFile(dir string, name string) (*file, error) {
 	f, err := os.OpenFile(filepath.Join(dir, name), os.O_CREATE|os.O_WRONLY, 0644)
 	if err != nil {
 		return nil, err
 	}
-	return &fileStream{f: f, w: bufio.NewWriterSize(f, defaultBufferSize)}, nil
+	return &file{f: f, w: bufio.NewWriterSize(f, defaultBufferSize)}, nil
 }
 
-func (f *fileStream) Flush() error {
+func (f *file) Flush() error {
 	f.Lock()
 	defer f.Unlock()
 	return f.w.Flush()
 }
 
-func (f *fileStream) Close() error { return f.f.Close() }
+func (f *file) Close() error { return f.f.Close() }
 
-func (f *fileStream) Size() (int64, error) {
+func (f *file) Size() (int64, error) {
 	f.Lock()
 	defer f.Unlock()
 	inf, err := f.f.Stat()
@@ -46,7 +45,7 @@ func (f *fileStream) Size() (int64, error) {
 	return inf.Size(), nil
 }
 
-func (f *fileStream) Write(data []byte) error {
+func (f *file) Write(data []byte) error {
 	f.Lock()
 	n, err := f.w.Write(data)
 	f.Unlock()
@@ -61,14 +60,14 @@ func (f *fileStream) Write(data []byte) error {
 
 // WriteAtStart writes data into beginning of the file.
 // Make sure that underling file doesn't use the O_APPEND directive.
-func (f *fileStream) WriteAtStart(data []byte) error {
+func (f *file) WriteAtStart(data []byte) error {
 	if _, err := f.f.Seek(0, 0); err != nil {
 		return err
 	}
 	return f.Write(data)
 }
 
-func (f *fileStream) WriteString(s string) (int, error) {
+func (f *file) WriteString(s string) (int, error) {
 	f.Lock()
 	defer f.Unlock()
 	return f.w.WriteString(s)

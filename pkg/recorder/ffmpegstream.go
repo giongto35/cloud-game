@@ -18,7 +18,7 @@ import (
 type ffmpegStream struct {
 	VideoStream
 
-	demux *fileStream
+	demux *file
 
 	buf      chan Video
 	dir      string
@@ -39,8 +39,8 @@ func pngBuf() *pool                      { return &pool{sync.Pool{New: func() in
 func (p *pool) Get() *png.EncoderBuffer  { return p.Pool.Get().(*png.EncoderBuffer) }
 func (p *pool) Put(b *png.EncoderBuffer) { p.Pool.Put(b) }
 
-func NewFfmpegStream(dir, game string, frequency int, fps float64, compress int) (*ffmpegStream, error) {
-	demux, err := newFileStream(dir, demuxFile)
+func NewFfmpegStream(dir string, opts Options) (*ffmpegStream, error) {
+	demux, err := newFile(dir, demuxFile)
 	if err != nil {
 		return nil, err
 	}
@@ -48,15 +48,15 @@ func NewFfmpegStream(dir, game string, frequency int, fps float64, compress int)
 	_, err = demux.WriteString(
 		fmt.Sprintf("ffconcat version 1.0\n"+
 			"# v: 1, date: %v, game: %v, fps: %v, freq (hz): %v\n\n",
-			time.Now().Format("20060102"), game, fps, frequency))
+			time.Now().Format("20060102"), opts.Game, opts.Fps, opts.Frequency))
 
 	return &ffmpegStream{
 		buf:   make(chan Video, 1),
 		dir:   dir,
 		demux: demux,
-		fps:   fps,
+		fps:   opts.Fps,
 		pnge: &png.Encoder{
-			CompressionLevel: png.CompressionLevel(compress),
+			CompressionLevel: png.CompressionLevel(opts.ImageCompressionLevel),
 			BufferPool:       pngBuf(),
 		},
 	}, nil

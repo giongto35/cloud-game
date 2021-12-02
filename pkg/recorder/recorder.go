@@ -9,25 +9,23 @@ import (
 	"sync"
 	"time"
 
-	"github.com/giongto35/cloud-game/v2/pkg/config/shared"
 	"github.com/hashicorp/go-multierror"
 )
 
 type Recording struct {
 	sync.Mutex
 
-	active bool
-	User   string
+	enabled bool
 
 	audio AudioStream
 	video VideoStream
 
-	path     string
-	game     string
-	fps      float64
-	compress int
-	freq     int
-	name     string
+	dir     string
+	saveDir string
+	meta    Meta
+	opts    Options
+
+	done chan struct{}
 }
 
 // naming regexp
@@ -67,15 +65,11 @@ type (
 // FFMPEG:
 //
 // Example of conversion:
-//    ffmpeg -f concat -i "./recording/psxtest/input.txt" \
-//   		 -ac 2 -channel_layout stereo -i "./recording/psxtest/audio.wav" \
-//  		 -b:a 128K -r 60 -crf 30 -preset faster -pix_fmt yuv420p out.mp4
-
-// ffmpeg -r 60 -f concat -i "./recording/20211126_Sushi The Cat/input.txt" -ac 2 -channel_layout stereo -i "./recording
-// 20211126_Sushi The Cat/audio.wav" -b:a 128K -r 60 -crf 16 -preset faster -pix_fmt yuv420p -ar 44100 -shortest out.mp4
-//
-func NewRecording(game string, user string, fps float64, frequency int, conf shared.Recording) *Recording {
-	savePath, err := filepath.Abs(conf.Folder)
+//    ffmpeg -r 60 -f concat -i ./recording/psxtest/input.txt \
+//   		-ac 2 -channel_layout stereo -i ./recording/psxtest/audio.wav \
+//  		-b:a 192K -crf 23 -pix_fmt yuv420p out.mp4
+func NewRecording(meta Meta, opts Options) *Recording {
+	savePath, err := filepath.Abs(opts.Dir)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -84,25 +78,16 @@ func NewRecording(game string, user string, fps float64, frequency int, conf sha
 			log.Fatal(err)
 		}
 	}
-
-	return &Recording{
-		name:     conf.Name,
-		User:     user,
-		path:     savePath,
-		game:     game,
-		fps:      fps,
-		freq:     frequency,
-		compress: conf.CompressLevel,
-	}
+	return &Recording{dir: savePath, meta: meta, opts: opts}
 }
 
 func (r *Recording) Start() {
 	r.Lock()
 	defer r.Unlock()
-	r.active = true
+	r.enabled = true
 
-	saveFolder := parseName(r.name, r.game, r.User)
-	path := filepath.Join(r.path, saveFolder)
+	r.saveDir = parseName(r.opts.Name, r.opts.Game, r.meta.UserName)
+	path := filepath.Join(r.dir, r.saveDir)
 
 	log.Printf("[recording] path will be [%v]", path)
 
@@ -112,12 +97,12 @@ func (r *Recording) Start() {
 		}
 	}
 
-	audio, err := NewWavStream(path, r.freq)
+	audio, err := NewWavStream(path, r.opts)
 	if err != nil {
 		log.Fatal(err)
 	}
 	r.audio = audio
-	video, err := NewFfmpegStream(path, r.game, r.freq, r.fps, r.compress)
+	video, err := NewFfmpegStream(path, r.opts)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -131,20 +116,33 @@ func (r *Recording) Stop() error {
 	var result *multierror.Error
 	r.Lock()
 	defer r.Unlock()
-	r.active = false
+	r.enabled = false
 	result = multierror.Append(result, r.audio.Stop())
 	result = multierror.Append(result, r.video.Stop())
+	if result.ErrorOrNil() == nil && r.opts.Zip && r.saveDir != "" {
+		//go func() {
+		src := filepath.Join(r.dir, r.saveDir)
+		dst := filepath.Join(src, "..", r.saveDir)
+		if err := compress(src, dst); err != nil {
+			log.Printf("error during result compress, %v", result)
+			//return
+		}
+		if err := os.RemoveAll(src); err != nil {
+			log.Printf("error during result compress, %v", result)
+		}
+		//}()
+	}
 	return result.ErrorOrNil()
 }
 
-func (r *Recording) Set(active bool, user string) {
+func (r *Recording) Set(enable bool, user string) {
 	r.Lock()
-	if !r.active && active {
+	if !r.enabled && enable {
 		r.Unlock()
 		r.Start()
 		r.Lock()
 	} else {
-		if r.active && !active {
+		if r.enabled && !enable {
 			r.Unlock()
 			if err := r.Stop(); err != nil {
 				log.Printf("failed to stop recording, %v", err)
@@ -152,15 +150,15 @@ func (r *Recording) Set(active bool, user string) {
 			r.Lock()
 		}
 	}
-	r.active = active
-	r.User = user
+	r.enabled = enable
+	r.meta.UserName = user
 	r.Unlock()
 }
 
-func (r *Recording) IsActive() bool {
+func (r *Recording) Enabled() bool {
 	r.Lock()
 	defer r.Unlock()
-	return r.active
+	return r.enabled
 }
 
 func (r *Recording) WriteVideo(frame Video) { r.video.Write(frame) }
@@ -169,6 +167,8 @@ func (r *Recording) WriteAudio(audio Audio) { r.audio.Write(audio) }
 func parseName(name, game, user string) (out string) {
 	if d := reDate.FindStringSubmatch(name); d != nil {
 		out = reDate.ReplaceAllString(name, time.Now().Format(d[1]))
+	} else {
+		out = name
 	}
 	out = reUser.ReplaceAllString(out, user)
 	out = reGame.ReplaceAllString(out, game)

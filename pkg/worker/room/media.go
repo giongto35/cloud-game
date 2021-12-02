@@ -38,7 +38,7 @@ import (
 //	}()
 //}
 
-func (r *Room) isRecording() bool { return r.rec != nil && r.rec.IsActive() }
+func (r *Room) isRecording() bool { return r.rec != nil && r.rec.Enabled() }
 
 func (r *Room) startAudio(sampleRate int, audio encoderConfig.Audio) {
 	sound, err := opus.NewEncoder(

@@ -12,8 +12,6 @@ import (
 	"sync/atomic"
 	"testing"
 	"time"
-
-	"github.com/giongto35/cloud-game/v2/pkg/config/shared"
 )
 
 func TestName(t *testing.T) {
@@ -21,12 +19,24 @@ func TestName(t *testing.T) {
 	if err != nil {
 		log.Fatal(err)
 	}
-	defer os.RemoveAll(dir)
+	defer func() {
+		if err := os.RemoveAll(dir); err != nil {
+			t.Fatal(err)
+		}
+	}()
 
-	config := shared.Recording{Enabled: true, Name: "", Folder: dir}
-	recorder := NewRecording(fmt.Sprintf("test_game_%v", rand.Int()), "test", 60, 100, config)
+	recorder := NewRecording(
+		Meta{UserName: "test"},
+		Options{
+			Dir:                   dir,
+			Fps:                   60,
+			Frequency:             10,
+			Game:                  fmt.Sprintf("test_game_%v", rand.Int()),
+			ImageCompressionLevel: 0,
+			Name:                  "test",
+			Zip:                   true,
+		})
 	recorder.Set(true, "test_user")
-	recorder.Start()
 
 	iterations := 222
 
@@ -87,8 +97,17 @@ func benchmarkRecorder(w, h int, comp int, b *testing.B) {
 
 	b.StartTimer()
 
-	config := shared.Recording{Enabled: true, Name: "", Folder: dir, CompressLevel: comp}
-	recorder := NewRecording(fmt.Sprintf("test_game_%v", rand.Int()), "test", 60, 100, config)
+	recorder := NewRecording(
+		Meta{UserName: "test"},
+		Options{
+			Dir:                   dir,
+			Fps:                   60,
+			Frequency:             10,
+			Game:                  fmt.Sprintf("test_game_%v", rand.Int()),
+			ImageCompressionLevel: comp,
+			Name:                  "",
+			Zip:                   false,
+		})
 	recorder.Set(true, "test_user")
 	samples := []int16{0, 0, 0, 0, 0, 1, 11, 11, 11, 1}
 
