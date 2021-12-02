@@ -211,7 +211,7 @@ encoder:
 # one additional FFMPEG concat demux file
 recording:
   enabled: false
-  # output images compression level:
+  # image compression level:
   #   0 - default compression
   #	 -1 - no compression
   #	 -2 - best speed
@@ -222,9 +222,10 @@ recording:
   # %date:go_time_format% -- refer: https://go.dev/src/time/format.go
   # %user% -- user name who started the recording
   # %game% -- game name (game ROM name)
-  # as example: 20210101101010_user1_badApple
-  name: "%date:20060102150405%_%user%_%game%"
-  # save directory name
+  # %rand:len% -- a random string of given length
+  # as example: 20210101101010_yeE_user1_badApple
+  name: "%date:20060102150405%_%rand:3%_%user%_%game%"
+  # save directory
   folder: ./recording
 
 storage:
