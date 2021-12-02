@@ -26,8 +26,6 @@ type Recording struct {
 	saveDir string
 	meta    Meta
 	opts    Options
-
-	done chan struct{}
 }
 
 // naming regexp
@@ -127,17 +125,17 @@ func (r *Recording) Stop() error {
 	result = multierror.Append(result, r.audio.Stop())
 	result = multierror.Append(result, r.video.Stop())
 	if result.ErrorOrNil() == nil && r.opts.Zip && r.saveDir != "" {
-		//go func() {
 		src := filepath.Join(r.dir, r.saveDir)
 		dst := filepath.Join(src, "..", r.saveDir)
-		if err := compress(src, dst); err != nil {
-			log.Printf("error during result compress, %v", result)
-			//return
-		}
-		if err := os.RemoveAll(src); err != nil {
-			log.Printf("error during result compress, %v", result)
-		}
-		//}()
+		go func() {
+			if err := compress(src, dst); err != nil {
+				log.Printf("error during result compress, %v", result)
+				return
+			}
+			if err := os.RemoveAll(src); err != nil {
+				log.Printf("error during result compress, %v", result)
+			}
+		}()
 	}
 	return result.ErrorOrNil()
 }
