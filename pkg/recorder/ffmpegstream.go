@@ -47,7 +47,7 @@ func NewFfmpegStream(dir string, opts Options) (*ffmpegStream, error) {
 
 	_, err = demux.WriteString(
 		fmt.Sprintf("ffconcat version 1.0\n"+
-			"# v: 1, date: %v, game: %v, fps: %v, freq (hz): %v\n\n",
+			"# v: 1\n# date: %v\n# game: %v\n# fps: %v\n# freq (hz): %v\n\n",
 			time.Now().Format("20060102"), opts.Game, opts.Fps, opts.Frequency))
 
 	return &ffmpegStream{
