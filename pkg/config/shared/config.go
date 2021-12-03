@@ -23,6 +23,7 @@ type Recording struct {
 	CompressLevel int
 	Name          string
 	Folder        string
+	Zip           bool
 }
 
 func (s *Server) WithFlags() {

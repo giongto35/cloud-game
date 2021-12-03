@@ -225,6 +225,8 @@ recording:
   # %rand:len% -- a random string of given length
   # as example: 20210101101010_yeE_user1_badApple
   name: "%date:20060102150405%_%rand:3%_%user%_%game%"
+  # zip and remove recording dir on completion
+  zip: true
   # save directory
   folder: ./recording
 
