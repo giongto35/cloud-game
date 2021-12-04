@@ -53,7 +53,7 @@ func (h *Hub) handleWebsocketUserConnection(w http.ResponseWriter, r *http.Reque
 		h.log.Error().Err(err).Msg("couldn't init user connection")
 	}
 	usr := NewUserClient(conn, h.log)
-	usr.HandleRequests(h.launcher)
+	usr.HandleRequests(h.launcher, h.conf)
 	defer usr.Close()
 	usr.ProcessMessages()
 

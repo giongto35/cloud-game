@@ -32,13 +32,18 @@ func (w *Worker) WebrtcIceCandidate(id network.Uid, candidate string) {
 	})
 }
 
-func (w *Worker) StartGame(id network.Uid, roomId string, idx int, app launcher.AppMeta) (api.StartGameResponse, error) {
-	data, err := w.Send(api.StartGame, api.StartGameRequest{
+func (w *Worker) StartGame(id network.Uid, app launcher.AppMeta, req api.GameStartUserRequest, rec bool) (api.StartGameResponse, error) {
+	sendData := api.StartGameRequest{
 		Stateful:    api.Stateful{Id: id},
 		Game:        api.GameInfo{Name: app.Name, Base: app.Base, Path: app.Path, Type: app.Type},
-		Room:        api.Room{Id: roomId},
-		PlayerIndex: idx,
-	})
+		Room:        api.Room{Id: req.RoomId},
+		PlayerIndex: req.PlayerIndex,
+	}
+	if rec {
+		sendData.Record = req.Record
+		sendData.RecordUser = req.RecordUser
+	}
+	data, err := w.Send(api.StartGame, sendData)
 	var resp api.StartGameResponse
 	if err != nil {
 		return resp, err

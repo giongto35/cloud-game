@@ -3,6 +3,7 @@ package coordinator
 import (
 	"github.com/giongto35/cloud-game/v2/pkg/api"
 	"github.com/giongto35/cloud-game/v2/pkg/client"
+	"github.com/giongto35/cloud-game/v2/pkg/config/coordinator"
 	"github.com/giongto35/cloud-game/v2/pkg/ipc"
 	"github.com/giongto35/cloud-game/v2/pkg/launcher"
 	"github.com/giongto35/cloud-game/v2/pkg/logger"
@@ -36,7 +37,7 @@ func (u *User) FreeWorker() {
 	}
 }
 
-func (u *User) HandleRequests(launcher launcher.Launcher) {
+func (u *User) HandleRequests(launcher launcher.Launcher, conf coordinator.Config) {
 	u.OnPacket(func(p ipc.InPacket) {
 		go func() {
 			switch p.T {
@@ -52,7 +53,7 @@ func (u *User) HandleRequests(launcher launcher.Launcher) {
 				u.HandleWebrtcIceCandidate(p.Payload)
 			case api.StartGame:
 				u.log.Info().Msg("Received start request from a browser -> relay to worker")
-				u.HandleStartGame(p.Payload, launcher)
+				u.HandleStartGame(p.Payload, launcher, conf)
 			case api.QuitGame:
 				u.log.Info().Msg("Received quit request from a browser -> relay to worker")
 				u.HandleQuitGame(p.Payload)
@@ -68,6 +69,9 @@ func (u *User) HandleRequests(launcher launcher.Launcher) {
 			case api.ToggleMultitap:
 				u.log.Info().Msg("Received multitap request from a browser -> relay to worker")
 				u.HandleToggleMultitap()
+			case api.RecordGame:
+				u.log.Info().Msg("Received record game request from a browser -> relay to worker")
+				u.HandleRecordGame(p.Payload, conf.Recording)
 			default:
 				u.log.Warn().Msgf("Unknown packet: %+v", p)
 			}

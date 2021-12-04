@@ -106,7 +106,6 @@ func GetEmulatorMock(room string, system string) *EmulatorMock {
 
 	// stub globals
 	NAEmulator = &emu.naEmulator
-	//outputImg = emu.canvas
 
 	emu.paths.save = cleanPath(emu.GetHashPath())
 
@@ -131,6 +130,7 @@ func (emu *EmulatorMock) loadRom(game string) {
 	fmt.Printf("%v %v\n", emu.paths.cores, emu.core)
 	coreLoad(emulator.Metadata{LibPath: emu.paths.cores + emu.core})
 	coreLoadGame(emu.paths.games + game)
+	emu.vw, emu.vh = emu.meta.BaseWidth, emu.meta.BaseHeight
 }
 
 // shutdownEmulator closes the emulator and cleans its resources.

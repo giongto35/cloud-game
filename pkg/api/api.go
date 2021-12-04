@@ -16,6 +16,7 @@ const (
 	SaveGame           uint8 = 106
 	LoadGame           uint8 = 107
 	ToggleMultitap     uint8 = 109
+	RecordGame         uint8 = 110
 )
 
 // Worker

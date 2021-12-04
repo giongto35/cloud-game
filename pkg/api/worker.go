@@ -36,11 +36,18 @@ type (
 	StartGameRequest struct {
 		Stateful
 		Room
+		Record      bool
+		RecordUser  string
 		Game        GameInfo `json:"game"`
 		PlayerIndex int      `json:"player_index"`
 	}
 	StartGameResponse struct {
 		Room
+		Record bool
+	}
+	RecordGameRequest struct {
+		Active bool   `json:"active"`
+		User   string `json:"user"`
 	}
 	TerminateSessionRequest struct {
 		Stateful

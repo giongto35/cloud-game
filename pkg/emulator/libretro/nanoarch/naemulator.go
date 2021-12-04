@@ -65,6 +65,9 @@ type naEmulator struct {
 	isSavingLoading bool
 	storage         Storage
 
+	// out frame size
+	vw, vh int
+
 	players Players
 
 	done chan struct{}
@@ -84,7 +87,6 @@ type GameFrame struct {
 }
 
 var NAEmulator *naEmulator
-var outputImg *image.RGBA
 
 // NewNAEmulator implements CloudEmulator interface for a Libretro frontend.
 func NewNAEmulator(roomID string, inputChannel <-chan InputEvent, storage Storage, conf config.LibretroCoreConfig, log *logger.Logger) (*naEmulator, chan GameFrame, chan []int16) {
@@ -173,35 +175,35 @@ func (na *naEmulator) LoadMeta(path string) emulator.Metadata {
 	return na.meta
 }
 
-func (na *naEmulator) SetViewport(width int, height int) {
-	// outputImg is tmp img used for decoding and reuse in encoding flow
-	outputImg = image.NewRGBA(image.Rect(0, 0, width, height))
-}
+func (na *naEmulator) SetViewport(width int, height int) { na.vw, na.vh = width, height }
 
 func (na *naEmulator) Start() {
 	if err := na.LoadGame(); err != nil {
 		na.log.Error().Err(err).Msg("couldn't load a save file")
 	}
 
+	framerate := 1 / na.meta.Fps
+	na.log.Info().Msgf("framerate: %vms", framerate)
 	ticker := time.NewTicker(time.Second / time.Duration(na.meta.Fps))
+	defer ticker.Stop()
 
-	frameTime = time.Now().UnixNano()
+	lastFrameTime = time.Now()
 
-	for range ticker.C {
+	for {
+		na.Lock()
+		nanoarchRun()
+		na.Unlock()
+
 		select {
-		// Slow response here
+		case <-ticker.C:
+			continue
 		case <-na.done:
 			nanoarchShutdown()
 			close(na.imageChannel)
 			close(na.audioChannel)
 			na.log.Debug().Msg("Closed Director")
 			return
-		default:
 		}
-
-		na.Lock()
-		nanoarchRun()
-		na.Unlock()
 	}
 }
 
@@ -237,8 +239,6 @@ func (na *naEmulator) ToggleMultitap() error {
 func (na *naEmulator) GetHashPath() string { return na.storage.GetSavePath() }
 
 func (na *naEmulator) GetSRAMPath() string { return na.storage.GetSRAMPath() }
-
-func (*naEmulator) GetViewport() interface{} { return outputImg }
 
 func (na *naEmulator) Close() {
 	na.Lock()

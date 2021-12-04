@@ -5,6 +5,8 @@ import (
 	"strconv"
 
 	"github.com/giongto35/cloud-game/v2/pkg/api"
+	"github.com/giongto35/cloud-game/v2/pkg/config/coordinator"
+	"github.com/giongto35/cloud-game/v2/pkg/config/shared"
 	"github.com/giongto35/cloud-game/v2/pkg/launcher"
 )
 
@@ -38,7 +40,7 @@ func (u *User) HandleWebrtcIceCandidate(data json.RawMessage) {
 	u.Worker.WebrtcIceCandidate(u.Id(), req)
 }
 
-func (u *User) HandleStartGame(data json.RawMessage, launcher launcher.Launcher) {
+func (u *User) HandleStartGame(data json.RawMessage, launcher launcher.Launcher, conf coordinator.Config) {
 	var req api.GameStartUserRequest
 	if err := json.Unmarshal(data, &req); err != nil {
 		u.log.Error().Err(err).Msg("malformed game start request")
@@ -63,7 +65,7 @@ func (u *User) HandleStartGame(data json.RawMessage, launcher launcher.Launcher)
 		return
 	}
 
-	workerResp, err := u.Worker.StartGame(u.Id(), req.RoomId, req.PlayerIndex, gameInfo)
+	workerResp, err := u.Worker.StartGame(u.Id(), gameInfo, req, conf.Recording.Enabled)
 	if err != nil {
 		u.log.Error().Err(err).Msg("malformed game start response")
 		return
@@ -75,6 +77,11 @@ func (u *User) HandleStartGame(data json.RawMessage, launcher launcher.Launcher)
 	if err = u.StartGame(); err != nil {
 		u.log.Error().Err(err).Msg("couldn't send back start request")
 		return
+	}
+
+	// send back recording status
+	if conf.Recording.Enabled && workerResp.Record {
+		_ = u.SendAndForget(api.RecordGame, "ok")
 	}
 }
 
@@ -124,3 +131,33 @@ func (u *User) HandleChangePlayer(data json.RawMessage) {
 }
 
 func (u *User) HandleToggleMultitap() { u.Worker.ToggleMultitap(u.Id(), u.RoomID) }
+
+func (u *User) HandleRecordGame(data json.RawMessage, conf shared.Recording) {
+	if !conf.Enabled {
+		u.log.Warn().Msg("Recording should be disabled!")
+		return
+	}
+	// todo fix
+	req := api.RecordGameRequest{}
+	if err := json.Unmarshal(data, &req); err != nil {
+		u.log.Error().Err(err).Msg("malformed record game request")
+		return
+	}
+
+	//bc.Printf("Session: %v, room: %v, rec: %v user: %v", bc.SessionID, bc.RoomID, request.Active, request.User)
+	//
+	//if bc.RoomID == "" {
+	//	bc.Printf("Recording in the empty room is not allowed!")
+	//	return cws.EmptyPacket
+	//}
+	//
+	//resp.SessionID = bc.SessionID
+	//resp.RoomID = bc.RoomID
+	//wc, ok := o.workerClients[bc.WorkerID]
+	//if !ok {
+	//	return cws.EmptyPacket
+	//}
+	//resp = wc.SyncSend(resp)
+	//
+	//return resp
+}

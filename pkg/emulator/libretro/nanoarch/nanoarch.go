@@ -59,11 +59,11 @@ void bridge_execute(void *f);
 */
 import "C"
 
-var mu sync.Mutex
+var mu, fmu sync.Mutex
+var lastFrameTime time.Time
 
 var libretroLogger = logger.Default()
 var sdlCtx *graphics.SDL
-var frameTime int64
 
 var video struct {
 	pitch    uint32
@@ -131,8 +131,6 @@ func coreVideoRefresh(data unsafe.Pointer, width C.unsigned, height C.unsigned, 
 		return
 	}
 
-	t := time.Now().UnixNano()
-
 	// if Libretro renders frame with OpenGL context
 	isOpenGLRender := data == C.RETRO_HW_FRAME_BUFFER_VALID
 
@@ -152,23 +150,27 @@ func coreVideoRefresh(data unsafe.Pointer, width C.unsigned, height C.unsigned, 
 	}
 
 	// the image is being resized and de-rotated
-	image.DrawRgbaImage(
+	img := image.DrawRgbaImage(
 		pixelFormatConverterFn,
 		rotationFn,
 		image.ScaleNearestNeighbour,
 		isOpenGLRender,
 		int(width), int(height), packedWidth, int(video.bpp),
 		data_,
-		outputImg,
+		NAEmulator.vw,
+		NAEmulator.vh,
 	)
 
-	delta := t - frameTime
-	frameTime = t
+	t := time.Now()
+	fmu.Lock()
+	dt := t.Sub(lastFrameTime)
+	lastFrameTime = t
+	fmu.Unlock()
 
 	// the image is pushed into a channel
 	// where it will be distributed with fan-out
 	select {
-	case NAEmulator.imageChannel <- GameFrame{Data: outputImg, Duration: time.Duration(delta)}:
+	case NAEmulator.imageChannel <- GameFrame{Data: img, Duration: dt}:
 	default:
 	}
 }

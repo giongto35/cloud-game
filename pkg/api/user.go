@@ -7,6 +7,8 @@ type (
 	GameStartUserRequest     struct {
 		GameName    string `json:"game_name"`
 		RoomId      string `json:"room_id"`
+		Record      bool   `json:"record,omitempty"`
+		RecordUser  string `json:"record_user,omitempty"`
 		PlayerIndex int    `json:"player_index"`
 	}
 	IceServer struct {
