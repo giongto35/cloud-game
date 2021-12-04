@@ -19,4 +19,5 @@ func (h *Handler) routes() {
 	h.oClient.Receive(api.GameLoad, h.handleGameLoad())
 	h.oClient.Receive(api.GamePlayerSelect, h.handleGamePlayerSelect())
 	h.oClient.Receive(api.GameMultitap, h.handleGameMultitap())
+	h.oClient.Receive(api.GameRecording, h.handleGameRecording())
 }

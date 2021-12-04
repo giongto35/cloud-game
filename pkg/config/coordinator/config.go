@@ -20,6 +20,7 @@ type Config struct {
 	}
 	Emulator    emulator.Emulator
 	Environment shared.Environment
+	Recording   shared.Recording
 	Webrtc      webrtcConfig.Webrtc
 }
 

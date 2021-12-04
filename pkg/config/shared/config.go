@@ -18,6 +18,14 @@ type Server struct {
 	}
 }
 
+type Recording struct {
+	Enabled       bool
+	CompressLevel int
+	Name          string
+	Folder        string
+	Zip           bool
+}
+
 func (s *Server) WithFlags() {
 	flag.StringVar(&s.Address, "address", s.Address, "HTTP server address (host:port)")
 	flag.StringVar(&s.Tls.Address, "httpsAddress", s.Tls.Address, "HTTPS server address (host:port)")

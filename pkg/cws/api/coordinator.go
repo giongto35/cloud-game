@@ -20,19 +20,31 @@ const (
 	GameLoad         = "load"
 	GamePlayerSelect = "player_index"
 	GameMultitap     = "multitap"
+	GameRecording    = "recording"
 )
 
 type GameStartRequest struct {
-	GameName string `json:"game_name"`
+	GameName   string `json:"game_name"`
+	Record     bool   `json:"record,omitempty"`
+	RecordUser string `json:"record_user,omitempty"`
 }
 
 func (packet *GameStartRequest) From(data string) error { return from(packet, data) }
 
+type GameRecordingRequest struct {
+	Active bool   `json:"active"`
+	User   string `json:"user"`
+}
+
+func (packet *GameRecordingRequest) From(data string) error { return from(packet, data) }
+
 type GameStartCall struct {
-	Name string `json:"name"`
-	Base string `json:"base"`
-	Path string `json:"path"`
-	Type string `json:"type"`
+	Name       string `json:"name"`
+	Base       string `json:"base"`
+	Path       string `json:"path"`
+	Type       string `json:"type"`
+	Record     bool   `json:"record,omitempty"`
+	RecordUser string `json:"record_user,omitempty"`
 }
 
 func (packet *GameStartCall) From(data string) error { return from(packet, data) }

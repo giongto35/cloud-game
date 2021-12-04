@@ -10,8 +10,6 @@ type CloudEmulator interface {
 	Start()
 	// SetViewport sets viewport size
 	SetViewport(width int, height int)
-	// GetViewport debug encoder image
-	GetViewport() interface{}
 	// SaveGame save game state
 	SaveGame() error
 	// LoadGame load game state

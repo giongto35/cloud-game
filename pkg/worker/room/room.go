@@ -19,6 +19,7 @@ import (
 	"github.com/giongto35/cloud-game/v2/pkg/emulator/libretro/nanoarch"
 	"github.com/giongto35/cloud-game/v2/pkg/encoder"
 	"github.com/giongto35/cloud-game/v2/pkg/games"
+	"github.com/giongto35/cloud-game/v2/pkg/recorder"
 	"github.com/giongto35/cloud-game/v2/pkg/session"
 	"github.com/giongto35/cloud-game/v2/pkg/storage"
 	"github.com/giongto35/cloud-game/v2/pkg/webrtc"
@@ -53,6 +54,8 @@ type Room struct {
 	director emulator.CloudEmulator
 	// Cloud storage to store room state online
 	onlineStorage storage.CloudStorage
+
+	rec *recorder.Recording
 
 	vPipe *encoder.VideoPipe
 }
@@ -120,7 +123,7 @@ func NewVideoImporter(roomID string) chan nanoarch.GameFrame {
 }
 
 // NewRoom creates a new room
-func NewRoom(roomID string, game games.GameMetadata, onlineStorage storage.CloudStorage, cfg worker.Config) *Room {
+func NewRoom(roomID string, game games.GameMetadata, recUser string, rec bool, onlineStorage storage.CloudStorage, cfg worker.Config) *Room {
 	if roomID == "" {
 		roomID = session.GenerateRoomID(game.Name)
 	}
@@ -203,6 +206,21 @@ func NewRoom(roomID string, game games.GameMetadata, onlineStorage storage.Cloud
 		encoderW, encoderH := nwidth, nheight
 		if gameMeta.Rotation.IsEven {
 			encoderW, encoderH = nheight, nwidth
+		}
+
+		if cfg.Recording.Enabled {
+			room.rec = recorder.NewRecording(
+				recorder.Meta{UserName: recUser},
+				recorder.Options{
+					Dir:                   cfg.Recording.Folder,
+					Fps:                   gameMeta.Fps,
+					Frequency:             gameMeta.AudioSampleRate,
+					Game:                  game.Name,
+					ImageCompressionLevel: cfg.Recording.CompressLevel,
+					Name:                  cfg.Recording.Name,
+					Zip:                   cfg.Recording.Zip,
+				})
+			room.ToggleRecording(rec, recUser)
 		}
 
 		room.director.SetViewport(encoderW, encoderH)
@@ -355,6 +373,11 @@ func (r *Room) Close() {
 	// Just dont close it, let it be gc
 	//close(r.imageChannel)
 	//close(r.audioChannel)
+	if r.rec != nil {
+		if err := r.rec.Stop(); err != nil {
+			log.Printf("record close err, %v", err)
+		}
+	}
 }
 
 func (r *Room) isRoomExisted() bool {
@@ -412,4 +435,11 @@ func (r *Room) IsRunningSessions() bool {
 	}
 
 	return false
+}
+
+func (r *Room) ToggleRecording(active bool, user string) {
+	if r.rec == nil {
+		return
+	}
+	r.rec.Set(active, user)
 }

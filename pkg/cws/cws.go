@@ -3,7 +3,6 @@ package cws
 import (
 	"encoding/json"
 	"log"
-	"runtime/debug"
 	"sync"
 	"time"
 
@@ -105,7 +104,6 @@ func (c *Client) Receive(id string, f PacketHandler) {
 		defer func() {
 			if err := recover(); err != nil {
 				log.Println("Recovered from err ", err)
-				log.Println(debug.Stack())
 			}
 		}()
 

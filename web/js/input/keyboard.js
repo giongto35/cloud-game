@@ -52,52 +52,52 @@ const keyboard = (() => {
     let dpadState = {[KEY.LEFT]: false, [KEY.RIGHT]: false, [KEY.UP]: false, [KEY.DOWN]: false};
 
     function onDpadToggle(checked) {
-      if (dpadMode === checked) {
-        return //error?
-      }
-      if (dpadMode) {
-        dpadMode = false;
-        // reset dpad keys pressed before moving to analog stick mode
-        for (const key in dpadState) {
-            if (dpadState[key] === true) {
-                dpadState[key] = false;
-                event.pub(KEY_RELEASED, {key: key});
+        if (dpadMode === checked) {
+            return //error?
+        }
+        if (dpadMode) {
+            dpadMode = false;
+            // reset dpad keys pressed before moving to analog stick mode
+            for (const key in dpadState) {
+                if (dpadState[key] === true) {
+                    dpadState[key] = false;
+                    event.pub(KEY_RELEASED, {key: key});
+                }
             }
+        } else {
+            dpadMode = true;
+            // reset analog stick axes before moving to dpad mode
+            value = (dpadState[KEY.RIGHT] === true ? 1 : 0) - (dpadState[KEY.LEFT] === true ? 1 : 0)
+            if (value !== 0) {
+                event.pub(AXIS_CHANGED, {id: 0, value: 0});
+            }
+            value = (dpadState[KEY.DOWN] === true ? 1 : 0) - (dpadState[KEY.UP] === true ? 1 : 0)
+            if (value !== 0) {
+                event.pub(AXIS_CHANGED, {id: 1, value: 0});
+            }
+            dpadState = {[KEY.LEFT]: false, [KEY.RIGHT]: false, [KEY.UP]: false, [KEY.DOWN]: false};
         }
-      } else {
-        dpadMode = true;
-        // reset analog stick axes before moving to dpad mode
-        value = (dpadState[KEY.RIGHT] === true ? 1 : 0) - (dpadState[KEY.LEFT] === true ? 1 : 0)
-        if (value !== 0) {
-          event.pub(AXIS_CHANGED, {id: 0, value: 0});
-        }
-        value = (dpadState[KEY.DOWN] === true ? 1 : 0) - (dpadState[KEY.UP] === true ? 1 : 0)
-        if (value !== 0) {
-          event.pub(AXIS_CHANGED, {id: 1, value: 0});
-        }
-        dpadState = {[KEY.LEFT]: false, [KEY.RIGHT]: false, [KEY.UP]: false, [KEY.DOWN]: false};
-      }
     }
 
     const onKey = (code, callback, state) => {
         if (code in keyMap) {
-          key = keyMap[code]
-          if (key in dpadState) {
-            dpadState[key] = state
-            if (dpadMode) {
-              callback(key);
+            key = keyMap[code]
+            if (key in dpadState) {
+                dpadState[key] = state
+                if (dpadMode) {
+                    callback(key);
+                } else {
+                    if (key === KEY.LEFT || key === KEY.RIGHT) {
+                        value = (dpadState[KEY.RIGHT] === true ? 1 : 0) - (dpadState[KEY.LEFT] === true ? 1 : 0)
+                        event.pub(AXIS_CHANGED, {id: 0, value: value});
+                    } else {
+                        value = (dpadState[KEY.DOWN] === true ? 1 : 0) - (dpadState[KEY.UP] === true ? 1 : 0)
+                        event.pub(AXIS_CHANGED, {id: 1, value: value});
+                    }
+                }
             } else {
-              if (key === KEY.LEFT || key == KEY.RIGHT) {
-                value = (dpadState[KEY.RIGHT] === true ? 1 : 0) - (dpadState[KEY.LEFT] === true ? 1 : 0)
-                event.pub(AXIS_CHANGED, {id: 0, value: value});
-              } else {
-                value = (dpadState[KEY.DOWN] === true ? 1 : 0) - (dpadState[KEY.UP] === true ? 1 : 0)
-                event.pub(AXIS_CHANGED, {id: 1, value: value});
-              }
+                callback(key);
             }
-          } else {
-            callback(key);
-          }
         }
     };
 
@@ -109,13 +109,21 @@ const keyboard = (() => {
             const body = document.body;
             // !to use prevent default as everyone
             body.addEventListener('keyup', e => {
+                e.stopPropagation();
                 if (isKeysFilteredMode) {
                     onKey(e.code, key => event.pub(KEY_RELEASED, {key: key}));
                 } else {
                     event.pub(KEYBOARD_KEY_PRESSED, {key: e.code});
                 }
             }, false);
-            body.addEventListener('keydown', e => onKey(e.code, key => event.pub(KEY_PRESSED, {key: key}), true));
+            body.addEventListener('keydown', e => {
+                e.stopPropagation();
+                if (isKeysFilteredMode) {
+                    onKey(e.code, key => event.pub(KEY_PRESSED, {key: key}), true)
+                } else {
+                    event.pub(KEYBOARD_KEY_PRESSED, {key: e.code});
+                }
+            });
 
             log.info('[input] keyboard has been initialized');
         },

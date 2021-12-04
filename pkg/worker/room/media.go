@@ -10,6 +10,7 @@ import (
 	"github.com/giongto35/cloud-game/v2/pkg/encoder/h264"
 	"github.com/giongto35/cloud-game/v2/pkg/encoder/opus"
 	"github.com/giongto35/cloud-game/v2/pkg/encoder/vpx"
+	"github.com/giongto35/cloud-game/v2/pkg/recorder"
 	"github.com/giongto35/cloud-game/v2/pkg/webrtc"
 )
 
@@ -37,6 +38,8 @@ import (
 //	}()
 //}
 
+func (r *Room) isRecording() bool { return r.rec != nil && r.rec.Enabled() }
+
 func (r *Room) startAudio(sampleRate int, audio encoderConfig.Audio) {
 	sound, err := opus.NewEncoder(
 		sampleRate,
@@ -53,6 +56,9 @@ func (r *Room) startAudio(sampleRate int, audio encoderConfig.Audio) {
 	log.Printf("OPUS: %v", sound.GetInfo())
 
 	for samples := range r.audioChannel {
+		if r.isRecording() {
+			r.rec.WriteAudio(recorder.Audio{Samples: &samples})
+		}
 		sound.BufferWrite(samples)
 	}
 
@@ -124,6 +130,9 @@ func (r *Room) startVideo(width, height int, video encoderConfig.Video) {
 
 	for frame := range r.imageChannel {
 		if len(einput) < cap(einput) {
+			if r.isRecording() {
+				go r.rec.WriteVideo(recorder.Video{Image: frame.Data, Duration: frame.Duration})
+			}
 			einput <- encoder.InFrame{Image: frame.Data, Duration: frame.Duration}
 		}
 	}

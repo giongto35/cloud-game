@@ -91,7 +91,7 @@ func TestRoom(t *testing.T) {
 			vCodec:    test.vCodec,
 		})
 		t.Logf("The game [%v] has been loaded", test.game.Name)
-		waitNFrames(test.frames, room.vPipe.Output)
+		waitNOutFrames(test.frames, room.vPipe.Output)
 		room.Close()
 	}
 	// hack: wait room destruction
@@ -123,7 +123,7 @@ func TestRoomWithGL(t *testing.T) {
 				vCodec:    test.vCodec,
 			})
 			t.Logf("The game [%v] has been loaded", test.game.Name)
-			waitNFrames(test.frames, room.vPipe.Output)
+			waitNOutFrames(test.frames, room.vPipe.Output)
 			room.Close()
 		}
 		// hack: wait room destruction
@@ -162,27 +162,17 @@ func TestAllEmulatorRooms(t *testing.T) {
 			autoGlContext: autoGlContext,
 		})
 		t.Logf("The game [%v] has been loaded", test.game.Name)
-		waitNFrames(test.frames, room.vPipe.Output)
+		frame := waitNFrames(test.frames, room.vPipe.Input)
 
 		if renderFrames {
-			img := room.director.GetViewport().(*image.RGBA)
-			tag := fmt.Sprintf("%v-%v-0x%08x", runtime.GOOS, test.game.Type, crc32.Checksum(img.Pix, crc32q))
-			dumpCanvas(img, tag, fmt.Sprintf("%v [%v]", tag, test.frames), outputPath)
+			tag := fmt.Sprintf("%v-%v-0x%08x", runtime.GOOS, test.game.Type, crc32.Checksum(frame.Image.Pix, crc32q))
+			dumpCanvas(frame.Image, tag, fmt.Sprintf("%v [%v]", tag, test.frames), outputPath)
 		}
 
 		room.Close()
 		// hack: wait room destruction
 		time.Sleep(2 * time.Second)
 	}
-}
-
-// enforce image.RGBA to remove alpha channel when encoding PNGs
-type opaqueRGBA struct {
-	*image.RGBA
-}
-
-func (*opaqueRGBA) Opaque() bool {
-	return true
 }
 
 func dumpCanvas(f *image.RGBA, name string, caption string, path string) {
@@ -213,7 +203,7 @@ func dumpCanvas(f *image.RGBA, name string, caption string, path string) {
 	}
 
 	if f, err := os.Create(filepath.Join(outPath, name+".png")); err == nil {
-		if err = png.Encode(f, &opaqueRGBA{&frame}); err != nil {
+		if err = png.Encode(f, &frame); err != nil {
 			log.Printf("Couldn't encode the image, %v", err)
 		}
 		_ = f.Close()
@@ -239,7 +229,7 @@ func getRoomMock(cfg roomMockConfig) roomMock {
 	conf.Encoder.Video.Codec = string(cfg.vCodec)
 
 	cloudStore, _ := storage.NewNoopCloudStorage()
-	room := NewRoom(cfg.roomName, cfg.game, cloudStore, conf)
+	room := NewRoom(cfg.roomName, cfg.game, "", false, cloudStore, conf)
 
 	// loop-wait the room initialization
 	var init sync.WaitGroup
@@ -285,10 +275,30 @@ func getRootPath() string {
 	return p + string(filepath.Separator)
 }
 
-func waitNFrames(n int, ch chan encoder.OutFrame) {
+func waitNFrames(n int, ch chan encoder.InFrame) encoder.InFrame {
 	var frames sync.WaitGroup
 	frames.Add(n)
 
+	var last encoder.InFrame
+	done := false
+	go func() {
+		for f := range ch {
+			last = f
+			if done {
+				break
+			}
+			frames.Done()
+		}
+	}()
+
+	frames.Wait()
+	done = true
+	return last
+}
+
+func waitNOutFrames(n int, ch chan encoder.OutFrame) {
+	var frames sync.WaitGroup
+	frames.Add(n)
 	done := false
 	go func() {
 		for range ch {
@@ -298,7 +308,6 @@ func waitNFrames(n int, ch chan encoder.OutFrame) {
 			frames.Done()
 		}
 	}()
-
 	frames.Wait()
 	done = true
 }
@@ -317,7 +326,7 @@ func benchmarkRoom(rom games.GameMetadata, codec codec.VideoCodec, frames int, s
 			game:      rom,
 			vCodec:    codec,
 		})
-		waitNFrames(frames, room.vPipe.Output)
+		waitNOutFrames(frames, room.vPipe.Output)
 		room.Close()
 	}
 }
