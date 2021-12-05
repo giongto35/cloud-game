@@ -250,7 +250,7 @@
 
     const handleRecordingStatus = (data) => {
         if (data === 'ok') {
-            message.show(`Recording ${recording.isActive() ? 'on' : 'off'}`, true)
+            message.show(`Recording ${recording.isActive() ? 'on' : 'off'}`)
             if (recording.isActive()) {
                 recording.setIndicator(true)
             }
@@ -472,4 +472,4 @@
 
     // initial app state
     setState(app.state.eden);
-})(document, event, env, gameList, input, KEY, log, message, room, settings, socket, stats, stream, utils);
+})(document, event, env, gameList, input, KEY, log, message, recording, room, settings, socket, stats, stream, utils);

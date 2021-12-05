@@ -11,7 +11,10 @@ const recording = (() => {
         recButton = document.getElementById('btn-rec');
 
     if (!userName || !recButton) {
-        return {}
+        return {
+            isActive: () => false,
+            getUser: () => '',
+        }
     }
 
     let state = {
