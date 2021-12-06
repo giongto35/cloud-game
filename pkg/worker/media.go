@@ -6,6 +6,7 @@ import (
 	"github.com/giongto35/cloud-game/v2/pkg/encoder/h264"
 	"github.com/giongto35/cloud-game/v2/pkg/encoder/opus"
 	"github.com/giongto35/cloud-game/v2/pkg/encoder/vpx"
+	"github.com/giongto35/cloud-game/v2/pkg/recorder"
 )
 
 func (r *Room) startAudio(sampleRate int, onAudio func([]byte), conf conf.Audio) {
@@ -29,6 +30,9 @@ func (r *Room) startAudio(sampleRate int, onAudio func([]byte), conf conf.Audio)
 			r.log.Info().Msg("Audio channel has been closed")
 			return
 		case samples := <-r.audioChannel:
+			if r.IsRecording() {
+				r.rec.WriteAudio(recorder.Audio{Samples: &samples})
+			}
 			sound.BufferWrite(samples)
 		}
 	}
@@ -73,6 +77,9 @@ func (r *Room) startVideo(width, height int, onFrame func(encoder.OutFrame), con
 			r.log.Info().Msg("Video channel has been closed")
 			return
 		case frame := <-r.imageChannel:
+			if r.IsRecording() {
+				go r.rec.WriteVideo(recorder.Video{Image: frame.Data, Duration: frame.Duration})
+			}
 			if len(einput) < cap(einput) {
 				einput <- encoder.InFrame{Image: frame.Data, Duration: frame.Duration}
 			}

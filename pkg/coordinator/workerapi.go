@@ -106,6 +106,21 @@ func (w *Worker) ToggleMultitap(id network.Uid, roomId string) {
 	})
 }
 
+func (w *Worker) RecordGame(id network.Uid, roomId string, rec bool, recUser string) (api.RecordGameResponse, error) {
+	data, err := w.Send(api.RecordGame, api.RecordGameRequest{
+		Stateful: api.Stateful{Id: id},
+		Room:     api.Room{Id: roomId},
+		Active:   rec,
+		User:     recUser,
+	})
+	var resp api.RecordGameResponse
+	if err != nil {
+		return resp, err
+	}
+	err = json.Unmarshal(data, &resp)
+	return resp, err
+}
+
 func (w *Worker) TerminateSession(id network.Uid) {
 	_, _ = w.Send(api.TerminateSession, api.TerminateSessionRequest{Stateful: api.Stateful{Id: id}})
 }

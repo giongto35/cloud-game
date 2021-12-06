@@ -187,7 +187,7 @@ func (na *naEmulator) Start() {
 	ticker := time.NewTicker(time.Second / time.Duration(na.meta.Fps))
 	defer ticker.Stop()
 
-	lastFrameTime = time.Now()
+	lastFrameTime = time.Now().UnixNano()
 
 	for {
 		na.Lock()

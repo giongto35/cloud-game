@@ -60,7 +60,7 @@ void bridge_execute(void *f);
 import "C"
 
 var mu, fmu sync.Mutex
-var lastFrameTime time.Time
+var lastFrameTime int64
 
 var libretroLogger = logger.Default()
 var sdlCtx *graphics.SDL
@@ -161,16 +161,16 @@ func coreVideoRefresh(data unsafe.Pointer, width C.unsigned, height C.unsigned, 
 		NAEmulator.vh,
 	)
 
-	t := time.Now()
+	t := time.Now().UnixNano()
 	fmu.Lock()
-	dt := t.Sub(lastFrameTime)
+	dt := t - lastFrameTime
 	lastFrameTime = t
 	fmu.Unlock()
 
 	// the image is pushed into a channel
 	// where it will be distributed with fan-out
 	select {
-	case NAEmulator.imageChannel <- GameFrame{Data: img, Duration: dt}:
+	case NAEmulator.imageChannel <- GameFrame{Data: img, Duration: time.Duration(dt)}:
 	default:
 	}
 }

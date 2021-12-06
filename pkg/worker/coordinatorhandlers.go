@@ -111,9 +111,18 @@ func (c *Coordinator) HandleGameStart(packet ipc.InPacket, h *Handler) {
 	playRoom := h.router.GetRoom(resp.Room.Id)
 	if playRoom == nil {
 		h.log.Info().Str("room", resp.Room.Id).Msg("Create room")
+
+		// recording
+		if h.conf.Recording.Enabled {
+			h.log.Info().Msgf("RECORD: %v %v", resp.Record, resp.RecordUser)
+		} else {
+			h.log.Info().Msg("RECORD OFF")
+		}
+
 		playRoom = h.CreateRoom(
 			resp.Room.Id,
 			games.GameMetadata{Name: resp.Game.Name, Base: resp.Game.Base, Type: resp.Game.Type, Path: resp.Game.Path},
+			resp.Record, resp.RecordUser,
 			func(room *Room) {
 				h.router.RemoveRoom(room)
 				// send signal to coordinator that the room is closed, coordinator will remove that room
@@ -246,4 +255,34 @@ func (c *Coordinator) HandleToggleMultitap(packet ipc.InPacket, h *Handler) {
 		rez = ipc.ErrPacket
 	}
 	_ = h.cord.SendPacket(packet.Proxy(rez))
+}
+
+func (c *Coordinator) HandleRecordGame(packet ipc.InPacket, h *Handler) {
+	var rez = ipc.OkPacket
+	defer func() {
+		_ = h.cord.SendPacket(packet.Proxy(rez))
+	}()
+
+	var resp api.RecordGameRequest
+	if err := fromJson(packet.Payload, &resp); err != nil {
+		c.log.Error().Err(err).Msg("malformed record game request")
+		rez = ipc.ErrPacket
+		return
+	}
+
+	if !h.conf.Recording.Enabled {
+		rez = ipc.ErrPacket
+		return
+	}
+
+	if resp.Room.Id != "" {
+		room := h.router.GetRoom(resp.Room.Id)
+		if room == nil {
+			return
+		}
+		room.ToggleRecording(resp.Active, resp.User)
+	} else {
+		rez = ipc.ErrPacket
+		return
+	}
 }

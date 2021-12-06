@@ -46,9 +46,12 @@ type (
 		Record bool
 	}
 	RecordGameRequest struct {
+		Stateful
+		Room
 		Active bool   `json:"active"`
 		User   string `json:"user"`
 	}
+	RecordGameResponse = string
 	TerminateSessionRequest struct {
 		Stateful
 	}

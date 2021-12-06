@@ -49,6 +49,9 @@ func NewFfmpegStream(dir string, opts Options) (*ffmpegStream, error) {
 		fmt.Sprintf("ffconcat version 1.0\n"+
 			"# v: 1\n# date: %v\n# game: %v\n# fps: %v\n# freq (hz): %v\n\n",
 			time.Now().Format("20060102"), opts.Game, opts.Fps, opts.Frequency))
+	if err != nil {
+		return nil, err
+	}
 
 	return &ffmpegStream{
 		buf:   make(chan Video, 1),

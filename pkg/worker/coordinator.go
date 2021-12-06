@@ -74,6 +74,9 @@ func (c *Coordinator) HandleRequests(h *Handler) {
 		case api.ToggleMultitap:
 			c.log.Info().Msg("Received multitap toggle request")
 			c.HandleToggleMultitap(p, h)
+		case api.RecordGame:
+			c.log.Info().Msg("Received recording request")
+			c.HandleRecordGame(p, h)
 		default:
 			c.log.Warn().Msgf("unhandled packet type %v", p.T)
 		}

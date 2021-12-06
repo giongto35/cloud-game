@@ -137,27 +137,26 @@ func (u *User) HandleRecordGame(data json.RawMessage, conf shared.Recording) {
 		u.log.Warn().Msg("Recording should be disabled!")
 		return
 	}
-	// todo fix
 	req := api.RecordGameRequest{}
 	if err := json.Unmarshal(data, &req); err != nil {
 		u.log.Error().Err(err).Msg("malformed record game request")
 		return
 	}
 
-	//bc.Printf("Session: %v, room: %v, rec: %v user: %v", bc.SessionID, bc.RoomID, request.Active, request.User)
-	//
-	//if bc.RoomID == "" {
-	//	bc.Printf("Recording in the empty room is not allowed!")
-	//	return cws.EmptyPacket
-	//}
-	//
-	//resp.SessionID = bc.SessionID
-	//resp.RoomID = bc.RoomID
-	//wc, ok := o.workerClients[bc.WorkerID]
-	//if !ok {
-	//	return cws.EmptyPacket
-	//}
-	//resp = wc.SyncSend(resp)
-	//
-	//return resp
+	u.log.Debug().Msgf("??? room: %v, rec: %v user: %v", u.RoomID, req.Active, req.User)
+
+	if u.RoomID == "" {
+		u.log.Error().Msg("Recording in the empty room is not allowed!")
+		return
+	}
+	if u.Worker == nil {
+		return
+	}
+
+	resp, err := u.Worker.RecordGame(u.Id(), u.RoomID, req.Active, req.User)
+	if err != nil {
+		u.log.Error().Err(err).Msg("malformed game record request")
+		return
+	}
+	u.Notify(api.RecordGame, resp)
 }

@@ -19,6 +19,7 @@ import (
 	"github.com/giongto35/cloud-game/v2/pkg/encoder"
 	"github.com/giongto35/cloud-game/v2/pkg/games"
 	"github.com/giongto35/cloud-game/v2/pkg/logger"
+	"github.com/giongto35/cloud-game/v2/pkg/recorder"
 	"github.com/giongto35/cloud-game/v2/pkg/session"
 	"github.com/giongto35/cloud-game/v2/pkg/storage"
 	"github.com/pion/webrtc/v3/pkg/media"
@@ -48,6 +49,8 @@ type Room struct {
 	onlineStorage storage.CloudStorage
 
 	onClose func(self *Room)
+
+	rec *recorder.Recording
 
 	vPipe *encoder.VideoPipe
 	log   *logger.Logger
@@ -113,7 +116,7 @@ func NewVideoImporter(id string, log *logger.Logger) chan nanoarch.GameFrame {
 }
 
 // NewRoom creates a new room
-func NewRoom(id string, game games.GameMetadata, storage storage.CloudStorage, onClose func(*Room), conf worker.Config, log *logger.Logger) *Room {
+func NewRoom(id string, game games.GameMetadata, storage storage.CloudStorage, onClose func(*Room), rec bool, recUser string, conf worker.Config, log *logger.Logger) *Room {
 	if id == "" {
 		id = session.GenerateRoomID(game.Name)
 	}
@@ -196,6 +199,21 @@ func NewRoom(id string, game games.GameMetadata, storage storage.CloudStorage, o
 		}
 
 		room.director.SetViewport(encoderW, encoderH)
+
+		if conf.Recording.Enabled {
+			room.rec = recorder.NewRecording(
+				recorder.Meta{UserName: recUser},
+				recorder.Options{
+					Dir:                   conf.Recording.Folder,
+					Fps:                   gameMeta.Fps,
+					Frequency:             gameMeta.AudioSampleRate,
+					Game:                  game.Name,
+					ImageCompressionLevel: conf.Recording.CompressLevel,
+					Name:                  conf.Recording.Name,
+					Zip:                   conf.Recording.Zip,
+				})
+			room.ToggleRecording(rec, recUser)
+		}
 
 		go room.startVideo(encoderW, encoderH, func(frame encoder.OutFrame) {
 			sample := media.Sample{Data: frame.Data, Duration: frame.Duration}
@@ -324,6 +342,12 @@ func (r *Room) Close() {
 
 	r.onClose(r)
 
+	if r.rec != nil {
+		if err := r.rec.Stop(); err != nil {
+			r.log.Error().Err(err).Msg("record close ")
+		}
+	}
+
 	// Close here is a bit wrong because this read channel
 	// Just don't close it, let it be gc
 }
@@ -371,6 +395,15 @@ func (r *Room) saveOnlineRoomToLocal(roomID string, savePath string) error {
 func (r *Room) LoadGame() error { return r.director.LoadGame() }
 
 func (r *Room) ToggleMultitap() error { return r.director.ToggleMultitap() }
+
+func (r *Room) IsRecording() bool { return r.rec != nil && r.rec.Enabled() }
+
+func (r *Room) ToggleRecording(active bool, user string) {
+	if r.rec == nil {
+		return
+	}
+	r.rec.Set(active, user)
+}
 
 func (r *Room) IsEmpty() bool { return r.users.IsEmpty() }
 
