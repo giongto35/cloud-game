@@ -203,6 +203,7 @@ func NewRoom(id string, game games.GameMetadata, storage storage.CloudStorage, o
 		if conf.Recording.Enabled {
 			room.rec = recorder.NewRecording(
 				recorder.Meta{UserName: recUser},
+				log,
 				recorder.Options{
 					Dir:                   conf.Recording.Folder,
 					Fps:                   gameMeta.Fps,
@@ -343,9 +344,7 @@ func (r *Room) Close() {
 	r.onClose(r)
 
 	if r.rec != nil {
-		if err := r.rec.Stop(); err != nil {
-			r.log.Error().Err(err).Msg("record close ")
-		}
+		r.rec.Set(false, "")
 	}
 
 	// Close here is a bit wrong because this read channel
@@ -402,6 +401,7 @@ func (r *Room) ToggleRecording(active bool, user string) {
 	if r.rec == nil {
 		return
 	}
+	r.log.Debug().Msgf("[REC] set: %v, %v", active, user)
 	r.rec.Set(active, user)
 }
 

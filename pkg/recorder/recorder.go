@@ -2,7 +2,6 @@ package recorder
 
 import (
 	"image"
-	"log"
 	"math/rand"
 	"os"
 	"path/filepath"
@@ -11,6 +10,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/giongto35/cloud-game/v2/pkg/logger"
 	"github.com/hashicorp/go-multierror"
 )
 
@@ -26,6 +26,7 @@ type Recording struct {
 	saveDir string
 	meta    Meta
 	opts    Options
+	log     *logger.Logger
 }
 
 // naming regexp
@@ -73,17 +74,17 @@ func init() {
 //    ffmpeg -r 60 -f concat -i ./recording/psxtest/input.txt \
 //   		-ac 2 -channel_layout stereo -i ./recording/psxtest/audio.wav \
 //  		-b:a 192K -crf 23 -pix_fmt yuv420p out.mp4
-func NewRecording(meta Meta, opts Options) *Recording {
+func NewRecording(meta Meta, log *logger.Logger, opts Options) *Recording {
 	savePath, err := filepath.Abs(opts.Dir)
 	if err != nil {
-		log.Fatal(err)
+		log.Error().Err(err).Send()
 	}
 	if _, err := os.Stat(savePath); os.IsNotExist(err) {
 		if err = os.Mkdir(savePath, os.ModeDir); err != nil {
-			log.Fatal(err)
+			log.Error().Err(err).Send()
 		}
 	}
-	return &Recording{dir: savePath, meta: meta, opts: opts}
+	return &Recording{dir: savePath, meta: meta, opts: opts, log: log}
 }
 
 func (r *Recording) Start() {
@@ -94,22 +95,22 @@ func (r *Recording) Start() {
 	r.saveDir = parseName(r.opts.Name, r.opts.Game, r.meta.UserName)
 	path := filepath.Join(r.dir, r.saveDir)
 
-	log.Printf("[recording] path will be [%v]", path)
+	r.log.Info().Msgf("[recording] path will be [%v]", path)
 
 	if _, err := os.Stat(path); os.IsNotExist(err) {
 		if err = os.Mkdir(path, os.ModeDir); err != nil {
-			log.Fatal(err)
+			r.log.Fatal().Err(err)
 		}
 	}
 
 	audio, err := NewWavStream(path, r.opts)
 	if err != nil {
-		log.Fatal(err)
+		r.log.Fatal().Err(err)
 	}
 	r.audio = audio
 	video, err := NewFfmpegStream(path, r.opts)
 	if err != nil {
-		log.Fatal(err)
+		r.log.Fatal().Err(err)
 	}
 	r.video = video
 
@@ -129,11 +130,11 @@ func (r *Recording) Stop() error {
 		dst := filepath.Join(src, "..", r.saveDir)
 		go func() {
 			if err := compress(src, dst); err != nil {
-				log.Printf("error during result compress, %v", result)
+				r.log.Error().Err(err).Msg("error during result compress")
 				return
 			}
 			if err := os.RemoveAll(src); err != nil {
-				log.Printf("error during result compress, %v", result)
+				r.log.Error().Err(err).Msg("error during result compress")
 			}
 		}()
 	}
@@ -150,8 +151,9 @@ func (r *Recording) Set(enable bool, user string) {
 		if r.enabled && !enable {
 			r.Unlock()
 			if err := r.Stop(); err != nil {
-				log.Printf("failed to stop recording, %v", err)
+				r.log.Error().Err(err).Msg("failed to stop recording")
 			}
+			r.log.Debug().Msg("recording has stopped")
 			r.Lock()
 		}
 	}

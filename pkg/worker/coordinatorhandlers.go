@@ -148,7 +148,9 @@ func (c *Coordinator) HandleGameStart(packet ipc.InPacket, h *Handler) {
 	}
 	user.SetRoom(playRoom)
 	h.router.AddRoom(playRoom)
-	_ = h.cord.SendPacket(packet.Proxy(api.StartGameResponse{Room: api.Room{Id: playRoom.ID}}))
+	_ = h.cord.SendPacket(packet.Proxy(api.StartGameResponse{
+		Room: api.Room{Id: playRoom.ID}, Record: h.conf.Recording.Enabled,
+	}))
 }
 
 func (c *Coordinator) HandleQuitGame(packet ipc.InPacket, h *Handler) {

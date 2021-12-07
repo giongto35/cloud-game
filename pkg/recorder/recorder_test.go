@@ -12,6 +12,8 @@ import (
 	"sync/atomic"
 	"testing"
 	"time"
+
+	"github.com/giongto35/cloud-game/v2/pkg/logger"
 )
 
 func TestName(t *testing.T) {
@@ -27,6 +29,7 @@ func TestName(t *testing.T) {
 
 	recorder := NewRecording(
 		Meta{UserName: "test"},
+		logger.Default(),
 		Options{
 			Dir:                   dir,
 			Fps:                   60,
@@ -99,6 +102,7 @@ func benchmarkRecorder(w, h int, comp int, b *testing.B) {
 
 	recorder := NewRecording(
 		Meta{UserName: "test"},
+		logger.Default(),
 		Options{
 			Dir:                   dir,
 			Fps:                   60,

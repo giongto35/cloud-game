@@ -166,7 +166,13 @@
         // on the server this game is ignored and the actual game will be extracted from the share link
         // so there's no point in doing this and this' really confusing
 
-        api.game.start(gameList.getCurrentGame(), room.getId(), +playerIndex.value - 1);
+        api.game.start(
+            gameList.getCurrentGame(),
+            room.getId(),
+            recording.isActive(),
+            recording.getUser(),
+            +playerIndex.value - 1,
+        );
 
         // clear menu screen
         input.poll().disable();
@@ -207,6 +213,10 @@
                 break;
             case api.endpoint.LATENCY_CHECK:
                 event.pub(LATENCY_CHECK_REQUESTED, {packetId: id, addresses: payload});
+                break;
+            case api.endpoint.GAME_RECORDING:
+                event.pub(RECORDING_STATUS_CHANGED, payload);
+                break;
         }
     }
 
@@ -281,6 +291,24 @@
         toggle.checked = !toggle.checked;
         event.pub(DPAD_TOGGLE, {checked: toggle.checked});
     };
+
+    const handleRecording = (data) => {
+        const {recording, userName} = data;
+        api.game.toggleRecording(recording, userName);
+    }
+
+    const handleRecordingStatus = (data) => {
+        if (data === 'ok') {
+            message.show(`Recording ${recording.isActive() ? 'on' : 'off'}`, true)
+            if (recording.isActive()) {
+                recording.setIndicator(true)
+            }
+        } else {
+            message.show(`Recording failed ):`)
+            recording.setIndicator(false)
+        }
+        console.log("recording is ", recording.isActive())
+    }
 
     const app = {
         state: {
@@ -493,6 +521,9 @@
     });
     event.sub(AXIS_CHANGED, onAxisChanged);
     event.sub(CONTROLLER_UPDATED, data => webrtc.input(data));
+    // recording
+    event.sub(RECORDING_TOGGLED, handleRecording);
+    event.sub(RECORDING_STATUS_CHANGED, handleRecordingStatus);
 
     event.sub(SETTINGS_CHANGED, () => {
         const newValue = settings.get()[opts.LOG_LEVEL];
@@ -503,4 +534,4 @@
 
     // initial app state
     setState(app.state.eden);
-})(document, event, env, gameList, input, KEY, log, message, room, settings, socket, stats, stream, utils);
+})(document, event, env, gameList, input, KEY, log, message, recording, room, settings, socket, stats, stream, utils);
