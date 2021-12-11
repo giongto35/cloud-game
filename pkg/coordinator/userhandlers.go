@@ -80,7 +80,7 @@ func (u *User) HandleStartGame(data json.RawMessage, launcher launcher.Launcher,
 	}
 
 	// send back recording status
-	if conf.Recording.Enabled && workerResp.Record {
+	if conf.Recording.Enabled && req.Record {
 		_ = u.SendAndForget(api.RecordGame, "ok")
 	}
 }
