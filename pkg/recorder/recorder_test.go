@@ -54,7 +54,7 @@ func TestName(t *testing.T) {
 			imgWg.Done()
 		}()
 		go func() {
-			recorder.WriteAudio(Audio{&[]int16{0, 0, 0, 0, 0, 1, 11, 11, 11, 1}})
+			recorder.WriteAudio(Audio{&[]int16{0, 0, 0, 0, 0, 1, 11, 11, 11, 1}, 1})
 			audioWg.Done()
 		}()
 	}
@@ -126,7 +126,7 @@ func benchmarkRecorder(w, h int, comp int, b *testing.B) {
 			ticks.Done()
 		}()
 		go func() {
-			recorder.WriteAudio(Audio{&samples})
+			recorder.WriteAudio(Audio{&samples, 1})
 			atomic.AddInt64(&bytes, int64(len(samples)*2))
 			ticks.Done()
 		}()

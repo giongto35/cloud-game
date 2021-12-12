@@ -33,7 +33,7 @@ type Room struct {
 	// imageChannel is image stream received from director
 	imageChannel <-chan nanoarch.GameFrame
 	// audioChannel is audio stream received from director
-	audioChannel <-chan []int16
+	audioChannel <-chan nanoarch.GameAudio
 	// inputChannel is input stream send to director. This inputChannel is combined
 	// input from webRTC + connection info (player index)
 	inputChannel chan<- nanoarch.InputEvent
@@ -212,6 +212,7 @@ func NewRoom(id string, game games.GameMetadata, storage storage.CloudStorage, o
 					ImageCompressionLevel: conf.Recording.CompressLevel,
 					Name:                  conf.Recording.Name,
 					Zip:                   conf.Recording.Zip,
+					Vsync:                 true,
 				})
 			room.ToggleRecording(rec, recUser)
 		}

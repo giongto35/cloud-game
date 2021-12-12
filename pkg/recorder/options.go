@@ -8,6 +8,7 @@ type Options struct {
 	ImageCompressionLevel int
 	Name                  string
 	Zip                   bool
+	Vsync                 bool
 }
 
 type Option func(*Options)

@@ -2,6 +2,7 @@ package recorder
 
 import (
 	"image"
+	"io"
 	"math/rand"
 	"os"
 	"path/filepath"
@@ -27,6 +28,8 @@ type Recording struct {
 	meta    Meta
 	opts    Options
 	log     *logger.Logger
+
+	vsync []time.Duration
 }
 
 // naming regexp
@@ -39,8 +42,7 @@ var (
 
 // Stream represent an output stream of the recording.
 type Stream interface {
-	Start()
-	Stop() error
+	io.Closer
 }
 
 type AudioStream interface {
@@ -54,7 +56,8 @@ type VideoStream interface {
 
 type (
 	Audio struct {
-		Samples *[]int16
+		Samples  *[]int16
+		Duration time.Duration
 	}
 	Video struct {
 		Image    image.Image
@@ -66,14 +69,7 @@ func init() {
 	rand.Seed(time.Now().UnixNano())
 }
 
-// NewRecording creates new recorder of the emulator.
-//
-// FFMPEG:
-//
-// Example of conversion:
-//    ffmpeg -r 60 -f concat -i ./recording/psxtest/input.txt \
-//   		-ac 2 -channel_layout stereo -i ./recording/psxtest/audio.wav \
-//  		-b:a 192K -crf 23 -pix_fmt yuv420p out.mp4
+// NewRecording creates new media recorder for the emulator.
 func NewRecording(meta Meta, log *logger.Logger, opts Options) *Recording {
 	savePath, err := filepath.Abs(opts.Dir)
 	if err != nil {
@@ -84,7 +80,7 @@ func NewRecording(meta Meta, log *logger.Logger, opts Options) *Recording {
 			log.Error().Err(err).Send()
 		}
 	}
-	return &Recording{dir: savePath, meta: meta, opts: opts, log: log}
+	return &Recording{dir: savePath, meta: meta, opts: opts, log: log, vsync: []time.Duration{}}
 }
 
 func (r *Recording) Start() {
@@ -108,14 +104,11 @@ func (r *Recording) Start() {
 		r.log.Fatal().Err(err)
 	}
 	r.audio = audio
-	video, err := NewFfmpegStream(path, r.opts)
+	video, err := NewPngStream(path, r.opts)
 	if err != nil {
 		r.log.Fatal().Err(err)
 	}
 	r.video = video
-
-	go r.audio.Start()
-	go r.video.Start()
 }
 
 func (r *Recording) Stop() error {
@@ -123,8 +116,13 @@ func (r *Recording) Stop() error {
 	r.Lock()
 	defer r.Unlock()
 	r.enabled = false
-	result = multierror.Append(result, r.audio.Stop())
-	result = multierror.Append(result, r.video.Stop())
+	result = multierror.Append(result, r.audio.Close())
+	result = multierror.Append(result, r.video.Close())
+
+	path := filepath.Join(r.dir, r.saveDir)
+	// FFMPEG
+	result = multierror.Append(result, CreateFfmpegMuxFile(path, videoFile, r.vsync, r.opts))
+
 	if result.ErrorOrNil() == nil && r.opts.Zip && r.saveDir != "" {
 		src := filepath.Join(r.dir, r.saveDir)
 		dst := filepath.Join(src, "..", r.saveDir)
@@ -138,6 +136,9 @@ func (r *Recording) Stop() error {
 			}
 		}()
 	}
+
+	r.vsync = []time.Duration{}
+
 	return result.ErrorOrNil()
 }
 
@@ -168,8 +169,15 @@ func (r *Recording) Enabled() bool {
 	return r.enabled
 }
 
-func (r *Recording) WriteVideo(frame Video) { r.video.Write(frame) }
-func (r *Recording) WriteAudio(audio Audio) { r.audio.Write(audio) }
+func (r *Recording) WriteVideo(frame Video) {
+	r.video.Write(frame)
+}
+func (r *Recording) WriteAudio(audio Audio) {
+	r.audio.Write(audio)
+	r.Lock()
+	r.vsync = append(r.vsync, audio.Duration)
+	r.Unlock()
+}
 
 func parseName(name, game, user string) (out string) {
 	if d := reDate.FindStringSubmatch(name); d != nil {

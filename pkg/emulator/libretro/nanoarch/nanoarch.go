@@ -167,8 +167,6 @@ func coreVideoRefresh(data unsafe.Pointer, width C.unsigned, height C.unsigned, 
 	lastFrameTime = t
 	fmu.Unlock()
 
-	// the image is pushed into a channel
-	// where it will be distributed with fan-out
 	select {
 	case NAEmulator.imageChannel <- GameFrame{Data: img, Duration: time.Duration(dt)}:
 	default:
@@ -176,8 +174,7 @@ func coreVideoRefresh(data unsafe.Pointer, width C.unsigned, height C.unsigned, 
 }
 
 //export coreInputPoll
-func coreInputPoll() {
-}
+func coreInputPoll() {}
 
 //export coreInputState
 func coreInputState(port C.unsigned, device C.unsigned, index C.unsigned, id C.unsigned) C.int16_t {
@@ -219,11 +216,13 @@ func audioWrite(buf unsafe.Pointer, frames C.size_t) C.size_t {
 	// and buf pointer is the same in continuous frames
 	copy(p, pcm)
 
+	// 1600 = x / 1000 * 48000 * 2
+	estimate := float64(len(pcm)) / float64(NAEmulator.meta.AudioSampleRate*2) * 1000000000
+
 	select {
-	case NAEmulator.audioChannel <- p:
+	case NAEmulator.audioChannel <- GameAudio{Data: p, Duration: time.Duration(estimate)}:
 	default:
 	}
-
 	return frames
 }
 

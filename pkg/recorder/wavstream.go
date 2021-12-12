@@ -2,7 +2,6 @@ package recorder
 
 import (
 	"encoding/binary"
-	"log"
 
 	"github.com/hashicorp/go-multierror"
 )
@@ -10,7 +9,6 @@ import (
 type wavStream struct {
 	AudioStream
 
-	buf       chan Audio
 	frequency int
 	wav       *file
 }
@@ -32,21 +30,11 @@ func NewWavStream(dir string, opts Options) (*wavStream, error) {
 	return &wavStream{
 		frequency: opts.Frequency,
 		wav:       wav,
-		buf:       make(chan Audio, 1),
 	}, nil
 }
 
-func (w *wavStream) Start() {
-	for audio := range w.buf {
-		if err := w.Save(*audio.Samples); err != nil {
-			log.Printf("wav write err: %v", err)
-		}
-	}
-}
-
-func (w *wavStream) Stop() error {
+func (w *wavStream) Close() error {
 	var result *multierror.Error
-	close(w.buf)
 	result = multierror.Append(result, w.wav.Flush())
 	size, er := w.wav.Size()
 	if er != nil {
@@ -61,13 +49,14 @@ func (w *wavStream) Stop() error {
 	return result.ErrorOrNil()
 }
 
-func (w *wavStream) Save(pcm []int16) error {
+func (w *wavStream) Write(data Audio) {
+	pcm := *data.Samples
 	bs := make([]byte, len(pcm)*2)
 	// int & 0xFF + (int >> 8) & 0xFF
 	for i, ln := 0, len(pcm); i < ln; i++ {
 		binary.LittleEndian.PutUint16(bs[i*2:i*2+2], uint16(pcm[i]))
 	}
-	return w.wav.Write(bs)
+	_ = w.wav.Write(bs)
 }
 
 // rIFFWavHeader creates RIFF WAV header.
@@ -111,5 +100,3 @@ func rIFFWavHeader(fSize uint32, fq int) []byte {
 	}
 	return header[:]
 }
-
-func (w *wavStream) Write(data Audio) { w.buf <- data }

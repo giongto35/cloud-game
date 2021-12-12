@@ -34,7 +34,7 @@ type EmulatorMock struct {
 
 	// channels
 	imageInCh  <-chan GameFrame
-	audioInCh  <-chan []int16
+	audioInCh  <-chan GameAudio
 	inputOutCh chan<- InputEvent
 }
 
@@ -62,7 +62,7 @@ func GetEmulatorMock(room string, system string) *EmulatorMock {
 	meta := conf.Emulator.GetLibretroCoreConfig(system)
 
 	images := make(chan GameFrame, 30)
-	audio := make(chan []int16, 30)
+	audio := make(chan GameAudio, 30)
 	inputs := make(chan InputEvent, 100)
 
 	SetLibretroLogger(logger.Default())
@@ -119,7 +119,7 @@ func GetDefaultEmulatorMock(room string, system string, rom string) *EmulatorMoc
 	mock := GetEmulatorMock(room, system)
 	mock.loadRom(rom)
 	go mock.handleVideo(func(_ GameFrame) {})
-	go mock.handleAudio(func(_ []int16) {})
+	go mock.handleAudio(func(_ GameAudio) {})
 
 	return mock
 }
@@ -161,7 +161,7 @@ func (emu *EmulatorMock) handleVideo(handler func(image GameFrame)) {
 }
 
 // handleAudio is a custom message handler for the audio channel.
-func (emu *EmulatorMock) handleAudio(handler func(sample []int16)) {
+func (emu *EmulatorMock) handleAudio(handler func(sample GameAudio)) {
 	for frame := range emu.audioInCh {
 		handler(frame)
 	}

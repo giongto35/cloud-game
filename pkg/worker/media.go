@@ -31,9 +31,9 @@ func (r *Room) startAudio(sampleRate int, onAudio func([]byte), conf conf.Audio)
 			return
 		case samples := <-r.audioChannel:
 			if r.IsRecording() {
-				r.rec.WriteAudio(recorder.Audio{Samples: &samples})
+				r.rec.WriteAudio(recorder.Audio{Samples: &samples.Data, Duration: samples.Duration})
 			}
-			sound.BufferWrite(samples)
+			sound.BufferWrite(samples.Data)
 		}
 	}
 }
