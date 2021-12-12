@@ -39,7 +39,7 @@ const webrtc = (() => {
             };
             if (onMessage) {
                 inputChannel.onmessage = onMessage;
-        }
+            }
             inputChannel.onclose = () => log.info('[rtp] the input channel has been closed');
         }
         connection.oniceconnectionstatechange = ice.onIceConnectionStateChange;
@@ -137,12 +137,20 @@ const webrtc = (() => {
             candidates.forEach(data => {
                 const candidate = new RTCIceCandidate(JSON.parse(atob(data)))
                 connection.addIceCandidate(candidate).catch(e => {
-                    console.error('[rtc] candidate add failed', e.name);
+                    log.error('[rtc] candidate add failed', e.name);
                 });
             });
             isFlushing = false;
         },
-        message: (mess = '') => inputChannel.send(mess),
+        message: (mess = '') => {
+            try {
+                inputChannel.send(mess)
+                return true
+            } catch (error) {
+                log.error('[rtc] input channel broken ' + error)
+                return false
+            }
+        },
         input: (data) => inputChannel.send(data),
         isConnected: () => connected,
         isInputReady: () => inputReady,

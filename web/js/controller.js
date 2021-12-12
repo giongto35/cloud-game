@@ -11,7 +11,7 @@
     let interacted = false;
 
     // ping-pong
-    const pingPong = true;
+    let pingPong = 0;
 
     const DIR = (() => {
         return {
@@ -72,9 +72,13 @@
 
     const onConnectionReady = () => {
         // ping / pong
-        if (pingPong) {
-            setInterval(() => {
-                webrtc.message('x');
+        if (pingPong === 0) {
+            pingPong = setInterval(() => {
+                if (!webrtc.message('x')) {
+                    clearInterval(pingPong);
+                    pingPong = 0;
+                    log.info("ping-pong was disabled due to remote channel error");
+                }
                 event.pub(PING_REQUEST, {time: Date.now()})
             }, 10000);
         }
@@ -504,6 +508,10 @@
     event.sub(WEBRTC_CONNECTION_READY, onConnectionReady);
     event.sub(WEBRTC_CONNECTION_CLOSED, () => {
         input.poll().disable();
+        if (pingPong > 0) {
+            clearInterval(pingPong);
+            pingPong = 0;
+        }
     });
     event.sub(LATENCY_CHECK_REQUESTED, onLatencyCheck);
     event.sub(GAMEPAD_CONNECTED, () => message.show('Gamepad connected'));
