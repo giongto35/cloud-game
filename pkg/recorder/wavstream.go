@@ -7,7 +7,7 @@ import (
 )
 
 type wavStream struct {
-	AudioStream
+	audioStream
 
 	frequency int
 	wav       *file
@@ -18,7 +18,7 @@ const (
 	audioFileRIFFSize = 44
 )
 
-func NewWavStream(dir string, opts Options) (*wavStream, error) {
+func newWavStream(dir string, opts Options) (*wavStream, error) {
 	wav, err := newFile(dir, audioFile)
 	if err != nil {
 		return nil, err

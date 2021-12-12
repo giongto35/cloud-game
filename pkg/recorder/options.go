@@ -11,8 +11,6 @@ type Options struct {
 	Vsync                 bool
 }
 
-type Option func(*Options)
-
 type Meta struct {
 	UserName string
 }

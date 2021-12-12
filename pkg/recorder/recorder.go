@@ -20,8 +20,8 @@ type Recording struct {
 
 	enabled bool
 
-	audio AudioStream
-	video VideoStream
+	audio audioStream
+	video videoStream
 
 	dir     string
 	saveDir string
@@ -40,17 +40,17 @@ var (
 	reRand = regexp.MustCompile(`%rand:(\d+)%`)
 )
 
-// Stream represent an output stream of the recording.
-type Stream interface {
+// stream represent an output stream of the recording.
+type stream interface {
 	io.Closer
 }
 
-type AudioStream interface {
-	Stream
+type audioStream interface {
+	stream
 	Write(data Audio)
 }
-type VideoStream interface {
-	Stream
+type videoStream interface {
+	stream
 	Write(data Video)
 }
 
@@ -99,12 +99,12 @@ func (r *Recording) Start() {
 		}
 	}
 
-	audio, err := NewWavStream(path, r.opts)
+	audio, err := newWavStream(path, r.opts)
 	if err != nil {
 		r.log.Fatal().Err(err)
 	}
 	r.audio = audio
-	video, err := NewPngStream(path, r.opts)
+	video, err := newPngStream(path, r.opts)
 	if err != nil {
 		r.log.Fatal().Err(err)
 	}
@@ -121,7 +121,7 @@ func (r *Recording) Stop() error {
 
 	path := filepath.Join(r.dir, r.saveDir)
 	// FFMPEG
-	result = multierror.Append(result, CreateFfmpegMuxFile(path, videoFile, r.vsync, r.opts))
+	result = multierror.Append(result, createFfmpegMuxFile(path, videoFile, r.vsync, r.opts))
 
 	if result.ErrorOrNil() == nil && r.opts.Zip && r.saveDir != "" {
 		src := filepath.Join(r.dir, r.saveDir)
@@ -136,9 +136,7 @@ func (r *Recording) Stop() error {
 			}
 		}()
 	}
-
 	r.vsync = []time.Duration{}
-
 	return result.ErrorOrNil()
 }
 
@@ -172,6 +170,7 @@ func (r *Recording) Enabled() bool {
 func (r *Recording) WriteVideo(frame Video) {
 	r.video.Write(frame)
 }
+
 func (r *Recording) WriteAudio(audio Audio) {
 	r.audio.Write(audio)
 	r.Lock()

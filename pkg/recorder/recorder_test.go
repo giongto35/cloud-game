@@ -73,7 +73,7 @@ func BenchmarkNewRecording100x100(b *testing.B) {
 func BenchmarkNewRecording320x240_compressed(b *testing.B) {
 	benchmarkRecorder(320, 240, 0, b)
 }
-func BenchmarkNewRecording320x240_nocompression(b *testing.B) {
+func BenchmarkNewRecording320x240_nocompress(b *testing.B) {
 	benchmarkRecorder(320, 240, -1, b)
 }
 

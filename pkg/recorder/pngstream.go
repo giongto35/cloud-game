@@ -13,7 +13,7 @@ import (
 )
 
 type pngStream struct {
-	VideoStream
+	videoStream
 
 	dir string
 	e   *png.Encoder
@@ -29,7 +29,7 @@ func pngBuf() *pool                      { return &pool{sync.Pool{New: func() in
 func (p *pool) Get() *png.EncoderBuffer  { return p.Pool.Get().(*png.EncoderBuffer) }
 func (p *pool) Put(b *png.EncoderBuffer) { p.Pool.Put(b) }
 
-func NewPngStream(dir string, opts Options) (*pngStream, error) {
+func newPngStream(dir string, opts Options) (*pngStream, error) {
 	return &pngStream{
 		dir: dir,
 		e: &png.Encoder{

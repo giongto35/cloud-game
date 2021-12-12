@@ -12,7 +12,7 @@ import (
 
 const demuxFile = "input.txt"
 
-// CreateFfmpegMuxFile makes FFMPEG concat demuxer file.
+// createFfmpegMuxFile makes FFMPEG concat demuxer file.
 //
 // ffmpeg concat demuxer, see: https://ffmpeg.org/ffmpeg-formats.html#concat
 // example:
@@ -20,26 +20,23 @@ const demuxFile = "input.txt"
 //		   -ac 2 -channel_layout stereo -i audio.wav \
 //		   -b:a 192K -crf 23 -vf fps=30 -pix_fmt yuv420p \
 //		   out.mp4
-func CreateFfmpegMuxFile(dir string, fPattern string, frameTimes []time.Duration, opts Options) (er error) {
+func createFfmpegMuxFile(dir string, fPattern string, frameTimes []time.Duration, opts Options) (er error) {
 	var result *multierror.Error
 	demux, err := newFile(dir, demuxFile)
 	if err != nil {
 		return err
 	}
 	defer func() { er = demux.Close() }()
-
 	_, err = demux.WriteString(
 		fmt.Sprintf("ffconcat version 1.0\n# v: 1\n# date: %v\n# game: %v\n# fps: %v\n# freq (hz): %v\n\n",
 			time.Now().Format("20060102"), opts.Game, opts.Fps, opts.Frequency))
 	if err != nil {
 		return err
 	}
-
 	files, err := os.ReadDir(dir)
 	if err != nil {
 		return err
 	}
-
 	i := 0
 	sync := opts.Vsync && len(frameTimes) > 0
 	ext := strings.TrimSuffix(fPattern, filepath.Ext(fPattern))
@@ -61,10 +58,11 @@ func CreateFfmpegMuxFile(dir string, fPattern string, frameTimes []time.Duration
 			result = multierror.Append(result, err)
 		}
 	}
-
 	if err = demux.Flush(); err != nil {
 		result = multierror.Append(result, err)
 	}
-
-	return result.ErrorOrNil()
+	if result != nil {
+		return result.ErrorOrNil()
+	}
+	return nil
 }
