@@ -39,7 +39,7 @@ func createFfmpegMuxFile(dir string, fPattern string, frameTimes []time.Duration
 	}
 	i := 0
 	sync := opts.Vsync && len(frameTimes) > 0
-	ext := strings.TrimSuffix(fPattern, filepath.Ext(fPattern))
+	ext := filepath.Ext(fPattern)
 	for _, file := range files {
 		name := file.Name()
 		if !strings.HasSuffix(strings.ToLower(name), ext) {

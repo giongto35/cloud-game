@@ -78,7 +78,7 @@ func (r *Room) startVideo(width, height int, onFrame func(encoder.OutFrame), con
 			return
 		case frame := <-r.imageChannel:
 			if r.IsRecording() {
-				go r.rec.WriteVideo(recorder.Video{Image: frame.Data, Duration: frame.Duration})
+				r.rec.WriteVideo(recorder.Video{Image: frame.Data, Duration: frame.Duration})
 			}
 			if len(einput) < cap(einput) {
 				einput <- encoder.InFrame{Image: frame.Data, Duration: frame.Duration}

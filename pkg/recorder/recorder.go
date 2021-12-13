@@ -65,9 +65,7 @@ type (
 	}
 )
 
-func init() {
-	rand.Seed(time.Now().UnixNano())
-}
+func init() { rand.Seed(time.Now().UnixNano()) }
 
 // NewRecording creates new media recorder for the emulator.
 func NewRecording(meta Meta, log *logger.Logger, opts Options) *Recording {
@@ -167,9 +165,7 @@ func (r *Recording) Enabled() bool {
 	return r.enabled
 }
 
-func (r *Recording) WriteVideo(frame Video) {
-	r.video.Write(frame)
-}
+func (r *Recording) WriteVideo(frame Video) { r.video.Write(frame) }
 
 func (r *Recording) WriteAudio(audio Audio) {
 	r.audio.Write(audio)
