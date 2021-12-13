@@ -170,6 +170,9 @@ func (w *WebRTC) AddCandidate(candidate string, decoder Decoder) error {
 }
 
 func (w *WebRTC) Disconnect() {
+	if !w.isConnected {
+		return
+	}
 	w.isConnected = false
 	if w.connection != nil {
 		if err := w.connection.Close(); err != nil {
