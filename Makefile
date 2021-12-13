@@ -79,7 +79,7 @@ dev.run: dev.build-local
 
 dev.run-docker:
 	docker rm cloud-game-local -f || true
-	CLOUD_GAME_GAMES_PATH=$(PWD)/assets/games docker-compose up --build
+	docker-compose up --build
 
 # RELEASE
 # Builds the app for new release.
