@@ -32,6 +32,13 @@ coordinator:
     profilingEnabled: false
     metricEnabled: false
     urlPrefix: /coordinator
+  # a custom Origins for incoming Websocket connections:
+  # "" -- checks same origin policy
+  # "*" -- allows all
+  # "your address" -- checks for that address
+  origin:
+    userWs:
+    workerWs:
   # HTTP(S) server config
   server:
     address: :8000

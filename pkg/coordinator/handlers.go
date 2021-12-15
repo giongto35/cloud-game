@@ -14,10 +14,10 @@ import (
 	"github.com/giongto35/cloud-game/v2/pkg/environment"
 	"github.com/giongto35/cloud-game/v2/pkg/games"
 	"github.com/giongto35/cloud-game/v2/pkg/ice"
+	"github.com/giongto35/cloud-game/v2/pkg/network/websocket"
 	"github.com/giongto35/cloud-game/v2/pkg/service"
 	"github.com/giongto35/cloud-game/v2/pkg/util"
 	"github.com/gofrs/uuid"
-	"github.com/gorilla/websocket"
 )
 
 type Server struct {
@@ -32,15 +32,15 @@ type Server struct {
 	workerClients map[string]*WorkerClient
 	// browserClients are the map sessionID to browser Client
 	browserClients map[string]*BrowserClient
-}
 
-var upgrader = websocket.Upgrader{}
+	userWsUpgrader, workerWsUpgrader websocket.Upgrader
+}
 
 func NewServer(cfg coordinator.Config, library games.GameLibrary) *Server {
 	// scan the lib right away
 	library.Scan()
 
-	return &Server{
+	s := &Server{
 		cfg:     cfg,
 		library: library,
 		// Mapping roomID to server
@@ -50,6 +50,12 @@ func NewServer(cfg coordinator.Config, library games.GameLibrary) *Server {
 		// Mapping sessionID to browser
 		browserClients: map[string]*BrowserClient{},
 	}
+
+	// a custom Origin check
+	s.workerWsUpgrader = websocket.NewUpgrader(cfg.Coordinator.Origin.WorkerWs)
+	s.userWsUpgrader = websocket.NewUpgrader(cfg.Coordinator.Origin.UserWs)
+
+	return s
 }
 
 // WSO handles all connections from a new worker to coordinator
@@ -70,9 +76,7 @@ func (s *Server) WSO(w http.ResponseWriter, r *http.Request) {
 		log.Printf("Warning! Unsecure connection. The worker may not work properly without HTTPS on its side!")
 	}
 
-	// be aware of ReadBufferSize, WriteBufferSize (default 4096)
-	// https://pkg.go.dev/github.com/gorilla/websocket?tab=doc#Upgrader
-	c, err := upgrader.Upgrade(w, r, nil)
+	c, err := s.workerWsUpgrader.Upgrade(w, r, nil)
 	if err != nil {
 		log.Println("Coordinator: [!] WS upgrade:", err)
 		return
@@ -130,18 +134,17 @@ func (s *Server) WSO(w http.ResponseWriter, r *http.Request) {
 	wc.Listen()
 }
 
-// WSO handles all connections from user/frontend to coordinator
+// WS handles all connections from user/frontend to coordinator
 func (s *Server) WS(w http.ResponseWriter, r *http.Request) {
 	log.Println("Coordinator: A user is connecting...")
+
 	defer func() {
 		if r := recover(); r != nil {
 			log.Println("Warn: Something wrong. Recovered in ", r)
 		}
 	}()
 
-	// be aware of ReadBufferSize, WriteBufferSize (default 4096)
-	// https://pkg.go.dev/github.com/gorilla/websocket?tab=doc#Upgrader
-	c, err := upgrader.Upgrade(w, r, nil)
+	c, err := s.userWsUpgrader.Upgrade(w, r, nil)
 	if err != nil {
 		log.Println("Coordinator: [!] WS upgrade:", err)
 		return

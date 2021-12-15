@@ -15,8 +15,12 @@ type Config struct {
 		DebugHost  string
 		Library    games.Config
 		Monitoring monitoring.Config
-		Server     shared.Server
-		Analytics  Analytics
+		Origin     struct {
+			UserWs   string
+			WorkerWs string
+		}
+		Server    shared.Server
+		Analytics Analytics
 	}
 	Emulator    emulator.Emulator
 	Environment shared.Environment
