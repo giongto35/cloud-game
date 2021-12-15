@@ -2,6 +2,7 @@ package websocket
 
 import (
 	"crypto/tls"
+	"errors"
 	"net"
 	"net/http"
 	"net/url"
@@ -35,10 +36,37 @@ type WS struct {
 
 type WSMessageHandler func(message []byte, err error)
 
-var upgrader = websocket.Upgrader{
-	ReadBufferSize:  1024,
-	WriteBufferSize: 1024,
-	WriteBufferPool: &sync.Pool{},
+type Upgrader struct {
+	websocket.Upgrader
+
+	origin string
+}
+
+var DefaultUpgrader = Upgrader{
+	Upgrader: websocket.Upgrader{
+		ReadBufferSize:    1024,
+		WriteBufferSize:   1024,
+		WriteBufferPool:   &sync.Pool{},
+		EnableCompression: true,
+	},
+}
+
+func NewUpgrader(origin string) Upgrader {
+	u := DefaultUpgrader
+	switch {
+	case origin == "*":
+		u.CheckOrigin = func(r *http.Request) bool { return true }
+	case origin != "":
+		u.CheckOrigin = func(r *http.Request) bool { return r.Header.Get("Origin") == origin }
+	}
+	return u
+}
+
+func (u *Upgrader) Upgrade(w http.ResponseWriter, r *http.Request, responseHeader http.Header) (*websocket.Conn, error) {
+	if u.origin != "" {
+		w.Header().Set("Access-Control-Allow-Origin", u.origin)
+	}
+	return u.Upgrader.Upgrade(w, r, responseHeader)
 }
 
 // reader pumps messages from the websocket connection to the OnMessage callback.
@@ -128,9 +156,16 @@ func (ws *WS) handleMessage(message []byte, ok bool) bool {
 
 // NewServer initializes new websocket peer requests handler.
 func NewServer(w http.ResponseWriter, r *http.Request, log *logger.Logger) (*WS, error) {
-	conn, err := upgrader.Upgrade(w, r, nil)
+	conn, err := DefaultUpgrader.Upgrade(w, r, nil)
 	if err != nil {
 		return nil, err
+	}
+	return newSocket(conn, true, log), nil
+}
+
+func NewServerWithConn(conn *websocket.Conn, log *logger.Logger) (*WS, error) {
+	if conn == nil {
+		return nil, errors.New("null connection")
 	}
 	return newSocket(conn, true, log), nil
 }

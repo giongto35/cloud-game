@@ -13,6 +13,8 @@ import (
 	"github.com/giongto35/cloud-game/v2/pkg/storage"
 )
 
+var retry = 10 * time.Second
+
 type Handler struct {
 	service.RunnableService
 
@@ -40,14 +42,15 @@ func (h *Handler) Run() {
 	coordinatorAddress := h.conf.Worker.Network.CoordinatorAddress
 	for {
 		if h.cord, err = newCoordinatorConnection(coordinatorAddress, h.conf.Worker, h.address, h.log); err != nil {
-			h.log.Error().Err(err).Msg("Cannot connect to coordinator. %v Retrying...")
-			time.Sleep(time.Second)
+			h.log.Error().Err(err).
+				Msgf("no connection to the coordinator %v. Retrying in %v", coordinatorAddress, retry)
+			time.Sleep(retry)
 			continue
 		}
-		h.cord.GetLogger().Info().Msgf("Connected at %v", coordinatorAddress)
+		h.cord.GetLogger().Info().Msgf("Connected to the coordinator %v", coordinatorAddress)
 		h.cord.HandleRequests(h)
 		h.cord.Listen()
-
+		// block
 		h.cord.Close()
 		h.router.Close()
 	}

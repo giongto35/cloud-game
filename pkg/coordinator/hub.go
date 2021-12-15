@@ -12,6 +12,7 @@ import (
 	"github.com/giongto35/cloud-game/v2/pkg/launcher"
 	"github.com/giongto35/cloud-game/v2/pkg/logger"
 	"github.com/giongto35/cloud-game/v2/pkg/network"
+	"github.com/giongto35/cloud-game/v2/pkg/network/websocket"
 	"github.com/giongto35/cloud-game/v2/pkg/service"
 )
 
@@ -24,13 +25,17 @@ type Hub struct {
 	guild    Guild         // stores workers
 	rooms    client.NetMap // stores user rooms
 	log      *logger.Logger
+
+	// custom ws upgrade handlers for Origin
+	// !to encapsulate betterly
+	wwsu, uwsu websocket.Upgrader
 }
 
 func NewHub(conf coordinator.Config, lib games.GameLibrary, log *logger.Logger) *Hub {
 	// scan the lib right away
 	lib.Scan()
 
-	return &Hub{
+	h := &Hub{
 		conf:     conf,
 		crowd:    client.NewNetMap(make(map[string]client.NetClient, 42)),
 		guild:    NewGuild(),
@@ -38,6 +43,9 @@ func NewHub(conf coordinator.Config, lib games.GameLibrary, log *logger.Logger) 
 		rooms:    client.NewNetMap(make(map[string]client.NetClient, 10)),
 		log:      log,
 	}
+	h.wwsu = websocket.NewUpgrader(conf.Coordinator.Origin.WorkerWs)
+	h.uwsu = websocket.NewUpgrader(conf.Coordinator.Origin.UserWs)
+	return h
 }
 
 // handleWebsocketUserConnection handles all connections from user/frontend.
@@ -48,7 +56,7 @@ func (h *Hub) handleWebsocketUserConnection(w http.ResponseWriter, r *http.Reque
 		}
 	}()
 
-	conn, err := ipc.NewClientServer(w, r, h.log)
+	conn, err := ipc.NewClientServer(w, r, &h.uwsu, h.log)
 	if err != nil {
 		h.log.Error().Err(err).Msg("couldn't init user connection")
 	}
@@ -109,9 +117,10 @@ func (h *Hub) handleWebsocketWorkerConnection(w http.ResponseWriter, r *http.Req
 		h.log.Warn().Msg("Unsecure connection. The worker may not work properly without HTTPS on its side!")
 	}
 
-	conn, err := ipc.NewClientServer(w, r, h.log)
+	conn, err := ipc.NewClientServer(w, r, &h.wwsu, h.log)
 	if err != nil {
 		h.log.Error().Err(err).Msg("couldn't init worker connection")
+		return
 	}
 	backend := NewWorkerClient(conn, h.log)
 	defer backend.Close()

@@ -40,8 +40,12 @@ func NewClient(address url.URL, log *logger.Logger) (*Client, error) {
 	return connect(websocket.NewClient(address, log))
 }
 
-func NewClientServer(w http.ResponseWriter, r *http.Request, log *logger.Logger) (*Client, error) {
-	return connect(websocket.NewServer(w, r, log))
+func NewClientServer(w http.ResponseWriter, r *http.Request, u *websocket.Upgrader, log *logger.Logger) (*Client, error) {
+	conn, err := u.Upgrade(w, r, nil)
+	if err != nil {
+		return nil, err
+	}
+	return connect(websocket.NewServerWithConn(conn, log))
 }
 
 func connect(conn *websocket.WS, err error) (*Client, error) {
