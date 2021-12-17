@@ -24,8 +24,12 @@ type Coordinator struct {
 	DebugHost  string
 	Library    games.Config
 	Monitoring monitoring.Config
-	Server     shared.Server
-	Analytics  Analytics
+	Origin     struct {
+		UserWs   string
+		WorkerWs string
+	}
+	Server    shared.Server
+	Analytics Analytics
 }
 
 // Analytics is optional Google Analytics
