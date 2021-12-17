@@ -40,7 +40,7 @@ const webrtc = (() => {
             if (onMessage) {
                 inputChannel.onmessage = onMessage;
             }
-            inputChannel.onclose = () => log.info('[rtp] the input channel has been closed');
+            inputChannel.onclose = () => log.info('[rtc] the input channel has been closed');
         }
         connection.oniceconnectionstatechange = ice.onIceConnectionStateChange;
         connection.onicegatheringstatechange = ice.onIceStateChange;
@@ -49,6 +49,26 @@ const webrtc = (() => {
             mediaStream.addTrack(event.track);
         }
     };
+
+    const stop = () => {
+        if (mediaStream) {
+            mediaStream.getTracks().forEach(t => {
+                t.stop();
+                mediaStream.removeTrack(t);
+            });
+            mediaStream = null;
+        }
+        if (connection) {
+            connection.close();
+            connection = null;
+        }
+        if (inputChannel) {
+            inputChannel.close();
+            inputChannel = null;
+        }
+        candidates = Array();
+        log.info('[rtc] WebRTC has been closed');
+    }
 
     const ice = (() => {
         const ICE_TIMEOUT = 2000;
@@ -155,5 +175,6 @@ const webrtc = (() => {
         isConnected: () => connected,
         isInputReady: () => inputReady,
         getConnection: () => connection,
+        stop,
     }
 })(event, log);
