@@ -68,6 +68,26 @@ const rtcp = (() => {
         }
     }
 
+    const stop = () => {
+        if (mediaStream) {
+            mediaStream.getTracks().forEach(t => {
+                t.stop();
+                mediaStream.removeTrack(t);
+            });
+            mediaStream = null;
+        }
+        if (connection) {
+            connection.close();
+            connection = null;
+        }
+        if (inputChannel) {
+            inputChannel.close();
+            inputChannel = null;
+        }
+        candidates = Array();
+        log.info('[rtcp] WebRTC has been closed');
+    }
+
     const ice = (() => {
         const ICE_TIMEOUT = 2000;
         let timeForIceGathering;
@@ -165,5 +185,6 @@ const rtcp = (() => {
         isConnected: () => connected,
         isInputReady: () => inputReady,
         getConnection: () => connection,
+        stop,
     }
 })(event, socket, env, log);

@@ -449,6 +449,7 @@
     event.sub(CONNECTION_CLOSED, () => {
         input.poll().disable();
         socket.abort();
+        rtcp.stop();
     });
     event.sub(LATENCY_CHECK_REQUESTED, onLatencyCheck);
     event.sub(GAMEPAD_CONNECTED, () => message.show('Gamepad connected'));
@@ -472,4 +473,4 @@
 
     // initial app state
     setState(app.state.eden);
-})(document, event, env, gameList, input, KEY, log, message, recording, room, settings, socket, stats, stream, utils);
+})(document, event, env, gameList, input, KEY, log, message, recording, room, rtcp, settings, socket, stats, stream, utils);
