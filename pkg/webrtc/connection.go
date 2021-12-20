@@ -42,6 +42,9 @@ func DefaultPeerConnection(conf conf.Webrtc) (*PeerConnection, error) {
 				panic(err)
 			}
 		}
+		if conf.IceLite {
+			settingEngine.SetLite(conf.IceLite)
+		}
 		if conf.IcePorts.Min > 0 && conf.IcePorts.Max > 0 {
 			if err := settingEngine.SetEphemeralUDPPortRange(conf.IcePorts.Min, conf.IcePorts.Max); err != nil {
 				panic(err)

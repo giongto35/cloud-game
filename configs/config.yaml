@@ -262,6 +262,10 @@ webrtc:
   # a list of STUN/TURN servers to use
   iceServers:
     - url: stun:stun.l.google.com:19302
+  # configures whether the ice agent should be a lite agent (true/false)
+  # (performance)
+  # don't use iceServers when enabled
+  iceLite: false
   # ICE configuration
   # by default, ICE ports are random and unlimited
   # alternatives:

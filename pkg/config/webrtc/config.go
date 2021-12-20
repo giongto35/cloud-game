@@ -11,6 +11,7 @@ type Webrtc struct {
 		Max uint16
 	}
 	IceIpMap   string
+	IceLite    bool
 	SinglePort int
 }
 
