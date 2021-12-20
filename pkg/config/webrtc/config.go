@@ -20,6 +20,7 @@ type IceServer struct {
 	Credential string `json:"credential,omitempty"`
 }
 
+func (w Webrtc) HasDtlsRole() bool   { return w.DtlsRole > 0 }
 func (w Webrtc) HasPortRange() bool  { return w.IcePorts.Min > 0 && w.IcePorts.Max > 0 }
 func (w Webrtc) HasSinglePort() bool { return w.SinglePort > 0 }
 func (w Webrtc) HasIceIpMap() bool   { return w.IceIpMap != "" }

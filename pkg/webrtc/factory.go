@@ -31,6 +31,13 @@ func NewApiFactory(conf conf.Webrtc, log *logger.Logger, mod ModApiFun) (api *Ap
 	}
 	customLogger := logger.NewPionLogger(log, conf.LogLevel)
 	s := webrtc.SettingEngine{LoggerFactory: customLogger}
+	if conf.HasDtlsRole() {
+		log.Info().Msgf("A custom DTLS role [%v]", conf.DtlsRole)
+		err = s.SetAnsweringDTLSRole(webrtc.DTLSRole(conf.DtlsRole))
+		if err != nil {
+			return
+		}
+	}
 	if conf.HasPortRange() {
 		if err = s.SetEphemeralUDPPortRange(conf.IcePorts.Min, conf.IcePorts.Max); err != nil {
 			return
