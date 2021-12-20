@@ -252,6 +252,13 @@ webrtc:
   # turn off default Pion interceptors (see: https://github.com/pion/interceptor)
   # (performance)
   disableDefaultInterceptors:
+  # indicates the role of the DTLS transport (see: https://github.com/pion/webrtc/blob/master/dtlsrole.go)
+  # (debug)
+  #  - (default)
+  #  - 1 (auto)
+  #  - 2 (client)
+  #  - 3 (server)
+  dtlsRole:
   # a list of STUN/TURN servers to use
   iceServers:
     - url: stun:stun.l.google.com:19302

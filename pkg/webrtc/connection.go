@@ -36,6 +36,12 @@ func DefaultPeerConnection(conf conf.Webrtc) (*PeerConnection, error) {
 
 	settingsOnce.Do(func() {
 		settingEngine := pion.SettingEngine{}
+		if conf.DtlsRole > 0 {
+			log.Printf("A custom DTLS role [%v]", conf.DtlsRole)
+			if err := settingEngine.SetAnsweringDTLSRole(pion.DTLSRole(conf.DtlsRole)); err != nil {
+				panic(err)
+			}
+		}
 		if conf.IcePorts.Min > 0 && conf.IcePorts.Max > 0 {
 			if err := settingEngine.SetEphemeralUDPPortRange(conf.IcePorts.Min, conf.IcePorts.Max); err != nil {
 				panic(err)
