@@ -38,6 +38,9 @@ func NewApiFactory(conf conf.Webrtc, log *logger.Logger, mod ModApiFun) (api *Ap
 			return
 		}
 	}
+	if conf.IceLite {
+		s.SetLite(conf.IceLite)
+	}
 	if conf.HasPortRange() {
 		if err = s.SetEphemeralUDPPortRange(conf.IcePorts.Min, conf.IcePorts.Max); err != nil {
 			return

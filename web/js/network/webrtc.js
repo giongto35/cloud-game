@@ -25,8 +25,8 @@ const webrtc = (() => {
 
     const start = (iceservers) => {
         log.info('[rtc] <- ICE servers', iceservers);
-
-        connection = new RTCPeerConnection({iceServers: iceservers});
+        const servers = iceservers || [];
+        connection = new RTCPeerConnection({iceServers: servers});
         mediaStream = new MediaStream();
 
         connection.ondatachannel = e => {
