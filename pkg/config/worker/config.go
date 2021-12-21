@@ -46,6 +46,7 @@ var configPath string
 func NewConfig() (conf Config) {
 	_ = config.LoadConfig(&conf, configPath)
 	conf.expandSpecialTags()
+	conf.fixValues()
 	return
 }
 
@@ -74,6 +75,14 @@ func (c *Config) expandSpecialTags() {
 			log.Fatalln("couldn't read user home directory", err)
 		}
 		*dir = strings.Replace(*dir, tag, userHomeDir, -1)
+	}
+}
+
+// fixValues tries to fix some values otherwise hard to set externally.
+func (c *Config) fixValues() {
+	// with ICE lite we clear ICE servers
+	if c.Webrtc.IceLite {
+		c.Webrtc.IceServers = []webrtcConfig.IceServer{}
 	}
 }
 
