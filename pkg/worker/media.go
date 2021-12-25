@@ -6,23 +6,21 @@ import (
 	"github.com/giongto35/cloud-game/v2/pkg/encoder/h264"
 	"github.com/giongto35/cloud-game/v2/pkg/encoder/opus"
 	"github.com/giongto35/cloud-game/v2/pkg/encoder/vpx"
+	"github.com/giongto35/cloud-game/v2/pkg/media"
 	"github.com/giongto35/cloud-game/v2/pkg/recorder"
 )
 
-func (r *Room) startAudio(sampleRate int, onAudio func([]byte), conf conf.Audio) {
-	sound, err := opus.NewEncoder(
-		sampleRate,
-		conf.Frequency,
-		conf.Channels,
-		opus.SampleBuffer(conf.Frame, sampleRate != conf.Frequency),
-		// we use callback on full buffer in order to
-		// send data to all the clients ASAP
-		opus.CallbackOnFullBuffer(onAudio),
-	)
+func (r *Room) startAudio(frequency int, onAudio func([]byte, error), conf conf.Audio) {
+	buf := media.NewBuffer(conf.GetFrameSizeFor(frequency))
+	resample, resampleSize := frequency != conf.Frequency, 0
+	if resample {
+		resampleSize = conf.GetFrameSize()
+	}
+	enc, err := opus.NewEncoder(conf.Frequency, conf.Channels)
 	if err != nil {
 		r.log.Fatal().Err(err).Msg("couldn't create audio encoder")
 	}
-	r.log.Debug().Msgf("OPUS: %v", sound.GetInfo())
+	r.log.Debug().Msgf("OPUS: %v", enc.GetInfo())
 
 	for {
 		select {
@@ -33,7 +31,12 @@ func (r *Room) startAudio(sampleRate int, onAudio func([]byte), conf conf.Audio)
 			if r.IsRecording() {
 				r.rec.WriteAudio(recorder.Audio{Samples: &samples.Data, Duration: samples.Duration})
 			}
-			sound.BufferWrite(samples.Data)
+			buf.Write(samples.Data, func(s media.Samples) {
+				if resample {
+					s = media.ResampleStretch(s, resampleSize)
+				}
+				onAudio(enc.Encode(s))
+			})
 		}
 	}
 }

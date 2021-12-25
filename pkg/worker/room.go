@@ -227,7 +227,10 @@ func NewRoom(id string, game games.GameMetadata, storage storage.CloudStorage, o
 		}, conf.Encoder.Video)
 
 		dur := time.Duration(conf.Encoder.Audio.Frame) * time.Millisecond
-		go room.startAudio(gameMeta.AudioSampleRate, func(audio []byte) {
+		go room.startAudio(gameMeta.AudioSampleRate, func(audio []byte, err error) {
+			if err != nil {
+				return
+			}
 			sample := media.Sample{Data: audio, Duration: dur}
 			room.users.ForEach(func(s *Session) {
 				if s.IsConnected() {
