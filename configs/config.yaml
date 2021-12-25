@@ -251,7 +251,7 @@ storage:
 webrtc:
   # turn off default Pion interceptors (see: https://github.com/pion/interceptor)
   # (performance)
-  disableDefaultInterceptors:
+  disableDefaultInterceptors: true
   # indicates the role of the DTLS transport (see: https://github.com/pion/webrtc/blob/master/dtlsrole.go)
   # (debug)
   #  - (default)

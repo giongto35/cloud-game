@@ -10,6 +10,7 @@ import (
 	"github.com/giongto35/cloud-game/v2/pkg/encoder/h264"
 	"github.com/giongto35/cloud-game/v2/pkg/encoder/opus"
 	"github.com/giongto35/cloud-game/v2/pkg/encoder/vpx"
+	"github.com/giongto35/cloud-game/v2/pkg/media"
 	"github.com/giongto35/cloud-game/v2/pkg/recorder"
 	"github.com/giongto35/cloud-game/v2/pkg/webrtc"
 )
@@ -41,27 +42,31 @@ import (
 func (r *Room) isRecording() bool { return r.rec != nil && r.rec.Enabled() }
 
 func (r *Room) startAudio(sampleRate int, audio encoderConfig.Audio) {
-	sound, err := opus.NewEncoder(
-		sampleRate,
-		audio.Frequency,
-		audio.Channels,
-		opus.SampleBuffer(audio.Frame, sampleRate != audio.Frequency),
-		// we use callback on full buffer in order to
-		// send data to all the clients ASAP
-		opus.CallbackOnFullBuffer(r.broadcastAudio),
-	)
+	buf := media.NewBuffer(audio.GetFrameSizeFor(sampleRate))
+	resample, resampleSize := sampleRate != audio.Frequency, 0
+	if resample {
+		resampleSize = audio.GetFrameSize()
+	}
+	enc, err := opus.NewEncoder(audio.Frequency, audio.Channels)
 	if err != nil {
 		log.Fatalf("error: cannot create audio encoder, %v", err)
 	}
-	log.Printf("OPUS: %v", sound.GetInfo())
+	log.Printf("OPUS: %v", enc.GetInfo())
 
 	for samples := range r.audioChannel {
 		if r.isRecording() {
 			r.rec.WriteAudio(recorder.Audio{Samples: &samples})
 		}
-		sound.BufferWrite(samples)
+		buf.Write(samples, func(s media.Samples) {
+			if resample {
+				s = media.ResampleStretch(s, resampleSize)
+			}
+			dat, err := enc.Encode(s)
+			if err == nil {
+				r.broadcastAudio(dat)
+			}
+		})
 	}
-
 	log.Println("Room ", r.ID, " audio channel closed")
 }
 

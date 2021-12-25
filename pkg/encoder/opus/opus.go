@@ -2,6 +2,7 @@ package opus
 
 /*
 #cgo pkg-config: opus
+#cgo CFLAGS: -Wall -O3
 
 #include <opus.h>
 
@@ -34,30 +35,30 @@ type (
 
 const (
 	// Optimize encoding for VoIP
-	AppVoIP = Application(C.OPUS_APPLICATION_VOIP)
+	//AppVoIP = Application(C.OPUS_APPLICATION_VOIP)
 	// Optimize encoding for non-voice signals like music
-	AppAudio = Application(C.OPUS_APPLICATION_AUDIO)
+	//AppAudio = Application(C.OPUS_APPLICATION_AUDIO)
 	// Optimize encoding for low latency applications
 	AppRestrictedLowdelay = Application(C.OPUS_APPLICATION_RESTRICTED_LOWDELAY)
 
 	// Auto/default setting
-	BitrateAuto = Bitrate(-1000)
-	BitrateMax  = Bitrate(-1)
+	//BitrateAuto = Bitrate(-1000)
+	//BitrateMax  = Bitrate(-1)
 
 	// 20 kHz bandpass
 	FullBand = Bandwidth(C.OPUS_BANDWIDTH_FULLBAND)
 )
 
-const (
-	ErrorOK             = Error(C.OPUS_OK)
-	ErrorBadArg         = Error(C.OPUS_BAD_ARG)
-	ErrorBufferTooSmall = Error(C.OPUS_BUFFER_TOO_SMALL)
-	ErrorInternalError  = Error(C.OPUS_INTERNAL_ERROR)
-	ErrorInvalidPacket  = Error(C.OPUS_INVALID_PACKET)
-	ErrorUnimplemented  = Error(C.OPUS_UNIMPLEMENTED)
-	ErrorInvalidState   = Error(C.OPUS_INVALID_STATE)
-	ErrorAllocFail      = Error(C.OPUS_ALLOC_FAIL)
-)
+//const (
+//	ErrorOK             = Error(C.OPUS_OK)
+//	ErrorBadArg         = Error(C.OPUS_BAD_ARG)
+//	ErrorBufferTooSmall = Error(C.OPUS_BUFFER_TOO_SMALL)
+//	ErrorInternalError  = Error(C.OPUS_INTERNAL_ERROR)
+//	ErrorInvalidPacket  = Error(C.OPUS_INVALID_PACKET)
+//	ErrorUnimplemented  = Error(C.OPUS_UNIMPLEMENTED)
+//	ErrorInvalidState   = Error(C.OPUS_INVALID_STATE)
+//	ErrorAllocFail      = Error(C.OPUS_ALLOC_FAIL)
+//)
 
 type LibOpusEncoder struct {
 	buf      []byte
