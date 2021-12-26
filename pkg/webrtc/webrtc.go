@@ -13,13 +13,14 @@ import (
 type WebRTC struct {
 	api         *ApiFactory
 	conf        conf.Webrtc
-	connection  *webrtc.PeerConnection
+	conn        *webrtc.PeerConnection
 	isConnected bool
 	log         *logger.Logger
-	aTrack      *webrtc.TrackLocalStaticSample
-	vTrack      *webrtc.TrackLocalStaticSample
-	dTrack      *webrtc.DataChannel
 	OnMessage   func(data []byte)
+
+	aTrack *webrtc.TrackLocalStaticSample
+	vTrack *webrtc.TrackLocalStaticSample
+	dTrack *webrtc.DataChannel
 }
 
 type Decoder func(data string, obj interface{}) error
@@ -34,16 +35,16 @@ func (w *WebRTC) NewCall(vCodec, aCodec string, onICECandidate func(ice interfac
 		return
 	}
 	w.log.Info().Msg("WebRTC start")
-	if w.connection, err = w.api.NewPeer(); err != nil {
+	if w.conn, err = w.api.NewPeer(); err != nil {
 		return "", err
 	}
-	w.connection.OnICECandidate(w.handleICECandidate(onICECandidate))
+	w.conn.OnICECandidate(w.handleICECandidate(onICECandidate))
 	// plug in the [video] track (out)
 	video, err := newTrack("video", "game-video", vCodec)
 	if err != nil {
 		return "", err
 	}
-	if _, err = w.connection.AddTrack(video); err != nil {
+	if _, err = w.conn.AddTrack(video); err != nil {
 		return "", err
 	}
 	w.vTrack = video
@@ -54,7 +55,7 @@ func (w *WebRTC) NewCall(vCodec, aCodec string, onICECandidate func(ice interfac
 	if err != nil {
 		return "", err
 	}
-	if _, err = w.connection.AddTrack(audio); err != nil {
+	if _, err = w.conn.AddTrack(audio); err != nil {
 		return "", err
 	}
 	w.log.Debug().Msgf("Added [%s] track", audio.Codec().MimeType)
@@ -66,17 +67,17 @@ func (w *WebRTC) NewCall(vCodec, aCodec string, onICECandidate func(ice interfac
 	}
 	w.log.Debug().Msg("Added input channel ")
 
-	w.connection.OnICEConnectionStateChange(w.handleICEState(func() {
+	w.conn.OnICEConnectionStateChange(w.handleICEState(func() {
 		w.log.Info().Msg("Start streaming")
 	}))
 	// Stream provider supposes to send offer
-	offer, err := w.connection.CreateOffer(nil)
+	offer, err := w.conn.CreateOffer(nil)
 	if err != nil {
 		return "", err
 	}
 	w.log.Info().Msg("Created Offer")
 
-	err = w.connection.SetLocalDescription(offer)
+	err = w.conn.SetLocalDescription(offer)
 	if err != nil {
 		return "", err
 	}
@@ -89,7 +90,7 @@ func (w *WebRTC) SetRemoteSDP(sdp string, decoder Decoder) error {
 	if err := decoder(sdp, &answer); err != nil {
 		return err
 	}
-	if err := w.connection.SetRemoteDescription(answer); err != nil {
+	if err := w.conn.SetRemoteDescription(answer); err != nil {
 		w.log.Error().Err(err).Msg("Set remote description from peer failed")
 		return err
 	}
@@ -162,7 +163,7 @@ func (w *WebRTC) AddCandidate(candidate string, decoder Decoder) error {
 	if err := decoder(candidate, &iceCandidate); err != nil {
 		return err
 	}
-	if err := w.connection.AddICECandidate(iceCandidate); err != nil {
+	if err := w.conn.AddICECandidate(iceCandidate); err != nil {
 		return err
 	}
 	w.log.Debug().Str("candidate", iceCandidate.Candidate).Msg("Ice")
@@ -174,11 +175,11 @@ func (w *WebRTC) Disconnect() {
 		return
 	}
 	w.isConnected = false
-	if w.connection != nil {
-		if err := w.connection.Close(); err != nil {
+	if w.conn != nil {
+		if err := w.conn.Close(); err != nil {
 			w.log.Error().Err(err).Msg("WebRTC close")
 		}
-		w.connection = nil
+		w.conn = nil
 	}
 	w.log.Info().Msg("WebRTC stop")
 }
@@ -190,7 +191,7 @@ func (w *WebRTC) SendMessage(data []byte) { _ = w.dTrack.Send(data) }
 // addInputChannel creates a new WebRTC data channel for user input.
 // Default params -- ordered: true, negotiated: false.
 func (w *WebRTC) addInputChannel(label string) error {
-	ch, err := w.connection.CreateDataChannel(label, nil)
+	ch, err := w.conn.CreateDataChannel(label, nil)
 	if err != nil {
 		return err
 	}
