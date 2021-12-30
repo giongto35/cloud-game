@@ -3,7 +3,6 @@ package ipc
 import (
 	"encoding/json"
 	"errors"
-	"net"
 	"net/http"
 	"net/url"
 	"sync"
@@ -142,5 +141,3 @@ func (c *Client) releaseQueue(err error) {
 		call.done <- struct{}{}
 	}
 }
-
-func (c *Client) GetRemoteAddr() net.Addr { return c.Conn.GetRemoteAddr() }

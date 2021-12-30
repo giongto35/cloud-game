@@ -122,7 +122,6 @@ func (h *Hub) handleWebsocketWorkerConnection(w http.ResponseWriter, r *http.Req
 	backend.PingServer = connRt.PingAddr
 	h.log.Info().
 		Fields(map[string]interface{}{
-			"addr": conn.GetRemoteAddr(),
 			"zone": backend.Zone,
 			"ping": backend.PingServer,
 		}).

@@ -222,5 +222,3 @@ func (ws *WS) shutdown() {
 		ws.log.Debug().Msg("WebSocket should be closed now")
 	})
 }
-
-func (ws *WS) GetRemoteAddr() net.Addr { return ws.conn.sock.RemoteAddr() }
