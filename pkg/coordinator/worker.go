@@ -55,8 +55,7 @@ func (w *Worker) In(region string) bool { return region == "" || region == w.Zon
 // users connected to the current worker.
 // We count users to determine when the worker becomes new game ready.
 func (w *Worker) ChangeUserQuantityBy(n int) {
-	atomic.AddInt32(&w.users, int32(n))
-	if atomic.LoadInt32(&w.users) < 0 {
+	if atomic.AddInt32(&w.users, int32(n)) < 0 {
 		atomic.StoreInt32(&w.users, 0)
 	}
 }

@@ -14,13 +14,6 @@ func (h *Hub) findWorkerByRoom(id string, region string) *Worker {
 	return nil
 }
 
-func (h *Hub) findWorkerByIp(address string) *Worker {
-	if address == "" {
-		return nil
-	}
-	return h.guild.findFreeByIp(address)
-}
-
 func (h *Hub) getAvailableWorkers(region string) []*Worker {
 	return h.guild.filter(func(w *Worker) bool { return w.HasGameSlot() && w.In(region) })
 }
@@ -56,12 +49,21 @@ func (h *Hub) findFastestWorker(region string, fn func(addresses []string) (map[
 		return nil
 	}
 
+	workers = h.getAvailableWorkers(region)
+	if len(workers) == 0 {
+		return nil
+	}
+
 	var bestWorker *Worker
 	var minLatency int64 = 1<<31 - 1
 	// get a worker with the lowest latency
 	for addr, ping := range latencies {
 		if ping < minLatency {
-			bestWorker = h.guild.findByPingServer(addr)
+			for _, w := range workers {
+				if w.PingServer == addr {
+					bestWorker = w
+				}
+			}
 			minLatency = ping
 		}
 	}

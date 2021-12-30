@@ -6,12 +6,10 @@ import (
 
 	"github.com/giongto35/cloud-game/v2/pkg/client"
 	"github.com/giongto35/cloud-game/v2/pkg/config/coordinator"
-	"github.com/giongto35/cloud-game/v2/pkg/environment"
 	"github.com/giongto35/cloud-game/v2/pkg/games"
 	"github.com/giongto35/cloud-game/v2/pkg/ipc"
 	"github.com/giongto35/cloud-game/v2/pkg/launcher"
 	"github.com/giongto35/cloud-game/v2/pkg/logger"
-	"github.com/giongto35/cloud-game/v2/pkg/network"
 	"github.com/giongto35/cloud-game/v2/pkg/network/websocket"
 	"github.com/giongto35/cloud-game/v2/pkg/service"
 )
@@ -37,10 +35,10 @@ func NewHub(conf coordinator.Config, lib games.GameLibrary, log *logger.Logger) 
 
 	h := &Hub{
 		conf:     conf,
-		crowd:    client.NewNetMap(make(map[string]client.NetClient, 42)),
+		crowd:    client.NewNetMap(),
 		guild:    NewGuild(),
 		launcher: launcher.NewGameLauncher(lib),
-		rooms:    client.NewNetMap(make(map[string]client.NetClient, 10)),
+		rooms:    client.NewNetMap(),
 		log:      log,
 	}
 	h.wwsu = websocket.NewUpgrader(conf.Coordinator.Origin.WorkerWs)
@@ -67,22 +65,17 @@ func (h *Hub) handleWebsocketUserConnection(w http.ResponseWriter, r *http.Reque
 
 	q := r.URL.Query()
 	roomId := q.Get("room_id")
-	region := q.Get("zone")
+	zone := q.Get("zone")
 
-	usr.GetLogger().Info().Msg("Searching for a free worker")
+	usr.GetLogger().Info().Msg("Search available servers")
 	var wkr *Worker
-	if wkr = h.findWorkerByRoom(roomId, region); wkr != nil {
+	if wkr = h.findWorkerByRoom(roomId, zone); wkr != nil {
 		usr.GetLogger().Info().Str("room", roomId).Msg("An existing worker has been found")
-	} else if wkr = h.findWorkerByIp(h.conf.Coordinator.DebugHost); wkr != nil {
-		usr.GetLogger().Info().Str("debug.addr", h.conf.Coordinator.DebugHost).
-			Msg("The worker has been found with the provided address")
-		if wkr = h.findAnyFreeWorker(region); wkr != nil {
-			usr.GetLogger().Info().Msg("A free worker has been found right away")
-		}
-	} else if wkr = h.findFastestWorker(region,
+	} else if wkr = h.findFastestWorker(zone,
 		func(servers []string) (map[string]int64, error) { return usr.CheckLatency(servers) }); wkr != nil {
 		usr.GetLogger().Info().Msg("The fastest worker has been found")
-	} else {
+	}
+	if wkr == nil {
 		usr.GetLogger().Warn().Msg("no free workers")
 		return
 	}
@@ -125,36 +118,15 @@ func (h *Hub) handleWebsocketWorkerConnection(w http.ResponseWriter, r *http.Req
 	backend := NewWorkerClient(conn, h.log)
 	defer backend.Close()
 
-	address := network.GetRemoteAddress(conn.GetRemoteAddr())
-	public := network.IsPublicIP(address)
 	backend.Zone = connRt.Zone
 	backend.PingServer = connRt.PingAddr
 	h.log.Info().
 		Fields(map[string]interface{}{
-			"pub":  public,
-			"addr": address,
+			"addr": conn.GetRemoteAddr(),
 			"zone": backend.Zone,
 			"ping": backend.PingServer,
 		}).
 		Msg("Worker info")
-
-	// !to rewrite
-	// In case wkr and coordinator in the same host
-	if !public && h.conf.Environment.Get() == environment.Production {
-		// Don't accept private IP for wkr's address in prod mode
-		// However, if the wkr in the same host with coordinator, we can get public IP of wkr
-		backend.GetLogger().Warn().Msgf("Invalid address [%s]", address)
-
-		address = network.GetHostPublicIP()
-		backend.GetLogger().Info().Msgf("Find public address [%s]", address)
-
-		if address == "" || !network.IsPublicIP(address) {
-			// Skip this wkr because we cannot find public IP
-			backend.GetLogger().Error().Msg("unable to find public address, rejecting worker")
-			return
-		}
-	}
-	backend.Address = address
 	backend.HandleRequests(&h.rooms, &h.crowd)
 	h.guild.add(&backend)
 	defer func() {

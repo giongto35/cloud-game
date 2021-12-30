@@ -7,43 +7,32 @@ type Guild struct {
 	client.NetMap
 }
 
-func NewGuild() Guild {
-	return Guild{client.NewNetMap(make(map[string]client.NetClient, 10))}
-}
-
-func (g *Guild) add(worker *Worker) { g.Add(worker) }
+func NewGuild() Guild { return Guild{client.NewNetMap()} }
 
 func (g *Guild) Remove(w *Worker) { g.NetMap.Remove(w) }
 
-func (g *Guild) findFreeByIp(addr string) *Worker {
-	worker, err := g.FindBy(func(cl client.NetClient) bool {
-		worker := cl.(*Worker)
-		return worker.HasGameSlot() && worker.Address == addr
-	})
-	if err != nil {
-		return nil
-	}
-	return worker.(*Worker)
-}
+func (g *Guild) add(worker *Worker) { g.Add(worker) }
 
 func (g *Guild) findByPingServer(address string) *Worker {
-	worker, err := g.FindBy(func(cl client.NetClient) bool {
-		worker := cl.(*Worker)
-		return worker.PingServer == address
+	w, _ := g.FindBy(func(w client.NetClient) bool {
+		worker := w.(*Worker)
+		if worker.PingServer == address {
+			return true
+		}
+		return false
 	})
-	if err != nil {
+	if w == nil {
 		return nil
 	}
-	return worker.(*Worker)
+	return w.(*Worker)
 }
 
-func (g *Guild) filter(fn func(w *Worker) bool) []*Worker {
-	var list []*Worker
-	g.ForEach(func(cl client.NetClient) {
-		worker := cl.(*Worker)
+func (g *Guild) filter(fn func(w *Worker) bool) (l []*Worker) {
+	g.ForEach(func(w client.NetClient) {
+		worker := w.(*Worker)
 		if fn(worker) {
-			list = append(list, worker)
+			l = append(l, worker)
 		}
 	})
-	return list
+	return l
 }

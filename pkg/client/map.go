@@ -14,7 +14,7 @@ type NetMap struct {
 // ErrNotFound is returned by NetMap when some value is not present.
 var ErrNotFound = errors.New("not found")
 
-func NewNetMap(m map[string]NetClient) NetMap { return NetMap{m: m} }
+func NewNetMap() NetMap { return NetMap{m: make(map[string]NetClient, 10)} }
 
 // Add adds a new NetClient value with its id value as the key.
 func (m *NetMap) Add(client NetClient) { m.Put(string(client.Id()), client) }
@@ -41,8 +41,8 @@ func (m *NetMap) RemoveByKey(key string) {
 func (m *NetMap) RemoveAll(client NetClient) {
 	m.Lock()
 	defer m.Unlock()
-	for k, cur := range m.m {
-		if string(cur.Id()) == string(client.Id()) {
+	for k, c := range m.m {
+		if c.Id() == client.Id() {
 			delete(m.m, k)
 		}
 	}
@@ -65,7 +65,7 @@ func (m *NetMap) Find(key string) (client NetClient, err error) {
 }
 
 // FindBy searches the first NetClient with the provided predicate function.
-func (m *NetMap) FindBy(fn func(_ NetClient) bool) (client NetClient, err error) {
+func (m *NetMap) FindBy(fn func(c NetClient) bool) (client NetClient, err error) {
 	m.Lock()
 	defer m.Unlock()
 	for _, w := range m.m {
@@ -77,7 +77,7 @@ func (m *NetMap) FindBy(fn func(_ NetClient) bool) (client NetClient, err error)
 }
 
 // ForEach processes every NetClient with the provided callback function.
-func (m *NetMap) ForEach(fn func(_ NetClient)) {
+func (m *NetMap) ForEach(fn func(c NetClient)) {
 	m.Lock()
 	defer m.Unlock()
 	for _, w := range m.m {

@@ -27,7 +27,7 @@ func (u *User) SetRoom(id string) { u.RoomID = id }
 
 func (u *User) SetWorker(w *Worker) {
 	u.Worker = w
-	w.ChangeUserQuantityBy(1)
+	u.Worker.ChangeUserQuantityBy(1)
 }
 
 func (u *User) FreeWorker() {
