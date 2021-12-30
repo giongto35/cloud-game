@@ -13,18 +13,17 @@ import (
 	"github.com/giongto35/cloud-game/v2/pkg/config/shared"
 	"github.com/giongto35/cloud-game/v2/pkg/config/storage"
 	webrtcConfig "github.com/giongto35/cloud-game/v2/pkg/config/webrtc"
-	"github.com/giongto35/cloud-game/v2/pkg/environment"
+	"github.com/giongto35/cloud-game/v2/pkg/os"
 	flag "github.com/spf13/pflag"
 )
 
 type Config struct {
-	Encoder     encoder.Encoder
-	Emulator    emulator.Emulator
-	Environment shared.Environment
-	Recording   shared.Recording
-	Storage     storage.Storage
-	Worker      Worker
-	Webrtc      webrtcConfig.Webrtc
+	Encoder   encoder.Encoder
+	Emulator  emulator.Emulator
+	Recording shared.Recording
+	Storage   storage.Storage
+	Worker    Worker
+	Webrtc    webrtcConfig.Webrtc
 }
 
 type Worker struct {
@@ -54,7 +53,6 @@ func NewConfig() (conf Config) {
 // Define own flags with default value set to the current config param.
 // Don't forget to call flag.Parse().
 func (c *Config) ParseFlags() {
-	c.Environment.WithFlags()
 	c.Worker.Server.WithFlags()
 	flag.IntVar(&c.Worker.Monitoring.Port, "monitoring.port", c.Worker.Monitoring.Port, "Monitoring server port")
 	flag.StringVar(&c.Worker.Network.CoordinatorAddress, "coordinatorhost", c.Worker.Network.CoordinatorAddress, "Worker URL to connect")
@@ -70,7 +68,7 @@ func (c *Config) expandSpecialTags() {
 		if *dir == "" || !strings.Contains(*dir, tag) {
 			continue
 		}
-		userHomeDir, err := environment.GetUserHome()
+		userHomeDir, err := os.GetUserHome()
 		if err != nil {
 			log.Fatalln("couldn't read user home directory", err)
 		}

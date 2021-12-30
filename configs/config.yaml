@@ -2,13 +2,7 @@
 # Application configuration file
 #
 
-# application environment (dev, staging, prod)
-# deprecated
-environment: dev
-
 coordinator:
-  # address if the server want to connect directly to debug
-  debugHost:
   # games library
   library:
     # some directory which is gonna be the root folder for the library

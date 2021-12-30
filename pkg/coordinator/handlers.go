@@ -5,18 +5,17 @@ import (
 	"errors"
 	"log"
 	"math"
+	"net"
 	"net/http"
 	"strings"
 
 	"github.com/giongto35/cloud-game/v2/pkg/config/coordinator"
 	"github.com/giongto35/cloud-game/v2/pkg/cws"
 	"github.com/giongto35/cloud-game/v2/pkg/cws/api"
-	"github.com/giongto35/cloud-game/v2/pkg/environment"
 	"github.com/giongto35/cloud-game/v2/pkg/games"
 	"github.com/giongto35/cloud-game/v2/pkg/ice"
 	"github.com/giongto35/cloud-game/v2/pkg/network/websocket"
 	"github.com/giongto35/cloud-game/v2/pkg/service"
-	"github.com/giongto35/cloud-game/v2/pkg/util"
 	"github.com/gofrs/uuid"
 )
 
@@ -98,31 +97,9 @@ func (s *Server) WSO(w http.ResponseWriter, r *http.Request) {
 	wc.Zone = connRt.Zone
 	wc.PingServer = connRt.PingAddr
 
-	// Register to workersClients map the client connection
-	address := util.GetRemoteAddress(c)
-	public := util.IsPublicIP(address)
-
-	wc.Printf("addr: %v | zone: %v | pub: %v | ping: %v", address, wc.Zone, public, wc.PingServer)
-
-	// In case worker and coordinator in the same host
-	if !public && s.cfg.Environment.Get() == environment.Production {
-		// Don't accept private IP for worker's address in prod mode
-		// However, if the worker in the same host with coordinator, we can get public IP of worker
-		wc.Printf("[!] Address %s is invalid", address)
-
-		address = util.GetHostPublicIP()
-		wc.Printf("Find public address: %s", address)
-
-		if address == "" || !util.IsPublicIP(address) {
-			// Skip this worker because we cannot find public IP
-			wc.Println("[!] Unable to find public address, reject worker")
-			return
-		}
-	}
-
-	// Create a workerClient instance
-	wc.Address = address
-	wc.StunTurnServer = ice.ToJson(s.cfg.Webrtc.IceServers, ice.Replacement{From: "server-ip", To: address})
+	addr := getIP(c.RemoteAddr())
+	wc.Printf("addr: %v | zone: %v | ping: %v", addr, wc.Zone, wc.PingServer)
+	wc.StunTurnServer = ice.ToJson(s.cfg.Webrtc.IceServers, ice.Replacement{From: "server-ip", To: addr})
 
 	// Attach to Server instance with workerID, add defer
 	s.workerClients[workerID] = wc
@@ -229,25 +206,12 @@ func (s *Server) WS(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) getBestWorkerClient(client *BrowserClient, zone string) (*WorkerClient, error) {
-	conf := s.cfg.Coordinator
-	if conf.DebugHost != "" {
-		client.Println("Connecting to debug host instead prod servers", conf.DebugHost)
-		wc := s.getWorkerFromAddress(conf.DebugHost)
-		if wc != nil {
-			return wc, nil
-		}
-		// if there is not debugHost, continue usual flow
-		client.Println("Not found, connecting to all available servers")
-	}
-
 	workerClients := s.getAvailableWorkers()
-
 	serverID, err := s.findBestServerFromBrowser(workerClients, client, zone)
 	if err != nil {
 		log.Println(err)
 		return nil, err
 	}
-
 	return s.workerClients[serverID], nil
 }
 
@@ -261,17 +225,6 @@ func (s *Server) getAvailableWorkers() map[string]*WorkerClient {
 	}
 
 	return workerClients
-}
-
-// getWorkerFromAddress returns the worker has given address
-func (s *Server) getWorkerFromAddress(address string) *WorkerClient {
-	for _, w := range s.workerClients {
-		if w.HasGameSlot() && w.Address == address {
-			return w
-		}
-	}
-
-	return nil
 }
 
 // findBestServerFromBrowser returns the best server for a session
@@ -381,4 +334,14 @@ func createInitPackage(stunturn string, games []games.GameMetadata) string {
 	initPackage := append([]string{stunturn}, gameName...)
 	encodedList, _ := json.Marshal(initPackage)
 	return string(encodedList)
+}
+
+func getIP(a net.Addr) (addr string) {
+	if parts := strings.Split(a.String(), ":"); len(parts) == 2 {
+		addr = parts[0]
+	}
+	if addr == "" {
+		return "localhost"
+	}
+	return
 }

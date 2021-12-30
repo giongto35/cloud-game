@@ -3,6 +3,7 @@ package os
 import (
 	"os"
 	"os/signal"
+	"os/user"
 	"syscall"
 )
 
@@ -20,4 +21,12 @@ func ExpectTermination() chan struct{} {
 		done <- struct{}{}
 	}()
 	return done
+}
+
+func GetUserHome() (string, error) {
+	me, err := user.Current()
+	if err != nil {
+		return "", err
+	}
+	return me.HomeDir, nil
 }

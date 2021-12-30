@@ -1,11 +1,6 @@
 package shared
 
-import (
-	"github.com/giongto35/cloud-game/v2/pkg/environment"
-	flag "github.com/spf13/pflag"
-)
-
-type Environment environment.Env
+import flag "github.com/spf13/pflag"
 
 type Server struct {
 	Address string
@@ -38,12 +33,4 @@ func (s *Server) GetAddr() string {
 		return s.Tls.Address
 	}
 	return s.Address
-}
-
-func (env *Environment) Get() environment.Env {
-	return (environment.Env)(*env)
-}
-
-func (env *Environment) WithFlags() {
-	flag.StringVar((*string)(env), "env", string(*env), "Specify environment type: [dev, staging, prod]")
 }

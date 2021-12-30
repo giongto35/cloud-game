@@ -13,7 +13,6 @@ type WorkerClient struct {
 	*cws.Client
 
 	WorkerID string
-	Address  string // ip address of worker
 	// public server used for ping check
 	PingServer     string
 	StunTurnServer string

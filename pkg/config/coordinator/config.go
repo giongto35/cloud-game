@@ -12,7 +12,6 @@ import (
 
 type Config struct {
 	Coordinator struct {
-		DebugHost  string
 		Library    games.Config
 		Monitoring monitoring.Config
 		Origin     struct {
@@ -22,10 +21,9 @@ type Config struct {
 		Server    shared.Server
 		Analytics Analytics
 	}
-	Emulator    emulator.Emulator
-	Environment shared.Environment
-	Recording   shared.Recording
-	Webrtc      webrtcConfig.Webrtc
+	Emulator  emulator.Emulator
+	Recording shared.Recording
+	Webrtc    webrtcConfig.Webrtc
 }
 
 // Analytics is optional Google Analytics
@@ -46,7 +44,6 @@ func NewConfig() (conf Config) {
 }
 
 func (c *Config) ParseFlags() {
-	c.Environment.WithFlags()
 	c.Coordinator.Server.WithFlags()
 	flag.IntVar(&c.Coordinator.Monitoring.Port, "monitoring.port", c.Coordinator.Monitoring.Port, "Monitoring server port")
 	flag.StringVarP(&configPath, "conf", "c", configPath, "Set custom configuration file path")
