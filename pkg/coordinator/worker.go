@@ -13,7 +13,6 @@ type Worker struct {
 	client.SocketClient
 	client.RegionalClient
 
-	Address    string
 	PingServer string
 	users      int32
 	log        *logger.Logger

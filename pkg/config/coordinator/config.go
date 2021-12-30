@@ -13,7 +13,6 @@ import (
 type Config struct {
 	Coordinator Coordinator
 	Emulator    emulator.Emulator
-	Environment shared.Environment
 	Recording   shared.Recording
 	Webrtc      webrtcConfig.Webrtc
 }
@@ -50,7 +49,6 @@ func NewConfig() (conf Config) {
 }
 
 func (c *Config) ParseFlags() {
-	c.Environment.WithFlags()
 	c.Coordinator.Server.WithFlags()
 	flag.IntVar(&c.Coordinator.Monitoring.Port, "monitoring.port", c.Coordinator.Monitoring.Port, "Monitoring server port")
 	flag.StringVarP(&configPath, "conf", "c", configPath, "Set custom configuration file path")

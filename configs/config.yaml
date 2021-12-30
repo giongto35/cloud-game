@@ -2,15 +2,9 @@
 # Application configuration file
 #
 
-# application environment (dev, staging, prod)
-# deprecated
-environment: dev
-
 coordinator:
   # show more logs
   debug: true
-  # address if the server want to connect directly to debug
-  debugHost:
   # get any free workers unconditionally on user connection
   roundRobin: false
   # games library
