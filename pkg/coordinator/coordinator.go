@@ -11,7 +11,9 @@ import (
 )
 
 func New(conf coordinator.Config, log *logger.Logger) (services service.Group) {
-	hub := NewHub(conf, games.NewLibWhitelisted(conf.Coordinator.Library, conf.Emulator, log), log)
+	lib := games.NewLibWhitelisted(conf.Coordinator.Library, conf.Emulator, log)
+	lib.Scan()
+	hub := NewHub(conf, lib, log)
 	httpSrv, err := NewHTTPServer(conf, log, func(mux *http.ServeMux) {
 		mux.HandleFunc("/ws", hub.handleWebsocketUserConnection)
 		mux.HandleFunc("/wso", hub.handleWebsocketWorkerConnection)

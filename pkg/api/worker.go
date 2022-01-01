@@ -51,7 +51,7 @@ type (
 		Active bool   `json:"active"`
 		User   string `json:"user"`
 	}
-	RecordGameResponse = string
+	RecordGameResponse      = string
 	TerminateSessionRequest struct {
 		Stateful
 	}

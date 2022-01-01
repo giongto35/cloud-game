@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"net/http"
 
+	"github.com/giongto35/cloud-game/v2/pkg/api"
 	"github.com/giongto35/cloud-game/v2/pkg/client"
 	"github.com/giongto35/cloud-game/v2/pkg/config/coordinator"
 	"github.com/giongto35/cloud-game/v2/pkg/games"
@@ -30,9 +31,6 @@ type Hub struct {
 }
 
 func NewHub(conf coordinator.Config, lib games.GameLibrary, log *logger.Logger) *Hub {
-	// scan the lib right away
-	lib.Scan()
-
 	h := &Hub{
 		conf:     conf,
 		crowd:    client.NewNetMap(),
@@ -59,15 +57,15 @@ func (h *Hub) handleWebsocketUserConnection(w http.ResponseWriter, r *http.Reque
 		h.log.Error().Err(err).Msg("couldn't init user connection")
 	}
 	usr := NewUserClient(conn, h.log)
+	defer h.cleanUser(&usr)
 	usr.HandleRequests(h.launcher, h.conf)
-	defer usr.Close()
 	usr.ProcessMessages()
 
 	q := r.URL.Query()
-	roomId := q.Get("room_id")
-	zone := q.Get("zone")
+	roomId := q.Get(api.RoomIdQueryParam)
+	zone := q.Get(api.ZoneQueryParam)
 
-	usr.GetLogger().Info().Msg("Search available servers")
+	usr.GetLogger().Info().Msg("Search available workers")
 	var wkr *Worker
 	if wkr = h.findWorkerByRoom(roomId, zone); wkr != nil {
 		usr.GetLogger().Info().Str("room", roomId).Msg("An existing worker has been found")
@@ -81,9 +79,7 @@ func (h *Hub) handleWebsocketUserConnection(w http.ResponseWriter, r *http.Reque
 	}
 
 	usr.SetWorker(wkr)
-	defer usr.FreeWorker()
 	h.crowd.Add(&usr)
-	defer h.crowd.Remove(&usr)
 	usr.InitSession(h.conf.Webrtc.IceServers, h.launcher.GetAppNames())
 	usr.Wait()
 }
@@ -96,17 +92,18 @@ func (h *Hub) handleWebsocketWorkerConnection(w http.ResponseWriter, r *http.Req
 		}
 	}()
 
-	connRt, err := GetConnectionRequest(r.URL.Query().Get("data"))
+	data := r.URL.Query().Get(api.DataQueryParam)
+	handshake, err := GetConnectionRequest(data)
 	if err != nil {
 		h.log.Error().Err(err).Msg("got a malformed request")
 		return
 	}
 
-	if connRt.PingAddr == "" {
+	if handshake.PingAddr == "" {
 		h.log.Warn().Msg("Ping address is not set")
 	}
 
-	if h.conf.Coordinator.Server.Https && !connRt.IsHTTPS {
+	if h.conf.Coordinator.Server.Https && !handshake.IsHTTPS {
 		h.log.Warn().Msg("Unsecure connection. The worker may not work properly without HTTPS on its side!")
 	}
 
@@ -115,22 +112,31 @@ func (h *Hub) handleWebsocketWorkerConnection(w http.ResponseWriter, r *http.Req
 		h.log.Error().Err(err).Msg("couldn't init worker connection")
 		return
 	}
-	backend := NewWorkerClient(conn, h.log)
-	defer backend.Close()
 
-	backend.Zone = connRt.Zone
-	backend.PingServer = connRt.PingAddr
-	h.log.Info().
-		Fields(map[string]interface{}{
-			"zone": backend.Zone,
-			"ping": backend.PingServer,
-		}).
-		Msg("Worker info")
-	backend.HandleRequests(&h.rooms, &h.crowd)
-	h.guild.add(&backend)
-	defer func() {
-		h.guild.Remove(&backend)
-		h.rooms.RemoveAll(&backend)
-	}()
-	backend.Listen()
+	wc := NewWorkerClient(conn, h.log)
+	defer h.cleanWorker(&wc)
+	wc.Zone = handshake.Zone
+	wc.PingServer = handshake.PingAddr
+	h.log.Info().Msgf("Worker info - zone: %v, ping addr: %v", wc.Zone, wc.PingServer)
+	wc.HandleRequests(&h.rooms, &h.crowd)
+	h.guild.add(&wc)
+	wc.Listen()
+}
+
+func (h *Hub) cleanWorker(w *Worker) {
+	if w == nil {
+		return
+	}
+	w.Close()
+	h.guild.Remove(w)
+	h.rooms.RemoveAll(w)
+}
+
+func (h *Hub) cleanUser(u *User) {
+	if u == nil {
+		return
+	}
+	u.Close()
+	u.FreeWorker()
+	h.crowd.Remove(u)
 }
