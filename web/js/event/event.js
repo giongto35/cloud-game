@@ -6,6 +6,9 @@
 const event = (() => {
     const topics = {};
 
+    // internal listener index
+    let _index = 0;
+
     return {
         /**
          * Subscribes onto some event.
@@ -20,19 +23,16 @@ const event = (() => {
          * sub01.unsub()
          */
         sub: (topic, listener, order) => {
-            if (!topics[topic]) topics[topic] = [];
-
-            // order handling stuff
-            const value = {order: order || 0, listener: listener};
-            topics[topic].push(value);
-            topics[topic].sort((a, b) => a.order - b.order);
-            const index = topics[topic].indexOf(value);
-
-            return {
+            if (!topics[topic]) topics[topic] = {};
+            // order index * big pad + next internal index (e.g. 1*100+1=101)
+            // use some arbitrary big number to not overlap with non-ordered
+            let i = (order !== undefined ? order * 1000000 : 0) + _index++;
+            topics[topic][i] = listener;
+            return Object.freeze({
                 unsub: () => {
-                    topics[topic].splice(index, 1);
+                    delete topics[topic][i]
                 }
-            };
+            });
         },
 
         /**
@@ -45,10 +45,9 @@ const event = (() => {
          * event.pub('rapture', {time: now()})
          */
         pub: (topic, data) => {
-            if (!topics[topic] || topics[topic].length < 1) return;
-
-            topics[topic].forEach((listener) => {
-                listener.listener(data !== undefined ? data : {})
+            if (!topics[topic]) return;
+            Object.keys(topics[topic]).forEach((ls) => {
+                topics[topic][ls](data !== undefined ? data : {})
             });
         }
     }
