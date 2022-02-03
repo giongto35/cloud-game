@@ -37,6 +37,7 @@ type Worker struct {
 		Zone               string
 	}
 	Server shared.Server
+	Tag    string
 }
 
 // allows custom config path

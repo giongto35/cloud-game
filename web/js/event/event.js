@@ -58,6 +58,8 @@ const LATENCY_CHECK_REQUESTED = 'latencyCheckRequested';
 const PING_REQUEST = 'pingRequest';
 const PING_RESPONSE = 'pingResponse';
 
+const GET_SERVER_LIST = 'getServerList';
+
 const GAME_ROOM_AVAILABLE = 'gameRoomAvailable';
 const GAME_SAVED = 'gameSaved';
 const GAME_LOADED = 'gameLoaded';
@@ -67,6 +69,7 @@ const GAME_PLAYER_IDX = 'gamePlayerIndex';
 
 const CONNECTION_READY = 'connectionReady';
 const CONNECTION_CLOSED = 'connectionClosed';
+const SOCKET_READY = 'socketReady'
 
 const MEDIA_STREAM_INITIALIZED = 'mediaStreamInitialized';
 const MEDIA_STREAM_SDP_AVAILABLE = 'mediaStreamSdpAvailable';

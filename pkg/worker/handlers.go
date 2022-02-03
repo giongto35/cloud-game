@@ -129,9 +129,10 @@ func newCoordinatorConnection(host string, conf worker.Worker, addr string) (*Co
 
 func MakeConnectionRequest(conf worker.Worker, address string) (string, error) {
 	req := api.ConnectionRequest{
-		Zone:     conf.Network.Zone,
-		PingAddr: conf.GetPingAddr(address),
 		IsHTTPS:  conf.Server.Https,
+		PingAddr: conf.GetPingAddr(address),
+		Tag:      conf.Tag,
+		Zone:     conf.Network.Zone,
 	}
 	rez, err := json.Marshal(req)
 	if err != nil {

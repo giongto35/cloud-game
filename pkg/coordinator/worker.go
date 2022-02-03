@@ -16,6 +16,7 @@ type WorkerClient struct {
 	// public server used for ping check
 	PingServer     string
 	StunTurnServer string
+	Tag            string
 	userCount      int // may be atomic
 	Zone           string
 

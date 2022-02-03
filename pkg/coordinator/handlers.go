@@ -96,9 +96,10 @@ func (s *Server) WSO(w http.ResponseWriter, r *http.Request) {
 	wc.Println("Generated worker ID")
 	wc.Zone = connRt.Zone
 	wc.PingServer = connRt.PingAddr
+	wc.Tag = connRt.Tag
 
 	addr := getIP(c.RemoteAddr())
-	wc.Printf("addr: %v | zone: %v | ping: %v", addr, wc.Zone, wc.PingServer)
+	wc.Printf("addr: %v | zone: %v | ping: %v | tag: %v", addr, wc.Zone, wc.PingServer, wc.Tag)
 	wc.StunTurnServer = ice.ToJson(s.cfg.Webrtc.IceServers, ice.Replacement{From: "server-ip", To: addr})
 
 	// Attach to Server instance with workerID, add defer
@@ -149,10 +150,18 @@ func (s *Server) WS(w http.ResponseWriter, r *http.Request) {
 
 	// get roomID if it is embeded in request. Server will pair the frontend with the server running the room. It only happens when we are trying to access a running room over share link.
 	// TODO: Update link to the wiki
-	roomID := r.URL.Query().Get("room_id")
+	q := r.URL.Query()
+	roomID := q.Get("room_id")
 	// zone param is to pick worker in that zone only
-	// if there is no zone param, we can pic
-	userZone := r.URL.Query().Get("zone")
+	// if there is no zone param, we can pick
+	userZone := q.Get("zone")
+	workerId := q.Get("wid")
+	workerAd := q.Get("wad")
+
+	_, _ = workerId, workerAd
+
+	// worker selection flow:
+	// by room -> by id -> by address -> by zone
 
 	bc.Printf("Get Room %s Zone %s From URL %v", roomID, userZone, r.URL)
 
@@ -161,7 +170,7 @@ func (s *Server) WS(w http.ResponseWriter, r *http.Request) {
 		if workerID, ok := s.roomToWorker[roomID]; ok {
 			wc = s.workerClients[workerID]
 			if userZone != "" && wc.Zone != userZone {
-				// if there is zone param, we need to ensure ther worker in that zone
+				// if there is zone param, we need to ensure the worker in that zone
 				// if not we consider the room is missing
 				wc = nil
 			} else {

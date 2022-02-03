@@ -260,3 +260,39 @@ func newGameStartCall(roomId string, data string, library games.GameLibrary, rec
 	}
 	return call, nil
 }
+
+func (bc *BrowserClient) handleGetServerList(o *Server) cws.PacketHandler {
+	return func(resp cws.WSPacket) (req cws.WSPacket) {
+		var request api.GetServerListRequest
+		if err := request.From(resp.Data); err != nil {
+			return cws.EmptyPacket
+		}
+		response := api.GetServerListResponse{}
+		var servers []api.Server
+		if o.cfg.Coordinator.Debug {
+			for _, s := range o.workerClients {
+				servers = append(servers, api.Server{
+					Id: s.WorkerID, IsBusy: !s.HasGameSlot(), Addr: s.PingServer, Tag: s.Tag, Zone: s.Zone,
+				})
+			}
+		} else {
+			unique := map[string]struct{}{}
+			for _, s := range o.workerClients {
+				if !s.HasGameSlot() {
+					continue
+				}
+				if _, ok := unique[s.PingServer]; !ok {
+					servers = append(servers, api.Server{Addr: s.PingServer})
+				}
+				unique[s.PingServer] = struct{}{}
+			}
+		}
+		response.Servers = servers
+		if packet, err := response.To(); err != nil {
+			return cws.EmptyPacket
+		} else {
+			resp.Data = packet
+		}
+		return resp
+	}
+}

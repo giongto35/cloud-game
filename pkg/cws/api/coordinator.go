@@ -21,6 +21,7 @@ const (
 	GamePlayerSelect = "player_index"
 	GameMultitap     = "multitap"
 	GameRecording    = "recording"
+	GetServerList    = "get_server_list"
 )
 
 type GameStartRequest struct {
@@ -51,10 +52,30 @@ func (packet *GameStartCall) From(data string) error { return from(packet, data)
 func (packet *GameStartCall) To() (string, error)    { return to(packet) }
 
 type ConnectionRequest struct {
-	Zone     string `json:"zone,omitempty"`
-	PingAddr string `json:"ping_addr,omitempty"`
 	IsHTTPS  bool   `json:"is_https,omitempty"`
+	PingAddr string `json:"ping_addr,omitempty"`
+	Tag      string `json:"tag,omitempty"`
+	Zone     string `json:"zone,omitempty"`
 }
+
+type GetServerListRequest struct{}
+type GetServerListResponse struct {
+	Servers []Server `json:"servers"`
+}
+
+// Server contains a list of server groups.
+// Server is a separate machine that may contain
+// multiple sub-processes.
+type Server struct {
+	Addr   string `json:"addr"`
+	Id     string `json:"id,omitempty"`
+	IsBusy bool   `json:"is_busy,omitempty"`
+	Tag    string `json:"tag,omitempty"`
+	Zone   string `json:"zone,omitempty"`
+}
+
+func (packet *GetServerListRequest) From(data string) error { return from(packet, data) }
+func (packet *GetServerListResponse) To() (string, error)   { return to(packet) }
 
 // packets
 

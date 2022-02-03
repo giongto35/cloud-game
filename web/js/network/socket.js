@@ -41,7 +41,7 @@ const socket = (() => {
             log.info('[ws] <- open connection');
             log.info(`[ws] -> setting ping interval to ${pingIntervalMs}ms`);
             // !to add destructor if SPA
-            pingIntervalId = setInterval(ping, pingIntervalMs)
+            pingIntervalId = setInterval(ping, pingIntervalMs);
         };
         conn.onerror = () => log.error('[ws] some error!');
         conn.onclose = (event) => log.info(`[ws] closed (${event.code})`);
@@ -59,6 +59,7 @@ const socket = (() => {
                     // const [stunturn, ...games] = data;
                     let serverData = JSON.parse(data.data);
                     event.pub(MEDIA_STREAM_INITIALIZED, {stunturn: serverData.shift(), games: serverData});
+                    event.pub(SOCKET_READY);
                     break;
                 case 'offer':
                     // this is offer from worker
@@ -89,6 +90,9 @@ const socket = (() => {
                     break;
                 case 'recording':
                     event.pub(RECORDING_STATUS_CHANGED, data.data);
+                    break;
+                case 'get_server_list':
+                    event.pub(GET_SERVER_LIST, JSON.parse(data.data));
                     break;
             }
         };
@@ -139,6 +143,7 @@ const socket = (() => {
     const toggleRecording = (active = false, userName = '') => send({
         "id": "recording", "data": JSON.stringify({"active": active, "user": userName,})
     })
+    const getServerList = () => send({"id": "get_server_list", "data": "{}"})
 
     return {
         init: init,
@@ -152,5 +157,6 @@ const socket = (() => {
         quitGame: quitGame,
         toggleMultitap: toggleMultitap,
         toggleRecording: toggleRecording,
+        getServerList,
     }
 })(event, log);
