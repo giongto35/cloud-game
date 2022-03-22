@@ -3,60 +3,73 @@
  * @version 1
  */
 const serverList = (() => {
-    const blockName = 'server-list',
-        container = document.getElementById(blockName),
-        fields = ['addr', 'id', 'is_busy'],
-        field_caps = ['Address', 'ID', 'Use'];
+    const id = 'server-list',
+        root = document.getElementById(id),
+        // cap -- is a caption of the field
+        // mut -- ia a transformation function for the field value
+        list = {
+            'n': {},
+            'id': {cap: 'ID'},
+            'addr': {
+                cap: 'Address',
+                mut: (v) => {
+                    try {
+                        return new URL(v).host
+                    } catch (_) {
+                        return v
+                    }
+                }
+            },
+            'is_busy': {cap: 'Reserved', mut: (v) => v === true ? '◍' : ''}
+        },
+        fields = Object.keys(list);
 
-
-    // container.classList.add("hidden");
+    // root.classList.add("hidden");
 
     const state = {
         servers: [],
         shown: true,
     }
 
-    const onReady = () => {
-        socket.getServerList()
-    }
+    // waiting for the server connection when it's ready
+    const onReady = () => socket.getServerList()
 
     const handleGetServerList = (data) => {
-        if (data && data['servers']) {
-            state.servers = data['servers'];
-            _render();
-        }
+        state.servers = data?.servers ? data.servers : [];
+        _render();
     }
 
+    const _index = (i = 0) => () => i++
+
     function _render() {
-        container.innerHTML = '';
+        root.innerHTML = '';
         if (!state.shown) {
-            container.classList.add('hidden');
+            gui.hide(root);
+            return;
+        }
+        gui.show(root);
+
+        if (state.servers.length === 0) {
+            root.append(gui.create('span', (el) => el.innerText = 'No data :('));
             return;
         }
 
-        container.classList.remove('hidden');
+        const header = gui.create('div', (el) => {
+            el.classList.add(`${id}__header`);
+            fields.forEach(field => el.append(gui.create('span', (f) => f.innerText = list[field]?.cap || '')))
+        });
+        root.append(header);
 
-        if (state.servers.length > 0) {
-            const h = gui.create();
-            h.classList.add(`${blockName}__header`);
-            container.append(h);
-            field_caps.forEach(field => {
-                const f = gui.create('span');
-                f.innerText = field;
-                h.append(f);
-            })
-        }
-        state.servers.forEach(server => {
-            const row = gui.create();
-            fields.forEach(field => {
-                if (server.hasOwnProperty(field)) {
-                    const f = gui.create('span');
-                    f.innerText = server[field];
-                    row.append(f);
-                }
-            })
-            container.append(row);
+        const renderRow = (server, i) => (row) => fields.forEach(field => {
+            const val = server.hasOwnProperty(field) ? server[field] :
+                // do row index
+                field === 'n' ? i
+                    : '';
+            const mut = list[field]?.mut;
+            row.append(gui.create('span', (f) => f.innerText = mut ? mut(val) : val));
         })
+        const index = _index(1);
+        state.servers.forEach(server => root.append(gui.create('div', renderRow(server, index()))))
     }
 
     event.sub(SOCKET_READY, onReady);

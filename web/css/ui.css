@@ -147,7 +147,7 @@
 
 #server-list div {
     display: grid;
-    grid-template-columns: 1fr 2fr 1fr;
+    grid-template-columns: .3fr 2fr 1fr 1fr;
     justify-items: start;
 
     padding: 0 1em 0 1em;

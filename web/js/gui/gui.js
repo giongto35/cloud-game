@@ -5,7 +5,13 @@
  */
 const gui = (() => {
 
-    const _create = (name = 'div') => document.createElement(name);
+    const _create = (name = 'div', modFn) => {
+        const el = document.createElement(name);
+        if (modFn) {
+            modFn(el);
+        }
+        return el;
+    }
 
     const _option = (text = '', selected = false) => {
         const el = _create('option');
@@ -115,11 +121,11 @@ const gui = (() => {
             fadeOut,
             fadeInOut,
         },
-        create: _create,
-        select,
         binding,
-        show,
+        create: _create,
         hide,
+        select,
+        show,
         toggle,
     }
 })(document);
