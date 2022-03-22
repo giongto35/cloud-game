@@ -22,7 +22,7 @@ const event = (() => {
          * ...
          * sub01.unsub()
          */
-        sub: (topic, listener, order) => {
+        sub: (topic, listener, order = undefined) => {
             if (!topics[topic]) topics[topic] = {};
             // order index * big pad + next internal index (e.g. 1*100+1=101)
             // use some arbitrary big number to not overlap with non-ordered
