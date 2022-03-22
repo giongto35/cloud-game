@@ -107,6 +107,8 @@ const gui = (() => {
         )
     }
 
+    const fragment = () => document.createDocumentFragment();
+
     const sleep = async (ms) => new Promise(resolve => setTimeout(resolve, ms));
 
     const fadeInOut = async (el, wait = 1000, speed = .1) => {
@@ -123,6 +125,7 @@ const gui = (() => {
         },
         binding,
         create: _create,
+        fragment,
         hide,
         select,
         show,
