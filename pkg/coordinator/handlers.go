@@ -67,7 +67,9 @@ func (s *Server) WSO(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if connRt.PingAddr == "" {
+	log.Printf("%v", connRt)
+
+	if connRt.PingURL == "" {
 		log.Printf("Warning! Ping address is not set.")
 	}
 
@@ -94,8 +96,10 @@ func (s *Server) WSO(w http.ResponseWriter, r *http.Request) {
 	// Create a workerClient instance
 	wc := NewWorkerClient(c, workerID)
 	wc.Println("Generated worker ID")
+	wc.Addr = connRt.Addr
 	wc.Zone = connRt.Zone
-	wc.PingServer = connRt.PingAddr
+	wc.PingServer = connRt.PingURL
+	wc.Port = connRt.Port
 	wc.Tag = connRt.Tag
 
 	addr := getIP(c.RemoteAddr())
@@ -232,7 +236,6 @@ func (s *Server) getAvailableWorkers() map[string]*WorkerClient {
 			workerClients[k] = w
 		}
 	}
-
 	return workerClients
 }
 

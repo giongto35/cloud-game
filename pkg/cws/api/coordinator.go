@@ -52,10 +52,12 @@ func (packet *GameStartCall) From(data string) error { return from(packet, data)
 func (packet *GameStartCall) To() (string, error)    { return to(packet) }
 
 type ConnectionRequest struct {
-	IsHTTPS  bool   `json:"is_https,omitempty"`
-	PingAddr string `json:"ping_addr,omitempty"`
-	Tag      string `json:"tag,omitempty"`
-	Zone     string `json:"zone,omitempty"`
+	Addr    string `json:"addr,omitempty"`
+	IsHTTPS bool   `json:"is_https,omitempty"`
+	PingURL string `json:"ping_url,omitempty"`
+	Port    string `json:"port,omitempty"`
+	Tag     string `json:"tag,omitempty"`
+	Zone    string `json:"zone,omitempty"`
 }
 
 type GetServerListRequest struct{}
@@ -67,11 +69,14 @@ type GetServerListResponse struct {
 // Server is a separate machine that may contain
 // multiple sub-processes.
 type Server struct {
-	Addr   string `json:"addr"`
-	Id     string `json:"id,omitempty"`
-	IsBusy bool   `json:"is_busy,omitempty"`
-	Tag    string `json:"tag,omitempty"`
-	Zone   string `json:"zone,omitempty"`
+	Addr     string `json:"addr,omitempty"`
+	Id       string `json:"id,omitempty"`
+	IsBusy   bool   `json:"is_busy,omitempty"`
+	PingURL  string `json:"ping_url"`
+	Port     string `json:"port,omitempty"`
+	Replicas uint32 `json:"replicas,omitempty"`
+	Tag      string `json:"tag,omitempty"`
+	Zone     string `json:"zone,omitempty"`
 }
 
 func (packet *GetServerListRequest) From(data string) error { return from(packet, data) }

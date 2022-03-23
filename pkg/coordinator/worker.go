@@ -13,8 +13,10 @@ type WorkerClient struct {
 	*cws.Client
 
 	WorkerID string
+	Addr     string
 	// public server used for ping check
 	PingServer     string
+	Port           string
 	StunTurnServer string
 	Tag            string
 	userCount      int // may be atomic

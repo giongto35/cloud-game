@@ -3,6 +3,7 @@ package coordinator
 import (
 	"errors"
 	"fmt"
+	"sort"
 
 	"github.com/giongto35/cloud-game/v2/pkg/cws"
 	"github.com/giongto35/cloud-game/v2/pkg/cws/api"
@@ -272,21 +273,28 @@ func (bc *BrowserClient) handleGetServerList(o *Server) cws.PacketHandler {
 		if o.cfg.Coordinator.Debug {
 			for _, s := range o.workerClients {
 				servers = append(servers, api.Server{
-					Id: s.WorkerID, IsBusy: !s.HasGameSlot(), Addr: s.PingServer, Tag: s.Tag, Zone: s.Zone,
+					Addr: s.Addr, Id: s.WorkerID, IsBusy: !s.HasGameSlot(), PingURL: s.PingServer, Port: s.Port,
+					Tag: s.Tag, Zone: s.Zone,
 				})
 			}
 		} else {
-			unique := map[string]struct{}{}
+			unique := map[string]*api.Server{}
 			for _, s := range o.workerClients {
-				if !s.HasGameSlot() {
-					continue
-				}
 				if _, ok := unique[s.PingServer]; !ok {
-					servers = append(servers, api.Server{Addr: s.PingServer})
+					unique[s.PingServer] = &api.Server{Addr: s.Addr, PingURL: s.PingServer}
 				}
-				unique[s.PingServer] = struct{}{}
+				unique[s.PingServer].Replicas++
+			}
+			for _, v := range unique {
+				servers = append(servers, *v)
 			}
 		}
+		sort.SliceStable(servers, func(i, j int) bool {
+			if servers[i].Addr != servers[j].Addr {
+				return servers[i].Addr < servers[j].Addr
+			}
+			return servers[i].Port < servers[j].Port
+		})
 		response.Servers = servers
 		if packet, err := response.To(); err != nil {
 			return cws.EmptyPacket

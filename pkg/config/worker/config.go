@@ -89,7 +89,7 @@ func (c *Config) fixValues() {
 func (w *Worker) GetAddr() string { return w.Server.GetAddr() }
 
 // GetPingAddr returns exposed to clients server ping endpoint address.
-func (w *Worker) GetPingAddr(address string) string {
+func (w *Worker) GetPingAddr(address string) url.URL {
 	_, srcPort, _ := net.SplitHostPort(w.GetAddr())
 	dstHost, _, _ := net.SplitHostPort(address)
 	address = net.JoinHostPort(dstHost, srcPort)
@@ -109,5 +109,10 @@ func (w *Worker) GetPingAddr(address string) string {
 	if w.Server.Https {
 		pingURL.Scheme = "https"
 	}
-	return pingURL.String()
+	return pingURL
+}
+
+func (w *Worker) GetPort(address string) string {
+	_, port, _ := net.SplitHostPort(address)
+	return port
 }
