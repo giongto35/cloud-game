@@ -83,7 +83,7 @@ const gui = (() => {
         el.style.display = 'block';
         return new Promise((done) => (function fade() {
                 let val = parseFloat(el.style.opacity);
-                const proceed = ((val += 0.1) <= 1);
+                const proceed = ((val += speed) <= 1);
                 if (proceed) {
                     el.style.opacity = '' + val;
                     requestAnimationFrame(fade);

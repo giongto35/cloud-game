@@ -7,7 +7,7 @@ const serverList = (() => {
         root = document.getElementById(id),
         index = ((i = 1) => () => i++)(),
         // caption -- the field caption
-        // renderer -- is an arbitrary mutation of the field
+        // renderer -- an arbitrary DOM output for the field
         list = {
             'n': {
                 renderer: () => String(index()).padStart(2, '0')
@@ -22,7 +22,7 @@ const serverList = (() => {
             },
             'is_busy': {
                 caption: 'State',
-                renderer: (data) => data.is_busy === true ? 'X' : ''
+                renderer: (data) => data?.is_busy === true ? 'X' : ''
             },
             'use': {
                 renderer: renderServerChangeEl
