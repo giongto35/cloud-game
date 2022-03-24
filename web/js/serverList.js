@@ -7,28 +7,26 @@ const serverList = (() => {
         root = document.getElementById(id),
         index = ((i = 1) => () => i++)(),
         // cap -- is a caption of the field
-        // fmt -- ia a transformation function for the field value
         // mut -- is an arbitrary mutation of the field
         list = {
             'n': {
                 // print line number as 01
-                fmt: (_) => String(index()).padStart(2, '0')
+                mut: () => String(index()).padStart(2, '0')
             },
             'id': {
-                cap: 'ID',
-                mut: (data) => {
-                    if (!data.id) {
-                        return `[replicated] x ${data['replicas']}`
-                    }
-                    return data.id
-                }
+                cap: 'ID', mut: (data) => data?.id ? data.id : `??? [replicated] x ${data['replicas']}`
             },
             'addr': {
-                cap: 'Address',
-                mut: (data) => data?.port ? `${data.addr}:${data.port}` : data.addr
+                cap: 'Address', mut: (data) => data?.port ? `${data.addr}:${data.port}` : data.addr
             },
-            'is_busy': {cap: 'State', fmt: (v) => v === true ? 'X' : ''},
-            'use': {fmt: (_) => '>>'}
+            'is_busy': {cap: 'State', mut: (data) => data.is_busy === true ? 'X' : ''},
+            'use': {
+                mut: (_, handler) => gui.create('a', (el) => {
+                    el.innerText = '>>';
+                    el.href = "#";
+                    el.addEventListener('click', handler);
+                })
+            }
         },
         fields = Object.keys(list);
 
@@ -69,11 +67,19 @@ const serverList = (() => {
 
         const renderRow = (server) => (row) => fields.forEach(field => {
             const val = server.hasOwnProperty(field) ? server[field] : '';
-            const fmt = list[field]?.fmt;
             const mut = list[field]?.mut;
-            row.appendChild(gui.create('span', (f) => f.innerHTML = mut ? mut(server) :
-                fmt ? fmt(val) :
-                    val)
+            row.appendChild(gui.create('span', (f) => {
+                    if (!mut) {
+                        f.innerHTML = val;
+                        return;
+                    }
+                    const content = mut(server, () => console.log(server.addr, server.id));
+                    if (content.nodeType) {
+                        f.appendChild(content);
+                        return;
+                    }
+                    f.innerHTML = content
+                })
             );
         })
         state.servers.forEach(server => frag.appendChild(gui.create('div', renderRow(server))))
