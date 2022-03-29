@@ -3,8 +3,9 @@
  * @version 1
  */
 const serverList = (() => {
-    const id = 'server-list',
-        root = document.getElementById(id),
+    const id = 'servers',
+        _class = 'server-list',
+        el = document.getElementById(id),
         index = ((i = 1) => () => i++)(),
         // caption -- the field caption
         // renderer -- an arbitrary DOM output for the field
@@ -43,11 +44,13 @@ const serverList = (() => {
 
     function _render(servers = []) {
         if (!state.shown) {
-            gui.hide(root);
+            gui.hide(el);
             return;
         }
-        root.innerHTML = '';
-        gui.show(root);
+        el.innerHTML = '';
+        gui.show(el);
+
+        const root = gui.fragment();
 
         if (servers.length === 0) {
             root.append(gui.create('span', (el) => el.innerText = 'No data :('));
@@ -56,7 +59,7 @@ const serverList = (() => {
 
         const frag = gui.fragment();
         const header = gui.create('div', (el) => {
-            el.classList.add(`${id}__header`);
+            el.classList.add(`${_class}__header`);
             fields.forEach(field => el.append(gui.create('span', (f) => f.innerHTML = list[field]?.caption || '')))
         });
         frag.append(header)
@@ -68,6 +71,7 @@ const serverList = (() => {
         })
         servers.forEach(server => frag.append(gui.create('div', renderRow(server))))
         root.append(frag);
+        gui.panel(el, 'SERVERS', 'server-list', root);
     }
 
     function renderServerChangeEl(server) {

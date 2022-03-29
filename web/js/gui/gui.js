@@ -36,6 +36,42 @@ const gui = (() => {
         return el;
     }
 
+    const panel = (root, title = '', cc = '', content) => {
+        const _root = root || _create('div');
+        _root.classList.add('panel');
+        const header = _create('div', (el) => el.classList.add('panel__header'));
+        const _content = _create('div', (el) => {
+            if (cc) {
+                el.classList.add(cc);
+            }
+            el.classList.add('panel__content')
+        });
+
+        header.append(_create('span', (el) => {
+            el.classList.add('panel__header__title');
+            el.innerText = title;
+        }));
+        header.append(_create('div', (el) => {
+            el.innerHTML = "<div style=\"color: rgba(0, 0, 0, 0.7);\"><div style=\"background-color: rgba(0, 0, 0, 0.3); border-radius: 9999px; height: 16px; width: 16px;\"></div></div>";
+            el.addEventListener('click', () => {
+                root.style.display = 'none';
+                //document.addEventListener('keydown', (e) => {
+                //   if (e.key === 'Escape') {
+
+                // }
+                //})
+            })
+        }))
+
+        root.append(header, _content);
+        if (content) {
+            _content.append(content);
+        }
+
+
+        return root;
+    }
+
     const _bind = (callback = function () {
     }, name = '', oldValue) => {
         const el = _create('button');
@@ -127,6 +163,7 @@ const gui = (() => {
         create: _create,
         fragment,
         hide,
+        panel,
         select,
         show,
         toggle,
