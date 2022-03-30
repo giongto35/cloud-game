@@ -36,7 +36,7 @@ const gui = (() => {
         return el;
     }
 
-    const panel = (root, title = '', cc = '', content, buttons) => {
+    const panel = (root, title = '', cc = '', content, buttons = []) => {
         const state = {
             shown: false,
             loading: false,
@@ -62,9 +62,11 @@ const gui = (() => {
         header.append(_create('div', (el) => {
             el.classList.add('panel__header__controls');
 
-            buttons?.forEach((b => el.append(_create('span', (el) => {
+            buttons.forEach((b => el.append(_create('span', (el) => {
                 el.classList.add('panel__button');
-                b?.cl.forEach(class_ => el.classList.add(class_));
+                if (b.cl) {
+                    b.cl.forEach(class_ => el.classList.add(class_));
+                }
                 el.innerText = b.caption;
                 el.addEventListener('click', b.handler)
             }))))
