@@ -5,13 +5,19 @@
 const serverList = (() => {
     const id = 'servers',
         _class = 'server-list',
-        el = document.getElementById(id),
-        index = ((i = 1) => () => i++)(),
+        panel = gui.panel(document.getElementById(id), 'SERVERS', 'server-list', null, [
+            {
+                caption: '⟳',
+                cl: ['bold'],
+                handler: handleReload,
+            }
+        ]),
+        index = ((i = 1) => ({v: () => i++, r: () => i = 1}))(),
         // caption -- the field caption
         // renderer -- an arbitrary DOM output for the field
         list = {
             'n': {
-                renderer: () => String(index()).padStart(2, '0')
+                renderer: () => String(index.v()).padStart(2, '0')
             },
             'id': {
                 caption: 'ID',
@@ -23,7 +29,7 @@ const serverList = (() => {
             },
             'is_busy': {
                 caption: 'State',
-                renderer: (data) => data?.is_busy === true ? 'X' : ''
+                renderer: (data) => data?.is_busy === true ? 'R' : ''
             },
             'use': {
                 renderer: renderServerChangeEl
@@ -33,45 +39,45 @@ const serverList = (() => {
 
     // root.classList.add("hidden");
 
-    const state = {
-        shown: true,
+    // waiting for the socket to request data
+    const onReady = () => handleReload()
+
+    const onNewData = (dat = {servers: []}) => {
+        panel.setLoad(false);
+        index.r();
+        _render(dat?.servers);
     }
 
-    // waiting for the socket to request data
-    const onReady = () => socket.getServerList()
-
-    const onNewData = (dat = {servers: []}) => _render(dat?.servers)
-
     function _render(servers = []) {
-        if (!state.shown) {
-            gui.hide(el);
-            return;
-        }
-        el.innerHTML = '';
-        gui.show(el);
+        panel.toggle(true);
+        if (panel.isHidden()) return;
 
-        const root = gui.fragment();
+        const content = gui.fragment();
 
         if (servers.length === 0) {
-            root.append(gui.create('span', (el) => el.innerText = 'No data :('));
+            content.append(gui.create('span', (el) => el.innerText = 'No data :('));
+            panel.setContent(content);
             return;
         }
 
-        const frag = gui.fragment();
         const header = gui.create('div', (el) => {
             el.classList.add(`${_class}__header`);
             fields.forEach(field => el.append(gui.create('span', (f) => f.innerHTML = list[field]?.caption || '')))
         });
-        frag.append(header)
+        content.append(header)
 
         const renderRow = (server) => (row) => fields.forEach(field => {
             const val = server.hasOwnProperty(field) ? server[field] : '';
             const renderer = list[field]?.renderer;
             row.append(gui.create('span', (f) => f.append(renderer ? renderer(server) : val)));
         })
-        servers.forEach(server => frag.append(gui.create('div', renderRow(server))))
-        root.append(frag);
-        gui.panel(el, 'SERVERS', 'server-list', root);
+        servers.forEach(server => content.append(gui.create('div', renderRow(server))))
+        panel.setContent(content);
+    }
+
+    function handleReload() {
+        panel.setLoad(true);
+        socket.getServerList();
     }
 
     function renderServerChangeEl(server) {

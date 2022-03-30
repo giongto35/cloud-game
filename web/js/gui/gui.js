@@ -36,7 +36,13 @@ const gui = (() => {
         return el;
     }
 
-    const panel = (root, title = '', cc = '', content) => {
+    const panel = (root, title = '', cc = '', content, buttons) => {
+        const state = {
+            shown: false,
+            loading: false,
+            title: title,
+        }
+
         const _root = root || _create('div');
         _root.classList.add('panel');
         const header = _create('div', (el) => el.classList.add('panel__header'));
@@ -47,20 +53,27 @@ const gui = (() => {
             el.classList.add('panel__content')
         });
 
-        header.append(_create('span', (el) => {
+        const _title = _create('span', (el) => {
             el.classList.add('panel__header__title');
             el.innerText = title;
-        }));
-        header.append(_create('div', (el) => {
-            el.innerHTML = "<div style=\"color: rgba(0, 0, 0, 0.7);\"><div style=\"background-color: rgba(0, 0, 0, 0.3); border-radius: 9999px; height: 16px; width: 16px;\"></div></div>";
-            el.addEventListener('click', () => {
-                root.style.display = 'none';
-                //document.addEventListener('keydown', (e) => {
-                //   if (e.key === 'Escape') {
+        });
+        header.append(_title);
 
-                // }
-                //})
-            })
+        header.append(_create('div', (el) => {
+            el.classList.add('panel__header__controls');
+
+            buttons?.forEach((b => el.append(_create('span', (el) => {
+                el.classList.add('panel__button');
+                b?.cl.forEach(class_ => el.classList.add(class_));
+                el.innerText = b.caption;
+                el.addEventListener('click', b.handler)
+            }))))
+
+            el.append(_create('span', (el) => {
+                el.classList.add('panel__button');
+                el.innerText = 'X';
+                el.addEventListener('click', () => toggle(false))
+            }))
         }))
 
         root.append(header, _content);
@@ -68,8 +81,28 @@ const gui = (() => {
             _content.append(content);
         }
 
+        const setContent = (content) => _content.replaceChildren(content)
 
-        return root;
+        const setLoad = (load = true) => {
+            state.loading = load;
+            _title.innerText = state.loading ? `${state.title}...` : state.title;
+        }
+
+        function toggle(show) {
+            state.shown = show;
+            if (state.shown) {
+                gui.show(_root);
+            } else {
+                gui.hide(_root);
+            }
+        }
+
+        return {
+            isHidden: () => !state.shown,
+            setContent,
+            setLoad,
+            toggle,
+        }
     }
 
     const _bind = (callback = function () {

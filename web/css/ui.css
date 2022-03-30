@@ -177,14 +177,21 @@
     justify-content: space-between;
 
     align-items: center;
-    padding: .5rem;
+    padding: .5rem .8rem;
 
     background-color: #f5f5f5;
     border-bottom: 1px solid #dbdbdb;
+
+    user-select: none;
 }
 
 .panel__header__title {
     letter-spacing: 1px;
+}
+
+.panel__header__controls {
+    display: flex;
+    gap: 0.3rem;
 }
 
 .panel__content {
@@ -197,4 +204,21 @@
     justify-content: flex-end;
     /* Border */
     border-top: 1px solid rgba(0, 0, 0.3);
+}
+
+.panel__button {
+    background-color: #dbdbdb;
+
+    padding: 2px 4px;
+}
+
+.panel__button:hover {
+    background-color: #7a7e7d;
+    color: white;
+
+    cursor: pointer;
+}
+
+.panel__button.bold {
+    font-weight: bold;
 }
