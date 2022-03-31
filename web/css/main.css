@@ -14,8 +14,9 @@ body {
 }
 
 #gamebody {
+    display: flex;
+
     overflow: hidden;
-    display: block;
     width: 556px;
     height: 286px;
 
@@ -787,7 +788,7 @@ body {
 }
 
 .dpad-toggle-label {
-    position: relative;
+    position: absolute;
     display: inline-block;
     width: 35px;
     height: 20px;
