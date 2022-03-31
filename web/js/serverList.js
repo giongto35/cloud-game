@@ -5,11 +5,12 @@
 const serverList = (() => {
     const id = 'servers',
         _class = 'server-list',
-        panel = gui.panel(document.getElementById(id), 'SERVERS', 'server-list', null, [
+        panel = gui.panel(document.getElementById(id), 'WORKERS', 'server-list', null, [
             {
                 caption: '⟳',
                 cl: ['bold'],
                 handler: handleReload,
+                title: 'Reload server data',
             }
         ]),
         index = ((i = 1) => ({v: () => i++, r: () => i = 1}))(),
@@ -32,6 +33,7 @@ const serverList = (() => {
                 renderer: (data) => data?.is_busy === true ? 'R' : ''
             },
             'use': {
+                caption: 'Use',
                 renderer: renderServerChangeEl
             }
         },

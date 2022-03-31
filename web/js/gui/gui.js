@@ -64,9 +64,8 @@ const gui = (() => {
 
             buttons.forEach((b => el.append(_create('span', (el) => {
                 el.classList.add('panel__button');
-                if (b.cl) {
-                    b.cl.forEach(class_ => el.classList.add(class_));
-                }
+                if (b.cl) b.cl.forEach(class_ => el.classList.add(class_));
+                if (b.title) el.title = b.title;
                 el.innerText = b.caption;
                 el.addEventListener('click', b.handler)
             }))))
@@ -74,6 +73,7 @@ const gui = (() => {
             el.append(_create('span', (el) => {
                 el.classList.add('panel__button');
                 el.innerText = 'X';
+                el.title = 'Close';
                 el.addEventListener('click', () => toggle(false))
             }))
         }))
