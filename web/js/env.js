@@ -2,7 +2,7 @@ const env = (() => {
     // UI
     const page = document.getElementsByTagName('html')[0];
     const gameBoy = document.getElementById('gamebody');
-    const ghRibbon = document.getElementById('ribbon');
+    const sourceLink = document.getElementsByClassName('source')[0];
 
     let isLayoutSwitched = false;
 
@@ -18,9 +18,16 @@ const env = (() => {
 
         rescaleGameBoy(targetWidth, targetHeight);
 
-        ghRibbon.style['bottom'] = isLayoutSwitched ? 0 : '';
-        ghRibbon.style['top'] = isLayoutSwitched ? '' : 0;
-        ghRibbon.style['transform'] = isLayoutSwitched ? 'rotate(90deg)' : '';
+        sourceLink.style['bottom'] = isLayoutSwitched ? 0 : '';
+        if (isLayoutSwitched) {
+            sourceLink.style.removeProperty('right');
+            sourceLink.style['left'] = 5;
+        } else {
+            sourceLink.style.removeProperty('left');
+            sourceLink.style['right'] = 5;
+        }
+        sourceLink.style['transform'] = isLayoutSwitched ? 'rotate(-90deg)' : '';
+        sourceLink.style['transform-origin'] = isLayoutSwitched ? 'left top' : '';
     };
 
     const rescaleGameBoy = (targetWidth, targetHeight) => {

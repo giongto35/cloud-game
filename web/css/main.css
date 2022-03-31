@@ -843,3 +843,11 @@ input:checked + .dpad-toggle-slider:before {
     color: #dddddd;
     text-shadow: -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000;
 }
+
+
+.source {
+    position: fixed;
+    bottom: 5px;
+    right: 5px;
+    color: white;
+}
