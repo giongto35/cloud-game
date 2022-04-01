@@ -77,6 +77,7 @@ type Server struct {
 	Replicas uint32 `json:"replicas,omitempty"`
 	Tag      string `json:"tag,omitempty"`
 	Zone     string `json:"zone,omitempty"`
+	Xid      string `json:"xid,omitempty"`
 }
 
 func (packet *GetServerListRequest) From(data string) error { return from(packet, data) }

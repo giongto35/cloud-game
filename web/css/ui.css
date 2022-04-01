@@ -195,7 +195,8 @@
 }
 
 .panel__content {
-    padding-top: .1rem;
+    padding-bottom: .5rem;
+    overflow-y: auto;
 }
 
 .panel__footer {

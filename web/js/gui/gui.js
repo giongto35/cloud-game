@@ -134,11 +134,11 @@ const gui = (() => {
     }
 
     const show = (el) => {
-        el.style.display = 'block';
+        el.style.removeProperty('visibility');
     }
 
     const hide = (el) => {
-        el.style.display = 'none';
+        el.style.visibility = 'hidden';
     }
 
     const toggle = (el, what) => {

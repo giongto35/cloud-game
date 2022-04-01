@@ -3,6 +3,7 @@ package coordinator
 import (
 	"encoding/json"
 	"errors"
+	"github.com/rs/xid"
 	"log"
 	"math"
 	"net"
@@ -96,6 +97,7 @@ func (s *Server) WSO(w http.ResponseWriter, r *http.Request) {
 	// Create a workerClient instance
 	wc := NewWorkerClient(c, workerID)
 	wc.Println("Generated worker ID")
+	wc.Id = xid.New()
 	wc.Addr = connRt.Addr
 	wc.Zone = connRt.Zone
 	wc.PingServer = connRt.PingURL
@@ -103,7 +105,7 @@ func (s *Server) WSO(w http.ResponseWriter, r *http.Request) {
 	wc.Tag = connRt.Tag
 
 	addr := getIP(c.RemoteAddr())
-	wc.Printf("addr: %v | zone: %v | ping: %v | tag: %v", addr, wc.Zone, wc.PingServer, wc.Tag)
+	wc.Printf("id: %v | addr: %v | zone: %v | ping: %v | tag: %v", wc.Id, addr, wc.Zone, wc.PingServer, wc.Tag)
 	wc.StunTurnServer = ice.ToJson(s.cfg.Webrtc.IceServers, ice.Replacement{From: "server-ip", To: addr})
 
 	// Attach to Server instance with workerID, add defer

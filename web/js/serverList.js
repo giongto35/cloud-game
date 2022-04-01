@@ -23,7 +23,7 @@ const serverList = (() => {
             },
             'id': {
                 caption: 'ID',
-                renderer: (data) => data?.id ? data.id : `??? [replicated] x ${data['replicas']}`
+                renderer: (data) => data?.id ? data.xid : `??? [replicated] x ${data['replicas']}`
             },
             'addr': {
                 caption: 'Address',
@@ -39,8 +39,6 @@ const serverList = (() => {
             }
         },
         fields = Object.keys(list);
-
-    // root.classList.add("hidden");
 
     // waiting for the socket to request data
     const onReady = () => handleReload()

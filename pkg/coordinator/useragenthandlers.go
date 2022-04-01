@@ -274,14 +274,14 @@ func (bc *BrowserClient) handleGetServerList(o *Server) cws.PacketHandler {
 			for _, s := range o.workerClients {
 				servers = append(servers, api.Server{
 					Addr: s.Addr, Id: s.WorkerID, IsBusy: !s.HasGameSlot(), PingURL: s.PingServer, Port: s.Port,
-					Tag: s.Tag, Zone: s.Zone,
+					Tag: s.Tag, Zone: s.Zone, Xid: s.Id.String(),
 				})
 			}
 		} else {
 			unique := map[string]*api.Server{}
 			for _, s := range o.workerClients {
 				if _, ok := unique[s.PingServer]; !ok {
-					unique[s.PingServer] = &api.Server{Addr: s.Addr, PingURL: s.PingServer}
+					unique[s.PingServer] = &api.Server{Addr: s.Addr, PingURL: s.PingServer, Xid: s.Id.String()}
 				}
 				unique[s.PingServer].Replicas++
 			}
