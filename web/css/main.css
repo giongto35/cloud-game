@@ -281,7 +281,8 @@ body {
     background-image: url('/static/img/ui/bt REC.png');
 }
 
-.record {}
+.record {
+}
 
 .record-user {
     position: absolute;
@@ -839,15 +840,18 @@ input:checked + .dpad-toggle-slider:before {
     transform: translateX(15px);
 }
 
-#version {
-    color: #dddddd;
-    text-shadow: -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000;
-}
-
-
 .source {
     position: fixed;
     bottom: 5px;
     right: 5px;
-    color: white;
+    color: #dddddd;
+    text-shadow: -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000;
+}
+
+.source #v {
+    cursor: default;
+}
+
+.source a {
+    color: #dddddd;
 }
