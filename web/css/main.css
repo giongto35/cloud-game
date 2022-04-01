@@ -231,10 +231,10 @@ body {
 
 #btn-help {
     padding-top: 0px;
-    width: 28px;
+    width: 20px;
     height: 28px;
 
-    top: 10px;
+    top: 16px;
     left: 23px;
 
     background-image: url('/static/img/ui/Help.png');
@@ -455,7 +455,7 @@ body {
 #room-txt {
     position: absolute;
     width: 59px;
-    top: 45px;
+    top: 48px;
     left: 23px;
     color: #bababa;
     padding-left: 0px;
@@ -794,7 +794,7 @@ body {
     width: 35px;
     height: 20px;
 
-    top: 44px;
+    top: 45px;
     left: 85px;
 }
 

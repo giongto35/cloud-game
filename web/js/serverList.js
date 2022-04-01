@@ -5,6 +5,7 @@
 const serverList = (() => {
     const id = 'servers',
         _class = 'server-list',
+        trigger = document.getElementById('w'),
         panel = gui.panel(document.getElementById(id), 'WORKERS', 'server-list', null, [
             {
                 caption: '⟳',
@@ -51,7 +52,6 @@ const serverList = (() => {
     }
 
     function _render(servers = []) {
-        panel.toggle(true);
         if (panel.isHidden()) return;
 
         const content = gui.fragment();
@@ -93,6 +93,13 @@ const serverList = (() => {
             el.addEventListener('click', handleServerChange);
         })
     }
+
+    panel.toggle(false);
+
+    trigger.addEventListener('click', () => {
+        handleReload();
+        panel.toggle(true);
+    })
 
     event.sub(SOCKET_READY, onReady);
     event.sub(GET_SERVER_LIST, onNewData);

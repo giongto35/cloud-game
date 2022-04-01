@@ -224,3 +224,18 @@
 .panel__button.bold {
     font-weight: bold;
 }
+
+
+.app-button {
+    position: absolute;
+    top: 34px;
+    left: 45px;
+    cursor: pointer;
+    font-size: 70%;
+    color: #606060;
+    font-family: '6809', sans-serif;
+}
+
+.app-button:hover {
+    color: #7e7e7e;
+}
