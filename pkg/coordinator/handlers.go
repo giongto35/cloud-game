@@ -162,9 +162,6 @@ func (s *Server) WS(w http.ResponseWriter, r *http.Request) {
 	// if there is no zone param, we can pick
 	userZone := q.Get("zone")
 	workerId := q.Get("wid")
-	workerAd := q.Get("wad")
-
-	_, _ = workerId, workerAd
 
 	// worker selection flow:
 	// by room -> by id -> by address -> by zone
@@ -187,10 +184,25 @@ func (s *Server) WS(w http.ResponseWriter, r *http.Request) {
 
 	// If there is no existing server to connect to, we find the best possible worker for the frontend
 	if wc == nil {
-		// Get best server for frontend to connect to
-		wc, err = s.getBestWorkerClient(bc, userZone)
-		if err != nil {
-			return
+		// when we select one particular worker
+		if workerId != "" {
+			if xid_, err := xid.FromString(workerId); err == nil {
+				for _, w := range s.workerClients {
+					if xid_ == w.Id {
+						wc = w
+						bc.Printf("Found worker with id: %v", xid_)
+						break
+					}
+				}
+			}
+		}
+
+		if wc == nil {
+			// Get best server for frontend to connect to
+			wc, err = s.getBestWorkerClient(bc, userZone)
+			if err != nil {
+				return
+			}
 		}
 	}
 

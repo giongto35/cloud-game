@@ -80,6 +80,8 @@ const workerManager = (() => {
     function renderServerChangeEl(server) {
         const handleServerChange = (e) => {
             e.preventDefault();
+            window.location.search = `wid=${server.xid}`
+            // window.location = window.location.pathname;
             console.log(server.addr, server.id);
         }
         return gui.create('a', (el) => {

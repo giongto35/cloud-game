@@ -28,8 +28,10 @@ const socket = (() => {
 
     let conn;
 
-    const init = (roomId, zone) => {
-        const params = new URLSearchParams({room_id: roomId, zone: zone}).toString()
+    const init = (roomId, wid, zone) => {
+        let objParams = {room_id: roomId, zone: zone};
+        if (wid) objParams.wid = wid;
+        const params = new URLSearchParams(objParams).toString()
         const address = `${location.protocol !== 'https:' ? 'ws' : 'wss'}://${location.host}/ws?${params}`;
         console.info(`[ws] connecting to ${address}`);
         conn = new WebSocket(address);
