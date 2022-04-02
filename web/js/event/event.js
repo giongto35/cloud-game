@@ -69,7 +69,6 @@ const GAME_PLAYER_IDX = 'gamePlayerIndex';
 
 const CONNECTION_READY = 'connectionReady';
 const CONNECTION_CLOSED = 'connectionClosed';
-const SOCKET_READY = 'socketReady'
 
 const MEDIA_STREAM_INITIALIZED = 'mediaStreamInitialized';
 const MEDIA_STREAM_SDP_AVAILABLE = 'mediaStreamSdpAvailable';

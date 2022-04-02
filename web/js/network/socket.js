@@ -58,7 +58,6 @@ const socket = (() => {
                     // const [stunturn, ...games] = data;
                     let serverData = JSON.parse(data.data);
                     event.pub(MEDIA_STREAM_INITIALIZED, {stunturn: serverData.shift(), games: serverData});
-                    event.pub(SOCKET_READY);
                     break;
                 case 'offer':
                     // this is offer from worker

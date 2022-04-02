@@ -40,9 +40,6 @@ const workerManager = (() => {
         },
         fields = Object.keys(list);
 
-    // waiting for the socket to request data
-    const onReady = () => handleReload()
-
     const onNewData = (dat = {servers: []}) => {
         panel.setLoad(false);
         index.r();
@@ -113,7 +110,6 @@ const workerManager = (() => {
         }))
     };
 
-    event.sub(SOCKET_READY, onReady);
     event.sub(GET_SERVER_LIST, onNewData);
 
     return {
