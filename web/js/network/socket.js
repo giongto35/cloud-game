@@ -27,7 +27,6 @@ const socket = (() => {
     let pingIntervalId = 0;
 
     let conn;
-    let curPacketId = '';
 
     const init = (roomId, zone) => {
         const params = new URLSearchParams({room_id: roomId, zone: zone}).toString()
@@ -84,9 +83,7 @@ const socket = (() => {
                     event.pub(GAME_PLAYER_IDX, data.data);
                     break;
                 case 'checkLatency':
-                    curPacketId = data.packet_id;
-                    const addresses = data.data.split(',');
-                    event.pub(LATENCY_CHECK_REQUESTED, {packetId: curPacketId, addresses: addresses});
+                    event.pub(LATENCY_CHECK_REQUESTED, {packetId: data.packet_id, addresses: data.data});
                     break;
                 case 'recording':
                     event.pub(RECORDING_STATUS_CHANGED, data.data);

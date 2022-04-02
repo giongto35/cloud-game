@@ -1,8 +1,8 @@
 /**
- * Server list module.
+ * Worker manager module.
  * @version 1
  */
-const serverList = (() => {
+const workerManager = (() => {
     const id = 'servers',
         _class = 'server-list',
         trigger = document.getElementById('w'),
@@ -99,8 +99,24 @@ const serverList = (() => {
         panel.toggle(true);
     })
 
+    const checkLatencies = (data) => {
+        const _addresses = data.addresses?.split(',') || [];
+        const timeoutMs = 1111;
+        // deduplicate
+        const addresses = [...new Set(_addresses)];
+
+        return Promise.all(addresses.map(address => {
+            const start = Date.now();
+            return ajax.fetch(`${address}?_=${start}`, {method: "GET", redirect: "follow"}, timeoutMs)
+                .then(() => ({[address]: Date.now() - start}))
+                .catch(() => ({[address]: 9999}));
+        }))
+    };
+
     event.sub(SOCKET_READY, onReady);
     event.sub(GET_SERVER_LIST, onNewData);
 
-    return {}
-})(document, event, gui, log, socket);
+    return {
+        checkLatencies,
+    }
+})(ajax, document, event, gui, log, socket);
