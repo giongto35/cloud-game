@@ -5,7 +5,7 @@
 coordinator:
   # debugging switch
   #   - allows selecting worker instances
-  debug: true
+  debug: false
   # games library
   library:
     # some directory which is gonna be the root folder for the library

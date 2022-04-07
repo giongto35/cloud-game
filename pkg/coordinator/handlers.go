@@ -1,6 +1,7 @@
 package coordinator
 
 import (
+	"bytes"
 	"encoding/json"
 	"errors"
 	"github.com/rs/xid"
@@ -187,18 +188,28 @@ func (s *Server) WS(w http.ResponseWriter, r *http.Request) {
 		// when we select one particular worker
 		if workerId != "" {
 			if xid_, err := xid.FromString(workerId); err == nil {
-				for _, w := range s.workerClients {
-					if xid_ == w.Id {
-						wc = w
-						bc.Printf("Found worker with id: %v", xid_)
-						break
+				if s.cfg.Coordinator.Debug {
+					for _, w := range s.workerClients {
+						if xid_ == w.Id {
+							wc = w
+							bc.Printf("[!] Worker found: %v", xid_)
+							break
+						}
+					}
+				} else {
+					for _, w := range s.workerClients {
+						if bytes.Equal(xid_.Machine(), w.Id.Machine()) {
+							wc = w
+							bc.Printf("[!] Machine %v found: %v", xid_.Machine(), xid_)
+							break
+						}
 					}
 				}
 			}
 		}
 
 		if wc == nil {
-			// Get best server for frontend to connect to
+			// Get the best server for frontend to connect to
 			wc, err = s.getBestWorkerClient(bc, userZone)
 			if err != nil {
 				return

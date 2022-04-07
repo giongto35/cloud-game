@@ -278,12 +278,14 @@ func (bc *BrowserClient) handleGetServerList(o *Server) cws.PacketHandler {
 				})
 			}
 		} else {
+			// not sure if []byte to string always reversible :/
 			unique := map[string]*api.Server{}
 			for _, s := range o.workerClients {
-				if _, ok := unique[s.PingServer]; !ok {
-					unique[s.PingServer] = &api.Server{Addr: s.Addr, PingURL: s.PingServer, Xid: s.Id.String()}
+				mid := string(s.Id.Machine())
+				if _, ok := unique[mid]; !ok {
+					unique[mid] = &api.Server{Addr: s.Addr, PingURL: s.PingServer, Xid: s.Id.String()}
 				}
-				unique[s.PingServer].Replicas++
+				unique[mid].Replicas++
 			}
 			for _, v := range unique {
 				servers = append(servers, *v)

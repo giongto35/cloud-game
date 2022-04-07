@@ -10,7 +10,7 @@ const workerManager = (() => {
             {
                 caption: '⟳',
                 cl: ['bold'],
-                handler: handleReload,
+                handler: utils.debounce(handleReload, 1000),
                 title: 'Reload server data',
             }
         ]),
@@ -23,7 +23,7 @@ const workerManager = (() => {
             },
             'id': {
                 caption: 'ID',
-                renderer: (data) => data?.id ? data.xid : `??? [replicated] x ${data['replicas']}`
+                renderer: (data) => data?.id ? data.xid : `${data.xid} [replicated] x ${data['replicas']}`
             },
             'addr': {
                 caption: 'Address',
@@ -117,4 +117,4 @@ const workerManager = (() => {
     return {
         checkLatencies,
     }
-})(ajax, document, event, gui, log, socket);
+})(ajax, document, event, gui, log, socket, utils);
