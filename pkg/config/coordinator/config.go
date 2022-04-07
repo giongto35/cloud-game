@@ -12,6 +12,7 @@ import (
 
 type Config struct {
 	Coordinator struct {
+		Debug      bool
 		Library    games.Config
 		Monitoring monitoring.Config
 		Origin     struct {

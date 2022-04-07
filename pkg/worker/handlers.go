@@ -127,11 +127,15 @@ func newCoordinatorConnection(host string, conf worker.Worker, addr string) (*Co
 	return NewCoordinatorClient(conn), nil
 }
 
-func MakeConnectionRequest(conf worker.Worker, address string) (string, error) {
+func MakeConnectionRequest(w worker.Worker, address string) (string, error) {
+	addr := w.GetPingAddr(address)
 	req := api.ConnectionRequest{
-		Zone:     conf.Network.Zone,
-		PingAddr: conf.GetPingAddr(address),
-		IsHTTPS:  conf.Server.Https,
+		Addr:    addr.Hostname(),
+		IsHTTPS: w.Server.Https,
+		PingURL: addr.String(),
+		Port:    w.GetPort(address),
+		Tag:     w.Tag,
+		Zone:    w.Network.Zone,
 	}
 	rez, err := json.Marshal(req)
 	if err != nil {

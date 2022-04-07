@@ -2,6 +2,7 @@ package coordinator
 
 import (
 	"fmt"
+	"github.com/rs/xid"
 	"log"
 	"sync"
 
@@ -12,10 +13,15 @@ import (
 type WorkerClient struct {
 	*cws.Client
 
+	Id xid.ID
+
 	WorkerID string
+	Addr     string
 	// public server used for ping check
 	PingServer     string
+	Port           string
 	StunTurnServer string
+	Tag            string
 	userCount      int // may be atomic
 	Zone           string
 

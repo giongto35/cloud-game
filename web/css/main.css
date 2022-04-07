@@ -7,11 +7,16 @@ html {
 body {
     background-image: url('/static/img/background.jpg');
     background-repeat: repeat;
+
+    align-items: center;
+    display: flex;
+    justify-content: center;
 }
 
 #gamebody {
+    display: flex;
+
     overflow: hidden;
-    display: block;
     width: 556px;
     height: 286px;
 
@@ -226,10 +231,10 @@ body {
 
 #btn-help {
     padding-top: 0px;
-    width: 28px;
+    width: 20px;
     height: 28px;
 
-    top: 10px;
+    top: 16px;
     left: 23px;
 
     background-image: url('/static/img/ui/Help.png');
@@ -276,7 +281,8 @@ body {
     background-image: url('/static/img/ui/bt REC.png');
 }
 
-.record {}
+.record {
+}
 
 .record-user {
     position: absolute;
@@ -449,7 +455,7 @@ body {
 #room-txt {
     position: absolute;
     width: 59px;
-    top: 45px;
+    top: 48px;
     left: 23px;
     color: #bababa;
     padding-left: 0px;
@@ -783,12 +789,12 @@ body {
 }
 
 .dpad-toggle-label {
-    position: relative;
+    position: absolute;
     display: inline-block;
     width: 35px;
     height: 20px;
 
-    top: 44px;
+    top: 45px;
     left: 85px;
 }
 
@@ -834,7 +840,18 @@ input:checked + .dpad-toggle-slider:before {
     transform: translateX(15px);
 }
 
-#version {
+.source {
+    position: fixed;
+    bottom: 5px;
+    right: 5px;
     color: #dddddd;
     text-shadow: -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000;
+}
+
+.source #v {
+    cursor: default;
+}
+
+.source a {
+    color: #dddddd;
 }

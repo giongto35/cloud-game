@@ -1,8 +1,10 @@
 package coordinator
 
 import (
+	"bytes"
 	"encoding/json"
 	"errors"
+	"github.com/rs/xid"
 	"log"
 	"math"
 	"net"
@@ -67,7 +69,9 @@ func (s *Server) WSO(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if connRt.PingAddr == "" {
+	log.Printf("%v", connRt)
+
+	if connRt.PingURL == "" {
 		log.Printf("Warning! Ping address is not set.")
 	}
 
@@ -94,11 +98,15 @@ func (s *Server) WSO(w http.ResponseWriter, r *http.Request) {
 	// Create a workerClient instance
 	wc := NewWorkerClient(c, workerID)
 	wc.Println("Generated worker ID")
+	wc.Id = xid.New()
+	wc.Addr = connRt.Addr
 	wc.Zone = connRt.Zone
-	wc.PingServer = connRt.PingAddr
+	wc.PingServer = connRt.PingURL
+	wc.Port = connRt.Port
+	wc.Tag = connRt.Tag
 
 	addr := getIP(c.RemoteAddr())
-	wc.Printf("addr: %v | zone: %v | ping: %v", addr, wc.Zone, wc.PingServer)
+	wc.Printf("id: %v | addr: %v | zone: %v | ping: %v | tag: %v", wc.Id, addr, wc.Zone, wc.PingServer, wc.Tag)
 	wc.StunTurnServer = ice.ToJson(s.cfg.Webrtc.IceServers, ice.Replacement{From: "server-ip", To: addr})
 
 	// Attach to Server instance with workerID, add defer
@@ -149,10 +157,15 @@ func (s *Server) WS(w http.ResponseWriter, r *http.Request) {
 
 	// get roomID if it is embeded in request. Server will pair the frontend with the server running the room. It only happens when we are trying to access a running room over share link.
 	// TODO: Update link to the wiki
-	roomID := r.URL.Query().Get("room_id")
+	q := r.URL.Query()
+	roomID := q.Get("room_id")
 	// zone param is to pick worker in that zone only
-	// if there is no zone param, we can pic
-	userZone := r.URL.Query().Get("zone")
+	// if there is no zone param, we can pick
+	userZone := q.Get("zone")
+	workerId := q.Get("wid")
+
+	// worker selection flow:
+	// by room -> by id -> by address -> by zone
 
 	bc.Printf("Get Room %s Zone %s From URL %v", roomID, userZone, r.URL)
 
@@ -161,7 +174,7 @@ func (s *Server) WS(w http.ResponseWriter, r *http.Request) {
 		if workerID, ok := s.roomToWorker[roomID]; ok {
 			wc = s.workerClients[workerID]
 			if userZone != "" && wc.Zone != userZone {
-				// if there is zone param, we need to ensure ther worker in that zone
+				// if there is zone param, we need to ensure the worker in that zone
 				// if not we consider the room is missing
 				wc = nil
 			} else {
@@ -172,10 +185,35 @@ func (s *Server) WS(w http.ResponseWriter, r *http.Request) {
 
 	// If there is no existing server to connect to, we find the best possible worker for the frontend
 	if wc == nil {
-		// Get best server for frontend to connect to
-		wc, err = s.getBestWorkerClient(bc, userZone)
-		if err != nil {
-			return
+		// when we select one particular worker
+		if workerId != "" {
+			if xid_, err := xid.FromString(workerId); err == nil {
+				if s.cfg.Coordinator.Debug {
+					for _, w := range s.workerClients {
+						if xid_ == w.Id {
+							wc = w
+							bc.Printf("[!] Worker found: %v", xid_)
+							break
+						}
+					}
+				} else {
+					for _, w := range s.workerClients {
+						if bytes.Equal(xid_.Machine(), w.Id.Machine()) {
+							wc = w
+							bc.Printf("[!] Machine %v found: %v", xid_.Machine(), xid_)
+							break
+						}
+					}
+				}
+			}
+		}
+
+		if wc == nil {
+			// Get the best server for frontend to connect to
+			wc, err = s.getBestWorkerClient(bc, userZone)
+			if err != nil {
+				return
+			}
 		}
 	}
 
@@ -223,7 +261,6 @@ func (s *Server) getAvailableWorkers() map[string]*WorkerClient {
 			workerClients[k] = w
 		}
 	}
-
 	return workerClients
 }
 

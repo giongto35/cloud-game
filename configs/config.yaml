@@ -3,6 +3,9 @@
 #
 
 coordinator:
+  # debugging switch
+  #   - allows selecting worker instances
+  debug: false
   # games library
   library:
     # some directory which is gonna be the root folder for the library
@@ -82,6 +85,8 @@ worker:
       # Own certs config
       httpsCert:
       httpsKey:
+  # optional server tag
+  tag:
 
 emulator:
   # set output viewport scale factor

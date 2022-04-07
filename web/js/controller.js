@@ -72,22 +72,12 @@
         }
     };
 
-    const onLatencyCheck = (data) => {
+    const onLatencyCheck = async (data) => {
         message.show('Connecting to fastest server...');
-        const timeoutMs = 1111;
-        // deduplicate
-        const addresses = [...new Set(data.addresses || [])];
-
-        Promise.all(addresses.map(address => {
-            const start = Date.now();
-            return ajax.fetch(`${address}?_=${start}`, {method: "GET", redirect: "follow"}, timeoutMs)
-                .then(() => ({[address]: Date.now() - start}))
-                .catch(() => ({[address]: 9999}));
-        })).then(servers => {
-            const latencies = Object.assign({}, ...servers);
-            log.info('[ping] <->', latencies);
-            socket.latency(latencies, data.packetId);
-        });
+        const servers = await workerManager.checkLatencies(data);
+        const latencies = Object.assign({}, ...servers);
+        log.info('[ping] <->', latencies);
+        socket.latency(latencies, data.packetId);
     };
 
     const helpScreen = {

@@ -27,10 +27,11 @@ const socket = (() => {
     let pingIntervalId = 0;
 
     let conn;
-    let curPacketId = '';
 
-    const init = (roomId, zone) => {
-        const params = new URLSearchParams({room_id: roomId, zone: zone}).toString()
+    const init = (roomId, wid, zone) => {
+        let objParams = {room_id: roomId, zone: zone};
+        if (wid) objParams.wid = wid;
+        const params = new URLSearchParams(objParams).toString()
         const address = `${location.protocol !== 'https:' ? 'ws' : 'wss'}://${location.host}/ws?${params}`;
         console.info(`[ws] connecting to ${address}`);
         conn = new WebSocket(address);
@@ -41,7 +42,7 @@ const socket = (() => {
             log.info('[ws] <- open connection');
             log.info(`[ws] -> setting ping interval to ${pingIntervalMs}ms`);
             // !to add destructor if SPA
-            pingIntervalId = setInterval(ping, pingIntervalMs)
+            pingIntervalId = setInterval(ping, pingIntervalMs);
         };
         conn.onerror = () => log.error('[ws] some error!');
         conn.onclose = (event) => log.info(`[ws] closed (${event.code})`);
@@ -83,12 +84,13 @@ const socket = (() => {
                     event.pub(GAME_PLAYER_IDX, data.data);
                     break;
                 case 'checkLatency':
-                    curPacketId = data.packet_id;
-                    const addresses = data.data.split(',');
-                    event.pub(LATENCY_CHECK_REQUESTED, {packetId: curPacketId, addresses: addresses});
+                    event.pub(LATENCY_CHECK_REQUESTED, {packetId: data.packet_id, addresses: data.data});
                     break;
                 case 'recording':
                     event.pub(RECORDING_STATUS_CHANGED, data.data);
+                    break;
+                case 'get_server_list':
+                    event.pub(GET_SERVER_LIST, JSON.parse(data.data));
                     break;
             }
         };
@@ -139,6 +141,7 @@ const socket = (() => {
     const toggleRecording = (active = false, userName = '') => send({
         "id": "recording", "data": JSON.stringify({"active": active, "user": userName,})
     })
+    const getServerList = () => send({"id": "get_server_list", "data": "{}"})
 
     return {
         init: init,
@@ -152,5 +155,6 @@ const socket = (() => {
         quitGame: quitGame,
         toggleMultitap: toggleMultitap,
         toggleRecording: toggleRecording,
+        getServerList,
     }
 })(event, log);

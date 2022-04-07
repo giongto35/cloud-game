@@ -128,3 +128,115 @@
     flex-direction: column;
     align-items: center;
 }
+
+/* Server list styling */
+#servers {
+    background-color: white;
+    font-size: 12px;
+
+    font-family: '6809', monospace;
+
+    z-index: 1;
+    position: relative;
+
+    opacity: .95;
+
+    cursor: default;
+}
+
+.server-list div {
+    display: grid;
+    grid-template-columns: .2fr 2.2fr 1fr .5fr .2fr;
+    justify-items: start;
+
+
+    padding: 0 1em 0 1em;
+}
+
+.server-list div:not(.server-list__header):hover {
+    background-color: #e7e7e7;
+}
+
+.server-list .server-list__header {
+    font-weight: bold;
+    padding: 1em 1em .6em 1em;
+}
+
+.server-list .server-list__header span {
+    border-bottom: 1px dashed black;
+}
+
+/* Panel element */
+.panel {
+    display: flex;
+    flex-grow: 1;
+    flex-direction: column;
+}
+
+.panel__header {
+    display: flex;
+    justify-content: space-between;
+
+    align-items: center;
+    padding: .5rem .8rem;
+
+    background-color: #f5f5f5;
+
+    user-select: none;
+}
+
+.panel__header__title {
+    letter-spacing: 1px;
+}
+
+.panel__header__controls {
+    display: flex;
+    gap: 0.3rem;
+}
+
+.panel__content {
+    padding-bottom: .5rem;
+    overflow-y: auto;
+}
+
+.panel__footer {
+    display: flex;
+    /* Push the buttons to the right */
+    justify-content: flex-end;
+    /* Border */
+    border-top: 1px solid rgba(0, 0, 0.3);
+}
+
+.panel__button {
+    background-color: #ededed;
+
+    padding: 2px 4px;
+    width: 0.7rem;
+    text-align: center;
+}
+
+.panel__button:hover {
+    background-color: #7a7e7d;
+    color: white;
+
+    cursor: pointer;
+}
+
+.panel__button.bold {
+    font-weight: bold;
+}
+
+
+.app-button {
+    position: absolute;
+    top: 34px;
+    left: 45px;
+    cursor: pointer;
+    font-size: 70%;
+    color: #606060;
+    font-family: '6809', sans-serif;
+}
+
+.app-button:hover {
+    color: #7e7e7e;
+}

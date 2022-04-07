@@ -3,6 +3,7 @@ package coordinator
 import (
 	"errors"
 	"fmt"
+	"sort"
 
 	"github.com/giongto35/cloud-game/v2/pkg/cws"
 	"github.com/giongto35/cloud-game/v2/pkg/cws/api"
@@ -259,4 +260,49 @@ func newGameStartCall(roomId string, data string, library games.GameLibrary, rec
 		call.RecordUser = request.RecordUser
 	}
 	return call, nil
+}
+
+func (bc *BrowserClient) handleGetServerList(o *Server) cws.PacketHandler {
+	return func(resp cws.WSPacket) (req cws.WSPacket) {
+		var request api.GetServerListRequest
+		if err := request.From(resp.Data); err != nil {
+			return cws.EmptyPacket
+		}
+		response := api.GetServerListResponse{}
+		var servers []api.Server
+		if o.cfg.Coordinator.Debug {
+			for _, s := range o.workerClients {
+				servers = append(servers, api.Server{
+					Addr: s.Addr, Id: s.WorkerID, IsBusy: !s.HasGameSlot(), PingURL: s.PingServer, Port: s.Port,
+					Tag: s.Tag, Zone: s.Zone, Xid: s.Id.String(),
+				})
+			}
+		} else {
+			// not sure if []byte to string always reversible :/
+			unique := map[string]*api.Server{}
+			for _, s := range o.workerClients {
+				mid := string(s.Id.Machine())
+				if _, ok := unique[mid]; !ok {
+					unique[mid] = &api.Server{Addr: s.Addr, PingURL: s.PingServer, Xid: s.Id.String()}
+				}
+				unique[mid].Replicas++
+			}
+			for _, v := range unique {
+				servers = append(servers, *v)
+			}
+		}
+		sort.SliceStable(servers, func(i, j int) bool {
+			if servers[i].Addr != servers[j].Addr {
+				return servers[i].Addr < servers[j].Addr
+			}
+			return servers[i].Port < servers[j].Port
+		})
+		response.Servers = servers
+		if packet, err := response.To(); err != nil {
+			return cws.EmptyPacket
+		} else {
+			resp.Data = packet
+		}
+		return resp
+	}
 }

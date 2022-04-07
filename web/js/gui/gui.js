@@ -5,7 +5,13 @@
  */
 const gui = (() => {
 
-    const _create = (name = 'div') => document.createElement(name);
+    const _create = (name = 'div', modFn) => {
+        const el = document.createElement(name);
+        if (modFn) {
+            modFn(el);
+        }
+        return el;
+    }
 
     const _option = (text = '', selected = false) => {
         const el = _create('option');
@@ -28,6 +34,77 @@ const gui = (() => {
         for (let value of values) select.append(_option(value, current === value));
 
         return el;
+    }
+
+    const panel = (root, title = '', cc = '', content, buttons = []) => {
+        const state = {
+            shown: false,
+            loading: false,
+            title: title,
+        }
+
+        const _root = root || _create('div');
+        _root.classList.add('panel');
+        const header = _create('div', (el) => el.classList.add('panel__header'));
+        const _content = _create('div', (el) => {
+            if (cc) {
+                el.classList.add(cc);
+            }
+            el.classList.add('panel__content')
+        });
+
+        const _title = _create('span', (el) => {
+            el.classList.add('panel__header__title');
+            el.innerText = title;
+        });
+        header.append(_title);
+
+        header.append(_create('div', (el) => {
+            el.classList.add('panel__header__controls');
+
+            buttons.forEach((b => el.append(_create('span', (el) => {
+                el.classList.add('panel__button');
+                if (b.cl) b.cl.forEach(class_ => el.classList.add(class_));
+                if (b.title) el.title = b.title;
+                el.innerText = b.caption;
+                el.addEventListener('click', b.handler)
+            }))))
+
+            el.append(_create('span', (el) => {
+                el.classList.add('panel__button');
+                el.innerText = 'X';
+                el.title = 'Close';
+                el.addEventListener('click', () => toggle(false))
+            }))
+        }))
+
+        root.append(header, _content);
+        if (content) {
+            _content.append(content);
+        }
+
+        const setContent = (content) => _content.replaceChildren(content)
+
+        const setLoad = (load = true) => {
+            state.loading = load;
+            _title.innerText = state.loading ? `${state.title}...` : state.title;
+        }
+
+        function toggle(show) {
+            state.shown = show;
+            if (state.shown) {
+                gui.show(_root);
+            } else {
+                gui.hide(_root);
+            }
+        }
+
+        return {
+            isHidden: () => !state.shown,
+            setContent,
+            setLoad,
+            toggle,
+        }
     }
 
     const _bind = (callback = function () {
@@ -57,11 +134,11 @@ const gui = (() => {
     }
 
     const show = (el) => {
-        el.style.display = 'block';
+        el.style.removeProperty('visibility');
     }
 
     const hide = (el) => {
-        el.style.display = 'none';
+        el.style.visibility = 'hidden';
     }
 
     const toggle = (el, what) => {
@@ -77,7 +154,7 @@ const gui = (() => {
         el.style.display = 'block';
         return new Promise((done) => (function fade() {
                 let val = parseFloat(el.style.opacity);
-                const proceed = ((val += 0.1) <= 1);
+                const proceed = ((val += speed) <= 1);
                 if (proceed) {
                     el.style.opacity = '' + val;
                     requestAnimationFrame(fade);
@@ -101,6 +178,8 @@ const gui = (() => {
         )
     }
 
+    const fragment = () => document.createDocumentFragment();
+
     const sleep = async (ms) => new Promise(resolve => setTimeout(resolve, ms));
 
     const fadeInOut = async (el, wait = 1000, speed = .1) => {
@@ -115,11 +194,13 @@ const gui = (() => {
             fadeOut,
             fadeInOut,
         },
-        create: _create,
-        select,
         binding,
-        show,
+        create: _create,
+        fragment,
         hide,
+        panel,
+        select,
+        show,
         toggle,
     }
 })(document);
