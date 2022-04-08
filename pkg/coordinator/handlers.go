@@ -233,7 +233,7 @@ func (s *Server) WS(w http.ResponseWriter, r *http.Request) {
 
 	bc.Send(cws.WSPacket{
 		ID:   "init",
-		Data: createInitPackage(wc.StunTurnServer, s.library.GetAll()),
+		Data: createInitPackage(wc.Id, wc.StunTurnServer, s.library.GetAll()),
 	}, nil)
 
 	// If peerconnection is done (client.Done is signalled), we close peerconnection
@@ -360,15 +360,14 @@ func (s *Server) cleanWorker(wc *WorkerClient, workerID string) {
 	wc.Close()
 }
 
-// createInitPackage returns serverhost + game list in encoded wspacket format
+// createInitPackage returns xid + serverhost + game list in encoded wspacket format
 // This package will be sent to initialize
-func createInitPackage(stunturn string, games []games.GameMetadata) string {
+func createInitPackage(id xid.ID, stunturn string, games []games.GameMetadata) string {
 	var gameName []string
 	for _, game := range games {
 		gameName = append(gameName, game.Name)
 	}
-
-	initPackage := append([]string{stunturn}, gameName...)
+	initPackage := append([]string{id.String(), stunturn}, gameName...)
 	encodedList, _ := json.Marshal(initPackage)
 	return string(encodedList)
 }

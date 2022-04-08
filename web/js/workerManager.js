@@ -40,10 +40,16 @@ const workerManager = (() => {
         },
         fields = Object.keys(list);
 
+    let state = {
+        lastId: null,
+        workers: [],
+    }
+
     const onNewData = (dat = {servers: []}) => {
         panel.setLoad(false);
         index.r();
-        _render(dat?.servers);
+        state.workers = dat?.servers || [];
+        _render(state.workers);
     }
 
     function _render(servers = []) {
@@ -63,11 +69,16 @@ const workerManager = (() => {
         });
         content.append(header)
 
-        const renderRow = (server) => (row) => fields.forEach(field => {
-            const val = server.hasOwnProperty(field) ? server[field] : '';
-            const renderer = list[field]?.renderer;
-            row.append(gui.create('span', (f) => f.append(renderer ? renderer(server) : val)));
-        })
+        const renderRow = (server) => (row) => {
+            if (server?.id && state.lastId && state.lastId === server?.xid) {
+                row.classList.add('active');
+            }
+            return fields.forEach(field => {
+                const val = server.hasOwnProperty(field) ? server[field] : '';
+                const renderer = list[field]?.renderer;
+                row.append(gui.create('span', (f) => f.append(renderer ? renderer(server) : val)));
+            })
+        }
         servers.forEach(server => content.append(gui.create('div', renderRow(server))))
         panel.setContent(content);
     }
@@ -112,9 +123,15 @@ const workerManager = (() => {
         }))
     };
 
+    const whoami = (id) => {
+        state.lastId = id;
+        _render(state.workers);
+    }
+
     event.sub(GET_SERVER_LIST, onNewData);
 
     return {
         checkLatencies,
+        whoami,
     }
 })(ajax, document, event, gui, log, socket, utils);

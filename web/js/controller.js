@@ -428,6 +428,7 @@
     });
 
     event.sub(MEDIA_STREAM_INITIALIZED, (data) => {
+        workerManager.whoami(data.xid);
         rtcp.start(data.stunturn);
         gameList.set(data.games);
     });
@@ -463,4 +464,4 @@
 
     // initial app state
     setState(app.state.eden);
-})(document, event, env, gameList, input, KEY, log, message, recording, room, rtcp, settings, socket, stats, stream, utils);
+})(document, event, env, gameList, input, KEY, log, message, recording, room, rtcp, settings, socket, stats, stream, utils, workerManager);

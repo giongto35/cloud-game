@@ -157,6 +157,12 @@
     background-color: #e7e7e7;
 }
 
+.server-list div.active::before {
+    content: '>';
+    position: absolute;
+    left: 4px;
+}
+
 .server-list .server-list__header {
     font-weight: bold;
     padding: 1em 1em .6em 1em;

@@ -56,10 +56,10 @@ const socket = (() => {
             switch (message) {
                 case 'init':
                     // TODO: Read from struct
-                    // init package has 2 part [stunturn, game1, game2, game3 ...]
-                    // const [stunturn, ...games] = data;
-                    let serverData = JSON.parse(data.data);
-                    event.pub(MEDIA_STREAM_INITIALIZED, {stunturn: serverData.shift(), games: serverData});
+                    // init package has 3 part [xid, stunturn, game1, game2, game3 ...]
+                    const [xid, stunturn, ...games] = JSON.parse(data.data);
+                    // let serverData = data.data);
+                    event.pub(MEDIA_STREAM_INITIALIZED, {xid: xid, stunturn: stunturn, games: games});
                     break;
                 case 'offer':
                     // this is offer from worker
