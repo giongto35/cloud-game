@@ -58,6 +58,7 @@ type ConnectionRequest struct {
 	Port    string `json:"port,omitempty"`
 	Tag     string `json:"tag,omitempty"`
 	Zone    string `json:"zone,omitempty"`
+	Xid     string `json:"xid,omitempty"`
 }
 
 type GetServerListRequest struct{}

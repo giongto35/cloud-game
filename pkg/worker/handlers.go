@@ -18,6 +18,7 @@ import (
 	"github.com/giongto35/cloud-game/v2/pkg/storage"
 	"github.com/giongto35/cloud-game/v2/pkg/webrtc"
 	"github.com/giongto35/cloud-game/v2/pkg/worker/room"
+	"github.com/rs/xid"
 )
 
 type Handler struct {
@@ -136,6 +137,7 @@ func MakeConnectionRequest(w worker.Worker, address string) (string, error) {
 		Port:    w.GetPort(address),
 		Tag:     w.Tag,
 		Zone:    w.Network.Zone,
+		Xid:     xid.New().String(),
 	}
 	rez, err := json.Marshal(req)
 	if err != nil {

@@ -19,11 +19,11 @@ const workerManager = (() => {
         // renderer -- an arbitrary DOM output for the field
         list = {
             'n': {
-                renderer: () => String(index.v()).padStart(2, '0')
+                renderer: renderIdEl
             },
             'id': {
                 caption: 'ID',
-                renderer: (data) => data?.id ? data.xid : `${data.xid} [replicated] x ${data['replicas']}`
+                renderer: (data) => data?.id ? data.xid : `${data.xid} x ${data['replicas']}`
             },
             'addr': {
                 caption: 'Address',
@@ -86,6 +86,12 @@ const workerManager = (() => {
     function handleReload() {
         panel.setLoad(true);
         socket.getServerList();
+    }
+
+    function renderIdEl(server) {
+        const id = String(index.v()).padStart(2, '0');
+        const isActive = server?.id && state.lastId && state.lastId === server?.xid
+        return `${(isActive ? '>' : '')}${id}`
     }
 
     function renderServerChangeEl(server) {

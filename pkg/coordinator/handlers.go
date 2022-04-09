@@ -98,7 +98,13 @@ func (s *Server) WSO(w http.ResponseWriter, r *http.Request) {
 	// Create a workerClient instance
 	wc := NewWorkerClient(c, workerID)
 	wc.Println("Generated worker ID")
-	wc.Id = xid.New()
+	if connRt.Xid != "" {
+		if wc.Id, err = xid.FromString(connRt.Xid); err != nil {
+			wc.Id = xid.New()
+		}
+	} else {
+		wc.Id = xid.New()
+	}
 	wc.Addr = connRt.Addr
 	wc.Zone = connRt.Zone
 	wc.PingServer = connRt.PingURL
