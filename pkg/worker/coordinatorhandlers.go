@@ -12,9 +12,10 @@ import (
 )
 
 func MakeConnectionRequest(conf worker.Worker, address string) (string, error) {
+	addr := conf.GetPingAddr(address)
 	return toBase64Json(api.ConnectionRequest{
 		Zone:     conf.Network.Zone,
-		PingAddr: conf.GetPingAddr(address),
+		PingAddr: addr.String(),
 		IsHTTPS:  conf.Server.Https,
 	})
 }
@@ -143,9 +144,12 @@ func (c *Coordinator) HandleGameStart(packet ipc.InPacket, h *Handler) {
 		playRoom.PollUserInput(user)
 	}
 	// Register room to coordinator if we are connecting to coordinator
-	if playRoom != nil {
-		h.cord.RegisterRoom(playRoom.ID)
+	if playRoom == nil {
+		c.log.Error().Msgf("couldn't create a room [%v]", resp.Stateful.Id)
+		_ = h.cord.SendPacket(packet.Proxy(ipc.EmptyPacket))
+		return
 	}
+	h.cord.RegisterRoom(playRoom.ID)
 	user.SetRoom(playRoom)
 	h.router.AddRoom(playRoom)
 	_ = h.cord.SendPacket(packet.Proxy(api.StartGameResponse{
