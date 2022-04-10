@@ -2,12 +2,14 @@ package coordinator
 
 import (
 	"encoding/json"
+	"sort"
 	"strconv"
 
 	"github.com/giongto35/cloud-game/v2/pkg/api"
 	"github.com/giongto35/cloud-game/v2/pkg/config/coordinator"
 	"github.com/giongto35/cloud-game/v2/pkg/config/shared"
 	"github.com/giongto35/cloud-game/v2/pkg/launcher"
+	"github.com/rs/xid"
 )
 
 func (u *User) HandleWebrtcInit() {
@@ -159,4 +161,37 @@ func (u *User) HandleRecordGame(data json.RawMessage, conf shared.Recording) {
 		return
 	}
 	u.Notify(api.RecordGame, resp)
+}
+
+func (u *User) handleGetWorkerList(debug bool, info ServerInfo) {
+	response := api.GetWorkerListResponse{}
+	servers := info.getServerList()
+
+	if debug {
+		response.Servers = servers
+	} else {
+		// not sure if []byte to string always reversible :/
+		unique := map[string]*api.Server{}
+		for _, s := range servers {
+			if id, err := xid.FromString(s.Id); err == nil {
+				mid := string(id.Machine())
+				if _, ok := unique[mid]; !ok {
+					unique[mid] = &api.Server{Addr: s.Addr, PingURL: s.PingURL, Id: s.Id, InGroup: true}
+				}
+				unique[mid].Replicas++
+			}
+		}
+		for _, v := range unique {
+			response.Servers = append(response.Servers, *v)
+		}
+	}
+	if len(response.Servers) > 0 {
+		sort.SliceStable(response.Servers, func(i, j int) bool {
+			if response.Servers[i].Addr != response.Servers[j].Addr {
+				return response.Servers[i].Addr < response.Servers[j].Addr
+			}
+			return response.Servers[i].Port < response.Servers[j].Port
+		})
+	}
+	u.Notify(api.GetWorkerList, response)
 }

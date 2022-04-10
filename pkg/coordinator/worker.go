@@ -1,6 +1,7 @@
 package coordinator
 
 import (
+	"github.com/giongto35/cloud-game/v2/pkg/network"
 	"sync/atomic"
 
 	"github.com/giongto35/cloud-game/v2/pkg/api"
@@ -13,7 +14,10 @@ type Worker struct {
 	client.SocketClient
 	client.RegionalClient
 
+	Addr       string
 	PingServer string
+	Port       string
+	Tag        string
 	users      int32
 	log        *logger.Logger
 	Zone       string
@@ -21,6 +25,12 @@ type Worker struct {
 
 func NewWorkerClient(conn *ipc.Client, log *logger.Logger) Worker {
 	c := client.New(conn, "w", log)
+	defer c.GetLogger().Info().Msg("Connect")
+	return Worker{SocketClient: c, log: c.GetLogger()}
+}
+
+func NewWorkerClientWithId(id network.Uid, conn *ipc.Client, log *logger.Logger) Worker {
+	c := client.NewWithId(id, conn, "w", log)
 	defer c.GetLogger().Info().Msg("Connect")
 	return Worker{SocketClient: c, log: c.GetLogger()}
 }

@@ -25,7 +25,8 @@ func newCoordinatorConnection(host string, conf worker.Worker, addr string, log 
 	}
 	address := url.URL{Scheme: scheme, Host: host, Path: conf.Network.Endpoint}
 
-	req, err := MakeConnectionRequest(conf, addr)
+	id := network.NewUid()
+	req, err := MakeConnectionRequest(id.String(), conf, addr)
 	if req != "" && err == nil {
 		address.RawQuery = "data=" + req
 	}
@@ -34,7 +35,7 @@ func newCoordinatorConnection(host string, conf worker.Worker, addr string, log 
 	if err != nil {
 		return Coordinator{}, err
 	}
-	return Coordinator{SocketClient: client.New(conn, "c", log), log: log}, nil
+	return Coordinator{SocketClient: client.NewWithId(id, conn, "c", log), log: log}, nil
 }
 
 func (c *Coordinator) HandleRequests(h *Handler) {

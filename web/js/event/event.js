@@ -58,7 +58,7 @@ const LATENCY_CHECK_REQUESTED = 'latencyCheckRequested';
 const PING_REQUEST = 'pingRequest';
 const PING_RESPONSE = 'pingResponse';
 
-const GET_SERVER_LIST = 'getServerList';
+const WORKER_LIST_FETCHED = 'workerListFetched';
 
 const GAME_ROOM_AVAILABLE = 'gameRoomAvailable';
 const GAME_SAVED = 'gameSaved';

@@ -19,6 +19,7 @@ const api = (() => {
         GAME_SET_PLAYER_INDEX: 108,
         GAME_TOGGLE_MULTITAP: 109,
         GAME_RECORDING: 110,
+        GET_WORKER_LIST: 111,
     });
 
     const packet = (type, payload, id) => {
@@ -37,6 +38,7 @@ const api = (() => {
                 sendIceCandidate: (candidate) => packet(endpoints.ICE_CANDIDATE, btoa(JSON.stringify(candidate))),
                 sendSdp: (sdp) => packet(endpoints.ANSWER, btoa(JSON.stringify(sdp))),
                 latencyCheck: (id, list) => packet(endpoints.LATENCY_CHECK, list, id),
+                getWorkerList: () => packet(endpoints.GET_WORKER_LIST),
             }),
         game:
             Object.freeze({

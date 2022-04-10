@@ -33,8 +33,6 @@ func NewSession(connection *webrtc.WebRTC, id network.Uid) *Session {
 
 func (s *Session) GetId() string { return s.id.String() }
 
-func (s *Session) GetShortId() string { return s.id.Short() }
-
 func (s *Session) GetRoom() *Room { return s.room }
 
 func (s *Session) GetPeerConn() *webrtc.WebRTC { return s.connection }

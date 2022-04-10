@@ -37,12 +37,12 @@ func (u *User) FreeWorker() {
 	}
 }
 
-func (u *User) HandleRequests(launcher launcher.Launcher, conf coordinator.Config) {
+func (u *User) HandleRequests(info ServerInfo, launcher launcher.Launcher, conf coordinator.Config) {
 	u.OnPacket(func(p ipc.InPacket) {
 		go func() {
 			switch p.T {
 			case api.WebrtcInit:
-				u.log.Info().Msgf("Received WebRTC init request -> relay to worker: %s", u.Worker.Id().Short())
+				u.log.Info().Msgf("Received WebRTC init request -> relay to worker: %s", u.Worker.Id())
 				u.HandleWebrtcInit()
 				u.log.Info().Msg("Received SDP from worker -> sending back to browser")
 			case api.WebrtcAnswer:
@@ -72,6 +72,9 @@ func (u *User) HandleRequests(launcher launcher.Launcher, conf coordinator.Confi
 			case api.RecordGame:
 				u.log.Info().Msg("Received record game request from a browser -> relay to worker")
 				u.HandleRecordGame(p.Payload, conf.Recording)
+			case api.GetWorkerList:
+				u.log.Info().Msg("Received get worker list request from a browser -> relay to worker")
+				u.handleGetWorkerList(conf.Coordinator.Debug, info)
 			default:
 				u.log.Warn().Msgf("Unknown packet: %+v", p)
 			}

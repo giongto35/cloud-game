@@ -1,6 +1,11 @@
 package coordinator
 
-import "github.com/giongto35/cloud-game/v2/pkg/client"
+import (
+	"bytes"
+
+	"github.com/giongto35/cloud-game/v2/pkg/client"
+	"github.com/rs/xid"
+)
 
 func (h *Hub) findWorkerByRoom(id string, region string) *Worker {
 	w, err := h.rooms.Find(id)
@@ -68,4 +73,30 @@ func (h *Hub) findFastestWorker(region string, fn func(addresses []string) (map[
 		}
 	}
 	return bestWorker
+}
+
+func (h *Hub) findWorkerById(workerId string, machineOnly bool) *Worker {
+	// when we select one particular worker
+	if workerId != "" {
+		if xid_, err := xid.FromString(workerId); err == nil {
+			if !machineOnly {
+				for _, w := range h.getAvailableWorkers("") {
+					if xid_.String() == w.Id().String() {
+						return w
+					}
+				}
+			} else {
+				for _, w := range h.getAvailableWorkers("") {
+					xid__, err := xid.FromString(workerId)
+					if err != nil {
+						continue
+					}
+					if bytes.Equal(xid_.Machine(), xid__.Machine()) {
+						return w
+					}
+				}
+			}
+		}
+	}
+	return nil
 }

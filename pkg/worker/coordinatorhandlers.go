@@ -11,12 +11,16 @@ import (
 	"github.com/giongto35/cloud-game/v2/pkg/webrtc"
 )
 
-func MakeConnectionRequest(conf worker.Worker, address string) (string, error) {
+func MakeConnectionRequest(id string, conf worker.Worker, address string) (string, error) {
 	addr := conf.GetPingAddr(address)
 	return toBase64Json(api.ConnectionRequest{
-		Zone:     conf.Network.Zone,
-		PingAddr: addr.String(),
-		IsHTTPS:  conf.Server.Https,
+		Addr:    addr.Hostname(),
+		Id:      id,
+		IsHTTPS: conf.Server.Https,
+		PingURL: addr.String(),
+		Port:    conf.GetPort(address),
+		Tag:     conf.Tag,
+		Zone:    conf.Network.Zone,
 	})
 }
 
@@ -63,7 +67,7 @@ func (c *Coordinator) HandleWebrtcInit(packet ipc.InPacket, h *Handler, connApi 
 	// use user uid from the coordinator
 	user := NewSession(peer, resp.Id)
 	h.router.AddUser(user)
-	c.log.Info().Str("id", resp.Id.Short()).Msgf("Peer connection (uid:%s)", user.GetId())
+	c.log.Info().Str("id", string(resp.Id)).Msgf("Peer connection (uid:%s)", user.GetId())
 
 	_ = h.cord.SendPacket(packet.Proxy(sdp))
 }

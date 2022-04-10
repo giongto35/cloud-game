@@ -11,8 +11,10 @@ import (
 	"github.com/giongto35/cloud-game/v2/pkg/ipc"
 	"github.com/giongto35/cloud-game/v2/pkg/launcher"
 	"github.com/giongto35/cloud-game/v2/pkg/logger"
+	"github.com/giongto35/cloud-game/v2/pkg/network"
 	"github.com/giongto35/cloud-game/v2/pkg/network/websocket"
 	"github.com/giongto35/cloud-game/v2/pkg/service"
+	"github.com/rs/xid"
 )
 
 type Hub struct {
@@ -58,17 +60,20 @@ func (h *Hub) handleWebsocketUserConnection(w http.ResponseWriter, r *http.Reque
 	}
 	usr := NewUserClient(conn, h.log)
 	defer h.cleanUser(&usr)
-	usr.HandleRequests(h.launcher, h.conf)
+	usr.HandleRequests(h, h.launcher, h.conf)
 	usr.ProcessMessages()
 
 	q := r.URL.Query()
 	roomId := q.Get(api.RoomIdQueryParam)
 	zone := q.Get(api.ZoneQueryParam)
+	wid := q.Get(api.WorkerIdParam)
 
 	usr.GetLogger().Info().Msg("Search available workers")
 	var wkr *Worker
 	if wkr = h.findWorkerByRoom(roomId, zone); wkr != nil {
 		usr.GetLogger().Info().Str("room", roomId).Msg("An existing worker has been found")
+	} else if wkr = h.findWorkerById(wid, h.conf.Coordinator.Debug); wkr != nil {
+		usr.GetLogger().Info().Msgf("Worker with id: %v has been found", wid)
 	} else if wkr = h.findFastestWorker(zone,
 		func(servers []string) (map[string]int64, error) { return usr.CheckLatency(servers) }); wkr != nil {
 		usr.GetLogger().Info().Msg("The fastest worker has been found")
@@ -80,7 +85,7 @@ func (h *Hub) handleWebsocketUserConnection(w http.ResponseWriter, r *http.Reque
 
 	usr.SetWorker(wkr)
 	h.crowd.Add(&usr)
-	usr.InitSession(h.conf.Webrtc.IceServers, h.launcher.GetAppNames())
+	usr.InitSession(wkr.Id().String(), h.conf.Webrtc.IceServers, h.launcher.GetAppNames())
 	usr.Wait()
 }
 
@@ -99,7 +104,7 @@ func (h *Hub) handleWebsocketWorkerConnection(w http.ResponseWriter, r *http.Req
 		return
 	}
 
-	if handshake.PingAddr == "" {
+	if handshake.PingURL == "" {
 		h.log.Warn().Msg("Ping address is not set")
 	}
 
@@ -113,14 +118,47 @@ func (h *Hub) handleWebsocketWorkerConnection(w http.ResponseWriter, r *http.Req
 		return
 	}
 
-	wc := NewWorkerClient(conn, h.log)
+	var id network.Uid
+	if handshake.Id != "" {
+		if _, err := xid.FromString(handshake.Id); err != nil {
+			id = network.NewUid()
+		} else {
+			id = network.Uid(handshake.Id)
+		}
+	} else {
+		id = network.NewUid()
+	}
+
+	wc := NewWorkerClientWithId(id, conn, h.log)
 	defer h.cleanWorker(&wc)
+
+	wc.Addr = handshake.Addr
 	wc.Zone = handshake.Zone
-	wc.PingServer = handshake.PingAddr
-	h.log.Info().Msgf("Worker info - zone: %v, ping addr: %v", wc.Zone, wc.PingServer)
+	wc.PingServer = handshake.PingURL
+	wc.Port = handshake.Port
+	wc.Tag = handshake.Tag
+
+	h.log.Info().Msgf("New worker -- addr: %v, port: %v, zone: %v, ping addr: %v, tag: %v",
+		wc.Addr, wc.Port, wc.Zone, wc.PingServer, wc.Tag)
 	wc.HandleRequests(&h.rooms, &h.crowd)
 	h.guild.add(&wc)
 	wc.Listen()
+}
+
+func (h *Hub) getServerList() (r []api.Server) {
+	workers := h.guild.filter(func(w *Worker) bool { return true })
+	for _, w := range workers {
+		r = append(r, api.Server{
+			Addr:    w.Addr,
+			Id:      w.Id().String(),
+			IsBusy:  !w.HasGameSlot(),
+			PingURL: w.PingServer,
+			Port:    w.Port,
+			Tag:     w.Tag,
+			Zone:    w.Zone,
+		})
+	}
+	return
 }
 
 func (h *Hub) cleanWorker(w *Worker) {

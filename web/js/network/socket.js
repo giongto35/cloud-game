@@ -22,8 +22,10 @@ const socket = (() => {
         return url
     }
 
-    const init = (roomId, zone) => {
-        const url = buildUrl({room_id: roomId, zone: zone})
+    const init = (roomId, wid, zone) => {
+        let objParams = {room_id: roomId, zone: zone};
+        if (wid) objParams.wid = wid;
+        const url = buildUrl(objParams)
         console.info(`[ws] connecting to ${url}`);
         conn = new WebSocket(url.toString());
         conn.onopen = () => {

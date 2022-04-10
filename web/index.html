@@ -22,7 +22,7 @@
 
 <body>
 <div id="gamebody">
-    <!--<div id="ui-emulator-bg"></div>-->
+    <div class="app-button" id="w" title="Workers">W</div>
 
     <div id="circle-pad-holder">
         <div id="btn-up" class="dpad" value="up"></div>
@@ -46,6 +46,8 @@
             <div id="menu-item-choice"></div>
         </div>
     </div>
+
+    <div id="servers"></div>
 
     <div id="guide-txt"><b>Arrows</b>(move),<b>ZXCVAS</b>(game ABXYLR),<b>1/2</b>(1st/2nd player),<b>Shift/Enter/K/L</b>(select/start/save/load),<b>F</b>(fullscreen),<b>share</b>(copy
         sharelink to clipboard)
@@ -110,13 +112,11 @@
     </div>
 </div>
 
-<a id="ribbon" style="position: fixed; right: 0; top: 0;" href="https://github.com/giongto35/cloud-game"><img
-        width="149" height="149"
-        src="https://github.blog/wp-content/uploads/2008/12/forkme_right_gray_6d6d6d.png?resize=149%2C149"
-        class="attachment-full size-full" alt="Fork me on GitHub" data-recalc-dims="1"></a>
-
-<div id="version">
-    <span id="v"></span>
+<div class="source">
+    <span id="v">69ff8ae</span>
+    <a rel="noopener noreferrer" target="_blank" href="https://github.com/giongto35/cloud-game">
+        Source code on GitHub
+    </a>
 </div>
 
 <script src="/static/js/gui/gui.js?v=1"></script>
@@ -137,6 +137,7 @@
 <script src="/static/js/network/webrtc.js?v=2"></script>
 <script src="/static/js/recording.js?v=1"></script>
 <script src="/static/js/api/api.js?v=2"></script>
+<script src="/static/js/workerManager.js?v=1"></script>
 <script src="/static/js/stats/stats.js?v=1"></script>
 <script src="/static/js/controller.js?v=7"></script>
 <script src="/static/js/input/keyboard.js?v=5"></script>

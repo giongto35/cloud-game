@@ -20,10 +20,11 @@ func (u *User) CheckLatency(req api.CheckLatencyUserResponse) (api.CheckLatencyU
 }
 
 // InitSession signals the user that the app is ready to go.
-func (u *User) InitSession(ice []webrtc.IceServer, games []string) {
+func (u *User) InitSession(wid string, ice []webrtc.IceServer, games []string) {
 	_ = u.SendAndForget(api.InitSession, api.InitSessionUserResponse{
 		Ice:   *(*[]api.IceServer)(unsafe.Pointer(&ice)), // don't do this at home
 		Games: games,
+		Wid:   wid,
 	})
 }
 

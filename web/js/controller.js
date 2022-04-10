@@ -91,22 +91,12 @@
         }
     };
 
-    const onLatencyCheck = (data) => {
+    const onLatencyCheck = async (data) => {
         message.show('Connecting to fastest server...');
-        const timeoutMs = 1111;
-        // deduplicate
-        const addresses = [...new Set(data.addresses || [])];
-
-        Promise.all(addresses.map(address => {
-            const start = Date.now();
-            return ajax.fetch(`${address}?_=${start}`, {method: "GET", redirect: "follow"}, timeoutMs)
-                .then(() => ({[address]: Date.now() - start}))
-                .catch(() => ({[address]: 9999}));
-        })).then(servers => {
-            const latencies = Object.assign({}, ...servers);
-            log.info('[ping] <->', latencies);
-            api.server.latencyCheck(data.packetId, latencies);
-        });
+        const servers = await workerManager.checkLatencies(data);
+        const latencies = Object.assign({}, ...servers);
+        log.info('[ping] <->', latencies);
+        api.server.latencyCheck(data.packetId, latencies);
     };
 
     const helpScreen = {
@@ -214,6 +204,9 @@
                 break;
             case api.endpoint.GAME_SET_PLAYER_INDEX:
                 event.pub(GAME_PLAYER_IDX_SET, payload);
+                break;
+            case api.endpoint.GET_WORKER_LIST:
+                event.pub(WORKER_LIST_FETCHED, payload);
                 break;
             case api.endpoint.LATENCY_CHECK:
                 event.pub(LATENCY_CHECK_REQUESTED, {packetId: id, addresses: payload});
@@ -495,6 +488,7 @@
         if (pingPong) {
             webrtc.setMessageHandler(onWebrtcMessage);
         }
+        workerManager.whoami(data.wid);
         webrtc.start(data.ice);
         api.server.initWebrtc()
         gameList.set(data.games);
@@ -543,4 +537,4 @@
 
     // initial app state
     setState(app.state.eden);
-})(document, event, env, gameList, input, KEY, log, message, recording, room, settings, socket, stats, stream, utils, webrtc);
+})(api, document, event, env, gameList, input, KEY, log, message, recording, room, settings, socket, stats, stream, utils, webrtc, workerManager);

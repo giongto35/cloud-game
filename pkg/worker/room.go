@@ -308,7 +308,7 @@ func (r *Room) AddUser(user *Session) {
 func (r *Room) RemoveUser(user *Session) {
 	user.SetRoom(nil)
 	r.users.Remove(user)
-	r.log.Debug().Str("user", user.GetShortId()).Msg("User has left the room")
+	r.log.Debug().Str("user", user.GetId()).Msg("User has left the room")
 	// Detach input. Send end signal
 	select {
 	case r.inputChannel <- nanoarch.InputEvent{RawState: []byte{0xFF, 0xFF}, ConnID: user.GetId()}:

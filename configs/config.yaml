@@ -3,7 +3,9 @@
 #
 
 coordinator:
-  # show more logs
+  # debugging switch
+  #   - shows debug logs
+  #   - allows selecting worker instances
   debug: true
   # get any free workers unconditionally on user connection
   roundRobin: false
@@ -88,6 +90,8 @@ worker:
       # Own certs config
       httpsCert:
       httpsKey:
+  # optional server tag
+  tag:
 
 emulator:
   # set output viewport scale factor
