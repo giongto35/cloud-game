@@ -75,11 +75,11 @@ func (h *Hub) findFastestWorker(region string, fn func(addresses []string) (map[
 	return bestWorker
 }
 
-func (h *Hub) findWorkerById(workerId string, machineOnly bool) *Worker {
+func (h *Hub) findWorkerById(workerId string, useAllWorkers bool) *Worker {
 	// when we select one particular worker
 	if workerId != "" {
 		if xid_, err := xid.FromString(workerId); err == nil {
-			if !machineOnly {
+			if useAllWorkers {
 				for _, w := range h.getAvailableWorkers("") {
 					if xid_.String() == w.Id().String() {
 						return w
