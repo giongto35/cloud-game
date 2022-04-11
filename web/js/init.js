@@ -8,7 +8,7 @@ settings.init();
         console.warn(
             `The log value [${lvl}] is not supported! ` +
             `The default value [debug] will be used instead.`);
-        settings.set(opts.LOG_LEVEL, `${log.DEFAULT}`)
+        settings.set(opts.LOG_LEVEL, log.DEFAULT)
         lvl = log.DEFAULT
     }
     log.level = lvl
