@@ -13,16 +13,21 @@ const gui = (() => {
         return el;
     }
 
-    const _option = (text = '', selected = false) => {
+    const _option = (text = '', selected = false, label) => {
         const el = _create('option');
-        el.textContent = text;
+        if (label) {
+            el.textContent = label;
+            el.value = text;
+        } else {
+            el.textContent = text;
+        }
         if (selected) el.selected = true;
 
         return el;
     }
 
     const select = (key = '', callback = function () {
-    }, values = [], current = '') => {
+    }, values = {values: [], labels: []}, current = '') => {
         const el = _create();
         const select = _create('select');
         select.onchange = event => {
@@ -31,7 +36,9 @@ const gui = (() => {
         el.append(select);
 
         select.append(_option('none', current === ''));
-        for (let value of values) select.append(_option(value, current === value));
+        values.values.forEach((value, index) => {
+            select.append(_option(value, current === value, values.labels?.[index]));
+        });
 
         return el;
     }

@@ -50,7 +50,7 @@
             state = newState;
         }
 
-        if (log.is(log.level.debug)) {
+        if (log.level === log.DEBUG) {
             const previous = prevState ? prevState.name : '???';
             const current = state ? state.name : '???';
             const kept = lastState ? lastState.name : '???';
@@ -461,6 +461,13 @@
     // recording
     event.sub(RECORDING_TOGGLED, handleRecording);
     event.sub(RECORDING_STATUS_CHANGED, handleRecordingStatus);
+
+    event.sub(SETTINGS_CHANGED, () => {
+        const newValue = settings.get()[opts.LOG_LEVEL];
+        if (newValue !== log.level) {
+            log.level = newValue;
+        }
+    });
 
     // initial app state
     setState(app.state.eden);

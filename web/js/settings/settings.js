@@ -15,7 +15,7 @@
  */
 const settings = (() => {
     // internal structure version
-    const revision = 1;
+    const revision = 1.1;
 
     // default settings
     // keep them for revert to defaults option
@@ -169,7 +169,7 @@ const settings = (() => {
 
         if (revision > store.settings._version) {
             // !to handle this with migrations
-            log.warning(`Your settings are in older format (v${store.settings._version})`);
+            log.warn(`Your settings are in older format (v${store.settings._version})`);
         }
     }
 
@@ -248,7 +248,7 @@ const settings = (() => {
 
     const remove = (key, subKey) => {
         const isRemoved = subKey !== undefined ? delete store.settings[key][subKey] : delete store.settings[key];
-        if (!isRemoved) log.warning(`The key: ${key + (subKey ? '.' + subKey : '')} wasn't deleted!`);
+        if (!isRemoved) log.warn(`The key: ${key + (subKey ? '.' + subKey : '')} wasn't deleted!`);
         provider.remove(key, subKey);
     }
 
@@ -390,7 +390,7 @@ settings._renderrer = (() => {
             const _settings = settings.get()[opts.INPUT_KEYBOARD_MAP];
 
             if (_settings[newValue] !== undefined) {
-                log.warning(`There are old settings for key: ${_settings[newValue]}, won't change!`);
+                log.warn(`There are old settings for key: ${_settings[newValue]}, won't change!`);
             } else {
                 settings.remove(opts.INPUT_KEYBOARD_MAP, oldValue);
                 settings.set(opts.INPUT_KEYBOARD_MAP, {[newValue]: key});
@@ -446,8 +446,10 @@ settings._renderrer = (() => {
                     break;
                 case opts.LOG_LEVEL:
                     _option(data).withName('Log level')
-                        .restartNeeded()
-                        .add(gui.select(k, onChange, ['trace', 'debug', 'warning', 'info'], value))
+                        .add(gui.select(k, onChange, {
+                            labels: ['trace', 'debug', 'warning', 'info'],
+                            values: [log.TRACE, log.DEBUG, log.WARN, log.INFO].map(String)
+                        }, value))
                         .build();
                     break;
                 case opts.INPUT_KEYBOARD_MAP:
@@ -458,7 +460,7 @@ settings._renderrer = (() => {
                     break;
                 case opts.MIRROR_SCREEN:
                     _option(data).withName('Video mirroring without smooth')
-                        .add(gui.select(k, onChange, ['mirror'], value))
+                        .add(gui.select(k, onChange, {values: ['mirror']}, value))
                         .build();
                     break;
                 default:
