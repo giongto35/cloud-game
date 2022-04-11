@@ -94,8 +94,6 @@ func initCloudStorage(conf worker.Config) storage.CloudStorage {
 	var st storage.CloudStorage
 	var err error
 	switch conf.Storage.Provider {
-	case "google":
-		st, err = storage.NewGoogleCloudClient()
 	case "oracle":
 		st, err = storage.NewOracleDataStorageClient(conf.Storage.Key)
 	case "coordinator":
