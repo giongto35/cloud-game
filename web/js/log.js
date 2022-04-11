@@ -3,24 +3,21 @@ const log = (() => {
     let level = -1;
 
     const atLeast = lv => (lv || -1) >= level;
+    const noop = () => ({});
+
+    const
+        info = atLeast(levels.info) ? console.info.bind(window.console) : noop,
+        debug = atLeast(levels.debug) ? console.debug.bind(window.console) : noop,
+        error = atLeast(levels.error) ? console.error.bind(window.console) : noop,
+        warning = atLeast(levels.warning) ? console.warn.bind(window.console) : noop;
 
     return {
         level: levels,
-        info: function () {
-            atLeast(levels.info) && console.info.apply(null, arguments)
-        },
-        debug: function () {
-            atLeast(levels.debug) && console.debug.apply(null, arguments)
-        },
-        error: function () {
-            console.error.apply(null, arguments)
-        },
-        warning: function () {
-            atLeast(levels.warning) && console.warn.apply(null, arguments)
-        },
-        setLevel: (level_) => {
-            level = levels[level_] || -1;
-        },
+        info,
+        debug,
+        error,
+        warning,
+        setLevel: (level_) => level = levels[level_] || -1,
         is: (level_) => level === level_
     }
-})(console);
+})(console, window);
