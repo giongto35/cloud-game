@@ -30,7 +30,7 @@ fully compatible with multi-platform like Desktop, Android, ~~IOS~~.
 ## Try the service at **[cloudretro.io](https://cloudretro.io)**
 
 Direct play an existing
-game: **[Pokemon Emerald](https://cloudretro.io/?id=4a5073a4b05ad0fe___Pokemon%20-%20Emerald%20Version%20(U))**
+game: **[Pokemon Emerald](https://cloudretro.io/?id=1bd37d4b5dfda87c___Pokemon%20-%20Emerald%20Version%20(U)[skip ci])**
 
 In ideal network condition and less resource contention on servers, the game will run smoothly as in the video demo.
 Because I only hosted the platform on limited servers in US East, US West, Eu, Singapore, you may experience some
