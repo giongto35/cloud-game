@@ -97,7 +97,8 @@
             gui.toggle(keyButtons[KEY.SAVE], show || isGameScreen);
             gui.toggle(keyButtons[KEY.LOAD], show || isGameScreen);
 
-            gui.toggle(helpOverlay, show);
+            gui.toggle(helpOverlay, show)
+            Array.from(helpOverlay.children).forEach((node) => gui.toggle(node, show))
 
             this.shown = show;
 

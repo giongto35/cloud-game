@@ -141,11 +141,11 @@ const gui = (() => {
     }
 
     const show = (el) => {
-        el.style.removeProperty('visibility');
+        el.classList.remove('hidden');
     }
 
     const hide = (el) => {
-        el.style.visibility = 'hidden';
+        el.classList.add('hidden');
     }
 
     const toggle = (el, what) => {

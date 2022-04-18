@@ -1,6 +1,6 @@
 
 .hidden {
-    display: none;
+    visibility: hidden;
 }
 
 .modal-window {

@@ -49,7 +49,6 @@ body {
 #help-overlay {
     width: 100%;
     height: 100%;
-    display: none;
     position: absolute;
     top: 0;
 }
@@ -66,7 +65,6 @@ body {
 #help-overlay-detail {
     width: 100%;
     height: 100%;
-    display: block;
     position: absolute;
 
     background-image: url('/static/img/help_overlay.png');
