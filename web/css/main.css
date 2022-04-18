@@ -495,10 +495,6 @@ body {
     display: flex;
 }
 
-[hidden] {
-    display: none !important;
-}
-
 #menu-screen {
     position: relative; /*must not static*/
 
@@ -507,7 +503,6 @@ body {
     width: 256px;
     height: 240px;
 
-    /* background-color: gray; */
     background-image: url('/static/img/screen_background5.png');
     background-size: cover;
 }
@@ -531,7 +526,6 @@ body {
 #menu-container {
     display: block;
     position: absolute;
-    /* background-color: red; */
 
     width: 100%;
 
