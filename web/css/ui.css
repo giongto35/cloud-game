@@ -1,6 +1,7 @@
 
-.hidden, [hidden] {
-    display: none !important;
+.hidden {
+    /*display: none;*/
+    visibility: hidden;
 }
 
 .modal-window {
