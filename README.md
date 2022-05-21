@@ -11,11 +11,11 @@ on generic solution for cloudgaming
 
 Discord: [Join Us](https://discord.gg/sXRQZa2zeP)
 
-## Announcement
+## Try the service at **[cloudretro.io](https://cloudretro.io)**
+Direct play an existing game: **[Pokemon Emerald](https://cloudretro.io/?id=1bd37d4b5dfda87c___Pokemon%20-%20Emerald%20Version%20(U))**
 
-**(Currently, I'm working on [CloudMorph](https://github.com/giongto35/cloud-morph): It offers more generic solution to
-run any offline games/application on browser in Cloud Gaming
-approach: [https://github.com/giongto35/cloud-morph](https://github.com/giongto35/cloud-morph))**
+## Announcement
+**Due to high cost of maintainance, we are keeping only one server hosting in U.S now. You may experience high latency when connecting the service from other places. You can try hosting the service yourself from the guideline. I believe CloudRetro has served its purpose to introduce Cloud Gaming/ WebRTC tech stack for the last 3 years.**
 
 ## Introduction
 
@@ -26,11 +26,6 @@ aims to deliver the most modern and convenient gaming experience through the tec
 Theoretically, in cloud gaming, games are run on remote servers and media are streamed to the player optimally to ensure
 the most comfortable user interaction. It opens the ability to play any retro games on web-browser directly, which are
 fully compatible with multi-platform like Desktop, Android, ~~IOS~~.
-
-## Try the service at **[cloudretro.io](https://cloudretro.io)**
-
-Direct play an existing
-game: **[Pokemon Emerald](https://cloudretro.io/?id=1bd37d4b5dfda87c___Pokemon%20-%20Emerald%20Version%20(U))**
 
 In ideal network condition and less resource contention on servers, the game will run smoothly as in the video demo.
 Because I only hosted the platform on limited servers in US East, US West, Eu, Singapore, you may experience some
@@ -169,6 +164,13 @@ Thanks:
 * [1978](http://simoncpage.co.uk/blog/2009/01/retro-art-wallpaper/) by [Simon C Page](http://simoncpage.co.uk/)
 * [Linear Video game controller background Gadgets seamless pattern](https://stock.adobe.com/ru/images/linear-video-game-controller-background-gadgets-seamless-pattern/241143639)
   by [Anna](https://stock.adobe.com/contributor/208277224/anna)
+
+# Announcement
+
+
+**[CloudMorph](https://github.com/giongto35/cloud-morph) is a sibling project that offers a more generic to
+run any offline games/application on browser in Cloud Gaming
+approach: [https://github.com/giongto35/cloud-morph](https://github.com/giongto35/cloud-morph))**
 
 ## Team
 
