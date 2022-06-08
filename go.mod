@@ -4,7 +4,6 @@ go 1.13
 
 require (
 	github.com/cavaliercoder/grab v1.0.1-0.20201108051000-98a5bfe305ec
-	github.com/faiface/mainthread v0.0.0-20171120011319-8b78f0a41ae3
 	github.com/fsnotify/fsnotify v1.5.1
 	github.com/go-gl/gl v0.0.0-20211210172815-726fda9656d6
 	github.com/gofrs/flock v0.8.1
