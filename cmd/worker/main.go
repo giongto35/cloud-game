@@ -41,5 +41,5 @@ func run() {
 }
 
 func main() {
-	thread.MainWrapMaybe(run)
+	thread.Wrap(run)
 }

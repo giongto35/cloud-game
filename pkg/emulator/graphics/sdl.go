@@ -62,7 +62,7 @@ func Init(cfg Config) {
 	}
 
 	// In OSX 10.14+ window creation and context creation must happen in the main thread
-	thread.MainMaybe(createWindow)
+	thread.Main(createWindow)
 
 	BindContext()
 
@@ -77,7 +77,7 @@ func Deinit() {
 	log.Printf("[SDL] [OpenGL] deinitialization...")
 	destroyFramebuffer()
 	// In OSX 10.14+ window deletion must happen in the main thread
-	thread.MainMaybe(destroyWindow)
+	thread.Main(destroyWindow)
 	sdl.Quit()
 	log.Printf("[SDL] [OpenGL] deinitialized (%v, %v)", sdl.GetError(), getDriverError())
 }

@@ -3,10 +3,8 @@
 // See: https://github.com/golang/go/wiki/LockOSThread
 package thread
 
-// MainWrapMaybe enables functions to be executed in the main thread.
-// Enabled for macOS only.
-func MainWrapMaybe(f func()) { Run(f) }
+// Wrap enables functions to be executed in the main thread.
+func Wrap(f func()) { Run(f) }
 
-// MainMaybe calls a function on the main thread.
-// Enabled for macOS only.
-func MainMaybe(f func()) { Call(f) }
+// Main calls a function on the main thread.
+func Main(f func()) { Call(f) }
