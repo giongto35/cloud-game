@@ -11,9 +11,7 @@ import (
 // The default value is 16 and should be good for 99% usecases.
 var CallQueueCap = 16
 
-var (
-	callQueue chan func()
-)
+var callQueue chan func()
 
 func init() {
 	runtime.LockOSThread()

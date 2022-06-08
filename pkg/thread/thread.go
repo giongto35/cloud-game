@@ -1,3 +1,6 @@
+//go:build !darwin
+// +build !darwin
+
 package thread
 
 // MainWrapMaybe enables functions to be executed in the main thread.
