@@ -157,11 +157,7 @@ func TestStateConcurrency(t *testing.T) {
 		op := 0
 
 		mock.loadRom(test.run.rom)
-		go mock.handleVideo(func(frame GameFrame) {
-			if len(frame.Data.Pix) == 0 {
-				t.Errorf("It seems that rom video frame was empty, which is strange!")
-			}
-		})
+		go mock.handleVideo(func(frame GameFrame) {})
 		go mock.handleAudio(func(_ []int16) {})
 		go mock.handleInput(func(_ InputEvent) {})
 

@@ -3,7 +3,6 @@ package nanoarch
 import (
 	"crypto/md5"
 	"fmt"
-	"image"
 	"io/ioutil"
 	"log"
 	"os"
@@ -29,8 +28,6 @@ type EmulatorMock struct {
 
 	// Libretro compiled lib core name
 	core string
-	// draw canvas instance
-	canvas *image.RGBA
 	// shared core paths (can't be changed)
 	paths EmulatorPaths
 
@@ -93,8 +90,7 @@ func GetEmulatorMock(room string, system string) *EmulatorMock {
 			done:    make(chan struct{}, 1),
 		},
 
-		canvas: image.NewRGBA(image.Rect(0, 0, meta.Width, meta.Height)),
-		core:   path.Base(meta.Lib),
+		core: path.Base(meta.Lib),
 
 		paths: EmulatorPaths{
 			assets: cleanPath(rootPath),
@@ -109,7 +105,7 @@ func GetEmulatorMock(room string, system string) *EmulatorMock {
 
 	// stub globals
 	NAEmulator = &emu.naEmulator
-	outputImg = emu.canvas
+	//outputImg = emu.canvas
 
 	emu.paths.save = cleanPath(emu.GetHashPath())
 
@@ -134,11 +130,6 @@ func (emu *EmulatorMock) loadRom(game string) {
 	fmt.Printf("%v %v\n", emu.paths.cores, emu.core)
 	coreLoad(emulator.Metadata{LibPath: emu.paths.cores + emu.core})
 	coreLoadGame(emu.paths.games + game)
-
-	if emu.canvas.Rect.Dx() == 0 || emu.canvas.Rect.Dy() == 0 {
-		emu.canvas = image.NewRGBA(image.Rect(0, 0, emu.meta.BaseWidth, emu.meta.BaseHeight))
-		outputImg = emu.canvas
-	}
 }
 
 // shutdownEmulator closes the emulator and cleans its resources.
