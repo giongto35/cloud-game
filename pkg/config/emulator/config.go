@@ -50,9 +50,15 @@ type LibretroCoreConfig struct {
 	IsGlAllowed bool
 	UsesLibCo   bool
 	HasMultitap bool
+	AltRepo     bool
 
 	// hack: keep it here to pass it down the emulator
 	AutoGlContext bool
+}
+
+type CoreInfo struct {
+	Name    string
+	AltRepo bool
 }
 
 // GetLibretroCoreConfig returns a core config with expanded paths.
@@ -94,12 +100,11 @@ func (e Emulator) GetSupportedExtensions() []string {
 	return extensions
 }
 
-func (l *LibretroConfig) GetCores() []string {
-	var cores []string
+func (l *LibretroConfig) GetCores() (cores []CoreInfo) {
 	for _, core := range l.Cores.List {
-		cores = append(cores, core.Lib)
+		cores = append(cores, CoreInfo{Name: core.Lib, AltRepo: core.AltRepo})
 	}
-	return cores
+	return
 }
 
 func (l *LibretroConfig) GetCoresStorePath() string {

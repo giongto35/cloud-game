@@ -18,7 +18,7 @@ type BasicManager struct {
 	Conf emulator.LibretroConfig
 }
 
-func (m BasicManager) GetInstalled() (installed []string) {
+func (m BasicManager) GetInstalled() (installed []emulator.CoreInfo) {
 	dir := m.Conf.GetCoresStorePath()
 	arch, err := core.GetCoreExt()
 	if err != nil {
@@ -35,7 +35,7 @@ func (m BasicManager) GetInstalled() (installed []string) {
 	for _, file := range files {
 		name := file.Name()
 		if filepath.Ext(name) == arch.LibExt {
-			installed = append(installed, strings.TrimSuffix(name, arch.LibExt))
+			installed = append(installed, emulator.CoreInfo{Name: strings.TrimSuffix(name, arch.LibExt)})
 		}
 	}
 	return
