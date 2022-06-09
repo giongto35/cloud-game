@@ -1,7 +1,6 @@
 package manager
 
 import (
-	"fmt"
 	"io/ioutil"
 	"path/filepath"
 	"strings"
@@ -18,22 +17,22 @@ type BasicManager struct {
 	Conf emulator.LibretroConfig
 }
 
-func (m BasicManager) GetInstalled() (installed []string, err error) {
+func (m BasicManager) GetInstalled() (installed []emulator.CoreInfo, err error) {
 	dir := m.Conf.GetCoresStorePath()
 	arch, err := core.GetCoreExt()
 	if err != nil {
-		return installed, err
+		return
 	}
 
 	files, err := ioutil.ReadDir(dir)
 	if err != nil {
-		return installed, fmt.Errorf("couldn't read installed cores: %w", err)
+		return
 	}
 
 	for _, file := range files {
 		name := file.Name()
 		if filepath.Ext(name) == arch.LibExt {
-			installed = append(installed, strings.TrimSuffix(name, arch.LibExt))
+			installed = append(installed, emulator.CoreInfo{Name: strings.TrimSuffix(name, arch.LibExt)})
 		}
 	}
 	return
