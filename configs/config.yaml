@@ -137,6 +137,7 @@ emulator:
       #   - based on the rom names in the roms param
       #
       # Available config params:
+      #   - altRepo (bool) prioritize secondary repo as the download source
       #   - lib (string)
       #   - config (string)
       #   - roms ([]string)
@@ -173,6 +174,7 @@ emulator:
           hasMultitap: true
         n64:
           lib: mupen64plus_next_libretro
+          altRepo: true
           config: mupen64plus_next_libretro.cfg
           roms: [ "n64", "v64", "z64" ]
           isGlAllowed: true
