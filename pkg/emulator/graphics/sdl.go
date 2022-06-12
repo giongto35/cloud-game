@@ -61,7 +61,7 @@ func NewSDLContext(cfg Config, log *logger.Logger) (*SDL, error) {
 
 	var err error
 	// In OSX 10.14+ window creation and context creation must happen in the main thread
-	thread.MainMaybe(func() { display.w, display.glWCtx, err = createWindow() })
+	thread.Main(func() { display.w, display.glWCtx, err = createWindow() })
 	if err != nil {
 		return nil, fmt.Errorf("window fail: %w", err)
 	}
@@ -83,7 +83,7 @@ func (s *SDL) Deinit() error {
 	destroyFramebuffer()
 	var err error
 	// In OSX 10.14+ window deletion must happen in the main thread
-	thread.MainMaybe(func() {
+	thread.Main(func() {
 		err = s.destroyWindow()
 	})
 	if err != nil {

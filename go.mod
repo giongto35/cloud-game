@@ -4,7 +4,6 @@ go 1.17
 
 require (
 	github.com/cavaliergopher/grab/v3 v3.0.1
-	github.com/faiface/mainthread v0.0.0-20171120011319-8b78f0a41ae3
 	github.com/fsnotify/fsnotify v1.5.1
 	github.com/go-gl/gl v0.0.0-20211210172815-726fda9656d6
 	github.com/gofrs/flock v0.8.1
