@@ -2,22 +2,15 @@ package thread
 
 import "testing"
 
-var f = func() {}
-
-func BenchmarkDirectCall(b *testing.B) {
-	b.ReportAllocs()
-	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
-		f()
-	}
+func init() {
+	runtime.LockOSThread()
 }
 
-func BenchmarkMainThreadCall(b *testing.B) {
-	Run(func() {
-		b.ReportAllocs()
-		b.ResetTimer()
-		for i := 0; i < b.N; i++ {
-			Call(f)
-		}
-	})
+func TestMainThread(t *testing.T) {
+	value := 0
+	fn := func() { value = 1 }
+	Main(fn)
+	if value != 1 {
+		t.Errorf("wrong value %v", value)
+	}
 }
