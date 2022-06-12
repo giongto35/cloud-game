@@ -594,7 +594,7 @@ func toggleMultitap() {
 
 func nanoarchShutdown() {
 	if usesLibCo {
-		thread.MainMaybe(func() {
+		thread.Main(func() {
 			C.bridge_execute(retroUnloadGame)
 			C.bridge_execute(retroDeinit)
 			if video.isGl {
@@ -603,7 +603,7 @@ func nanoarchShutdown() {
 		})
 	} else {
 		if video.isGl {
-			thread.MainMaybe(func() {
+			thread.Main(func() {
 				// running inside a go routine, lock the thread to make sure the OpenGL context stays current
 				runtime.LockOSThread()
 				graphics.BindContext()
@@ -612,7 +612,7 @@ func nanoarchShutdown() {
 		C.bridge_retro_unload_game(retroUnloadGame)
 		C.bridge_retro_deinit(retroDeinit)
 		if video.isGl {
-			thread.MainMaybe(func() {
+			thread.Main(func() {
 				deinitVideo()
 				runtime.UnlockOSThread()
 			})

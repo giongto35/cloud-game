@@ -62,7 +62,7 @@ func TestMain(m *testing.M) {
 	flag.StringVar(&outputPath, "outputPath", "./", "Output path for generated files")
 	flag.BoolVar(&autoGlContext, "autoGlContext", false, "Set auto GL context choose for headless machines")
 
-	thread.MainWrapMaybe(func() { os.Exit(m.Run()) })
+	thread.Wrap(func() { os.Exit(m.Run()) })
 }
 
 func TestRoom(t *testing.T) {
@@ -130,7 +130,7 @@ func TestRoomWithGL(t *testing.T) {
 		time.Sleep(2 * time.Second)
 	}
 
-	thread.MainMaybe(run)
+	thread.Main(run)
 }
 
 func TestAllEmulatorRooms(t *testing.T) {
