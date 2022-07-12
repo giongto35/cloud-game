@@ -14,7 +14,7 @@ const rtcp = (() => {
     let inputReady = false;
 
     const start = (iceservers) => {
-        log.info(`[rtcp] <- received stunturn from worker ${iceservers}`);
+        log.info(`[rtcp] <- received coordinator's ICE STUN/TURN config: ${iceservers}`);
 
         connection = new RTCPeerConnection({
             iceServers: JSON.parse(iceservers)
