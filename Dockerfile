@@ -51,6 +51,7 @@ RUN bash install.sh && \
 COPY --from=build ${BUILD_PATH}/bin/ ./
 RUN cp -s $(pwd)/* /usr/local/bin
 COPY assets/cores ./assets/cores
+COPY assets/games ./assets/games
 COPY configs ./configs
 COPY web ./web
 ARG VERSION
