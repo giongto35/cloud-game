@@ -392,13 +392,15 @@
 
                         // quit
                         case KEY.QUIT:
+                            saveGame();
+                            room.copyToClipboard();
                             input.poll().disable();
 
                             // TODO: Stop game
                             socket.quitGame(room.getId());
                             room.reset();
 
-                            message.show('Quit!');
+                            message.show('Save copied to clipboard! Visit that URL to continue your progress.');
 
                             window.location = window.location.pathname;
                             break;
@@ -441,6 +443,7 @@
         input.poll().disable();
         socket.abort();
         rtcp.stop();
+        window.location.href = room.getLink();
     });
     event.sub(LATENCY_CHECK_REQUESTED, onLatencyCheck);
     event.sub(GAMEPAD_CONNECTED, () => message.show('Gamepad connected'));
