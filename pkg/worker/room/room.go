@@ -231,20 +231,34 @@ func NewRoom(roomID string, game games.GameMetadata, recUser string, rec bool, o
 		go room.startAudio(gameMeta.AudioSampleRate, cfg.Encoder.Audio)
 		//go room.startVoice()
 
-		go room.autoSave(cfg.Worker)
+		if cfg.Emulator.AutosaveSec > 0 {
+			go room.enableAutosave(cfg.Emulator.AutosaveSec)
+		}
 
 		room.director.Start()
 	}(game, roomID)
 	return room
 }
 
-func (r *Room) autoSave(cfg worker.Worker) {
-	log.Println("Starting AutoSave process")
-	if cfg.AutoSave.Enabled {
-		for r.IsRunning {
-			time.Sleep(time.Millisecond * time.Duration(cfg.AutoSave.Period))
-			r.director.SaveGame()
-			log.Println("AutoSaved!")
+func (r *Room) enableAutosave(periodSec int) {
+	log.Printf("Autosave is enabled with the period of [%vs]", periodSec)
+	ticker := time.NewTicker(time.Duration(periodSec) * time.Second)
+	defer ticker.Stop()
+
+	for {
+		select {
+		case <-ticker.C:
+			if !r.IsRunning {
+				continue
+			}
+			if err := r.director.SaveGame(); err != nil {
+				log.Printf("Autosave failed: %v", err)
+			} else {
+				// should be in the debug level of the leveled logger
+				log.Printf("Autosave!")
+			}
+		case <-r.Done:
+			return
 		}
 	}
 }

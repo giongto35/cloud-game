@@ -85,9 +85,6 @@ worker:
       # Own certs config
       httpsCert:
       httpsKey:
-  autosave:
-    enabled: false
-    period: 3000
   # optional server tag
   tag:
 
@@ -102,6 +99,9 @@ emulator:
     # recalculate emulator game frame size to the given WxH
     width: 320
     height: 240
+
+  # enable autosave for emulator states if set to a non-zero value of seconds
+  autosaveSec: 0
 
   # save directory for emulator states
   # special tag {user} will be replaced with current user's home dir
