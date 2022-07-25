@@ -229,11 +229,13 @@ func NewRoom(roomID string, game games.GameMetadata, recUser string, rec bool, o
 		// Spawn video and audio encoding for webRTC
 		go room.startVideo(encoderW, encoderH, cfg.Encoder.Video)
 		go room.startAudio(gameMeta.AudioSampleRate, cfg.Encoder.Audio)
+
+		go room.autoSave(cfg.Worker.AutoSave)
+
 		//go room.startVoice()
 		room.director.Start()
 
 		//start timed autosave
-		go room.autoSave(cfg.Worker.AutoSave)
 
 	}(game, roomID)
 	return room

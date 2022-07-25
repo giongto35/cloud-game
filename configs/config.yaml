@@ -88,7 +88,7 @@ worker:
   # optional server tag
   autosave:
     enabled: true
-    period: 100
+    period: 3000
   tag:
 
 emulator:
