@@ -86,6 +86,9 @@ worker:
       httpsCert:
       httpsKey:
   # optional server tag
+  autosave:
+    enabled: true
+    period: 100
   tag:
 
 emulator:
