@@ -36,10 +36,6 @@ type Worker struct {
 		Secure             bool
 		Zone               string
 	}
-	AutoSave struct {
-		Enabled bool
-		Period  int
-	}
 	Server shared.Server
 	Tag    string
 }
