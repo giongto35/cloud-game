@@ -15,6 +15,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/giongto35/cloud-game/v2/pkg/config/worker"
 	"github.com/giongto35/cloud-game/v2/pkg/emulator"
 	"github.com/giongto35/cloud-game/v2/pkg/emulator/libretro/nanoarch"
 	"github.com/giongto35/cloud-game/v2/pkg/encoder"
@@ -23,7 +24,6 @@ import (
 	"github.com/giongto35/cloud-game/v2/pkg/session"
 	"github.com/giongto35/cloud-game/v2/pkg/storage"
 	"github.com/giongto35/cloud-game/v2/pkg/webrtc"
-	"github.com/l7mp/cloudretro-demo-build/pkg/config/worker"
 )
 
 // Room is a game session. multi webRTC sessions can connect to a same game.
@@ -239,11 +239,11 @@ func NewRoom(roomID string, game games.GameMetadata, recUser string, rec bool, o
 	return room
 }
 
-func (r *Room) autoSave(cfg worker.Worker.AutoSave) {
+func (r *Room) autoSave(cfg worker.AutoSave) {
 	log.Println("Starting AutoSave process")
 	if cfg.Enabled {
 		for r.IsRunning {
-			time.Sleep(1000 * cfg.Period)
+			time.Sleep(time.Millisecond * time.Duration(cfg.Period))
 			r.director.SaveGame()
 			log.Println("AutoSaved!")
 		}

@@ -36,12 +36,14 @@ type Worker struct {
 		Secure             bool
 		Zone               string
 	}
-	AutoSave struct {
-		Enabled bool
-		Period  int
-	}
-	Server shared.Server
-	Tag    string
+	AutoSave AutoSave
+	Server   shared.Server
+	Tag      string
+}
+
+type AutoSave struct {
+	Enabled bool
+	Period  int
 }
 
 // allows custom config path
