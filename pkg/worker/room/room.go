@@ -13,6 +13,7 @@ import (
 	"os"
 	"path/filepath"
 	"sync"
+	"time"
 
 	"github.com/giongto35/cloud-game/v2/pkg/config/worker"
 	"github.com/giongto35/cloud-game/v2/pkg/emulator"
@@ -229,9 +230,23 @@ func NewRoom(roomID string, game games.GameMetadata, recUser string, rec bool, o
 		go room.startVideo(encoderW, encoderH, cfg.Encoder.Video)
 		go room.startAudio(gameMeta.AudioSampleRate, cfg.Encoder.Audio)
 		//go room.startVoice()
+
+		go room.autoSave(cfg.Worker)
+
 		room.director.Start()
 	}(game, roomID)
 	return room
+}
+
+func (r *Room) autoSave(cfg worker.Worker) {
+	log.Println("Starting AutoSave process")
+	if cfg.AutoSave.Enabled {
+		for r.IsRunning {
+			time.Sleep(time.Millisecond * time.Duration(cfg.AutoSave.Period))
+			r.director.SaveGame()
+			log.Println("AutoSaved!")
+		}
+	}
 }
 
 func resizeToAspect(ratio float64, sw int, sh int) (dw int, dh int) {

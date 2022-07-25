@@ -85,6 +85,9 @@ worker:
       # Own certs config
       httpsCert:
       httpsKey:
+  autosave:
+    enabled: false
+    period: 3000
   # optional server tag
   tag:
 
