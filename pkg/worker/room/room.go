@@ -253,9 +253,6 @@ func (r *Room) enableAutosave(periodSec int) {
 			}
 			if err := r.director.SaveGame(); err != nil {
 				log.Printf("Autosave failed: %v", err)
-			} else {
-				// should be in the debug level of the leveled logger
-				log.Printf("Autosave!")
 			}
 		case <-r.Done:
 			return
