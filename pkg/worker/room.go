@@ -5,6 +5,7 @@ import (
 	"encoding/gob"
 	"errors"
 	"fmt"
+	"github.com/rs/zerolog/log"
 	"io"
 	"io/ioutil"
 	"math"
@@ -239,8 +240,8 @@ func NewRoom(id string, game games.GameMetadata, storage storage.CloudStorage, o
 			})
 		}, conf.Encoder.Audio)
 
-		if cfg.Emulator.AutosaveSec > 0 {
-			go room.enableAutosave(cfg.Emulator.AutosaveSec)
+		if conf.Emulator.AutosaveSec > 0 {
+			go room.enableAutosave(conf.Emulator.AutosaveSec)
 		}
 
 		room.director.Start()
@@ -249,7 +250,7 @@ func NewRoom(id string, game games.GameMetadata, storage storage.CloudStorage, o
 }
 
 func (r *Room) enableAutosave(periodSec int) {
-	log.Printf("Autosave is enabled with the period of [%vs]", periodSec)
+	log.Info().Msgf("Autosave is enabled with the period of [%vs]", periodSec)
 	ticker := time.NewTicker(time.Duration(periodSec) * time.Second)
 	defer ticker.Stop()
 
@@ -260,7 +261,9 @@ func (r *Room) enableAutosave(periodSec int) {
 				continue
 			}
 			if err := r.director.SaveGame(); err != nil {
-				log.Printf("Autosave failed: %v", err)
+				log.Error().Msgf("Autosave failed: %v", err)
+			} else {
+				log.Debug().Msgf("Autosave done")
 			}
 		case <-r.Done:
 			return
