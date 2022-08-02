@@ -11,6 +11,7 @@ var libretroOsArchMap = map[string]ArchInfo{
 	"linux:arm":     {Os: "linux", Arch: "armv7-neon-hf", LibExt: ".so"},
 	"windows:amd64": {Os: "windows", Arch: "x86_64", LibExt: ".dll"},
 	"darwin:amd64":  {Os: "osx", Arch: "x86_64", Vendor: "apple", LibExt: ".dylib"},
+	"darwin:arm64":  {Os: "osx", Arch: "arm64", Vendor: "apple", LibExt: ".dylib"},
 }
 
 // ArchInfo contains Libretro core lib platform info.
