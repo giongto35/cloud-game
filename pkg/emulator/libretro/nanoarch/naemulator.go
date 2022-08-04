@@ -64,6 +64,7 @@ type naEmulator struct {
 	gameName        string
 	isSavingLoading bool
 	storage         Storage
+	saveCompression bool
 
 	// out frame size
 	vw, vh int
@@ -102,13 +103,14 @@ func NewNAEmulator(roomID string, inputChannel <-chan InputEvent, storage Storag
 			HasMultitap:   conf.HasMultitap,
 			AutoGlContext: conf.AutoGlContext,
 		},
-		storage:      storage,
-		imageChannel: imageChannel,
-		audioChannel: audioChannel,
-		inputChannel: inputChannel,
-		players:      NewPlayerSessionInput(),
-		roomID:       roomID,
-		done:         make(chan struct{}, 1),
+		saveCompression: conf.SaveCompression,
+		storage:         storage,
+		imageChannel:    imageChannel,
+		audioChannel:    audioChannel,
+		inputChannel:    inputChannel,
+		players:         NewPlayerSessionInput(),
+		roomID:          roomID,
+		done:            make(chan struct{}, 1),
 	}, imageChannel, audioChannel
 }
 
@@ -236,6 +238,4 @@ func (na *naEmulator) GetHashPath() string { return na.storage.GetSavePath() }
 
 func (na *naEmulator) GetSRAMPath() string { return na.storage.GetSRAMPath() }
 
-func (na *naEmulator) Close() {
-	close(na.done)
-}
+func (na *naEmulator) Close() { close(na.done) }

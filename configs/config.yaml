@@ -109,7 +109,6 @@ emulator:
 
   libretro:
     # use zip compression for emulator save states
-    # or can be enabled for distinct emulators from the list
     saveCompression: false
     cores:
       paths:
