@@ -32,6 +32,7 @@ type LibretroConfig struct {
 		}
 		List map[string]LibretroCoreConfig
 	}
+	SaveCompression bool
 }
 
 type LibretroRepoConfig struct {
@@ -41,17 +42,18 @@ type LibretroRepoConfig struct {
 }
 
 type LibretroCoreConfig struct {
-	Lib         string
-	Config      string
-	Roms        []string
-	Folder      string
-	Width       int
-	Height      int
-	Ratio       float64
-	IsGlAllowed bool
-	UsesLibCo   bool
-	HasMultitap bool
-	AltRepo     bool
+	Lib             string
+	Config          string
+	Roms            []string
+	Folder          string
+	Width           int
+	Height          int
+	Ratio           float64
+	SaveCompression bool
+	IsGlAllowed     bool
+	UsesLibCo       bool
+	HasMultitap     bool
+	AltRepo         bool
 
 	// hack: keep it here to pass it down the emulator
 	AutoGlContext bool
@@ -69,6 +71,9 @@ func (e Emulator) GetLibretroCoreConfig(emulator string) LibretroCoreConfig {
 	conf.Lib = path.Join(cores.Paths.Libs, conf.Lib)
 	if conf.Config != "" {
 		conf.Config = path.Join(cores.Paths.Configs, conf.Config)
+	}
+	if e.Libretro.SaveCompression {
+		conf.SaveCompression = true
 	}
 	return conf
 }

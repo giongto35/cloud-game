@@ -108,6 +108,9 @@ emulator:
   storage: "{user}/.cr/save"
 
   libretro:
+    # use zip compression for emulator save states
+    # or can be enabled for distinct emulators from the list
+    saveCompression: false
     cores:
       paths:
         libs: assets/cores
@@ -151,6 +154,7 @@ emulator:
       #   - width (int) -- broken
       #   - height (int) -- broken
       #   - ratio (float)
+      #   - saveCompression (bool)
       #   - isGlAllowed (bool)
       #   - usesLibCo (bool)
       #   - hasMultitap (bool)
