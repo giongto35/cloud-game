@@ -153,7 +153,6 @@ emulator:
       #   - width (int) -- broken
       #   - height (int) -- broken
       #   - ratio (float)
-      #   - saveCompression (bool)
       #   - isGlAllowed (bool)
       #   - usesLibCo (bool)
       #   - hasMultitap (bool)

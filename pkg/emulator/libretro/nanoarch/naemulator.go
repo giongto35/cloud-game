@@ -103,14 +103,13 @@ func NewNAEmulator(roomID string, inputChannel <-chan InputEvent, storage Storag
 			HasMultitap:   conf.HasMultitap,
 			AutoGlContext: conf.AutoGlContext,
 		},
-		saveCompression: conf.SaveCompression,
-		storage:         storage,
-		imageChannel:    imageChannel,
-		audioChannel:    audioChannel,
-		inputChannel:    inputChannel,
-		players:         NewPlayerSessionInput(),
-		roomID:          roomID,
-		done:            make(chan struct{}, 1),
+		storage:      storage,
+		imageChannel: imageChannel,
+		audioChannel: audioChannel,
+		inputChannel: inputChannel,
+		players:      NewPlayerSessionInput(),
+		roomID:       roomID,
+		done:         make(chan struct{}, 1),
 	}, imageChannel, audioChannel
 }
 
