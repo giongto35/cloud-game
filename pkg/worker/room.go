@@ -147,7 +147,7 @@ func NewRoom(id string, game games.GameMetadata, storage storage.CloudStorage, o
 			Path:     conf.Emulator.Storage,
 			MainSave: roomID,
 		}
-		if cfg.Emulator.Libretro.SaveCompression {
+		if conf.Emulator.Libretro.SaveCompression {
 			store = &nanoarch.ZipStorage{Storage: store}
 		}
 

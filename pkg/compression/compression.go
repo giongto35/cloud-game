@@ -11,8 +11,6 @@ type Extractor interface {
 	Extract(src string, dest string) ([]string, error)
 }
 
-const zipExt = ".zip"
-
 func NewFromExt(path string, log *logger.Logger) Extractor {
 	switch filepath.Ext(path) {
 	case zip.Ext:
