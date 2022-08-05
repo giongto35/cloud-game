@@ -64,6 +64,7 @@ type naEmulator struct {
 	gameName        string
 	isSavingLoading bool
 	storage         Storage
+	saveCompression bool
 
 	// out frame size
 	vw, vh int
@@ -236,6 +237,4 @@ func (na *naEmulator) GetHashPath() string { return na.storage.GetSavePath() }
 
 func (na *naEmulator) GetSRAMPath() string { return na.storage.GetSRAMPath() }
 
-func (na *naEmulator) Close() {
-	close(na.done)
-}
+func (na *naEmulator) Close() { close(na.done) }

@@ -1,47 +1,45 @@
 package nanoarch
 
-import "io/ioutil"
-
 // Save writes the current state to the filesystem.
-// Deadlock warning: locks the emulator.
-func (na *naEmulator) Save() (err error) {
+func (na *naEmulator) Save() error {
 	na.Lock()
 	defer na.Unlock()
 
-	if sramState := getSaveRAM(); sramState != nil {
-		err = toFile(na.GetSRAMPath(), sramState)
+	ss, err := getSaveState()
+	if err != nil {
+		return err
 	}
-	if saveState, err := getSaveState(); err == nil {
-		return toFile(na.GetHashPath(), saveState)
+	if err := na.storage.Save(na.GetHashPath(), ss); err != nil {
+		return err
 	}
-	return
+
+	if sram := getSaveRAM(); sram != nil {
+		if err := na.storage.Save(na.GetSRAMPath(), sram); err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 // Load restores the state from the filesystem.
-// Deadlock warning: locks the emulator.
-func (na *naEmulator) Load() (err error) {
+func (na *naEmulator) Load() error {
 	na.Lock()
 	defer na.Unlock()
 
-	if sramState, err := fromFile(na.GetSRAMPath()); err == nil {
-		restoreSaveRAM(sramState)
+	ss, err := na.storage.Load(na.GetHashPath())
+	if err != nil {
+		return err
 	}
-	if saveState, err := fromFile(na.GetHashPath()); err == nil {
-		return restoreSaveState(saveState)
+	if err := restoreSaveState(ss); err != nil {
+		return err
 	}
-	return
-}
 
-// toFile writes the state to a file with the path.
-func toFile(path string, data []byte) error {
-	return ioutil.WriteFile(path, data, 0644)
-}
-
-// fromFile reads the state from a file with the path.
-func fromFile(path string) ([]byte, error) {
-	if bytes, err := ioutil.ReadFile(path); err == nil {
-		return bytes, nil
-	} else {
-		return []byte{}, err
+	sram, err := na.storage.Load(na.GetSRAMPath())
+	if err != nil {
+		return err
 	}
+	if sram != nil {
+		restoreSaveRAM(sram)
+	}
+	return nil
 }

@@ -108,6 +108,8 @@ emulator:
   storage: "{user}/.cr/save"
 
   libretro:
+    # use zip compression for emulator save states
+    saveCompression: false
     cores:
       paths:
         libs: assets/cores

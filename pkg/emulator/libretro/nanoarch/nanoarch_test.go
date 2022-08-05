@@ -64,19 +64,16 @@ func GetEmulatorMock(room string, system string) *EmulatorMock {
 	audio := make(chan []int16, 30)
 	inputs := make(chan InputEvent, 100)
 
-	store := Storage{
-		Path:     os.TempDir(),
-		MainSave: room,
-	}
-
 	// an emu
 	emu := &EmulatorMock{
 		naEmulator: naEmulator{
 			imageChannel: images,
 			audioChannel: audio,
 			inputChannel: inputs,
-			storage:      store,
-
+			storage: &StateStorage{
+				Path:     os.TempDir(),
+				MainSave: room,
+			},
 			meta: emulator.Metadata{
 				LibPath:     meta.Lib,
 				ConfigPath:  meta.Config,
