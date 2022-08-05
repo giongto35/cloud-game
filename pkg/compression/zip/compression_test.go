@@ -1,8 +1,11 @@
 package zip
 
 import (
+	"fmt"
+	"math/rand"
 	"reflect"
 	"testing"
+	"time"
 )
 
 func TestCompression(t *testing.T) {
@@ -41,6 +44,26 @@ func TestCompression(t *testing.T) {
 			}
 			if !reflect.DeepEqual(got, tt.want) {
 				t.Errorf("Compress() got = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+func BenchmarkCompressions(b *testing.B) {
+	benchmarks := []struct {
+		name string
+		size int
+	}{
+		{name: "compress", size: 1024 * 1024 * 1},
+		{name: "compress", size: 1024 * 1024 * 2},
+	}
+	for _, bm := range benchmarks {
+		rand.Seed(time.Now().UnixNano())
+		b.Run(fmt.Sprintf("%v %v", bm.name, bm.size), func(b *testing.B) {
+			dat := make([]byte, bm.size)
+			rand.Read(dat)
+			for i := 0; i < b.N; i++ {
+				_, _ = Compress(dat, "test")
 			}
 		})
 	}

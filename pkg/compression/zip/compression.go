@@ -27,6 +27,10 @@ func Compress(data []byte, name string) ([]byte, error) {
 	buf := new(bytes.Buffer)
 	w := zip.NewWriter(buf)
 
+	//w.RegisterCompressor(zip.Deflate, func(out io.Writer) (io.WriteCloser, error) {
+	//	return flate.NewWriter(out, flate.BestCompression)
+	//})
+
 	z, err := w.Create(name)
 	if err != nil {
 		return nil, err
