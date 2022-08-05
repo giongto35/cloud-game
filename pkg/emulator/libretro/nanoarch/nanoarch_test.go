@@ -70,8 +70,10 @@ func GetEmulatorMock(room string, system string) *EmulatorMock {
 			imageChannel: images,
 			audioChannel: audio,
 			inputChannel: inputs,
-			storage:      NewStateStorage(os.TempDir(), room),
-
+			storage: &StateStorage{
+				Path:     os.TempDir(),
+				MainSave: room,
+			},
 			meta: emulator.Metadata{
 				LibPath:     meta.Lib,
 				ConfigPath:  meta.Config,

@@ -149,11 +149,12 @@ func NewRoom(roomID string, game games.GameMetadata, recUser string, rec bool, o
 
 	// Check if room is on local storage, if not, pull from GCS to local storage
 	go func(game games.GameMetadata, roomID string) {
-		var store nanoarch.Storage
-		stateStorage := nanoarch.NewStateStorage(cfg.Emulator.Storage, roomID)
-		store = stateStorage
+		var store nanoarch.Storage = &nanoarch.StateStorage{
+			Path:     cfg.Emulator.Storage,
+			MainSave: roomID,
+		}
 		if cfg.Emulator.Libretro.SaveCompression {
-			store = nanoarch.NewZipStorage(stateStorage)
+			store = &nanoarch.ZipStorage{Storage: store}
 		}
 
 		// Check room is on local or fetch from server

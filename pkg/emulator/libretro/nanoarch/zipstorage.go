@@ -4,51 +4,39 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/giongto35/cloud-game/v2/pkg/compression"
+	"github.com/giongto35/cloud-game/v2/pkg/compression/zip"
 )
 
-type (
-	ZipStorage struct {
-		*StateStorage
-	}
-	ZipReaderWriter struct {
-		ReaderWriter
-	}
-)
-
-const zip = ".zip"
-
-func NewZipStorage(store *StateStorage) *ZipStorage {
-	store.rw = &ZipReaderWriter{store.rw}
-	return &ZipStorage{StateStorage: store}
+type ZipStorage struct {
+	Storage
 }
 
-func (z *ZipStorage) GetSavePath() string { return z.StateStorage.GetSavePath() + zip }
-func (z *ZipStorage) GetSRAMPath() string { return z.StateStorage.GetSRAMPath() + zip }
+func (z *ZipStorage) GetSavePath() string { return z.Storage.GetSavePath() + zip.Ext }
+func (z *ZipStorage) GetSRAMPath() string { return z.Storage.GetSRAMPath() + zip.Ext }
 
-// Write writes the state to a file with the path.
-func (zrw *ZipReaderWriter) Write(path string, data []byte) error {
-	_, name := filepath.Split(path)
-	if name == "" || name == "." {
-		return compression.ErrorInvalidName
-	}
-	name = strings.TrimSuffix(name, zip)
-	compress, err := compression.Compress(data, name)
-	if err != nil {
-		return err
-	}
-	return zrw.ReaderWriter.Write(path, compress)
-}
-
-// Read reads the state from a file with the path.
-func (zrw *ZipReaderWriter) Read(path string) ([]byte, error) {
-	data, err := zrw.ReaderWriter.Read(path)
+// Load loads a zip file with the path specified.
+func (z *ZipStorage) Load(path string) ([]byte, error) {
+	data, err := z.Storage.Load(path)
 	if err != nil {
 		return nil, err
 	}
-	d, _, err := compression.Read(data)
+	d, _, err := zip.Read(data)
 	if err != nil {
 		return nil, err
 	}
 	return d, nil
+}
+
+// Save saves the array of bytes into a file with the specified path.
+func (z *ZipStorage) Save(path string, data []byte) error {
+	_, name := filepath.Split(path)
+	if name == "" || name == "." {
+		return zip.ErrorInvalidName
+	}
+	name = strings.TrimSuffix(name, zip.Ext)
+	compress, err := zip.Compress(data, name)
+	if err != nil {
+		return err
+	}
+	return z.Storage.Save(path, compress)
 }

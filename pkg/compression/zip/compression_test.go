@@ -1,4 +1,4 @@
-package compression
+package zip
 
 import (
 	"reflect"
