@@ -9,7 +9,7 @@ require (
 	github.com/gofrs/flock v0.8.1
 	github.com/gorilla/websocket v1.5.0
 	github.com/hashicorp/go-multierror v1.1.1
-	github.com/kkyr/fig v0.3.0
+	github.com/kkyr/fig v0.3.1-0.20220103220255-711af35e3ee2
 	github.com/pion/interceptor v0.1.12
 	github.com/pion/logging v0.2.2
 	github.com/pion/webrtc/v3 v3.1.43

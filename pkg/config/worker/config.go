@@ -51,12 +51,7 @@ func NewConfig() (conf Config) {
 		panic(err)
 	}
 	conf.expandSpecialTags()
-	// with ICE lite we clear ICE servers
-	if !conf.Webrtc.IceLite {
-		conf.Webrtc.AddIceServersEnv()
-	} else {
-		conf.Webrtc.IceServers = []webrtc.IceServer{}
-	}
+	conf.fixValues()
 	return
 }
 
@@ -85,6 +80,16 @@ func (c *Config) expandSpecialTags() {
 		}
 		*dir = strings.Replace(*dir, tag, userHomeDir, -1)
 		*dir = filepath.FromSlash(*dir)
+	}
+}
+
+// fixValues tries to fix some values otherwise hard to set externally.
+func (c *Config) fixValues() {
+	// with ICE lite we clear ICE servers
+	if !c.Webrtc.IceLite {
+		c.Webrtc.AddIceServersEnv()
+	} else {
+		c.Webrtc.IceServers = []webrtc.IceServer{}
 	}
 }
 

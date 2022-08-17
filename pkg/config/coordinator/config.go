@@ -5,7 +5,7 @@ import (
 	"github.com/giongto35/cloud-game/v2/pkg/config/emulator"
 	"github.com/giongto35/cloud-game/v2/pkg/config/monitoring"
 	"github.com/giongto35/cloud-game/v2/pkg/config/shared"
-	webrtcConfig "github.com/giongto35/cloud-game/v2/pkg/config/webrtc"
+	"github.com/giongto35/cloud-game/v2/pkg/config/webrtc"
 	"github.com/giongto35/cloud-game/v2/pkg/games"
 	flag "github.com/spf13/pflag"
 )
@@ -14,7 +14,7 @@ type Config struct {
 	Coordinator Coordinator
 	Emulator    emulator.Emulator
 	Recording   shared.Recording
-	Webrtc      webrtcConfig.Webrtc
+	Webrtc      webrtc.Webrtc
 }
 
 type Coordinator struct {
@@ -45,6 +45,7 @@ func NewConfig() (conf Config) {
 	if err != nil {
 		panic(err)
 	}
+	conf.Webrtc.AddIceServersEnv()
 	return
 }
 
