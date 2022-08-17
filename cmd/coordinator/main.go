@@ -29,7 +29,7 @@ func main() {
 	defer logging.Flush()
 
 	glog.Infof("[coordinator] version: %v", Version)
-	glog.V(4).Infof("Coordinator configs %v", conf)
+	glog.V(4).Infof("[coordinator] Local configuration %+v", conf)
 	c := coordinator.New(conf)
 	c.Start()
 
