@@ -12,7 +12,7 @@ import (
 	"github.com/giongto35/cloud-game/v2/pkg/config/monitoring"
 	"github.com/giongto35/cloud-game/v2/pkg/config/shared"
 	"github.com/giongto35/cloud-game/v2/pkg/config/storage"
-	webrtcConfig "github.com/giongto35/cloud-game/v2/pkg/config/webrtc"
+	"github.com/giongto35/cloud-game/v2/pkg/config/webrtc"
 	"github.com/giongto35/cloud-game/v2/pkg/os"
 	flag "github.com/spf13/pflag"
 )
@@ -23,7 +23,7 @@ type Config struct {
 	Recording shared.Recording
 	Storage   storage.Storage
 	Worker    Worker
-	Webrtc    webrtcConfig.Webrtc
+	Webrtc    webrtc.Webrtc
 }
 
 type Worker struct {
@@ -46,7 +46,12 @@ var configPath string
 func NewConfig() (conf Config) {
 	_ = config.LoadConfig(&conf, configPath)
 	conf.expandSpecialTags()
-	conf.fixValues()
+	// with ICE lite we clear ICE servers
+	if !conf.Webrtc.IceLite {
+		conf.Webrtc.AddIceServersEnv()
+	} else {
+		conf.Webrtc.IceServers = []webrtc.IceServer{}
+	}
 	return
 }
 
@@ -74,14 +79,6 @@ func (c *Config) expandSpecialTags() {
 			log.Fatalln("couldn't read user home directory", err)
 		}
 		*dir = strings.Replace(*dir, tag, userHomeDir, -1)
-	}
-}
-
-// fixValues tries to fix some values otherwise hard to set externally.
-func (c *Config) fixValues() {
-	// with ICE lite we clear ICE servers
-	if c.Webrtc.IceLite {
-		c.Webrtc.IceServers = []webrtcConfig.IceServer{}
 	}
 }
 
