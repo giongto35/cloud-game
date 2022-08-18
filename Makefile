@@ -72,7 +72,7 @@ dev.build: compile build
 dev.build-local:
 	mkdir -p bin/
 	go build -o bin/ ./cmd/coordinator
-	go build -buildmode=exe -o bin/ ./cmd/worker
+	go build -o bin/ ./cmd/worker
 
 dev.run: dev.build-local
 	./bin/coordinator --v=5 &
