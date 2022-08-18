@@ -4,7 +4,7 @@ import (
 	"log"
 	"unsafe"
 
-	"github.com/go-gl/gl/v2.1/gl"
+	"github.com/giongto35/cloud-game/v2/pkg/emulator/backend/gl"
 )
 
 type offscreenSetup struct {
@@ -24,7 +24,6 @@ type offscreenSetup struct {
 
 var opt = offscreenSetup{}
 
-// OpenGL pixel format
 type PixelFormat int
 
 const (
@@ -97,14 +96,12 @@ func destroyFramebuffer() {
 func ReadFramebuffer(bytes int, w int, h int) []byte {
 	data := make([]byte, bytes)
 	gl.BindFramebuffer(gl.FRAMEBUFFER, opt.fbo)
-	gl.ReadPixels(0, 0, int32(w), int32(h), opt.pixType, opt.pixFormat, gl.Ptr(&data[0]))
+	gl.ReadPixels(0, 0, int32(w), int32(h), opt.pixType, opt.pixFormat, unsafe.Pointer(&data[0]))
 	gl.BindFramebuffer(gl.FRAMEBUFFER, 0)
 	return data
 }
 
-func getFbo() uint32 {
-	return opt.fbo
-}
+func getFbo() uint32 { return opt.fbo }
 
 func SetPixelFormat(format PixelFormat) {
 	switch format {
@@ -134,10 +131,5 @@ func PrintDriverInfo() {
 	log.Printf("[OpenGL] GLSL Version: %v", get(gl.SHADING_LANGUAGE_VERSION))
 }
 
-func getDriverError() uint32 {
-	return gl.GetError()
-}
-
-func get(name uint32) string {
-	return gl.GoStr(gl.GetString(name))
-}
+func get(name uint32) string { return gl.GoStr(gl.GetString(name)) }
+func getDriverError() uint32 { return gl.GetError() }
