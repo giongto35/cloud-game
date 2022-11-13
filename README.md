@@ -8,10 +8,10 @@
 **CloudMorph**: [https://github.com/giongto35/cloud-morph](https://github.com/giongto35/cloud-morph): My current focus
 on generic solution for cloudgaming
 
+Discord: [Join Us](https://discord.gg/sXRQZa2zeP)
+
 ## Announcement
 **Due to the current economic recession, i'm unable to keep demo server. Google Stadia also shutdown the Cloud service because of high cost and low adoption. I still believe Cloud Gaming is a brilliant idea and it should keep getting more investment. I open source my works so that everyone can experience self-hosting cloud gaming service to hold this spirit. You can check the rest of idea in the wiki**
-
-Discord: [Join Us](https://discord.gg/sXRQZa2zeP)
 
 ## Try the service at **[cloudretro.io](https://cloudretro.io)**
 Direct play an existing game: **[Pokemon Emerald](https://cloudretro.io/?id=1bd37d4b5dfda87c___Pokemon%20-%20Emerald%20Version%20(U))**
