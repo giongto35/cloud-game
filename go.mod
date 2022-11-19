@@ -5,7 +5,6 @@ go 1.17
 require (
 	github.com/cavaliergopher/grab/v3 v3.0.1
 	github.com/fsnotify/fsnotify v1.5.4
-	github.com/go-gl/gl v0.0.0-20211210172815-726fda9656d6
 	github.com/gofrs/flock v0.8.1
 	github.com/gorilla/websocket v1.5.0
 	github.com/hashicorp/go-multierror v1.1.1

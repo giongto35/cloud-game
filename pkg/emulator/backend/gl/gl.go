@@ -123,29 +123,29 @@ import (
 )
 
 const (
-	VENDOR                   = 0x1F00
-	VERSION                  = 0x1F02
-	RENDERER                 = 0x1F01
-	SHADING_LANGUAGE_VERSION = 0x8B8C
-	TEXTURE_2D               = 0x0DE1
-	RENDERBUFFER             = 0x8D41
-	FRAMEBUFFER              = 0x8D40
-	TEXTURE_MIN_FILTER       = 0x2801
-	TEXTURE_MAG_FILTER       = 0x2800
-	NEAREST                  = 0x2600
-	RGBA8                    = 0x8058
-	BGRA                     = 0x80E1
-	RGB                      = 0x1907
-	COLOR_ATTACHMENT0        = 0x8CE0
-	DEPTH24_STENCIL8         = 0x88F0
-	DEPTH_STENCIL_ATTACHMENT = 0x821A
-	DEPTH_COMPONENT24        = 0x81A6
-	DEPTH_ATTACHMENT         = 0x8D00
-	FRAMEBUFFER_COMPLETE     = 0x8CD5
-	NO_ERROR                 = 0
-	UNSIGNED_SHORT_5_5_5_1   = 0x8034
-	UNSIGNED_SHORT_5_6_5     = 0x8363
-	UNSIGNED_INT_8_8_8_8_REV = 0x8367
+	VENDOR                 = 0x1F00
+	VERSION                = 0x1F02
+	RENDERER               = 0x1F01
+	ShadingLanguageVersion = 0x8B8C
+	Texture2d              = 0x0DE1
+	RENDERBUFFER           = 0x8D41
+	FRAMEBUFFER            = 0x8D40
+	TextureMinFilter       = 0x2801
+	TextureMagFilter       = 0x2800
+	NEAREST                = 0x2600
+	RGBA8                  = 0x8058
+	BGRA                   = 0x80E1
+	RGB                    = 0x1907
+	ColorAttachment0       = 0x8CE0
+	Depth24Stencil8        = 0x88F0
+	DepthStencilAttachment = 0x821A
+	DepthComponent24       = 0x81A6
+	DepthAttachment        = 0x8D00
+	FramebufferComplete    = 0x8CD5
+
+	UnsignedShort5551  = 0x8034
+	UnsignedShort565   = 0x8363
+	UnsignedInt8888Rev = 0x8367
 )
 
 var (
@@ -229,8 +229,8 @@ func TexImage2D(target uint32, level int32, internalformat int32, width int32, h
 func GenFramebuffers(n int32, framebuffers *uint32) {
 	C.genFramebuffers(gpGenFramebuffers, (C.GLsizei)(n), (*C.GLuint)(unsafe.Pointer(framebuffers)))
 }
-func FramebufferTexture2D(target uint32, attachment uint32, textarget uint32, texture uint32, level int32) {
-	C.framebufferTexture2D(gpFramebufferTexture2D, (C.GLenum)(target), (C.GLenum)(attachment), (C.GLenum)(textarget), (C.GLuint)(texture), (C.GLint)(level))
+func FramebufferTexture2D(target uint32, attachment uint32, texTarget uint32, texture uint32, level int32) {
+	C.framebufferTexture2D(gpFramebufferTexture2D, (C.GLenum)(target), (C.GLenum)(attachment), (C.GLenum)(texTarget), (C.GLuint)(texture), (C.GLint)(level))
 }
 func GenRenderbuffers(n int32, renderbuffers *uint32) {
 	C.genRenderbuffers(gpGenRenderbuffers, (C.GLsizei)(n), (*C.GLuint)(unsafe.Pointer(renderbuffers)))
@@ -241,8 +241,8 @@ func BindRenderbuffer(target uint32, renderbuffer uint32) {
 func RenderbufferStorage(target uint32, internalformat uint32, width int32, height int32) {
 	C.renderbufferStorage(gpRenderbufferStorage, (C.GLenum)(target), (C.GLenum)(internalformat), (C.GLsizei)(width), (C.GLsizei)(height))
 }
-func FramebufferRenderbuffer(target uint32, attachment uint32, renderbuffertarget uint32, renderbuffer uint32) {
-	C.framebufferRenderbuffer(gpFramebufferRenderbuffer, (C.GLenum)(target), (C.GLenum)(attachment), (C.GLenum)(renderbuffertarget), (C.GLuint)(renderbuffer))
+func FramebufferRenderbuffer(target uint32, attachment uint32, renderbufferTarget uint32, renderbuffer uint32) {
+	C.framebufferRenderbuffer(gpFramebufferRenderbuffer, (C.GLenum)(target), (C.GLenum)(attachment), (C.GLenum)(renderbufferTarget), (C.GLuint)(renderbuffer))
 }
 func CheckFramebufferStatus(target uint32) uint32 {
 	return (uint32)(C.checkFramebufferStatus(gpCheckFramebufferStatus, (C.GLenum)(target)))
