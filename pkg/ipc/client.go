@@ -20,20 +20,19 @@ var (
 	errTimeout    = errors.New("timeout")
 )
 
-type call struct {
-	done     chan struct{}
-	err      error
-	Request  OutPacket
-	Response InPacket
-}
-
-type Client struct {
-	Conn *websocket.WS
-	// !to check leaks
-	queue    map[network.Uid]*call
-	mu       sync.Mutex
-	onPacket func(packet InPacket)
-}
+type (
+	Client struct {
+		conn     *websocket.WS
+		queue    map[network.Uid]*call
+		onPacket func(packet InPacket)
+		mu       sync.Mutex
+	}
+	call struct {
+		done     chan struct{}
+		err      error
+		Response InPacket
+	}
+)
 
 func NewClient(address url.URL, log *logger.Logger) (*Client, error) {
 	return connect(websocket.NewClient(address, log))
@@ -51,42 +50,41 @@ func connect(conn *websocket.WS, err error) (*Client, error) {
 	if err != nil {
 		return nil, err
 	}
-	client := &Client{Conn: conn, queue: make(map[network.Uid]*call, 1)}
-	client.Conn.OnMessage = client.handleMessage
+	client := &Client{conn: conn, queue: make(map[network.Uid]*call, 1)}
+	client.conn.OnMessage = client.handleMessage
 	return client, nil
 }
 
 func (c *Client) OnPacket(fn func(packet InPacket)) { c.mu.Lock(); c.onPacket = fn; c.mu.Unlock() }
 
-func (c *Client) Listen() { c.mu.Lock(); c.Conn.Listen(); c.mu.Unlock() }
+func (c *Client) Listen() { c.mu.Lock(); c.conn.Listen(); c.mu.Unlock() }
 
 // !to handle error
 func (c *Client) Close() {
-	c.Conn.Close()
-	c.releaseQueue(errConnClosed)
+	c.conn.Close()
+	c.drain(errConnClosed)
 }
 
 // !to expose channel instead of results
 func (c *Client) Call(type_ uint8, payload interface{}) ([]byte, error) {
-	id := network.NewUid()
-	rq := OutPacket{Id: id, T: type_, Payload: payload}
-	call := &call{Request: rq, done: make(chan struct{})}
+	rq := OutPacket{Id: network.NewUid(), T: type_, Payload: payload}
 	r, err := json.Marshal(&rq)
 	if err != nil {
-		delete(c.queue, id)
+		//delete(c.queue, id)
 		return nil, err
 	}
 
+	task := &call{done: make(chan struct{})}
 	c.mu.Lock()
-	c.queue[id] = call
-	c.Conn.Write(r)
+	c.queue[rq.Id] = task
+	c.conn.Write(r)
 	c.mu.Unlock()
 	select {
-	case <-call.done:
+	case <-task.done:
 	case <-time.After(callTimeout):
-		call.err = errTimeout
+		task.err = errTimeout
 	}
-	return call.Response.Payload, call.err
+	return task.Response.Payload, task.err
 }
 
 func (c *Client) Send(type_ uint8, payload interface{}) error {
@@ -99,10 +97,12 @@ func (c *Client) SendPacket(packet OutPacket) error {
 		return err
 	}
 	c.mu.Lock()
-	c.Conn.Write(r)
+	c.conn.Write(r)
 	c.mu.Unlock()
 	return nil
 }
+
+func (c *Client) Wait() chan struct{} { return c.conn.Done }
 
 func (c *Client) handleMessage(message []byte, err error) {
 	if err != nil {
@@ -115,10 +115,10 @@ func (c *Client) handleMessage(message []byte, err error) {
 	}
 
 	if res.Id != network.EmptyUid {
-		call := c.pop(res.Id)
-		if call != nil {
-			call.Response = res
-			call.done <- struct{}{}
+		task := c.pop(res.Id)
+		if task != nil {
+			task.Response = res
+			task.done <- struct{}{}
 			return
 		}
 	}
@@ -128,16 +128,18 @@ func (c *Client) handleMessage(message []byte, err error) {
 func (c *Client) pop(id network.Uid) *call {
 	c.mu.Lock()
 	defer c.mu.Unlock()
-	call := c.queue[id]
+	task := c.queue[id]
 	delete(c.queue, id)
-	return call
+	return task
 }
 
-func (c *Client) releaseQueue(err error) {
+func (c *Client) drain(err error) {
 	c.mu.Lock()
 	defer c.mu.Unlock()
-	for _, call := range c.queue {
-		call.err = err
-		call.done <- struct{}{}
+	for _, task := range c.queue {
+		if task.err == nil {
+			task.err = err
+		}
+		task.done <- struct{}{}
 	}
 }

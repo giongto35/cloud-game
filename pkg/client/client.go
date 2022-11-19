@@ -48,7 +48,7 @@ func (c SocketClient) GetLogger() *logger.Logger { return c.log }
 
 func (c SocketClient) ProcessMessages() { c.wire.Listen() }
 
-func (c SocketClient) Wait() { <-c.wire.Conn.Done }
+func (c SocketClient) Wait() { <-c.wire.Wait() }
 
 func (c SocketClient) Listen() { c.ProcessMessages(); c.Wait() }
 

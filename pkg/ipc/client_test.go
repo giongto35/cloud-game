@@ -115,7 +115,7 @@ func testWebsocket(t *testing.T) {
 	client.Close()
 
 	<-socket.Done
-	<-client.Conn.Done
+	<-client.conn.Done
 
 }
 
