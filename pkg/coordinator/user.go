@@ -39,6 +39,7 @@ func (u *User) FreeWorker() {
 
 func (u *User) HandleRequests(info ServerInfo, launcher launcher.Launcher, conf coordinator.Config) {
 	u.OnPacket(func(p ipc.InPacket) {
+		// !to use proper channels
 		go func() {
 			switch p.T {
 			case api.WebrtcInit:
@@ -47,16 +48,36 @@ func (u *User) HandleRequests(info ServerInfo, launcher launcher.Launcher, conf 
 				u.log.Info().Msg("Received SDP from worker -> sending back to browser")
 			case api.WebrtcAnswer:
 				u.log.Info().Msg("Received browser answered SDP -> relay to worker")
-				u.HandleWebrtcAnswer(p.Payload)
+				rq, err := api.Unwrap[api.WebrtcAnswerUserRequest](p.Payload)
+				if err != nil {
+					u.log.Error().Err(err).Msg("malformed WebRTC answer request")
+					return
+				}
+				u.HandleWebrtcAnswer(*rq)
 			case api.WebrtcIceCandidate:
 				u.log.Info().Msg("Received IceCandidate from browser -> relay to worker")
-				u.HandleWebrtcIceCandidate(p.Payload)
+				rq, err := api.Unwrap[api.WebrtcUserIceCandidate](p.Payload)
+				if err != nil {
+					u.log.Error().Err(err).Msg("malformed Ice candidate request")
+					return
+				}
+				u.HandleWebrtcIceCandidate(*rq)
 			case api.StartGame:
 				u.log.Info().Msg("Received start request from a browser -> relay to worker")
-				u.HandleStartGame(p.Payload, launcher, conf)
+				rq, err := api.Unwrap[api.GameStartUserRequest](p.Payload)
+				if err != nil {
+					u.log.Error().Err(err).Msg("malformed game start request")
+					return
+				}
+				u.HandleStartGame(*rq, launcher, conf)
 			case api.QuitGame:
 				u.log.Info().Msg("Received quit request from a browser -> relay to worker")
-				u.HandleQuitGame(p.Payload)
+				rq, err := api.Unwrap[api.GameQuitRequest](p.Payload)
+				if err != nil {
+					u.log.Error().Err(err).Msg("malformed game quit request")
+					return
+				}
+				u.HandleQuitGame(*rq)
 			case api.SaveGame:
 				u.log.Info().Msg("Received save request from a browser -> relay to worker")
 				u.HandleSaveGame()
@@ -65,13 +86,27 @@ func (u *User) HandleRequests(info ServerInfo, launcher launcher.Launcher, conf 
 				u.HandleLoadGame()
 			case api.ChangePlayer:
 				u.log.Info().Msg("Received update player index request from a browser -> relay to worker")
-				u.HandleChangePlayer(p.Payload)
+				rq, err := api.Unwrap[api.ChangePlayerUserRequest](p.Payload)
+				if err != nil {
+					u.log.Error().Err(err).Msg("malformed player change request")
+					return
+				}
+				u.HandleChangePlayer(*rq)
 			case api.ToggleMultitap:
 				u.log.Info().Msg("Received multitap request from a browser -> relay to worker")
 				u.HandleToggleMultitap()
 			case api.RecordGame:
 				u.log.Info().Msg("Received record game request from a browser -> relay to worker")
-				u.HandleRecordGame(p.Payload, conf.Recording)
+				if !conf.Recording.Enabled {
+					u.log.Warn().Msg("Recording should be disabled!")
+					return
+				}
+				rq, err := api.Unwrap[api.RecordGameRequest](p.Payload)
+				if err != nil {
+					u.log.Error().Err(err).Msg("malformed record game request")
+					return
+				}
+				u.HandleRecordGame(*rq)
 			case api.GetWorkerList:
 				u.log.Info().Msg("Received get worker list request from a browser -> relay to worker")
 				u.handleGetWorkerList(conf.Coordinator.Debug, info)

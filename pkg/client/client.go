@@ -36,13 +36,24 @@ func NewWithId(id network.Uid, conn *ipc.Client, tag string, log *logger.Logger)
 
 func (c SocketClient) Id() network.Uid { return c.id }
 
-func (c SocketClient) Send(t uint8, data interface{}) ([]byte, error) { return c.wire.Call(t, data) }
+func (c SocketClient) Send(t ipc.PacketType, data any) ([]byte, error) {
+	return c.wire.Call(t, data)
+}
 
 func (c SocketClient) SendPacket(packet ipc.OutPacket) error { return c.wire.SendPacket(packet) }
 
-func (c SocketClient) SendAndForget(t uint8, data interface{}) error { return c.wire.Send(t, data) }
+func (c SocketClient) SendAndForget(t ipc.PacketType, data any) error {
+	return c.wire.Send(t, data)
+}
+
+// Notify supposedly non-blocking, discard error operation.
+func (c SocketClient) Notify(t ipc.PacketType, data any) { _ = c.wire.Send(t, data) }
 
 func (c SocketClient) OnPacket(fn func(ipc.InPacket)) { c.wire.OnPacket(fn) }
+
+func (c SocketClient) Route(p ipc.InPacket, payload any) error {
+	return c.wire.SendPacket(p.Proxy(payload))
+}
 
 func (c SocketClient) GetLogger() *logger.Logger { return c.log }
 

@@ -87,7 +87,7 @@ func (c *Client) Call(type_ uint8, payload interface{}) ([]byte, error) {
 	return task.Response.Payload, task.err
 }
 
-func (c *Client) Send(type_ uint8, payload interface{}) error {
+func (c *Client) Send(type_ uint8, payload any) error {
 	return c.SendPacket(OutPacket{T: type_, Payload: payload})
 }
 

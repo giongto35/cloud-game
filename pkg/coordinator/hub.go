@@ -99,7 +99,7 @@ func (h *Hub) handleWebsocketWorkerConnection(w http.ResponseWriter, r *http.Req
 
 	data := r.URL.Query().Get(api.DataQueryParam)
 	handshake, err := GetConnectionRequest(data)
-	if err != nil {
+	if err != nil || handshake == nil {
 		h.log.Error().Err(err).Msg("got a malformed request")
 		return
 	}

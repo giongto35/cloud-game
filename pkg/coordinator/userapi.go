@@ -1,7 +1,6 @@
 package coordinator
 
 import (
-	"encoding/json"
 	"unsafe"
 
 	"github.com/giongto35/cloud-game/v2/pkg/api"
@@ -11,33 +10,28 @@ import (
 // CheckLatency sends a list of server addresses to the user
 // and waits get back this list with tested ping times for each server.
 func (u *User) CheckLatency(req api.CheckLatencyUserResponse) (api.CheckLatencyUserRequest, error) {
-	var response api.CheckLatencyUserRequest
 	data, err := u.Send(api.CheckLatency, req)
 	if err != nil || data == nil {
-		return response, err
+		return nil, err
 	}
-	return response, json.Unmarshal(data, &response)
+	rs, err := api.Unwrap[api.CheckLatencyUserRequest](data)
+	if err != nil {
+		return api.CheckLatencyUserRequest{}, err
+	}
+	return *rs, err
 }
 
 // InitSession signals the user that the app is ready to go.
 func (u *User) InitSession(wid string, ice []webrtc.IceServer, games []string) {
-	_ = u.SendAndForget(api.InitSession, api.InitSessionUserResponse{
-		Ice:   *(*[]api.IceServer)(unsafe.Pointer(&ice)), // don't do this at home
-		Games: games,
-		Wid:   wid,
-	})
+	// don't do this at home
+	u.Notify(api.InitSessionResult(*(*[]api.IceServer)(unsafe.Pointer(&ice)), games, wid))
 }
 
 // SendWebrtcOffer sends SDP offer back to the user.
-func (u *User) SendWebrtcOffer(sdp string) { _ = u.SendAndForget(api.WebrtcOffer, sdp) }
+func (u *User) SendWebrtcOffer(sdp string) { u.Notify(api.WebrtcOffer, sdp) }
 
 // SendWebrtcIceCandidate sends remote ICE candidate back to the user.
-func (u *User) SendWebrtcIceCandidate(candidate string) {
-	_ = u.SendAndForget(api.WebrtcIceCandidate, candidate)
-}
+func (u *User) SendWebrtcIceCandidate(candidate string) { u.Notify(api.WebrtcIceCandidate, candidate) }
 
 // StartGame signals the user that everything is ready to start a game.
 func (u *User) StartGame() error { return u.SendAndForget(api.StartGame, u.RoomID) }
-
-// Notify unconditionally sends the result of some operation.
-func (u *User) Notify(endpoint uint8, result interface{}) { _ = u.SendAndForget(endpoint, result) }

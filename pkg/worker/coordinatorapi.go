@@ -7,19 +7,9 @@ import (
 	"github.com/giongto35/cloud-game/v2/pkg/api"
 )
 
-func (c *Coordinator) terminateSession(data json.RawMessage) (api.TerminateSessionRequest, error) {
-	var v api.TerminateSessionRequest
-	err := json.Unmarshal(data, &v)
-	return v, err
+func (c *Coordinator) webrtcInit(data []byte) (*api.WebrtcInitRequest, error) {
+	return api.Unwrap[api.WebrtcInitRequest](data)
 }
-
-func (c *Coordinator) webrtcInit(data json.RawMessage) (api.WebrtcInitRequest, error) {
-	var v api.WebrtcInitRequest
-	err := json.Unmarshal(data, &v)
-	return v, err
-}
-
-func fromJson(data json.RawMessage, value interface{}) error { return json.Unmarshal(data, &value) }
 
 // toBase64Json encodes data to a URL-encoded Base64+JSON string.
 func toBase64Json(data interface{}) (string, error) {

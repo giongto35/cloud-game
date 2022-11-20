@@ -21,6 +21,10 @@ type (
 		Games []string    `json:"games"`
 		Wid   string      `json:"wid"`
 	}
-	WebrtcAnswerUserRequest       = string
-	WebrtcIceCandidateUserRequest = string
+	WebrtcAnswerUserRequest = string
+	WebrtcUserIceCandidate  = string
 )
+
+func InitSessionResult(ice []IceServer, games []string, wid string) (uint8, InitSessionUserResponse) {
+	return InitSession, InitSessionUserResponse{Ice: ice, Games: games, Wid: wid}
+}

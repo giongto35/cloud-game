@@ -2,54 +2,32 @@ package coordinator
 
 import (
 	"encoding/base64"
-	"encoding/json"
+	"fmt"
 
 	"github.com/giongto35/cloud-game/v2/pkg/api"
 	"github.com/giongto35/cloud-game/v2/pkg/client"
 )
 
-func GetConnectionRequest(data string) (api.ConnectionRequest, error) {
-	req := api.ConnectionRequest{}
+func GetConnectionRequest(data string) (*api.ConnectionRequest, error) {
 	if data == "" {
-		return req, nil
+		return nil, fmt.Errorf("no data")
 	}
-	decodeString, err := base64.URLEncoding.DecodeString(data)
-	if err != nil {
-		return req, err
-	}
-	err = json.Unmarshal(decodeString, &req)
-	return req, err
+	return api.UnwrapChecked[api.ConnectionRequest](base64.URLEncoding.DecodeString(data))
 }
 
-func (w *Worker) HandleRegisterRoom(data json.RawMessage, rooms *client.NetMap) {
-	var req api.RegisterRoomRequest
-	if err := json.Unmarshal(data, &req); err != nil {
-		w.log.Error().Err(err).Msg("malformed room register request")
-		return
-	}
-	rooms.Put(req, w)
+func (w *Worker) HandleRegisterRoom(rq api.RegisterRoomRequest, rooms *client.NetMap) {
+	rooms.Put(rq, w)
 }
 
-func (w *Worker) HandleCloseRoom(data json.RawMessage, rooms *client.NetMap) {
-	var req api.CloseRoomRequest
-	if err := json.Unmarshal(data, &req); err != nil {
-		w.log.Error().Err(err).Msg("malformed room remove request")
-		return
-	}
-	rooms.RemoveByKey(req)
+func (w *Worker) HandleCloseRoom(rq api.CloseRoomRequest, rooms *client.NetMap) {
+	rooms.RemoveByKey(rq)
 }
 
-func (w *Worker) HandleIceCandidate(data json.RawMessage, crowd *client.NetMap) {
-	var req api.WebrtcIceCandidateRequest
-	if err := json.Unmarshal(data, &req); err != nil {
-		w.log.Error().Err(err).Msg("malformed Ice candidate request")
-		return
-	}
-	usr, err := crowd.Find(string(req.Id))
-	if err == nil {
+func (w *Worker) HandleIceCandidate(rq api.WebrtcIceCandidateRequest, crowd *client.NetMap) {
+	if usr, err := crowd.Find(string(rq.Id)); err == nil {
 		u := usr.(*User)
-		u.SendWebrtcIceCandidate(req.Candidate)
+		u.SendWebrtcIceCandidate(rq.Candidate)
 	} else {
-		w.log.Warn().Str("id", req.Id.String()).Msg("unknown session")
+		w.log.Warn().Str("id", rq.Id.String()).Msg("unknown session")
 	}
 }

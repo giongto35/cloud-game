@@ -5,9 +5,7 @@ import (
 	"encoding/gob"
 	"errors"
 	"fmt"
-	"github.com/rs/zerolog/log"
 	"io"
-	"io/ioutil"
 	"math"
 	"net"
 	"os"
@@ -24,6 +22,7 @@ import (
 	"github.com/giongto35/cloud-game/v2/pkg/session"
 	"github.com/giongto35/cloud-game/v2/pkg/storage"
 	"github.com/pion/webrtc/v3/pkg/media"
+	"github.com/rs/zerolog/log"
 )
 
 // Room is a game session. multi webRTC sessions can connect to a same game.
@@ -390,7 +389,7 @@ func (r *Room) saveOnlineRoomToLocal(roomID string, savePath string) error {
 	}
 	// Save the data fetched from a cloud provider to the local server
 	if data != nil {
-		if err := ioutil.WriteFile(savePath, data, 0644); err != nil {
+		if err := os.WriteFile(savePath, data, 0644); err != nil {
 			return err
 		}
 		r.log.Debug().Msg("Successfully downloaded cloud save")

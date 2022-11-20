@@ -47,22 +47,43 @@ func (c *Coordinator) HandleRequests(h *Handler) {
 	c.OnPacket(func(p ipc.InPacket) {
 		switch p.T {
 		case api.TerminateSession:
-			c.HandleTerminateSession(p.Payload, h)
+			resp, err := api.Unwrap[api.TerminateSessionRequest](p.Payload)
+			if err != nil {
+				c.log.Error().Err(err).Msg("terminate session error")
+				return
+			}
+			c.log.Info().Msgf("Received a terminate session [%v]", resp.Id)
+			c.HandleTerminateSession(*resp, h)
 		case api.WebrtcInit:
 			c.log.Info().Msg("Received a request to createOffer from browser via coordinator")
 			c.HandleWebrtcInit(p, h, ap)
 		case api.WebrtcAnswer:
 			c.log.Info().Msg("Received answer SDP from browser")
-			c.HandleWebrtcAnswer(p, h)
+			rq, err := api.Unwrap[api.WebrtcAnswerRequest](p.Payload)
+			if err != nil {
+				c.log.Error().Err(err).Msg("malformed WebRTC answer")
+				return
+			}
+			c.HandleWebrtcAnswer(*rq, h)
 		case api.WebrtcIceCandidate:
 			c.log.Info().Msg("Received remote Ice Candidate from browser")
-			c.HandleWebrtcIceCandidate(p, h)
+			rs, err := api.Unwrap[api.WebrtcIceCandidateRequest](p.Payload)
+			if err != nil {
+				c.log.Error().Err(err).Send()
+				return
+			}
+			c.HandleWebrtcIceCandidate(*rs, h)
 		case api.StartGame:
 			c.log.Info().Msg("Received game start request")
 			c.HandleGameStart(p, h)
 		case api.QuitGame:
 			c.log.Info().Msg("Received game quit request")
-			c.HandleQuitGame(p, h)
+			resp, err := api.Unwrap[api.GameQuitRequest](p.Payload)
+			if err != nil {
+				c.log.Error().Err(err).Msg("malformed game quit request")
+				return
+			}
+			c.HandleQuitGame(*resp, h)
 		case api.SaveGame:
 			c.log.Info().Msg("Received a save game from coordinator")
 			c.HandleSaveGame(p, h)
@@ -88,9 +109,6 @@ func (c *Coordinator) CloseRoom(id string) { _ = c.SendAndForget(api.CloseRoom, 
 
 func (c *Coordinator) RegisterRoom(id string) { _ = c.SendAndForget(api.RegisterRoom, id) }
 
-func (c *Coordinator) IceCandidate(candidate string, sessionId string) {
-	_ = c.SendAndForget(api.IceCandidate, api.WebrtcIceCandidateRequest{
-		Stateful:  api.Stateful{Id: network.Uid(sessionId)},
-		Candidate: candidate,
-	})
+func (c *Coordinator) IceCandidate(candidate string, sessionId network.Uid) {
+	_ = c.SendAndForget(api.NewWebrtcIceCandidateRequest(sessionId, candidate))
 }

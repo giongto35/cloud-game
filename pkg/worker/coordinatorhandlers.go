@@ -1,7 +1,6 @@
 package worker
 
 import (
-	"encoding/json"
 	"strconv"
 
 	"github.com/giongto35/cloud-game/v2/pkg/api"
@@ -24,14 +23,8 @@ func MakeConnectionRequest(id string, conf worker.Worker, address string) (strin
 	})
 }
 
-func (c *Coordinator) HandleTerminateSession(data json.RawMessage, h *Handler) {
-	resp, err := c.terminateSession(data)
-	if err != nil {
-		c.log.Error().Err(err).Msg("terminate session error")
-		return
-	}
-	c.log.Info().Msgf("Received a terminate session [%v]", resp.Id)
-	if session := h.router.GetUser(resp.Id); session != nil {
+func (c *Coordinator) HandleTerminateSession(rq api.TerminateSessionRequest, h *Handler) {
+	if session := h.router.GetUser(rq.Id); session != nil {
 		h.TerminateSession(session)
 	}
 }
@@ -50,17 +43,17 @@ func (c *Coordinator) HandleWebrtcInit(packet ipc.InPacket, h *Handler, connApi 
 			c.log.Error().Err(err).Msgf("ICE candidate encode fail for [%v]", data)
 			return
 		}
-		h.cord.IceCandidate(candidate, string(resp.Id))
+		h.cord.IceCandidate(candidate, resp.Id)
 	})
 	if err != nil {
 		c.log.Error().Err(err).Msg("cannot create new webrtc session")
-		_ = h.cord.SendPacket(packet.Proxy(ipc.EmptyPacket))
+		_ = h.cord.Route(packet, ipc.EmptyPacket)
 		return
 	}
 	sdp, err := toBase64Json(localSDP)
 	if err != nil {
 		c.log.Error().Err(err).Msgf("SDP encode fail fro [%v]", localSDP)
-		_ = h.cord.SendPacket(packet.Proxy(ipc.EmptyPacket))
+		_ = h.cord.Route(packet, ipc.EmptyPacket)
 		return
 	}
 
@@ -68,47 +61,37 @@ func (c *Coordinator) HandleWebrtcInit(packet ipc.InPacket, h *Handler, connApi 
 	user := NewSession(peer, resp.Id)
 	h.router.AddUser(user)
 	c.log.Info().Str("id", string(resp.Id)).Msgf("Peer connection (uid:%s)", user.GetId())
-
-	_ = h.cord.SendPacket(packet.Proxy(sdp))
+	_ = h.cord.Route(packet, sdp)
 }
 
-func (c *Coordinator) HandleWebrtcAnswer(packet ipc.InPacket, h *Handler) {
-	var resp api.WebrtcAnswerRequest
-	if err := fromJson(packet.Payload, &resp); err != nil {
-		c.log.Error().Err(err).Msg("malformed WebRTC answer")
-		return
-	}
-	if user := h.router.GetUser(resp.Id); user != nil {
-		if err := user.GetPeerConn().SetRemoteSDP(resp.Sdp, fromBase64Json); err != nil {
-			c.log.Error().Err(err).Msgf("cannot set remote SDP of client [%v]", resp.Id)
+func (c *Coordinator) HandleWebrtcAnswer(rq api.WebrtcAnswerRequest, h *Handler) {
+	if user := h.router.GetUser(rq.Id); user != nil {
+		if err := user.GetPeerConn().SetRemoteSDP(rq.Sdp, fromBase64Json); err != nil {
+			c.log.Error().Err(err).Msgf("cannot set remote SDP of client [%v]", rq.Id)
 		}
 	}
 }
 
-func (c *Coordinator) HandleWebrtcIceCandidate(packet ipc.InPacket, h *Handler) {
-	var resp api.WebrtcIceCandidateRequest
-	if err := fromJson(packet.Payload, &resp); err != nil {
-		c.log.Error().Err(err).Msg("malformed WebRTC candidate request")
-		return
-	}
-	if user := h.router.GetUser(resp.Id); user != nil {
-		if err := user.GetPeerConn().AddCandidate(resp.Candidate, fromBase64Json); err != nil {
-			c.log.Error().Err(err).Msgf("cannot add Ice candidate of client [%v]", resp.Id)
+func (c *Coordinator) HandleWebrtcIceCandidate(rs api.WebrtcIceCandidateRequest, h *Handler) {
+	if user := h.router.GetUser(rs.Id); user != nil {
+		if err := user.GetPeerConn().AddCandidate(rs.Candidate, fromBase64Json); err != nil {
+			c.log.Error().Err(err).Msgf("cannot add ICE candidate of the client [%v]", rs.Id)
 		}
 	}
 }
 
 func (c *Coordinator) HandleGameStart(packet ipc.InPacket, h *Handler) {
-	var resp api.StartGameRequest
-	if err := fromJson(packet.Payload, &resp); err != nil {
+	rq, err := api.Unwrap[api.StartGameRequest](packet.Payload)
+	if err != nil {
 		c.log.Error().Err(err).Msg("malformed game start request")
-		_ = h.cord.SendPacket(packet.Proxy(ipc.EmptyPacket))
+		_ = h.cord.Route(packet, ipc.EmptyPacket)
 		return
 	}
+	resp := *rq
 	user := h.router.GetUser(resp.Stateful.Id)
 	if user == nil {
 		c.log.Error().Msgf("no user [%v]", resp.Stateful.Id)
-		_ = h.cord.SendPacket(packet.Proxy(ipc.EmptyPacket))
+		_ = h.cord.Route(packet, ipc.EmptyPacket)
 		return
 	}
 	h.log.Info().Str("game", resp.Game.Name).Msg("Starting the game")
@@ -120,8 +103,6 @@ func (c *Coordinator) HandleGameStart(packet ipc.InPacket, h *Handler) {
 		// recording
 		if h.conf.Recording.Enabled {
 			h.log.Info().Msgf("RECORD: %v %v", resp.Record, resp.RecordUser)
-		} else {
-			h.log.Info().Msg("RECORD OFF")
 		}
 
 		playRoom = h.CreateRoom(
@@ -150,25 +131,18 @@ func (c *Coordinator) HandleGameStart(packet ipc.InPacket, h *Handler) {
 	// Register room to coordinator if we are connecting to coordinator
 	if playRoom == nil {
 		c.log.Error().Msgf("couldn't create a room [%v]", resp.Stateful.Id)
-		_ = h.cord.SendPacket(packet.Proxy(ipc.EmptyPacket))
+		_ = h.cord.Route(packet, ipc.EmptyPacket)
 		return
 	}
 	h.cord.RegisterRoom(playRoom.ID)
 	user.SetRoom(playRoom)
 	h.router.AddRoom(playRoom)
-	_ = h.cord.SendPacket(packet.Proxy(api.StartGameResponse{
-		Room: api.Room{Id: playRoom.ID}, Record: h.conf.Recording.Enabled,
-	}))
+	_ = h.cord.Route(packet, api.StartGameResponse{Room: api.Room{Id: playRoom.ID}, Record: h.conf.Recording.Enabled})
 }
 
-func (c *Coordinator) HandleQuitGame(packet ipc.InPacket, h *Handler) {
-	var resp api.GameQuitRequest
-	if err := fromJson(packet.Payload, &resp); err != nil {
-		c.log.Error().Err(err).Msg("malformed game quit request")
-		return
-	}
-	if user := h.router.GetUser(resp.Stateful.Id); user != nil {
-		if room := h.router.GetRoom(resp.Room.Id); room != nil {
+func (c *Coordinator) HandleQuitGame(rq api.GameQuitRequest, h *Handler) {
+	if user := h.router.GetUser(rq.Stateful.Id); user != nil {
+		if room := h.router.GetRoom(rq.Room.Id); room != nil {
 			if room.HasUser(user) {
 				h.removeUser(user)
 			}
@@ -177,8 +151,8 @@ func (c *Coordinator) HandleQuitGame(packet ipc.InPacket, h *Handler) {
 }
 
 func (c *Coordinator) HandleSaveGame(packet ipc.InPacket, h *Handler) {
-	var resp api.SaveGameRequest
-	if err := fromJson(packet.Payload, &resp); err != nil {
+	resp, err := api.Unwrap[api.SaveGameRequest](packet.Payload)
+	if err != nil {
 		c.log.Error().Err(err).Msg("malformed game save request")
 		return
 	}
@@ -197,13 +171,13 @@ func (c *Coordinator) HandleSaveGame(packet ipc.InPacket, h *Handler) {
 	} else {
 		rez = ipc.ErrPacket
 	}
-	_ = h.cord.SendPacket(packet.Proxy(rez))
+	_ = h.cord.Route(packet, rez)
 }
 
 func (c *Coordinator) HandleLoadGame(packet ipc.InPacket, h *Handler) {
 	c.log.Info().Msg("Loading game state")
-	var resp api.LoadGameRequest
-	if err := fromJson(packet.Payload, &resp); err != nil {
+	resp, err := api.Unwrap[api.LoadGameRequest](packet.Payload)
+	if err != nil {
 		c.log.Error().Err(err).Msg("malformed game load request")
 		return
 	}
@@ -220,12 +194,12 @@ func (c *Coordinator) HandleLoadGame(packet ipc.InPacket, h *Handler) {
 	} else {
 		rez = ipc.ErrPacket
 	}
-	_ = h.cord.SendPacket(packet.Proxy(rez))
+	_ = h.cord.Route(packet, rez)
 }
 
 func (c *Coordinator) HandleChangePlayer(packet ipc.InPacket, h *Handler) {
-	var resp api.ChangePlayerRequest
-	if err := fromJson(packet.Payload, &resp); err != nil {
+	resp, err := api.Unwrap[api.ChangePlayerRequest](packet.Payload)
+	if err != nil {
 		c.log.Error().Err(err).Msg("malformed change player request")
 		return
 	}
@@ -242,12 +216,12 @@ func (c *Coordinator) HandleChangePlayer(packet ipc.InPacket, h *Handler) {
 	} else {
 		rez = ipc.ErrPacket
 	}
-	_ = h.cord.SendPacket(packet.Proxy(rez))
+	_ = h.cord.Route(packet, rez)
 }
 
 func (c *Coordinator) HandleToggleMultitap(packet ipc.InPacket, h *Handler) {
-	var resp api.ToggleMultitapRequest
-	if err := fromJson(packet.Payload, &resp); err != nil {
+	resp, err := api.Unwrap[api.ToggleMultitapRequest](packet.Payload)
+	if err != nil {
 		c.log.Error().Err(err).Msg("malformed toggle multitap request")
 		return
 	}
@@ -264,17 +238,17 @@ func (c *Coordinator) HandleToggleMultitap(packet ipc.InPacket, h *Handler) {
 	} else {
 		rez = ipc.ErrPacket
 	}
-	_ = h.cord.SendPacket(packet.Proxy(rez))
+	_ = h.cord.Route(packet, rez)
 }
 
 func (c *Coordinator) HandleRecordGame(packet ipc.InPacket, h *Handler) {
 	var rez = ipc.OkPacket
 	defer func() {
-		_ = h.cord.SendPacket(packet.Proxy(rez))
+		_ = h.cord.Route(packet, rez)
 	}()
 
-	var resp api.RecordGameRequest
-	if err := fromJson(packet.Payload, &resp); err != nil {
+	resp, err := api.Unwrap[api.RecordGameRequest](packet.Payload)
+	if err != nil {
 		c.log.Error().Err(err).Msg("malformed record game request")
 		rez = ipc.ErrPacket
 		return

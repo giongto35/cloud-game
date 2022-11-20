@@ -1,33 +1,63 @@
 package api
 
-import "github.com/giongto35/cloud-game/v2/pkg/network"
+import (
+	"encoding/json"
+
+	"github.com/giongto35/cloud-game/v2/pkg/network"
+)
+
+type (
+	PType    = uint8
+	Stateful struct {
+		Id network.Uid `json:"id"`
+	}
+)
+
+// Various codes
+
+const (
+	EMPTY = ""
+	ERROR = "error"
+	OK    = "ok"
+)
 
 // User
 const (
-	CheckLatency       uint8 = 3
-	InitSession        uint8 = 4
-	WebrtcInit         uint8 = 100
-	WebrtcOffer        uint8 = 101
-	WebrtcAnswer       uint8 = 102
-	WebrtcIceCandidate uint8 = 103
-	StartGame          uint8 = 104
-	ChangePlayer       uint8 = 108
-	QuitGame           uint8 = 105
-	SaveGame           uint8 = 106
-	LoadGame           uint8 = 107
-	ToggleMultitap     uint8 = 109
-	RecordGame         uint8 = 110
-	GetWorkerList      uint8 = 111
+	CheckLatency       PType = 3
+	InitSession        PType = 4
+	WebrtcInit         PType = 100
+	WebrtcOffer        PType = 101
+	WebrtcAnswer       PType = 102
+	WebrtcIceCandidate PType = 103
+	StartGame          PType = 104
+	ChangePlayer       PType = 108
+	QuitGame           PType = 105
+	SaveGame           PType = 106
+	LoadGame           PType = 107
+	ToggleMultitap     PType = 109
+	RecordGame         PType = 110
+	GetWorkerList      PType = 111
 )
 
 // Worker
 const (
-	RegisterRoom     uint8 = 2
-	CloseRoom        uint8 = 3
-	IceCandidate     uint8 = 4
-	TerminateSession uint8 = 5
+	RegisterRoom     PType = 2
+	CloseRoom        PType = 3
+	IceCandidate           = WebrtcIceCandidate
+	TerminateSession PType = 5
 )
 
-type Stateful struct {
-	Id network.Uid `json:"id"`
+func Unwrap[T any](bytes []byte) (*T, error) {
+	out := new(T)
+	if err := json.Unmarshal(bytes, out); err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func UnwrapChecked[T any](bytes []byte, err error) (*T, error) {
+	if err != nil {
+		return nil, err
+	}
+	return Unwrap[T](bytes)
 }

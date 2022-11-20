@@ -1,38 +1,28 @@
 package coordinator
 
 import (
-	"encoding/json"
-
 	"github.com/giongto35/cloud-game/v2/pkg/api"
 	"github.com/giongto35/cloud-game/v2/pkg/launcher"
 	"github.com/giongto35/cloud-game/v2/pkg/network"
 )
 
-func (w *Worker) WebrtcInit(id network.Uid) (api.WebrtcInitResponse, error) {
-	data, err := w.Send(api.WebrtcInit, api.WebrtcInitRequest{Stateful: api.Stateful{Id: id}})
-	var resp string
-	if err != nil {
-		return resp, err
-	}
-	err = json.Unmarshal(data, &resp)
-	return resp, err
+func (w *Worker) WebrtcInit(id network.Uid) (*api.WebrtcInitResponse, error) {
+	return api.UnwrapChecked[api.WebrtcInitResponse](
+		w.Send(api.WebrtcInit, api.WebrtcInitRequest{Stateful: api.Stateful{Id: id}}))
 }
 
 func (w *Worker) WebrtcAnswer(id network.Uid, sdp string) {
-	_ = w.SendAndForget(api.WebrtcAnswer, api.WebrtcAnswerRequest{
+	w.Notify(api.WebrtcAnswer, api.WebrtcAnswerRequest{
 		Stateful: api.Stateful{Id: id},
 		Sdp:      sdp,
 	})
 }
 
-func (w *Worker) WebrtcIceCandidate(id network.Uid, candidate string) {
-	_ = w.SendAndForget(api.WebrtcIceCandidate, api.WebrtcIceCandidateRequest{
-		Stateful:  api.Stateful{Id: id},
-		Candidate: candidate,
-	})
+func (w *Worker) WebrtcIceCandidate(id network.Uid, can string) {
+	w.Notify(api.NewWebrtcIceCandidateRequest(id, can))
 }
 
-func (w *Worker) StartGame(id network.Uid, app launcher.AppMeta, req api.GameStartUserRequest, rec bool) (api.StartGameResponse, error) {
+func (w *Worker) StartGame(id network.Uid, app launcher.AppMeta, req api.GameStartUserRequest, rec bool) (*api.StartGameResponse, error) {
 	sendData := api.StartGameRequest{
 		Stateful:    api.Stateful{Id: id},
 		Game:        api.GameInfo{Name: app.Name, Base: app.Base, Path: app.Path, Type: app.Type},
@@ -43,60 +33,38 @@ func (w *Worker) StartGame(id network.Uid, app launcher.AppMeta, req api.GameSta
 		sendData.Record = req.Record
 		sendData.RecordUser = req.RecordUser
 	}
-	data, err := w.Send(api.StartGame, sendData)
-	var resp api.StartGameResponse
-	if err != nil {
-		return resp, err
-	}
-	err = json.Unmarshal(data, &resp)
-	return resp, err
+	return api.UnwrapChecked[api.StartGameResponse](w.Send(api.StartGame, sendData))
 }
 
 func (w *Worker) QuitGame(id network.Uid, roomId string) {
-	_ = w.SendAndForget(api.QuitGame, api.GameQuitRequest{
+	w.Notify(api.QuitGame, api.GameQuitRequest{
 		Stateful: api.Stateful{Id: id},
 		Room:     api.Room{Id: roomId},
 	})
 }
 
-func (w *Worker) SaveGame(id network.Uid, roomId string) (api.SaveGameResponse, error) {
-	data, err := w.Send(api.SaveGame, api.SaveGameRequest{
-		Stateful: api.Stateful{Id: id},
-		Room:     api.Room{Id: roomId},
-	})
-	var resp api.SaveGameResponse
-	if err != nil {
-		return resp, err
-	}
-	err = json.Unmarshal(data, &resp)
-	return resp, err
+func (w *Worker) SaveGame(id network.Uid, roomId string) (*api.SaveGameResponse, error) {
+	return api.UnwrapChecked[api.SaveGameResponse](
+		w.Send(api.SaveGame, api.SaveGameRequest{
+			Stateful: api.Stateful{Id: id},
+			Room:     api.Room{Id: roomId},
+		}))
 }
 
-func (w *Worker) LoadGame(id network.Uid, roomId string) (api.LoadGameResponse, error) {
-	data, err := w.Send(api.LoadGame, api.LoadGameRequest{
+func (w *Worker) LoadGame(id network.Uid, roomId string) (*api.LoadGameResponse, error) {
+	return api.UnwrapChecked[api.LoadGameResponse](w.Send(api.LoadGame, api.LoadGameRequest{
 		Stateful: api.Stateful{Id: id},
 		Room:     api.Room{Id: roomId},
-	})
-	var resp api.LoadGameResponse
-	if err != nil {
-		return resp, err
-	}
-	err = json.Unmarshal(data, &resp)
-	return resp, err
+	}))
 }
 
-func (w *Worker) ChangePlayer(id network.Uid, roomId string, index string) (api.ChangePlayerResponse, error) {
-	data, err := w.Send(api.ChangePlayer, api.ChangePlayerRequest{
-		Stateful: api.Stateful{Id: id},
-		Room:     api.Room{Id: roomId},
-		Index:    index,
-	})
-	var resp api.ChangePlayerResponse
-	if err != nil {
-		return resp, err
-	}
-	err = json.Unmarshal(data, &resp)
-	return resp, err
+func (w *Worker) ChangePlayer(id network.Uid, roomId string, index string) (*api.ChangePlayerResponse, error) {
+	return api.UnwrapChecked[api.ChangePlayerResponse](
+		w.Send(api.ChangePlayer, api.ChangePlayerRequest{
+			Stateful: api.Stateful{Id: id},
+			Room:     api.Room{Id: roomId},
+			Index:    index,
+		}))
 }
 
 func (w *Worker) ToggleMultitap(id network.Uid, roomId string) {
@@ -106,19 +74,14 @@ func (w *Worker) ToggleMultitap(id network.Uid, roomId string) {
 	})
 }
 
-func (w *Worker) RecordGame(id network.Uid, roomId string, rec bool, recUser string) (api.RecordGameResponse, error) {
-	data, err := w.Send(api.RecordGame, api.RecordGameRequest{
-		Stateful: api.Stateful{Id: id},
-		Room:     api.Room{Id: roomId},
-		Active:   rec,
-		User:     recUser,
-	})
-	var resp api.RecordGameResponse
-	if err != nil {
-		return resp, err
-	}
-	err = json.Unmarshal(data, &resp)
-	return resp, err
+func (w *Worker) RecordGame(id network.Uid, roomId string, rec bool, recUser string) (*api.RecordGameResponse, error) {
+	return api.UnwrapChecked[api.RecordGameResponse](
+		w.Send(api.RecordGame, api.RecordGameRequest{
+			Stateful: api.Stateful{Id: id},
+			Room:     api.Room{Id: roomId},
+			Active:   rec,
+			User:     recUser,
+		}))
 }
 
 func (w *Worker) TerminateSession(id network.Uid) {
