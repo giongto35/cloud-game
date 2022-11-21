@@ -59,7 +59,7 @@ void bridge_execute(void *f);
 */
 import "C"
 
-var mu, fmu sync.Mutex
+var mu sync.Mutex
 var lastFrameTime int64
 
 var libretroLogger = logger.Default()
@@ -150,7 +150,7 @@ func coreVideoRefresh(data unsafe.Pointer, width C.unsigned, height C.unsigned, 
 	}
 
 	// the image is being resized and de-rotated
-	img := image.DrawRgbaImage(
+	frame := image.DrawRgbaImage(
 		pixelFormatConverterFn,
 		rotationFn,
 		image.ScaleNearestNeighbour,
@@ -162,13 +162,11 @@ func coreVideoRefresh(data unsafe.Pointer, width C.unsigned, height C.unsigned, 
 	)
 
 	t := time.Now().UnixNano()
-	fmu.Lock()
-	dt := t - lastFrameTime
+	dt := time.Duration(t - lastFrameTime)
 	lastFrameTime = t
-	fmu.Unlock()
 
 	select {
-	case NAEmulator.imageChannel <- GameFrame{Data: img, Duration: time.Duration(dt)}:
+	case NAEmulator.imageChannel <- GameFrame{Data: frame, Duration: dt}:
 	default:
 	}
 }
@@ -494,6 +492,8 @@ func slurp(path string, size int64) ([]byte, error) {
 }
 
 func coreLoadGame(filename string) {
+	lastFrameTime = 0
+
 	file, err := os.Open(filename)
 	if err != nil {
 		panic(err)
