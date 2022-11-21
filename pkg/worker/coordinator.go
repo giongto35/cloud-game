@@ -18,7 +18,7 @@ type Coordinator struct {
 	log *logger.Logger
 }
 
-func newCoordinatorConnection(host string, conf worker.Worker, addr string, log *logger.Logger) (Coordinator, error) {
+func newCoordinatorConnection(host string, conf worker.Worker, addr string, log *logger.Logger) (*Coordinator, error) {
 	scheme := "ws"
 	if conf.Network.Secure {
 		scheme = "wss"
@@ -30,12 +30,11 @@ func newCoordinatorConnection(host string, conf worker.Worker, addr string, log 
 	if req != "" && err == nil {
 		address.RawQuery = "data=" + req
 	}
-
 	conn, err := ipc.NewClient(address, log)
 	if err != nil {
-		return Coordinator{}, err
+		return nil, err
 	}
-	return Coordinator{SocketClient: client.NewWithId(id, conn, "c", log), log: log}, nil
+	return &Coordinator{SocketClient: client.NewWithId(id, conn, "c", log), log: log}, nil
 }
 
 func (c *Coordinator) HandleRequests(h *Handler) {
@@ -105,10 +104,10 @@ func (c *Coordinator) HandleRequests(h *Handler) {
 	})
 }
 
-func (c *Coordinator) CloseRoom(id string) { _ = c.SendAndForget(api.CloseRoom, id) }
+func (c *Coordinator) CloseRoom(id string) { c.Notify(api.CloseRoom, id) }
 
-func (c *Coordinator) RegisterRoom(id string) { _ = c.SendAndForget(api.RegisterRoom, id) }
+func (c *Coordinator) RegisterRoom(id string) { c.Notify(api.RegisterRoom, id) }
 
 func (c *Coordinator) IceCandidate(candidate string, sessionId network.Uid) {
-	_ = c.SendAndForget(api.NewWebrtcIceCandidateRequest(sessionId, candidate))
+	c.Notify(api.NewWebrtcIceCandidateRequest(sessionId, candidate))
 }

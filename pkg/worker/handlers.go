@@ -38,16 +38,17 @@ func NewHandler(address string, conf worker.Config, log *logger.Logger) *Handler
 }
 
 func (h *Handler) Run() {
-	var err error
-	coordinatorAddress := h.conf.Worker.Network.CoordinatorAddress
+	remoteAddr := h.conf.Worker.Network.CoordinatorAddress
 	for {
-		if h.cord, err = newCoordinatorConnection(coordinatorAddress, h.conf.Worker, h.address, h.log); err != nil {
+		conn, err := newCoordinatorConnection(remoteAddr, h.conf.Worker, h.address, h.log)
+		if err != nil {
 			h.log.Error().Err(err).
-				Msgf("no connection to the coordinator %v. Retrying in %v", coordinatorAddress, retry)
+				Msgf("no connection to the coordinator %v. Retrying in %v", remoteAddr, retry)
 			time.Sleep(retry)
 			continue
 		}
-		h.cord.GetLogger().Info().Msgf("Connected to the coordinator %v", coordinatorAddress)
+		h.cord = *conn
+		h.cord.GetLogger().Info().Msgf("Connected to the coordinator %v", remoteAddr)
 		h.cord.HandleRequests(h)
 		h.cord.Listen()
 		// block
