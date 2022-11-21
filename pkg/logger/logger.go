@@ -16,24 +16,14 @@ import (
 type Level int8
 
 const (
-	// DebugLevel defines debug log level.
 	DebugLevel Level = iota
-	// InfoLevel defines info log level.
 	InfoLevel
-	// WarnLevel defines warn log level.
 	WarnLevel
-	// ErrorLevel defines error log level.
 	ErrorLevel
-	// FatalLevel defines fatal log level.
 	FatalLevel
-	// PanicLevel defines panic log level.
 	PanicLevel
-	// NoLevel defines an absent log level.
 	NoLevel
-	// Disabled disables the logger.
 	Disabled
-
-	// TraceLevel defines trace log level.
 	TraceLevel Level = -1
 	// Values less than TraceLevel are handled as numbers.
 )
@@ -74,7 +64,7 @@ func New(isDebug bool) *Logger {
 		logLevel = zerolog.DebugLevel
 	}
 	zerolog.SetGlobalLevel(logLevel)
-	logger := zerolog.New(os.Stderr).With().Timestamp().Fields(map[string]interface{}{"pid": pid}).Logger()
+	logger := zerolog.New(os.Stderr).With().Timestamp().Fields(map[string]any{"pid": pid}).Logger()
 	return &Logger{logger: &logger}
 }
 
@@ -86,12 +76,23 @@ func NewConsole(isDebug bool, tag string, noColor bool) *Logger {
 	zerolog.SetGlobalLevel(logLevel)
 	zerolog.TimeFieldFormat = time.RFC3339Nano
 	output := zerolog.ConsoleWriter{Out: os.Stdout, TimeFormat: "15:04:05.0000", NoColor: noColor}
-	output.FormatMessage = func(i interface{}) string {
-		if output.NoColor {
+
+	if output.NoColor {
+		output.FormatMessage = func(i any) string {
+			if i == nil {
+				return fmt.Sprintf("%s %s", tag, "")
+			}
 			return fmt.Sprintf("%s %v", tag, i)
 		}
-		return fmt.Sprintf("\x1b[%dm%s\x1b[0m %v", 36, tag, i)
+	} else {
+		output.FormatMessage = func(i any) string {
+			if i == nil {
+				return fmt.Sprintf("\x1b[%dm%s\x1b[0m %s", 36, tag, "")
+			}
+			return fmt.Sprintf("\x1b[%dm%s\x1b[0m %v", 36, tag, i)
+		}
 	}
+
 	//multi := zerolog.MultiLevelWriter(output, os.Stdout)
 	logger := zerolog.New(output).With().
 		Int("pid", pid).
