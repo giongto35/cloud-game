@@ -69,6 +69,9 @@ type naEmulator struct {
 	// out frame size
 	vw, vh int
 
+	// draw threads
+	th int
+
 	players Players
 
 	done chan struct{}
@@ -89,7 +92,7 @@ type GameFrame struct {
 var NAEmulator *naEmulator
 
 // NAEmulator implements CloudEmulator interface based on NanoArch(golang RetroArch)
-func NewNAEmulator(roomID string, inputChannel <-chan InputEvent, storage Storage, conf config.LibretroCoreConfig) (*naEmulator, chan GameFrame, chan []int16) {
+func NewNAEmulator(roomID string, inputChannel <-chan InputEvent, storage Storage, conf config.LibretroCoreConfig, threads int) (*naEmulator, chan GameFrame, chan []int16) {
 	imageChannel := make(chan GameFrame, 30)
 	audioChannel := make(chan []int16, 30)
 
@@ -110,6 +113,7 @@ func NewNAEmulator(roomID string, inputChannel <-chan InputEvent, storage Storag
 		players:      NewPlayerSessionInput(),
 		roomID:       roomID,
 		done:         make(chan struct{}, 1),
+		th:           threads,
 	}, imageChannel, audioChannel
 }
 
@@ -142,8 +146,8 @@ func NewVideoExporter(roomID string, imgChannel chan GameFrame) *VideoExporter {
 
 // Init initialize new RetroArch cloud emulator
 // withImageChan returns an image stream as Channel for output else it will write to unix socket
-func Init(roomID string, withImageChannel bool, inputChannel <-chan InputEvent, storage Storage, config config.LibretroCoreConfig) (*naEmulator, chan GameFrame, chan []int16) {
-	emu, imageChannel, audioChannel := NewNAEmulator(roomID, inputChannel, storage, config)
+func Init(roomID string, withImageChannel bool, inputChannel <-chan InputEvent, storage Storage, config config.LibretroCoreConfig, threads int) (*naEmulator, chan GameFrame, chan []int16) {
+	emu, imageChannel, audioChannel := NewNAEmulator(roomID, inputChannel, storage, config, threads)
 	// Set to global NAEmulator
 	NAEmulator = emu
 	if !withImageChannel {

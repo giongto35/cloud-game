@@ -79,7 +79,7 @@ var video struct {
 
 // default core pix format converter
 var pixelFormatConverterFn = image.Rgb565
-var rotationFn = image.GetRotation(image.Angle(0))
+var rotationFn *image.Rotate
 
 //const joypadNumKeys = int(C.RETRO_DEVICE_ID_JOYPAD_R3 + 1)
 //var joy [joypadNumKeys]bool
@@ -161,6 +161,7 @@ func coreVideoRefresh(data unsafe.Pointer, width C.unsigned, height C.unsigned, 
 		data_,
 		NAEmulator.vw,
 		NAEmulator.vh,
+		NAEmulator.th,
 	)
 
 	t := time.Now().UnixNano()
@@ -208,13 +209,9 @@ func coreInputState(port C.unsigned, device C.unsigned, index C.unsigned, id C.u
 }
 
 func audioWrite(buf unsafe.Pointer, frames C.size_t) C.size_t {
-	// !to make it mono/stereo independent
-	samples := int(frames) * 2
-	pcm := (*[(1 << 30) - 1]int16)(buf)[:samples:samples]
-
+	samples := int(frames) << 1
+	pcm := (*[4096]int16)(buf)[:samples:samples]
 	p := make([]int16, samples)
-	// copy because pcm slice refer to buf underlying pointer,
-	// and buf pointer is the same in continuous frames
 	copy(p, pcm)
 
 	select {
@@ -512,7 +509,7 @@ func coreLoadGame(filename string) {
 	log.Printf("  block_extract: %v", bool(si.block_extract))
 
 	if !si.need_fullpath {
-		bytes, err := slurp(filename, size)
+		bytes, err := os.ReadFile(filename)
 		if err != nil {
 			panic(err)
 		}
@@ -628,6 +625,7 @@ func nanoarchShutdown() {
 	for _, element := range coreConfig {
 		C.free(unsafe.Pointer(element))
 	}
+	image.Clear()
 }
 
 func nanoarchRun() {
@@ -675,8 +673,13 @@ func setRotation(rotation uint) {
 		return
 	}
 	video.rotation = image.Angle(rotation)
-	rotationFn = image.GetRotation(video.rotation)
-	NAEmulator.meta.Rotation = rotationFn
+	r := image.GetRotation(video.rotation)
+	if rotation > 0 {
+		rotationFn = &r
+	} else {
+		rotationFn = nil
+	}
+	NAEmulator.meta.Rotation = r
 	log.Printf("[Env]: the game video is rotated %v°", map[uint]uint{0: 0, 1: 90, 2: 180, 3: 270}[rotation])
 }
 

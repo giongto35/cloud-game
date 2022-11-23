@@ -2,6 +2,7 @@ package image
 
 import (
 	"image"
+	"sync"
 )
 
 type imageCache struct {
@@ -10,58 +11,72 @@ type imageCache struct {
 	h     int
 }
 
-var canvas = imageCache{
-	image.NewRGBA(image.Rectangle{}),
-	0,
-	0,
+func (i *imageCache) get(w, h int) *image.RGBA {
+	if i.w == w && i.h == h {
+		return i.image
+	}
+	i.w, i.h = w, h
+	i.image = image.NewRGBA(image.Rect(0, 0, w, h))
+	return i.image
 }
 
-func DrawRgbaImage(pixFormat Format, rotationFn Rotate, scaleType int, flipV bool, w, h, packedW, bpp int,
-	data []byte, dw, dh int) *image.RGBA {
-	if pixFormat == nil {
-		return nil
-	}
+var (
+	canvas1 = imageCache{image.NewRGBA(image.Rectangle{}), 0, 0}
+	canvas2 = imageCache{image.NewRGBA(image.Rectangle{}), 0, 0}
+	wg      sync.WaitGroup
+)
 
+func DrawRgbaImage(pixFormat Format, rot *Rotate, scaleType int, flipV bool, w, h, packedW, bpp int,
+	data []byte, dw, dh, th int) *image.RGBA {
 	// !to implement own image interfaces img.Pix = bytes[]
 	ww, hh := w, h
-	if rotationFn.IsEven {
+	if rot != nil && rot.IsEven {
 		ww, hh = hh, ww
 	}
-	src := getCanvas(ww, hh)
+	src := canvas1.get(ww, hh)
 
-	drawImage(pixFormat, w, h, packedW, bpp, flipV, rotationFn, data, src)
-	out := image.NewRGBA(image.Rect(0, 0, dw, dh))
-	Resize(scaleType, src, out)
-	return out
-}
+	normY := !flipV
+	hn := h / th
+	pwb := packedW * bpp
+	wg.Add(th)
+	for i := 0; i < th; i++ {
+		xx := hn * i
+		go func() {
+			for y, yy, l, lx, row := xx, 0, xx+hn, 0, 0; y < l; y++ {
+				if normY {
+					yy = y
+				} else {
+					yy = (h - 1) - y
+				}
+				row = yy * src.Stride
+				lx = y * pwb
+				for x, k := 0, 0; x < w; x++ {
+					if rot == nil {
+						k = x<<2 + row
+					} else {
+						dx, dy := rot.Call(x, yy, w, h)
+						k = dx<<2 + dy*src.Stride
+					}
+					r := pixFormat(data, x*bpp+lx)
+					src.Pix[k], src.Pix[k+1], src.Pix[k+2], src.Pix[k+3] = r.R, r.G, r.B, 255
+				}
+			}
+			wg.Done()
+		}()
+	}
+	wg.Wait()
 
-func drawImage(toRGBA Format, w, h, packedW, bpp int, flipV bool, rotationFn Rotate, data []byte, image *image.RGBA) {
-	for y := 0; y < h; y++ {
-		yy := y
-		if flipV {
-			yy = (h - 1) - y
-		}
-		lx := y * packedW * bpp
-		for x := 0; x < w; x++ {
-			src := toRGBA(data, x*bpp+lx)
-			dx, dy := rotationFn.Call(x, yy, w, h)
-			i := dx*4 + dy*image.Stride
-			dst := image.Pix[i : i+4 : i+4]
-			dst[0] = src.R
-			dst[1] = src.G
-			dst[2] = src.B
-			dst[3] = src.A
-		}
+	if ww == dw && hh == dh {
+		return src
+	} else {
+		out := canvas2.get(dw, dh)
+		Resize(scaleType, src, out)
+		return out
 	}
 }
 
-func getCanvas(w, h int) *image.RGBA {
-	if canvas.w == w && canvas.h == h {
-		return canvas.image
-	}
-
-	canvas.w, canvas.h = w, h
-	canvas.image = image.NewRGBA(image.Rect(0, 0, w, h))
-
-	return canvas.image
+func Clear() {
+	wg = sync.WaitGroup{}
+	canvas1.get(0, 0)
+	canvas2.get(0, 0)
 }
