@@ -68,6 +68,9 @@ type naEmulator struct {
 	// out frame size
 	vw, vh int
 
+	// draw threads
+	th int
+
 	players Players
 
 	done chan struct{}
@@ -94,7 +97,7 @@ type GameAudio struct {
 var NAEmulator *naEmulator
 
 // NewNAEmulator implements CloudEmulator interface for a Libretro frontend.
-func NewNAEmulator(roomID string, inputChannel <-chan InputEvent, storage Storage, conf config.LibretroCoreConfig, log *logger.Logger) (*naEmulator, chan GameFrame, chan GameAudio) {
+func NewNAEmulator(roomID string, inputChannel <-chan InputEvent, storage Storage, conf config.LibretroCoreConfig, threads int, log *logger.Logger) (*naEmulator, chan GameFrame, chan GameAudio) {
 	imageChannel := make(chan GameFrame, 30)
 	audioChannel := make(chan GameAudio, 30)
 
@@ -118,6 +121,7 @@ func NewNAEmulator(roomID string, inputChannel <-chan InputEvent, storage Storag
 		players:      NewPlayerSessionInput(),
 		roomID:       roomID,
 		done:         make(chan struct{}, 1),
+		th:           threads,
 		log:          log,
 	}, imageChannel, audioChannel
 }
@@ -146,8 +150,8 @@ func NewVideoExporter(roomID string, imgChannel chan GameFrame, log *logger.Logg
 
 // Init initialize new RetroArch cloud emulator
 // withImageChan returns an image stream as Channel for output else it will write to unix socket
-func Init(roomID string, withImageChannel bool, inputChannel <-chan InputEvent, storage Storage, config config.LibretroCoreConfig, log *logger.Logger) (*naEmulator, chan GameFrame, chan GameAudio) {
-	emu, imageChannel, audioChannel := NewNAEmulator(roomID, inputChannel, storage, config, log)
+func Init(roomID string, withImageChannel bool, inputChannel <-chan InputEvent, storage Storage, config config.LibretroCoreConfig, threads int, log *logger.Logger) (*naEmulator, chan GameFrame, chan GameAudio) {
+	emu, imageChannel, audioChannel := NewNAEmulator(roomID, inputChannel, storage, config, threads, log)
 	// Set to global NAEmulator
 	NAEmulator = emu
 	if !withImageChannel {

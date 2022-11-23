@@ -1,7 +1,6 @@
 package nanoarch
 
 import (
-	"bufio"
 	"fmt"
 	"os"
 	"os/user"
@@ -83,7 +82,7 @@ var video struct {
 
 // default core pix format converter
 var pixelFormatConverterFn = image.Rgb565
-var rotationFn = image.GetRotation(image.Angle(0))
+var rotationFn *image.Rotate
 
 //const joypadNumKeys = int(C.RETRO_DEVICE_ID_JOYPAD_R3 + 1)
 //var joy [joypadNumKeys]bool
@@ -159,6 +158,7 @@ func coreVideoRefresh(data unsafe.Pointer, width C.unsigned, height C.unsigned, 
 		data_,
 		NAEmulator.vw,
 		NAEmulator.vh,
+		NAEmulator.th,
 	)
 
 	t := time.Now().UnixNano()
@@ -205,17 +205,13 @@ func coreInputState(port C.unsigned, device C.unsigned, index C.unsigned, id C.u
 }
 
 func audioWrite(buf unsafe.Pointer, frames C.size_t) C.size_t {
-	// !to make it mono/stereo independent
-	samples := int(frames) * 2
-	pcm := (*[(1 << 30) - 1]int16)(buf)[:samples:samples]
-
+	samples := int(frames) << 1
+	pcm := (*[4096]int16)(buf)[:samples:samples]
 	p := make([]int16, samples)
-	// copy because pcm slice refer to buf underlying pointer,
-	// and buf pointer is the same in continuous frames
 	copy(p, pcm)
 
 	// 1600 = x / 1000 * 48000 * 2
-	estimate := float64(len(pcm)) / float64(NAEmulator.meta.AudioSampleRate*2) * 1000000000
+	estimate := float64(samples) / float64(NAEmulator.meta.AudioSampleRate<<1) * 1000000000
 
 	select {
 	case NAEmulator.audioChannel <- GameAudio{Data: p, Duration: time.Duration(estimate)}:
@@ -474,46 +470,8 @@ func coreLoad(meta emulator.Metadata) {
 	C.bridge_retro_init(retroInit)
 }
 
-func slurp(path string, size int64) ([]byte, error) {
-	f, err := os.Open(path)
-	if err != nil {
-		return nil, err
-	}
-	defer func() {
-		_ = f.Close()
-	}()
-	bytes := make([]byte, size)
-	buffer := bufio.NewReader(f)
-	_, err = buffer.Read(bytes)
-	if err != nil {
-		return nil, err
-	}
-	return bytes, nil
-}
-
 func coreLoadGame(filename string) {
 	lastFrameTime = 0
-
-	file, err := os.Open(filename)
-	if err != nil {
-		panic(err)
-	}
-
-	fi, err := file.Stat()
-	if err != nil {
-		panic(err)
-	}
-	_ = file.Close()
-
-	size := fi.Size()
-	libretroLogger.Debug().Msgf("ROM size: %v", size)
-
-	csFilename := C.CString(filename)
-	defer C.free(unsafe.Pointer(csFilename))
-	gi := C.struct_retro_game_info{
-		path: csFilename,
-		size: C.size_t(size),
-	}
 
 	si := C.struct_retro_system_info{}
 	C.bridge_retro_get_system_info(retroGetSystemInfo, &si)
@@ -525,14 +483,33 @@ func coreLoadGame(filename string) {
 		)
 	}
 
+	file, err := os.Open(filename)
+	if err != nil {
+		panic(err)
+	}
+	defer func() { _ = file.Close() }()
+
+	fi, err := file.Stat()
+	if err != nil {
+		panic(err)
+	}
+
+	fPath := C.CString(filename)
+	defer C.free(unsafe.Pointer(fPath))
+	gi := C.struct_retro_game_info{
+		path: fPath,
+		size: C.size_t(fi.Size()),
+	}
+	libretroLogger.Debug().MsgFunc(func() string { return fmt.Sprintf("ROM size: %v", byteCountBinary(int64(gi.size))) })
+
 	if !si.need_fullpath {
-		bytes, err := slurp(filename, size)
+		bytes, err := os.ReadFile(filename)
 		if err != nil {
-			panic(err)
+			libretroLogger.Fatal().Err(err).Msgf("couldn't read %s", filename)
 		}
-		cstr := C.CString(string(bytes))
-		defer C.free(unsafe.Pointer(cstr))
-		gi.data = unsafe.Pointer(cstr)
+		dat := C.CString(string(bytes))
+		gi.data = unsafe.Pointer(dat)
+		defer C.free(unsafe.Pointer(dat))
 	}
 
 	if ok := C.bridge_retro_load_game(retroLoadGame, &gi); !ok {
@@ -671,6 +648,7 @@ func videoSetPixelFormat(format uint32) (C.bool, error) {
 		video.bpp = 2
 		// format is not implemented
 		pixelFormatConverterFn = nil
+		return false, fmt.Errorf("unsupported pixel type %v converter", format)
 	case C.RETRO_PIXEL_FORMAT_XRGB8888:
 		video.pixFmt = image.BitFormatInt8888Rev
 		if err := graphics.SetPixelFormat(graphics.UnsignedInt8888Rev); err != nil {
@@ -696,8 +674,13 @@ func setRotation(rotation uint) {
 		return
 	}
 	video.rotation = image.Angle(rotation)
-	rotationFn = image.GetRotation(video.rotation)
-	NAEmulator.meta.Rotation = rotationFn
+	r := image.GetRotation(video.rotation)
+	if rotation > 0 {
+		rotationFn = &r
+	} else {
+		rotationFn = nil
+	}
+	NAEmulator.meta.Rotation = r
 	libretroLogger.Debug().Msgf("Image rotated %v°", map[uint]uint{0: 0, 1: 90, 2: 180, 3: 270}[rotation])
 }
 
@@ -712,4 +695,17 @@ func printOpenGLDriverInfo() {
 	openGLInfo.WriteString(fmt.Sprintf("[OpenGL] Renderer: %v\n", graphics.GetGLRendererInfo()))
 	openGLInfo.WriteString(fmt.Sprintf("[OpenGL] GLSL Version: %v", graphics.GetGLSLInfo()))
 	libretroLogger.Debug().Msg(openGLInfo.String())
+}
+
+func byteCountBinary(b int64) string {
+	const unit = 1024
+	if b < unit {
+		return fmt.Sprintf("%d B", b)
+	}
+	div, exp := int64(unit), 0
+	for n := b / unit; n >= unit; n /= unit {
+		div *= unit
+		exp++
+	}
+	return fmt.Sprintf("%.1f %ciB", float64(b)/float64(div), "KMGTPE"[exp])
 }

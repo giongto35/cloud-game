@@ -163,12 +163,14 @@ func NewRoom(id string, game games.GameMetadata, storage storage.CloudStorage, o
 		emuName := conf.Emulator.GetEmulator(game.Type, game.Path)
 		libretroConfig := conf.Emulator.GetLibretroCoreConfig(emuName)
 
+		log.Info().Msgf("Image processing threads = %v", conf.Emulator.Threads)
+
 		// Run without game, image stream is communicated over a unix socket
 		if conf.Encoder.WithoutGame {
 			room.imageChannel = NewVideoImporter(roomID, log)
-			room.director, _, room.audioChannel = nanoarch.Init(roomID, false, inputChannel, store, libretroConfig, log)
+			room.director, _, room.audioChannel = nanoarch.Init(roomID, false, inputChannel, store, libretroConfig, conf.Emulator.Threads, log)
 		} else {
-			room.director, room.imageChannel, room.audioChannel = nanoarch.Init(roomID, true, inputChannel, store, libretroConfig, log)
+			room.director, room.imageChannel, room.audioChannel = nanoarch.Init(roomID, true, inputChannel, store, libretroConfig, conf.Emulator.Threads, log)
 		}
 
 		gameMeta := room.director.LoadMeta(filepath.Join(game.Base, game.Path))

@@ -217,10 +217,14 @@ func cleanPath(path string) string {
 // benchmarkEmulator is a generic function for
 // measuring emulator performance for one emulation frame.
 func benchmarkEmulator(system string, rom string, b *testing.B) {
+	b.StopTimer()
 	log.SetOutput(io.Discard)
 	os.Stdout, _ = os.Open(os.DevNull)
+	libretroLogger = logger.New(false)
 
 	s := GetDefaultEmulatorMock("bench_"+system+"_performance", system, rom)
+
+	b.StartTimer()
 	for i := 0; i < b.N; i++ {
 		s.emulateOneFrame()
 	}
