@@ -2,6 +2,7 @@ package nanoarch
 
 import (
 	"bufio"
+	"fmt"
 	"log"
 	"os"
 	"os/user"
@@ -151,7 +152,7 @@ func coreVideoRefresh(data unsafe.Pointer, width C.unsigned, height C.unsigned, 
 	}
 
 	// the image is being resized and de-rotated
-	img := image.DrawRgbaImage(
+	frame := image.DrawRgbaImage(
 		pixelFormatConverterFn,
 		rotationFn,
 		image.ScaleNearestNeighbour,
@@ -167,7 +168,7 @@ func coreVideoRefresh(data unsafe.Pointer, width C.unsigned, height C.unsigned, 
 	lastFrameTime = t
 
 	select {
-	case NAEmulator.imageChannel <- GameFrame{Data: img, Duration: dt}:
+	case NAEmulator.imageChannel <- GameFrame{Data: frame, Duration: dt}:
 	default:
 	}
 }
@@ -479,6 +480,8 @@ func slurp(path string, size int64) ([]byte, error) {
 }
 
 func coreLoadGame(filename string) {
+	lastFrameTime = 0
+
 	file, err := os.Open(filename)
 	if err != nil {
 		panic(err)
@@ -675,4 +678,17 @@ func setRotation(rotation uint) {
 	rotationFn = image.GetRotation(video.rotation)
 	NAEmulator.meta.Rotation = rotationFn
 	log.Printf("[Env]: the game video is rotated %v°", map[uint]uint{0: 0, 1: 90, 2: 180, 3: 270}[rotation])
+}
+
+func byteCountBinary(b int64) string {
+	const unit = 1024
+	if b < unit {
+		return fmt.Sprintf("%d B", b)
+	}
+	div, exp := int64(unit), 0
+	for n := b / unit; n >= unit; n /= unit {
+		div *= unit
+		exp++
+	}
+	return fmt.Sprintf("%.1f %ciB", float64(b)/float64(div), "KMGTPE"[exp])
 }
