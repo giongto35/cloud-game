@@ -570,6 +570,9 @@ func coreLoadGame(filename string) {
 	video.baseWidth = int32(avi.geometry.base_width)
 	video.baseHeight = int32(avi.geometry.base_height)
 	if video.isGl {
+		bufS := int(video.maxWidth * video.maxHeight * int32(video.bpp))
+		graphics.SetBuffer(bufS)
+		libretroLogger.Info().Msgf("Set buffer: %v", byteCountBinary(int64(bufS)))
 		if usesLibCo {
 			C.bridge_execute(C.initVideo_cgo)
 		} else {

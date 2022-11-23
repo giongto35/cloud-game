@@ -32,7 +32,10 @@ const (
 	UnsignedInt8888Rev
 )
 
-var opt = offscreenSetup{}
+var (
+	opt = offscreenSetup{}
+	buf []byte
+)
 
 func initContext(getProcAddr func(name string) unsafe.Pointer) {
 	if err := gl.InitWithProcAddrFunc(getProcAddr); err != nil {
@@ -91,7 +94,7 @@ func destroyFramebuffer() {
 }
 
 func ReadFramebuffer(bytes int, w int, h int) []byte {
-	data := make([]byte, bytes)
+	data := buf[:bytes]
 	gl.BindFramebuffer(gl.FRAMEBUFFER, opt.fbo)
 	gl.ReadPixels(0, 0, int32(w), int32(h), opt.pixType, opt.pixFormat, unsafe.Pointer(&data[0]))
 	gl.BindFramebuffer(gl.FRAMEBUFFER, 0)
@@ -99,6 +102,8 @@ func ReadFramebuffer(bytes int, w int, h int) []byte {
 }
 
 func getFbo() uint32 { return opt.fbo }
+
+func SetBuffer(size int) { buf = make([]byte, size) }
 
 func SetPixelFormat(format PixelFormat) error {
 	switch format {
