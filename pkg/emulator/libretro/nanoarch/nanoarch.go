@@ -57,8 +57,8 @@ void bridge_execute(void *f);
 */
 import "C"
 
-var mu, fmu sync.Mutex
-var lastFrameTime time.Time
+var mu sync.Mutex
+var lastFrameTime int64
 
 var video struct {
 	pitch    uint32
@@ -127,12 +127,6 @@ type CloudEmulator interface {
 
 //export coreVideoRefresh
 func coreVideoRefresh(data unsafe.Pointer, width C.unsigned, height C.unsigned, pitch C.size_t) {
-	t := time.Now()
-	fmu.Lock()
-	dt := t.Sub(lastFrameTime)
-	lastFrameTime = t
-	fmu.Unlock()
-
 	// some cores can return nothing
 	// !to add duplicate if can dup
 	if data == nil {
@@ -168,8 +162,10 @@ func coreVideoRefresh(data unsafe.Pointer, width C.unsigned, height C.unsigned, 
 		NAEmulator.vh,
 	)
 
-	// the image is pushed into a channel
-	// where it will be distributed with fan-out
+	t := time.Now().UnixNano()
+	dt := time.Duration(t - lastFrameTime)
+	lastFrameTime = t
+
 	select {
 	case NAEmulator.imageChannel <- GameFrame{Data: img, Duration: dt}:
 	default:
