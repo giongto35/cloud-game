@@ -170,18 +170,22 @@ func NewRoom(roomID string, game games.GameMetadata, recUser string, rec bool, o
 		emuName := cfg.Emulator.GetEmulator(game.Type, game.Path)
 		libretroConfig := cfg.Emulator.GetLibretroCoreConfig(emuName)
 
-		log.Printf("Image processing threads = %v", cfg.Emulator.Threads)
+		th := cfg.Emulator.Threads
+		if th == 0 {
+			th = 1
+		}
+		log.Printf("Image processing threads = %v", th)
 
 		if cfg.Encoder.WithoutGame {
 			// Run without game, image stream is communicated over a unix socket
 			imageChannel := NewVideoImporter(roomID)
-			director, _, audioChannel := nanoarch.Init(roomID, false, inputChannel, store, libretroConfig, cfg.Emulator.Threads)
+			director, _, audioChannel := nanoarch.Init(roomID, false, inputChannel, store, libretroConfig, th)
 			room.imageChannel = imageChannel
 			room.director = director
 			room.audioChannel = audioChannel
 		} else {
 			// Run without game, image stream is communicated over image channel
-			director, imageChannel, audioChannel := nanoarch.Init(roomID, true, inputChannel, store, libretroConfig, cfg.Emulator.Threads)
+			director, imageChannel, audioChannel := nanoarch.Init(roomID, true, inputChannel, store, libretroConfig, th)
 			room.imageChannel = imageChannel
 			room.director = director
 			room.audioChannel = audioChannel
