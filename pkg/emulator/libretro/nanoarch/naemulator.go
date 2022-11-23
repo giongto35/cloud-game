@@ -1,9 +1,6 @@
 package nanoarch
 
 import (
-	"bytes"
-	"encoding/gob"
-	"fmt"
 	"image"
 	"net"
 	"sync"
@@ -53,10 +50,9 @@ import "C"
 type naEmulator struct {
 	sync.Mutex
 
-	imageChannel  chan<- GameFrame
-	audioChannel  chan<- GameAudio
-	inputChannel  <-chan InputEvent
-	videoExporter *VideoExporter
+	imageChannel chan<- GameFrame
+	audioChannel chan<- GameAudio
+	inputChannel <-chan InputEvent
 
 	meta            emulator.Metadata
 	gamePath        string
@@ -126,37 +122,9 @@ func NewNAEmulator(roomID string, inputChannel <-chan InputEvent, storage Storag
 	}, imageChannel, audioChannel
 }
 
-// NewVideoExporter creates new video Exporter that produces to unix socket
-func NewVideoExporter(roomID string, imgChannel chan GameFrame, log *logger.Logger) *VideoExporter {
-	sockAddr := fmt.Sprintf("/tmp/cloudretro-retro-%s.sock", roomID)
-	go func(sockAddr string) {
-		log.Info().Msgf("Dialing to %v", sockAddr)
-		conn, err := net.Dial("unix", sockAddr)
-		if err != nil {
-			log.Panic().Err(err)
-		}
-
-		defer conn.Close()
-
-		for img := range imgChannel {
-			reqBodyBytes := new(bytes.Buffer)
-			_ = gob.NewEncoder(reqBodyBytes).Encode(img)
-			b := reqBodyBytes.Bytes()
-			_, _ = conn.Write(b)
-		}
-	}(sockAddr)
-	return &VideoExporter{imageChannel: imgChannel}
-}
-
-// Init initialize new RetroArch cloud emulator
-// withImageChan returns an image stream as Channel for output else it will write to unix socket
-func Init(roomID string, withImageChannel bool, inputChannel <-chan InputEvent, storage Storage, config config.LibretroCoreConfig, threads int, log *logger.Logger) (*naEmulator, chan GameFrame, chan GameAudio) {
+func Init(roomID string, inputChannel <-chan InputEvent, storage Storage, config config.LibretroCoreConfig, threads int, log *logger.Logger) (*naEmulator, chan GameFrame, chan GameAudio) {
 	emu, imageChannel, audioChannel := NewNAEmulator(roomID, inputChannel, storage, config, threads, log)
-	// Set to global NAEmulator
 	NAEmulator = emu
-	if !withImageChannel {
-		NAEmulator.videoExporter = NewVideoExporter(roomID, imageChannel, log)
-	}
 
 	go NAEmulator.listenInput()
 

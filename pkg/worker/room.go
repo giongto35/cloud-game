@@ -1,13 +1,8 @@
 package worker
 
 import (
-	"bytes"
-	"encoding/gob"
 	"errors"
-	"fmt"
-	"io"
 	"math"
-	"net"
 	"os"
 	"path/filepath"
 	"time"
@@ -54,65 +49,6 @@ type Room struct {
 
 	vPipe *encoder.VideoPipe
 	log   *logger.Logger
-}
-
-const (
-	bufSize        = 245969
-	SocketAddrTmpl = "/tmp/cloudretro-retro-%s.sock"
-)
-
-// NewVideoImporter return image Channel from stream
-func NewVideoImporter(id string, log *logger.Logger) chan nanoarch.GameFrame {
-	sockAddr := fmt.Sprintf(SocketAddrTmpl, id)
-	imgChan := make(chan nanoarch.GameFrame)
-
-	l, err := net.Listen("unix", sockAddr)
-	if err != nil {
-		log.Fatal().Err(err).Msg("socket error")
-	}
-
-	go func(l net.Listener) {
-		defer l.Close()
-
-		conn, err := l.Accept()
-		if err != nil {
-			log.Fatal().Err(err).Send()
-		}
-		defer conn.Close()
-
-		log.Info().Msg("Received new conn")
-
-		fullBuf := make([]byte, bufSize*2)
-		fullBuf = fullBuf[:0]
-
-		for {
-			// TODO: Not reallocate
-			buf := make([]byte, bufSize)
-			l, err := conn.Read(buf)
-			if err != nil {
-				if err != io.EOF {
-					log.Error().Err(err).Send()
-				}
-				continue
-			}
-
-			buf = buf[:l]
-			fullBuf = append(fullBuf, buf...)
-			if len(fullBuf) >= bufSize {
-				buff := bytes.NewBuffer(fullBuf)
-				dec := gob.NewDecoder(buff)
-
-				frame := nanoarch.GameFrame{}
-				if err := dec.Decode(&frame); err != nil {
-					log.Fatal().Err(err)
-				}
-				imgChan <- frame
-				fullBuf = fullBuf[bufSize:]
-			}
-		}
-	}(l)
-
-	return imgChan
 }
 
 // NewRoom creates a new room
@@ -165,13 +101,7 @@ func NewRoom(id string, game games.GameMetadata, storage storage.CloudStorage, o
 
 		log.Info().Msgf("Image processing threads = %v", conf.Emulator.Threads)
 
-		// Run without game, image stream is communicated over a unix socket
-		if conf.Encoder.WithoutGame {
-			room.imageChannel = NewVideoImporter(roomID, log)
-			room.director, _, room.audioChannel = nanoarch.Init(roomID, false, inputChannel, store, libretroConfig, conf.Emulator.Threads, log)
-		} else {
-			room.director, room.imageChannel, room.audioChannel = nanoarch.Init(roomID, true, inputChannel, store, libretroConfig, conf.Emulator.Threads, log)
-		}
+		room.director, room.imageChannel, room.audioChannel = nanoarch.Init(roomID, inputChannel, store, libretroConfig, conf.Emulator.Threads, log)
 
 		gameMeta := room.director.LoadMeta(filepath.Join(game.Base, game.Path))
 

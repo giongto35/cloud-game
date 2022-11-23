@@ -222,9 +222,6 @@ encoder:
       bitrate: 1200
       # force keyframe interval
       keyframeInterval: 5
-  # run without a game
-  # (experimental)
-  withoutGame: false
 
 # game recording
 # (experimental)

@@ -1,9 +1,8 @@
 package encoder
 
 type Encoder struct {
-	Audio       Audio
-	Video       Video
-	WithoutGame bool
+	Audio Audio
+	Video Video
 }
 
 type Audio struct {
