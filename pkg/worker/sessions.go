@@ -78,10 +78,12 @@ func (ss *Sessions) Remove(s *Session) {
 
 func (ss *Sessions) IsEmpty() bool { return len(ss.store) == 0 }
 
-func (ss *Sessions) ForEach(do func(*Session)) {
+func (ss *Sessions) EachConnected(do func(*Session)) {
 	ss.mu.Lock()
 	for _, v := range ss.store {
-		do(v)
+		if v.IsConnected() {
+			do(v)
+		}
 	}
 	ss.mu.Unlock()
 }

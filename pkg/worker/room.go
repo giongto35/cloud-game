@@ -151,11 +151,7 @@ func NewRoom(id string, game games.GameMetadata, storage storage.CloudStorage, o
 
 		go room.startVideo(encoderW, encoderH, func(frame encoder.OutFrame) {
 			sample := media.Sample{Data: frame.Data, Duration: frame.Duration}
-			room.users.ForEach(func(s *Session) {
-				if s.IsConnected() {
-					_ = s.SendVideo(sample)
-				}
-			})
+			room.users.EachConnected(func(s *Session) { _ = s.SendVideo(sample) })
 		}, conf.Encoder.Video)
 
 		dur := time.Duration(conf.Encoder.Audio.Frame) * time.Millisecond
@@ -164,11 +160,7 @@ func NewRoom(id string, game games.GameMetadata, storage storage.CloudStorage, o
 				return
 			}
 			sample := media.Sample{Data: audio, Duration: dur}
-			room.users.ForEach(func(s *Session) {
-				if s.IsConnected() {
-					_ = s.SendAudio(sample)
-				}
-			})
+			room.users.EachConnected(func(s *Session) { _ = s.SendAudio(sample) })
 		}, conf.Encoder.Audio)
 
 		if conf.Emulator.AutosaveSec > 0 {
@@ -347,11 +339,9 @@ func (r *Room) IsEmpty() bool { return r.users.IsEmpty() }
 
 func (r *Room) HasRunningSessions() (has bool) {
 	has = false
-	r.users.ForEach(func(s *Session) {
-		if s.IsConnected() {
-			has = true
-			return
-		}
+	r.users.EachConnected(func(s *Session) {
+		has = true
+		return
 	})
 	return
 }
