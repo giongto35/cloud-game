@@ -18,7 +18,7 @@ func ResampleStretch(pcm []int16, size int) []int16 {
 			l[i] = l[i-1]
 		}
 	}
-	for i := 0; i < size-1; i += 2 {
+	for i := 0; i < size; i += 2 {
 		audio[i], audio[i+1] = r[i/2], l[i/2]
 	}
 	return audio

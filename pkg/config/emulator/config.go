@@ -8,6 +8,7 @@ import (
 
 type Emulator struct {
 	Scale       int
+	Threads     int
 	AspectRatio struct {
 		Keep   bool
 		Width  int

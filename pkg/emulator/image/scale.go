@@ -17,7 +17,6 @@ const (
 
 func Resize(scaleType int, src *image.RGBA, out *image.RGBA) {
 	// !to do set it once instead switching on each iteration
-	// !to do skip resize if w=vw h=vh
 	switch scaleType {
 	case ScaleBilinear:
 		draw.ApproxBiLinear.Scale(out, out.Bounds(), src, src.Bounds(), draw.Src, nil)

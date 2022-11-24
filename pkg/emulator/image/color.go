@@ -1,8 +1,6 @@
 package image
 
-import (
-	"image/color"
-)
+import "unsafe"
 
 const (
 	// BIT_FORMAT_SHORT_5_5_5_1 has 5 bits R, 5 bits G, 5 bits B, 1 bit alpha
@@ -13,24 +11,17 @@ const (
 	BitFormatShort565
 )
 
-type Format func(data []byte, index int) color.RGBA
-
-func Rgb565(data []byte, index int) color.RGBA {
-	pixel := (int)(data[index]) + ((int)(data[index+1]) << 8)
-
-	return color.RGBA{
-		R: byte(((pixel>>11)*255 + 15) / 31),
-		G: byte((((pixel>>5)&0x3F)*255 + 31) / 63),
-		B: byte(((pixel&0x1F)*255 + 15) / 31),
-		A: 255,
-	}
+type RGB struct {
+	R, G, B uint8
 }
 
-func Rgba8888(data []byte, index int) color.RGBA {
-	return color.RGBA{
-		R: data[index+2],
-		G: data[index+1],
-		B: data[index],
-		A: 255,
-	}
+type Format func(data []byte, index int) RGB
+
+func Rgb565(data []byte, index int) RGB {
+	pixel := *(*uint16)(unsafe.Pointer(&data[index]))
+	return RGB{R: uint8((pixel >> 8) & 0xf8), G: uint8((pixel >> 3) & 0xfc), B: uint8((pixel << 3) & 0xfc)}
+}
+
+func Rgba8888(data []byte, index int) RGB {
+	return RGB{R: data[index+2], G: data[index+1], B: data[index]}
 }

@@ -3,7 +3,7 @@ package nanoarch
 import (
 	"crypto/md5"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"log"
 	"os"
 	"path"
@@ -85,6 +85,7 @@ func GetEmulatorMock(room string, system string) *EmulatorMock {
 			players: NewPlayerSessionInput(),
 			roomID:  room,
 			done:    make(chan struct{}, 1),
+			th:      conf.Emulator.Threads,
 		},
 
 		core: path.Base(meta.Lib),
@@ -175,7 +176,7 @@ func (emu *EmulatorMock) handleInput(handler func(event InputEvent)) {
 // Locks the emulator.
 func (emu *EmulatorMock) dumpState() (string, string) {
 	emu.Lock()
-	bytes, _ := ioutil.ReadFile(emu.paths.save)
+	bytes, _ := os.ReadFile(emu.paths.save)
 	persistedStateHash := getHash(bytes)
 	emu.Unlock()
 
@@ -213,7 +214,7 @@ func cleanPath(path string) string {
 // benchmarkEmulator is a generic function for
 // measuring emulator performance for one emulation frame.
 func benchmarkEmulator(system string, rom string, b *testing.B) {
-	log.SetOutput(ioutil.Discard)
+	log.SetOutput(io.Discard)
 	os.Stdout, _ = os.Open(os.DevNull)
 
 	s := GetDefaultEmulatorMock("bench_"+system+"_performance", system, rom)

@@ -92,6 +92,10 @@ emulator:
   # set output viewport scale factor
   scale: 1
 
+  # set the total number of threads for the image processing
+  # (experimental)
+  threads: 4
+
   aspectRatio:
     # enable aspect ratio changing
     # (experimental)

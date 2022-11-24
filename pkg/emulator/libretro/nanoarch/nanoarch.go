@@ -2,6 +2,7 @@ package nanoarch
 
 import (
 	"bufio"
+	"fmt"
 	"log"
 	"os"
 	"os/user"
@@ -57,8 +58,8 @@ void bridge_execute(void *f);
 */
 import "C"
 
-var mu, fmu sync.Mutex
-var lastFrameTime time.Time
+var mu sync.Mutex
+var lastFrameTime int64
 
 var video struct {
 	pitch    uint32
@@ -78,7 +79,7 @@ var video struct {
 
 // default core pix format converter
 var pixelFormatConverterFn = image.Rgb565
-var rotationFn = image.GetRotation(image.Angle(0))
+var rotationFn *image.Rotate
 
 //const joypadNumKeys = int(C.RETRO_DEVICE_ID_JOYPAD_R3 + 1)
 //var joy [joypadNumKeys]bool
@@ -127,12 +128,6 @@ type CloudEmulator interface {
 
 //export coreVideoRefresh
 func coreVideoRefresh(data unsafe.Pointer, width C.unsigned, height C.unsigned, pitch C.size_t) {
-	t := time.Now()
-	fmu.Lock()
-	dt := t.Sub(lastFrameTime)
-	lastFrameTime = t
-	fmu.Unlock()
-
 	// some cores can return nothing
 	// !to add duplicate if can dup
 	if data == nil {
@@ -157,7 +152,7 @@ func coreVideoRefresh(data unsafe.Pointer, width C.unsigned, height C.unsigned, 
 	}
 
 	// the image is being resized and de-rotated
-	img := image.DrawRgbaImage(
+	frame := image.DrawRgbaImage(
 		pixelFormatConverterFn,
 		rotationFn,
 		image.ScaleNearestNeighbour,
@@ -166,12 +161,15 @@ func coreVideoRefresh(data unsafe.Pointer, width C.unsigned, height C.unsigned, 
 		data_,
 		NAEmulator.vw,
 		NAEmulator.vh,
+		NAEmulator.th,
 	)
 
-	// the image is pushed into a channel
-	// where it will be distributed with fan-out
+	t := time.Now().UnixNano()
+	dt := time.Duration(t - lastFrameTime)
+	lastFrameTime = t
+
 	select {
-	case NAEmulator.imageChannel <- GameFrame{Data: img, Duration: dt}:
+	case NAEmulator.imageChannel <- GameFrame{Data: frame, Duration: dt}:
 	default:
 	}
 }
@@ -211,13 +209,9 @@ func coreInputState(port C.unsigned, device C.unsigned, index C.unsigned, id C.u
 }
 
 func audioWrite(buf unsafe.Pointer, frames C.size_t) C.size_t {
-	// !to make it mono/stereo independent
-	samples := int(frames) * 2
-	pcm := (*[(1 << 30) - 1]int16)(buf)[:samples:samples]
-
+	samples := int(frames) << 1
+	pcm := (*[4096]int16)(buf)[:samples:samples]
 	p := make([]int16, samples)
-	// copy because pcm slice refer to buf underlying pointer,
-	// and buf pointer is the same in continuous frames
 	copy(p, pcm)
 
 	select {
@@ -483,6 +477,8 @@ func slurp(path string, size int64) ([]byte, error) {
 }
 
 func coreLoadGame(filename string) {
+	lastFrameTime = 0
+
 	file, err := os.Open(filename)
 	if err != nil {
 		panic(err)
@@ -513,7 +509,7 @@ func coreLoadGame(filename string) {
 	log.Printf("  block_extract: %v", bool(si.block_extract))
 
 	if !si.need_fullpath {
-		bytes, err := slurp(filename, size)
+		bytes, err := os.ReadFile(filename)
 		if err != nil {
 			panic(err)
 		}
@@ -561,6 +557,9 @@ func coreLoadGame(filename string) {
 	video.baseWidth = int32(avi.geometry.base_width)
 	video.baseHeight = int32(avi.geometry.base_height)
 	if video.isGl {
+		bufS := int(video.maxWidth * video.maxHeight * int32(video.bpp))
+		graphics.SetBuffer(bufS)
+		log.Printf("Set buffer: %v", byteCountBinary(int64(bufS)))
 		if usesLibCo {
 			C.bridge_execute(C.initVideo_cgo)
 		} else {
@@ -626,6 +625,7 @@ func nanoarchShutdown() {
 	for _, element := range coreConfig {
 		C.free(unsafe.Pointer(element))
 	}
+	image.Clear()
 }
 
 func nanoarchRun() {
@@ -673,7 +673,25 @@ func setRotation(rotation uint) {
 		return
 	}
 	video.rotation = image.Angle(rotation)
-	rotationFn = image.GetRotation(video.rotation)
-	NAEmulator.meta.Rotation = rotationFn
+	r := image.GetRotation(video.rotation)
+	if rotation > 0 {
+		rotationFn = &r
+	} else {
+		rotationFn = nil
+	}
+	NAEmulator.meta.Rotation = r
 	log.Printf("[Env]: the game video is rotated %v°", map[uint]uint{0: 0, 1: 90, 2: 180, 3: 270}[rotation])
+}
+
+func byteCountBinary(b int64) string {
+	const unit = 1024
+	if b < unit {
+		return fmt.Sprintf("%d B", b)
+	}
+	div, exp := int64(unit), 0
+	for n := b / unit; n >= unit; n /= unit {
+		div *= unit
+		exp++
+	}
+	return fmt.Sprintf("%.1f %ciB", float64(b)/float64(div), "KMGTPE"[exp])
 }

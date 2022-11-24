@@ -22,7 +22,10 @@ type offscreenSetup struct {
 	hasStencil bool
 }
 
-var opt = offscreenSetup{}
+var (
+	opt = offscreenSetup{}
+	buf []byte
+)
 
 type PixelFormat int
 
@@ -94,7 +97,7 @@ func destroyFramebuffer() {
 }
 
 func ReadFramebuffer(bytes int, w int, h int) []byte {
-	data := make([]byte, bytes)
+	data := buf[:bytes]
 	gl.BindFramebuffer(gl.FRAMEBUFFER, opt.fbo)
 	gl.ReadPixels(0, 0, int32(w), int32(h), opt.pixType, opt.pixFormat, unsafe.Pointer(&data[0]))
 	gl.BindFramebuffer(gl.FRAMEBUFFER, 0)
@@ -102,6 +105,8 @@ func ReadFramebuffer(bytes int, w int, h int) []byte {
 }
 
 func getFbo() uint32 { return opt.fbo }
+
+func SetBuffer(size int) { buf = make([]byte, size) }
 
 func SetPixelFormat(format PixelFormat) {
 	switch format {
