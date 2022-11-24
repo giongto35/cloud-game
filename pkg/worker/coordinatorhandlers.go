@@ -231,10 +231,7 @@ func (c *Coordinator) HandleToggleMultitap(packet ipc.InPacket, h *Handler) {
 		if room == nil {
 			return
 		}
-		if err := room.ToggleMultitap(); err != nil {
-			c.log.Error().Err(err).Msg("could not toggle multitap state")
-			rez = ipc.ErrPacket
-		}
+		room.ToggleMultitap()
 	} else {
 		rez = ipc.ErrPacket
 	}

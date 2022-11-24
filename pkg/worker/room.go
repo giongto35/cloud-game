@@ -101,7 +101,8 @@ func NewRoom(id string, game games.GameMetadata, storage storage.CloudStorage, o
 
 		log.Info().Msgf("Image processing threads = %v", conf.Emulator.Threads)
 
-		room.director, room.imageChannel, room.audioChannel = nanoarch.Init(roomID, inputChannel, store, libretroConfig, conf.Emulator.Threads, log)
+		room.director, room.imageChannel, room.audioChannel =
+			nanoarch.NewFrontend(roomID, inputChannel, store, libretroConfig, conf.Emulator.Threads, log)
 
 		gameMeta := room.director.LoadMeta(filepath.Join(game.Base, game.Path))
 
@@ -323,7 +324,7 @@ func (r *Room) saveOnlineRoomToLocal(roomID string, savePath string) error {
 
 func (r *Room) LoadGame() error { return r.director.LoadGame() }
 
-func (r *Room) ToggleMultitap() error { return r.director.ToggleMultitap() }
+func (r *Room) ToggleMultitap() { r.director.ToggleMultitap() }
 
 func (r *Room) IsRecording() bool { return r.rec != nil && r.rec.Enabled() }
 

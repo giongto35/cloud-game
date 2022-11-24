@@ -18,7 +18,7 @@ type CloudEmulator interface {
 	// Close will be called when the game is done
 	Close()
 	// ToggleMultitap toggles multitap controller.
-	ToggleMultitap() error
+	ToggleMultitap()
 }
 
 type Metadata struct {

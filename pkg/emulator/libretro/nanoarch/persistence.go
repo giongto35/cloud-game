@@ -1,20 +1,24 @@
 package nanoarch
 
 // Save writes the current state to the filesystem.
-func (na *naEmulator) Save() error {
-	na.Lock()
-	defer na.Unlock()
+func (f *Frontend) Save() error {
+	if f.roomID == "" {
+		return nil
+	}
+
+	f.mu.Lock()
+	defer f.mu.Unlock()
 
 	ss, err := getSaveState()
 	if err != nil {
 		return err
 	}
-	if err := na.storage.Save(na.GetHashPath(), ss); err != nil {
+	if err := f.storage.Save(f.GetHashPath(), ss); err != nil {
 		return err
 	}
 
 	if sram := getSaveRAM(); sram != nil {
-		if err := na.storage.Save(na.GetSRAMPath(), sram); err != nil {
+		if err := f.storage.Save(f.GetSRAMPath(), sram); err != nil {
 			return err
 		}
 	}
@@ -22,11 +26,15 @@ func (na *naEmulator) Save() error {
 }
 
 // Load restores the state from the filesystem.
-func (na *naEmulator) Load() error {
-	na.Lock()
-	defer na.Unlock()
+func (f *Frontend) Load() error {
+	if f.roomID == "" {
+		return nil
+	}
 
-	ss, err := na.storage.Load(na.GetHashPath())
+	f.mu.Lock()
+	defer f.mu.Unlock()
+
+	ss, err := f.storage.Load(f.GetHashPath())
 	if err != nil {
 		return err
 	}
@@ -34,7 +42,7 @@ func (na *naEmulator) Load() error {
 		return err
 	}
 
-	sram, err := na.storage.Load(na.GetSRAMPath())
+	sram, err := f.storage.Load(f.GetSRAMPath())
 	if err != nil {
 		return err
 	}

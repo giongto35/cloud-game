@@ -58,6 +58,9 @@ void bridge_execute(void *f);
 */
 import "C"
 
+// to link with the Go struct
+var frontend *Frontend
+
 var mu sync.Mutex
 var lastFrameTime int64
 
@@ -156,9 +159,9 @@ func coreVideoRefresh(data unsafe.Pointer, width C.unsigned, height C.unsigned, 
 		isOpenGLRender,
 		int(width), int(height), packedWidth, int(video.bpp),
 		data_,
-		NAEmulator.vw,
-		NAEmulator.vh,
-		NAEmulator.th,
+		frontend.vw,
+		frontend.vh,
+		frontend.th,
 	)
 
 	t := time.Now().UnixNano()
@@ -166,7 +169,7 @@ func coreVideoRefresh(data unsafe.Pointer, width C.unsigned, height C.unsigned, 
 	lastFrameTime = t
 
 	select {
-	case NAEmulator.imageChannel <- GameFrame{Data: frame, Duration: dt}:
+	case frontend.imageChannel <- GameFrame{Data: frame, Duration: dt}:
 	default:
 	}
 }
@@ -181,7 +184,7 @@ func coreInputState(port C.unsigned, device C.unsigned, index C.unsigned, id C.u
 			return 0
 		}
 		axis := index*2 + id
-		value := NAEmulator.players.isDpadTouched(uint(port), uint(axis))
+		value := frontend.players.isDpadTouched(uint(port), uint(axis))
 		if value != 0 {
 			return (C.int16_t)(value)
 		}
@@ -197,7 +200,7 @@ func coreInputState(port C.unsigned, device C.unsigned, index C.unsigned, id C.u
 		return 0
 	}
 
-	if NAEmulator.players.isKeyPressed(uint(port), key) {
+	if frontend.players.isKeyPressed(uint(port), key) {
 		return 1
 	}
 
@@ -211,10 +214,10 @@ func audioWrite(buf unsafe.Pointer, frames C.size_t) C.size_t {
 	copy(p, pcm)
 
 	// 1600 = x / 1000 * 48000 * 2
-	estimate := float64(samples) / float64(NAEmulator.meta.AudioSampleRate<<1) * 1000000000
+	estimate := float64(samples) / float64(frontend.meta.AudioSampleRate<<1) * 1000000000
 
 	select {
-	case NAEmulator.audioChannel <- GameAudio{Data: p, Duration: time.Duration(estimate)}:
+	case frontend.audioChannel <- GameAudio{Data: p, Duration: time.Duration(estimate)}:
 	default:
 	}
 	return frames
@@ -533,10 +536,10 @@ func coreLoadGame(filename string) {
 	C.bridge_retro_get_system_av_info(retroGetSystemAVInfo, &avi)
 
 	// Append the library name to the window title.
-	NAEmulator.meta.AudioSampleRate = int(avi.timing.sample_rate)
-	NAEmulator.meta.Fps = float64(avi.timing.fps)
-	NAEmulator.meta.BaseWidth = int(avi.geometry.base_width)
-	NAEmulator.meta.BaseHeight = int(avi.geometry.base_height)
+	frontend.meta.AudioSampleRate = int(avi.timing.sample_rate)
+	frontend.meta.Fps = float64(avi.timing.fps)
+	frontend.meta.BaseWidth = int(avi.geometry.base_width)
+	frontend.meta.BaseHeight = int(avi.geometry.base_height)
 	// set aspect ratio
 	/* Nominal aspect ratio of game. If aspect_ratio is <= 0.0,
 	an aspect ratio of base_width / base_height is assumed.
@@ -545,7 +548,7 @@ func coreLoadGame(filename string) {
 	if ratio <= 0.0 {
 		ratio = float64(avi.geometry.base_width) / float64(avi.geometry.base_height)
 	}
-	NAEmulator.meta.Ratio = ratio
+	frontend.meta.Ratio = ratio
 
 	if libretroLogger.GetLevel() < logger.InfoLevel {
 		libretroLogger.Debug().Msgf("Core media info: %vx%v (%vx%v), [%vfps], AR [%v], audio [%vHz]",
@@ -580,6 +583,9 @@ func coreLoadGame(filename string) {
 }
 
 func toggleMultitap() {
+	if frontend.roomID == "" {
+		return
+	}
 	if multitap.supported && multitap.value != 0 {
 		// Official SNES games only support a single multitap device
 		// Most require it to be plugged in player 2 port
@@ -693,7 +699,7 @@ func setRotation(rotation uint) {
 	} else {
 		rotationFn = nil
 	}
-	NAEmulator.meta.Rotation = r
+	frontend.meta.Rotation = r
 	libretroLogger.Debug().Msgf("Image rotated %v°", map[uint]uint{0: 0, 1: 90, 2: 180, 3: 270}[rotation])
 }
 

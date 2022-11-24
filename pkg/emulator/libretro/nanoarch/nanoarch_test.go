@@ -23,9 +23,9 @@ type testRun struct {
 	emulationTicks int
 }
 
-// EmulatorMock contains naEmulator mocking data.
+// EmulatorMock contains Frontend mocking data.
 type EmulatorMock struct {
-	naEmulator
+	Frontend
 
 	// Libretro compiled lib core name
 	core string
@@ -69,7 +69,7 @@ func GetEmulatorMock(room string, system string) *EmulatorMock {
 
 	// an emu
 	emu := &EmulatorMock{
-		naEmulator: naEmulator{
+		Frontend: Frontend{
 			imageChannel: images,
 			audioChannel: audio,
 			inputChannel: inputs,
@@ -103,9 +103,6 @@ func GetEmulatorMock(room string, system string) *EmulatorMock {
 		audioInCh:  audio,
 		inputOutCh: inputs,
 	}
-
-	// stub globals
-	NAEmulator = &emu.naEmulator
 
 	emu.paths.save = cleanPath(emu.GetHashPath())
 
@@ -147,9 +144,9 @@ func (emu *EmulatorMock) shutdownEmulator() {
 
 // emulateOneFrame emulates one frame with exclusive lock.
 func (emu *EmulatorMock) emulateOneFrame() {
-	emu.Lock()
+	emu.mu.Lock()
 	nanoarchRun()
-	emu.Unlock()
+	emu.mu.Unlock()
 }
 
 // Who needs generics anyway?
@@ -178,10 +175,10 @@ func (emu *EmulatorMock) handleInput(handler func(event InputEvent)) {
 // the latest saved state for its session.
 // Locks the emulator.
 func (emu *EmulatorMock) dumpState() (string, string) {
-	emu.Lock()
+	emu.mu.Lock()
 	bytes, _ := os.ReadFile(emu.paths.save)
 	persistedStateHash := getHash(bytes)
-	emu.Unlock()
+	emu.mu.Unlock()
 
 	stateHash := emu.getStateHash()
 	fmt.Printf("mem: %v, dat: %v\n", stateHash, persistedStateHash)
@@ -191,9 +188,9 @@ func (emu *EmulatorMock) dumpState() (string, string) {
 // getStateHash returns the current emulator state hash.
 // Locks the emulator.
 func (emu *EmulatorMock) getStateHash() string {
-	emu.Lock()
+	emu.mu.Lock()
 	state, _ := getSaveState()
-	emu.Unlock()
+	emu.mu.Unlock()
 
 	return getHash(state)
 }
