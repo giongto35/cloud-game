@@ -59,14 +59,14 @@ func (c *Client) OnPacket(fn func(packet InPacket)) { c.mu.Lock(); c.onPacket = 
 
 func (c *Client) Listen() { c.mu.Lock(); c.conn.Listen(); c.mu.Unlock() }
 
-// !to handle error
 func (c *Client) Close() {
+	// !to handle error
 	c.conn.Close()
 	c.drain(errConnClosed)
 }
 
-// !to expose channel instead of results
 func (c *Client) Call(type_ uint8, payload interface{}) ([]byte, error) {
+	// !to expose channel instead of results
 	rq := OutPacket{Id: network.NewUid(), T: type_, Payload: payload}
 	r, err := json.Marshal(&rq)
 	if err != nil {

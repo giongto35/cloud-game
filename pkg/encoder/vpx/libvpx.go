@@ -127,6 +127,7 @@ func NewEncoder(width, height int, options ...Option) (*Vpx, error) {
 	return &vpx, nil
 }
 
+// Encode encodes yuv image with the VPX8 encoder.
 // see: https://chromium.googlesource.com/webm/libvpx/+/master/examples/simple_encoder.c
 func (vpx *Vpx) Encode(yuv []byte) []byte {
 	var iter C.vpx_codec_iter_t

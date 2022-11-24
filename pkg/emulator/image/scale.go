@@ -7,12 +7,9 @@ import (
 )
 
 const (
-	// skips image interpolation
-	ScaleNot = iota
-	// nearest neighbour interpolation
-	ScaleNearestNeighbour
-	// bilinear interpolation
-	ScaleBilinear
+	ScaleNot              = iota // skips image interpolation
+	ScaleNearestNeighbour        // nearest neighbour interpolation
+	ScaleBilinear                // bilinear interpolation
 )
 
 func Resize(scaleType int, src *image.RGBA, out *image.RGBA) {

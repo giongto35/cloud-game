@@ -1,4 +1,4 @@
-// Implements cgo bindings for [x264](https://www.videolan.org/developers/x264.html) library.
+// Package h264 implements cgo bindings for [x264](https://www.videolan.org/developers/x264.html) library.
 package h264
 
 /*
@@ -14,7 +14,7 @@ import "unsafe"
 
 const Build = C.X264_BUILD
 
-/* T is opaque handler for encoder */
+// T is opaque handler for encoder
 type T struct{}
 
 /****************************************************************************
