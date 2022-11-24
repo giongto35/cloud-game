@@ -8,7 +8,7 @@ import (
 	"image/color"
 	"image/draw"
 	"image/png"
-	"io/ioutil"
+	"io"
 	"log"
 	"os"
 	"path/filepath"
@@ -270,7 +270,7 @@ func fixEmulators(config *worker.Config, autoGlContext bool) {
 	}
 }
 
-// getRootPath returns absolute path to the assets directory.
+// getRootPath returns absolute path to the assets.
 func getRootPath() string {
 	p, _ := filepath.Abs("../../")
 	return p + string(filepath.Separator)
@@ -317,7 +317,7 @@ func waitNOutFrames(n int, ch chan encoder.OutFrame) {
 // Measure period: the room initialization, n emulated and encoded frames, the room shutdown.
 func benchmarkRoom(rom games.GameMetadata, codec encoder.VideoCodec, frames int, suppressOutput bool, b *testing.B) {
 	if suppressOutput {
-		log.SetOutput(ioutil.Discard)
+		log.SetOutput(io.Discard)
 		os.Stdout, _ = os.Open(os.DevNull)
 	}
 

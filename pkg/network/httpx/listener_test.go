@@ -25,6 +25,9 @@ func TestListenerCreation(t *testing.T) {
 
 	for _, test := range tests {
 		ls, err := NewListener(test.addr, false)
+		if ls == nil {
+			t.Errorf("unexpected nil")
+		}
 
 		if test.error {
 			if err == nil {
@@ -38,7 +41,7 @@ func TestListenerCreation(t *testing.T) {
 			continue
 		}
 
-		defer ls.Close()
+		defer func() { _ = ls.Close() }()
 
 		addr := ls.Addr().(*net.TCPAddr)
 		port := ls.GetPort()

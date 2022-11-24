@@ -6,8 +6,9 @@ import (
 	"encoding/base64"
 	"errors"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"net/http"
+	"os"
 	"time"
 )
 
@@ -39,7 +40,7 @@ func (s *OracleDataStorageClient) Save(name string, localPath string) (err error
 		return nil
 	}
 
-	dat, err := ioutil.ReadFile(localPath)
+	dat, err := os.ReadFile(localPath)
 	if err != nil {
 		return err
 	}
@@ -86,7 +87,7 @@ func (s *OracleDataStorageClient) Load(name string) (data []byte, err error) {
 		return nil, errors.New(res.Status)
 	}
 
-	dat, err := ioutil.ReadAll(res.Body)
+	dat, err := io.ReadAll(res.Body)
 	if err != nil {
 		return nil, err
 	}

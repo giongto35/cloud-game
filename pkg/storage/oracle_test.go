@@ -1,7 +1,7 @@
 package storage
 
 import (
-	"io/ioutil"
+	"io"
 	"net/http"
 	"os"
 	"strings"
@@ -23,14 +23,14 @@ func TestOracleSave(t *testing.T) {
 	client.client = newTestClient(func(req *http.Request) *http.Response {
 		return &http.Response{
 			StatusCode: 200,
-			Body:       ioutil.NopCloser(strings.NewReader("")),
+			Body:       io.NopCloser(strings.NewReader("")),
 			Header: map[string][]string{
 				"Opc-Content-Md5": {"CY9rzUYh03PK3k6DJie09g=="},
 			},
 		}
 	})
 
-	tempFile, err := ioutil.TempFile("", "oracle_test.file")
+	tempFile, err := os.CreateTemp("", "oracle_test.file")
 	if err != nil {
 		t.Errorf("%v", err)
 	}

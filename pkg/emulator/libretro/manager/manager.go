@@ -1,7 +1,7 @@
 package manager
 
 import (
-	"io/ioutil"
+	"os"
 	"path/filepath"
 	"strings"
 
@@ -24,7 +24,7 @@ func (m BasicManager) GetInstalled() (installed []emulator.CoreInfo, err error) 
 		return
 	}
 
-	files, err := ioutil.ReadDir(dir)
+	files, err := os.ReadDir(dir)
 	if err != nil {
 		return
 	}

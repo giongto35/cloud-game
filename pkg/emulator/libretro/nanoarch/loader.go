@@ -2,7 +2,7 @@ package nanoarch
 
 import (
 	"errors"
-	"io/ioutil"
+	"os"
 	"path"
 	"strconv"
 	"strings"
@@ -44,7 +44,7 @@ func loadLib(filepath string) (handle unsafe.Pointer, err error) {
 
 func loadLibRollingRollingRolling(filepath string) (handle unsafe.Pointer, err error) {
 	dir, lib := path.Dir(filepath), path.Base(filepath)
-	files, err := ioutil.ReadDir(dir)
+	files, err := os.ReadDir(dir)
 	if err != nil {
 		return nil, errors.New("couldn't find 'n load the lib")
 	}

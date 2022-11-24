@@ -1,7 +1,7 @@
 package nanoarch
 
 import (
-	"io/ioutil"
+	"os"
 	"path/filepath"
 )
 
@@ -25,5 +25,5 @@ type (
 
 func (s *StateStorage) GetSavePath() string                { return filepath.Join(s.Path, s.MainSave+".dat") }
 func (s *StateStorage) GetSRAMPath() string                { return filepath.Join(s.Path, s.MainSave+".srm") }
-func (s *StateStorage) Load(path string) ([]byte, error)   { return ioutil.ReadFile(path) }
-func (s *StateStorage) Save(path string, dat []byte) error { return ioutil.WriteFile(path, dat, 0644) }
+func (s *StateStorage) Load(path string) ([]byte, error)   { return os.ReadFile(path) }
+func (s *StateStorage) Save(path string, dat []byte) error { return os.WriteFile(path, dat, 0644) }

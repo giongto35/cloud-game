@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"image"
 	"image/color"
-	"io/ioutil"
 	"log"
 	"math/rand"
 	"os"
@@ -17,7 +16,7 @@ import (
 )
 
 func TestName(t *testing.T) {
-	dir, err := ioutil.TempDir("", "rec_test_")
+	dir, err := os.MkdirTemp("", "rec_test_")
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -80,7 +79,7 @@ func BenchmarkNewRecording320x240_nocompress(b *testing.B) {
 func benchmarkRecorder(w, h int, comp int, b *testing.B) {
 	b.StopTimer()
 
-	dir, err := ioutil.TempDir("", "rec_bench_")
+	dir, err := os.MkdirTemp("", "rec_bench_")
 	if err != nil {
 		b.Fatal(err)
 	}
