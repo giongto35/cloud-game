@@ -2,7 +2,6 @@ package nanoarch
 
 import (
 	"image"
-	"net"
 	"sync"
 	"time"
 
@@ -71,12 +70,6 @@ type naEmulator struct {
 
 	done chan struct{}
 	log  *logger.Logger
-}
-
-// VideoExporter produces image frame to unix socket
-type VideoExporter struct {
-	sock         net.Conn
-	imageChannel chan<- GameFrame
 }
 
 // GameFrame contains image and timeframe

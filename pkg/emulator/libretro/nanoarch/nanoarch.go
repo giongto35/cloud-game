@@ -232,9 +232,22 @@ func coreAudioSampleBatch(data unsafe.Pointer, frames C.size_t) C.size_t {
 }
 
 //export coreLog
-func coreLog(_ C.enum_retro_log_level, msg *C.char) {
+func coreLog(level C.enum_retro_log_level, msg *C.char) {
 	message := strings.TrimRight(C.GoString(msg), "\n")
-	libretroLogger.Debug().Msg(message)
+	switch int(level) {
+	// with debug level cores have too much logs
+	case 0: // RETRO_LOG_DEBUG
+	//	libretroLogger.Debug().Msg(message)
+	case 1: // RETRO_LOG_INFO
+		libretroLogger.Info().Msg(message)
+	case 2: // RETRO_LOG_WARN
+		libretroLogger.Warn().Msg(message)
+	case 3: // RETRO_LOG_ERROR
+		libretroLogger.Error().Msg(message)
+	default:
+		libretroLogger.Log().Msg(message)
+		// RETRO_LOG_DUMMY = INT_MAX
+	}
 }
 
 //export coreGetCurrentFramebuffer
