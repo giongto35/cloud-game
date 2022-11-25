@@ -28,6 +28,6 @@ func (w *Worker) HandleIceCandidate(rq api.WebrtcIceCandidateRequest, crowd *cli
 		u := usr.(*User)
 		u.SendWebrtcIceCandidate(rq.Candidate)
 	} else {
-		w.log.Warn().Str("id", rq.Id.String()).Msg("unknown session")
+		w.Log.Warn().Str("id", rq.Id.String()).Msg("unknown session")
 	}
 }

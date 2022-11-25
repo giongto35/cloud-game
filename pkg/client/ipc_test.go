@@ -1,4 +1,4 @@
-package ipc
+package client
 
 import (
 	"encoding/json"
@@ -120,7 +120,7 @@ func testWebsocket(t *testing.T) {
 }
 
 func newClient(t *testing.T, addr url.URL) *Client {
-	conn, err := NewClient(addr, log)
+	conn, err := NewConnector().NewClient(addr, log)
 	if err != nil {
 		t.Fatalf("error: couldn't connect to %v because of %v", addr.String(), err)
 	}

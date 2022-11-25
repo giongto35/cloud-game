@@ -1,4 +1,4 @@
-package ipc
+package client
 
 import (
 	"encoding/json"

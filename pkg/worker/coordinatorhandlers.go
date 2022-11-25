@@ -1,12 +1,12 @@
 package worker
 
 import (
+	"github.com/giongto35/cloud-game/v2/pkg/client"
 	"strconv"
 
 	"github.com/giongto35/cloud-game/v2/pkg/api"
 	"github.com/giongto35/cloud-game/v2/pkg/config/worker"
 	"github.com/giongto35/cloud-game/v2/pkg/games"
-	"github.com/giongto35/cloud-game/v2/pkg/ipc"
 	"github.com/giongto35/cloud-game/v2/pkg/webrtc"
 )
 
@@ -29,7 +29,7 @@ func (c *Coordinator) HandleTerminateSession(rq api.TerminateSessionRequest, h *
 	}
 }
 
-func (c *Coordinator) HandleWebrtcInit(packet ipc.InPacket, h *Handler, connApi *webrtc.ApiFactory) {
+func (c *Coordinator) HandleWebrtcInit(packet client.InPacket, h *Handler, connApi *webrtc.ApiFactory) {
 	resp, err := c.webrtcInit(packet.Payload)
 	if err != nil {
 		c.log.Error().Err(err).Msg("malformed WebRTC init request")
@@ -47,13 +47,13 @@ func (c *Coordinator) HandleWebrtcInit(packet ipc.InPacket, h *Handler, connApi 
 	})
 	if err != nil {
 		c.log.Error().Err(err).Msg("cannot create new webrtc session")
-		_ = h.cord.Route(packet, ipc.EmptyPacket)
+		_ = h.cord.Route(packet, client.EmptyPacket)
 		return
 	}
 	sdp, err := toBase64Json(localSDP)
 	if err != nil {
 		c.log.Error().Err(err).Msgf("SDP encode fail fro [%v]", localSDP)
-		_ = h.cord.Route(packet, ipc.EmptyPacket)
+		_ = h.cord.Route(packet, client.EmptyPacket)
 		return
 	}
 
@@ -80,18 +80,18 @@ func (c *Coordinator) HandleWebrtcIceCandidate(rs api.WebrtcIceCandidateRequest,
 	}
 }
 
-func (c *Coordinator) HandleGameStart(packet ipc.InPacket, h *Handler) {
+func (c *Coordinator) HandleGameStart(packet client.InPacket, h *Handler) {
 	rq, err := api.Unwrap[api.StartGameRequest](packet.Payload)
 	if err != nil {
 		c.log.Error().Err(err).Msg("malformed game start request")
-		_ = h.cord.Route(packet, ipc.EmptyPacket)
+		_ = h.cord.Route(packet, client.EmptyPacket)
 		return
 	}
 	resp := *rq
 	user := h.router.GetUser(resp.Stateful.Id)
 	if user == nil {
 		c.log.Error().Msgf("no user [%v]", resp.Stateful.Id)
-		_ = h.cord.Route(packet, ipc.EmptyPacket)
+		_ = h.cord.Route(packet, client.EmptyPacket)
 		return
 	}
 	h.log.Info().Str("game", resp.Game.Name).Msg("Starting the game")
@@ -131,7 +131,7 @@ func (c *Coordinator) HandleGameStart(packet ipc.InPacket, h *Handler) {
 	// Register room to coordinator if we are connecting to coordinator
 	if playRoom == nil {
 		c.log.Error().Msgf("couldn't create a room [%v]", resp.Stateful.Id)
-		_ = h.cord.Route(packet, ipc.EmptyPacket)
+		_ = h.cord.Route(packet, client.EmptyPacket)
 		return
 	}
 	h.cord.RegisterRoom(playRoom.ID)
@@ -150,14 +150,14 @@ func (c *Coordinator) HandleQuitGame(rq api.GameQuitRequest, h *Handler) {
 	}
 }
 
-func (c *Coordinator) HandleSaveGame(packet ipc.InPacket, h *Handler) {
+func (c *Coordinator) HandleSaveGame(packet client.InPacket, h *Handler) {
 	resp, err := api.Unwrap[api.SaveGameRequest](packet.Payload)
 	if err != nil {
 		c.log.Error().Err(err).Msg("malformed game save request")
 		return
 	}
 	c.log.Info().Str("room", resp.Room.Id).Msg("Got room")
-	rez := ipc.OkPacket
+	rez := client.OkPacket
 	if resp.Room.Id != "" {
 		room := h.router.GetRoom(resp.Room.Id)
 		if room == nil {
@@ -166,22 +166,22 @@ func (c *Coordinator) HandleSaveGame(packet ipc.InPacket, h *Handler) {
 		err := room.SaveGame()
 		if err != nil {
 			c.log.Error().Err(err).Msg("cannot save game state")
-			rez = ipc.ErrPacket
+			rez = client.ErrPacket
 		}
 	} else {
-		rez = ipc.ErrPacket
+		rez = client.ErrPacket
 	}
 	_ = h.cord.Route(packet, rez)
 }
 
-func (c *Coordinator) HandleLoadGame(packet ipc.InPacket, h *Handler) {
+func (c *Coordinator) HandleLoadGame(packet client.InPacket, h *Handler) {
 	c.log.Info().Msg("Loading game state")
 	resp, err := api.Unwrap[api.LoadGameRequest](packet.Payload)
 	if err != nil {
 		c.log.Error().Err(err).Msg("malformed game load request")
 		return
 	}
-	rez := ipc.OkPacket
+	rez := client.OkPacket
 	if resp.Room.Id != "" {
 		rm := h.router.GetRoom(resp.Room.Id)
 		if rm == nil {
@@ -189,15 +189,15 @@ func (c *Coordinator) HandleLoadGame(packet ipc.InPacket, h *Handler) {
 		}
 		if err := rm.LoadGame(); err != nil {
 			c.log.Error().Err(err).Msg("cannot load game state")
-			rez = ipc.ErrPacket
+			rez = client.ErrPacket
 		}
 	} else {
-		rez = ipc.ErrPacket
+		rez = client.ErrPacket
 	}
 	_ = h.cord.Route(packet, rez)
 }
 
-func (c *Coordinator) HandleChangePlayer(packet ipc.InPacket, h *Handler) {
+func (c *Coordinator) HandleChangePlayer(packet client.InPacket, h *Handler) {
 	resp, err := api.Unwrap[api.ChangePlayerRequest](packet.Payload)
 	if err != nil {
 		c.log.Error().Err(err).Msg("malformed change player request")
@@ -214,18 +214,18 @@ func (c *Coordinator) HandleChangePlayer(packet ipc.InPacket, h *Handler) {
 		h.log.Info().Msgf("Updated player index to: %d", idx)
 		rez = strconv.Itoa(idx)
 	} else {
-		rez = ipc.ErrPacket
+		rez = client.ErrPacket
 	}
 	_ = h.cord.Route(packet, rez)
 }
 
-func (c *Coordinator) HandleToggleMultitap(packet ipc.InPacket, h *Handler) {
+func (c *Coordinator) HandleToggleMultitap(packet client.InPacket, h *Handler) {
 	resp, err := api.Unwrap[api.ToggleMultitapRequest](packet.Payload)
 	if err != nil {
 		c.log.Error().Err(err).Msg("malformed toggle multitap request")
 		return
 	}
-	rez := ipc.OkPacket
+	rez := client.OkPacket
 	if resp.Room.Id != "" {
 		room := h.router.GetRoom(resp.Room.Id)
 		if room == nil {
@@ -233,13 +233,13 @@ func (c *Coordinator) HandleToggleMultitap(packet ipc.InPacket, h *Handler) {
 		}
 		room.ToggleMultitap()
 	} else {
-		rez = ipc.ErrPacket
+		rez = client.ErrPacket
 	}
 	_ = h.cord.Route(packet, rez)
 }
 
-func (c *Coordinator) HandleRecordGame(packet ipc.InPacket, h *Handler) {
-	var rez = ipc.OkPacket
+func (c *Coordinator) HandleRecordGame(packet client.InPacket, h *Handler) {
+	var rez = client.OkPacket
 	defer func() {
 		_ = h.cord.Route(packet, rez)
 	}()
@@ -247,12 +247,12 @@ func (c *Coordinator) HandleRecordGame(packet ipc.InPacket, h *Handler) {
 	resp, err := api.Unwrap[api.RecordGameRequest](packet.Payload)
 	if err != nil {
 		c.log.Error().Err(err).Msg("malformed record game request")
-		rez = ipc.ErrPacket
+		rez = client.ErrPacket
 		return
 	}
 
 	if !h.conf.Recording.Enabled {
-		rez = ipc.ErrPacket
+		rez = client.ErrPacket
 		return
 	}
 
@@ -263,7 +263,7 @@ func (c *Coordinator) HandleRecordGame(packet ipc.InPacket, h *Handler) {
 		}
 		room.ToggleRecording(resp.Active, resp.User)
 	} else {
-		rez = ipc.ErrPacket
+		rez = client.ErrPacket
 		return
 	}
 }

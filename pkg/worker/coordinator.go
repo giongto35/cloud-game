@@ -6,7 +6,6 @@ import (
 	"github.com/giongto35/cloud-game/v2/pkg/api"
 	"github.com/giongto35/cloud-game/v2/pkg/client"
 	"github.com/giongto35/cloud-game/v2/pkg/config/worker"
-	"github.com/giongto35/cloud-game/v2/pkg/ipc"
 	"github.com/giongto35/cloud-game/v2/pkg/logger"
 	"github.com/giongto35/cloud-game/v2/pkg/network"
 	"github.com/giongto35/cloud-game/v2/pkg/webrtc"
@@ -30,7 +29,7 @@ func newCoordinatorConnection(host string, conf worker.Worker, addr string, log 
 	if req != "" && err == nil {
 		address.RawQuery = "data=" + req
 	}
-	conn, err := ipc.NewClient(address, log)
+	conn, err := client.NewConnector().NewClient(address, log)
 	if err != nil {
 		return nil, err
 	}
@@ -43,7 +42,7 @@ func (c *Coordinator) HandleRequests(h *Handler) {
 		c.log.Panic().Err(err).Msg("WebRTC API creation has been failed")
 	}
 
-	c.OnPacket(func(p ipc.InPacket) {
+	c.OnPacket(func(p client.InPacket) {
 		switch p.T {
 		case api.TerminateSession:
 			resp, err := api.Unwrap[api.TerminateSessionRequest](p.Payload)

@@ -8,13 +8,10 @@ import (
 	"github.com/giongto35/cloud-game/v2/pkg/client"
 	"github.com/giongto35/cloud-game/v2/pkg/config/coordinator"
 	"github.com/giongto35/cloud-game/v2/pkg/games"
-	"github.com/giongto35/cloud-game/v2/pkg/ipc"
 	"github.com/giongto35/cloud-game/v2/pkg/launcher"
 	"github.com/giongto35/cloud-game/v2/pkg/logger"
 	"github.com/giongto35/cloud-game/v2/pkg/network"
-	"github.com/giongto35/cloud-game/v2/pkg/network/websocket"
 	"github.com/giongto35/cloud-game/v2/pkg/service"
-	"github.com/rs/xid"
 )
 
 type Hub struct {
@@ -27,23 +24,26 @@ type Hub struct {
 	rooms    client.NetMap // stores user rooms
 	log      *logger.Logger
 
-	// custom ws upgrade handlers for Origin
-	// !to encapsulate betterly
-	wwsu, uwsu websocket.Upgrader
+	wConn, uConn *client.Connector
 }
 
 func NewHub(conf coordinator.Config, lib games.GameLibrary, log *logger.Logger) *Hub {
-	h := &Hub{
+	return &Hub{
 		conf:     conf,
 		crowd:    client.NewNetMap(),
 		guild:    NewGuild(),
 		launcher: launcher.NewGameLauncher(lib),
 		rooms:    client.NewNetMap(),
 		log:      log,
+		wConn: client.NewConnector(
+			client.WithOrigin(conf.Coordinator.Origin.WorkerWs),
+			client.WithTag("w"),
+		),
+		uConn: client.NewConnector(
+			client.WithOrigin(conf.Coordinator.Origin.UserWs),
+			client.WithTag("u"),
+		),
 	}
-	h.wwsu = websocket.NewUpgrader(conf.Coordinator.Origin.WorkerWs)
-	h.uwsu = websocket.NewUpgrader(conf.Coordinator.Origin.UserWs)
-	return h
 }
 
 // handleWebsocketUserConnection handles all connections from user/frontend.
@@ -54,12 +54,16 @@ func (h *Hub) handleWebsocketUserConnection(w http.ResponseWriter, r *http.Reque
 		}
 	}()
 
-	conn, err := ipc.NewClientServer(w, r, &h.uwsu, h.log)
+	usr, err := NewUserClientServer(h.uConn.NewClientServer(w, r, h.log))
 	if err != nil {
 		h.log.Error().Err(err).Msg("couldn't init user connection")
 	}
-	usr := NewUserClient(conn, h.log)
-	defer h.cleanUser(&usr)
+	defer func() {
+		if usr != nil {
+			usr.Disconnect()
+			h.crowd.Remove(usr)
+		}
+	}()
 	usr.HandleRequests(h, h.launcher, h.conf)
 	usr.ProcessMessages()
 
@@ -84,7 +88,7 @@ func (h *Hub) handleWebsocketUserConnection(w http.ResponseWriter, r *http.Reque
 	}
 
 	usr.SetWorker(wkr)
-	h.crowd.Add(&usr)
+	h.crowd.Add(usr)
 	usr.InitSession(wkr.Id().String(), h.conf.Webrtc.IceServers, h.launcher.GetAppNames())
 	usr.Wait()
 }
@@ -112,25 +116,20 @@ func (h *Hub) handleWebsocketWorkerConnection(w http.ResponseWriter, r *http.Req
 		h.log.Warn().Msg("Unsecure connection. The worker may not work properly without HTTPS on its side!")
 	}
 
-	conn, err := ipc.NewClientServer(w, r, &h.wwsu, h.log)
+	conn, err := h.wConn.NewClientServer(w, r, h.log)
 	if err != nil {
 		h.log.Error().Err(err).Msg("couldn't init worker connection")
 		return
 	}
-
-	var id network.Uid
-	if handshake.Id != "" {
-		if _, err := xid.FromString(handshake.Id); err != nil {
-			id = network.NewUid()
-		} else {
-			id = network.Uid(handshake.Id)
+	wc := NewWorkerClientServer(network.Uid(handshake.Id), conn)
+	defer func() {
+		if w == nil {
+			return
 		}
-	} else {
-		id = network.NewUid()
-	}
-
-	wc := NewWorkerClientWithId(id, conn, h.log)
-	defer h.cleanWorker(&wc)
+		wc.Disconnect()
+		h.guild.Remove(wc)
+		h.rooms.RemoveAll(wc)
+	}()
 
 	wc.Addr = handshake.Addr
 	wc.Zone = handshake.Zone
@@ -141,7 +140,7 @@ func (h *Hub) handleWebsocketWorkerConnection(w http.ResponseWriter, r *http.Req
 	h.log.Info().Msgf("New worker -- addr: %v, port: %v, zone: %v, ping addr: %v, tag: %v",
 		wc.Addr, wc.Port, wc.Zone, wc.PingServer, wc.Tag)
 	wc.HandleRequests(&h.rooms, &h.crowd)
-	h.guild.add(&wc)
+	h.guild.add(wc)
 	wc.Listen()
 }
 
@@ -159,22 +158,4 @@ func (h *Hub) getServerList() (r []api.Server) {
 		})
 	}
 	return
-}
-
-func (h *Hub) cleanWorker(w *Worker) {
-	if w == nil {
-		return
-	}
-	w.Close()
-	h.guild.Remove(w)
-	h.rooms.RemoveAll(w)
-}
-
-func (h *Hub) cleanUser(u *User) {
-	if u == nil {
-		return
-	}
-	u.Close()
-	u.FreeWorker()
-	h.crowd.Remove(u)
 }

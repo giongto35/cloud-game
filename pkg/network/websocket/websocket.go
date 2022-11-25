@@ -51,7 +51,7 @@ var DefaultUpgrader = Upgrader{
 	},
 }
 
-func NewUpgrader(origin string) Upgrader {
+func NewUpgrader(origin string) *Upgrader {
 	u := DefaultUpgrader
 	switch {
 	case origin == "*":
@@ -59,7 +59,7 @@ func NewUpgrader(origin string) Upgrader {
 	case origin != "":
 		u.CheckOrigin = func(r *http.Request) bool { return r.Header.Get("Origin") == origin }
 	}
-	return u
+	return &u
 }
 
 func (u *Upgrader) Upgrade(w http.ResponseWriter, r *http.Request, responseHeader http.Header) (*websocket.Conn, error) {

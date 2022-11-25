@@ -1,17 +1,16 @@
 package coordinator
 
 import (
+	"github.com/rs/xid"
 	"sync/atomic"
 
 	"github.com/giongto35/cloud-game/v2/pkg/api"
 	"github.com/giongto35/cloud-game/v2/pkg/client"
-	"github.com/giongto35/cloud-game/v2/pkg/ipc"
-	"github.com/giongto35/cloud-game/v2/pkg/logger"
 	"github.com/giongto35/cloud-game/v2/pkg/network"
 )
 
 type Worker struct {
-	client.SocketClient
+	*client.SocketClient
 	client.RegionalClient
 
 	Addr       string
@@ -19,48 +18,53 @@ type Worker struct {
 	Port       string
 	Tag        string
 	users      int32
-	log        *logger.Logger
 	Zone       string
 }
 
-func NewWorkerClientWithId(id network.Uid, conn *ipc.Client, log *logger.Logger) Worker {
-	c := client.NewWithId(id, conn, "w", log)
-	defer c.GetLogger().Info().Msg("Connect")
-	return Worker{SocketClient: c, log: c.GetLogger()}
+func NewWorkerClientServer(id network.Uid, conn *client.SocketClient) *Worker {
+	if id != "" {
+		if _, err := xid.FromString(string(id)); err != nil {
+			id = network.NewUid()
+		}
+	} else {
+		id = network.NewUid()
+	}
+	defer conn.Log.Info().Msg("Connect")
+	return &Worker{SocketClient: conn}
 }
 
 func (w *Worker) HandleRequests(rooms *client.NetMap, crowd *client.NetMap) {
-	w.SocketClient.OnPacket(func(p ipc.InPacket) {
+	w.SocketClient.OnPacket(func(p client.InPacket) {
 		go func() {
 			switch p.T {
 			case api.RegisterRoom:
-				w.log.Debug().Msgf("Received room register call %s", p.Payload)
+				w.Log.Debug().Msgf("Received room register call %s", p.Payload)
 				rq, err := api.Unwrap[api.RegisterRoomRequest](p.Payload)
 				if err != nil {
-					w.log.Error().Err(err).Msg("malformed room register request")
+					w.Log.Error().Err(err).Msg("malformed room register request")
 					return
 				}
 				w.HandleRegisterRoom(*rq, rooms)
-				w.log.Debug().Msgf("Rooms: %+v", rooms.List())
+				w.Log.Debug().Msgf("Rooms: %+v", rooms.List())
 			case api.CloseRoom:
-				w.log.Debug().Msgf("Received room close call %s", p.Payload)
+				w.Log.Debug().Msgf("Received room close call %s", p.Payload)
 				rq, err := api.Unwrap[api.CloseRoomRequest](p.Payload)
 				if err != nil {
-					w.log.Error().Err(err).Msg("malformed room remove request")
+					w.Log.Error().Err(err).Msg("malformed room remove request")
 					return
 				}
 				w.HandleCloseRoom(*rq, rooms)
-				w.log.Debug().Msgf("Current room list is: %+v", rooms.List())
+				w.Log.Debug().Msgf("Current room list is: %+v", rooms.List())
 			case api.IceCandidate:
-				w.log.Debug().Msgf("Pass ICE candidate to a user")
+				w.Log.Debug().Msgf("Pass ICE candidate to a user")
 				rq, err := api.Unwrap[api.WebrtcIceCandidateRequest](p.Payload)
 				if err != nil {
-					w.log.Error().Err(err).Msg("malformed Ice candidate request")
+					w.Log.Error().Err(err).Msg("malformed Ice candidate request")
 					return
 				}
 				w.HandleIceCandidate(*rq, crowd)
 			default:
-				w.log.Warn().Msgf("Unknown packet: %+v", p)
+				w.Log.Warn().Msgf("Unknown packet: %+v", p)
 			}
 		}()
 	})
@@ -83,7 +87,7 @@ func (w *Worker) ChangeUserQuantityBy(n int) {
 // Workers support only one game at a time.
 func (w *Worker) HasGameSlot() bool { return atomic.LoadInt32(&w.users) == 0 }
 
-func (w *Worker) Close() {
+func (w *Worker) Disconnect() {
 	w.SocketClient.Close()
-	w.log.Info().Msg("Disconnect")
+	w.Log.Info().Msg("Disconnect")
 }

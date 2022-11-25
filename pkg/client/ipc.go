@@ -1,4 +1,4 @@
-package ipc
+package client
 
 import (
 	"encoding/json"
@@ -21,6 +21,10 @@ var (
 )
 
 type (
+	Connector struct {
+		tag string
+		wu  *websocket.Upgrader
+	}
 	Client struct {
 		conn     *websocket.WS
 		queue    map[network.Uid]*call
@@ -34,16 +38,40 @@ type (
 	}
 )
 
-func NewClient(address url.URL, log *logger.Logger) (*Client, error) {
-	return connect(websocket.NewClient(address, log))
+type Option = func(c *Connector)
+
+func WithOrigin(origin string) Option {
+	return func(c *Connector) { c.wu = websocket.NewUpgrader(origin) }
+}
+func WithTag(tag string) Option { return func(c *Connector) { c.tag = tag } }
+
+func NewConnector(opts ...Option) *Connector {
+	c := &Connector{}
+	for _, opt := range opts {
+		opt(c)
+	}
+	if c.wu == nil {
+		c.wu = &websocket.DefaultUpgrader
+	}
+	return c
 }
 
-func NewClientServer(w http.ResponseWriter, r *http.Request, u *websocket.Upgrader, log *logger.Logger) (*Client, error) {
-	conn, err := u.Upgrade(w, r, nil)
+func (co *Connector) NewClientServer(w http.ResponseWriter, r *http.Request, log *logger.Logger) (*SocketClient, error) {
+	ws, err := co.wu.Upgrade(w, r, nil)
 	if err != nil {
 		return nil, err
 	}
-	return connect(websocket.NewServerWithConn(conn, log))
+	conn, err := connect(websocket.NewServerWithConn(ws, log))
+	if err != nil {
+		return nil, err
+	}
+	c := New(conn, co.tag, log)
+	defer log.Info().Msg("Connect")
+	return &c, nil
+}
+
+func (co *Connector) NewClient(address url.URL, log *logger.Logger) (*Client, error) {
+	return connect(websocket.NewClient(address, log))
 }
 
 func connect(conn *websocket.WS, err error) (*Client, error) {
