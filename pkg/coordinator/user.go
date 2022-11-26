@@ -14,6 +14,10 @@ type User struct {
 	Worker *Worker
 }
 
+type ServerInfo interface {
+	getServerList() []api.Server
+}
+
 func NewUserClientServer(conn *client.SocketClient, err error) (*User, error) {
 	if err != nil {
 		return nil, err

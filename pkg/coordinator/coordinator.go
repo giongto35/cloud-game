@@ -15,8 +15,8 @@ func New(conf coordinator.Config, log *logger.Logger) (services service.Group) {
 	lib.Scan()
 	hub := NewHub(conf, lib, log)
 	httpSrv, err := NewHTTPServer(conf, log, func(mux *http.ServeMux) {
-		mux.HandleFunc("/ws", hub.handleWebsocketUserConnection)
-		mux.HandleFunc("/wso", hub.handleWebsocketWorkerConnection)
+		mux.HandleFunc("/ws", hub.handleUserConnection)
+		mux.HandleFunc("/wso", hub.handleWorkerConnection)
 	})
 	if err != nil {
 		log.Error().Err(err).Msg("http server init fail")

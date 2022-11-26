@@ -46,8 +46,8 @@ func NewHub(conf coordinator.Config, lib games.GameLibrary, log *logger.Logger) 
 	}
 }
 
-// handleWebsocketUserConnection handles all connections from user/frontend.
-func (h *Hub) handleWebsocketUserConnection(w http.ResponseWriter, r *http.Request) {
+// handleUserConnection handles all connections from user/frontend.
+func (h *Hub) handleUserConnection(w http.ResponseWriter, r *http.Request) {
 	defer func() {
 		if err := recover(); err != nil {
 			h.log.Error().Err(fmt.Errorf("%v", err)).Msg("user client crashed")
@@ -93,8 +93,8 @@ func (h *Hub) handleWebsocketUserConnection(w http.ResponseWriter, r *http.Reque
 	usr.Wait()
 }
 
-// handleWebsocketWorkerConnection handles all connections from a new worker to coordinator.
-func (h *Hub) handleWebsocketWorkerConnection(w http.ResponseWriter, r *http.Request) {
+// handleWorkerConnection handles all connections from a new worker to coordinator.
+func (h *Hub) handleWorkerConnection(w http.ResponseWriter, r *http.Request) {
 	defer func() {
 		if err := recover(); err != nil {
 			h.log.Error().Err(fmt.Errorf("%v", err)).Msg("worker client crashed")

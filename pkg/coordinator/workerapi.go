@@ -22,18 +22,16 @@ func (w *Worker) WebrtcIceCandidate(id network.Uid, can string) {
 	w.Notify(api.NewWebrtcIceCandidateRequest(id, can))
 }
 
-func (w *Worker) StartGame(id network.Uid, app launcher.AppMeta, req api.GameStartUserRequest, rec bool) (*api.StartGameResponse, error) {
-	sendData := api.StartGameRequest{
+func (w *Worker) StartGame(id network.Uid, app launcher.AppMeta, req api.GameStartUserRequest) (*api.StartGameResponse, error) {
+	rq := api.StartGameRequest{
 		Stateful:    api.Stateful{Id: id},
 		Game:        api.GameInfo{Name: app.Name, Base: app.Base, Path: app.Path, Type: app.Type},
 		Room:        api.Room{Id: req.RoomId},
 		PlayerIndex: req.PlayerIndex,
+		Record:      req.Record,
+		RecordUser:  req.RecordUser,
 	}
-	if rec {
-		sendData.Record = req.Record
-		sendData.RecordUser = req.RecordUser
-	}
-	return api.UnwrapChecked[api.StartGameResponse](w.Send(api.StartGame, sendData))
+	return api.UnwrapChecked[api.StartGameResponse](w.Send(api.StartGame, rq))
 }
 
 func (w *Worker) QuitGame(id network.Uid, roomId string) {

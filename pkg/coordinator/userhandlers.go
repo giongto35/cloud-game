@@ -48,15 +48,14 @@ func (u *User) HandleStartGame(rq api.GameStartUserRequest, launcher launcher.La
 		return
 	}
 
-	workerResp, err := u.Worker.StartGame(u.Id(), gameInfo, rq, conf.Recording.Enabled)
-	if err != nil || workerResp == nil {
+	startGameResp, err := u.Worker.StartGame(u.Id(), gameInfo, rq)
+	if err != nil || startGameResp == nil {
 		u.Log.Error().Err(err).Msg("malformed game start response")
 		return
 	}
 	// Response from worker contains initialized roomID. Set roomID to the session
-	u.SetRoom(workerResp.Id)
-	u.Log.Info().Str("id", workerResp.Id).Msg("Received room response from worker")
-
+	u.SetRoom(startGameResp.Id)
+	u.Log.Info().Str("id", startGameResp.Id).Msg("Received room response from worker")
 	if err = u.StartGame(); err != nil {
 		u.Log.Error().Err(err).Msg("couldn't send back start request")
 		return
