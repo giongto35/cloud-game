@@ -79,13 +79,13 @@ const keyboard = (() => {
         }
     }
 
-    const onKey = (code, callback, state) => {
+    const onKey = (code, evt, state) => {
         if (code in keyMap) {
             const key = keyMap[code]
             if (key in dpadState) {
                 dpadState[key] = state
                 if (dpadMode) {
-                    callback(key);
+                    event.pub(evt, {key: key})
                 } else {
                     if (key === KEY.LEFT || key === KEY.RIGHT) {
                         const value = (dpadState[KEY.RIGHT] === true ? 1 : 0) - (dpadState[KEY.LEFT] === true ? 1 : 0)
@@ -96,7 +96,7 @@ const keyboard = (() => {
                     }
                 }
             } else {
-                callback(key);
+                event.pub(evt, {key: key})
             }
         }
     };
@@ -111,7 +111,7 @@ const keyboard = (() => {
             body.addEventListener('keyup', e => {
                 e.stopPropagation();
                 if (isKeysFilteredMode) {
-                    onKey(e.code, key => event.pub(KEY_RELEASED, {key: key}));
+                    onKey(e.code, KEY_RELEASED)
                 } else {
                     event.pub(KEYBOARD_KEY_PRESSED, {key: e.code});
                 }
@@ -120,7 +120,7 @@ const keyboard = (() => {
             body.addEventListener('keydown', e => {
                 e.stopPropagation();
                 if (isKeysFilteredMode) {
-                    onKey(e.code, key => event.pub(KEY_PRESSED, {key: key}), true)
+                    onKey(e.code, KEY_PRESSED, true)
                 } else {
                     event.pub(KEYBOARD_KEY_PRESSED, {key: e.code});
                 }
