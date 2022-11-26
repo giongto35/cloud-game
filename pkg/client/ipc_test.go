@@ -41,7 +41,11 @@ func testWebsocket(t *testing.T) {
 	// socket handler
 	var socket *websocket.WS
 	http.HandleFunc("/ws", func(w http.ResponseWriter, r *http.Request) {
-		sock, err := websocket.NewServer(w, r, log)
+		conn, err := websocket.DefaultUpgrader.Upgrade(w, r, nil)
+		if err != nil {
+			t.Fatalf("no socket, %v", err)
+		}
+		sock, err := websocket.NewServerWithConn(conn, log)
 		if err != nil {
 			t.Fatalf("couldn't init socket server")
 		}
@@ -116,7 +120,6 @@ func testWebsocket(t *testing.T) {
 
 	<-socket.Done
 	<-client.conn.Done
-
 }
 
 func newClient(t *testing.T, addr url.URL) *Client {

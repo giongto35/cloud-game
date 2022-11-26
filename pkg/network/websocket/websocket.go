@@ -51,6 +51,8 @@ var DefaultUpgrader = Upgrader{
 	},
 }
 
+var ErrNilConnection = errors.New("nil connection")
+
 func NewUpgrader(origin string) *Upgrader {
 	u := DefaultUpgrader
 	switch {
@@ -67,6 +69,25 @@ func (u *Upgrader) Upgrade(w http.ResponseWriter, r *http.Request, responseHeade
 		w.Header().Set("Access-Control-Allow-Origin", u.origin)
 	}
 	return u.Upgrader.Upgrade(w, r, responseHeader)
+}
+
+func NewServerWithConn(conn *websocket.Conn, log *logger.Logger) (*WS, error) {
+	if conn == nil {
+		return nil, ErrNilConnection
+	}
+	return newSocket(conn, true, log), nil
+}
+
+func NewClient(address url.URL, log *logger.Logger) (*WS, error) {
+	dialer := websocket.DefaultDialer
+	if address.Scheme == "wss" {
+		dialer.TLSClientConfig = &tls.Config{InsecureSkipVerify: true}
+	}
+	conn, _, err := dialer.Dial(address.String(), nil)
+	if err != nil {
+		return nil, err
+	}
+	return newSocket(conn, false, log), nil
 }
 
 // reader pumps messages from the websocket connection to the OnMessage callback.
@@ -89,7 +110,7 @@ func (ws *WS) reader() {
 				err := conn.WriteControl(websocket.PongMessage, []byte{}, time.Now().Add(writeWait))
 				if err == websocket.ErrCloseSent {
 					return nil
-				} else if e, ok := err.(net.Error); ok && e.Temporary() {
+				} else if e, ok := err.(net.Error); ok && e.Timeout() {
 					return nil
 				}
 				return err
@@ -111,17 +132,12 @@ func (ws *WS) reader() {
 // writer pumps messages from the send channel to the websocket connection.
 // Blocking, must be called as goroutine. Serializes all websocket writes.
 func (ws *WS) writer() {
-	var ticker *time.Ticker
+	defer ws.shutdown()
+
 	if ws.pingPong {
-		ticker = time.NewTicker(pingTime)
-	}
-	defer func() {
-		if ticker != nil {
-			ticker.Stop()
-		}
-		ws.shutdown()
-	}()
-	if ws.pingPong {
+		ticker := time.NewTicker(pingTime)
+		defer ticker.Stop()
+
 		for {
 			select {
 			case message, ok := <-ws.send:
@@ -154,43 +170,9 @@ func (ws *WS) handleMessage(message []byte, ok bool) bool {
 	return true
 }
 
-// NewServer initializes new websocket peer requests handler.
-func NewServer(w http.ResponseWriter, r *http.Request, log *logger.Logger) (*WS, error) {
-	conn, err := DefaultUpgrader.Upgrade(w, r, nil)
-	if err != nil {
-		return nil, err
-	}
-	return newSocket(conn, true, log), nil
-}
-
-func NewServerWithConn(conn *websocket.Conn, log *logger.Logger) (*WS, error) {
-	if conn == nil {
-		return nil, errors.New("null connection")
-	}
-	return newSocket(conn, true, log), nil
-}
-
-func NewClient(address url.URL, log *logger.Logger) (*WS, error) {
-	dialer := websocket.DefaultDialer
-	if address.Scheme == "wss" {
-		dialer.TLSClientConfig = &tls.Config{InsecureSkipVerify: true}
-	}
-	conn, _, err := dialer.Dial(address.String(), nil)
-	if err != nil {
-		return nil, err
-	}
-	return newSocket(conn, false, log), nil
-}
-
 func newSocket(conn *websocket.Conn, pingPong bool, log *logger.Logger) *WS {
-	// graceful shutdown ( ಠ_ಠ )
-	shut := sync.WaitGroup{}
-	shut.Add(2)
-
-	safeConn := deadlinedConn{sock: conn, wt: writeWait}
-
-	ws := &WS{
-		conn:      safeConn,
+	return &WS{
+		conn:      deadlinedConn{sock: conn, wt: writeWait},
 		send:      make(chan []byte),
 		once:      sync.Once{},
 		Done:      make(chan struct{}, 1),
@@ -198,8 +180,6 @@ func newSocket(conn *websocket.Conn, pingPong bool, log *logger.Logger) *WS {
 		OnMessage: func(message []byte, err error) {},
 		log:       log,
 	}
-
-	return ws
 }
 
 func (ws *WS) Listen() {
