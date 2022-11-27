@@ -6,21 +6,20 @@ import (
 )
 
 func TestConcurrentInput(t *testing.T) {
-	players := NewPlayerSessionInput()
+	players := NewGameSessionInput()
 
-	session := "mad-test-session"
 	events := 1000
 	go func() {
 		for i := 0; i < events*2; i++ {
-			player := rand.Intn(controllersNum)
-			go players.session.setInput(session, player, 100, []byte{})
+			player := rand.Intn(maxPort)
+			go players.setInput(player, 100, []byte{})
 			// here it usually crashes
-			go players.session.close(session)
+			go players.close()
 		}
 	}()
 	go func() {
 		for i := 0; i < events*2; i++ {
-			player := rand.Intn(controllersNum)
+			player := rand.Intn(maxPort)
 			go players.isKeyPressed(uint(player), 100)
 		}
 	}()

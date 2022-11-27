@@ -26,7 +26,7 @@ type Frontend struct {
 	// draw threads
 	th int
 
-	players Players
+	input GameSessionInput
 
 	done chan struct{}
 	log  *logger.Logger
@@ -55,7 +55,7 @@ func NewFrontend(roomID string, storage Storage, conf config.LibretroCoreConfig,
 		storage:      storage,
 		imageChannel: imageChannel,
 		audioChannel: audioChannel,
-		players:      NewPlayerSessionInput(),
+		input:        NewGameSessionInput(),
 		roomID:       roomID,
 		done:         make(chan struct{}, 1),
 		th:           threads,
@@ -67,13 +67,8 @@ func NewFrontend(roomID string, storage Storage, conf config.LibretroCoreConfig,
 	return &f, imageChannel, audioChannel
 }
 
-func (f *Frontend) Input(uid string, player int, data []byte) {
-	bm := uint16(data[1])<<8 + uint16(data[0])
-	if bm != InputTerminate {
-		f.players.session.setInput(uid, player, bm, data)
-	} else {
-		f.players.session.close(uid)
-	}
+func (f *Frontend) Input(player int, data []byte) {
+	f.input.setInput(player, uint16(data[1])<<8+uint16(data[0]), data)
 }
 
 func (f *Frontend) LoadMeta(path string) emulator.Metadata {

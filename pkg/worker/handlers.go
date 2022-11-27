@@ -104,7 +104,6 @@ func (h *Handler) removeUser(user *Session) {
 	if room.IsEmpty() {
 		h.log.Info().Msg("Closing an empty room")
 		room.Close()
-		user.GetPeerConn().SendMessage([]byte{0xFF, 0xFF})
 	}
 }
 

@@ -179,12 +179,16 @@ func coreInputPoll() {}
 
 //export coreInputState
 func coreInputState(port C.unsigned, device C.unsigned, index C.unsigned, id C.unsigned) C.int16_t {
+	if port >= maxPort {
+		return 0
+	}
+
 	if device == C.RETRO_DEVICE_ANALOG {
 		if index > C.RETRO_DEVICE_INDEX_ANALOG_RIGHT || id > C.RETRO_DEVICE_ID_ANALOG_Y {
 			return 0
 		}
 		axis := index*2 + id
-		value := frontend.players.isDpadTouched(uint(port), uint(axis))
+		value := frontend.input.isDpadTouched(uint(port), uint(axis))
 		if value != 0 {
 			return (C.int16_t)(value)
 		}
@@ -199,12 +203,7 @@ func coreInputState(port C.unsigned, device C.unsigned, index C.unsigned, id C.u
 	if !ok {
 		return 0
 	}
-
-	if frontend.players.isKeyPressed(uint(port), key) {
-		return 1
-	}
-
-	return 0
+	return C.int16_t(frontend.input.isKeyPressed(uint(port), key))
 }
 
 func audioWrite(buf unsafe.Pointer, frames C.size_t) C.size_t {
@@ -576,7 +575,6 @@ func coreLoadGame(filename string) {
 	}
 
 	// set default controller types on all ports
-	maxPort := 4 // controllersNum
 	for i := 0; i < maxPort; i++ {
 		C.bridge_retro_set_controller_port_device(retroSetControllerPortDevice, C.uint(i), C.RETRO_DEVICE_JOYPAD)
 	}

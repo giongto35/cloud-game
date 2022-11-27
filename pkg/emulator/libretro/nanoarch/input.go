@@ -3,85 +3,54 @@ package nanoarch
 import "sync"
 
 const (
-	// how many axes on the D-pad
+	maxPort     = 4
 	dpadAxesNum = 4
-	// the upper limit on how many controllers (players)
-	// are possible for one play session (emulator instance)
-	controllersNum = 8
 )
 
-const InputTerminate = 0xffff
-
-type Players struct {
-	session playerSession
-}
-
-type playerSession struct {
-	sync.RWMutex
-
-	state map[string][]controllerState
-}
-
-type controllerState struct {
-	keyState uint16
-	axes     [dpadAxesNum]int16
-}
-
-func NewPlayerSessionInput() Players {
-	return Players{
-		session: playerSession{
-			state: map[string][]controllerState{},
-		},
+type (
+	GameSessionInput struct {
+		state [maxPort]controller
+		mu    sync.RWMutex
 	}
-}
+	controller struct {
+		keys uint16
+		axes [dpadAxesNum]int16
+	}
+)
+
+func NewGameSessionInput() GameSessionInput { return GameSessionInput{state: [maxPort]controller{}} }
 
 // close terminates user input session.
-func (ps *playerSession) close(id string) {
-	ps.Lock()
-	defer ps.Unlock()
-
-	delete(ps.state, id)
+func (p *GameSessionInput) close() {
+	//p.mu.Lock()
+	//
+	//delete(p., id)
+	//p.mu.Unlock()
 }
 
 // setInput sets input state for some player in a game session.
-func (ps *playerSession) setInput(id string, player int, buttons uint16, dpad []byte) {
-	ps.Lock()
-	defer ps.Unlock()
+func (p *GameSessionInput) setInput(player int, buttons uint16, dpad []byte) {
+	p.mu.Lock()
+	defer p.mu.Unlock()
 
-	if _, ok := ps.state[id]; !ok {
-		ps.state[id] = make([]controllerState, controllersNum)
-	}
-
-	ps.state[id][player].keyState = buttons
+	p.state[player].keys = buttons
 	for i, axes := 0, len(dpad); i < dpadAxesNum && (i+1)*2+1 < axes; i++ {
 		axis := (i + 1) * 2
-		ps.state[id][player].axes[i] = int16(dpad[axis+1])<<8 + int16(dpad[axis])
+		p.state[player].axes[i] = int16(dpad[axis+1])<<8 + int16(dpad[axis])
 	}
 }
 
 // isKeyPressed checks if some button is pressed by any player.
-func (p *Players) isKeyPressed(player uint, key int) (pressed bool) {
-	p.session.RLock()
-	defer p.session.RUnlock()
-
-	for k := range p.session.state {
-		if ((p.session.state[k][player].keyState >> uint(key)) & 1) == 1 {
-			return true
-		}
-	}
-	return
+func (p *GameSessionInput) isKeyPressed(port uint, key int) uint16 {
+	p.mu.RLock()
+	defer p.mu.RUnlock()
+	return (p.state[port].keys >> uint(key)) & 1
 }
 
 // isDpadTouched checks if D-pad is used by any player.
-func (p *Players) isDpadTouched(player uint, axis uint) (shift int16) {
-	p.session.RLock()
-	defer p.session.RUnlock()
+func (p *GameSessionInput) isDpadTouched(port uint, axis uint) (shift int16) {
+	p.mu.RLock()
+	defer p.mu.RUnlock()
 
-	for k := range p.session.state {
-		value := p.session.state[k][player].axes[axis]
-		if value != 0 {
-			return value
-		}
-	}
-	return
+	return p.state[port].axes[axis]
 }

@@ -25,7 +25,7 @@ type CloudEmulator interface {
 	// ToggleMultitap toggles multitap controller.
 	ToggleMultitap()
 	// Input passes input to the emulator
-	Input(uid string, player int, data []byte)
+	Input(player int, data []byte)
 }
 
 type Metadata struct {

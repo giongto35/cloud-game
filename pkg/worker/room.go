@@ -208,9 +208,9 @@ func isGameOnLocal(path string) bool {
 	return !errors.Is(err, os.ErrNotExist)
 }
 
-func (r *Room) PollUserInput(user *Session) {
-	r.log.Debug().Msg("Start user input poll")
-	user.GetPeerConn().OnMessage = func(data []byte) { r.director.Input(user.GetId(), user.GetPlayerIndex(), data) }
+func (r *Room) PollUserInput(session *Session) {
+	r.log.Debug().Msg("Start session input poll")
+	session.GetPeerConn().OnMessage = func(data []byte) { r.director.Input(session.GetPlayerIndex(), data) }
 }
 
 func (r *Room) AddUser(user *Session) {
