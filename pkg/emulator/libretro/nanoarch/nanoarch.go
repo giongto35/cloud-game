@@ -83,9 +83,7 @@ var video struct {
 	autoGlContext bool
 }
 
-// default core pix format converter
-var pixelFormatConverterFn = image.Rgb565
-var rotationFn *image.Rotate
+var rotationFn *image.Rotate = nil
 
 //const joypadNumKeys = int(C.RETRO_DEVICE_ID_JOYPAD_R3 + 1)
 //var joy [joypadNumKeys]bool
@@ -153,7 +151,8 @@ func coreVideoRefresh(data unsafe.Pointer, width C.unsigned, height C.unsigned, 
 
 	// the image is being resized and de-rotated
 	frame := image.DrawRgbaImage(
-		pixelFormatConverterFn,
+		//pixelFormatConverterFn,
+		video.pixFmt,
 		rotationFn,
 		image.ScaleNearestNeighbour,
 		isOpenGLRender,
@@ -664,7 +663,6 @@ func videoSetPixelFormat(format uint32) (C.bool, error) {
 		}
 		video.bpp = 2
 		// format is not implemented
-		pixelFormatConverterFn = nil
 		return false, fmt.Errorf("unsupported pixel type %v converter", format)
 	case C.RETRO_PIXEL_FORMAT_XRGB8888:
 		video.pixFmt = image.BitFormatInt8888Rev
@@ -672,14 +670,12 @@ func videoSetPixelFormat(format uint32) (C.bool, error) {
 			return false, fmt.Errorf("unknown pixel format %v", video.pixFmt)
 		}
 		video.bpp = 4
-		pixelFormatConverterFn = image.Rgba8888
 	case C.RETRO_PIXEL_FORMAT_RGB565:
 		video.pixFmt = image.BitFormatShort565
 		if err := graphics.SetPixelFormat(graphics.UnsignedShort565); err != nil {
 			return false, fmt.Errorf("unknown pixel format %v", video.pixFmt)
 		}
 		video.bpp = 2
-		pixelFormatConverterFn = image.Rgb565
 	default:
 		return false, fmt.Errorf("unknown pixel type %v", format)
 	}

@@ -9,6 +9,7 @@ import (
 	"path"
 	"path/filepath"
 	"testing"
+	"unsafe"
 
 	"github.com/giongto35/cloud-game/v2/pkg/config"
 	"github.com/giongto35/cloud-game/v2/pkg/config/worker"
@@ -223,4 +224,17 @@ func BenchmarkEmulatorGba(b *testing.B) {
 
 func BenchmarkEmulatorNes(b *testing.B) {
 	benchmarkEmulator("nes", "Super Mario Bros.nes", b)
+}
+
+func TestSwap(t *testing.T) {
+	data := []byte{1, 254, 255, 32}
+	pixel := *(*uint32)(unsafe.Pointer(&data[0]))
+	// 0 1 2 3
+	// 2 1 0 3
+	ll := ((pixel >> 16) & 0xff) | (pixel & 0xff00) | ((pixel << 16) & 0xff0000) | 0xff000000
+
+	rez := []byte{0, 0, 0, 0}
+	*(*uint32)(unsafe.Pointer(&rez[0])) = ll
+
+	log.Printf("%v\n%v", data, rez)
 }

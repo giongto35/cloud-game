@@ -3,6 +3,13 @@ package image
 import (
 	"image"
 	"sync"
+	"unsafe"
+)
+
+const (
+	BitFormatShort5551  = iota // BIT_FORMAT_SHORT_5_5_5_1 has 5 bits R, 5 bits G, 5 bits B, 1 bit alpha
+	BitFormatInt8888Rev        // BIT_FORMAT_INT_8_8_8_8_REV has 8 bits R, 8 bits G, 8 bits B, 8 bit alpha
+	BitFormatShort565          // BIT_FORMAT_SHORT_5_6_5 has 5 bits R, 6 bits G, 5 bits
 )
 
 type imageCache struct {
@@ -26,7 +33,7 @@ var (
 	wg      sync.WaitGroup
 )
 
-func DrawRgbaImage(pixFormat Format, rot *Rotate, scaleType int, flipV bool, w, h, packedW, bpp int,
+func DrawRgbaImage(encoding uint32, rot *Rotate, scaleType int, flipV bool, w, h, packedW, bpp int,
 	data []byte, dw, dh, th int) *image.RGBA {
 	// !to implement own image interfaces img.Pix = bytes[]
 	ww, hh := w, h
@@ -42,6 +49,8 @@ func DrawRgbaImage(pixFormat Format, rot *Rotate, scaleType int, flipV bool, w, 
 	for i := 0; i < th; i++ {
 		xx := hn * i
 		go func() {
+			var px uint32
+			var dst *uint32
 			for y, yy, l, lx, row := xx, 0, xx+hn, 0, 0; y < l; y++ {
 				if normY {
 					yy = y
@@ -57,8 +66,15 @@ func DrawRgbaImage(pixFormat Format, rot *Rotate, scaleType int, flipV bool, w, 
 						dx, dy := rot.Call(x, yy, w, h)
 						k = dx<<2 + dy*src.Stride
 					}
-					r := pixFormat(data, x*bpp+lx)
-					src.Pix[k], src.Pix[k+1], src.Pix[k+2], src.Pix[k+3] = r.R, r.G, r.B, 255
+					px = *(*uint32)(unsafe.Pointer(&data[x*bpp+lx]))
+					dst = (*uint32)(unsafe.Pointer(&src.Pix[k]))
+					// LE, BE might not work
+					switch encoding {
+					case BitFormatShort565:
+						i565(dst, px)
+					case BitFormatInt8888Rev:
+						ix8888(dst, px)
+					}
 				}
 			}
 			wg.Done()
@@ -73,6 +89,14 @@ func DrawRgbaImage(pixFormat Format, rot *Rotate, scaleType int, flipV bool, w, 
 		Resize(scaleType, src, out)
 		return out
 	}
+}
+
+func i565(dst *uint32, px uint32) {
+	*dst = ((px >> 8) & 0xf8) | (((px >> 3) & 0xfc) << 8) | (((px << 3) & 0xfc) << 16)
+}
+
+func ix8888(dst *uint32, px uint32) {
+	*dst = ((px >> 16) & 0xff) | (px & 0xff00) | ((px << 16) & 0xff0000) // | 0xff000000
 }
 
 func Clear() {
