@@ -5,6 +5,8 @@ import "sync"
 const (
 	maxPort     = 4
 	dpadAxesNum = 4
+	KeyPressed  = 1
+	KeyReleased = 0
 )
 
 type (
@@ -41,10 +43,10 @@ func (p *GameSessionInput) setInput(player int, buttons uint16, dpad []byte) {
 }
 
 // isKeyPressed checks if some button is pressed by any player.
-func (p *GameSessionInput) isKeyPressed(port uint, key int) uint16 {
+func (p *GameSessionInput) isKeyPressed(port uint, key int) int {
 	p.mu.RLock()
 	defer p.mu.RUnlock()
-	return (p.state[port].keys >> uint(key)) & 1
+	return int((p.state[port].keys >> uint(key)) & 1)
 }
 
 // isDpadTouched checks if D-pad is used by any player.

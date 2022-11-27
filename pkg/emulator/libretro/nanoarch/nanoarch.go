@@ -102,26 +102,7 @@ var systemDirectory = C.CString("./pkg/emulator/libretro/system")
 var saveDirectory = C.CString(".")
 var currentUser *C.char
 
-//var seed = rand.New(rand.NewSource(time.Now().UnixNano())).Uint32()
-
-var bindKeysMap = map[int]int{
-	C.RETRO_DEVICE_ID_JOYPAD_A:      0,
-	C.RETRO_DEVICE_ID_JOYPAD_B:      1,
-	C.RETRO_DEVICE_ID_JOYPAD_X:      2,
-	C.RETRO_DEVICE_ID_JOYPAD_Y:      3,
-	C.RETRO_DEVICE_ID_JOYPAD_L:      4,
-	C.RETRO_DEVICE_ID_JOYPAD_R:      5,
-	C.RETRO_DEVICE_ID_JOYPAD_SELECT: 6,
-	C.RETRO_DEVICE_ID_JOYPAD_START:  7,
-	C.RETRO_DEVICE_ID_JOYPAD_UP:     8,
-	C.RETRO_DEVICE_ID_JOYPAD_DOWN:   9,
-	C.RETRO_DEVICE_ID_JOYPAD_LEFT:   10,
-	C.RETRO_DEVICE_ID_JOYPAD_RIGHT:  11,
-	C.RETRO_DEVICE_ID_JOYPAD_R2:     12,
-	C.RETRO_DEVICE_ID_JOYPAD_L2:     13,
-	C.RETRO_DEVICE_ID_JOYPAD_R3:     14,
-	C.RETRO_DEVICE_ID_JOYPAD_L3:     15,
-}
+const lastKey = int(C.RETRO_DEVICE_ID_JOYPAD_R3)
 
 //export coreVideoRefresh
 func coreVideoRefresh(data unsafe.Pointer, width C.unsigned, height C.unsigned, pitch C.size_t) {
@@ -179,7 +160,7 @@ func coreInputPoll() {}
 //export coreInputState
 func coreInputState(port C.unsigned, device C.unsigned, index C.unsigned, id C.unsigned) C.int16_t {
 	if port >= maxPort {
-		return 0
+		return KeyReleased
 	}
 
 	if device == C.RETRO_DEVICE_ANALOG {
@@ -193,16 +174,14 @@ func coreInputState(port C.unsigned, device C.unsigned, index C.unsigned, id C.u
 		}
 	}
 
-	if id >= 255 || index > 0 || device != C.RETRO_DEVICE_JOYPAD {
-		return 0
+	key := int(id)
+	if key > lastKey || index > 0 || device != C.RETRO_DEVICE_JOYPAD {
+		return KeyReleased
 	}
-
-	// map from id to control key
-	key, ok := bindKeysMap[int(id)]
-	if !ok {
-		return 0
+	if frontend.input.isKeyPressed(uint(port), key) == KeyPressed {
+		return KeyPressed
 	}
-	return C.int16_t(frontend.input.isKeyPressed(uint(port), key))
+	return KeyReleased
 }
 
 func audioWrite(buf unsafe.Pointer, frames C.size_t) C.size_t {

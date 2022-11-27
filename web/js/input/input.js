@@ -3,26 +3,25 @@ const input = (() => {
     let pollIntervalId = 0;
     let controllerChangedIndex = -1;
 
+    // Libretro config
     let controllerState = {
-        // control
-        [KEY.A]: false,
         [KEY.B]: false,
-        [KEY.X]: false,
         [KEY.Y]: false,
-        [KEY.L]: false,
-        [KEY.R]: false,
         [KEY.SELECT]: false,
         [KEY.START]: false,
-        // dpad
         [KEY.UP]: false,
         [KEY.DOWN]: false,
         [KEY.LEFT]: false,
         [KEY.RIGHT]: false,
+        [KEY.A]: false,
+        [KEY.X]: false,
         // extra
-        [KEY.R2]: false,
+        [KEY.L]: false,
+        [KEY.R]: false,
         [KEY.L2]: false,
-        [KEY.R3]: false,
-        [KEY.L3]: false
+        [KEY.R2]: false,
+        [KEY.L3]: false,
+        [KEY.R3]: false
     };
 
     const controllerEncoded = new Array(5).fill(0);
