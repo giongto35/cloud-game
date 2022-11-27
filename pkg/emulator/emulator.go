@@ -1,6 +1,11 @@
 package emulator
 
-import "github.com/giongto35/cloud-game/v2/pkg/emulator/image"
+import (
+	img "image"
+	"time"
+
+	"github.com/giongto35/cloud-game/v2/pkg/emulator/image"
+)
 
 type CloudEmulator interface {
 	// LoadMeta returns metadata of emulator
@@ -19,6 +24,8 @@ type CloudEmulator interface {
 	Close()
 	// ToggleMultitap toggles multitap controller.
 	ToggleMultitap()
+	// Input passes input to the emulator
+	Input(uid string, player int, data []byte)
 }
 
 type Metadata struct {
@@ -38,3 +45,17 @@ type Metadata struct {
 	AutoGlContext   bool
 	HasMultitap     bool
 }
+
+type (
+	GameFrame struct {
+		Data     *img.RGBA
+		Duration time.Duration
+	}
+	GameAudio struct {
+		Data     []int16
+		Duration time.Duration
+	}
+	InputEvent struct {
+		RawState []byte
+	}
+)

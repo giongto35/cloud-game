@@ -10,9 +10,7 @@ const (
 	controllersNum = 8
 )
 
-const (
-	InputTerminate = 0xFFFF
-)
+const InputTerminate = 0xffff
 
 type Players struct {
 	session playerSession
@@ -87,11 +85,3 @@ func (p *Players) isDpadTouched(player uint, axis uint) (shift int16) {
 	}
 	return
 }
-
-type InputEvent struct {
-	RawState  []byte
-	PlayerIdx int
-	ConnID    string
-}
-
-func (ie InputEvent) bitmap() uint16 { return uint16(ie.RawState[1])<<8 + uint16(ie.RawState[0]) }

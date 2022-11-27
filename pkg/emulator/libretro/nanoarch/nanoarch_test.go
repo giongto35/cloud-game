@@ -33,9 +33,8 @@ type EmulatorMock struct {
 	paths EmulatorPaths
 
 	// channels
-	imageInCh  <-chan GameFrame
-	audioInCh  <-chan GameAudio
-	inputOutCh chan<- InputEvent
+	imageInCh <-chan emulator.GameFrame
+	audioInCh <-chan emulator.GameAudio
 }
 
 // EmulatorPaths defines various emulator file paths.
@@ -61,9 +60,8 @@ func GetEmulatorMock(room string, system string) *EmulatorMock {
 
 	meta := conf.Emulator.GetLibretroCoreConfig(system)
 
-	images := make(chan GameFrame, 30)
-	audio := make(chan GameAudio, 30)
-	inputs := make(chan InputEvent, 100)
+	images := make(chan emulator.GameFrame, 1)
+	audio := make(chan emulator.GameAudio, 1)
 
 	SetLibretroLogger(logger.Default())
 
@@ -72,7 +70,6 @@ func GetEmulatorMock(room string, system string) *EmulatorMock {
 		Frontend: Frontend{
 			imageChannel: images,
 			audioChannel: audio,
-			inputChannel: inputs,
 			storage: &StateStorage{
 				Path:     os.TempDir(),
 				MainSave: room,
@@ -99,12 +96,12 @@ func GetEmulatorMock(room string, system string) *EmulatorMock {
 			games:  cleanPath(rootPath + "assets/games/"),
 		},
 
-		imageInCh:  images,
-		audioInCh:  audio,
-		inputOutCh: inputs,
+		imageInCh: images,
+		audioInCh: audio,
 	}
 
 	emu.paths.save = cleanPath(emu.GetHashPath())
+	frontend = &emu.Frontend
 
 	return emu
 }
@@ -115,8 +112,8 @@ func GetEmulatorMock(room string, system string) *EmulatorMock {
 func GetDefaultEmulatorMock(room string, system string, rom string) *EmulatorMock {
 	mock := GetEmulatorMock(room, system)
 	mock.loadRom(rom)
-	go mock.handleVideo(func(_ GameFrame) {})
-	go mock.handleAudio(func(_ GameAudio) {})
+	go mock.handleVideo(func(_ emulator.GameFrame) {})
+	go mock.handleAudio(func(_ emulator.GameAudio) {})
 
 	return mock
 }
@@ -137,7 +134,6 @@ func (emu *EmulatorMock) shutdownEmulator() {
 
 	close(emu.imageChannel)
 	close(emu.audioChannel)
-	close(emu.inputOutCh)
 
 	nanoarchShutdown()
 }
@@ -151,23 +147,16 @@ func (emu *EmulatorMock) emulateOneFrame() {
 
 // Who needs generics anyway?
 // handleVideo is a custom message handler for the video channel.
-func (emu *EmulatorMock) handleVideo(handler func(image GameFrame)) {
+func (emu *EmulatorMock) handleVideo(handler func(image emulator.GameFrame)) {
 	for frame := range emu.imageInCh {
 		handler(frame)
 	}
 }
 
 // handleAudio is a custom message handler for the audio channel.
-func (emu *EmulatorMock) handleAudio(handler func(sample GameAudio)) {
+func (emu *EmulatorMock) handleAudio(handler func(sample emulator.GameAudio)) {
 	for frame := range emu.audioInCh {
 		handler(frame)
-	}
-}
-
-// handleInput is a custom message handler for the input channel.
-func (emu *EmulatorMock) handleInput(handler func(event InputEvent)) {
-	for event := range emu.inputChannel {
-		handler(event)
 	}
 }
 

@@ -25,13 +25,9 @@ import (
 type Room struct {
 	ID string
 
-	// imageChannel is image stream received from director
-	imageChannel <-chan nanoarch.GameFrame
-	// audioChannel is audio stream received from director
-	audioChannel <-chan nanoarch.GameAudio
-	// inputChannel is input stream send to director. This inputChannel is combined
-	// input from webRTC + connection info (player index)
-	inputChannel chan<- nanoarch.InputEvent
+	videoFrames <-chan emulator.GameFrame
+	audioFrames <-chan emulator.GameAudio
+
 	// State of room
 	IsRunning bool
 	// Done channel is to fire exit event when room is closed
@@ -51,7 +47,6 @@ type Room struct {
 	log   *logger.Logger
 }
 
-// NewRoom creates a new room
 func NewRoom(id string, game games.GameMetadata, storage storage.CloudStorage, onClose func(*Room), rec bool, recUser string, conf worker.Config, log *logger.Logger) *Room {
 	if id == "" {
 		id = session.GenerateRoomID(game.Name)
@@ -63,17 +58,14 @@ func NewRoom(id string, game games.GameMetadata, storage storage.CloudStorage, o
 		onClose = func(*Room) {}
 	}
 
-	inputChannel := make(chan nanoarch.InputEvent, 100)
 	room := &Room{
 		ID:            id,
-		inputChannel:  inputChannel,
-		imageChannel:  nil,
 		users:         NewSessions(),
 		IsRunning:     true,
 		onlineStorage: storage,
 		Done:          make(chan struct{}, 1),
-		log:           log,
 		onClose:       onClose,
+		log:           log,
 	}
 
 	// Check if room is on local storage, if not, pull from GCS to local storage
@@ -101,8 +93,8 @@ func NewRoom(id string, game games.GameMetadata, storage storage.CloudStorage, o
 
 		log.Info().Msgf("Image processing threads = %v", conf.Emulator.Threads)
 
-		room.director, room.imageChannel, room.audioChannel =
-			nanoarch.NewFrontend(roomID, inputChannel, store, libretroConfig, conf.Emulator.Threads, log)
+		room.director, room.videoFrames, room.audioFrames =
+			nanoarch.NewFrontend(roomID, store, libretroConfig, conf.Emulator.Threads, log)
 
 		gameMeta := room.director.LoadMeta(filepath.Join(game.Base, game.Path))
 
@@ -218,12 +210,7 @@ func isGameOnLocal(path string) bool {
 
 func (r *Room) PollUserInput(user *Session) {
 	r.log.Debug().Msg("Start user input poll")
-	user.GetPeerConn().OnMessage = func(data []byte) {
-		select {
-		case r.inputChannel <- nanoarch.InputEvent{RawState: data, PlayerIdx: user.GetPlayerIndex(), ConnID: user.GetId()}:
-		default:
-		}
-	}
+	user.GetPeerConn().OnMessage = func(data []byte) { r.director.Input(user.GetId(), user.GetPlayerIndex(), data) }
 }
 
 func (r *Room) AddUser(user *Session) {
@@ -235,12 +222,8 @@ func (r *Room) AddUser(user *Session) {
 func (r *Room) RemoveUser(user *Session) {
 	user.SetRoom(nil)
 	r.users.Remove(user)
-	r.log.Debug().Str("user", user.GetId()).Msg("User has left the room")
-	// Detach input. Send end signal
-	select {
-	case r.inputChannel <- nanoarch.InputEvent{RawState: []byte{0xFF, 0xFF}, ConnID: user.GetId()}:
-	default:
-	}
+	uid := user.GetId()
+	r.log.Debug().Str("user", uid).Msg("User has left the room")
 }
 
 func (r *Room) HasUser(u *Session) bool { return r != nil && r.users.Get(u.id) != nil }
@@ -268,8 +251,6 @@ func (r *Room) Close() {
 	} else {
 		r.director.Close()
 	}
-	r.log.Debug().Msg("Closing input of the room ")
-	close(r.inputChannel)
 	close(r.Done)
 
 	r.onClose(r)
@@ -277,9 +258,6 @@ func (r *Room) Close() {
 	if r.rec != nil {
 		r.rec.Set(false, "")
 	}
-
-	// Close here is a bit wrong because this read channel
-	// Just don't close it, let it be gc
 }
 
 func (r *Room) isRoomExisted() bool {

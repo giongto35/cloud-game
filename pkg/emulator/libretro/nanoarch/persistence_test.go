@@ -6,6 +6,8 @@ import (
 	"sync"
 	"testing"
 	"time"
+
+	"github.com/giongto35/cloud-game/v2/pkg/emulator"
 )
 
 // Tests a successful emulator state save.
@@ -58,7 +60,6 @@ func TestSave(t *testing.T) {
 // Emulate n ticks again.
 // Call load from the save (b).
 // Compare states (a) and (b), should be =.
-//
 func TestLoad(t *testing.T) {
 	tests := []testRun{
 		{
@@ -157,13 +158,12 @@ func TestStateConcurrency(t *testing.T) {
 		op := 0
 
 		mock.loadRom(test.run.rom)
-		go mock.handleVideo(func(frame GameFrame) {
+		go mock.handleVideo(func(frame emulator.GameFrame) {
 			if len(frame.Data.Pix) == 0 {
 				t.Errorf("It seems that rom video frame was empty, which is strange!")
 			}
 		})
-		go mock.handleAudio(func(_ GameAudio) {})
-		go mock.handleInput(func(_ InputEvent) {})
+		go mock.handleAudio(func(_ emulator.GameAudio) {})
 
 		rand.Seed(int64(test.seed))
 		t.Logf("Random seed is [%v]\n", test.seed)

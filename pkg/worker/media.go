@@ -27,7 +27,7 @@ func (r *Room) startAudio(frequency int, onAudio func([]byte, error), conf conf.
 		case <-r.Done:
 			r.log.Info().Msg("Audio channel has been closed")
 			return
-		case samples := <-r.audioChannel:
+		case samples := <-r.audioFrames:
 			if r.IsRecording() {
 				r.rec.WriteAudio(recorder.Audio{Samples: &samples.Data, Duration: samples.Duration})
 			}
@@ -41,7 +41,7 @@ func (r *Room) startAudio(frequency int, onAudio func([]byte, error), conf conf.
 	}
 }
 
-// startVideo processes imageChannel images with an encoder (codec) then pushes the result to WebRTC.
+// startVideo processes videoFrames images with an encoder (codec) then pushes the result to WebRTC.
 func (r *Room) startVideo(width, height int, onFrame func(encoder.OutFrame), conf conf.Video) {
 	var enc encoder.Encoder
 	var err error
@@ -68,9 +68,8 @@ func (r *Room) startVideo(width, height int, onFrame func(encoder.OutFrame), con
 		return
 	}
 
+	// a/v processing pipe
 	r.vPipe = encoder.NewVideoPipe(enc, width, height, r.log)
-	einput, eoutput := r.vPipe.Input, r.vPipe.Output
-
 	go r.vPipe.Start()
 	defer r.vPipe.Stop()
 
@@ -79,14 +78,15 @@ func (r *Room) startVideo(width, height int, onFrame func(encoder.OutFrame), con
 		case <-r.Done:
 			r.log.Info().Msg("Video channel has been closed")
 			return
-		case frame := <-r.imageChannel:
+		case frame := <-r.videoFrames:
 			if r.IsRecording() {
 				r.rec.WriteVideo(recorder.Video{Image: frame.Data, Duration: frame.Duration})
 			}
-			if len(einput) < cap(einput) {
-				einput <- encoder.InFrame{Image: frame.Data, Duration: frame.Duration}
+			select {
+			case r.vPipe.Input <- encoder.InFrame{Image: frame.Data, Duration: frame.Duration}:
+			default:
 			}
-		case frame := <-eoutput:
+		case frame := <-r.vPipe.Output:
 			onFrame(frame)
 		}
 	}

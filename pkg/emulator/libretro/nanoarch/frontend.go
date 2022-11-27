@@ -1,7 +1,6 @@
 package nanoarch
 
 import (
-	"image"
 	"sync"
 	"time"
 
@@ -11,9 +10,8 @@ import (
 )
 
 type Frontend struct {
-	imageChannel chan<- GameFrame
-	audioChannel chan<- GameAudio
-	inputChannel <-chan InputEvent
+	imageChannel chan<- emulator.GameFrame
+	audioChannel chan<- emulator.GameAudio
 
 	meta            emulator.Metadata
 	gamePath        string
@@ -36,21 +34,10 @@ type Frontend struct {
 	mu sync.Mutex
 }
 
-type (
-	GameFrame struct {
-		Data     *image.RGBA
-		Duration time.Duration
-	}
-	GameAudio struct {
-		Data     []int16
-		Duration time.Duration
-	}
-)
-
 // NewFrontend implements CloudEmulator interface for a Libretro frontend.
-func NewFrontend(roomID string, inputChannel <-chan InputEvent, storage Storage, conf config.LibretroCoreConfig, threads int, log *logger.Logger) (*Frontend, chan GameFrame, chan GameAudio) {
-	imageChannel := make(chan GameFrame, 30)
-	audioChannel := make(chan GameAudio, 30)
+func NewFrontend(roomID string, storage Storage, conf config.LibretroCoreConfig, threads int, log *logger.Logger) (*Frontend, chan emulator.GameFrame, chan emulator.GameAudio) {
+	imageChannel := make(chan emulator.GameFrame, 6)
+	audioChannel := make(chan emulator.GameAudio, 6)
 
 	log = log.Extend(log.With().Str("[m]", "Libretro"))
 	SetLibretroLogger(log)
@@ -68,7 +55,6 @@ func NewFrontend(roomID string, inputChannel <-chan InputEvent, storage Storage,
 		storage:      storage,
 		imageChannel: imageChannel,
 		audioChannel: audioChannel,
-		inputChannel: inputChannel,
 		players:      NewPlayerSessionInput(),
 		roomID:       roomID,
 		done:         make(chan struct{}, 1),
@@ -78,31 +64,15 @@ func NewFrontend(roomID string, inputChannel <-chan InputEvent, storage Storage,
 
 	// set global link to the Libretro
 	frontend = &f
-
-	go f.listenInput()
-
 	return &f, imageChannel, audioChannel
 }
 
-// listenInput handles user input.
-// The user input is encoded as bitmap that we decode
-// and send into the game emulator.
-func (f *Frontend) listenInput() {
-	for {
-		select {
-		case <-f.done:
-			return
-		case in, ok := <-f.inputChannel:
-			if !ok {
-				return
-			}
-			bitmap := in.bitmap()
-			if bitmap == InputTerminate {
-				f.players.session.close(in.ConnID)
-				continue
-			}
-			f.players.session.setInput(in.ConnID, in.PlayerIdx, bitmap, in.RawState)
-		}
+func (f *Frontend) Input(uid string, player int, data []byte) {
+	bm := uint16(data[1])<<8 + uint16(data[0])
+	if bm != InputTerminate {
+		f.players.session.setInput(uid, player, bm, data)
+	} else {
+		f.players.session.close(uid)
 	}
 }
 

@@ -169,7 +169,7 @@ func coreVideoRefresh(data unsafe.Pointer, width C.unsigned, height C.unsigned, 
 	lastFrameTime = t
 
 	select {
-	case frontend.imageChannel <- GameFrame{Data: frame, Duration: dt}:
+	case frontend.imageChannel <- emulator.GameFrame{Data: frame, Duration: dt}:
 	default:
 	}
 }
@@ -217,7 +217,7 @@ func audioWrite(buf unsafe.Pointer, frames C.size_t) C.size_t {
 	estimate := float64(samples) / float64(frontend.meta.AudioSampleRate<<1) * 1000000000
 
 	select {
-	case frontend.audioChannel <- GameAudio{Data: p, Duration: time.Duration(estimate)}:
+	case frontend.audioChannel <- emulator.GameAudio{Data: p, Duration: time.Duration(estimate)}:
 	default:
 	}
 	return frames
