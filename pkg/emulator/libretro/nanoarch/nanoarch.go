@@ -6,7 +6,6 @@ import (
 	"os/user"
 	"runtime"
 	"strings"
-	"sync"
 	"time"
 	"unsafe"
 
@@ -58,51 +57,43 @@ void bridge_execute(void *f);
 */
 import "C"
 
-// to link with the Go struct
-var frontend *Frontend
-
-var mu sync.Mutex
-var lastFrameTime int64
-
-var libretroLogger = logger.Default()
-var sdlCtx *graphics.SDL
-
-var video struct {
-	pitch    uint32
-	pixFmt   uint32
-	bpp      uint32
-	rotation image.Angle
-
-	baseWidth  int32
-	baseHeight int32
-	maxWidth   int32
-	maxHeight  int32
-
-	hw            *C.struct_retro_hw_render_callback
-	isGl          bool
-	autoGlContext bool
-}
-
-var rotationFn *image.Rotate = nil
-
-//const joypadNumKeys = int(C.RETRO_DEVICE_ID_JOYPAD_R3 + 1)
-//var joy [joypadNumKeys]bool
-
-var isGlAllowed bool
-var usesLibCo bool
-var coreConfig ConfigProperties
-
-var multitap struct {
-	supported bool
-	enabled   bool
-	value     C.unsigned
-}
-
-var systemDirectory = C.CString("./pkg/emulator/libretro/system")
-var saveDirectory = C.CString(".")
-var currentUser *C.char
-
 const lastKey = int(C.RETRO_DEVICE_ID_JOYPAD_R3)
+
+var (
+	coreConfig      ConfigProperties
+	currentUser     *C.char
+	frontend        *Frontend
+	isGlAllowed     bool
+	lastFrameTime   int64
+	libretroLogger                = logger.Default()
+	rotationFn      *image.Rotate = nil
+	saveDirectory                 = C.CString(".")
+	sdlCtx          *graphics.SDL
+	systemDirectory = C.CString("./pkg/emulator/libretro/system")
+	usesLibCo       bool
+
+	video struct {
+		pitch    uint32
+		pixFmt   uint32
+		bpp      uint32
+		rotation image.Angle
+
+		baseWidth  int32
+		baseHeight int32
+		maxWidth   int32
+		maxHeight  int32
+
+		hw            *C.struct_retro_hw_render_callback
+		isGl          bool
+		autoGlContext bool
+	}
+
+	multitap struct {
+		supported bool
+		enabled   bool
+		value     C.unsigned
+	}
+)
 
 //export coreVideoRefresh
 func coreVideoRefresh(data unsafe.Pointer, width C.unsigned, height C.unsigned, pitch C.size_t) {
@@ -132,7 +123,6 @@ func coreVideoRefresh(data unsafe.Pointer, width C.unsigned, height C.unsigned, 
 
 	// the image is being resized and de-rotated
 	frame := image.DrawRgbaImage(
-		//pixelFormatConverterFn,
 		video.pixFmt,
 		rotationFn,
 		image.ScaleNearestNeighbour,
@@ -149,7 +139,7 @@ func coreVideoRefresh(data unsafe.Pointer, width C.unsigned, height C.unsigned, 
 	lastFrameTime = t
 
 	select {
-	case frontend.imageChannel <- emulator.GameFrame{Data: frame, Duration: dt}:
+	case frontend.video <- emulator.GameFrame{Data: frame, Duration: dt}:
 	default:
 	}
 }
@@ -194,7 +184,7 @@ func audioWrite(buf unsafe.Pointer, frames C.size_t) C.size_t {
 	estimate := float64(samples) / float64(frontend.meta.AudioSampleRate<<1) * 1000000000
 
 	select {
-	case frontend.audioChannel <- emulator.GameAudio{Data: p, Duration: time.Duration(estimate)}:
+	case frontend.audio <- emulator.GameAudio{Data: p, Duration: time.Duration(estimate)}:
 	default:
 	}
 	return frames
@@ -420,7 +410,6 @@ func coreLoad(meta emulator.Metadata) {
 		libretroLogger.Warn().Err(err).Msg("system arch guesser failed")
 	}
 
-	mu.Lock()
 	retroHandle, err = loadLib(filePath)
 	// fallback to sequential lib loader (first successfully loaded)
 	if err != nil {
@@ -450,8 +439,6 @@ func coreLoad(meta emulator.Metadata) {
 	retroSetControllerPortDevice = loadFunction(retroHandle, "retro_set_controller_port_device")
 	retroGetMemorySize = loadFunction(retroHandle, "retro_get_memory_size")
 	retroGetMemoryData = loadFunction(retroHandle, "retro_get_memory_data")
-
-	mu.Unlock()
 
 	C.bridge_retro_set_environment(retroSetEnvironment, C.coreEnvironment_cgo)
 	C.bridge_retro_set_video_refresh(retroSetVideoRefresh, C.coreVideoRefresh_cgo)
@@ -559,9 +546,6 @@ func coreLoadGame(filename string) {
 }
 
 func toggleMultitap() {
-	if frontend.roomID == "" {
-		return
-	}
 	if multitap.supported && multitap.value != 0 {
 		// Official SNES games only support a single multitap device
 		// Most require it to be plugged in player 2 port
@@ -615,7 +599,7 @@ func nanoarchShutdown() {
 	image.Clear()
 }
 
-func nanoarchRun() {
+func run() {
 	if usesLibCo {
 		C.bridge_execute(retroRun)
 	} else {

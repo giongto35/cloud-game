@@ -239,7 +239,7 @@ func getRoomMock(cfg roomMockConfig) roomMock {
 	wasted := 0
 	go func() {
 		sleepDeltaMs := 10
-		for room.director == nil || room.vPipe == nil {
+		for room.emulator == nil || room.vPipe == nil {
 			time.Sleep(time.Duration(sleepDeltaMs) * time.Millisecond)
 			wasted++
 			if wasted > 1000 {

@@ -10,23 +10,18 @@ import (
 )
 
 type Frontend struct {
-	imageChannel chan<- emulator.GameFrame
-	audioChannel chan<- emulator.GameAudio
+	audio chan emulator.GameAudio
+	video chan emulator.GameFrame
+	input GameSessionInput
 
-	meta            emulator.Metadata
-	gamePath        string
-	roomID          string
-	gameName        string
-	isSavingLoading bool
-	storage         Storage
+	meta    emulator.Metadata
+	storage Storage
 
 	// out frame size
 	vw, vh int
 
 	// draw threads
 	th int
-
-	input GameSessionInput
 
 	done chan struct{}
 	log  *logger.Logger
@@ -35,14 +30,12 @@ type Frontend struct {
 }
 
 // NewFrontend implements CloudEmulator interface for a Libretro frontend.
-func NewFrontend(roomID string, storage Storage, conf config.LibretroCoreConfig, threads int, log *logger.Logger) (*Frontend, chan emulator.GameFrame, chan emulator.GameAudio) {
-	imageChannel := make(chan emulator.GameFrame, 6)
-	audioChannel := make(chan emulator.GameAudio, 6)
-
+func NewFrontend(storage Storage, conf config.LibretroCoreConfig, threads int, log *logger.Logger) *Frontend {
 	log = log.Extend(log.With().Str("[m]", "Libretro"))
 	SetLibretroLogger(log)
 
-	f := Frontend{
+	// set global link to the Libretro
+	frontend = &Frontend{
 		meta: emulator.Metadata{
 			LibPath:       conf.Lib,
 			ConfigPath:    conf.Config,
@@ -52,19 +45,15 @@ func NewFrontend(roomID string, storage Storage, conf config.LibretroCoreConfig,
 			HasMultitap:   conf.HasMultitap,
 			AutoGlContext: conf.AutoGlContext,
 		},
-		storage:      storage,
-		imageChannel: imageChannel,
-		audioChannel: audioChannel,
-		input:        NewGameSessionInput(),
-		roomID:       roomID,
-		done:         make(chan struct{}, 1),
-		th:           threads,
-		log:          log,
+		storage: storage,
+		video:   make(chan emulator.GameFrame, 6),
+		audio:   make(chan emulator.GameAudio, 6),
+		input:   NewGameSessionInput(),
+		done:    make(chan struct{}, 1),
+		th:      threads,
+		log:     log,
 	}
-
-	// set global link to the Libretro
-	frontend = &f
-	return &f, imageChannel, audioChannel
+	return frontend
 }
 
 func (f *Frontend) Input(player int, data []byte) {
@@ -72,9 +61,10 @@ func (f *Frontend) Input(player int, data []byte) {
 }
 
 func (f *Frontend) LoadMeta(path string) emulator.Metadata {
+	f.mu.Lock()
 	coreLoad(f.meta)
+	f.mu.Unlock()
 	coreLoadGame(path)
-	f.gamePath = path
 	return f.meta
 }
 
@@ -94,7 +84,7 @@ func (f *Frontend) Start() {
 
 	for {
 		f.mu.Lock()
-		nanoarchRun()
+		run()
 		f.mu.Unlock()
 
 		select {
@@ -102,13 +92,17 @@ func (f *Frontend) Start() {
 			continue
 		case <-f.done:
 			nanoarchShutdown()
-			close(f.imageChannel)
-			close(f.audioChannel)
+			close(f.video)
+			close(f.audio)
 			f.log.Debug().Msg("Closed Director")
 			return
 		}
 	}
 }
+
+func (f *Frontend) GetAudio() chan emulator.GameAudio { return f.audio }
+
+func (f *Frontend) GetVideo() chan emulator.GameFrame { return f.video }
 
 func (f *Frontend) SaveGame() error { return f.Save() }
 
@@ -125,4 +119,48 @@ func (f *Frontend) Close() {
 	f.SetViewport(0, 0)
 	f.mu.Unlock()
 	close(f.done)
+}
+
+// Save writes the current state to the filesystem.
+func (f *Frontend) Save() error {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+
+	ss, err := getSaveState()
+	if err != nil {
+		return err
+	}
+	if err := f.storage.Save(f.GetHashPath(), ss); err != nil {
+		return err
+	}
+
+	if sram := getSaveRAM(); sram != nil {
+		if err := f.storage.Save(f.GetSRAMPath(), sram); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+// Load restores the state from the filesystem.
+func (f *Frontend) Load() error {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+
+	ss, err := f.storage.Load(f.GetHashPath())
+	if err != nil {
+		return err
+	}
+	if err := restoreSaveState(ss); err != nil {
+		return err
+	}
+
+	sram, err := f.storage.Load(f.GetSRAMPath())
+	if err != nil {
+		return err
+	}
+	if sram != nil {
+		restoreSaveRAM(sram)
+	}
+	return nil
 }

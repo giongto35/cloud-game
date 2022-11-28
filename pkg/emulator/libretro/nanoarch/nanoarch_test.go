@@ -69,8 +69,8 @@ func GetEmulatorMock(room string, system string) *EmulatorMock {
 	// an emu
 	emu := &EmulatorMock{
 		Frontend: Frontend{
-			imageChannel: images,
-			audioChannel: audio,
+			video: images,
+			audio: audio,
 			storage: &StateStorage{
 				Path:     os.TempDir(),
 				MainSave: room,
@@ -83,10 +83,9 @@ func GetEmulatorMock(room string, system string) *EmulatorMock {
 				UsesLibCo:   meta.UsesLibCo,
 				HasMultitap: meta.HasMultitap,
 			},
-			input:  NewGameSessionInput(),
-			roomID: room,
-			done:   make(chan struct{}, 1),
-			th:     conf.Emulator.Threads,
+			input: NewGameSessionInput(),
+			done:  make(chan struct{}, 1),
+			th:    conf.Emulator.Threads,
 		},
 
 		core: path.Base(meta.Lib),
@@ -133,8 +132,8 @@ func (emu *EmulatorMock) shutdownEmulator() {
 	_ = os.Remove(emu.GetHashPath())
 	_ = os.Remove(emu.GetSRAMPath())
 
-	close(emu.imageChannel)
-	close(emu.audioChannel)
+	close(emu.video)
+	close(emu.audio)
 
 	nanoarchShutdown()
 }
@@ -142,7 +141,7 @@ func (emu *EmulatorMock) shutdownEmulator() {
 // emulateOneFrame emulates one frame with exclusive lock.
 func (emu *EmulatorMock) emulateOneFrame() {
 	emu.mu.Lock()
-	nanoarchRun()
+	run()
 	emu.mu.Unlock()
 }
 

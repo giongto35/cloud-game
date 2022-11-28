@@ -24,18 +24,13 @@ import (
 // A room stores all the channel for interaction between all webRTCs session and emulator
 type Room struct {
 	ID string
-
-	videoFrames <-chan emulator.GameFrame
-	audioFrames <-chan emulator.GameAudio
-
 	// State of room
 	IsRunning bool
 	// Done channel is to fire exit event when room is closed
 	Done chan struct{}
 	// List of users in the room
-	users Sessions
-	// Director is emulator
-	director emulator.CloudEmulator
+	users    Sessions
+	emulator emulator.CloudEmulator
 	// Cloud storage to store room state online
 	onlineStorage storage.CloudStorage
 
@@ -47,7 +42,8 @@ type Room struct {
 	log   *logger.Logger
 }
 
-func NewRoom(id string, game games.GameMetadata, storage storage.CloudStorage, onClose func(*Room), rec bool, recUser string, conf worker.Config, log *logger.Logger) *Room {
+func NewRoom(id string, game games.GameMetadata, storage storage.CloudStorage, onClose func(*Room),
+	rec bool, recUser string, conf worker.Config, log *logger.Logger) *Room {
 	if id == "" {
 		id = session.GenerateRoomID(game.Name)
 	}
@@ -69,99 +65,97 @@ func NewRoom(id string, game games.GameMetadata, storage storage.CloudStorage, o
 	}
 
 	// Check if room is on local storage, if not, pull from GCS to local storage
-	go func(game games.GameMetadata, roomID string) {
-		var store nanoarch.Storage = &nanoarch.StateStorage{
-			Path:     conf.Emulator.Storage,
-			MainSave: roomID,
+	var store nanoarch.Storage = &nanoarch.StateStorage{
+		Path:     conf.Emulator.Storage,
+		MainSave: id,
+	}
+	if conf.Emulator.Libretro.SaveCompression {
+		store = &nanoarch.ZipStorage{Storage: store}
+	}
+
+	// Check room is on local or fetch from server
+	log.Info().Msg("Check if the room in the cloud")
+	if err := room.saveOnlineRoomToLocal(id, store.GetSavePath()); err != nil {
+		log.Warn().Err(err).Msg("The room is not in the cloud")
+	}
+
+	// If not then load room or create room from local.
+	log.Info().Str("game", game.Name).Msg("The room is opened")
+
+	// Spawn new emulator and plug-in all channels
+	emuName := conf.Emulator.GetEmulator(game.Type, game.Path)
+	libretroConfig := conf.Emulator.GetLibretroCoreConfig(emuName)
+
+	log.Info().Msgf("Image processing threads = %v", conf.Emulator.Threads)
+
+	room.emulator = nanoarch.NewFrontend(store, libretroConfig, conf.Emulator.Threads, log)
+
+	gameMeta := room.emulator.LoadMeta(filepath.Join(game.Base, game.Path))
+
+	// nwidth, nheight are the WebRTC output size
+	var nwidth, nheight int
+	emu, ar := conf.Emulator, conf.Emulator.AspectRatio
+
+	if ar.Keep {
+		baseAspectRatio := float64(gameMeta.BaseWidth) / float64(ar.Height)
+		nwidth, nheight = resizeToAspect(baseAspectRatio, ar.Width, ar.Height)
+		log.Info().Msgf("Viewport size will be changed from %dx%d (%f) -> %dx%d", ar.Width, ar.Height,
+			baseAspectRatio, nwidth, nheight)
+	} else {
+		nwidth, nheight = gameMeta.BaseWidth, gameMeta.BaseHeight
+		log.Info().Msgf("Viewport custom size is disabled, base size will be used instead %dx%d", nwidth, nheight)
+	}
+
+	if emu.Scale > 1 {
+		nwidth, nheight = nwidth*emu.Scale, nheight*emu.Scale
+		log.Info().Msgf("Viewport size has scaled to %dx%d", nwidth, nheight)
+	}
+
+	// set game frame size considering its orientation
+	encoderW, encoderH := nwidth, nheight
+	if gameMeta.Rotation.IsEven {
+		encoderW, encoderH = nheight, nwidth
+	}
+
+	room.emulator.SetViewport(encoderW, encoderH)
+
+	if conf.Recording.Enabled {
+		room.rec = recorder.NewRecording(
+			recorder.Meta{UserName: recUser},
+			log,
+			recorder.Options{
+				Dir:                   conf.Recording.Folder,
+				Fps:                   gameMeta.Fps,
+				Frequency:             gameMeta.AudioSampleRate,
+				Game:                  game.Name,
+				ImageCompressionLevel: conf.Recording.CompressLevel,
+				Name:                  conf.Recording.Name,
+				Zip:                   conf.Recording.Zip,
+				Vsync:                 true,
+			})
+		room.ToggleRecording(rec, recUser)
+	}
+
+	go room.startVideo(encoderW, encoderH, func(frame encoder.OutFrame) {
+		sample := media.Sample{Data: frame.Data, Duration: frame.Duration}
+		room.users.EachConnected(func(s *Session) { _ = s.SendVideo(sample) })
+	}, conf.Encoder.Video)
+
+	dur := time.Duration(conf.Encoder.Audio.Frame) * time.Millisecond
+	go room.startAudio(gameMeta.AudioSampleRate, func(audio []byte, err error) {
+		if err != nil {
+			return
 		}
-		if conf.Emulator.Libretro.SaveCompression {
-			store = &nanoarch.ZipStorage{Storage: store}
-		}
+		sample := media.Sample{Data: audio, Duration: dur}
+		room.users.EachConnected(func(s *Session) { _ = s.SendAudio(sample) })
+	}, conf.Encoder.Audio)
 
-		// Check room is on local or fetch from server
-		log.Info().Msg("Check if the room in the cloud")
-		if err := room.saveOnlineRoomToLocal(roomID, store.GetSavePath()); err != nil {
-			log.Warn().Err(err).Msg("The room is not in the cloud")
-		}
+	if conf.Emulator.AutosaveSec > 0 {
+		go room.enableAutosave(conf.Emulator.AutosaveSec)
+	}
 
-		// If not then load room or create room from local.
-		log.Info().Str("game", game.Name).Msg("The room is opened")
+	go room.emulator.Start()
 
-		// Spawn new emulator and plug-in all channels
-		emuName := conf.Emulator.GetEmulator(game.Type, game.Path)
-		libretroConfig := conf.Emulator.GetLibretroCoreConfig(emuName)
-
-		log.Info().Msgf("Image processing threads = %v", conf.Emulator.Threads)
-
-		room.director, room.videoFrames, room.audioFrames =
-			nanoarch.NewFrontend(roomID, store, libretroConfig, conf.Emulator.Threads, log)
-
-		gameMeta := room.director.LoadMeta(filepath.Join(game.Base, game.Path))
-
-		// nwidth, nheight are the WebRTC output size
-		var nwidth, nheight int
-		emu, ar := conf.Emulator, conf.Emulator.AspectRatio
-
-		if ar.Keep {
-			baseAspectRatio := float64(gameMeta.BaseWidth) / float64(ar.Height)
-			nwidth, nheight = resizeToAspect(baseAspectRatio, ar.Width, ar.Height)
-			log.Info().Msgf("Viewport size will be changed from %dx%d (%f) -> %dx%d", ar.Width, ar.Height,
-				baseAspectRatio, nwidth, nheight)
-		} else {
-			nwidth, nheight = gameMeta.BaseWidth, gameMeta.BaseHeight
-			log.Info().Msgf("Viewport custom size is disabled, base size will be used instead %dx%d", nwidth, nheight)
-		}
-
-		if emu.Scale > 1 {
-			nwidth, nheight = nwidth*emu.Scale, nheight*emu.Scale
-			log.Info().Msgf("Viewport size has scaled to %dx%d", nwidth, nheight)
-		}
-
-		// set game frame size considering its orientation
-		encoderW, encoderH := nwidth, nheight
-		if gameMeta.Rotation.IsEven {
-			encoderW, encoderH = nheight, nwidth
-		}
-
-		room.director.SetViewport(encoderW, encoderH)
-
-		if conf.Recording.Enabled {
-			room.rec = recorder.NewRecording(
-				recorder.Meta{UserName: recUser},
-				log,
-				recorder.Options{
-					Dir:                   conf.Recording.Folder,
-					Fps:                   gameMeta.Fps,
-					Frequency:             gameMeta.AudioSampleRate,
-					Game:                  game.Name,
-					ImageCompressionLevel: conf.Recording.CompressLevel,
-					Name:                  conf.Recording.Name,
-					Zip:                   conf.Recording.Zip,
-					Vsync:                 true,
-				})
-			room.ToggleRecording(rec, recUser)
-		}
-
-		go room.startVideo(encoderW, encoderH, func(frame encoder.OutFrame) {
-			sample := media.Sample{Data: frame.Data, Duration: frame.Duration}
-			room.users.EachConnected(func(s *Session) { _ = s.SendVideo(sample) })
-		}, conf.Encoder.Video)
-
-		dur := time.Duration(conf.Encoder.Audio.Frame) * time.Millisecond
-		go room.startAudio(gameMeta.AudioSampleRate, func(audio []byte, err error) {
-			if err != nil {
-				return
-			}
-			sample := media.Sample{Data: audio, Duration: dur}
-			room.users.EachConnected(func(s *Session) { _ = s.SendAudio(sample) })
-		}, conf.Encoder.Audio)
-
-		if conf.Emulator.AutosaveSec > 0 {
-			go room.enableAutosave(conf.Emulator.AutosaveSec)
-		}
-
-		room.director.Start()
-	}(game, id)
 	return room
 }
 
@@ -176,7 +170,7 @@ func (r *Room) enableAutosave(periodSec int) {
 			if !r.IsRunning {
 				continue
 			}
-			if err := r.director.SaveGame(); err != nil {
+			if err := r.emulator.SaveGame(); err != nil {
 				log.Error().Msgf("Autosave failed: %v", err)
 			} else {
 				log.Debug().Msgf("Autosave done")
@@ -210,7 +204,7 @@ func isGameOnLocal(path string) bool {
 
 func (r *Room) PollUserInput(session *Session) {
 	r.log.Debug().Msg("Start session input poll")
-	session.GetPeerConn().OnMessage = func(data []byte) { r.director.Input(session.GetPlayerIndex(), data) }
+	session.GetPeerConn().OnMessage = func(data []byte) { r.emulator.Input(session.GetPlayerIndex(), data) }
 }
 
 func (r *Room) AddUser(user *Session) {
@@ -246,10 +240,10 @@ func (r *Room) Close() {
 			if err := r.SaveGame(); err != nil {
 				r.log.Error().Err(err).Msg("couldn't save the game during close")
 			}
-			r.director.Close()
+			r.emulator.Close()
 		}()
 	} else {
-		r.director.Close()
+		r.emulator.Close()
 	}
 	close(r.Done)
 
@@ -266,17 +260,17 @@ func (r *Room) isRoomExisted() bool {
 	if err == nil {
 		return true
 	}
-	return isGameOnLocal(r.director.GetHashPath())
+	return isGameOnLocal(r.emulator.GetHashPath())
 }
 
 // SaveGame writes save state on the disk as well as
 // uploads it to a cloud storage.
 func (r *Room) SaveGame() error {
 	// TODO: Move to game view
-	if err := r.director.SaveGame(); err != nil {
+	if err := r.emulator.SaveGame(); err != nil {
 		return err
 	}
-	if err := r.onlineStorage.Save(r.ID, r.director.GetHashPath()); err != nil {
+	if err := r.onlineStorage.Save(r.ID, r.emulator.GetHashPath()); err != nil {
 		return err
 	}
 	r.log.Debug().Msg("Cloud save is successful")
@@ -300,9 +294,9 @@ func (r *Room) saveOnlineRoomToLocal(roomID string, savePath string) error {
 	return nil
 }
 
-func (r *Room) LoadGame() error { return r.director.LoadGame() }
+func (r *Room) LoadGame() error { return r.emulator.LoadGame() }
 
-func (r *Room) ToggleMultitap() { r.director.ToggleMultitap() }
+func (r *Room) ToggleMultitap() { r.emulator.ToggleMultitap() }
 
 func (r *Room) IsRecording() bool { return r.rec != nil && r.rec.Enabled() }
 

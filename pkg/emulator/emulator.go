@@ -8,6 +8,8 @@ import (
 )
 
 type CloudEmulator interface {
+	GetAudio() chan GameAudio
+	GetVideo() chan GameFrame
 	// LoadMeta returns metadata of emulator
 	LoadMeta(path string) Metadata
 	// Start is called after LoadGame
