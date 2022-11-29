@@ -78,7 +78,6 @@ func GetEmulatorMock(room string, system string) *EmulatorMock {
 			meta: emulator.Metadata{
 				LibPath:     meta.Lib,
 				ConfigPath:  meta.Config,
-				Ratio:       meta.Ratio,
 				IsGlAllowed: meta.IsGlAllowed,
 				UsesLibCo:   meta.UsesLibCo,
 				HasMultitap: meta.HasMultitap,

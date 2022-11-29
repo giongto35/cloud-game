@@ -49,7 +49,6 @@ type LibretroCoreConfig struct {
 	Folder      string
 	Width       int
 	Height      int
-	Ratio       float64
 	IsGlAllowed bool
 	UsesLibCo   bool
 	HasMultitap bool

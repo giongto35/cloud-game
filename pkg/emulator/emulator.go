@@ -42,7 +42,6 @@ type Metadata struct {
 	Fps             float64
 	BaseWidth       int
 	BaseHeight      int
-	Ratio           float64
 	Rotation        image.Rotate
 	IsGlAllowed     bool
 	UsesLibCo       bool

@@ -68,9 +68,10 @@ const lastKey = int(C.RETRO_DEVICE_ID_JOYPAD_R3)
 
 type (
 	nanoarch struct {
-		v        video
-		multitap multitap
-		system   systemInfo
+		v         video
+		multitap  multitap
+		sysInfo   C.struct_retro_system_info
+		sysAvInfo C.struct_retro_system_av_info
 	}
 	video struct {
 		pitch    uint32
@@ -78,20 +79,9 @@ type (
 		bpp      int
 		rotation image.Angle
 
-		baseWidth  int32
-		baseHeight int32
-		maxWidth   int32
-		maxHeight  int32
-
 		hw            *C.struct_retro_hw_render_callback
 		isGl          bool
 		autoGlContext bool
-	}
-	systemInfo struct {
-		libraryVersion  string
-		libraryName     string
-		validExtensions string
-		needFullPath    bool
 	}
 	multitap struct {
 		supported bool
@@ -208,7 +198,7 @@ func audioWrite(buf unsafe.Pointer, frames C.size_t) C.size_t {
 	copy(p, pcm)
 
 	// 1600 = x / 1000 * 48000 * 2
-	estimate := float64(samples) / float64(frontend.meta.AudioSampleRate<<1) * 1000000000
+	estimate := float64(samples) / float64(int(nano.sysAvInfo.timing.sample_rate)<<1) * 1000000000
 
 	select {
 	case frontend.audio <- emulator.GameAudio{Data: p, Duration: time.Duration(estimate)}:
@@ -362,8 +352,8 @@ func initVideo() {
 
 	sdl, err := graphics.NewSDLContext(graphics.Config{
 		Ctx:            context,
-		W:              int(nano.v.maxWidth),
-		H:              int(nano.v.maxHeight),
+		W:              int(nano.sysAvInfo.geometry.max_width),
+		H:              int(nano.sysAvInfo.geometry.max_height),
 		GLAutoContext:  nano.v.autoGlContext,
 		GLVersionMajor: uint(nano.v.hw.version_major),
 		GLVersionMinor: uint(nano.v.hw.version_minor),
@@ -477,14 +467,10 @@ func coreLoad(meta emulator.Metadata) {
 
 	C.bridge_retro_init(retroInit)
 
-	sys := C.struct_retro_system_info{}
-	C.bridge_retro_get_system_info(retroGetSystemInfo, &sys)
-	nano.system.libraryName = C.GoString(sys.library_name)
-	nano.system.libraryVersion = C.GoString(sys.library_version)
-	nano.system.validExtensions = C.GoString(sys.valid_extensions)
-	nano.system.needFullPath = bool(sys.need_fullpath)
+	C.bridge_retro_get_system_info(retroGetSystemInfo, &nano.sysInfo)
 	libretroLogger.Debug().Msgf("System >>> %s (%s) [%s] nfp: %v",
-		nano.system.libraryName, nano.system.libraryVersion, nano.system.validExtensions, nano.system.needFullPath)
+		C.GoString(nano.sysInfo.library_name), C.GoString(nano.sysInfo.library_version),
+		C.GoString(nano.sysInfo.valid_extensions), bool(nano.sysInfo.need_fullpath))
 }
 
 func LoadGame(path string) error {
@@ -501,7 +487,7 @@ func LoadGame(path string) error {
 	defer C.free(unsafe.Pointer(fPath))
 	gi := C.struct_retro_game_info{path: fPath, size: C.size_t(fileSize)}
 
-	if !nano.system.needFullPath {
+	if !bool(nano.sysInfo.need_fullpath) {
 		bytes, err := os.ReadFile(path)
 		if err != nil {
 			return err
@@ -515,38 +501,21 @@ func LoadGame(path string) error {
 		return fmt.Errorf("core failed to load ROM: %v", path)
 	}
 
-	avi := C.struct_retro_system_av_info{}
-	C.bridge_retro_get_system_av_info(retroGetSystemAVInfo, &avi)
+	C.bridge_retro_get_system_av_info(retroGetSystemAVInfo, &nano.sysAvInfo)
+	libretroLogger.Debug().Msgf("System A/V >>> %vx%v (%vx%v), [%vfps], AR [%v], audio [%vHz]",
+		nano.sysAvInfo.geometry.base_width, nano.sysAvInfo.geometry.base_height,
+		nano.sysAvInfo.geometry.max_width, nano.sysAvInfo.geometry.max_height,
+		nano.sysAvInfo.timing.fps, nano.sysAvInfo.geometry.aspect_ratio, nano.sysAvInfo.timing.sample_rate,
+	)
 
 	// Append the library name to the window title.
-	frontend.meta.AudioSampleRate = int(avi.timing.sample_rate)
-	frontend.meta.Fps = float64(avi.timing.fps)
-	frontend.meta.BaseWidth = int(avi.geometry.base_width)
-	frontend.meta.BaseHeight = int(avi.geometry.base_height)
-	// set aspect ratio
-	/* Nominal aspect ratio of game. If aspect_ratio is <= 0.0,
-	an aspect ratio of base_width / base_height is assumed.
-	* A frontend could override this setting, if desired. */
-	ratio := float64(avi.geometry.aspect_ratio)
-	if ratio <= 0.0 {
-		ratio = float64(avi.geometry.base_width) / float64(avi.geometry.base_height)
-	}
-	frontend.meta.Ratio = ratio
+	frontend.meta.AudioSampleRate = int(nano.sysAvInfo.timing.sample_rate)
+	frontend.meta.Fps = float64(nano.sysAvInfo.timing.fps)
+	frontend.meta.BaseWidth = int(nano.sysAvInfo.geometry.base_width)
+	frontend.meta.BaseHeight = int(nano.sysAvInfo.geometry.base_height)
 
-	if libretroLogger.GetLevel() < logger.InfoLevel {
-		libretroLogger.Debug().Msgf("Core media info: %vx%v (%vx%v), [%vfps], AR [%v], audio [%vHz]",
-			avi.geometry.base_width, avi.geometry.base_height,
-			avi.geometry.max_width, avi.geometry.max_height,
-			avi.timing.fps, ratio, avi.timing.sample_rate,
-		)
-	}
-
-	nano.v.maxWidth = int32(avi.geometry.max_width)
-	nano.v.maxHeight = int32(avi.geometry.max_height)
-	nano.v.baseWidth = int32(avi.geometry.base_width)
-	nano.v.baseHeight = int32(avi.geometry.base_height)
 	if nano.v.isGl {
-		bufS := int(nano.v.maxWidth * nano.v.maxHeight * int32(nano.v.bpp))
+		bufS := int(nano.sysAvInfo.geometry.max_width*nano.sysAvInfo.geometry.max_height) * nano.v.bpp
 		graphics.SetBuffer(bufS)
 		libretroLogger.Info().Msgf("Set buffer: %v", byteCountBinary(int64(bufS)))
 		if usesLibCo {

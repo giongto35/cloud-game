@@ -51,7 +51,6 @@ func NewFrontend(game games.GameMetadata, conf conf.Emulator, log *logger.Logger
 		meta: emulator.Metadata{
 			LibPath:       libretroConf.Lib,
 			ConfigPath:    libretroConf.Config,
-			Ratio:         libretroConf.Ratio,
 			IsGlAllowed:   libretroConf.IsGlAllowed,
 			UsesLibCo:     libretroConf.UsesLibCo,
 			HasMultitap:   libretroConf.HasMultitap,
@@ -89,9 +88,7 @@ func (f *Frontend) Start() {
 		f.log.Error().Err(err).Msg("couldn't load a save file")
 	}
 
-	framerate := 1 / f.meta.Fps
-	f.log.Info().Msgf("framerate: %vms", framerate)
-	ticker := time.NewTicker(time.Second / time.Duration(f.meta.Fps))
+	ticker := time.NewTicker(time.Second / time.Duration(nano.sysAvInfo.timing.fps))
 	defer ticker.Stop()
 
 	lastFrameTime = time.Now().UnixNano()
