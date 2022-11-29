@@ -20,26 +20,33 @@ const (
 	writeWait      = 1 * time.Second
 )
 
-type WS struct {
-	conn deadlinedConn
-	send chan []byte
+type (
+	WS struct {
+		conn      deadlineConn
+		send      chan []byte
+		OnMessage WSMessageHandler
+		pingPong  bool
+		once      sync.Once
+		Done      chan struct{}
+		closed    bool
+		log       *logger.Logger
+	}
+	WSMessageHandler func(message []byte, err error)
+	Upgrader         struct {
+		websocket.Upgrader
+		origin string
+	}
+	deadlineConn struct {
+		*websocket.Conn
+		wt time.Duration
+	}
+)
 
-	OnMessage WSMessageHandler
-
-	pingPong bool
-
-	once   sync.Once
-	Done   chan struct{}
-	closed bool
-	log    *logger.Logger
-}
-
-type WSMessageHandler func(message []byte, err error)
-
-type Upgrader struct {
-	websocket.Upgrader
-
-	origin string
+func (conn *deadlineConn) write(t int, mess []byte) error {
+	if err := conn.SetWriteDeadline(time.Now().Add(conn.wt)); err != nil {
+		return err
+	}
+	return conn.WriteMessage(t, mess)
 }
 
 var DefaultUpgrader = Upgrader{
@@ -99,26 +106,24 @@ func (ws *WS) reader() {
 		ws.shutdown()
 	}()
 
-	ws.conn.setup(func(conn *websocket.Conn) {
-		conn.SetReadLimit(maxMessageSize)
-		_ = conn.SetReadDeadline(time.Now().Add(pongTime))
-		if ws.pingPong {
-			conn.SetPongHandler(func(string) error { _ = conn.SetReadDeadline(time.Now().Add(pongTime)); return nil })
-		} else {
-			conn.SetPingHandler(func(string) error {
-				_ = conn.SetReadDeadline(time.Now().Add(pongTime))
-				err := conn.WriteControl(websocket.PongMessage, []byte{}, time.Now().Add(writeWait))
-				if err == websocket.ErrCloseSent {
-					return nil
-				} else if e, ok := err.(net.Error); ok && e.Timeout() {
-					return nil
-				}
-				return err
-			})
-		}
-	})
+	ws.conn.SetReadLimit(maxMessageSize)
+	_ = ws.conn.SetReadDeadline(time.Now().Add(pongTime))
+	if ws.pingPong {
+		ws.conn.SetPongHandler(func(string) error { _ = ws.conn.SetReadDeadline(time.Now().Add(pongTime)); return nil })
+	} else {
+		ws.conn.SetPingHandler(func(string) error {
+			_ = ws.conn.SetReadDeadline(time.Now().Add(pongTime))
+			err := ws.conn.WriteControl(websocket.PongMessage, nil, time.Now().Add(writeWait))
+			if err == websocket.ErrCloseSent {
+				return nil
+			} else if e, ok := err.(net.Error); ok && e.Timeout() {
+				return nil
+			}
+			return err
+		})
+	}
 	for {
-		message, err := ws.conn.read()
+		_, message, err := ws.conn.ReadMessage()
 		if err != nil {
 			if websocket.IsUnexpectedCloseError(err, websocket.CloseNormalClosure, websocket.CloseGoingAway) {
 				ws.log.Error().Err(err).Msg("WebSocket read fail")
@@ -172,7 +177,7 @@ func (ws *WS) handleMessage(message []byte, ok bool) bool {
 
 func newSocket(conn *websocket.Conn, pingPong bool, log *logger.Logger) *WS {
 	return &WS{
-		conn:      deadlinedConn{sock: conn, wt: writeWait},
+		conn:      deadlineConn{Conn: conn, wt: writeWait},
 		send:      make(chan []byte),
 		once:      sync.Once{},
 		Done:      make(chan struct{}, 1),
@@ -197,7 +202,7 @@ func (ws *WS) Close() { _ = ws.conn.write(websocket.CloseMessage, []byte{}) }
 
 func (ws *WS) shutdown() {
 	ws.once.Do(func() {
-		_ = ws.conn.close()
+		_ = ws.conn.Close()
 		close(ws.Done)
 		ws.log.Debug().Msg("WebSocket should be closed now")
 	})

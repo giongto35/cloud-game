@@ -181,7 +181,7 @@ func (w *WebRTC) Disconnect() {
 		}
 		w.conn = nil
 	}
-	w.log.Info().Msg("WebRTC stop")
+	w.log.Debug().Msg("WebRTC stop")
 }
 
 func (w *WebRTC) IsConnected() bool { return w.isConnected }
