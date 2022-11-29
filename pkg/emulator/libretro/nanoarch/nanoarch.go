@@ -98,16 +98,25 @@ type (
 var nano = nanoarch{}
 
 var (
-	coreConfig      ConfigProperties
-	currentUser     *C.char
-	frontend        *Frontend
-	lastFrameTime   int64
-	libretroLogger  = logger.Default()
-	saveDirectory   = C.CString(".")
-	sdlCtx          *graphics.SDL
-	systemDirectory = C.CString("./pkg/emulator/libretro/system")
-	usesLibCo       bool
+	coreConfig       ConfigProperties
+	frontend         *Frontend
+	lastFrameTime    int64
+	libretroLogger   = logger.Default()
+	sdlCtx           *graphics.SDL
+	usesLibCo        bool
+	cSaveDirectory   = C.CString(".")
+	cSystemDirectory = C.CString("./pkg/emulator/libretro/system")
+	cUserName        *C.char
 )
+
+func init() {
+	usr, err := user.Current()
+	if err == nil {
+		cUserName = C.CString(usr.Name)
+	} else {
+		cUserName = C.CString("retro")
+	}
+}
 
 //export coreVideoRefresh
 func coreVideoRefresh(data unsafe.Pointer, width C.unsigned, height C.unsigned, pitch C.size_t) {
@@ -246,15 +255,7 @@ func coreGetProcAddress(sym *C.char) C.retro_proc_address_t {
 func coreEnvironment(cmd C.unsigned, data unsafe.Pointer) C.bool {
 	switch cmd {
 	case C.RETRO_ENVIRONMENT_GET_USERNAME:
-		if currentUser == nil {
-			currentUserGo, err := user.Current()
-			if err != nil {
-				currentUser = C.CString("")
-			} else {
-				currentUser = C.CString(currentUserGo.Username)
-			}
-		}
-		*(**C.char)(data) = currentUser
+		*(**C.char)(data) = cUserName
 	case C.RETRO_ENVIRONMENT_GET_LOG_INTERFACE:
 		cb := (*C.struct_retro_log_callback)(data)
 		cb.log = (C.retro_log_printf_t)(C.coreLog_cgo)
@@ -267,10 +268,10 @@ func coreEnvironment(cmd C.unsigned, data unsafe.Pointer) C.bool {
 		}
 		return res
 	case C.RETRO_ENVIRONMENT_GET_SYSTEM_DIRECTORY:
-		*(**C.char)(data) = systemDirectory
+		*(**C.char)(data) = cSystemDirectory
 		return true
 	case C.RETRO_ENVIRONMENT_GET_SAVE_DIRECTORY:
-		*(**C.char)(data) = saveDirectory
+		*(**C.char)(data) = cSaveDirectory
 		return true
 	case C.RETRO_ENVIRONMENT_SHUTDOWN:
 		//window.SetShouldClose(true)
