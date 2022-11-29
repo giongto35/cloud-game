@@ -29,6 +29,7 @@ func NewGameSessionInput() GameSessionInput {
 }
 
 // setInput sets input state for some player in a game session.
+// Will crash on 0 data slice.
 func (s *GameSessionInput) setInput(player int, data []byte) {
 	atomic.StoreUint32(&s[player].keys, *(*uint32)(unsafe.Pointer(&data[0])))
 	// tf is that
