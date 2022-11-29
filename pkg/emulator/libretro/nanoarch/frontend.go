@@ -14,13 +14,11 @@ type Frontend struct {
 	video chan emulator.GameFrame
 	input GameSessionInput
 
-	conf conf.Emulator
-
+	conf    conf.Emulator
 	storage Storage
 
 	// out frame size
 	vw, vh int
-
 	// draw threads
 	th int
 
@@ -55,12 +53,7 @@ func NewFrontend(conf conf.Emulator, log *logger.Logger) *Frontend {
 	return frontend
 }
 
-func (f *Frontend) Input(player int, data []byte) {
-	if len(data) == 0 {
-		return
-	}
-	f.input.setInput(player, data)
-}
+func (f *Frontend) Input(player int, data []byte) { f.input.setInput(player, data) }
 
 func (f *Frontend) LoadMetadata(emu string) {
 	libretroConf := f.conf.GetLibretroCoreConfig(emu)

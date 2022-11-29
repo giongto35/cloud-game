@@ -200,6 +200,9 @@ func (w *WebRTC) addInputChannel(label string) error {
 	})
 	ch.OnError(w.logx)
 	ch.OnMessage(func(mess webrtc.DataChannelMessage) {
+		if len(mess.Data) == 0 {
+			return
+		}
 		// echo string messages (e.g. ping/pong)
 		if mess.IsString {
 			w.logx(ch.Send(mess.Data))
