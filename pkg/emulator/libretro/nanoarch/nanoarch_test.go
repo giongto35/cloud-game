@@ -69,18 +69,12 @@ func GetEmulatorMock(room string, system string) *EmulatorMock {
 	// an emu
 	emu := &EmulatorMock{
 		Frontend: Frontend{
+			conf:  conf.Emulator,
 			video: images,
 			audio: audio,
 			storage: &StateStorage{
 				Path:     os.TempDir(),
 				MainSave: room,
-			},
-			meta: emulator.Metadata{
-				LibPath:     meta.Lib,
-				ConfigPath:  meta.Config,
-				IsGlAllowed: meta.IsGlAllowed,
-				UsesLibCo:   meta.UsesLibCo,
-				HasMultitap: meta.HasMultitap,
 			},
 			input: NewGameSessionInput(),
 			done:  make(chan struct{}, 1),
@@ -126,7 +120,7 @@ func (emu *EmulatorMock) loadRom(game string) {
 	if err != nil {
 		log.Fatal(err)
 	}
-	emu.vw, emu.vh = emu.meta.BaseWidth, emu.meta.BaseHeight
+	emu.vw, emu.vh = emu.GetFrameSize()
 }
 
 // shutdownEmulator closes the emulator and cleans its resources.

@@ -6,6 +6,7 @@ import (
 	"path/filepath"
 	"time"
 
+	conf "github.com/giongto35/cloud-game/v2/pkg/config/emulator"
 	"github.com/giongto35/cloud-game/v2/pkg/config/worker"
 	"github.com/giongto35/cloud-game/v2/pkg/emulator"
 	"github.com/giongto35/cloud-game/v2/pkg/emulator/libretro/nanoarch"
@@ -16,7 +17,6 @@ import (
 	"github.com/giongto35/cloud-game/v2/pkg/session"
 	"github.com/giongto35/cloud-game/v2/pkg/storage"
 	"github.com/pion/webrtc/v3/pkg/media"
-	"github.com/rs/zerolog/log"
 )
 
 // Room is a game session. multi webRTC sessions can connect to a same game.
@@ -60,8 +60,23 @@ func NewRoom(id string, game games.GameMetadata, storage storage.CloudStorage, o
 		log:       log,
 	}
 
-	room.emulator = nanoarch.NewFrontend(game, conf.Emulator, log)
+	room.emulator = nanoarch.NewFrontend(conf.Emulator, log)
 	room.emulator.SetMainSaveName(id)
+	emulatorGuess := conf.Emulator.GetEmulator(game.Type, game.Path)
+	room.emulator.LoadMetadata(emulatorGuess)
+
+	gamePath := filepath.Join(game.Base, game.Path)
+	if err := room.emulator.LoadGame(gamePath); err != nil {
+		log.Fatal().Msgf("couldn't load the game %v, %v", gamePath, err)
+	}
+
+	// calc output frame size and rotation
+	fw, fh := room.emulator.GetFrameSize()
+	w, h := room.whatsFrame(conf.Emulator, fw, fh)
+	if room.emulator.Rotated() {
+		w, h = h, w
+	}
+	room.emulator.SetViewport(w, h)
 
 	if !room.storage.IsNoop() {
 		if err := room.saveOnlineRoomToLocal(id, room.emulator.GetHashPath()); err != nil {
@@ -71,46 +86,14 @@ func NewRoom(id string, game games.GameMetadata, storage storage.CloudStorage, o
 
 	log.Info().Str("game", game.Name).Msg("The room is opened")
 
-	gameMeta, err := room.emulator.LoadMeta(filepath.Join(game.Base, game.Path))
-	if err != nil {
-		log.Fatal().Err(err).Send()
-	}
-
-	// nwidth, nheight are the WebRTC output size
-	var nwidth, nheight int
-	emu, ar := conf.Emulator, conf.Emulator.AspectRatio
-
-	if ar.Keep {
-		baseAspectRatio := float64(gameMeta.BaseWidth) / float64(ar.Height)
-		nwidth, nheight = resizeToAspect(baseAspectRatio, ar.Width, ar.Height)
-		log.Info().Msgf("Viewport size will be changed from %dx%d (%f) -> %dx%d", ar.Width, ar.Height,
-			baseAspectRatio, nwidth, nheight)
-	} else {
-		nwidth, nheight = gameMeta.BaseWidth, gameMeta.BaseHeight
-		log.Info().Msgf("Viewport custom size is disabled, base size will be used instead %dx%d", nwidth, nheight)
-	}
-
-	if emu.Scale > 1 {
-		nwidth, nheight = nwidth*emu.Scale, nheight*emu.Scale
-		log.Info().Msgf("Viewport size has scaled to %dx%d", nwidth, nheight)
-	}
-
-	// set game frame size considering its orientation
-	encoderW, encoderH := nwidth, nheight
-	if gameMeta.Rotation.IsEven {
-		encoderW, encoderH = nheight, nwidth
-	}
-
-	room.emulator.SetViewport(encoderW, encoderH)
-
 	if conf.Recording.Enabled {
 		room.rec = recorder.NewRecording(
 			recorder.Meta{UserName: recUser},
 			log,
 			recorder.Options{
 				Dir:                   conf.Recording.Folder,
-				Fps:                   gameMeta.Fps,
-				Frequency:             gameMeta.AudioSampleRate,
+				Fps:                   float64(room.emulator.GetFps()),
+				Frequency:             int(room.emulator.GetSampleRate()),
 				Game:                  game.Name,
 				ImageCompressionLevel: conf.Recording.CompressLevel,
 				Name:                  conf.Recording.Name,
@@ -120,13 +103,13 @@ func NewRoom(id string, game games.GameMetadata, storage storage.CloudStorage, o
 		room.ToggleRecording(rec, recUser)
 	}
 
-	go room.startVideo(encoderW, encoderH, func(frame encoder.OutFrame) {
+	go room.startVideo(w, h, func(frame encoder.OutFrame) {
 		sample := media.Sample{Data: frame.Data, Duration: frame.Duration}
 		room.users.EachConnected(func(s *Session) { _ = s.SendVideo(sample) })
 	}, conf.Encoder.Video)
 
 	dur := time.Duration(conf.Encoder.Audio.Frame) * time.Millisecond
-	go room.startAudio(gameMeta.AudioSampleRate, func(audio []byte, err error) {
+	go room.startAudio(int(room.emulator.GetSampleRate()), func(audio []byte, err error) {
 		if err != nil {
 			return
 		}
@@ -144,7 +127,7 @@ func NewRoom(id string, game games.GameMetadata, storage storage.CloudStorage, o
 }
 
 func (r *Room) enableAutosave(periodSec int) {
-	log.Info().Msgf("Autosave is enabled with the period of [%vs]", periodSec)
+	r.log.Info().Msgf("Autosave is enabled with the period of [%vs]", periodSec)
 	ticker := time.NewTicker(time.Duration(periodSec) * time.Second)
 	defer ticker.Stop()
 
@@ -155,9 +138,9 @@ func (r *Room) enableAutosave(periodSec int) {
 				continue
 			}
 			if err := r.emulator.SaveGameState(); err != nil {
-				log.Error().Msgf("Autosave failed: %v", err)
+				r.log.Error().Msgf("Autosave failed: %v", err)
 			} else {
-				log.Debug().Msgf("Autosave done")
+				r.log.Debug().Msgf("Autosave done")
 			}
 		case <-r.Done:
 			return
@@ -173,6 +156,31 @@ func resizeToAspect(ratio float64, sw int, sh int) (dw int, dh int) {
 		dw = sw
 		dh = int(math.Round(float64(sw)/ratio/2) * 2)
 	}
+	return
+}
+
+func (r *Room) whatsFrame(conf conf.Emulator, w, h int) (ww int, hh int) {
+	// nwidth, nheight are the WebRTC output size
+	var nwidth, nheight int
+	emu, ar := conf, conf.AspectRatio
+
+	if ar.Keep {
+		baseAspectRatio := float64(w) / float64(ar.Height)
+		nwidth, nheight = resizeToAspect(baseAspectRatio, ar.Width, ar.Height)
+		r.log.Info().Msgf("Viewport size will be changed from %dx%d (%f) -> %dx%d", ar.Width, ar.Height,
+			baseAspectRatio, nwidth, nheight)
+	} else {
+		nwidth, nheight = w, h
+		r.log.Info().Msgf("Viewport custom size is disabled, base size will be used instead %dx%d", nwidth, nheight)
+	}
+
+	if emu.Scale > 1 {
+		nwidth, nheight = nwidth*emu.Scale, nheight*emu.Scale
+		r.log.Info().Msgf("Viewport size has scaled to %dx%d", nwidth, nheight)
+	}
+
+	// set game frame size considering its orientation
+	ww, hh = nwidth, nheight
 	return
 }
 

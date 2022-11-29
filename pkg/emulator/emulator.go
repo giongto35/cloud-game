@@ -10,8 +10,12 @@ import (
 type CloudEmulator interface {
 	GetAudio() chan GameAudio
 	GetVideo() chan GameFrame
-	// LoadMeta returns metadata of emulator
-	LoadMeta(path string) (*Metadata, error)
+	LoadMetadata(name string)
+	LoadGame(path string) error
+	GetFps() uint
+	GetSampleRate() uint
+	GetFrameSize() (w, h int)
+	Rotated() bool
 	// Start is called after LoadGame
 	Start()
 	// SetViewport sets viewport size

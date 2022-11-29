@@ -12,10 +12,10 @@ const (
 
 // Angles is a helper to choose appropriate rotation based on its angle.
 var Angles = [4]Rotate{
-	Angle0:   {Call: Rotate0, IsEven: false},
-	Angle90:  {Call: Rotate90, IsEven: true},
-	Angle180: {Call: Rotate180, IsEven: false},
-	Angle270: {Call: Rotate270, IsEven: true},
+	Angle0:   {Angle: Angle0, Call: Rotate0},
+	Angle90:  {Angle: Angle90, Call: Rotate90, IsEven: true},
+	Angle180: {Angle: Angle180, Call: Rotate180},
+	Angle270: {Angle: Angle270, Call: Rotate270, IsEven: true},
 }
 
 func GetRotation(angle Angle) Rotate { return Angles[angle] }
@@ -28,6 +28,7 @@ func GetRotation(angle Angle) Rotate { return Angles[angle] }
 // and it's meant to be used with h corresponded
 // to matrix height and y coordinate, and with w to x coordinate.
 type Rotate struct {
+	Angle  Angle
 	Call   func(x, y, w, h int) (int, int)
 	IsEven bool
 }

@@ -6,7 +6,6 @@ import (
 
 	conf "github.com/giongto35/cloud-game/v2/pkg/config/emulator"
 	"github.com/giongto35/cloud-game/v2/pkg/emulator"
-	"github.com/giongto35/cloud-game/v2/pkg/games"
 	"github.com/giongto35/cloud-game/v2/pkg/logger"
 )
 
@@ -15,7 +14,8 @@ type Frontend struct {
 	video chan emulator.GameFrame
 	input GameSessionInput
 
-	meta    emulator.Metadata
+	conf conf.Emulator
+
 	storage Storage
 
 	// out frame size
@@ -31,12 +31,7 @@ type Frontend struct {
 }
 
 // NewFrontend implements CloudEmulator interface for a Libretro frontend.
-func NewFrontend(game games.GameMetadata, conf conf.Emulator, log *logger.Logger) *Frontend {
-	emulatorGuess := conf.GetEmulator(game.Type, game.Path)
-	libretroConf := conf.GetLibretroCoreConfig(emulatorGuess)
-
-	log.Info().Msgf("Image processing threads = %v", conf.Threads)
-
+func NewFrontend(conf conf.Emulator, log *logger.Logger) *Frontend {
 	log = log.Extend(log.With().Str("[m]", "Libretro"))
 	SetLibretroLogger(log)
 
@@ -48,14 +43,7 @@ func NewFrontend(game games.GameMetadata, conf conf.Emulator, log *logger.Logger
 
 	// set global link to the Libretro
 	frontend = &Frontend{
-		meta: emulator.Metadata{
-			LibPath:       libretroConf.Lib,
-			ConfigPath:    libretroConf.Config,
-			IsGlAllowed:   libretroConf.IsGlAllowed,
-			UsesLibCo:     libretroConf.UsesLibCo,
-			HasMultitap:   libretroConf.HasMultitap,
-			AutoGlContext: libretroConf.AutoGlContext,
-		},
+		conf:    conf,
 		storage: store,
 		video:   make(chan emulator.GameFrame, 6),
 		audio:   make(chan emulator.GameAudio, 6),
@@ -69,15 +57,31 @@ func NewFrontend(game games.GameMetadata, conf conf.Emulator, log *logger.Logger
 
 func (f *Frontend) Input(player int, data []byte) { f.input.setInput(player, data) }
 
-func (f *Frontend) LoadMeta(path string) (*emulator.Metadata, error) {
+func (f *Frontend) LoadMetadata(emu string) {
+	libretroConf := f.conf.GetLibretroCoreConfig(emu)
 	f.mu.Lock()
-	coreLoad(f.meta)
+	coreLoad(emulator.Metadata{
+		LibPath:       libretroConf.Lib,
+		ConfigPath:    libretroConf.Config,
+		IsGlAllowed:   libretroConf.IsGlAllowed,
+		UsesLibCo:     libretroConf.UsesLibCo,
+		HasMultitap:   libretroConf.HasMultitap,
+		AutoGlContext: libretroConf.AutoGlContext,
+	})
 	f.mu.Unlock()
-	if err := LoadGame(path); err != nil {
-		return nil, err
-	}
-	return &f.meta, nil
 }
+
+func (f *Frontend) Rotated() bool { return nano.rot != nil && nano.rot.IsEven }
+
+func (f *Frontend) GetFrameSize() (int, int) {
+	return int(nano.sysAvInfo.geometry.base_width), int(nano.sysAvInfo.geometry.base_height)
+}
+
+func (f *Frontend) GetFps() uint { return uint(nano.sysAvInfo.timing.fps) }
+
+func (f *Frontend) GetSampleRate() uint { return uint(nano.sysAvInfo.timing.sample_rate) }
+
+func (f *Frontend) LoadGame(path string) error { return LoadGame(path) }
 
 func (f *Frontend) SetViewport(width int, height int) { f.vw, f.vh = width, height }
 

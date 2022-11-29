@@ -70,15 +70,13 @@ type (
 	nanoarch struct {
 		v         video
 		multitap  multitap
+		rot       *image.Rotate
 		sysInfo   C.struct_retro_system_info
 		sysAvInfo C.struct_retro_system_av_info
 	}
 	video struct {
-		pitch    uint32
-		pixFmt   uint32
-		bpp      int
-		rotation image.Angle
-
+		pixFmt        uint32
+		bpp           int
 		hw            *C.struct_retro_hw_render_callback
 		isGl          bool
 		autoGlContext bool
@@ -104,9 +102,8 @@ var (
 	currentUser     *C.char
 	frontend        *Frontend
 	lastFrameTime   int64
-	libretroLogger                = logger.Default()
-	rotationFn      *image.Rotate = nil
-	saveDirectory                 = C.CString(".")
+	libretroLogger  = logger.Default()
+	saveDirectory   = C.CString(".")
 	sdlCtx          *graphics.SDL
 	systemDirectory = C.CString("./pkg/emulator/libretro/system")
 	usesLibCo       bool
@@ -141,7 +138,7 @@ func coreVideoRefresh(data unsafe.Pointer, width C.unsigned, height C.unsigned, 
 	// the image is being resized and de-rotated
 	frame := image.DrawRgbaImage(
 		nano.v.pixFmt,
-		rotationFn,
+		nano.rot,
 		image.ScaleNearestNeighbour,
 		isOpenGLRender,
 		int(width), int(height), packedWidth, nano.v.bpp,
@@ -508,12 +505,6 @@ func LoadGame(path string) error {
 		nano.sysAvInfo.timing.fps, nano.sysAvInfo.geometry.aspect_ratio, nano.sysAvInfo.timing.sample_rate,
 	)
 
-	// Append the library name to the window title.
-	frontend.meta.AudioSampleRate = int(nano.sysAvInfo.timing.sample_rate)
-	frontend.meta.Fps = float64(nano.sysAvInfo.timing.fps)
-	frontend.meta.BaseWidth = int(nano.sysAvInfo.geometry.base_width)
-	frontend.meta.BaseHeight = int(nano.sysAvInfo.geometry.base_height)
-
 	if nano.v.isGl {
 		bufS := int(nano.sysAvInfo.geometry.max_width*nano.sysAvInfo.geometry.max_height) * nano.v.bpp
 		graphics.SetBuffer(bufS)
@@ -636,17 +627,15 @@ func videoSetPixelFormat(format uint32) (C.bool, error) {
 }
 
 func setRotation(rotation uint) {
-	if rotation == uint(nano.v.rotation) {
+	if nano.rot != nil && rotation == uint(nano.rot.Angle) {
 		return
 	}
-	nano.v.rotation = image.Angle(rotation)
-	r := image.GetRotation(nano.v.rotation)
 	if rotation > 0 {
-		rotationFn = &r
+		r := image.GetRotation(image.Angle(rotation))
+		nano.rot = &r
 	} else {
-		rotationFn = nil
+		nano.rot = nil
 	}
-	frontend.meta.Rotation = r
 	libretroLogger.Debug().Msgf("Image rotated %v°", map[uint]uint{0: 0, 1: 90, 2: 180, 3: 270}[rotation])
 }
 
