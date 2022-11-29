@@ -4,7 +4,7 @@ import (
 	"sync"
 	"time"
 
-	config "github.com/giongto35/cloud-game/v2/pkg/config/emulator"
+	conf "github.com/giongto35/cloud-game/v2/pkg/config/emulator"
 	"github.com/giongto35/cloud-game/v2/pkg/emulator"
 	"github.com/giongto35/cloud-game/v2/pkg/games"
 	"github.com/giongto35/cloud-game/v2/pkg/logger"
@@ -31,7 +31,7 @@ type Frontend struct {
 }
 
 // NewFrontend implements CloudEmulator interface for a Libretro frontend.
-func NewFrontend(game games.GameMetadata, conf config.Emulator, log *logger.Logger) *Frontend {
+func NewFrontend(game games.GameMetadata, conf conf.Emulator, log *logger.Logger) *Frontend {
 	emulatorGuess := conf.GetEmulator(game.Type, game.Path)
 	libretroConf := conf.GetLibretroCoreConfig(emulatorGuess)
 

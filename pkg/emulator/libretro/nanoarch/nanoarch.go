@@ -66,31 +66,16 @@ import "C"
 
 const lastKey = int(C.RETRO_DEVICE_ID_JOYPAD_R3)
 
-// defines any memory state of the emulator
-type state []byte
-
-type mem struct {
-	ptr  unsafe.Pointer
-	size uint
-}
-
-var (
-	coreConfig      ConfigProperties
-	currentUser     *C.char
-	frontend        *Frontend
-	isGlAllowed     bool
-	lastFrameTime   int64
-	libretroLogger                = logger.Default()
-	rotationFn      *image.Rotate = nil
-	saveDirectory                 = C.CString(".")
-	sdlCtx          *graphics.SDL
-	systemDirectory = C.CString("./pkg/emulator/libretro/system")
-	usesLibCo       bool
-
+type (
+	nanoarch struct {
+		v        video
+		multitap multitap
+		system   systemInfo
+	}
 	video struct {
 		pitch    uint32
 		pixFmt   uint32
-		bpp      uint32
+		bpp      int
 		rotation image.Angle
 
 		baseWidth  int32
@@ -102,12 +87,39 @@ var (
 		isGl          bool
 		autoGlContext bool
 	}
-
+	systemInfo struct {
+		libraryVersion  string
+		libraryName     string
+		validExtensions string
+		needFullPath    bool
+	}
 	multitap struct {
 		supported bool
 		enabled   bool
 		value     C.unsigned
 	}
+	// defines any memory state of the emulator
+	state []byte
+	mem   struct {
+		ptr  unsafe.Pointer
+		size uint
+	}
+)
+
+// Global link for C callbacks to Go
+var nano = nanoarch{}
+
+var (
+	coreConfig      ConfigProperties
+	currentUser     *C.char
+	frontend        *Frontend
+	lastFrameTime   int64
+	libretroLogger                = logger.Default()
+	rotationFn      *image.Rotate = nil
+	saveDirectory                 = C.CString(".")
+	sdlCtx          *graphics.SDL
+	systemDirectory = C.CString("./pkg/emulator/libretro/system")
+	usesLibCo       bool
 )
 
 //export coreVideoRefresh
@@ -122,12 +134,12 @@ func coreVideoRefresh(data unsafe.Pointer, width C.unsigned, height C.unsigned, 
 	isOpenGLRender := data == C.RETRO_HW_FRAME_BUFFER_VALID
 
 	// calculate real frame width in pixels from packed data (realWidth >= width)
-	packedWidth := int(uint32(pitch) / video.bpp)
+	packedWidth := int(pitch) / nano.v.bpp
 	if packedWidth < 1 {
 		packedWidth = int(width)
 	}
 	// calculate space for the video frame
-	bytes := int(height) * packedWidth * int(video.bpp)
+	bytes := int(height) * packedWidth * nano.v.bpp
 
 	var data_ []byte
 	if isOpenGLRender {
@@ -138,11 +150,11 @@ func coreVideoRefresh(data unsafe.Pointer, width C.unsigned, height C.unsigned, 
 
 	// the image is being resized and de-rotated
 	frame := image.DrawRgbaImage(
-		video.pixFmt,
+		nano.v.pixFmt,
 		rotationFn,
 		image.ScaleNearestNeighbour,
 		isOpenGLRender,
-		int(width), int(height), packedWidth, int(video.bpp),
+		int(width), int(height), packedWidth, nano.v.bpp,
 		data_,
 		frontend.vw,
 		frontend.vh,
@@ -247,7 +259,6 @@ func coreGetProcAddress(sym *C.char) C.retro_proc_address_t {
 func coreEnvironment(cmd C.unsigned, data unsafe.Pointer) C.bool {
 	switch cmd {
 	case C.RETRO_ENVIRONMENT_GET_USERNAME:
-		username := (**C.char)(data)
 		if currentUser == nil {
 			currentUserGo, err := user.Current()
 			if err != nil {
@@ -256,13 +267,12 @@ func coreEnvironment(cmd C.unsigned, data unsafe.Pointer) C.bool {
 				currentUser = C.CString(currentUserGo.Username)
 			}
 		}
-		*username = currentUser
+		*(**C.char)(data) = currentUser
 	case C.RETRO_ENVIRONMENT_GET_LOG_INTERFACE:
 		cb := (*C.struct_retro_log_callback)(data)
 		cb.log = (C.retro_log_printf_t)(C.coreLog_cgo)
 	case C.RETRO_ENVIRONMENT_GET_CAN_DUPE:
-		bval := (*C.bool)(data)
-		*bval = C.bool(true)
+		*(*C.bool)(data) = C.bool(true)
 	case C.RETRO_ENVIRONMENT_SET_PIXEL_FORMAT:
 		res, err := videoSetPixelFormat(*(*C.enum_retro_pixel_format)(data))
 		if err != nil {
@@ -270,12 +280,10 @@ func coreEnvironment(cmd C.unsigned, data unsafe.Pointer) C.bool {
 		}
 		return res
 	case C.RETRO_ENVIRONMENT_GET_SYSTEM_DIRECTORY:
-		path := (**C.char)(data)
-		*path = systemDirectory
+		*(**C.char)(data) = systemDirectory
 		return true
 	case C.RETRO_ENVIRONMENT_GET_SAVE_DIRECTORY:
-		path := (**C.char)(data)
-		*path = saveDirectory
+		*(**C.char)(data) = saveDirectory
 		return true
 	case C.RETRO_ENVIRONMENT_SHUTDOWN:
 		//window.SetShouldClose(true)
@@ -298,26 +306,26 @@ func coreEnvironment(cmd C.unsigned, data unsafe.Pointer) C.bool {
 		}
 		return false
 	case C.RETRO_ENVIRONMENT_SET_HW_RENDER:
-		video.isGl = isGlAllowed
-		if isGlAllowed {
-			video.hw = (*C.struct_retro_hw_render_callback)(data)
-			video.hw.get_current_framebuffer = (C.retro_hw_get_current_framebuffer_t)(C.coreGetCurrentFramebuffer_cgo)
-			video.hw.get_proc_address = (C.retro_hw_get_proc_address_t)(C.coreGetProcAddress_cgo)
+		if nano.v.isGl {
+			nano.v.hw = (*C.struct_retro_hw_render_callback)(data)
+			nano.v.hw.get_current_framebuffer = (C.retro_hw_get_current_framebuffer_t)(C.coreGetCurrentFramebuffer_cgo)
+			nano.v.hw.get_proc_address = (C.retro_hw_get_proc_address_t)(C.coreGetProcAddress_cgo)
 			return true
 		}
 		return false
 	case C.RETRO_ENVIRONMENT_SET_CONTROLLER_INFO:
-		if multitap.supported {
-			info := (*[100]C.struct_retro_controller_info)(data)
-			var i C.unsigned
-			for i = 0; unsafe.Pointer(info[i].types) != nil; i++ {
-				var j C.unsigned
-				types := (*[100]C.struct_retro_controller_description)(unsafe.Pointer(info[i].types))
-				for j = 0; j < info[i].num_types; j++ {
-					if C.GoString(types[j].desc) == "Multitap" {
-						multitap.value = types[j].id
-						return true
-					}
+		if !nano.multitap.supported {
+			return false
+		}
+		info := (*[100]C.struct_retro_controller_info)(data)
+		var i C.unsigned
+		for i = 0; unsafe.Pointer(info[i].types) != nil; i++ {
+			var j C.unsigned
+			types := (*[100]C.struct_retro_controller_description)(unsafe.Pointer(info[i].types))
+			for j = 0; j < info[i].num_types; j++ {
+				if C.GoString(types[j].desc) == "Multitap" {
+					nano.multitap.value = types[j].id
+					return true
 				}
 			}
 		}
@@ -331,7 +339,7 @@ func coreEnvironment(cmd C.unsigned, data unsafe.Pointer) C.bool {
 //export initVideo
 func initVideo() {
 	var context graphics.Context
-	switch video.hw.context_type {
+	switch nano.v.hw.context_type {
 	case C.RETRO_HW_CONTEXT_NONE:
 		context = graphics.CtxNone
 	case C.RETRO_HW_CONTEXT_OPENGL:
@@ -354,20 +362,20 @@ func initVideo() {
 
 	sdl, err := graphics.NewSDLContext(graphics.Config{
 		Ctx:            context,
-		W:              int(video.maxWidth),
-		H:              int(video.maxHeight),
-		GLAutoContext:  video.autoGlContext,
-		GLVersionMajor: uint(video.hw.version_major),
-		GLVersionMinor: uint(video.hw.version_minor),
-		GLHasDepth:     bool(video.hw.depth),
-		GLHasStencil:   bool(video.hw.stencil),
+		W:              int(nano.v.maxWidth),
+		H:              int(nano.v.maxHeight),
+		GLAutoContext:  nano.v.autoGlContext,
+		GLVersionMajor: uint(nano.v.hw.version_major),
+		GLVersionMinor: uint(nano.v.hw.version_minor),
+		GLHasDepth:     bool(nano.v.hw.depth),
+		GLHasStencil:   bool(nano.v.hw.stencil),
 	}, libretroLogger)
 	if err != nil {
 		panic(err)
 	}
 	sdlCtx = sdl
 
-	C.bridge_context_reset(video.hw.context_reset)
+	C.bridge_context_reset(nano.v.hw.context_reset)
 	if libretroLogger.GetLevel() < logger.InfoLevel {
 		printOpenGLDriverInfo()
 	}
@@ -375,12 +383,12 @@ func initVideo() {
 
 //export deinitVideo
 func deinitVideo() {
-	C.bridge_context_reset(video.hw.context_destroy)
+	C.bridge_context_reset(nano.v.hw.context_destroy)
 	if err := sdlCtx.Deinit(); err != nil {
 		libretroLogger.Error().Err(err).Msg("deinit fail")
 	}
-	video.isGl = false
-	video.autoGlContext = false
+	nano.v.isGl = false
+	nano.v.autoGlContext = false
 }
 
 var (
@@ -411,17 +419,17 @@ func SetLibretroLogger(log *logger.Logger) { libretroLogger = log }
 
 func coreLoad(meta emulator.Metadata) {
 	var err error
-	isGlAllowed = meta.IsGlAllowed
+	nano.v.isGl = meta.IsGlAllowed
 	usesLibCo = meta.UsesLibCo
-	video.autoGlContext = meta.AutoGlContext
+	nano.v.autoGlContext = meta.AutoGlContext
 	coreConfig, err = ScanConfigFile(meta.ConfigPath)
 	if err != nil {
 		libretroLogger.Warn().Err(err).Msg("config scan has been failed")
 	}
 
-	multitap.supported = meta.HasMultitap
-	multitap.enabled = false
-	multitap.value = 0
+	nano.multitap.supported = meta.HasMultitap
+	nano.multitap.enabled = false
+	nano.multitap.value = 0
 
 	filePath := meta.LibPath
 	if arch, err := core.GetCoreExt(); err == nil {
@@ -468,20 +476,19 @@ func coreLoad(meta emulator.Metadata) {
 	C.bridge_retro_set_audio_sample_batch(retroSetAudioSampleBatch, C.coreAudioSampleBatch_cgo)
 
 	C.bridge_retro_init(retroInit)
+
+	sys := C.struct_retro_system_info{}
+	C.bridge_retro_get_system_info(retroGetSystemInfo, &sys)
+	nano.system.libraryName = C.GoString(sys.library_name)
+	nano.system.libraryVersion = C.GoString(sys.library_version)
+	nano.system.validExtensions = C.GoString(sys.valid_extensions)
+	nano.system.needFullPath = bool(sys.need_fullpath)
+	libretroLogger.Debug().Msgf("System >>> %s (%s) [%s] nfp: %v",
+		nano.system.libraryName, nano.system.libraryVersion, nano.system.validExtensions, nano.system.needFullPath)
 }
 
 func coreLoadGame(filename string) {
 	lastFrameTime = 0
-
-	si := C.struct_retro_system_info{}
-	C.bridge_retro_get_system_info(retroGetSystemInfo, &si)
-	if libretroLogger.GetLevel() < logger.InfoLevel {
-		libretroLogger.Debug().Msgf("Core: %s %s (%s)",
-			C.GoString(si.library_name),
-			C.GoString(si.library_version),
-			C.GoString(si.valid_extensions),
-		)
-	}
 
 	file, err := os.Open(filename)
 	if err != nil {
@@ -502,7 +509,7 @@ func coreLoadGame(filename string) {
 	}
 	libretroLogger.Debug().MsgFunc(func() string { return fmt.Sprintf("ROM size: %v", byteCountBinary(int64(gi.size))) })
 
-	if !si.need_fullpath {
+	if !nano.system.needFullPath {
 		bytes, err := os.ReadFile(filename)
 		if err != nil {
 			libretroLogger.Fatal().Err(err).Msgf("couldn't read %s", filename)
@@ -542,12 +549,12 @@ func coreLoadGame(filename string) {
 		)
 	}
 
-	video.maxWidth = int32(avi.geometry.max_width)
-	video.maxHeight = int32(avi.geometry.max_height)
-	video.baseWidth = int32(avi.geometry.base_width)
-	video.baseHeight = int32(avi.geometry.base_height)
-	if video.isGl {
-		bufS := int(video.maxWidth * video.maxHeight * int32(video.bpp))
+	nano.v.maxWidth = int32(avi.geometry.max_width)
+	nano.v.maxHeight = int32(avi.geometry.max_height)
+	nano.v.baseWidth = int32(avi.geometry.base_width)
+	nano.v.baseHeight = int32(avi.geometry.base_height)
+	if nano.v.isGl {
+		bufS := int(nano.v.maxWidth * nano.v.maxHeight * int32(nano.v.bpp))
 		graphics.SetBuffer(bufS)
 		libretroLogger.Info().Msgf("Set buffer: %v", byteCountBinary(int64(bufS)))
 		if usesLibCo {
@@ -566,17 +573,17 @@ func coreLoadGame(filename string) {
 }
 
 func toggleMultitap() {
-	if multitap.supported && multitap.value != 0 {
+	if nano.multitap.supported && nano.multitap.value != 0 {
 		// Official SNES games only support a single multitap device
 		// Most require it to be plugged in player 2 port
 		// And Snes9X requires it to be "plugged" after the game is loaded
 		// Control this from the browser since player 2 will stop working in some games if multitap is "plugged" in
-		if multitap.enabled {
+		if nano.multitap.enabled {
 			C.bridge_retro_set_controller_port_device(retroSetControllerPortDevice, 1, C.RETRO_DEVICE_JOYPAD)
 		} else {
-			C.bridge_retro_set_controller_port_device(retroSetControllerPortDevice, 1, multitap.value)
+			C.bridge_retro_set_controller_port_device(retroSetControllerPortDevice, 1, nano.multitap.value)
 		}
-		multitap.enabled = !multitap.enabled
+		nano.multitap.enabled = !nano.multitap.enabled
 	}
 }
 
@@ -585,12 +592,12 @@ func nanoarchShutdown() {
 		thread.Main(func() {
 			C.bridge_execute(retroUnloadGame)
 			C.bridge_execute(retroDeinit)
-			if video.isGl {
+			if nano.v.isGl {
 				C.bridge_execute(C.deinitVideo_cgo)
 			}
 		})
 	} else {
-		if video.isGl {
+		if nano.v.isGl {
 			thread.Main(func() {
 				// running inside a go routine, lock the thread to make sure the OpenGL context stays current
 				runtime.LockOSThread()
@@ -601,7 +608,7 @@ func nanoarchShutdown() {
 		}
 		C.bridge_retro_unload_game(retroUnloadGame)
 		C.bridge_retro_deinit(retroDeinit)
-		if video.isGl {
+		if nano.v.isGl {
 			thread.Main(func() {
 				deinitVideo()
 				runtime.UnlockOSThread()
@@ -623,7 +630,7 @@ func run() {
 	if usesLibCo {
 		C.bridge_execute(retroRun)
 	} else {
-		if video.isGl {
+		if nano.v.isGl {
 			// running inside a go routine, lock the thread to make sure the OpenGL context stays current
 			runtime.LockOSThread()
 			if err := sdlCtx.BindContext(); err != nil {
@@ -631,7 +638,7 @@ func run() {
 			}
 		}
 		C.bridge_retro_run(retroRun)
-		if video.isGl {
+		if nano.v.isGl {
 			runtime.UnlockOSThread()
 		}
 	}
@@ -640,25 +647,25 @@ func run() {
 func videoSetPixelFormat(format uint32) (C.bool, error) {
 	switch format {
 	case C.RETRO_PIXEL_FORMAT_0RGB1555:
-		video.pixFmt = image.BitFormatShort5551
+		nano.v.pixFmt = image.BitFormatShort5551
 		if err := graphics.SetPixelFormat(graphics.UnsignedShort5551); err != nil {
-			return false, fmt.Errorf("unknown pixel format %v", video.pixFmt)
+			return false, fmt.Errorf("unknown pixel format %v", nano.v.pixFmt)
 		}
-		video.bpp = 2
+		nano.v.bpp = 2
 		// format is not implemented
 		return false, fmt.Errorf("unsupported pixel type %v converter", format)
 	case C.RETRO_PIXEL_FORMAT_XRGB8888:
-		video.pixFmt = image.BitFormatInt8888Rev
+		nano.v.pixFmt = image.BitFormatInt8888Rev
 		if err := graphics.SetPixelFormat(graphics.UnsignedInt8888Rev); err != nil {
-			return false, fmt.Errorf("unknown pixel format %v", video.pixFmt)
+			return false, fmt.Errorf("unknown pixel format %v", nano.v.pixFmt)
 		}
-		video.bpp = 4
+		nano.v.bpp = 4
 	case C.RETRO_PIXEL_FORMAT_RGB565:
-		video.pixFmt = image.BitFormatShort565
+		nano.v.pixFmt = image.BitFormatShort565
 		if err := graphics.SetPixelFormat(graphics.UnsignedShort565); err != nil {
-			return false, fmt.Errorf("unknown pixel format %v", video.pixFmt)
+			return false, fmt.Errorf("unknown pixel format %v", nano.v.pixFmt)
 		}
-		video.bpp = 2
+		nano.v.bpp = 2
 	default:
 		return false, fmt.Errorf("unknown pixel type %v", format)
 	}
@@ -666,11 +673,11 @@ func videoSetPixelFormat(format uint32) (C.bool, error) {
 }
 
 func setRotation(rotation uint) {
-	if rotation == uint(video.rotation) {
+	if rotation == uint(nano.v.rotation) {
 		return
 	}
-	video.rotation = image.Angle(rotation)
-	r := image.GetRotation(video.rotation)
+	nano.v.rotation = image.Angle(rotation)
+	r := image.GetRotation(nano.v.rotation)
 	if rotation > 0 {
 		rotationFn = &r
 	} else {
@@ -722,11 +729,11 @@ func restoreSaveState(st state) error {
 
 // getSaveRAM returns the game save RAM (cartridge) data or a nil slice.
 func getSaveRAM() state {
-	mem := ptSaveRAM()
-	if mem == nil {
+	memory := ptSaveRAM()
+	if memory == nil {
 		return nil
 	}
-	return C.GoBytes(mem.ptr, C.int(mem.size))
+	return C.GoBytes(memory.ptr, C.int(memory.size))
 }
 
 // restoreSaveRAM restores game save RAM.
@@ -734,8 +741,8 @@ func restoreSaveRAM(st state) {
 	if len(st) == 0 {
 		return
 	}
-	if mem := ptSaveRAM(); mem != nil {
-		sram := (*[1 << 30]byte)(mem.ptr)[:mem.size:mem.size]
+	if memory := ptSaveRAM(); memory != nil {
+		sram := (*[1 << 30]byte)(memory.ptr)[:memory.size:memory.size]
 		copy(sram, st)
 	}
 }
