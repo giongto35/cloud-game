@@ -10,16 +10,23 @@ import (
 	"github.com/giongto35/cloud-game/v2/pkg/recorder"
 )
 
+var encoder_ *opus.Encoder
+
 func (r *Room) startAudio(frequency int, onAudio func([]byte, error), conf conf.Audio) {
 	buf := media.NewBuffer(conf.GetFrameSizeFor(frequency))
 	resample, resampleSize := frequency != conf.Frequency, 0
 	if resample {
 		resampleSize = conf.GetFrameSize()
 	}
-	enc, err := opus.NewEncoder(conf.Frequency, conf.Channels)
-	if err != nil {
-		r.log.Fatal().Err(err).Msg("couldn't create audio encoder")
+	// a garbage cache
+	if encoder_ == nil {
+		enc, err := opus.NewEncoder(conf.Frequency, conf.Channels)
+		if err != nil {
+			r.log.Fatal().Err(err).Msg("couldn't create audio encoder")
+		}
+		encoder_ = enc
 	}
+	enc := *encoder_
 	r.log.Debug().Msgf("OPUS: %v", enc.GetInfo())
 
 	for {
