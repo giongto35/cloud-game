@@ -16,6 +16,8 @@ type CloudEmulator interface {
 	Start()
 	// SetViewport sets viewport size
 	SetViewport(width int, height int)
+	// SetMainSaveName sets distinct name for saves naming
+	SetMainSaveName(name string)
 	// SaveGame save game state
 	SaveGame() error
 	// LoadGame load game state

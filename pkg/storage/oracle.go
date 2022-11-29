@@ -101,6 +101,8 @@ func (s *OracleDataStorageClient) Load(name string) (data []byte, err error) {
 	return dat, nil
 }
 
+func (s *OracleDataStorageClient) IsNoop() bool { return false }
+
 func md5Hash(data []byte) []byte {
 	hash := md5.New()
 	hash.Write(data)

@@ -6,6 +6,7 @@ import (
 
 	config "github.com/giongto35/cloud-game/v2/pkg/config/emulator"
 	"github.com/giongto35/cloud-game/v2/pkg/emulator"
+	"github.com/giongto35/cloud-game/v2/pkg/games"
 	"github.com/giongto35/cloud-game/v2/pkg/logger"
 )
 
@@ -30,35 +31,44 @@ type Frontend struct {
 }
 
 // NewFrontend implements CloudEmulator interface for a Libretro frontend.
-func NewFrontend(storage Storage, conf config.LibretroCoreConfig, threads int, log *logger.Logger) *Frontend {
+func NewFrontend(game games.GameMetadata, conf config.Emulator, log *logger.Logger) *Frontend {
+	emulatorGuess := conf.GetEmulator(game.Type, game.Path)
+	libretroConf := conf.GetLibretroCoreConfig(emulatorGuess)
+
+	log.Info().Msgf("Image processing threads = %v", conf.Threads)
+
 	log = log.Extend(log.With().Str("[m]", "Libretro"))
 	SetLibretroLogger(log)
+
+	// Check if room is on local storage, if not, pull from GCS to local storage
+	var store Storage = &StateStorage{Path: conf.Storage}
+	if conf.Libretro.SaveCompression {
+		store = &ZipStorage{Storage: store}
+	}
 
 	// set global link to the Libretro
 	frontend = &Frontend{
 		meta: emulator.Metadata{
-			LibPath:       conf.Lib,
-			ConfigPath:    conf.Config,
-			Ratio:         conf.Ratio,
-			IsGlAllowed:   conf.IsGlAllowed,
-			UsesLibCo:     conf.UsesLibCo,
-			HasMultitap:   conf.HasMultitap,
-			AutoGlContext: conf.AutoGlContext,
+			LibPath:       libretroConf.Lib,
+			ConfigPath:    libretroConf.Config,
+			Ratio:         libretroConf.Ratio,
+			IsGlAllowed:   libretroConf.IsGlAllowed,
+			UsesLibCo:     libretroConf.UsesLibCo,
+			HasMultitap:   libretroConf.HasMultitap,
+			AutoGlContext: libretroConf.AutoGlContext,
 		},
-		storage: storage,
+		storage: store,
 		video:   make(chan emulator.GameFrame, 6),
 		audio:   make(chan emulator.GameAudio, 6),
 		input:   NewGameSessionInput(),
 		done:    make(chan struct{}, 1),
-		th:      threads,
+		th:      conf.Threads,
 		log:     log,
 	}
 	return frontend
 }
 
-func (f *Frontend) Input(player int, data []byte) {
-	f.input.setInput(player, uint16(data[1])<<8+uint16(data[0]), data)
-}
+func (f *Frontend) Input(player int, data []byte) { f.input.setInput(player, data) }
 
 func (f *Frontend) LoadMeta(path string) emulator.Metadata {
 	f.mu.Lock()
@@ -69,6 +79,8 @@ func (f *Frontend) LoadMeta(path string) emulator.Metadata {
 }
 
 func (f *Frontend) SetViewport(width int, height int) { f.vw, f.vh = width, height }
+
+func (f *Frontend) SetMainSaveName(name string) { f.storage.SetMainSaveName(name) }
 
 func (f *Frontend) Start() {
 	if err := f.LoadGame(); err != nil {

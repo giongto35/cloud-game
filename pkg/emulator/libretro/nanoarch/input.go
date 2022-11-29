@@ -1,58 +1,51 @@
 package nanoarch
 
-import "sync"
+import (
+	"sync/atomic"
+	"unsafe"
+)
 
 const (
 	maxPort     = 4
-	dpadAxesNum = 4
+	dpadAxes    = 4
 	KeyPressed  = 1
 	KeyReleased = 0
 )
 
-type (
-	GameSessionInput struct {
-		state [maxPort]controller
-		mu    sync.RWMutex
-	}
-	controller struct {
-		keys uint16
-		axes [dpadAxesNum]int16
-	}
-)
+// GameSessionInput stores full controller state.
+// It consists of:
+//   - uint16 button values
+//   - int16 analog stick values
+type GameSessionInput [maxPort]struct {
+	keys uint32
+	axes [dpadAxes]int32
+}
 
-func NewGameSessionInput() GameSessionInput { return GameSessionInput{state: [maxPort]controller{}} }
-
-// close terminates user input session.
-func (p *GameSessionInput) close() {
-	//p.mu.Lock()
-	//
-	//delete(p., id)
-	//p.mu.Unlock()
+func NewGameSessionInput() GameSessionInput {
+	return [maxPort]struct {
+		keys uint32
+		axes [dpadAxes]int32
+	}{}
 }
 
 // setInput sets input state for some player in a game session.
-func (p *GameSessionInput) setInput(player int, buttons uint16, dpad []byte) {
-	p.mu.Lock()
-	defer p.mu.Unlock()
-
-	p.state[player].keys = buttons
-	for i, axes := 0, len(dpad); i < dpadAxesNum && (i+1)*2+1 < axes; i++ {
-		axis := (i + 1) * 2
-		p.state[player].axes[i] = int16(dpad[axis+1])<<8 + int16(dpad[axis])
+func (s *GameSessionInput) setInput(player int, data []byte) {
+	atomic.StoreUint32(&s[player].keys, *(*uint32)(unsafe.Pointer(&data[0])))
+	// tf is that
+	// !to add tests
+	// axis = (i+1)*2
+	for i, axes := 0, len(data); i < dpadAxes && i<<1+3 < axes; i++ {
+		atomic.StoreInt32(&s[player].axes[i], *(*int32)(unsafe.Pointer(&data[i<<1+2])))
+		//int32(data[axis+1])<<8+int32(data[axis]))
 	}
 }
 
 // isKeyPressed checks if some button is pressed by any player.
-func (p *GameSessionInput) isKeyPressed(port uint, key int) int {
-	p.mu.RLock()
-	defer p.mu.RUnlock()
-	return int((p.state[port].keys >> uint(key)) & 1)
+func (s *GameSessionInput) isKeyPressed(port uint, key int) int {
+	return int((atomic.LoadUint32(&s[port].keys) >> uint(key)) & 1)
 }
 
 // isDpadTouched checks if D-pad is used by any player.
-func (p *GameSessionInput) isDpadTouched(port uint, axis uint) (shift int16) {
-	p.mu.RLock()
-	defer p.mu.RUnlock()
-
-	return p.state[port].axes[axis]
+func (s *GameSessionInput) isDpadTouched(port uint, axis uint) (shift int16) {
+	return int16(atomic.LoadInt32(&s[port].axes[axis]))
 }

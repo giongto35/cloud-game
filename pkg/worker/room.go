@@ -1,7 +1,6 @@
 package worker
 
 import (
-	"errors"
 	"math"
 	"os"
 	"path/filepath"
@@ -32,7 +31,7 @@ type Room struct {
 	users    Sessions
 	emulator emulator.CloudEmulator
 	// Cloud storage to store room state online
-	onlineStorage storage.CloudStorage
+	storage storage.CloudStorage
 
 	onClose func(self *Room)
 
@@ -50,45 +49,27 @@ func NewRoom(id string, game games.GameMetadata, storage storage.CloudStorage, o
 	log = log.Extend(log.With().Str("room", id[:5]))
 	log.Info().Str("game", game.Name).Msg("")
 
-	if onClose == nil {
-		onClose = func(*Room) {}
-	}
-
 	room := &Room{
-		ID:            id,
-		users:         NewSessions(),
-		IsRunning:     true,
-		onlineStorage: storage,
-		Done:          make(chan struct{}, 1),
-		onClose:       onClose,
-		log:           log,
+		ID: id,
+		// this f**** thing
+		IsRunning: true,
+		users:     NewSessions(),
+		storage:   storage,
+		Done:      make(chan struct{}, 1),
+		onClose:   onClose,
+		log:       log,
 	}
 
-	// Check if room is on local storage, if not, pull from GCS to local storage
-	var store nanoarch.Storage = &nanoarch.StateStorage{
-		Path:     conf.Emulator.Storage,
-		MainSave: id,
-	}
-	if conf.Emulator.Libretro.SaveCompression {
-		store = &nanoarch.ZipStorage{Storage: store}
+	room.emulator = nanoarch.NewFrontend(game, conf.Emulator, log)
+	room.emulator.SetMainSaveName(id)
+
+	if !room.storage.IsNoop() {
+		if err := room.saveOnlineRoomToLocal(id, room.emulator.GetHashPath()); err != nil {
+			log.Warn().Err(err).Msg("The room is not in the cloud")
+		}
 	}
 
-	// Check room is on local or fetch from server
-	log.Info().Msg("Check if the room in the cloud")
-	if err := room.saveOnlineRoomToLocal(id, store.GetSavePath()); err != nil {
-		log.Warn().Err(err).Msg("The room is not in the cloud")
-	}
-
-	// If not then load room or create room from local.
 	log.Info().Str("game", game.Name).Msg("The room is opened")
-
-	// Spawn new emulator and plug-in all channels
-	emuName := conf.Emulator.GetEmulator(game.Type, game.Path)
-	libretroConfig := conf.Emulator.GetLibretroCoreConfig(emuName)
-
-	log.Info().Msgf("Image processing threads = %v", conf.Emulator.Threads)
-
-	room.emulator = nanoarch.NewFrontend(store, libretroConfig, conf.Emulator.Threads, log)
 
 	gameMeta := room.emulator.LoadMeta(filepath.Join(game.Base, game.Path))
 
@@ -192,14 +173,9 @@ func resizeToAspect(ratio float64, sw int, sh int) (dw int, dh int) {
 	return
 }
 
-func isGameOnLocal(path string) bool {
-	file, err := os.Open(path)
-	if err == nil {
-		defer func() {
-			_ = file.Close()
-		}()
-	}
-	return !errors.Is(err, os.ErrNotExist)
+func hasStateSavedLocally(path string) bool {
+	_, err := os.Stat(path)
+	return !os.IsNotExist(err)
 }
 
 func (r *Room) PollUserInput(session *Session) {
@@ -210,14 +186,13 @@ func (r *Room) PollUserInput(session *Session) {
 func (r *Room) AddUser(user *Session) {
 	r.users.Add(user.id, user)
 	user.SetRoom(r)
+	r.log.Debug().Str("user", user.GetId()).Msg("User has joined the room")
 }
 
-// RemoveUser removes a user from the room.
 func (r *Room) RemoveUser(user *Session) {
 	user.SetRoom(nil)
 	r.users.Remove(user)
-	uid := user.GetId()
-	r.log.Debug().Str("user", uid).Msg("User has left the room")
+	r.log.Debug().Str("user", user.GetId()).Msg("User has left the room")
 }
 
 func (r *Room) HasUser(u *Session) bool { return r != nil && r.users.Get(u.id) != nil }
@@ -247,7 +222,9 @@ func (r *Room) Close() {
 	}
 	close(r.Done)
 
-	r.onClose(r)
+	if r.onClose != nil {
+		r.onClose(r)
+	}
 
 	if r.rec != nil {
 		r.rec.Set(false, "")
@@ -256,11 +233,11 @@ func (r *Room) Close() {
 
 func (r *Room) isRoomExisted() bool {
 	// Check if room is in online storage
-	_, err := r.onlineStorage.Load(r.ID)
+	_, err := r.storage.Load(r.ID)
 	if err == nil {
 		return true
 	}
-	return isGameOnLocal(r.emulator.GetHashPath())
+	return hasStateSavedLocally(r.emulator.GetHashPath())
 }
 
 // SaveGame writes save state on the disk as well as
@@ -270,7 +247,7 @@ func (r *Room) SaveGame() error {
 	if err := r.emulator.SaveGame(); err != nil {
 		return err
 	}
-	if err := r.onlineStorage.Save(r.ID, r.emulator.GetHashPath()); err != nil {
+	if err := r.storage.Save(r.ID, r.emulator.GetHashPath()); err != nil {
 		return err
 	}
 	r.log.Debug().Msg("Cloud save is successful")
@@ -280,7 +257,7 @@ func (r *Room) SaveGame() error {
 // saveOnlineRoomToLocal save online room to local.
 // !Supports only one file of main save state.
 func (r *Room) saveOnlineRoomToLocal(roomID string, savePath string) error {
-	data, err := r.onlineStorage.Load(roomID)
+	data, err := r.storage.Load(roomID)
 	if err != nil {
 		return err
 	}

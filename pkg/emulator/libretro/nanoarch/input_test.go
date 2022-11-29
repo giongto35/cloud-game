@@ -12,9 +12,7 @@ func TestConcurrentInput(t *testing.T) {
 	go func() {
 		for i := 0; i < events*2; i++ {
 			player := rand.Intn(maxPort)
-			go players.setInput(player, 100, []byte{})
-			// here it usually crashes
-			go players.close()
+			go players.setInput(player, []byte{})
 		}
 	}()
 	go func() {
