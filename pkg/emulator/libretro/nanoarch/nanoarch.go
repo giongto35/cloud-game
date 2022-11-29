@@ -487,32 +487,24 @@ func coreLoad(meta emulator.Metadata) {
 		nano.system.libraryName, nano.system.libraryVersion, nano.system.validExtensions, nano.system.needFullPath)
 }
 
-func coreLoadGame(filename string) {
+func LoadGame(path string) error {
 	lastFrameTime = 0
 
-	file, err := os.Open(filename)
+	fi, err := os.Stat(path)
 	if err != nil {
-		panic(err)
+		return err
 	}
-	defer func() { _ = file.Close() }()
+	fileSize := fi.Size()
+	libretroLogger.Debug().Msgf("ROM size: %v", byteCountBinary(fileSize))
 
-	fi, err := file.Stat()
-	if err != nil {
-		panic(err)
-	}
-
-	fPath := C.CString(filename)
+	fPath := C.CString(path)
 	defer C.free(unsafe.Pointer(fPath))
-	gi := C.struct_retro_game_info{
-		path: fPath,
-		size: C.size_t(fi.Size()),
-	}
-	libretroLogger.Debug().MsgFunc(func() string { return fmt.Sprintf("ROM size: %v", byteCountBinary(int64(gi.size))) })
+	gi := C.struct_retro_game_info{path: fPath, size: C.size_t(fileSize)}
 
 	if !nano.system.needFullPath {
-		bytes, err := os.ReadFile(filename)
+		bytes, err := os.ReadFile(path)
 		if err != nil {
-			libretroLogger.Fatal().Err(err).Msgf("couldn't read %s", filename)
+			return err
 		}
 		dat := C.CString(string(bytes))
 		gi.data = unsafe.Pointer(dat)
@@ -520,7 +512,7 @@ func coreLoadGame(filename string) {
 	}
 
 	if ok := C.bridge_retro_load_game(retroLoadGame, &gi); !ok {
-		libretroLogger.Fatal().Msg("The core failed to load the content.")
+		return fmt.Errorf("core failed to load ROM: %v", path)
 	}
 
 	avi := C.struct_retro_system_av_info{}
@@ -570,6 +562,8 @@ func coreLoadGame(filename string) {
 	for i := 0; i < maxPort; i++ {
 		C.bridge_retro_set_controller_port_device(retroSetControllerPortDevice, C.uint(i), C.RETRO_DEVICE_JOYPAD)
 	}
+
+	return nil
 }
 
 func toggleMultitap() {

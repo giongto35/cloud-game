@@ -70,12 +70,14 @@ func NewFrontend(game games.GameMetadata, conf conf.Emulator, log *logger.Logger
 
 func (f *Frontend) Input(player int, data []byte) { f.input.setInput(player, data) }
 
-func (f *Frontend) LoadMeta(path string) emulator.Metadata {
+func (f *Frontend) LoadMeta(path string) (*emulator.Metadata, error) {
 	f.mu.Lock()
 	coreLoad(f.meta)
 	f.mu.Unlock()
-	coreLoadGame(path)
-	return f.meta
+	if err := LoadGame(path); err != nil {
+		return nil, err
+	}
+	return &f.meta, nil
 }
 
 func (f *Frontend) SetViewport(width int, height int) { f.vw, f.vh = width, height }
@@ -83,7 +85,7 @@ func (f *Frontend) SetViewport(width int, height int) { f.vw, f.vh = width, heig
 func (f *Frontend) SetMainSaveName(name string) { f.storage.SetMainSaveName(name) }
 
 func (f *Frontend) Start() {
-	if err := f.LoadGame(); err != nil {
+	if err := f.LoadGameState(); err != nil {
 		f.log.Error().Err(err).Msg("couldn't load a save file")
 	}
 
@@ -116,9 +118,9 @@ func (f *Frontend) GetAudio() chan emulator.GameAudio { return f.audio }
 
 func (f *Frontend) GetVideo() chan emulator.GameFrame { return f.video }
 
-func (f *Frontend) SaveGame() error { return f.Save() }
+func (f *Frontend) SaveGameState() error { return f.Save() }
 
-func (f *Frontend) LoadGame() error { return f.Load() }
+func (f *Frontend) LoadGameState() error { return f.Load() }
 
 func (f *Frontend) ToggleMultitap() { toggleMultitap() }
 

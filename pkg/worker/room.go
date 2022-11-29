@@ -71,7 +71,10 @@ func NewRoom(id string, game games.GameMetadata, storage storage.CloudStorage, o
 
 	log.Info().Str("game", game.Name).Msg("The room is opened")
 
-	gameMeta := room.emulator.LoadMeta(filepath.Join(game.Base, game.Path))
+	gameMeta, err := room.emulator.LoadMeta(filepath.Join(game.Base, game.Path))
+	if err != nil {
+		log.Fatal().Err(err).Send()
+	}
 
 	// nwidth, nheight are the WebRTC output size
 	var nwidth, nheight int
@@ -151,7 +154,7 @@ func (r *Room) enableAutosave(periodSec int) {
 			if !r.IsRunning {
 				continue
 			}
-			if err := r.emulator.SaveGame(); err != nil {
+			if err := r.emulator.SaveGameState(); err != nil {
 				log.Error().Msgf("Autosave failed: %v", err)
 			} else {
 				log.Debug().Msgf("Autosave done")
@@ -208,8 +211,8 @@ func (r *Room) Close() {
 	// Save game before quit. Only save for game which was previous saved to avoid flooding database
 	if r.isRoomExisted() {
 		r.log.Debug().Msg("Save game before closing room")
-		// use goroutine here because SaveGame attempt to acquire an emulator lock.
-		// the lock is holding before coming to close, so it will cause deadlock if SaveGame is synchronous
+		// use goroutine here because SaveGameState attempt to acquire an emulator lock.
+		// the lock is holding before coming to close, so it will cause deadlock if SaveGameState is synchronous
 		go func() {
 			// Save before close, so save can have correct state (Not sure) may again cause deadlock
 			if err := r.SaveGame(); err != nil {
@@ -244,7 +247,7 @@ func (r *Room) isRoomExisted() bool {
 // uploads it to a cloud storage.
 func (r *Room) SaveGame() error {
 	// TODO: Move to game view
-	if err := r.emulator.SaveGame(); err != nil {
+	if err := r.emulator.SaveGameState(); err != nil {
 		return err
 	}
 	if err := r.storage.Save(r.ID, r.emulator.GetHashPath()); err != nil {
@@ -271,7 +274,7 @@ func (r *Room) saveOnlineRoomToLocal(roomID string, savePath string) error {
 	return nil
 }
 
-func (r *Room) LoadGame() error { return r.emulator.LoadGame() }
+func (r *Room) LoadGame() error { return r.emulator.LoadGameState() }
 
 func (r *Room) ToggleMultitap() { r.emulator.ToggleMultitap() }
 

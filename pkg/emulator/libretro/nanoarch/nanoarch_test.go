@@ -123,7 +123,10 @@ func GetDefaultEmulatorMock(room string, system string, rom string) *EmulatorMoc
 func (emu *EmulatorMock) loadRom(game string) {
 	fmt.Printf("%v %v\n", emu.paths.cores, emu.core)
 	coreLoad(emulator.Metadata{LibPath: emu.paths.cores + emu.core})
-	coreLoadGame(emu.paths.games + game)
+	err := LoadGame(emu.paths.games + game)
+	if err != nil {
+		log.Fatal(err)
+	}
 	emu.vw, emu.vh = emu.meta.BaseWidth, emu.meta.BaseHeight
 }
 

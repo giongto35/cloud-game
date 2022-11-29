@@ -11,17 +11,17 @@ type CloudEmulator interface {
 	GetAudio() chan GameAudio
 	GetVideo() chan GameFrame
 	// LoadMeta returns metadata of emulator
-	LoadMeta(path string) Metadata
+	LoadMeta(path string) (*Metadata, error)
 	// Start is called after LoadGame
 	Start()
 	// SetViewport sets viewport size
 	SetViewport(width int, height int)
 	// SetMainSaveName sets distinct name for saves naming
 	SetMainSaveName(name string)
-	// SaveGame save game state
-	SaveGame() error
-	// LoadGame load game state
-	LoadGame() error
+	// SaveGameState save game state
+	SaveGameState() error
+	// LoadGameState load game state
+	LoadGameState() error
 	// GetHashPath returns the path emulator will save state to
 	GetHashPath() string
 	// Close will be called when the game is done
