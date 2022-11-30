@@ -1,17 +1,17 @@
 package coordinator
 
 import (
-	"github.com/rs/xid"
 	"sync/atomic"
 
 	"github.com/giongto35/cloud-game/v2/pkg/api"
-	"github.com/giongto35/cloud-game/v2/pkg/client"
+	"github.com/giongto35/cloud-game/v2/pkg/comm"
 	"github.com/giongto35/cloud-game/v2/pkg/network"
+	"github.com/rs/xid"
 )
 
 type Worker struct {
-	*client.SocketClient
-	client.RegionalClient
+	*comm.SocketClient
+	comm.RegionalClient
 
 	Addr       string
 	PingServer string
@@ -21,7 +21,7 @@ type Worker struct {
 	Zone       string
 }
 
-func NewWorkerClientServer(id network.Uid, conn *client.SocketClient) *Worker {
+func NewWorkerClientServer(id network.Uid, conn *comm.SocketClient) *Worker {
 	if id != "" {
 		if _, err := xid.FromString(string(id)); err != nil {
 			id = network.NewUid()
@@ -33,33 +33,33 @@ func NewWorkerClientServer(id network.Uid, conn *client.SocketClient) *Worker {
 	return &Worker{SocketClient: conn}
 }
 
-func (w *Worker) HandleRequests(rooms *client.NetMap, crowd *client.NetMap) {
-	w.SocketClient.OnPacket(func(p client.In) {
+func (w *Worker) HandleRequests(rooms *comm.NetMap, crowd *comm.NetMap) {
+	w.SocketClient.OnPacket(func(p comm.In) {
 		go func() {
 			switch p.T {
 			case api.RegisterRoom:
 				w.Log.Debug().Msgf("Received room register call %s", p.Payload)
-				rq, err := api.Unwrap[api.RegisterRoomRequest](p.Payload)
-				if err != nil {
-					w.Log.Error().Err(err).Msg("malformed room register request")
+				rq := api.Unwrap[api.RegisterRoomRequest](p.Payload)
+				if rq == nil {
+					w.Log.Error().Msg("malformed room register request")
 					return
 				}
 				w.HandleRegisterRoom(*rq, rooms)
 				w.Log.Debug().Msgf("Rooms: %+v", rooms.List())
 			case api.CloseRoom:
 				w.Log.Debug().Msgf("Received room close call %s", p.Payload)
-				rq, err := api.Unwrap[api.CloseRoomRequest](p.Payload)
-				if err != nil {
-					w.Log.Error().Err(err).Msg("malformed room remove request")
+				rq := api.Unwrap[api.CloseRoomRequest](p.Payload)
+				if rq == nil {
+					w.Log.Error().Msg("malformed room remove request")
 					return
 				}
 				w.HandleCloseRoom(*rq, rooms)
 				w.Log.Debug().Msgf("Current room list is: %+v", rooms.List())
 			case api.IceCandidate:
 				w.Log.Debug().Msgf("Pass ICE candidate to a user")
-				rq, err := api.Unwrap[api.WebrtcIceCandidateRequest](p.Payload)
-				if err != nil {
-					w.Log.Error().Err(err).Msg("malformed Ice candidate request")
+				rq := api.Unwrap[api.WebrtcIceCandidateRequest](p.Payload)
+				if rq == nil {
+					w.Log.Error().Msg("malformed Ice candidate request")
 					return
 				}
 				w.HandleIceCandidate(*rq, crowd)

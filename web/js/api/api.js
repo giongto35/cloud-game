@@ -44,7 +44,7 @@ const api = (() => {
             Object.freeze({
                 load: () => packet(endpoints.GAME_LOAD),
                 save: () => packet(endpoints.GAME_SAVE),
-                setPlayerIndex: (i) => packet(endpoints.GAME_SET_PLAYER_INDEX, '' + i),
+                setPlayerIndex: (i) => packet(endpoints.GAME_SET_PLAYER_INDEX, i),
                 start: (game, roomId, record, recordUser, player) => packet(endpoints.GAME_START, {
                     game_name: game,
                     room_id: roomId,

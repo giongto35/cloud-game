@@ -2,13 +2,13 @@ package coordinator
 
 import (
 	"github.com/giongto35/cloud-game/v2/pkg/api"
-	"github.com/giongto35/cloud-game/v2/pkg/client"
+	"github.com/giongto35/cloud-game/v2/pkg/comm"
 	"github.com/giongto35/cloud-game/v2/pkg/config/coordinator"
 	"github.com/giongto35/cloud-game/v2/pkg/launcher"
 )
 
 type User struct {
-	*client.SocketClient
+	*comm.SocketClient
 
 	RoomID string
 	Worker *Worker
@@ -18,7 +18,7 @@ type ServerInfo interface {
 	getServerList() []api.Server
 }
 
-func NewUserClientServer(conn *client.SocketClient, err error) (*User, error) {
+func NewUserClientServer(conn *comm.SocketClient, err error) (*User, error) {
 	if err != nil {
 		return nil, err
 	}
@@ -40,7 +40,7 @@ func (u *User) FreeWorker() {
 }
 
 func (u *User) HandleRequests(info ServerInfo, launcher launcher.Launcher, conf coordinator.Config) {
-	u.OnPacket(func(p client.In) {
+	u.OnPacket(func(p comm.In) {
 		// !to use proper channels
 		go func() {
 			switch p.T {
@@ -50,33 +50,33 @@ func (u *User) HandleRequests(info ServerInfo, launcher launcher.Launcher, conf 
 				u.Log.Info().Msg("Received SDP from worker -> sending back to browser")
 			case api.WebrtcAnswer:
 				u.Log.Info().Msg("Received browser answered SDP -> relay to worker")
-				rq, err := api.Unwrap[api.WebrtcAnswerUserRequest](p.Payload)
-				if err != nil {
-					u.Log.Error().Err(err).Msg("malformed WebRTC answer request")
+				rq := api.Unwrap[api.WebrtcAnswerUserRequest](p.Payload)
+				if rq == nil {
+					u.Log.Error().Msg("malformed WebRTC answer request")
 					return
 				}
 				u.HandleWebrtcAnswer(*rq)
 			case api.WebrtcIceCandidate:
 				u.Log.Info().Msg("Received IceCandidate from browser -> relay to worker")
-				rq, err := api.Unwrap[api.WebrtcUserIceCandidate](p.Payload)
-				if err != nil {
-					u.Log.Error().Err(err).Msg("malformed Ice candidate request")
+				rq := api.Unwrap[api.WebrtcUserIceCandidate](p.Payload)
+				if rq == nil {
+					u.Log.Error().Msg("malformed Ice candidate request")
 					return
 				}
 				u.HandleWebrtcIceCandidate(*rq)
 			case api.StartGame:
 				u.Log.Info().Msg("Received start request from a browser -> relay to worker")
-				rq, err := api.Unwrap[api.GameStartUserRequest](p.Payload)
-				if err != nil {
-					u.Log.Error().Err(err).Msg("malformed game start request")
+				rq := api.Unwrap[api.GameStartUserRequest](p.Payload)
+				if rq == nil {
+					u.Log.Error().Msg("malformed game start request")
 					return
 				}
 				u.HandleStartGame(*rq, launcher, conf)
 			case api.QuitGame:
 				u.Log.Info().Msg("Received quit request from a browser -> relay to worker")
-				rq, err := api.Unwrap[api.GameQuitRequest](p.Payload)
-				if err != nil {
-					u.Log.Error().Err(err).Msg("malformed game quit request")
+				rq := api.Unwrap[api.GameQuitRequest](p.Payload)
+				if rq == nil {
+					u.Log.Error().Msg("malformed game quit request")
 					return
 				}
 				u.HandleQuitGame(*rq)
@@ -88,9 +88,9 @@ func (u *User) HandleRequests(info ServerInfo, launcher launcher.Launcher, conf 
 				u.HandleLoadGame()
 			case api.ChangePlayer:
 				u.Log.Info().Msg("Received update player index request from a browser -> relay to worker")
-				rq, err := api.Unwrap[api.ChangePlayerUserRequest](p.Payload)
-				if err != nil {
-					u.Log.Error().Err(err).Msg("malformed player change request")
+				rq := api.Unwrap[api.ChangePlayerUserRequest](p.Payload)
+				if rq == nil {
+					u.Log.Error().Msg("malformed player change request")
 					return
 				}
 				u.HandleChangePlayer(*rq)
@@ -103,9 +103,9 @@ func (u *User) HandleRequests(info ServerInfo, launcher launcher.Launcher, conf 
 					u.Log.Warn().Msg("Recording should be disabled!")
 					return
 				}
-				rq, err := api.Unwrap[api.RecordGameRequest](p.Payload)
-				if err != nil {
-					u.Log.Error().Err(err).Msg("malformed record game request")
+				rq := api.Unwrap[api.RecordGameRequest](p.Payload)
+				if rq == nil {
+					u.Log.Error().Msg("malformed record game request")
 					return
 				}
 				u.HandleRecordGame(*rq)

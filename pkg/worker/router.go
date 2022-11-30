@@ -14,16 +14,15 @@ func NewRouter() Router {
 	}
 }
 
-func (r *Router) AddRoom(room *Room) { r.rooms.Add(room) }
-
-func (r *Router) AddUser(user *Session) { r.sessions.Add(user.id, user) }
-
+func (r *Router) AddRoom(room *Room)               { r.rooms.Add(room) }
+func (r *Router) AddUser(user *Session)            { r.sessions.Add(user.id, user) }
+func (r *Router) Close()                           { r.rooms.Close() }
 func (r *Router) GetUser(uid network.Uid) *Session { return r.sessions.Get(uid) }
-
-func (r *Router) GetRoom(id string) *Room { return r.rooms.Get(id) }
-
-func (r *Router) RemoveRoom(room *Room) { r.rooms.Remove(room.ID) }
-
-func (r *Router) RemoveUser(user *Session) { r.sessions.Remove(user) }
-
-func (r *Router) Close() { r.rooms.Close() }
+func (r *Router) RemoveRoom(room *Room)            { r.rooms.Remove(room.ID) }
+func (r *Router) RemoveUser(user *Session)         { r.sessions.Remove(user) }
+func (r *Router) GetRoom(id string) *Room {
+	if id == "" {
+		return nil
+	}
+	return r.rooms.Get(id)
+}

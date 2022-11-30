@@ -1,4 +1,4 @@
-package client
+package comm
 
 import (
 	"encoding/json"

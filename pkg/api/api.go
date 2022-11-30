@@ -1,9 +1,10 @@
 package api
 
 import (
-	"encoding/json"
+	"errors"
 
 	"github.com/giongto35/cloud-game/v2/pkg/network"
+	"github.com/goccy/go-json"
 )
 
 type (
@@ -17,7 +18,6 @@ type (
 
 const (
 	EMPTY = ""
-	ERROR = "error"
 	OK    = "ok"
 )
 
@@ -47,17 +47,19 @@ const (
 	TerminateSession PType = 5
 )
 
-func Unwrap[T any](bytes []byte) (*T, error) {
+var ErrMalformed = errors.New("malformed")
+
+func Unwrap[T any](data []byte) *T {
 	out := new(T)
-	if err := json.Unmarshal(bytes, out); err != nil {
-		return nil, err
+	if err := json.Unmarshal(data, out); err != nil {
+		return nil
 	}
-	return out, nil
+	return out
 }
 
 func UnwrapChecked[T any](bytes []byte, err error) (*T, error) {
 	if err != nil {
 		return nil, err
 	}
-	return Unwrap[T](bytes)
+	return Unwrap[T](bytes), nil
 }

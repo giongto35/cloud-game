@@ -1,7 +1,7 @@
 package api
 
 type (
-	ChangePlayerUserRequest  = string
+	ChangePlayerUserRequest  = int
 	CheckLatencyUserResponse []string
 	CheckLatencyUserRequest  map[string]int64
 	GameStartUserRequest     struct {

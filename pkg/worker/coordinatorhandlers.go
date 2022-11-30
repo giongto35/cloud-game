@@ -1,10 +1,8 @@
 package worker
 
 import (
-	"strconv"
-
 	"github.com/giongto35/cloud-game/v2/pkg/api"
-	"github.com/giongto35/cloud-game/v2/pkg/client"
+	"github.com/giongto35/cloud-game/v2/pkg/comm"
 	"github.com/giongto35/cloud-game/v2/pkg/config/worker"
 	"github.com/giongto35/cloud-game/v2/pkg/games"
 	"github.com/giongto35/cloud-game/v2/pkg/webrtc"
@@ -29,45 +27,39 @@ func (c *Coordinator) HandleTerminateSession(rq api.TerminateSessionRequest, h *
 	}
 }
 
-func (c *Coordinator) HandleWebrtcInit(packet client.In, h *Handler, connApi *webrtc.ApiFactory) {
-	resp, err := c.webrtcInit(packet.Payload)
-	if err != nil {
-		c.log.Error().Err(err).Msg("malformed WebRTC init request")
-		return
-	}
+func (c *Coordinator) HandleWebrtcInit(rq api.WebrtcInitRequest, h *Handler, connApi *webrtc.ApiFactory) comm.Out {
 	enc := h.conf.Encoder
-	peer := webrtc.NewWebRTC(h.conf.Webrtc, c.log, connApi)
+	peer := webrtc.NewWebRTC(h.conf.Webrtc, c.Log, connApi)
 	localSDP, err := peer.NewCall(enc.Video.Codec, enc.Audio.Codec, func(data any) {
 		candidate, err := toBase64Json(data)
 		if err != nil {
-			c.log.Error().Err(err).Msgf("ICE candidate encode fail for [%v]", data)
+			c.Log.Error().Err(err).Msgf("ICE candidate encode fail for [%v]", data)
 			return
 		}
-		h.cord.IceCandidate(candidate, resp.Id)
+		h.cord.IceCandidate(candidate, rq.Id)
 	})
 	if err != nil {
-		c.log.Error().Err(err).Msg("cannot create new webrtc session")
-		_ = h.cord.Route(packet, client.EmptyPacket)
-		return
+		c.Log.Error().Err(err).Msg("cannot create new webrtc session")
+		return comm.EmptyPacket
 	}
 	sdp, err := toBase64Json(localSDP)
 	if err != nil {
-		c.log.Error().Err(err).Msgf("SDP encode fail fro [%v]", localSDP)
-		_ = h.cord.Route(packet, client.EmptyPacket)
-		return
+		c.Log.Error().Err(err).Msgf("SDP encode fail fro [%v]", localSDP)
+		return comm.EmptyPacket
 	}
 
 	// use user uid from the coordinator
-	user := NewSession(peer, resp.Id)
+	user := NewSession(peer, rq.Id)
 	h.router.AddUser(user)
-	c.log.Info().Str("id", string(resp.Id)).Msgf("Peer connection (uid:%s)", user.GetId())
-	_ = h.cord.Route(packet, sdp)
+	c.Log.Info().Str("id", string(rq.Id)).Msgf("Peer connection (uid:%s)", user.GetId())
+
+	return comm.Out{Payload: sdp}
 }
 
 func (c *Coordinator) HandleWebrtcAnswer(rq api.WebrtcAnswerRequest, h *Handler) {
 	if user := h.router.GetUser(rq.Id); user != nil {
 		if err := user.GetPeerConn().SetRemoteSDP(rq.Sdp, fromBase64Json); err != nil {
-			c.log.Error().Err(err).Msgf("cannot set remote SDP of client [%v]", rq.Id)
+			c.Log.Error().Err(err).Msgf("cannot set remote SDP of client [%v]", rq.Id)
 		}
 	}
 }
@@ -75,40 +67,32 @@ func (c *Coordinator) HandleWebrtcAnswer(rq api.WebrtcAnswerRequest, h *Handler)
 func (c *Coordinator) HandleWebrtcIceCandidate(rs api.WebrtcIceCandidateRequest, h *Handler) {
 	if user := h.router.GetUser(rs.Id); user != nil {
 		if err := user.GetPeerConn().AddCandidate(rs.Candidate, fromBase64Json); err != nil {
-			c.log.Error().Err(err).Msgf("cannot add ICE candidate of the client [%v]", rs.Id)
+			c.Log.Error().Err(err).Msgf("cannot add ICE candidate of the client [%v]", rs.Id)
 		}
 	}
 }
 
-func (c *Coordinator) HandleGameStart(packet client.In, h *Handler) {
-	rq, err := api.Unwrap[api.StartGameRequest](packet.Payload)
-	if err != nil {
-		c.log.Error().Err(err).Msg("malformed game start request")
-		_ = h.cord.Route(packet, client.EmptyPacket)
-		return
-	}
-	resp := *rq
-	user := h.router.GetUser(resp.Stateful.Id)
+func (c *Coordinator) HandleGameStart(rq api.StartGameRequest, h *Handler) comm.Out {
+	user := h.router.GetUser(rq.Id)
 	if user == nil {
-		c.log.Error().Msgf("no user [%v]", resp.Stateful.Id)
-		_ = h.cord.Route(packet, client.EmptyPacket)
-		return
+		c.Log.Error().Msgf("no user [%v]", rq.Id)
+		return comm.EmptyPacket
 	}
-	h.log.Info().Str("game", resp.Game.Name).Msg("Starting the game")
+	h.log.Info().Str("game", rq.Game.Name).Msg("Starting the game")
 	// trying to find existing room with that id
-	playRoom := h.router.GetRoom(resp.Room.Id)
+	playRoom := h.router.GetRoom(rq.Rid)
 	if playRoom == nil {
-		h.log.Info().Str("room", resp.Room.Id).Msg("Create room")
+		h.log.Info().Str("room", rq.Rid).Msg("Create room")
 
 		// recording
 		if h.conf.Recording.Enabled {
-			h.log.Info().Msgf("RECORD: %v %v", resp.Record, resp.RecordUser)
+			h.log.Info().Msgf("RECORD: %v %v", rq.Record, rq.RecordUser)
 		}
 
 		playRoom = h.CreateRoom(
-			resp.Room.Id,
-			games.GameMetadata{Name: resp.Game.Name, Base: resp.Game.Base, Type: resp.Game.Type, Path: resp.Game.Path},
-			resp.Record, resp.RecordUser,
+			rq.Room.Rid,
+			games.GameMetadata{Name: rq.Game.Name, Base: rq.Game.Base, Type: rq.Game.Type, Path: rq.Game.Path},
+			rq.Record, rq.RecordUser,
 			func(room *Room) {
 				h.router.RemoveRoom(room)
 				// send signal to coordinator that the room is closed, coordinator will remove that room
@@ -117,8 +101,8 @@ func (c *Coordinator) HandleGameStart(packet client.In, h *Handler) {
 			},
 		)
 		h.router.AddRoom(playRoom)
-		user.SetPlayerIndex(resp.PlayerIndex)
-		h.log.Info().Msgf("Updated player index to: %d", resp.PlayerIndex)
+		user.SetPlayerIndex(rq.PlayerIndex)
+		h.log.Info().Msgf("Updated player index to: %d", rq.PlayerIndex)
 	}
 	// Attach peerconnection to room. If PC is already in room, don't detach
 	userInRoom := playRoom.HasUser(user)
@@ -130,19 +114,18 @@ func (c *Coordinator) HandleGameStart(packet client.In, h *Handler) {
 	}
 	// Register room to coordinator if we are connecting to coordinator
 	if playRoom == nil {
-		c.log.Error().Msgf("couldn't create a room [%v]", resp.Stateful.Id)
-		_ = h.cord.Route(packet, client.EmptyPacket)
-		return
+		c.Log.Error().Msgf("couldn't create a room [%v]", rq.Id)
+		return comm.EmptyPacket
 	}
 	h.cord.RegisterRoom(playRoom.ID)
 	user.SetRoom(playRoom)
 	h.router.AddRoom(playRoom)
-	_ = h.cord.Route(packet, api.StartGameResponse{Room: api.Room{Id: playRoom.ID}, Record: h.conf.Recording.Enabled})
+	return comm.Out{Payload: api.StartGameResponse{Room: api.Room{Rid: playRoom.ID}, Record: h.conf.Recording.Enabled}}
 }
 
 func (c *Coordinator) HandleQuitGame(rq api.GameQuitRequest, h *Handler) {
-	if user := h.router.GetUser(rq.Stateful.Id); user != nil {
-		if room := h.router.GetRoom(rq.Room.Id); room != nil {
+	if user := h.router.GetUser(rq.Id); user != nil {
+		if room := h.router.GetRoom(rq.Rid); room != nil {
 			if room.HasUser(user) {
 				h.removeUser(user)
 			}
@@ -150,120 +133,60 @@ func (c *Coordinator) HandleQuitGame(rq api.GameQuitRequest, h *Handler) {
 	}
 }
 
-func (c *Coordinator) HandleSaveGame(packet client.In, h *Handler) {
-	resp, err := api.Unwrap[api.SaveGameRequest](packet.Payload)
-	if err != nil {
-		c.log.Error().Err(err).Msg("malformed game save request")
-		return
+func (c *Coordinator) HandleSaveGame(rq api.SaveGameRequest, h *Handler) comm.Out {
+	room := h.router.GetRoom(rq.Rid)
+	if room == nil {
+		return comm.ErrPacket
 	}
-	c.log.Info().Str("room", resp.Room.Id).Msg("Got room")
-	rez := client.OkPacket
-	if resp.Room.Id != "" {
-		room := h.router.GetRoom(resp.Room.Id)
-		if room == nil {
-			return
-		}
-		err := room.SaveGame()
-		if err != nil {
-			c.log.Error().Err(err).Msg("cannot save game state")
-			rez = client.ErrPacket
-		}
-	} else {
-		rez = client.ErrPacket
+	if err := room.SaveGame(); err != nil {
+		c.Log.Error().Err(err).Msg("cannot save game state")
+		return comm.ErrPacket
 	}
-	_ = h.cord.Route(packet, rez)
+	return comm.OkPacket
 }
 
-func (c *Coordinator) HandleLoadGame(packet client.In, h *Handler) {
-	c.log.Info().Msg("Loading game state")
-	resp, err := api.Unwrap[api.LoadGameRequest](packet.Payload)
-	if err != nil {
-		c.log.Error().Err(err).Msg("malformed game load request")
-		return
+func (c *Coordinator) HandleLoadGame(rq api.LoadGameRequest, h *Handler) comm.Out {
+	room := h.router.GetRoom(rq.Rid)
+	if room == nil {
+		return comm.ErrPacket
 	}
-	rez := client.OkPacket
-	if resp.Room.Id != "" {
-		rm := h.router.GetRoom(resp.Room.Id)
-		if rm == nil {
-			return
-		}
-		if err := rm.LoadGame(); err != nil {
-			c.log.Error().Err(err).Msg("cannot load game state")
-			rez = client.ErrPacket
-		}
-	} else {
-		rez = client.ErrPacket
+	if err := room.LoadGame(); err != nil {
+		c.Log.Error().Err(err).Msg("cannot load game state")
+		return comm.ErrPacket
 	}
-	_ = h.cord.Route(packet, rez)
+	return comm.OkPacket
 }
 
-func (c *Coordinator) HandleChangePlayer(packet client.In, h *Handler) {
-	resp, err := api.Unwrap[api.ChangePlayerRequest](packet.Payload)
-	if err != nil {
-		c.log.Error().Err(err).Msg("malformed change player request")
-		return
+func (c *Coordinator) HandleChangePlayer(rq api.ChangePlayerRequest, h *Handler) comm.Out {
+	user := h.router.GetUser(rq.Id)
+	if user == nil || h.router.GetRoom(rq.Rid) == nil {
+		return comm.Out{Payload: -1} // semi-predicates
 	}
-	user := h.router.GetUser(resp.Stateful.Id)
-	idx, err := strconv.Atoi(resp.Index)
-	if h.router.GetRoom(resp.Room.Id) == nil {
-		return
-	}
-	var rez api.ChangePlayerResponse
-	if user != nil && err == nil {
-		user.SetPlayerIndex(idx)
-		h.log.Info().Msgf("Updated player index to: %d", idx)
-		rez = strconv.Itoa(idx)
-	} else {
-		rez = client.ErrPacket
-	}
-	_ = h.cord.Route(packet, rez)
+	user.SetPlayerIndex(rq.Index)
+	h.log.Info().Msgf("Updated player index to: %d", rq.Index)
+	return comm.Out{Payload: rq.Index}
 }
 
-func (c *Coordinator) HandleToggleMultitap(packet client.In, h *Handler) {
-	resp, err := api.Unwrap[api.ToggleMultitapRequest](packet.Payload)
-	if err != nil {
-		c.log.Error().Err(err).Msg("malformed toggle multitap request")
-		return
+func (c *Coordinator) HandleToggleMultitap(rq api.ToggleMultitapRequest, h *Handler) comm.Out {
+	if rq.Rid == "" {
+		return comm.ErrPacket
 	}
-	rez := client.OkPacket
-	if resp.Room.Id != "" {
-		room := h.router.GetRoom(resp.Room.Id)
-		if room == nil {
-			return
-		}
-		room.ToggleMultitap()
-	} else {
-		rez = client.ErrPacket
+	room := h.router.GetRoom(rq.Rid)
+	if room == nil {
+		return comm.ErrPacket
 	}
-	_ = h.cord.Route(packet, rez)
+	room.ToggleMultitap()
+	return comm.OkPacket
 }
 
-func (c *Coordinator) HandleRecordGame(packet client.In, h *Handler) {
-	var rez = client.OkPacket
-	defer func() {
-		_ = h.cord.Route(packet, rez)
-	}()
-
-	resp, err := api.Unwrap[api.RecordGameRequest](packet.Payload)
-	if err != nil {
-		c.log.Error().Err(err).Msg("malformed record game request")
-		rez = client.ErrPacket
-		return
+func (c *Coordinator) HandleRecordGame(rq api.RecordGameRequest, h *Handler) comm.Out {
+	if !h.conf.Recording.Enabled || rq.Rid == "" {
+		return comm.ErrPacket
 	}
-
-	if !h.conf.Recording.Enabled {
-		rez = client.ErrPacket
-		return
+	room := h.router.GetRoom(rq.Rid)
+	if room == nil {
+		return comm.ErrPacket
 	}
-
-	if resp.Room.Id != "" {
-		room := h.router.GetRoom(resp.Room.Id)
-		if room == nil {
-			return
-		}
-		room.ToggleRecording(resp.Active, resp.User)
-	} else {
-		rez = client.ErrPacket
-		return
-	}
+	room.ToggleRecording(rq.Active, rq.User)
+	return comm.OkPacket
 }

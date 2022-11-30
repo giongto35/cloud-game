@@ -2,7 +2,6 @@ package coordinator
 
 import (
 	"sort"
-	"strconv"
 
 	"github.com/giongto35/cloud-game/v2/pkg/api"
 	"github.com/giongto35/cloud-game/v2/pkg/config/coordinator"
@@ -54,8 +53,8 @@ func (u *User) HandleStartGame(rq api.GameStartUserRequest, launcher launcher.La
 		return
 	}
 	// Response from worker contains initialized roomID. Set roomID to the session
-	u.SetRoom(startGameResp.Id)
-	u.Log.Info().Str("id", startGameResp.Id).Msg("Received room response from worker")
+	u.SetRoom(startGameResp.Rid)
+	u.Log.Info().Str("id", startGameResp.Rid).Msg("Received room response from worker")
 	u.StartGame()
 
 	// send back recording status
@@ -64,7 +63,7 @@ func (u *User) HandleStartGame(rq api.GameStartUserRequest, launcher launcher.La
 	}
 }
 
-func (u *User) HandleQuitGame(rq api.GameQuitRequest) { u.Worker.QuitGame(u.Id(), rq.Room.Id) }
+func (u *User) HandleQuitGame(rq api.GameQuitRequest) { u.Worker.QuitGame(u.Id(), rq.Room.Rid) }
 
 func (u *User) HandleSaveGame() {
 	resp, err := u.Worker.SaveGame(u.Id(), u.RoomID)
@@ -87,16 +86,11 @@ func (u *User) HandleLoadGame() {
 func (u *User) HandleChangePlayer(rq api.ChangePlayerUserRequest) {
 	resp, err := u.Worker.ChangePlayer(u.Id(), u.RoomID, rq)
 	// !to make it a little less convoluted
-	if err != nil || resp == nil || *resp == api.ERROR {
+	if err != nil || resp == nil || *resp == -1 {
 		u.Log.Error().Err(err).Msg("player switch failed for some reason")
 		return
 	}
-	idx, err := strconv.Atoi(*resp)
-	if err != nil {
-		u.Log.Error().Err(err).Msg("malformed player change response")
-		return
-	}
-	u.Notify(api.ChangePlayer, idx)
+	u.Notify(api.ChangePlayer, rq)
 }
 
 func (u *User) HandleToggleMultitap() { u.Worker.ToggleMultitap(u.Id(), u.RoomID) }

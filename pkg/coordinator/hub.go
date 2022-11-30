@@ -2,10 +2,10 @@ package coordinator
 
 import (
 	"fmt"
+	"github.com/giongto35/cloud-game/v2/pkg/comm"
 	"net/http"
 
 	"github.com/giongto35/cloud-game/v2/pkg/api"
-	"github.com/giongto35/cloud-game/v2/pkg/client"
 	"github.com/giongto35/cloud-game/v2/pkg/config/coordinator"
 	"github.com/giongto35/cloud-game/v2/pkg/games"
 	"github.com/giongto35/cloud-game/v2/pkg/launcher"
@@ -19,29 +19,29 @@ type Hub struct {
 
 	conf     coordinator.Config
 	launcher launcher.Launcher
-	crowd    client.NetMap // stores users
-	guild    Guild         // stores workers
-	rooms    client.NetMap // stores user rooms
+	crowd    comm.NetMap // stores users
+	guild    Guild       // stores workers
+	rooms    comm.NetMap // stores user rooms
 	log      *logger.Logger
 
-	wConn, uConn *client.Connector
+	wConn, uConn *comm.Connector
 }
 
 func NewHub(conf coordinator.Config, lib games.GameLibrary, log *logger.Logger) *Hub {
 	return &Hub{
 		conf:     conf,
-		crowd:    client.NewNetMap(),
+		crowd:    comm.NewNetMap(),
 		guild:    NewGuild(),
 		launcher: launcher.NewGameLauncher(lib),
-		rooms:    client.NewNetMap(),
+		rooms:    comm.NewNetMap(),
 		log:      log,
-		wConn: client.NewConnector(
-			client.WithOrigin(conf.Coordinator.Origin.WorkerWs),
-			client.WithTag("w"),
+		wConn: comm.NewConnector(
+			comm.WithOrigin(conf.Coordinator.Origin.WorkerWs),
+			comm.WithTag("w"),
 		),
-		uConn: client.NewConnector(
-			client.WithOrigin(conf.Coordinator.Origin.UserWs),
-			client.WithTag("u"),
+		uConn: comm.NewConnector(
+			comm.WithOrigin(conf.Coordinator.Origin.UserWs),
+			comm.WithTag("u"),
 		),
 	}
 }

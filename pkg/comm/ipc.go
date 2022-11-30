@@ -1,4 +1,4 @@
-package client
+package comm
 
 import (
 	"errors"
@@ -71,7 +71,7 @@ func (co *Connector) NewClientServer(w http.ResponseWriter, r *http.Request, log
 	if err != nil {
 		return nil, err
 	}
-	c := New(conn, co.tag, log)
+	c := New(conn, co.tag, network.NewUid(), log)
 	defer log.Info().Msg("Connect")
 	return &c, nil
 }
@@ -129,9 +129,9 @@ func (c *Client) Send(type_ uint8, pl any) error {
 	defer sentPool.Put(rq)
 	return c.SendPacket(rq)
 }
-func (c *Client) Route(p In, pl any) error {
+func (c *Client) Route(p In, pl Out) error {
 	rq := sentPool.Get().(Out)
-	rq.Id, rq.T, rq.Payload = p.Id, p.T, pl
+	rq.Id, rq.T, rq.Payload = p.Id, p.T, pl.Payload
 	defer sentPool.Put(rq)
 	return c.SendPacket(rq)
 }

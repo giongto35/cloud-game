@@ -3,13 +3,8 @@ package worker
 import (
 	"encoding/base64"
 
-	"github.com/giongto35/cloud-game/v2/pkg/api"
 	"github.com/goccy/go-json"
 )
-
-func (c *Coordinator) webrtcInit(data []byte) (*api.WebrtcInitRequest, error) {
-	return api.Unwrap[api.WebrtcInitRequest](data)
-}
 
 // toBase64Json encodes data to a URL-encoded Base64+JSON string.
 func toBase64Json(data any) (string, error) {

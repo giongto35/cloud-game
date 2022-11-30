@@ -14,11 +14,11 @@ func (u *User) CheckLatency(req api.CheckLatencyUserResponse) (api.CheckLatencyU
 	if err != nil || data == nil {
 		return nil, err
 	}
-	rs, err := api.Unwrap[api.CheckLatencyUserRequest](data)
-	if err != nil {
+	dat := api.Unwrap[api.CheckLatencyUserRequest](data)
+	if dat == nil {
 		return api.CheckLatencyUserRequest{}, err
 	}
-	return *rs, err
+	return *dat, err
 }
 
 // InitSession signals the user that the app is ready to go.

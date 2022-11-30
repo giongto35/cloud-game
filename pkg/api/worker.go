@@ -10,7 +10,7 @@ type (
 		Type string `json:"type"`
 	}
 	Room struct {
-		Id string `json:"room_id"`
+		Rid string `json:"room_id"` // room id
 	}
 )
 
@@ -18,9 +18,9 @@ type (
 	ChangePlayerRequest = struct {
 		Stateful
 		Room
-		Index string `json:"index"`
+		Index int `json:"index"`
 	}
-	ChangePlayerResponse = string
+	ChangePlayerResponse = int
 	GameQuitRequest      struct {
 		Stateful
 		Room
