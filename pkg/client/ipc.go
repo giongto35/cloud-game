@@ -1,7 +1,6 @@
 package client
 
 import (
-	"encoding/json"
 	"errors"
 	"net/http"
 	"net/url"
@@ -11,6 +10,7 @@ import (
 	"github.com/giongto35/cloud-game/v2/pkg/logger"
 	"github.com/giongto35/cloud-game/v2/pkg/network"
 	"github.com/giongto35/cloud-game/v2/pkg/network/websocket"
+	"github.com/goccy/go-json"
 )
 
 const callTimeout = 5 * time.Second

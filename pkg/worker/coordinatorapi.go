@@ -2,9 +2,9 @@ package worker
 
 import (
 	"encoding/base64"
-	"encoding/json"
 
 	"github.com/giongto35/cloud-game/v2/pkg/api"
+	"github.com/goccy/go-json"
 )
 
 func (c *Coordinator) webrtcInit(data []byte) (*api.WebrtcInitRequest, error) {
