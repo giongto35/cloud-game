@@ -16,7 +16,7 @@ import (
 var log = logger.Default()
 
 func TestPackets(t *testing.T) {
-	r, err := json.Marshal(OutPacket{Payload: "asd"})
+	r, err := json.Marshal(Out{Payload: "asd"})
 	if err != nil {
 		t.Fatalf("can't marshal packet")
 	}

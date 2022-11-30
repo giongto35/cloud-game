@@ -40,7 +40,7 @@ func (u *User) FreeWorker() {
 }
 
 func (u *User) HandleRequests(info ServerInfo, launcher launcher.Launcher, conf coordinator.Config) {
-	u.OnPacket(func(p client.InPacket) {
+	u.OnPacket(func(p client.In) {
 		// !to use proper channels
 		go func() {
 			switch p.T {

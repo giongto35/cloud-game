@@ -28,15 +28,21 @@ type (
 	Client struct {
 		conn     *websocket.WS
 		queue    map[network.Uid]*call
-		onPacket func(packet InPacket)
+		onPacket func(packet In)
 		mu       sync.Mutex
 	}
 	call struct {
 		done     chan struct{}
 		err      error
-		Response InPacket
+		Response In
 	}
 )
+
+var sentPool = sync.Pool{
+	New: func() any {
+		return Out{}
+	},
+}
 
 type Option = func(c *Connector)
 
@@ -83,7 +89,7 @@ func connect(conn *websocket.WS, err error) (*Client, error) {
 	return client, nil
 }
 
-func (c *Client) OnPacket(fn func(packet InPacket)) { c.mu.Lock(); c.onPacket = fn; c.mu.Unlock() }
+func (c *Client) OnPacket(fn func(packet In)) { c.mu.Lock(); c.onPacket = fn; c.mu.Unlock() }
 
 func (c *Client) Listen() { c.mu.Lock(); c.conn.Listen(); c.mu.Unlock() }
 
@@ -95,8 +101,10 @@ func (c *Client) Close() {
 
 func (c *Client) Call(type_ uint8, payload interface{}) ([]byte, error) {
 	// !to expose channel instead of results
-	rq := OutPacket{Id: network.NewUid(), T: type_, Payload: payload}
+	rq := sentPool.Get().(Out)
+	rq.Id, rq.T, rq.Payload = network.NewUid(), type_, payload
 	r, err := json.Marshal(&rq)
+	sentPool.Put(rq)
 	if err != nil {
 		//delete(c.queue, id)
 		return nil, err
@@ -115,11 +123,20 @@ func (c *Client) Call(type_ uint8, payload interface{}) ([]byte, error) {
 	return task.Response.Payload, task.err
 }
 
-func (c *Client) Send(type_ uint8, payload any) error {
-	return c.SendPacket(OutPacket{T: type_, Payload: payload})
+func (c *Client) Send(type_ uint8, pl any) error {
+	rq := sentPool.Get().(Out)
+	rq.Id, rq.T, rq.Payload = "", type_, pl
+	defer sentPool.Put(rq)
+	return c.SendPacket(rq)
+}
+func (c *Client) Route(p In, pl any) error {
+	rq := sentPool.Get().(Out)
+	rq.Id, rq.T, rq.Payload = p.Id, p.T, pl
+	defer sentPool.Put(rq)
+	return c.SendPacket(rq)
 }
 
-func (c *Client) SendPacket(packet OutPacket) error {
+func (c *Client) SendPacket(packet Out) error {
 	r, err := json.Marshal(packet)
 	if err != nil {
 		return err
@@ -137,7 +154,7 @@ func (c *Client) handleMessage(message []byte, err error) {
 		return
 	}
 
-	var res InPacket
+	var res In
 	if err = json.Unmarshal(message, &res); err != nil {
 		return
 	}

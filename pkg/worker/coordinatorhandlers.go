@@ -29,7 +29,7 @@ func (c *Coordinator) HandleTerminateSession(rq api.TerminateSessionRequest, h *
 	}
 }
 
-func (c *Coordinator) HandleWebrtcInit(packet client.InPacket, h *Handler, connApi *webrtc.ApiFactory) {
+func (c *Coordinator) HandleWebrtcInit(packet client.In, h *Handler, connApi *webrtc.ApiFactory) {
 	resp, err := c.webrtcInit(packet.Payload)
 	if err != nil {
 		c.log.Error().Err(err).Msg("malformed WebRTC init request")
@@ -80,7 +80,7 @@ func (c *Coordinator) HandleWebrtcIceCandidate(rs api.WebrtcIceCandidateRequest,
 	}
 }
 
-func (c *Coordinator) HandleGameStart(packet client.InPacket, h *Handler) {
+func (c *Coordinator) HandleGameStart(packet client.In, h *Handler) {
 	rq, err := api.Unwrap[api.StartGameRequest](packet.Payload)
 	if err != nil {
 		c.log.Error().Err(err).Msg("malformed game start request")
@@ -150,7 +150,7 @@ func (c *Coordinator) HandleQuitGame(rq api.GameQuitRequest, h *Handler) {
 	}
 }
 
-func (c *Coordinator) HandleSaveGame(packet client.InPacket, h *Handler) {
+func (c *Coordinator) HandleSaveGame(packet client.In, h *Handler) {
 	resp, err := api.Unwrap[api.SaveGameRequest](packet.Payload)
 	if err != nil {
 		c.log.Error().Err(err).Msg("malformed game save request")
@@ -174,7 +174,7 @@ func (c *Coordinator) HandleSaveGame(packet client.InPacket, h *Handler) {
 	_ = h.cord.Route(packet, rez)
 }
 
-func (c *Coordinator) HandleLoadGame(packet client.InPacket, h *Handler) {
+func (c *Coordinator) HandleLoadGame(packet client.In, h *Handler) {
 	c.log.Info().Msg("Loading game state")
 	resp, err := api.Unwrap[api.LoadGameRequest](packet.Payload)
 	if err != nil {
@@ -197,7 +197,7 @@ func (c *Coordinator) HandleLoadGame(packet client.InPacket, h *Handler) {
 	_ = h.cord.Route(packet, rez)
 }
 
-func (c *Coordinator) HandleChangePlayer(packet client.InPacket, h *Handler) {
+func (c *Coordinator) HandleChangePlayer(packet client.In, h *Handler) {
 	resp, err := api.Unwrap[api.ChangePlayerRequest](packet.Payload)
 	if err != nil {
 		c.log.Error().Err(err).Msg("malformed change player request")
@@ -219,7 +219,7 @@ func (c *Coordinator) HandleChangePlayer(packet client.InPacket, h *Handler) {
 	_ = h.cord.Route(packet, rez)
 }
 
-func (c *Coordinator) HandleToggleMultitap(packet client.InPacket, h *Handler) {
+func (c *Coordinator) HandleToggleMultitap(packet client.In, h *Handler) {
 	resp, err := api.Unwrap[api.ToggleMultitapRequest](packet.Payload)
 	if err != nil {
 		c.log.Error().Err(err).Msg("malformed toggle multitap request")
@@ -238,7 +238,7 @@ func (c *Coordinator) HandleToggleMultitap(packet client.InPacket, h *Handler) {
 	_ = h.cord.Route(packet, rez)
 }
 
-func (c *Coordinator) HandleRecordGame(packet client.InPacket, h *Handler) {
+func (c *Coordinator) HandleRecordGame(packet client.In, h *Handler) {
 	var rez = client.OkPacket
 	defer func() {
 		_ = h.cord.Route(packet, rez)

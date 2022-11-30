@@ -56,10 +56,7 @@ func (u *User) HandleStartGame(rq api.GameStartUserRequest, launcher launcher.La
 	// Response from worker contains initialized roomID. Set roomID to the session
 	u.SetRoom(startGameResp.Id)
 	u.Log.Info().Str("id", startGameResp.Id).Msg("Received room response from worker")
-	if err = u.StartGame(); err != nil {
-		u.Log.Error().Err(err).Msg("couldn't send back start request")
-		return
-	}
+	u.StartGame()
 
 	// send back recording status
 	if conf.Recording.Enabled && rq.Record {

@@ -34,7 +34,7 @@ func NewWorkerClientServer(id network.Uid, conn *client.SocketClient) *Worker {
 }
 
 func (w *Worker) HandleRequests(rooms *client.NetMap, crowd *client.NetMap) {
-	w.SocketClient.OnPacket(func(p client.InPacket) {
+	w.SocketClient.OnPacket(func(p client.In) {
 		go func() {
 			switch p.T {
 			case api.RegisterRoom:

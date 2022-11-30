@@ -34,4 +34,4 @@ func (u *User) SendWebrtcOffer(sdp string) { u.Notify(api.WebrtcOffer, sdp) }
 func (u *User) SendWebrtcIceCandidate(candidate string) { u.Notify(api.WebrtcIceCandidate, candidate) }
 
 // StartGame signals the user that everything is ready to start a game.
-func (u *User) StartGame() error { return u.SendAndForget(api.StartGame, u.RoomID) }
+func (u *User) StartGame() { u.Notify(api.StartGame, u.RoomID) }
