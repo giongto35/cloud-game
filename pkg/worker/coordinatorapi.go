@@ -12,7 +12,7 @@ func (c *Coordinator) webrtcInit(data []byte) (*api.WebrtcInitRequest, error) {
 }
 
 // toBase64Json encodes data to a URL-encoded Base64+JSON string.
-func toBase64Json(data interface{}) (string, error) {
+func toBase64Json(data any) (string, error) {
 	if data == nil {
 		return "", nil
 	}
@@ -24,7 +24,7 @@ func toBase64Json(data interface{}) (string, error) {
 }
 
 // fromBase64Json decodes data from a URL-encoded Base64+JSON string.
-func fromBase64Json(data string, obj interface{}) error {
+func fromBase64Json(data string, obj any) error {
 	b, err := base64.URLEncoding.DecodeString(data)
 	if err != nil {
 		return err

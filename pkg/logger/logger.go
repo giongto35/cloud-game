@@ -157,11 +157,11 @@ func (l *Logger) Log() *zerolog.Event { return l.logger.Log() }
 
 // Print sends a log event using debug level and no extra field.
 // Arguments are handled in the manner of fmt.Print.
-func (l *Logger) Print(v ...interface{}) { l.logger.Print(v...) }
+func (l *Logger) Print(v ...any) { l.logger.Print(v...) }
 
 // Printf sends a log event using debug level and no extra field.
 // Arguments are handled in the manner of fmt.Printf.
-func (l *Logger) Printf(format string, v ...interface{}) { l.logger.Printf(format, v...) }
+func (l *Logger) Printf(format string, v ...any) { l.logger.Printf(format, v...) }
 
 // Ctx returns the Logger associated with the ctx. If no logger
 // is associated, a disabled logger is returned.

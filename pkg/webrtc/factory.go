@@ -47,7 +47,7 @@ func NewApiFactory(conf conf.Webrtc, log *logger.Logger, mod ModApiFun) (api *Ap
 		}
 	}
 	if conf.HasSinglePort() {
-		var l interface{}
+		var l any
 		l, err = socket.NewSocketPortRoll("udp", conf.SinglePort)
 		if err != nil {
 			return

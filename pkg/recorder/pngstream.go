@@ -25,7 +25,7 @@ const videoFile = "f%07d.png"
 
 type pool struct{ sync.Pool }
 
-func pngBuf() *pool                      { return &pool{sync.Pool{New: func() interface{} { return &png.EncoderBuffer{} }}} }
+func pngBuf() *pool                      { return &pool{sync.Pool{New: func() any { return &png.EncoderBuffer{} }}} }
 func (p *pool) Get() *png.EncoderBuffer  { return p.Pool.Get().(*png.EncoderBuffer) }
 func (p *pool) Put(b *png.EncoderBuffer) { p.Pool.Put(b) }
 

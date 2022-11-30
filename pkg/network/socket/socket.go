@@ -16,7 +16,7 @@ const udpBufferSize = 16 * 1024 * 1024
 // udp, udp4, udp6, tcp, tcp4, tcp6
 // The function result will be either *net.UDPConn for UDPs or
 // *net.TCPListener for TCPs.
-func NewSocket(proto string, port int) (interface{}, error) {
+func NewSocket(proto string, port int) (any, error) {
 	if listener, err := socket(proto, port); err != nil {
 		return nil, err
 	} else {
@@ -26,7 +26,7 @@ func NewSocket(proto string, port int) (interface{}, error) {
 
 // NewSocketPortRoll creates either TCP or UDP socket listener on the next free port.
 // See: NewSocket.
-func NewSocketPortRoll(proto string, port int) (listener interface{}, err error) {
+func NewSocketPortRoll(proto string, port int) (listener any, err error) {
 	if listener, err = NewSocket(proto, port); err == nil {
 		return listener, nil
 	}
@@ -42,7 +42,7 @@ func NewSocketPortRoll(proto string, port int) (listener interface{}, err error)
 	return nil, err
 }
 
-func socket(proto string, port int) (interface{}, error) {
+func socket(proto string, port int) (any, error) {
 	switch proto {
 	case "udp", "udp4", "udp6":
 		if l, err := net.ListenUDP(proto, &net.UDPAddr{Port: port}); err == nil {

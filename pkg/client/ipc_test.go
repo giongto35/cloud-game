@@ -73,9 +73,9 @@ func testWebsocket(t *testing.T) {
 
 	calls := []struct {
 		typ        uint8
-		payload    interface{}
+		payload    any
 		concurrent bool
-		value      interface{}
+		value      any
 	}{
 		{typ: 10, payload: "test", value: "test", concurrent: true},
 		{typ: 10, payload: "test2", value: "test2"},
@@ -130,12 +130,12 @@ func newClient(t *testing.T, addr url.URL) *Client {
 	return conn
 }
 
-func checkCall(t *testing.T, v []byte, err error, need interface{}) {
+func checkCall(t *testing.T, v []byte, err error, need any) {
 	if err != nil {
 		t.Fatalf("should be no error but %v", err)
 		return
 	}
-	var value interface{}
+	var value any
 	if v != nil {
 		if err = json.Unmarshal(v, &value); err != nil {
 			t.Fatalf("can't unmarshal %v", v)
@@ -151,16 +151,16 @@ func checkCall(t *testing.T, v []byte, err error, need interface{}) {
 		nice = value == need.(bool)
 	case float64:
 		nice = value == float64(need.(int))
-	case []interface{}:
+	case []any:
 		// let's assume that's strings
-		vv := value.([]interface{})
+		vv := value.([]any)
 		for i := 0; i < len(need.([]string)); i++ {
 			if vv[i].(string) != need.([]string)[i] {
 				nice = false
 				break
 			}
 		}
-	case map[string]interface{}:
+	case map[string]any:
 		// ???
 	}
 

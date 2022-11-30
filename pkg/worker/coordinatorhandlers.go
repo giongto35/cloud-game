@@ -37,7 +37,7 @@ func (c *Coordinator) HandleWebrtcInit(packet client.In, h *Handler, connApi *we
 	}
 	enc := h.conf.Encoder
 	peer := webrtc.NewWebRTC(h.conf.Webrtc, c.log, connApi)
-	localSDP, err := peer.NewCall(enc.Video.Codec, enc.Audio.Codec, func(data interface{}) {
+	localSDP, err := peer.NewCall(enc.Video.Codec, enc.Audio.Codec, func(data any) {
 		candidate, err := toBase64Json(data)
 		if err != nil {
 			c.log.Error().Err(err).Msgf("ICE candidate encode fail for [%v]", data)

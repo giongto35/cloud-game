@@ -10,7 +10,7 @@ type fun struct {
 	done chan struct{}
 }
 
-var dPool = sync.Pool{New: func() interface{} { return make(chan struct{}) }}
+var dPool = sync.Pool{New: func() any { return make(chan struct{}) }}
 var fq = make(chan fun, runtime.GOMAXPROCS(0))
 
 func init() {

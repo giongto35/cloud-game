@@ -23,13 +23,13 @@ type WebRTC struct {
 	dTrack *webrtc.DataChannel
 }
 
-type Decoder func(data string, obj interface{}) error
+type Decoder func(data string, obj any) error
 
 func NewWebRTC(conf conf.Webrtc, log *logger.Logger, api *ApiFactory) *WebRTC {
 	return &WebRTC{api: api, conf: conf, log: log}
 }
 
-func (w *WebRTC) NewCall(vCodec, aCodec string, onICECandidate func(ice interface{})) (sdp interface{}, err error) {
+func (w *WebRTC) NewCall(vCodec, aCodec string, onICECandidate func(ice any)) (sdp any, err error) {
 	if w.isConnected {
 		w.log.Warn().Msg("Strange multiple init connection calls with the same peer")
 		return
@@ -125,7 +125,7 @@ func newTrack(id string, label string, codec string) (*webrtc.TrackLocalStaticSa
 	return webrtc.NewTrackLocalStaticSample(webrtc.RTPCodecCapability{MimeType: mime}, id, label)
 }
 
-func (w *WebRTC) handleICECandidate(callback func(interface{})) func(*webrtc.ICECandidate) {
+func (w *WebRTC) handleICECandidate(callback func(any)) func(*webrtc.ICECandidate) {
 	return func(ice *webrtc.ICECandidate) {
 		// ICE gathering finish condition
 		if ice == nil {

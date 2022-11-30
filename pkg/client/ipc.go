@@ -99,7 +99,7 @@ func (c *Client) Close() {
 	c.drain(errConnClosed)
 }
 
-func (c *Client) Call(type_ uint8, payload interface{}) ([]byte, error) {
+func (c *Client) Call(type_ uint8, payload any) ([]byte, error) {
 	// !to expose channel instead of results
 	rq := sentPool.Get().(Out)
 	rq.Id, rq.T, rq.Payload = network.NewUid(), type_, payload

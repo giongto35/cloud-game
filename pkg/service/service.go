@@ -6,7 +6,7 @@ import (
 )
 
 // Service defines a generic service.
-type Service interface{}
+type Service any
 
 // RunnableService defines a service that can be run.
 type RunnableService interface {
