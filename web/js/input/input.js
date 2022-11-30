@@ -1,5 +1,5 @@
 const input = (() => {
-    let pollIntervalMs = 10;
+    let pollIntervalMs = 4;
     let pollIntervalId = 0;
     let controllerChangedIndex = -1;
 
@@ -62,9 +62,9 @@ const input = (() => {
     };
 
     const setAxisChanged = (index, value) => {
-        if (controllerEncoded[index+1] !== undefined) {
-            controllerEncoded[index+1] = Math.floor(32767 * value);
-            controllerChangedIndex = Math.max(controllerChangedIndex, index+1);
+        if (controllerEncoded[index + 1] !== undefined) {
+            controllerEncoded[index + 1] = Math.floor(32767 * value);
+            controllerChangedIndex = Math.max(controllerChangedIndex, index + 1);
         }
     };
 
@@ -81,8 +81,7 @@ const input = (() => {
     const _encodeState = () => {
         controllerEncoded[0] = 0;
         for (let i = 0, len = keys.length; i < len; i++) controllerEncoded[0] += controllerState[keys[i]] ? 1 << i : 0;
-
-        return new Uint16Array(controllerEncoded.slice(0, controllerChangedIndex+1));
+        return new Uint16Array(controllerEncoded.slice(0, controllerChangedIndex + 1));
     }
 
     return {

@@ -517,7 +517,6 @@
     });
     event.sub(KEY_PRESSED, onKeyPress);
     event.sub(KEY_RELEASED, onKeyRelease);
-    event.sub(KEY_STATE_UPDATED, data => webrtc.input(data));
     event.sub(SETTINGS_CHANGED, () => message.show('Settings have been updated'));
     event.sub(SETTINGS_CLOSED, () => {
         state.keyRelease(KEY.SETTINGS);
