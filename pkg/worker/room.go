@@ -171,7 +171,7 @@ func (r *Room) whatsFrame(conf conf.Emulator, w, h int) (ww int, hh int) {
 			baseAspectRatio, nwidth, nheight)
 	} else {
 		nwidth, nheight = w, h
-		r.log.Info().Msgf("Viewport custom size is disabled, base size will be used instead %dx%d", nwidth, nheight)
+		r.log.Info().Msgf("Viewport resolution: %dx%d", nwidth, nheight)
 	}
 
 	if emu.Scale > 1 {

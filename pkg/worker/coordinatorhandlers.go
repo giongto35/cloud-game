@@ -80,8 +80,8 @@ func (c *Coordinator) HandleGameStart(rq api.StartGameRequest, h *Handler) comm.
 	}
 	h.log.Info().Str("game", rq.Game.Name).Msg("Starting the game")
 	// trying to find existing room with that id
-	playRoom := h.router.GetRoom(rq.Rid)
-	if playRoom == nil {
+	room := h.router.GetRoom(rq.Rid)
+	if room == nil {
 		h.log.Info().Str("room", rq.Rid).Msg("Create room")
 
 		// recording
@@ -89,7 +89,7 @@ func (c *Coordinator) HandleGameStart(rq api.StartGameRequest, h *Handler) comm.
 			h.log.Info().Msgf("RECORD: %v %v", rq.Record, rq.RecordUser)
 		}
 
-		playRoom = h.CreateRoom(
+		room = h.CreateRoom(
 			rq.Room.Rid,
 			games.GameMetadata{Name: rq.Game.Name, Base: rq.Game.Base, Type: rq.Game.Type, Path: rq.Game.Path},
 			rq.Record, rq.RecordUser,
@@ -100,27 +100,27 @@ func (c *Coordinator) HandleGameStart(rq api.StartGameRequest, h *Handler) comm.
 				h.log.Debug().Msgf("Room close has been called %v", room.ID)
 			},
 		)
-		h.router.AddRoom(playRoom)
+		h.router.AddRoom(room)
 		user.SetPlayerIndex(rq.PlayerIndex)
 		h.log.Info().Msgf("Updated player index to: %d", rq.PlayerIndex)
 	}
 	// Attach peerconnection to room. If PC is already in room, don't detach
-	userInRoom := playRoom.HasUser(user)
-	if !userInRoom {
-		h.log.Info().Msgf("The peer is not in the room: %v", userInRoom)
+	if !room.HasUser(user) {
 		h.removeUser(user)
-		playRoom.AddUser(user)
-		playRoom.PollUserInput(user)
+		room.AddUser(user)
+		room.PollUserInput(user)
+	} else {
+		h.log.Info().Msg("The peer was not detached")
 	}
 	// Register room to coordinator if we are connecting to coordinator
-	if playRoom == nil {
+	if room == nil {
 		c.Log.Error().Msgf("couldn't create a room [%v]", rq.Id)
 		return comm.EmptyPacket
 	}
-	h.cord.RegisterRoom(playRoom.ID)
-	user.SetRoom(playRoom)
-	h.router.AddRoom(playRoom)
-	return comm.Out{Payload: api.StartGameResponse{Room: api.Room{Rid: playRoom.ID}, Record: h.conf.Recording.Enabled}}
+	h.cord.RegisterRoom(room.ID)
+	user.SetRoom(room)
+	h.router.AddRoom(room)
+	return comm.Out{Payload: api.StartGameResponse{Room: api.Room{Rid: room.ID}, Record: h.conf.Recording.Enabled}}
 }
 
 func (c *Coordinator) HandleQuitGame(rq api.GameQuitRequest, h *Handler) {

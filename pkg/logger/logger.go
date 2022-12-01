@@ -75,33 +75,39 @@ func NewConsole(isDebug bool, tag string, noColor bool) *Logger {
 	}
 	zerolog.SetGlobalLevel(logLevel)
 	zerolog.TimeFieldFormat = time.RFC3339Nano
-	output := zerolog.ConsoleWriter{Out: os.Stdout, TimeFormat: "15:04:05.0000", NoColor: noColor}
+	output := zerolog.ConsoleWriter{Out: os.Stdout, TimeFormat: "15:04:05.0000", NoColor: noColor,
+		PartsOrder: []string{zerolog.TimestampFieldName,
+			zerolog.LevelFieldName,
+			zerolog.CallerFieldName,
+			"s",
+			"d",
+			"c",
+			zerolog.MessageFieldName,
+		},
+		FieldsExclude: []string{"s", "c", "d"},
+	}
 
 	if output.NoColor {
 		output.FormatMessage = func(i any) string {
 			if i == nil {
-				return fmt.Sprintf("%s %s", tag, "")
+				return fmt.Sprintf("%s", "")
 			}
-			return fmt.Sprintf("%s %v", tag, i)
-		}
-	} else {
-		output.FormatMessage = func(i any) string {
-			if i == nil {
-				return fmt.Sprintf("\x1b[%dm%s\x1b[0m %s", 36, tag, "")
-			}
-			return fmt.Sprintf("\x1b[%dm%s\x1b[0m %v", 36, tag, i)
+			return fmt.Sprintf("%v", i)
 		}
 	}
 
 	//multi := zerolog.MultiLevelWriter(output, os.Stdout)
 	logger := zerolog.New(output).With().
 		Int("pid", pid).
-		Str("tag", tag).
+		Str("s", tag).
+		Str("d", " ").
+		Str("c", " ").
+		// Str("tag", tag). use when a file writer
 		Timestamp().Logger()
-	return &Logger{&logger}
+	return &Logger{logger: &logger}
 }
 
-func Default() *Logger { return &Logger{&log.Logger} }
+func Default() *Logger { return &Logger{logger: &log.Logger} }
 
 // GetLevel returns the current Level of l.
 func (l *Logger) GetLevel() Level { return Level(l.logger.GetLevel()) }
@@ -170,5 +176,5 @@ func (l *Logger) Ctx(ctx context.Context) *Logger { return &Logger{logger: zerol
 // Extend adds some additional context to the existing logger.
 func (l *Logger) Extend(ctx zerolog.Context) *Logger {
 	logger := ctx.Logger()
-	return &Logger{&logger}
+	return &Logger{logger: &logger}
 }

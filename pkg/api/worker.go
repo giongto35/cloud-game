@@ -75,6 +75,6 @@ type (
 	WebrtcInitResponse = string
 )
 
-func NewWebrtcIceCandidateRequest(id network.Uid, can string) (PType, any) {
+func NewWebrtcIceCandidateRequest(id network.Uid, can string) (PT, any) {
 	return WebrtcIceCandidate, WebrtcIceCandidateRequest{Stateful: Stateful{id}, Candidate: can}
 }

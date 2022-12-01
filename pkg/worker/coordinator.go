@@ -39,111 +39,92 @@ func (c *Coordinator) HandleRequests(h *Handler) {
 	if err != nil {
 		c.Log.Panic().Err(err).Msg("WebRTC API creation has been failed")
 	}
-
-	c.OnPacket(func(p comm.In) {
-		var err error
-		switch p.T {
+	c.OnPacket(func(x comm.In) (err error) {
+		switch x.T {
 		case api.TerminateSession:
-			dat := api.Unwrap[api.TerminateSessionRequest](p.Payload)
+			dat := api.Unwrap[api.TerminateSessionRequest](x.Payload)
 			if dat == nil {
-				err = api.ErrMalformed
-				break
+				return api.ErrMalformed
 			}
-			c.Log.Info().Msgf("Received a terminate session [%v]", dat.Id)
 			c.HandleTerminateSession(*dat, h)
 		case api.WebrtcInit:
-			c.Log.Info().Msg("Received a request to createOffer from browser via coordinator")
 			var out comm.Out
-			if dat := api.Unwrap[api.WebrtcInitRequest](p.Payload); dat == nil {
+			if dat := api.Unwrap[api.WebrtcInitRequest](x.Payload); dat == nil {
 				err, out = api.ErrMalformed, comm.EmptyPacket
 			} else {
 				out = c.HandleWebrtcInit(*dat, h, ap)
 			}
-			h.cord.Route(p, out)
+			h.cord.Route(x, out)
 		case api.WebrtcAnswer:
-			c.Log.Info().Msg("Received answer SDP from browser")
-			dat := api.Unwrap[api.WebrtcAnswerRequest](p.Payload)
+			dat := api.Unwrap[api.WebrtcAnswerRequest](x.Payload)
 			if dat == nil {
-				err = api.ErrMalformed
-				break
+				return api.ErrMalformed
 			}
 			c.HandleWebrtcAnswer(*dat, h)
 		case api.WebrtcIceCandidate:
-			c.Log.Info().Msg("Received remote Ice Candidate from browser")
-			dat := api.Unwrap[api.WebrtcIceCandidateRequest](p.Payload)
+			dat := api.Unwrap[api.WebrtcIceCandidateRequest](x.Payload)
 			if dat == nil {
-				err = api.ErrMalformed
-				break
+				return api.ErrMalformed
 			}
 			c.HandleWebrtcIceCandidate(*dat, h)
 		case api.StartGame:
-			c.Log.Info().Msg("Received game start request")
 			var out comm.Out
-			if dat := api.Unwrap[api.StartGameRequest](p.Payload); dat == nil {
+			if dat := api.Unwrap[api.StartGameRequest](x.Payload); dat == nil {
 				err, out = api.ErrMalformed, comm.EmptyPacket
 			} else {
 				out = c.HandleGameStart(*dat, h)
 			}
-			h.cord.Route(p, out)
+			h.cord.Route(x, out)
 		case api.QuitGame:
-			c.Log.Info().Msg("Received game quit request")
-			dat := api.Unwrap[api.GameQuitRequest](p.Payload)
+			dat := api.Unwrap[api.GameQuitRequest](x.Payload)
 			if dat == nil {
-				err = api.ErrMalformed
-				break
+				return api.ErrMalformed
 			}
 			c.HandleQuitGame(*dat, h)
 		case api.SaveGame:
-			c.Log.Info().Msg("Received a save game from coordinator")
 			var out comm.Out
-			if dat := api.Unwrap[api.SaveGameRequest](p.Payload); dat == nil {
+			if dat := api.Unwrap[api.SaveGameRequest](x.Payload); dat == nil {
 				err, out = api.ErrMalformed, comm.EmptyPacket
 			} else {
 				out = c.HandleSaveGame(*dat, h)
 			}
-			h.cord.Route(p, out)
+			h.cord.Route(x, out)
 		case api.LoadGame:
-			c.Log.Info().Msg("Received load game request")
 			var out comm.Out
-			if dat := api.Unwrap[api.LoadGameRequest](p.Payload); dat == nil {
+			if dat := api.Unwrap[api.LoadGameRequest](x.Payload); dat == nil {
 				err, out = api.ErrMalformed, comm.EmptyPacket
 			} else {
 				out = c.HandleLoadGame(*dat, h)
 			}
-			h.cord.Route(p, out)
+			h.cord.Route(x, out)
 		case api.ChangePlayer:
-			c.Log.Info().Msg("Received an update player index request")
 			var out comm.Out
-			if dat := api.Unwrap[api.ChangePlayerRequest](p.Payload); dat == nil {
+			if dat := api.Unwrap[api.ChangePlayerRequest](x.Payload); dat == nil {
 				err, out = api.ErrMalformed, comm.EmptyPacket
 			} else {
 				out = c.HandleChangePlayer(*dat, h)
 			}
-			h.cord.Route(p, out)
+			h.cord.Route(x, out)
 		case api.ToggleMultitap:
-			c.Log.Info().Msg("Received multitap toggle request")
 			var out comm.Out
-			if dat := api.Unwrap[api.ToggleMultitapRequest](p.Payload); dat == nil {
+			if dat := api.Unwrap[api.ToggleMultitapRequest](x.Payload); dat == nil {
 				err, out = api.ErrMalformed, comm.EmptyPacket
 			} else {
 				c.HandleToggleMultitap(*dat, h)
 			}
-			h.cord.Route(p, out)
+			h.cord.Route(x, out)
 		case api.RecordGame:
-			c.Log.Info().Msg("Received recording request")
 			var out comm.Out
-			if dat := api.Unwrap[api.RecordGameRequest](p.Payload); dat == nil {
+			if dat := api.Unwrap[api.RecordGameRequest](x.Payload); dat == nil {
 				err, out = api.ErrMalformed, comm.EmptyPacket
 			} else {
 				c.HandleRecordGame(*dat, h)
 			}
-			h.cord.Route(p, out)
+			h.cord.Route(x, out)
 		default:
-			c.Log.Warn().Msgf("unhandled packet type %v", p.T)
+			c.Log.Warn().Msgf("unhandled packet type %v", x.T)
 		}
-		if err != nil {
-			c.Log.Error().Err(err).Msgf("malformed packet #%v", p.T)
-		}
+		return nil
 	})
 }
 

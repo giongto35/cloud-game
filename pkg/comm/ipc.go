@@ -7,6 +7,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/giongto35/cloud-game/v2/pkg/api"
 	"github.com/giongto35/cloud-game/v2/pkg/logger"
 	"github.com/giongto35/cloud-game/v2/pkg/network"
 	"github.com/giongto35/cloud-game/v2/pkg/network/websocket"
@@ -99,7 +100,7 @@ func (c *Client) Close() {
 	c.drain(errConnClosed)
 }
 
-func (c *Client) Call(type_ uint8, payload any) ([]byte, error) {
+func (c *Client) Call(type_ api.PT, payload any) ([]byte, error) {
 	// !to expose channel instead of results
 	rq := sentPool.Get().(Out)
 	rq.Id, rq.T, rq.Payload = network.NewUid(), type_, payload
@@ -123,7 +124,7 @@ func (c *Client) Call(type_ uint8, payload any) ([]byte, error) {
 	return task.Response.Payload, task.err
 }
 
-func (c *Client) Send(type_ uint8, pl any) error {
+func (c *Client) Send(type_ api.PT, pl any) error {
 	rq := sentPool.Get().(Out)
 	rq.Id, rq.T, rq.Payload = "", type_, pl
 	defer sentPool.Put(rq)

@@ -40,82 +40,65 @@ func (u *User) FreeWorker() {
 }
 
 func (u *User) HandleRequests(info ServerInfo, launcher launcher.Launcher, conf coordinator.Config) {
-	u.OnPacket(func(p comm.In) {
+	u.OnPacket(func(x comm.In) error {
 		// !to use proper channels
-		go func() {
-			switch p.T {
-			case api.WebrtcInit:
-				u.Log.Info().Msgf("Received WebRTC init request -> relay to worker: %s", u.Worker.Id())
-				u.HandleWebrtcInit()
-				u.Log.Info().Msg("Received SDP from worker -> sending back to browser")
-			case api.WebrtcAnswer:
-				u.Log.Info().Msg("Received browser answered SDP -> relay to worker")
-				rq := api.Unwrap[api.WebrtcAnswerUserRequest](p.Payload)
-				if rq == nil {
-					u.Log.Error().Msg("malformed WebRTC answer request")
-					return
-				}
-				u.HandleWebrtcAnswer(*rq)
-			case api.WebrtcIceCandidate:
-				u.Log.Info().Msg("Received IceCandidate from browser -> relay to worker")
-				rq := api.Unwrap[api.WebrtcUserIceCandidate](p.Payload)
-				if rq == nil {
-					u.Log.Error().Msg("malformed Ice candidate request")
-					return
-				}
-				u.HandleWebrtcIceCandidate(*rq)
-			case api.StartGame:
-				u.Log.Info().Msg("Received start request from a browser -> relay to worker")
-				rq := api.Unwrap[api.GameStartUserRequest](p.Payload)
-				if rq == nil {
-					u.Log.Error().Msg("malformed game start request")
-					return
-				}
-				u.HandleStartGame(*rq, launcher, conf)
-			case api.QuitGame:
-				u.Log.Info().Msg("Received quit request from a browser -> relay to worker")
-				rq := api.Unwrap[api.GameQuitRequest](p.Payload)
-				if rq == nil {
-					u.Log.Error().Msg("malformed game quit request")
-					return
-				}
-				u.HandleQuitGame(*rq)
-			case api.SaveGame:
-				u.Log.Info().Msg("Received save request from a browser -> relay to worker")
-				u.HandleSaveGame()
-			case api.LoadGame:
-				u.Log.Info().Msg("Received load request from a browser -> relay to worker")
-				u.HandleLoadGame()
-			case api.ChangePlayer:
-				u.Log.Info().Msg("Received update player index request from a browser -> relay to worker")
-				rq := api.Unwrap[api.ChangePlayerUserRequest](p.Payload)
-				if rq == nil {
-					u.Log.Error().Msg("malformed player change request")
-					return
-				}
-				u.HandleChangePlayer(*rq)
-			case api.ToggleMultitap:
-				u.Log.Info().Msg("Received multitap request from a browser -> relay to worker")
-				u.HandleToggleMultitap()
-			case api.RecordGame:
-				u.Log.Info().Msg("Received record game request from a browser -> relay to worker")
-				if !conf.Recording.Enabled {
-					u.Log.Warn().Msg("Recording should be disabled!")
-					return
-				}
-				rq := api.Unwrap[api.RecordGameRequest](p.Payload)
-				if rq == nil {
-					u.Log.Error().Msg("malformed record game request")
-					return
-				}
-				u.HandleRecordGame(*rq)
-			case api.GetWorkerList:
-				u.Log.Info().Msg("Received get worker list request from a browser -> relay to worker")
-				u.handleGetWorkerList(conf.Coordinator.Debug, info)
-			default:
-				u.Log.Warn().Msgf("Unknown packet: %+v", p)
+		switch x.T {
+		case api.WebrtcInit:
+			if u.Worker == nil {
+				return nil
 			}
-		}()
+			u.HandleWebrtcInit()
+		case api.WebrtcAnswer:
+			rq := api.Unwrap[api.WebrtcAnswerUserRequest](x.Payload)
+			if rq == nil {
+				return api.ErrMalformed
+			}
+			u.HandleWebrtcAnswer(*rq)
+		case api.WebrtcIceCandidate:
+			rq := api.Unwrap[api.WebrtcUserIceCandidate](x.Payload)
+			if rq == nil {
+				return api.ErrMalformed
+			}
+			u.HandleWebrtcIceCandidate(*rq)
+		case api.StartGame:
+			rq := api.Unwrap[api.GameStartUserRequest](x.Payload)
+			if rq == nil {
+				return api.ErrMalformed
+			}
+			u.HandleStartGame(*rq, launcher, conf)
+		case api.QuitGame:
+			rq := api.Unwrap[api.GameQuitRequest](x.Payload)
+			if rq == nil {
+				return api.ErrMalformed
+			}
+			u.HandleQuitGame(*rq)
+		case api.SaveGame:
+			return u.HandleSaveGame()
+		case api.LoadGame:
+			return u.HandleLoadGame()
+		case api.ChangePlayer:
+			rq := api.Unwrap[api.ChangePlayerUserRequest](x.Payload)
+			if rq == nil {
+				return api.ErrMalformed
+			}
+			u.HandleChangePlayer(*rq)
+		case api.ToggleMultitap:
+			u.HandleToggleMultitap()
+		case api.RecordGame:
+			if !conf.Recording.Enabled {
+				return api.ErrForbidden
+			}
+			rq := api.Unwrap[api.RecordGameRequest](x.Payload)
+			if rq == nil {
+				return api.ErrMalformed
+			}
+			u.HandleRecordGame(*rq)
+		case api.GetWorkerList:
+			u.handleGetWorkerList(conf.Coordinator.Debug, info)
+		default:
+			u.Log.Warn().Msgf("Unknown packet: %+v", x)
+		}
+		return nil
 	})
 }
 

@@ -34,39 +34,31 @@ func NewWorkerClientServer(id network.Uid, conn *comm.SocketClient) *Worker {
 }
 
 func (w *Worker) HandleRequests(rooms *comm.NetMap, crowd *comm.NetMap) {
-	w.SocketClient.OnPacket(func(p comm.In) {
-		go func() {
-			switch p.T {
-			case api.RegisterRoom:
-				w.Log.Debug().Msgf("Received room register call %s", p.Payload)
-				rq := api.Unwrap[api.RegisterRoomRequest](p.Payload)
-				if rq == nil {
-					w.Log.Error().Msg("malformed room register request")
-					return
-				}
-				w.HandleRegisterRoom(*rq, rooms)
-				w.Log.Debug().Msgf("Rooms: %+v", rooms.List())
-			case api.CloseRoom:
-				w.Log.Debug().Msgf("Received room close call %s", p.Payload)
-				rq := api.Unwrap[api.CloseRoomRequest](p.Payload)
-				if rq == nil {
-					w.Log.Error().Msg("malformed room remove request")
-					return
-				}
-				w.HandleCloseRoom(*rq, rooms)
-				w.Log.Debug().Msgf("Current room list is: %+v", rooms.List())
-			case api.IceCandidate:
-				w.Log.Debug().Msgf("Pass ICE candidate to a user")
-				rq := api.Unwrap[api.WebrtcIceCandidateRequest](p.Payload)
-				if rq == nil {
-					w.Log.Error().Msg("malformed Ice candidate request")
-					return
-				}
-				w.HandleIceCandidate(*rq, crowd)
-			default:
-				w.Log.Warn().Msgf("Unknown packet: %+v", p)
+	// !to make a proper multithreading abstraction
+	w.OnPacket(func(p comm.In) error {
+		switch p.T {
+		case api.RegisterRoom:
+			rq := api.Unwrap[api.RegisterRoomRequest](p.Payload)
+			if rq == nil {
+				return api.ErrMalformed
 			}
-		}()
+			w.HandleRegisterRoom(*rq, rooms)
+		case api.CloseRoom:
+			rq := api.Unwrap[api.CloseRoomRequest](p.Payload)
+			if rq == nil {
+				return api.ErrMalformed
+			}
+			w.HandleCloseRoom(*rq, rooms)
+		case api.IceCandidate:
+			rq := api.Unwrap[api.WebrtcIceCandidateRequest](p.Payload)
+			if rq == nil {
+				return api.ErrMalformed
+			}
+			w.HandleIceCandidate(*rq, crowd)
+		default:
+			w.Log.Warn().Msgf("Unknown packet: %+v", p)
+		}
+		return nil
 	})
 }
 

@@ -25,6 +25,6 @@ type (
 	WebrtcUserIceCandidate  = string
 )
 
-func InitSessionResult(ice []IceServer, games []string, wid string) (uint8, InitSessionUserResponse) {
+func InitSessionResult(ice []IceServer, games []string, wid string) (PT, InitSessionUserResponse) {
 	return InitSession, InitSessionUserResponse{Ice: ice, Games: games, Wid: wid}
 }

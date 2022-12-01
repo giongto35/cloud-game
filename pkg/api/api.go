@@ -1,53 +1,94 @@
 package api
 
 import (
-	"errors"
+	"fmt"
 
 	"github.com/giongto35/cloud-game/v2/pkg/network"
 	"github.com/goccy/go-json"
 )
 
-type (
-	PType    = uint8
-	Stateful struct {
-		Id network.Uid `json:"id"`
-	}
+type Stateful struct {
+	Id network.Uid `json:"id"`
+}
+
+type PT uint8
+
+// Packet codes:
+//
+//	x, 1xx - user codes
+//	2xx - worker codes
+const (
+	CheckLatency       PT = 3
+	InitSession        PT = 4
+	WebrtcInit         PT = 100
+	WebrtcOffer        PT = 101
+	WebrtcAnswer       PT = 102
+	WebrtcIceCandidate PT = 103
+	StartGame          PT = 104
+	ChangePlayer       PT = 108
+	QuitGame           PT = 105
+	SaveGame           PT = 106
+	LoadGame           PT = 107
+	ToggleMultitap     PT = 109
+	RecordGame         PT = 110
+	GetWorkerList      PT = 111
+	RegisterRoom       PT = 201
+	CloseRoom          PT = 202
+	IceCandidate          = WebrtcIceCandidate
+	TerminateSession   PT = 204
 )
 
-// Various codes
+func (p PT) String() string {
+	switch p {
+	case CheckLatency:
+		return "CheckLatency"
+	case InitSession:
+		return "InitSession"
+	case WebrtcInit:
+		return "WebrtcInit"
+	case WebrtcOffer:
+		return "WebrtcOffer"
+	case WebrtcAnswer:
+		return "WebrtcAnswer"
+	case WebrtcIceCandidate:
+		return "WebrtcIceCandidate"
+	case StartGame:
+		return "StartGame"
+	case ChangePlayer:
+		return "ChangePlayer"
+	case QuitGame:
+		return "QuitGame"
+	case SaveGame:
+		return "SaveGame"
+	case LoadGame:
+		return "LoadGame"
+	case ToggleMultitap:
+		return "ToggleMultitap"
+	case RecordGame:
+		return "RecordGame"
+	case GetWorkerList:
+		return "GetWorkerList"
+	case RegisterRoom:
+		return "RegisterRoom"
+	case CloseRoom:
+		return "CloseRoom"
+	case TerminateSession:
+		return "TerminateSession"
+	default:
+		return "Unknown"
+	}
+}
 
+// Various codes
 const (
 	EMPTY = ""
 	OK    = "ok"
 )
 
-// User
-const (
-	CheckLatency       PType = 3
-	InitSession        PType = 4
-	WebrtcInit         PType = 100
-	WebrtcOffer        PType = 101
-	WebrtcAnswer       PType = 102
-	WebrtcIceCandidate PType = 103
-	StartGame          PType = 104
-	ChangePlayer       PType = 108
-	QuitGame           PType = 105
-	SaveGame           PType = 106
-	LoadGame           PType = 107
-	ToggleMultitap     PType = 109
-	RecordGame         PType = 110
-	GetWorkerList      PType = 111
+var (
+	ErrForbidden = fmt.Errorf("forbidden")
+	ErrMalformed = fmt.Errorf("malformed")
 )
-
-// Worker
-const (
-	RegisterRoom     PType = 2
-	CloseRoom        PType = 3
-	IceCandidate           = WebrtcIceCandidate
-	TerminateSession PType = 5
-)
-
-var ErrMalformed = errors.New("malformed")
 
 func Unwrap[T any](data []byte) *T {
 	out := new(T)

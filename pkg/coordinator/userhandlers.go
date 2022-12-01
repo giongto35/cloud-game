@@ -10,9 +10,6 @@ import (
 )
 
 func (u *User) HandleWebrtcInit() {
-	if u.Worker == nil {
-		return
-	}
 	resp, err := u.Worker.WebrtcInit(u.Id())
 	if err != nil || resp == nil || *resp == api.EMPTY {
 		u.Log.Error().Err(err).Msg("malformed WebRTC init response")
@@ -63,24 +60,26 @@ func (u *User) HandleStartGame(rq api.GameStartUserRequest, launcher launcher.La
 	}
 }
 
-func (u *User) HandleQuitGame(rq api.GameQuitRequest) { u.Worker.QuitGame(u.Id(), rq.Room.Rid) }
-
-func (u *User) HandleSaveGame() {
-	resp, err := u.Worker.SaveGame(u.Id(), u.RoomID)
-	if err != nil {
-		u.Log.Error().Err(err).Msg("malformed game save request")
-		return
-	}
-	u.Notify(api.SaveGame, resp)
+func (u *User) HandleQuitGame(rq api.GameQuitRequest) {
+	u.Worker.QuitGame(u.Id(), rq.Room.Rid)
 }
 
-func (u *User) HandleLoadGame() {
+func (u *User) HandleSaveGame() error {
+	resp, err := u.Worker.SaveGame(u.Id(), u.RoomID)
+	if err != nil {
+		return err
+	}
+	u.Notify(api.SaveGame, resp)
+	return nil
+}
+
+func (u *User) HandleLoadGame() error {
 	resp, err := u.Worker.LoadGame(u.Id(), u.RoomID)
 	if err != nil {
-		u.Log.Error().Err(err).Msg("malformed game load request")
-		return
+		return err
 	}
 	u.Notify(api.LoadGame, resp)
+	return nil
 }
 
 func (u *User) HandleChangePlayer(rq api.ChangePlayerUserRequest) {
