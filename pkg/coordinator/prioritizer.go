@@ -8,7 +8,7 @@ import (
 )
 
 func (h *Hub) findWorkerByRoom(id string, region string) *Worker {
-	w, err := h.rooms.Find(id)
+	w, err := h.rooms2workers.Find(id)
 	if err == nil {
 		if w.(comm.RegionalClient).In(region) {
 			return w.(*Worker)
@@ -20,10 +20,16 @@ func (h *Hub) findWorkerByRoom(id string, region string) *Worker {
 }
 
 func (h *Hub) getAvailableWorkers(region string) []*Worker {
-	return h.guild.filter(func(w *Worker) bool { return w.HasGameSlot() && w.In(region) })
+	var workers []*Worker
+	h.workers.ForEach(func(w *Worker) {
+		if w.HasGameSlot() && w.In(region) {
+			workers = append(workers, w)
+		}
+	})
+	return workers
 }
 
-func (h *Hub) findAnyFreeWorker(region string) *Worker {
+func (h *Hub) find1stFreeWorker(region string) *Worker {
 	workers := h.getAvailableWorkers(region)
 	if len(workers) > 0 {
 		return workers[0]

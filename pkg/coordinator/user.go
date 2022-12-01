@@ -33,6 +33,9 @@ func (u *User) SetWorker(w *Worker) {
 }
 
 func (u *User) FreeWorker() {
+	if u.Worker == nil {
+		return
+	}
 	u.Worker.ChangeUserQuantityBy(-1)
 	if u.Worker != nil {
 		u.Worker.TerminateSession(u.Id())

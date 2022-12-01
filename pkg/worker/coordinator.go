@@ -22,6 +22,8 @@ func newCoordinatorConnection(host string, conf worker.Worker, addr string, log 
 	}
 	address := url.URL{Scheme: scheme, Host: host, Path: conf.Network.Endpoint}
 
+	log.Info().Str("c", "c").Str("d", "→").Msgf("Handshake %s", address.String())
+
 	id := network.NewUid()
 	req, err := MakeConnectionRequest(id.String(), conf, addr)
 	if req != "" && err == nil {

@@ -15,25 +15,18 @@ type testClient struct {
 }
 
 func (t *testClient) Id() network.Uid { return network.Uid(fmt.Sprintf("%v", t.id)) }
-func (t *testClient) Close()          {}
 func (t *testClient) change(n int)    { atomic.AddInt32(&t.c, int32(n)) }
 
 func TestPointerValue(t *testing.T) {
-	m := NewNetMap()
+	m := NewNetMap[*testClient]()
 	c := testClient{id: 1}
 	m.Add(&c)
-	fc, _ := m.FindBy(func(c NetClient) bool {
-		cc := c.(*testClient)
-		if cc.id == 1 {
-			return true
-		}
-		return false
-	})
+	fc, _ := m.FindBy(func(c *testClient) bool { return c.id == 1 })
 	c.change(100)
-	fc2, _ := m.Find(fc.(*testClient).Id().String())
+	fc2, _ := m.Find(fc.Id().String())
 
-	expected := c.c == fc.(*testClient).c && c.c == fc2.(*testClient).c
+	expected := c.c == fc.c && c.c == fc2.c
 	if !expected {
-		t.Errorf("not expected change, o: %v != %v != %v", c.c, fc.(*testClient).c, fc2.(*testClient).c)
+		t.Errorf("not expected change, o: %v != %v != %v", c.c, fc.c, fc2.c)
 	}
 }

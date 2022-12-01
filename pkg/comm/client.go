@@ -47,7 +47,7 @@ type SocketClient struct {
 }
 
 func New(conn *Client, tag string, id network.Uid, log *logger.Logger) SocketClient {
-	l := log.Extend(log.With().Str("cid", id.Short())) //.Str("c", Tag))
+	l := log.Extend(log.With().Str("cid", id.Short()))
 	return SocketClient{id: id, wire: conn, Tag: tag, Log: l}
 }
 func (c SocketClient) OnPacket(fn func(p In) error) {
@@ -68,11 +68,10 @@ func (c SocketClient) Notify(t api.PT, data any) {
 	_ = c.wire.Send(t, data)
 }
 
-func (c SocketClient) Close()                    { c.wire.Close() }
-func (c SocketClient) GetLogger() *logger.Logger { return c.Log }
-func (c SocketClient) Id() network.Uid           { return c.id }
-func (c SocketClient) Listen()                   { c.ProcessMessages(); c.Wait() }
-func (c SocketClient) ProcessMessages()          { c.wire.Listen() }
-func (c SocketClient) Route(p In, pl Out)        { _ = c.wire.Route(p, pl) }
-func (c SocketClient) String() string            { return c.Tag + ":" + string(c.Id()) }
-func (c SocketClient) Wait()                     { <-c.wire.Wait() }
+func (c SocketClient) Close()               { c.wire.Close() }
+func (c SocketClient) Id() network.Uid      { return c.id }
+func (c SocketClient) Listen()              { c.ProcessMessages(); c.Wait() }
+func (c SocketClient) ProcessMessages()     { c.wire.Listen() }
+func (c SocketClient) Route(in In, out Out) { _ = c.wire.Route(in, out) }
+func (c SocketClient) String() string       { return c.Tag + ":" + string(c.Id()) }
+func (c SocketClient) Wait()                { <-c.wire.Wait() }

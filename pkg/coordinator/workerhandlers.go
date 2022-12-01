@@ -15,18 +15,17 @@ func GetConnectionRequest(data string) (*api.ConnectionRequest, error) {
 	return api.UnwrapChecked[api.ConnectionRequest](base64.URLEncoding.DecodeString(data))
 }
 
-func (w *Worker) HandleRegisterRoom(rq api.RegisterRoomRequest, rooms *comm.NetMap) {
+func (w *Worker) HandleRegisterRoom(rq api.RegisterRoomRequest, rooms *comm.NetMap[comm.NetClient]) {
 	rooms.Put(rq, w)
 }
 
-func (w *Worker) HandleCloseRoom(rq api.CloseRoomRequest, rooms *comm.NetMap) {
+func (w *Worker) HandleCloseRoom(rq api.CloseRoomRequest, rooms *comm.NetMap[comm.NetClient]) {
 	rooms.RemoveByKey(rq)
 }
 
-func (w *Worker) HandleIceCandidate(rq api.WebrtcIceCandidateRequest, crowd *comm.NetMap) {
+func (w *Worker) HandleIceCandidate(rq api.WebrtcIceCandidateRequest, crowd *comm.NetMap[*User]) {
 	if usr, err := crowd.Find(string(rq.Id)); err == nil {
-		u := usr.(*User)
-		u.SendWebrtcIceCandidate(rq.Candidate)
+		usr.SendWebrtcIceCandidate(rq.Candidate)
 	} else {
 		w.Log.Warn().Str("id", rq.Id.String()).Msg("unknown session")
 	}

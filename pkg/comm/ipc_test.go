@@ -9,6 +9,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/giongto35/cloud-game/v2/pkg/api"
 	"github.com/giongto35/cloud-game/v2/pkg/logger"
 	"github.com/giongto35/cloud-game/v2/pkg/network/websocket"
 )
@@ -72,7 +73,7 @@ func testWebsocket(t *testing.T) {
 	client.Listen()
 
 	calls := []struct {
-		typ        uint8
+		typ        api.PT
 		payload    any
 		concurrent bool
 		value      any

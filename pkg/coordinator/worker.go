@@ -29,11 +29,10 @@ func NewWorkerClientServer(id network.Uid, conn *comm.SocketClient) *Worker {
 	} else {
 		id = network.NewUid()
 	}
-	defer conn.Log.Info().Msg("Connect")
 	return &Worker{SocketClient: conn}
 }
 
-func (w *Worker) HandleRequests(rooms *comm.NetMap, crowd *comm.NetMap) {
+func (w *Worker) HandleRequests(rooms *comm.NetMap[comm.NetClient], users *comm.NetMap[*User]) {
 	// !to make a proper multithreading abstraction
 	w.OnPacket(func(p comm.In) error {
 		switch p.T {
@@ -54,7 +53,7 @@ func (w *Worker) HandleRequests(rooms *comm.NetMap, crowd *comm.NetMap) {
 			if rq == nil {
 				return api.ErrMalformed
 			}
-			w.HandleIceCandidate(*rq, crowd)
+			w.HandleIceCandidate(*rq, users)
 		default:
 			w.Log.Warn().Msgf("Unknown packet: %+v", p)
 		}

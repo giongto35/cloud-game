@@ -48,7 +48,7 @@ func (h *Handler) Run() {
 			continue
 		}
 		h.cord = *conn
-		h.cord.GetLogger().Info().Msgf("Connected to the coordinator %v", remoteAddr)
+		h.cord.Log.Info().Msgf("Connected to the coordinator %v", remoteAddr)
 		h.cord.HandleRequests(h)
 		h.cord.Listen()
 		// block
