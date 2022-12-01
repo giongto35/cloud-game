@@ -1,4 +1,4 @@
-package comm
+package com
 
 import (
 	"encoding/json"
@@ -50,7 +50,10 @@ func New(conn *Client, tag string, id network.Uid, log *logger.Logger) SocketCli
 	l := log.Extend(log.With().Str("cid", id.Short()))
 	return SocketClient{id: id, wire: conn, Tag: tag, Log: l}
 }
-func (c SocketClient) OnPacket(fn func(p In) error) {
+
+func (c *SocketClient) SetId(id network.Uid) { c.id = id }
+
+func (c *SocketClient) OnPacket(fn func(p In) error) {
 	logFn := func(p In) {
 		c.Log.Info().Str("c", c.Tag).Str("d", "←").Msgf("%s", p.T)
 		if err := fn(p); err != nil {
@@ -59,19 +62,23 @@ func (c SocketClient) OnPacket(fn func(p In) error) {
 	}
 	c.wire.OnPacket(logFn)
 }
-func (c SocketClient) Send(t api.PT, data any) ([]byte, error) {
+
+// Send makes a blocking call.
+func (c *SocketClient) Send(t api.PT, data any) ([]byte, error) {
 	c.Log.Info().Str("c", c.Tag).Str("d", "→").Msgf("ᵇ%s", t)
 	return c.wire.Call(t, data)
 }
-func (c SocketClient) Notify(t api.PT, data any) {
+
+// Notify just sends a message and goes further.
+func (c *SocketClient) Notify(t api.PT, data any) {
 	c.Log.Info().Str("c", c.Tag).Str("d", "→").Msgf("%s", t)
 	_ = c.wire.Send(t, data)
 }
 
-func (c SocketClient) Close()               { c.wire.Close() }
-func (c SocketClient) Id() network.Uid      { return c.id }
-func (c SocketClient) Listen()              { c.ProcessMessages(); c.Wait() }
-func (c SocketClient) ProcessMessages()     { c.wire.Listen() }
-func (c SocketClient) Route(in In, out Out) { _ = c.wire.Route(in, out) }
-func (c SocketClient) String() string       { return c.Tag + ":" + string(c.Id()) }
-func (c SocketClient) Wait()                { <-c.wire.Wait() }
+func (c *SocketClient) Close()               { c.wire.Close() }
+func (c *SocketClient) Id() network.Uid      { return c.id }
+func (c *SocketClient) Listen()              { c.ProcessMessages(); c.Wait() }
+func (c *SocketClient) ProcessMessages()     { c.wire.Listen() }
+func (c *SocketClient) Route(in In, out Out) { _ = c.wire.Route(in, out) }
+func (c *SocketClient) String() string       { return c.Tag + ":" + string(c.Id()) }
+func (c *SocketClient) Wait()                { <-c.wire.Wait() }

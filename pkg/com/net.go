@@ -1,4 +1,4 @@
-package comm
+package com
 
 import (
 	"errors"
@@ -73,7 +73,6 @@ func (co *Connector) NewClientServer(w http.ResponseWriter, r *http.Request, log
 		return nil, err
 	}
 	c := New(conn, co.tag, network.NewUid(), log)
-	defer log.Info().Msg("Connect")
 	return &c, nil
 }
 

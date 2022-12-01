@@ -2,13 +2,13 @@ package coordinator
 
 import (
 	"github.com/giongto35/cloud-game/v2/pkg/api"
-	"github.com/giongto35/cloud-game/v2/pkg/comm"
+	"github.com/giongto35/cloud-game/v2/pkg/com"
 	"github.com/giongto35/cloud-game/v2/pkg/config/coordinator"
 	"github.com/giongto35/cloud-game/v2/pkg/launcher"
 )
 
 type User struct {
-	*comm.SocketClient
+	com.SocketClient
 
 	RoomID string
 	Worker *Worker
@@ -18,32 +18,33 @@ type ServerInfo interface {
 	getServerList() []api.Server
 }
 
-func NewUserClientServer(conn *comm.SocketClient, err error) (*User, error) {
+func NewUserClientServer(conn *com.SocketClient, err error) (*User, error) {
 	if err != nil {
 		return nil, err
 	}
-	return &User{SocketClient: conn}, nil
+	return &User{SocketClient: *conn}, nil
 }
 
 func (u *User) SetRoom(id string) { u.RoomID = id }
 
 func (u *User) SetWorker(w *Worker) {
 	u.Worker = w
-	u.Worker.ChangeUserQuantityBy(1)
+	u.Worker.SetSlots(-1)
 }
 
-func (u *User) FreeWorker() {
+func (u *User) Disconnect() {
+	u.SocketClient.Close()
 	if u.Worker == nil {
 		return
 	}
-	u.Worker.ChangeUserQuantityBy(-1)
+	u.Worker.SetSlots(+1)
 	if u.Worker != nil {
 		u.Worker.TerminateSession(u.Id())
 	}
 }
 
 func (u *User) HandleRequests(info ServerInfo, launcher launcher.Launcher, conf coordinator.Config) {
-	u.OnPacket(func(x comm.In) error {
+	u.OnPacket(func(x com.In) error {
 		// !to use proper channels
 		switch x.T {
 		case api.WebrtcInit:
@@ -103,10 +104,4 @@ func (u *User) HandleRequests(info ServerInfo, launcher launcher.Launcher, conf 
 		}
 		return nil
 	})
-}
-
-func (u *User) Disconnect() {
-	u.SocketClient.Close()
-	u.FreeWorker()
-	u.Log.Info().Msg("Disconnect")
 }

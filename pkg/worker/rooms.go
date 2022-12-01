@@ -3,8 +3,8 @@ package worker
 import "sync"
 
 type Rooms struct {
-	mu    sync.Mutex
 	store map[string]*Room
+	mu    sync.Mutex
 }
 
 func NewRooms() Rooms { return Rooms{store: make(map[string]*Room, 10)} }

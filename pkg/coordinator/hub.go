@@ -4,7 +4,7 @@ import (
 	"net/http"
 
 	"github.com/giongto35/cloud-game/v2/pkg/api"
-	"github.com/giongto35/cloud-game/v2/pkg/comm"
+	"github.com/giongto35/cloud-game/v2/pkg/com"
 	"github.com/giongto35/cloud-game/v2/pkg/config/coordinator"
 	"github.com/giongto35/cloud-game/v2/pkg/games"
 	"github.com/giongto35/cloud-game/v2/pkg/launcher"
@@ -18,29 +18,29 @@ type Hub struct {
 
 	conf          coordinator.Config
 	launcher      launcher.Launcher
-	users         comm.NetMap[*User]
-	workers       comm.NetMap[*Worker]
-	rooms2workers comm.NetMap[comm.NetClient]
+	users         com.NetMap[*User]
+	workers       com.NetMap[*Worker]
+	rooms2workers com.NetMap[com.NetClient]
 	log           *logger.Logger
 
-	wConn, uConn *comm.Connector
+	wConn, uConn *com.Connector
 }
 
 func NewHub(conf coordinator.Config, lib games.GameLibrary, log *logger.Logger) *Hub {
 	return &Hub{
 		conf:          conf,
-		users:         comm.NewNetMap[*User](),
-		workers:       comm.NewNetMap[*Worker](),
-		rooms2workers: comm.NewNetMap[comm.NetClient](),
+		users:         com.NewNetMap[*User](),
+		workers:       com.NewNetMap[*Worker](),
+		rooms2workers: com.NewNetMap[com.NetClient](),
 		launcher:      launcher.NewGameLauncher(lib),
 		log:           log,
-		wConn: comm.NewConnector(
-			comm.WithOrigin(conf.Coordinator.Origin.WorkerWs),
-			comm.WithTag("w"),
+		wConn: com.NewConnector(
+			com.WithOrigin(conf.Coordinator.Origin.WorkerWs),
+			com.WithTag("w"),
 		),
-		uConn: comm.NewConnector(
-			comm.WithOrigin(conf.Coordinator.Origin.UserWs),
-			comm.WithTag("u"),
+		uConn: com.NewConnector(
+			com.WithOrigin(conf.Coordinator.Origin.UserWs),
+			com.WithTag("u"),
 		),
 	}
 }
@@ -111,21 +111,26 @@ func (h *Hub) handleWorkerConnection(w http.ResponseWriter, r *http.Request) {
 		h.log.Error().Err(err).Msg("couldn't init worker connection")
 		return
 	}
-	wc := NewWorkerClientServer(network.Uid(handshake.Id), conn)
-	defer func() {
-		if wc == nil {
-			return
-		}
-		wc.Disconnect()
-		h.workers.Remove(wc)
-		h.rooms2workers.RemoveAll(wc)
-	}()
 
+	wc := &Worker{SocketClient: *conn}
 	wc.Addr = handshake.Addr
 	wc.Zone = handshake.Zone
 	wc.PingServer = handshake.PingURL
 	wc.Port = handshake.Port
 	wc.Tag = handshake.Tag
+	// we duplicate uid from the handshake
+	hid := network.Uid(handshake.Id)
+	if !(handshake.Id == "" || !network.ValidUid(hid)) {
+		conn.SetId(hid)
+		wc.Log.Info().Msgf("worker connection id has changed to %s", hid)
+	}
+	defer func() {
+		if wc != nil {
+			wc.Disconnect()
+			h.workers.Remove(wc)
+			h.rooms2workers.RemoveAll(wc)
+		}
+	}()
 
 	h.log.Info().Msgf("New worker -- addr: %v, port: %v, zone: %v, ping addr: %v, tag: %v",
 		wc.Addr, wc.Port, wc.Zone, wc.PingServer, wc.Tag)

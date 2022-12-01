@@ -3,14 +3,14 @@ package coordinator
 import (
 	"bytes"
 
-	"github.com/giongto35/cloud-game/v2/pkg/comm"
+	"github.com/giongto35/cloud-game/v2/pkg/com"
 	"github.com/rs/xid"
 )
 
 func (h *Hub) findWorkerByRoom(id string, region string) *Worker {
 	w, err := h.rooms2workers.Find(id)
 	if err == nil {
-		if w.(comm.RegionalClient).In(region) {
+		if w.(com.RegionalClient).In(region) {
 			return w.(*Worker)
 		}
 		// if there is zone param, we need to ensure the worker in that zone,

@@ -4,7 +4,7 @@ import (
 	"net/url"
 
 	"github.com/giongto35/cloud-game/v2/pkg/api"
-	"github.com/giongto35/cloud-game/v2/pkg/comm"
+	"github.com/giongto35/cloud-game/v2/pkg/com"
 	"github.com/giongto35/cloud-game/v2/pkg/config/worker"
 	"github.com/giongto35/cloud-game/v2/pkg/logger"
 	"github.com/giongto35/cloud-game/v2/pkg/network"
@@ -12,7 +12,7 @@ import (
 )
 
 type Coordinator struct {
-	comm.SocketClient
+	com.SocketClient
 }
 
 func newCoordinatorConnection(host string, conf worker.Worker, addr string, log *logger.Logger) (*Coordinator, error) {
@@ -29,11 +29,11 @@ func newCoordinatorConnection(host string, conf worker.Worker, addr string, log 
 	if req != "" && err == nil {
 		address.RawQuery = "data=" + req
 	}
-	conn, err := comm.NewConnector().NewClient(address, log)
+	conn, err := com.NewConnector().NewClient(address, log)
 	if err != nil {
 		return nil, err
 	}
-	return &Coordinator{SocketClient: comm.New(conn, "c", id, log)}, nil
+	return &Coordinator{SocketClient: com.New(conn, "c", id, log)}, nil
 }
 
 func (c *Coordinator) HandleRequests(h *Handler) {
@@ -41,7 +41,7 @@ func (c *Coordinator) HandleRequests(h *Handler) {
 	if err != nil {
 		c.Log.Panic().Err(err).Msg("WebRTC API creation has been failed")
 	}
-	c.OnPacket(func(x comm.In) (err error) {
+	c.OnPacket(func(x com.In) (err error) {
 		switch x.T {
 		case api.TerminateSession:
 			dat := api.Unwrap[api.TerminateSessionRequest](x.Payload)
@@ -50,9 +50,9 @@ func (c *Coordinator) HandleRequests(h *Handler) {
 			}
 			c.HandleTerminateSession(*dat, h)
 		case api.WebrtcInit:
-			var out comm.Out
+			var out com.Out
 			if dat := api.Unwrap[api.WebrtcInitRequest](x.Payload); dat == nil {
-				err, out = api.ErrMalformed, comm.EmptyPacket
+				err, out = api.ErrMalformed, com.EmptyPacket
 			} else {
 				out = c.HandleWebrtcInit(*dat, h, ap)
 			}
@@ -70,9 +70,9 @@ func (c *Coordinator) HandleRequests(h *Handler) {
 			}
 			c.HandleWebrtcIceCandidate(*dat, h)
 		case api.StartGame:
-			var out comm.Out
+			var out com.Out
 			if dat := api.Unwrap[api.StartGameRequest](x.Payload); dat == nil {
-				err, out = api.ErrMalformed, comm.EmptyPacket
+				err, out = api.ErrMalformed, com.EmptyPacket
 			} else {
 				out = c.HandleGameStart(*dat, h)
 			}
@@ -84,41 +84,41 @@ func (c *Coordinator) HandleRequests(h *Handler) {
 			}
 			c.HandleQuitGame(*dat, h)
 		case api.SaveGame:
-			var out comm.Out
+			var out com.Out
 			if dat := api.Unwrap[api.SaveGameRequest](x.Payload); dat == nil {
-				err, out = api.ErrMalformed, comm.EmptyPacket
+				err, out = api.ErrMalformed, com.EmptyPacket
 			} else {
 				out = c.HandleSaveGame(*dat, h)
 			}
 			h.cord.Route(x, out)
 		case api.LoadGame:
-			var out comm.Out
+			var out com.Out
 			if dat := api.Unwrap[api.LoadGameRequest](x.Payload); dat == nil {
-				err, out = api.ErrMalformed, comm.EmptyPacket
+				err, out = api.ErrMalformed, com.EmptyPacket
 			} else {
 				out = c.HandleLoadGame(*dat, h)
 			}
 			h.cord.Route(x, out)
 		case api.ChangePlayer:
-			var out comm.Out
+			var out com.Out
 			if dat := api.Unwrap[api.ChangePlayerRequest](x.Payload); dat == nil {
-				err, out = api.ErrMalformed, comm.EmptyPacket
+				err, out = api.ErrMalformed, com.EmptyPacket
 			} else {
 				out = c.HandleChangePlayer(*dat, h)
 			}
 			h.cord.Route(x, out)
 		case api.ToggleMultitap:
-			var out comm.Out
+			var out com.Out
 			if dat := api.Unwrap[api.ToggleMultitapRequest](x.Payload); dat == nil {
-				err, out = api.ErrMalformed, comm.EmptyPacket
+				err, out = api.ErrMalformed, com.EmptyPacket
 			} else {
 				c.HandleToggleMultitap(*dat, h)
 			}
 			h.cord.Route(x, out)
 		case api.RecordGame:
-			var out comm.Out
+			var out com.Out
 			if dat := api.Unwrap[api.RecordGameRequest](x.Payload); dat == nil {
-				err, out = api.ErrMalformed, comm.EmptyPacket
+				err, out = api.ErrMalformed, com.EmptyPacket
 			} else {
 				c.HandleRecordGame(*dat, h)
 			}

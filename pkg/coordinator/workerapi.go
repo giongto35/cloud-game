@@ -12,10 +12,7 @@ func (w *Worker) WebrtcInit(id network.Uid) (*api.WebrtcInitResponse, error) {
 }
 
 func (w *Worker) WebrtcAnswer(id network.Uid, sdp string) {
-	w.Notify(api.WebrtcAnswer, api.WebrtcAnswerRequest{
-		Stateful: api.Stateful{Id: id},
-		Sdp:      sdp,
-	})
+	w.Notify(api.WebrtcAnswer, api.WebrtcAnswerRequest{Stateful: api.Stateful{Id: id}, Sdp: sdp})
 }
 
 func (w *Worker) WebrtcIceCandidate(id network.Uid, can string) {
@@ -35,25 +32,17 @@ func (w *Worker) StartGame(id network.Uid, app launcher.AppMeta, req api.GameSta
 }
 
 func (w *Worker) QuitGame(id network.Uid, roomId string) {
-	w.Notify(api.QuitGame, api.GameQuitRequest{
-		Stateful: api.Stateful{Id: id},
-		Room:     api.Room{Rid: roomId},
-	})
+	w.Notify(api.QuitGame, api.GameQuitRequest{Stateful: api.Stateful{Id: id}, Room: api.Room{Rid: roomId}})
 }
 
 func (w *Worker) SaveGame(id network.Uid, roomId string) (*api.SaveGameResponse, error) {
 	return api.UnwrapChecked[api.SaveGameResponse](
-		w.Send(api.SaveGame, api.SaveGameRequest{
-			Stateful: api.Stateful{Id: id},
-			Room:     api.Room{Rid: roomId},
-		}))
+		w.Send(api.SaveGame, api.SaveGameRequest{Stateful: api.Stateful{Id: id}, Room: api.Room{Rid: roomId}}))
 }
 
 func (w *Worker) LoadGame(id network.Uid, roomId string) (*api.LoadGameResponse, error) {
-	return api.UnwrapChecked[api.LoadGameResponse](w.Send(api.LoadGame, api.LoadGameRequest{
-		Stateful: api.Stateful{Id: id},
-		Room:     api.Room{Rid: roomId},
-	}))
+	return api.UnwrapChecked[api.LoadGameResponse](
+		w.Send(api.LoadGame, api.LoadGameRequest{Stateful: api.Stateful{Id: id}, Room: api.Room{Rid: roomId}}))
 }
 
 func (w *Worker) ChangePlayer(id network.Uid, roomId string, index int) (*api.ChangePlayerResponse, error) {
@@ -66,10 +55,7 @@ func (w *Worker) ChangePlayer(id network.Uid, roomId string, index int) (*api.Ch
 }
 
 func (w *Worker) ToggleMultitap(id network.Uid, roomId string) {
-	_, _ = w.Send(api.ToggleMultitap, api.ToggleMultitapRequest{
-		Stateful: api.Stateful{Id: id},
-		Room:     api.Room{Rid: roomId},
-	})
+	_, _ = w.Send(api.ToggleMultitap, api.ToggleMultitapRequest{Stateful: api.Stateful{Id: id}, Room: api.Room{Rid: roomId}})
 }
 
 func (w *Worker) RecordGame(id network.Uid, roomId string, rec bool, recUser string) (*api.RecordGameResponse, error) {

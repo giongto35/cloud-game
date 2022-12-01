@@ -4,14 +4,12 @@ import (
 	"sync/atomic"
 
 	"github.com/giongto35/cloud-game/v2/pkg/api"
-	"github.com/giongto35/cloud-game/v2/pkg/comm"
-	"github.com/giongto35/cloud-game/v2/pkg/network"
-	"github.com/rs/xid"
+	"github.com/giongto35/cloud-game/v2/pkg/com"
 )
 
 type Worker struct {
-	*comm.SocketClient
-	comm.RegionalClient
+	com.SocketClient
+	com.RegionalClient
 
 	Addr       string
 	PingServer string
@@ -21,20 +19,9 @@ type Worker struct {
 	Zone       string
 }
 
-func NewWorkerClientServer(id network.Uid, conn *comm.SocketClient) *Worker {
-	if id != "" {
-		if _, err := xid.FromString(string(id)); err != nil {
-			id = network.NewUid()
-		}
-	} else {
-		id = network.NewUid()
-	}
-	return &Worker{SocketClient: conn}
-}
-
-func (w *Worker) HandleRequests(rooms *comm.NetMap[comm.NetClient], users *comm.NetMap[*User]) {
+func (w *Worker) HandleRequests(rooms *com.NetMap[com.NetClient], users *com.NetMap[*User]) {
 	// !to make a proper multithreading abstraction
-	w.OnPacket(func(p comm.In) error {
+	w.OnPacket(func(p com.In) error {
 		switch p.T {
 		case api.RegisterRoom:
 			rq := api.Unwrap[api.RegisterRoomRequest](p.Payload)
@@ -65,11 +52,10 @@ func (w *Worker) HandleRequests(rooms *comm.NetMap[comm.NetClient], users *comm.
 // Empty region always returns true.
 func (w *Worker) In(region string) bool { return region == "" || region == w.Zone }
 
-// ChangeUserQuantityBy increases or decreases the total number of
-// users connected to the current worker.
-// We count users to determine when the worker becomes new game ready.
-func (w *Worker) ChangeUserQuantityBy(n int) {
-	if atomic.AddInt32(&w.users, int32(n)) < 0 {
+// SetSlots adds or removes user slots of the worker.
+// We count users to determine when the worker becomes ready for a game.
+func (w *Worker) SetSlots(n int) {
+	if atomic.AddInt32(&w.users, -int32(n)) < 0 {
 		atomic.StoreInt32(&w.users, 0)
 	}
 }
@@ -78,7 +64,4 @@ func (w *Worker) ChangeUserQuantityBy(n int) {
 // Workers support only one game at a time.
 func (w *Worker) HasGameSlot() bool { return atomic.LoadInt32(&w.users) == 0 }
 
-func (w *Worker) Disconnect() {
-	w.SocketClient.Close()
-	w.Log.Info().Msg("Disconnect")
-}
+func (w *Worker) Disconnect() { w.SocketClient.Close() }
