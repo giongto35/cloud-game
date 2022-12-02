@@ -41,6 +41,7 @@ type (
 	deadlineConn struct {
 		*websocket.Conn
 		wt time.Duration
+		mu sync.Mutex // needed for concurrent writes of Gorilla
 	}
 )
 
@@ -48,7 +49,15 @@ func (conn *deadlineConn) write(t int, mess []byte) error {
 	if err := conn.SetWriteDeadline(time.Now().Add(conn.wt)); err != nil {
 		return err
 	}
+	conn.mu.Lock()
+	defer conn.mu.Unlock()
 	return conn.WriteMessage(t, mess)
+}
+
+func (conn *deadlineConn) writeControl(messageType int, data []byte, deadline time.Time) error {
+	conn.mu.Lock()
+	defer conn.mu.Unlock()
+	return conn.Conn.WriteControl(messageType, data, deadline)
 }
 
 var DefaultUpgrader = Upgrader{
@@ -117,7 +126,7 @@ func (ws *WS) reader() {
 	} else {
 		ws.conn.SetPingHandler(func(string) error {
 			_ = ws.conn.SetReadDeadline(time.Now().Add(pongTime))
-			err := ws.conn.WriteControl(websocket.PongMessage, nil, time.Now().Add(writeWait))
+			err := ws.conn.writeControl(websocket.PongMessage, nil, time.Now().Add(writeWait))
 			if err == websocket.ErrCloseSent {
 				return nil
 			} else if e, ok := err.(net.Error); ok && e.Timeout() {
