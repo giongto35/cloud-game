@@ -89,6 +89,8 @@ func connect(conn *websocket.WS, err error) (*Client, error) {
 	return client, nil
 }
 
+func (c *Client) IsServer() bool { return c.conn.IsServer() }
+
 func (c *Client) OnPacket(fn func(packet In)) { c.mu.Lock(); c.onPacket = fn; c.mu.Unlock() }
 
 func (c *Client) Listen() { c.mu.Lock(); c.conn.Listen(); c.mu.Unlock() }
@@ -159,11 +161,10 @@ func (c *Client) handleMessage(message []byte, err error) {
 		return
 	}
 
-	if res.Id != network.EmptyUid {
-		task := c.pop(res.Id)
-		if task != nil {
+	if !res.Id.Empty() {
+		if task := c.pop(res.Id); task != nil {
 			task.Response = res
-			task.done <- struct{}{}
+			close(task.done)
 			return
 		}
 	}
@@ -172,19 +173,19 @@ func (c *Client) handleMessage(message []byte, err error) {
 
 func (c *Client) pop(id network.Uid) *call {
 	c.mu.Lock()
-	defer c.mu.Unlock()
 	task := c.queue[id]
 	delete(c.queue, id)
+	c.mu.Unlock()
 	return task
 }
 
 func (c *Client) drain(err error) {
 	c.mu.Lock()
-	defer c.mu.Unlock()
 	for _, task := range c.queue {
 		if task.err == nil {
 			task.err = err
 		}
-		task.done <- struct{}{}
+		close(task.done)
 	}
+	c.mu.Unlock()
 }

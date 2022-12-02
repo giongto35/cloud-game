@@ -1,7 +1,7 @@
 package api
 
 type (
-	ChangePlayerUserRequest  = int
+	ChangePlayerUserRequest  int
 	CheckLatencyUserResponse []string
 	CheckLatencyUserRequest  map[string]int64
 	GameStartUserRequest     struct {
@@ -21,8 +21,8 @@ type (
 		Games []string    `json:"games"`
 		Wid   string      `json:"wid"`
 	}
-	WebrtcAnswerUserRequest = string
-	WebrtcUserIceCandidate  = string
+	WebrtcAnswerUserRequest string
+	WebrtcUserIceCandidate  string
 )
 
 func InitSessionResult(ice []IceServer, games []string, wid string) (PT, InitSessionUserResponse) {

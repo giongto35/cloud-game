@@ -6,7 +6,6 @@ import (
 	"github.com/giongto35/cloud-game/v2/pkg/api"
 	"github.com/giongto35/cloud-game/v2/pkg/config/coordinator"
 	"github.com/giongto35/cloud-game/v2/pkg/launcher"
-	"github.com/rs/xid"
 )
 
 func (u *User) HandleWebrtcInit() {
@@ -18,10 +17,12 @@ func (u *User) HandleWebrtcInit() {
 	u.SendWebrtcOffer(*resp)
 }
 
-func (u *User) HandleWebrtcAnswer(rq api.WebrtcAnswerUserRequest) { u.Worker.WebrtcAnswer(u.Id(), rq) }
+func (u *User) HandleWebrtcAnswer(rq api.WebrtcAnswerUserRequest) {
+	u.Worker.WebrtcAnswer(u.Id(), string(rq))
+}
 
 func (u *User) HandleWebrtcIceCandidate(rq api.WebrtcUserIceCandidate) {
-	u.Worker.WebrtcIceCandidate(u.Id(), rq)
+	u.Worker.WebrtcIceCandidate(u.Id(), string(rq))
 }
 
 func (u *User) HandleStartGame(rq api.GameStartUserRequest, launcher launcher.Launcher, conf coordinator.Config) {
@@ -83,7 +84,7 @@ func (u *User) HandleLoadGame() error {
 }
 
 func (u *User) HandleChangePlayer(rq api.ChangePlayerUserRequest) {
-	resp, err := u.Worker.ChangePlayer(u.Id(), u.RoomID, rq)
+	resp, err := u.Worker.ChangePlayer(u.Id(), u.RoomID, int(rq))
 	// !to make it a little less convoluted
 	if err != nil || resp == nil || *resp == -1 {
 		u.Log.Error().Err(err).Msg("player switch failed for some reason")
@@ -124,13 +125,11 @@ func (u *User) handleGetWorkerList(debug bool, info ServerInfo) {
 		// not sure if []byte to string always reversible :/
 		unique := map[string]*api.Server{}
 		for _, s := range servers {
-			if id, err := xid.FromString(s.Id); err == nil {
-				mid := string(id.Machine())
-				if _, ok := unique[mid]; !ok {
-					unique[mid] = &api.Server{Addr: s.Addr, PingURL: s.PingURL, Id: s.Id, InGroup: true}
-				}
-				unique[mid].Replicas++
+			mid := s.Id.Machine()
+			if _, ok := unique[mid]; !ok {
+				unique[mid] = &api.Server{Addr: s.Addr, PingURL: s.PingURL, Id: s.Id, InGroup: true}
 			}
+			unique[mid].Replicas++
 		}
 		for _, v := range unique {
 			response.Servers = append(response.Servers, *v)

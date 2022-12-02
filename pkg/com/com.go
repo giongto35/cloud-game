@@ -48,6 +48,11 @@ type SocketClient struct {
 
 func New(conn *Client, tag string, id network.Uid, log *logger.Logger) SocketClient {
 	l := log.Extend(log.With().Str("cid", id.Short()))
+	dir := "→"
+	if conn.IsServer() {
+		dir = "←"
+	}
+	l.Info().Str("c", tag).Str("d", dir).Msg("Connect")
 	return SocketClient{id: id, wire: conn, Tag: tag, Log: l}
 }
 
@@ -75,7 +80,11 @@ func (c *SocketClient) Notify(t api.PT, data any) {
 	_ = c.wire.Send(t, data)
 }
 
-func (c *SocketClient) Close()               { c.wire.Close() }
+func (c *SocketClient) Close() {
+	c.wire.Close()
+	c.Log.Info().Str("c", c.Tag).Str("d", "x").Msg("Close")
+}
+
 func (c *SocketClient) Id() network.Uid      { return c.id }
 func (c *SocketClient) Listen()              { c.ProcessMessages(); c.Wait() }
 func (c *SocketClient) ProcessMessages()     { c.wire.Listen() }
