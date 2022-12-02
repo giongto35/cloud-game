@@ -337,7 +337,7 @@ const stats = (() => {
         let value = 0;
         let listener;
 
-        const ui = moduleUi('RTT(w)', true, () => 'ms');
+        const ui = moduleUi('RTT', true, () => 'ms');
 
         const get = () => ui.el;
 
@@ -359,14 +359,7 @@ const stats = (() => {
         return {get, enable, disable, render}
     })(event, moduleUi);
 
-    const modules = (fn, force = true) => {
-        _modules.forEach(m => {
-                if (force || !m.internal) {
-                    fn(m);
-                }
-            }
-        )
-    }
+    const modules = (fn, force = true) => _modules.forEach(m => (force || !m.internal) && fn(m))
 
     const enable = () => {
         active = true;
@@ -426,7 +419,7 @@ const stats = (() => {
     // add submodules
     _modules.push(
         webRTCRttStats,
-        latency,
+        // latency,
         clientMemory,
         webRTCStats_,
         webRTCFrameStats

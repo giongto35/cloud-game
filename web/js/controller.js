@@ -11,7 +11,7 @@
     let interacted = false;
 
     // ping-pong
-    let pingPong = 0;
+    // let pingPong = 0;
 
     const DIR = (() => {
         return {
@@ -72,16 +72,16 @@
 
     const onConnectionReady = () => {
         // ping / pong
-        if (pingPong === 0) {
-            pingPong = setInterval(() => {
-                if (!webrtc.message('x')) {
-                    clearInterval(pingPong);
-                    pingPong = 0;
-                    log.info("ping-pong was disabled due to remote channel error");
-                }
-                event.pub(PING_REQUEST, {time: Date.now()})
-            }, 10000);
-        }
+        // if (pingPong === 0) {
+        //     pingPong = setInterval(() => {
+        //         if (!webrtc.message('x')) {
+        //             clearInterval(pingPong);
+        //             pingPong = 0;
+        //             log.info("ping-pong was disabled due to remote channel error");
+        //         }
+        //         event.pub(PING_REQUEST, {time: Date.now()})
+        //     }, 10000);
+        // }
 
         // start a game right away or show the menu
         if (room.getId()) {
@@ -485,9 +485,9 @@
         if (!isNaN(+idx)) message.show(+idx + 1);
     });
     event.sub(WEBRTC_NEW_CONNECTION, (data) => {
-        if (pingPong) {
-            webrtc.setMessageHandler(onWebrtcMessage);
-        }
+        // if (pingPong) {
+        //     webrtc.setMessageHandler(onWebrtcMessage);
+        // }
         workerManager.whoami(data.wid);
         webrtc.start(data.ice);
         api.server.initWebrtc()
@@ -502,10 +502,10 @@
     event.sub(WEBRTC_CONNECTION_READY, onConnectionReady);
     event.sub(WEBRTC_CONNECTION_CLOSED, () => {
         input.poll().disable();
-        if (pingPong > 0) {
-            clearInterval(pingPong);
-            pingPong = 0;
-        }
+        // if (pingPong > 0) {
+        //     clearInterval(pingPong);
+        //     pingPong = 0;
+        // }
         webrtc.stop();
     });
     event.sub(LATENCY_CHECK_REQUESTED, onLatencyCheck);
