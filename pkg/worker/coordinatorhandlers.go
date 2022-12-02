@@ -21,13 +21,13 @@ func MakeConnectionRequest(id string, conf worker.Worker, address string) (strin
 	})
 }
 
-func (c *Coordinator) HandleTerminateSession(rq api.TerminateSessionRequest, h *Handler) {
+func (c *coordinator) HandleTerminateSession(rq api.TerminateSessionRequest, h *Handler) {
 	if session := h.router.GetUser(rq.Id); session != nil {
 		h.TerminateSession(session)
 	}
 }
 
-func (c *Coordinator) HandleWebrtcInit(rq api.WebrtcInitRequest, h *Handler, connApi *webrtc.ApiFactory) com.Out {
+func (c *coordinator) HandleWebrtcInit(rq api.WebrtcInitRequest, h *Handler, connApi *webrtc.ApiFactory) com.Out {
 	enc := h.conf.Encoder
 	peer := webrtc.NewWebRTC(h.conf.Webrtc, c.Log, connApi)
 	localSDP, err := peer.NewCall(enc.Video.Codec, enc.Audio.Codec, func(data any) {
@@ -51,12 +51,12 @@ func (c *Coordinator) HandleWebrtcInit(rq api.WebrtcInitRequest, h *Handler, con
 	// use user uid from the coordinator
 	user := NewSession(peer, rq.Id)
 	h.router.AddUser(user)
-	c.Log.Info().Str("id", string(rq.Id)).Msgf("Peer connection (uid:%s)", user.GetId())
+	c.Log.Info().Str("id", string(rq.Id)).Msgf("Peer connection (uid:%s)", user.Id())
 
 	return com.Out{Payload: sdp}
 }
 
-func (c *Coordinator) HandleWebrtcAnswer(rq api.WebrtcAnswerRequest, h *Handler) {
+func (c *coordinator) HandleWebrtcAnswer(rq api.WebrtcAnswerRequest, h *Handler) {
 	if user := h.router.GetUser(rq.Id); user != nil {
 		if err := user.GetPeerConn().SetRemoteSDP(rq.Sdp, api.FromBase64Json); err != nil {
 			c.Log.Error().Err(err).Msgf("cannot set remote SDP of client [%v]", rq.Id)
@@ -64,7 +64,7 @@ func (c *Coordinator) HandleWebrtcAnswer(rq api.WebrtcAnswerRequest, h *Handler)
 	}
 }
 
-func (c *Coordinator) HandleWebrtcIceCandidate(rs api.WebrtcIceCandidateRequest, h *Handler) {
+func (c *coordinator) HandleWebrtcIceCandidate(rs api.WebrtcIceCandidateRequest, h *Handler) {
 	if user := h.router.GetUser(rs.Id); user != nil {
 		if err := user.GetPeerConn().AddCandidate(rs.Candidate, api.FromBase64Json); err != nil {
 			c.Log.Error().Err(err).Msgf("cannot add ICE candidate of the client [%v]", rs.Id)
@@ -72,7 +72,7 @@ func (c *Coordinator) HandleWebrtcIceCandidate(rs api.WebrtcIceCandidateRequest,
 	}
 }
 
-func (c *Coordinator) HandleGameStart(rq api.StartGameRequest, h *Handler) com.Out {
+func (c *coordinator) HandleGameStart(rq api.StartGameRequest, h *Handler) com.Out {
 	user := h.router.GetUser(rq.Id)
 	if user == nil {
 		c.Log.Error().Msgf("no user [%v]", rq.Id)
@@ -123,7 +123,7 @@ func (c *Coordinator) HandleGameStart(rq api.StartGameRequest, h *Handler) com.O
 	return com.Out{Payload: api.StartGameResponse{Room: api.Room{Rid: room.ID}, Record: h.conf.Recording.Enabled}}
 }
 
-func (c *Coordinator) HandleQuitGame(rq api.GameQuitRequest, h *Handler) {
+func (c *coordinator) HandleQuitGame(rq api.GameQuitRequest, h *Handler) {
 	if user := h.router.GetUser(rq.Id); user != nil {
 		if room := h.router.GetRoom(rq.Rid); room != nil {
 			if room.HasUser(user) {
@@ -133,7 +133,7 @@ func (c *Coordinator) HandleQuitGame(rq api.GameQuitRequest, h *Handler) {
 	}
 }
 
-func (c *Coordinator) HandleSaveGame(rq api.SaveGameRequest, h *Handler) com.Out {
+func (c *coordinator) HandleSaveGame(rq api.SaveGameRequest, h *Handler) com.Out {
 	room := h.router.GetRoom(rq.Rid)
 	if room == nil {
 		return com.ErrPacket
@@ -145,7 +145,7 @@ func (c *Coordinator) HandleSaveGame(rq api.SaveGameRequest, h *Handler) com.Out
 	return com.OkPacket
 }
 
-func (c *Coordinator) HandleLoadGame(rq api.LoadGameRequest, h *Handler) com.Out {
+func (c *coordinator) HandleLoadGame(rq api.LoadGameRequest, h *Handler) com.Out {
 	room := h.router.GetRoom(rq.Rid)
 	if room == nil {
 		return com.ErrPacket
@@ -157,7 +157,7 @@ func (c *Coordinator) HandleLoadGame(rq api.LoadGameRequest, h *Handler) com.Out
 	return com.OkPacket
 }
 
-func (c *Coordinator) HandleChangePlayer(rq api.ChangePlayerRequest, h *Handler) com.Out {
+func (c *coordinator) HandleChangePlayer(rq api.ChangePlayerRequest, h *Handler) com.Out {
 	user := h.router.GetUser(rq.Id)
 	if user == nil || h.router.GetRoom(rq.Rid) == nil {
 		return com.Out{Payload: -1} // semi-predicates
@@ -167,7 +167,7 @@ func (c *Coordinator) HandleChangePlayer(rq api.ChangePlayerRequest, h *Handler)
 	return com.Out{Payload: rq.Index}
 }
 
-func (c *Coordinator) HandleToggleMultitap(rq api.ToggleMultitapRequest, h *Handler) com.Out {
+func (c *coordinator) HandleToggleMultitap(rq api.ToggleMultitapRequest, h *Handler) com.Out {
 	if rq.Rid == "" {
 		return com.ErrPacket
 	}
@@ -179,7 +179,7 @@ func (c *Coordinator) HandleToggleMultitap(rq api.ToggleMultitapRequest, h *Hand
 	return com.OkPacket
 }
 
-func (c *Coordinator) HandleRecordGame(rq api.RecordGameRequest, h *Handler) com.Out {
+func (c *coordinator) HandleRecordGame(rq api.RecordGameRequest, h *Handler) com.Out {
 	if !h.conf.Recording.Enabled || rq.Rid == "" {
 		return com.ErrPacket
 	}

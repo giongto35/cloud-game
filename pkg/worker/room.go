@@ -6,6 +6,7 @@ import (
 	"path/filepath"
 	"time"
 
+	"github.com/giongto35/cloud-game/v2/pkg/com"
 	conf "github.com/giongto35/cloud-game/v2/pkg/config/emulator"
 	"github.com/giongto35/cloud-game/v2/pkg/config/worker"
 	"github.com/giongto35/cloud-game/v2/pkg/emulator"
@@ -13,6 +14,7 @@ import (
 	"github.com/giongto35/cloud-game/v2/pkg/encoder"
 	"github.com/giongto35/cloud-game/v2/pkg/games"
 	"github.com/giongto35/cloud-game/v2/pkg/logger"
+	"github.com/giongto35/cloud-game/v2/pkg/network"
 	"github.com/giongto35/cloud-game/v2/pkg/recorder"
 	"github.com/giongto35/cloud-game/v2/pkg/session"
 	"github.com/giongto35/cloud-game/v2/pkg/storage"
@@ -28,7 +30,7 @@ type Room struct {
 	// Done channel is to fire exit event when room is closed
 	Done chan struct{}
 	// List of users in the room
-	users    Sessions
+	users    com.NetMap[*Session]
 	emulator emulator.CloudEmulator
 	// Cloud storage to store room state online
 	storage storage.CloudStorage
@@ -53,7 +55,7 @@ func NewRoom(id string, game games.GameMetadata, storage storage.CloudStorage, o
 		ID: id,
 		// this f**** thing
 		IsRunning: true,
-		users:     NewSessions(),
+		users:     com.NewNetMap[*Session](),
 		storage:   storage,
 		Done:      make(chan struct{}, 1),
 		onClose:   onClose,
@@ -105,7 +107,11 @@ func NewRoom(id string, game games.GameMetadata, storage storage.CloudStorage, o
 
 	go room.startVideo(w, h, func(frame encoder.OutFrame) {
 		sample := media.Sample{Data: frame.Data, Duration: frame.Duration}
-		room.users.EachConnected(func(s *Session) { _ = s.SendVideo(sample) })
+		room.users.ForEach(func(s *Session) {
+			if s.IsConnected() {
+				_ = s.SendVideo(sample)
+			}
+		})
 	}, conf.Encoder.Video)
 
 	dur := time.Duration(conf.Encoder.Audio.Frame) * time.Millisecond
@@ -114,7 +120,11 @@ func NewRoom(id string, game games.GameMetadata, storage storage.CloudStorage, o
 			return
 		}
 		sample := media.Sample{Data: audio, Duration: dur}
-		room.users.EachConnected(func(s *Session) { _ = s.SendAudio(sample) })
+		room.users.ForEach(func(s *Session) {
+			if s.IsConnected() {
+				_ = s.SendAudio(sample)
+			}
+		})
 	}, conf.Encoder.Audio)
 
 	if conf.Emulator.AutosaveSec > 0 {
@@ -125,6 +135,8 @@ func NewRoom(id string, game games.GameMetadata, storage storage.CloudStorage, o
 
 	return room
 }
+
+func (r *Room) Id() network.Uid { return network.Uid(r.ID) }
 
 func (r *Room) enableAutosave(periodSec int) {
 	r.log.Info().Msgf("Autosave is enabled with the period of [%vs]", periodSec)
@@ -195,18 +207,18 @@ func (r *Room) PollUserInput(session *Session) {
 }
 
 func (r *Room) AddUser(user *Session) {
-	r.users.Add(user.id, user)
+	r.users.Add(user)
 	user.SetRoom(r)
-	r.log.Debug().Str("user", user.GetId()).Msg("User has joined the room")
+	r.log.Debug().Str("user", string(user.Id())).Msg("User has joined the room")
 }
 
 func (r *Room) RemoveUser(user *Session) {
 	user.SetRoom(nil)
 	r.users.Remove(user)
-	r.log.Debug().Str("user", user.GetId()).Msg("User has left the room")
+	r.log.Debug().Str("user", string(user.Id())).Msg("User has left the room")
 }
 
-func (r *Room) HasUser(u *Session) bool { return r != nil && r.users.Get(u.id) != nil }
+func (r *Room) HasUser(u *Session) bool { return r != nil && r.users.Has(u.id) }
 
 func (r *Room) Close() {
 	if !r.IsRunning {
@@ -300,9 +312,11 @@ func (r *Room) IsEmpty() bool { return r.users.IsEmpty() }
 
 func (r *Room) HasRunningSessions() (has bool) {
 	has = false
-	r.users.EachConnected(func(s *Session) {
-		has = true
-		return
+	r.users.ForEach(func(s *Session) {
+		if s.IsConnected() {
+			has = true
+			return
+		}
 	})
 	return
 }

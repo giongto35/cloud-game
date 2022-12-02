@@ -3,6 +3,8 @@ package com
 import (
 	"errors"
 	"sync"
+
+	"github.com/giongto35/cloud-game/v2/pkg/network"
 )
 
 // NetMap defines a thread-safe NetClient list.
@@ -47,8 +49,15 @@ func (m *NetMap[T]) RemoveAll(client T) {
 	}
 }
 
+func (m *NetMap[T]) IsEmpty() bool { return len(m.m) == 0 }
+
 // List returns the current NetClient map.
 func (m *NetMap[T]) List() map[string]T { return m.m }
+
+func (m *NetMap[T]) Has(id network.Uid) bool {
+	_, err := m.Find(string(id))
+	return err == nil
+}
 
 // Find searches the first NetClient by a specified key value.
 func (m *NetMap[T]) Find(key string) (client T, err error) {

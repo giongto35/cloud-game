@@ -13,18 +13,18 @@ import (
 	"github.com/giongto35/cloud-game/v2/pkg/storage"
 )
 
-var retry = 10 * time.Second
-
 type Handler struct {
 	service.RunnableService
 
 	address string
 	conf    worker.Config
-	cord    Coordinator
-	log     *logger.Logger
-	storage storage.CloudStorage
+	cord    coordinator
 	router  Router
+	storage storage.CloudStorage
+	log     *logger.Logger
 }
+
+const retry = 10 * time.Second
 
 func NewHandler(address string, conf worker.Config, log *logger.Logger) *Handler {
 	createLocalStorage(conf.Emulator.Storage, log)
@@ -40,7 +40,7 @@ func NewHandler(address string, conf worker.Config, log *logger.Logger) *Handler
 func (h *Handler) Run() {
 	remoteAddr := h.conf.Worker.Network.CoordinatorAddress
 	for {
-		conn, err := newCoordinatorConnection(remoteAddr, h.conf.Worker, h.address, h.log)
+		conn, err := connect(remoteAddr, h.conf.Worker, h.address, h.log)
 		if err != nil {
 			h.log.Error().Err(err).
 				Msgf("no connection to the coordinator %v. Retrying in %v", remoteAddr, retry)
@@ -112,8 +112,7 @@ func (h *Handler) CreateRoom(id string, game games.GameMetadata, record bool, re
 	// If the roomID doesn't have any running sessions (room was closed)
 	// we spawn a new room
 	old := h.router.GetRoom(id)
-	exists := old != nil && old.HasRunningSessions()
-	if exists {
+	if old != nil && old.HasRunningSessions() {
 		return nil
 	}
 	return NewRoom(id, game, h.storage, onClose, record, recUser, h.conf, h.log)
