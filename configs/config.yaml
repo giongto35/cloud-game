@@ -29,7 +29,7 @@ coordinator:
   monitoring:
     port: 6601
     # enable Go profiler HTTP server
-    profilingEnabled: true
+    profilingEnabled: false
     metricEnabled: false
     urlPrefix: /coordinator
   # a custom Origins for incoming Websocket connections:
