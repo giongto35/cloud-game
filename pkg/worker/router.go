@@ -8,8 +8,8 @@ import (
 )
 
 type Router struct {
-	rooms    com.NetMap[*Room]
-	sessions com.NetMap[*Session]
+	room  *Room
+	users com.NetMap[*Session]
 }
 
 // Session represents a user session.
@@ -26,25 +26,26 @@ type Session struct {
 	room *Room
 }
 
-func NewRouter() Router {
-	return Router{
-		rooms:    com.NewNetMap[*Room](),
-		sessions: com.NewNetMap[*Session](),
+func NewRouter() Router { return Router{users: com.NewNetMap[*Session]()} }
+
+func (r *Router) SetRoom(room *Room)    { r.room = room }
+func (r *Router) AddUser(user *Session) { r.users.Add(user) }
+func (r *Router) Close() {
+	if r.room != nil {
+		r.room.Close()
 	}
 }
-
-func (r *Router) AddRoom(room *Room)    { r.rooms.Add(room) }
-func (r *Router) AddUser(user *Session) { r.sessions.Add(user) }
-func (r *Router) Close()                { r.rooms.ForEach(func(room *Room) { room.Close() }) }
 func (r *Router) GetUser(uid network.Uid) *Session {
-	sess, _ := r.sessions.Find(string(uid))
+	sess, _ := r.users.Find(string(uid))
 	return sess
 }
-func (r *Router) RemoveRoom(room *Room)    { r.rooms.Remove(room) }
-func (r *Router) RemoveUser(user *Session) { r.sessions.Remove(user) }
+func (r *Router) RemoveRoom()              { r.room = nil }
+func (r *Router) RemoveUser(user *Session) { r.users.Remove(user) }
 func (r *Router) GetRoom(id string) *Room {
-	room, _ := r.rooms.Find(id)
-	return room
+	if r.room != nil && r.room.ID == id {
+		return r.room
+	}
+	return nil
 }
 
 func NewSession(connection *webrtc.WebRTC, id network.Uid) *Session {

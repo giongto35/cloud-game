@@ -79,47 +79,48 @@ func (c *coordinator) HandleGameStart(rq api.StartGameRequest, h *Handler) com.O
 		return com.EmptyPacket
 	}
 	h.log.Info().Str("game", rq.Game.Name).Msg("Starting the game")
-	// trying to find existing room with that id
+
 	room := h.router.GetRoom(rq.Rid)
 	if room == nil {
 		h.log.Info().Str("room", rq.Rid).Msg("Create room")
-
-		// recording
-		if h.conf.Recording.Enabled {
-			h.log.Info().Msgf("RECORD: %v %v", rq.Record, rq.RecordUser)
-		}
-
-		room = h.CreateRoom(
+		room = NewRoom(
 			rq.Room.Rid,
 			games.GameMetadata{Name: rq.Game.Name, Base: rq.Game.Base, Type: rq.Game.Type, Path: rq.Game.Path},
-			rq.Record, rq.RecordUser,
+			h.storage,
 			func(room *Room) {
-				h.router.RemoveRoom(room)
+				h.router.RemoveRoom()
 				// send signal to coordinator that the room is closed, coordinator will remove that room
 				h.cord.CloseRoom(room.ID)
 				h.log.Debug().Msgf("Room close has been called %v", room.ID)
 			},
+			rq.Record, rq.RecordUser,
+			h.conf,
+			h.log,
 		)
-		h.router.AddRoom(room)
+		h.router.SetRoom(room)
 		user.SetPlayerIndex(rq.PlayerIndex)
 		h.log.Info().Msgf("Updated player index to: %d", rq.PlayerIndex)
+		if h.conf.Recording.Enabled {
+			h.log.Info().Msgf("RECORD: %v %v", rq.Record, rq.RecordUser)
+		}
 	}
-	// Attach peerconnection to room. If PC is already in room, don't detach
-	if !room.HasUser(user) {
-		//h.removeUser(user)
-		room.AddUser(user)
-		room.PollUserInput(user)
-	} else {
-		h.log.Info().Msg("The peer was not detached")
-	}
-	// Register room to coordinator if we are connecting to coordinator
+
 	if room == nil {
 		c.Log.Error().Msgf("couldn't create a room [%v]", rq.Id)
 		return com.EmptyPacket
 	}
+
+	// Attach peerconnection to room. If PC is already in room, don't detach
+	if !room.HasUser(user) {
+		room.AddUser(user)
+		room.PollUserInput(user)
+	}
+
 	h.cord.RegisterRoom(room.ID)
 	user.SetRoom(room)
-	h.router.AddRoom(room)
+
+	h.log.Info().Msgf("room: %+v", h.router.room)
+
 	return com.Out{Payload: api.StartGameResponse{Room: api.Room{Rid: room.ID}, Record: h.conf.Recording.Enabled}}
 }
 

@@ -7,7 +7,6 @@ import (
 
 	"github.com/giongto35/cloud-game/v2/pkg/config/worker"
 	"github.com/giongto35/cloud-game/v2/pkg/emulator/libretro/manager/remotehttp"
-	"github.com/giongto35/cloud-game/v2/pkg/games"
 	"github.com/giongto35/cloud-game/v2/pkg/logger"
 	"github.com/giongto35/cloud-game/v2/pkg/service"
 	"github.com/giongto35/cloud-game/v2/pkg/storage"
@@ -88,17 +87,6 @@ func (h *Handler) removeUser(user *Session) {
 		h.log.Info().Msg("Closing an empty room")
 		room.Close()
 	}
-}
-
-// CreateRoom creates a new room or returns nil for existing.
-func (h *Handler) CreateRoom(id string, game games.GameMetadata, record bool, recUser string, onClose func(*Room)) *Room {
-	// If the roomID doesn't have any running sessions (room was closed)
-	// we spawn a new room
-	old := h.router.GetRoom(id)
-	if old != nil && old.HasRunningSessions() {
-		return nil
-	}
-	return NewRoom(id, game, h.storage, onClose, record, recUser, h.conf, h.log)
 }
 
 func (h *Handler) TerminateSession(session *Session) {
