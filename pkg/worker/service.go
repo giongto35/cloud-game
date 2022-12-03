@@ -54,17 +54,3 @@ func (h *Service) Run() {
 }
 
 func (h *Service) Shutdown(context.Context) error { return nil }
-
-// removeUser removes the user from the room.
-func (h *Service) removeUser(user *Session) {
-	room := user.GetRoom()
-	if room == nil || room.IsEmpty() {
-		return
-	}
-	room.RemoveUser(user)
-	h.log.Info().Msg("Closing peer connection")
-	if room.IsEmpty() {
-		h.log.Info().Msg("Closing an empty room")
-		room.Close()
-	}
-}

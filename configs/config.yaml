@@ -75,7 +75,7 @@ worker:
   monitoring:
     # monitoring server port
     port: 6602
-    profilingEnabled: false
+    profilingEnabled: true
     # monitoring server URL prefix
     metricEnabled: false
     urlPrefix: /worker

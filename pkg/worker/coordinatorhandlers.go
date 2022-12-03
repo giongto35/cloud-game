@@ -25,7 +25,16 @@ func (c *coordinator) HandleTerminateSession(rq api.TerminateSessionRequest, h *
 	if session := h.router.GetUser(rq.Id); session != nil {
 		session.Close()
 		h.router.RemoveUser(session)
-		h.removeUser(session)
+		room := session.GetRoom()
+		if room == nil || room.IsEmpty() {
+			return
+		}
+		room.RemoveUser(session)
+		h.log.Info().Msg("Closing peer connection")
+		if room.IsEmpty() {
+			h.log.Info().Msg("Closing an empty room")
+			room.Close()
+		}
 	}
 }
 
@@ -129,8 +138,13 @@ func (c *coordinator) HandleGameStart(rq api.StartGameRequest, h *Service) com.O
 func (c *coordinator) HandleQuitGame(rq api.GameQuitRequest, h *Service) {
 	if user := h.router.GetUser(rq.Id); user != nil {
 		if room := h.router.GetRoom(rq.Rid); room != nil {
-			if room.HasUser(user) {
-				h.removeUser(user)
+			if room.HasUser(user) && !room.IsEmpty() {
+				room.RemoveUser(user)
+				h.log.Info().Msg("Closing peer connection")
+				if room.IsEmpty() {
+					h.log.Info().Msg("Closing an empty room")
+					room.Close()
+				}
 			}
 		}
 	}
