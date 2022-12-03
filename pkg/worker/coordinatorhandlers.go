@@ -106,7 +106,7 @@ func (c *coordinator) HandleGameStart(rq api.StartGameRequest, h *Handler) com.O
 	}
 	// Attach peerconnection to room. If PC is already in room, don't detach
 	if !room.HasUser(user) {
-		h.removeUser(user)
+		//h.removeUser(user)
 		room.AddUser(user)
 		room.PollUserInput(user)
 	} else {
