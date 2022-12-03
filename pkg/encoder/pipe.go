@@ -1,8 +1,6 @@
 package encoder
 
 import (
-	"fmt"
-
 	"github.com/giongto35/cloud-game/v2/pkg/encoder/yuv"
 	"github.com/giongto35/cloud-game/v2/pkg/logger"
 )
@@ -42,9 +40,6 @@ func NewVideoPipe(enc Encoder, w, h int, log *logger.Logger) *VideoPipe {
 // Should be wrapped into a goroutine.
 func (vp *VideoPipe) Start() {
 	defer func() {
-		if err := recover(); err != nil {
-			vp.log.Error().Err(fmt.Errorf("%v", err)).Msg("video pipe crashed")
-		}
 		close(vp.Output)
 		close(vp.done)
 	}()

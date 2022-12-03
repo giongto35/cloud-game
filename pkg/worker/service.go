@@ -2,11 +2,9 @@ package worker
 
 import (
 	"context"
-	"os"
 	"time"
 
 	"github.com/giongto35/cloud-game/v2/pkg/config/worker"
-	"github.com/giongto35/cloud-game/v2/pkg/emulator/libretro/manager/remotehttp"
 	"github.com/giongto35/cloud-game/v2/pkg/logger"
 	"github.com/giongto35/cloud-game/v2/pkg/service"
 	"github.com/giongto35/cloud-game/v2/pkg/storage"
@@ -57,20 +55,16 @@ func (h *Service) Run() {
 
 func (h *Service) Shutdown(context.Context) error { return nil }
 
-func (h *Service) Prepare() {
-	if !h.conf.Emulator.Libretro.Cores.Repo.Sync {
+// removeUser removes the user from the room.
+func (h *Service) removeUser(user *Session) {
+	room := user.GetRoom()
+	if room == nil || room.IsEmpty() {
 		return
 	}
-
-	h.log.Info().Msg("Starting Libretro cores sync...")
-	coreManager := remotehttp.NewRemoteHttpManager(h.conf.Emulator.Libretro, h.log)
-	// make a dir for cores
-	dir := coreManager.Conf.GetCoresStorePath()
-	if err := os.MkdirAll(dir, os.ModeDir); err != nil {
-		h.log.Error().Err(err).Msgf("couldn't make directory: %v", dir)
-		return
-	}
-	if err := coreManager.Sync(); err != nil {
-		h.log.Error().Err(err).Msg("cores sync has failed")
+	room.RemoveUser(user)
+	h.log.Info().Msg("Closing peer connection")
+	if room.IsEmpty() {
+		h.log.Info().Msg("Closing an empty room")
+		room.Close()
 	}
 }

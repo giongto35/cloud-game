@@ -57,6 +57,23 @@ func NewRemoteHttpManager(conf emulator.LibretroConfig, log *logger.Logger) Mana
 	return m
 }
 
+func CheckCores(conf emulator.Emulator, log *logger.Logger) error {
+	if !conf.Libretro.Cores.Repo.Sync {
+		return nil
+	}
+	log.Info().Msg("Starting Libretro cores sync...")
+	coreManager := NewRemoteHttpManager(conf.Libretro, log)
+	// make a dir for cores
+	dir := coreManager.Conf.GetCoresStorePath()
+	if err := os.MkdirAll(dir, os.ModeDir); err != nil {
+		return err
+	}
+	if err := coreManager.Sync(); err != nil {
+		return err
+	}
+	return nil
+}
+
 func (m *Manager) Sync() error {
 	// IPC lock if multiple worker processes on the same machine
 	m.fmu.Lock()

@@ -22,13 +22,10 @@ func MakeConnectionRequest(id string, conf worker.Worker, address string) (strin
 }
 
 func (c *coordinator) HandleTerminateSession(rq api.TerminateSessionRequest, h *Service) {
-	if userSession := h.router.GetUser(rq.Id); userSession != nil {
-		userSession.Close()
-		room := userSession.GetRoom()
-		room.RemoveUser(userSession)
-		if room.IsEmpty() {
-			room.Close()
-		}
+	if session := h.router.GetUser(rq.Id); session != nil {
+		session.Close()
+		h.router.RemoveUser(session)
+		h.removeUser(session)
 	}
 }
 
@@ -130,14 +127,11 @@ func (c *coordinator) HandleGameStart(rq api.StartGameRequest, h *Service) com.O
 }
 
 func (c *coordinator) HandleQuitGame(rq api.GameQuitRequest, h *Service) {
-	user := h.router.GetUser(rq.Id)
-	if user == nil {
-		return
-	}
-	if room := h.router.GetRoom(rq.Rid); room != nil && room.HasUser(user) {
-		room.RemoveUser(user)
-		if room.IsEmpty() {
-			room.Close()
+	if user := h.router.GetUser(rq.Id); user != nil {
+		if room := h.router.GetRoom(rq.Rid); room != nil {
+			if room.HasUser(user) {
+				h.removeUser(user)
+			}
 		}
 	}
 }
