@@ -37,7 +37,7 @@ func connect(host string, conf worker.Worker, addr string, log *logger.Logger) (
 	return &coordinator{SocketClient: com.New(conn, "c", id, log)}, nil
 }
 
-func (c *coordinator) HandleRequests(h *Handler) {
+func (c *coordinator) HandleRequests(h *Service) {
 	ap, err := webrtc.NewApiFactory(h.conf.Webrtc, c.Log, nil)
 	if err != nil {
 		c.Log.Panic().Err(err).Msg("WebRTC API creation has been failed")
@@ -131,10 +131,8 @@ func (c *coordinator) HandleRequests(h *Handler) {
 	})
 }
 
-func (c *coordinator) CloseRoom(id string) { c.Notify(api.CloseRoom, id) }
-
 func (c *coordinator) RegisterRoom(id string) { c.Notify(api.RegisterRoom, id) }
-
+func (c *coordinator) CloseRoom(id string)    { c.Notify(api.CloseRoom, id) }
 func (c *coordinator) IceCandidate(candidate string, sessionId network.Uid) {
 	c.Notify(api.NewWebrtcIceCandidateRequest(sessionId, candidate))
 }

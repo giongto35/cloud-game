@@ -42,7 +42,7 @@ func (r *Router) GetUser(uid network.Uid) *Session {
 func (r *Router) RemoveRoom()              { r.room = nil }
 func (r *Router) RemoveUser(user *Session) { r.users.Remove(user) }
 func (r *Router) GetRoom(id string) *Room {
-	if r.room != nil && r.room.ID == id {
+	if r.room != nil && r.room.id == id {
 		return r.room
 	}
 	return nil

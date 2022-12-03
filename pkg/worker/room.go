@@ -24,7 +24,7 @@ import (
 // Room is a game session. multi webRTC sessions can connect to a same game.
 // A room stores all the channel for interaction between all webRTCs session and emulator
 type Room struct {
-	ID string
+	id string
 	// State of room
 	IsRunning bool
 	// Done channel is to fire exit event when room is closed
@@ -52,7 +52,7 @@ func NewRoom(id string, game games.GameMetadata, storage storage.CloudStorage, o
 	log.Info().Str("game", game.Name).Msg("")
 
 	room := &Room{
-		ID: id,
+		id: id,
 		// this f**** thing
 		IsRunning: true,
 		users:     com.NewNetMap[*Session](),
@@ -140,7 +140,7 @@ func NewRoom(id string, game games.GameMetadata, storage storage.CloudStorage, o
 	return room
 }
 
-func (r *Room) Id() network.Uid { return network.Uid(r.ID) }
+func (r *Room) Id() network.Uid { return network.Uid(r.id) }
 
 func (r *Room) enableAutosave(periodSec int) {
 	r.log.Info().Msgf("Autosave is enabled with the period of [%vs]", periodSec)
@@ -260,7 +260,7 @@ func (r *Room) Close() {
 
 func (r *Room) isRoomExisted() bool {
 	// Check if room is in online storage
-	_, err := r.storage.Load(r.ID)
+	_, err := r.storage.Load(r.id)
 	if err == nil {
 		return true
 	}
@@ -274,7 +274,7 @@ func (r *Room) SaveGame() error {
 	if err := r.emulator.SaveGameState(); err != nil {
 		return err
 	}
-	if err := r.storage.Save(r.ID, r.emulator.GetHashPath()); err != nil {
+	if err := r.storage.Save(r.id, r.emulator.GetHashPath()); err != nil {
 		return err
 	}
 	r.log.Debug().Msg("Cloud save is successful")

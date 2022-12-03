@@ -12,7 +12,7 @@ import (
 	"github.com/giongto35/cloud-game/v2/pkg/storage"
 )
 
-type Handler struct {
+type Service struct {
 	service.RunnableService
 
 	address string
@@ -25,8 +25,8 @@ type Handler struct {
 
 const retry = 10 * time.Second
 
-func NewHandler(address string, conf worker.Config, log *logger.Logger) *Handler {
-	return &Handler{
+func NewHandler(address string, conf worker.Config, log *logger.Logger) *Service {
+	return &Service{
 		address: address,
 		conf:    conf,
 		log:     log,
@@ -35,7 +35,7 @@ func NewHandler(address string, conf worker.Config, log *logger.Logger) *Handler
 	}
 }
 
-func (h *Handler) Run() {
+func (h *Service) Run() {
 	remoteAddr := h.conf.Worker.Network.CoordinatorAddress
 	for {
 		conn, err := connect(remoteAddr, h.conf.Worker, h.address, h.log)
@@ -55,9 +55,9 @@ func (h *Handler) Run() {
 	}
 }
 
-func (h *Handler) Shutdown(context.Context) error { return nil }
+func (h *Service) Shutdown(context.Context) error { return nil }
 
-func (h *Handler) Prepare() {
+func (h *Service) Prepare() {
 	if !h.conf.Emulator.Libretro.Cores.Repo.Sync {
 		return
 	}
@@ -73,24 +73,4 @@ func (h *Handler) Prepare() {
 	if err := coreManager.Sync(); err != nil {
 		h.log.Error().Err(err).Msg("cores sync has failed")
 	}
-}
-
-// removeUser removes the user from the room.
-func (h *Handler) removeUser(user *Session) {
-	room := user.GetRoom()
-	if room == nil || room.IsEmpty() {
-		return
-	}
-	room.RemoveUser(user)
-	h.log.Info().Msg("Closing peer connection")
-	if room.IsEmpty() {
-		h.log.Info().Msg("Closing an empty room")
-		room.Close()
-	}
-}
-
-func (h *Handler) TerminateSession(session *Session) {
-	session.Close()
-	h.router.RemoveUser(session)
-	h.removeUser(session)
 }
