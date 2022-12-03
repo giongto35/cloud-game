@@ -7,3 +7,19 @@ type CloudStorage interface {
 	// !to remove when properly refactored
 	IsNoop() bool
 }
+
+func GetCloudStorage(provider, key string) CloudStorage {
+	var st CloudStorage
+	var err error
+	switch provider {
+	case "oracle":
+		st, err = NewOracleDataStorageClient(key)
+	case "coordinator":
+	default:
+		st, _ = NewNoopCloudStorage()
+	}
+	if err != nil {
+		st, _ = NewNoopCloudStorage()
+	}
+	return st
+}

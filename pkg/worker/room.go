@@ -62,7 +62,11 @@ func NewRoom(id string, game games.GameMetadata, storage storage.CloudStorage, o
 		log:       log,
 	}
 
-	room.emulator = nanoarch.NewFrontend(conf.Emulator, log)
+	fe, err := nanoarch.NewFrontend(conf.Emulator, log)
+	if err != nil {
+		log.Fatal().Err(err).Send()
+	}
+	room.emulator = fe
 	room.emulator.SetMainSaveName(id)
 	emulatorGuess := conf.Emulator.GetEmulator(game.Type, game.Path)
 	room.emulator.LoadMetadata(emulatorGuess)

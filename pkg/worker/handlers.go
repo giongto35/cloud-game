@@ -27,12 +27,11 @@ type Handler struct {
 const retry = 10 * time.Second
 
 func NewHandler(address string, conf worker.Config, log *logger.Logger) *Handler {
-	createLocalStorage(conf.Emulator.Storage, log)
 	return &Handler{
 		address: address,
 		conf:    conf,
 		log:     log,
-		storage: initCloudStorage(conf),
+		storage: storage.GetCloudStorage(conf.Storage.Provider, conf.Storage.Key),
 		router:  NewRouter(),
 	}
 }
@@ -77,22 +76,6 @@ func (h *Handler) Prepare() {
 	}
 }
 
-func initCloudStorage(conf worker.Config) storage.CloudStorage {
-	var st storage.CloudStorage
-	var err error
-	switch conf.Storage.Provider {
-	case "oracle":
-		st, err = storage.NewOracleDataStorageClient(conf.Storage.Key)
-	case "coordinator":
-	default:
-		st, _ = storage.NewNoopCloudStorage()
-	}
-	if err != nil {
-		st, _ = storage.NewNoopCloudStorage()
-	}
-	return st
-}
-
 // removeUser removes the user from the room.
 func (h *Handler) removeUser(user *Session) {
 	room := user.GetRoom()
@@ -116,13 +99,6 @@ func (h *Handler) CreateRoom(id string, game games.GameMetadata, record bool, re
 		return nil
 	}
 	return NewRoom(id, game, h.storage, onClose, record, recUser, h.conf, h.log)
-}
-
-func createLocalStorage(path string, log *logger.Logger) {
-	log.Info().Msgf("Local storage path: %v", path)
-	if err := os.MkdirAll(path, 0755); err != nil {
-		log.Error().Err(err).Msgf("failed to create local storage path: %v", path)
-	}
 }
 
 func (h *Handler) TerminateSession(session *Session) {

@@ -1,6 +1,8 @@
 package nanoarch
 
 import (
+	"fmt"
+	"os"
 	"sync"
 	"time"
 
@@ -29,11 +31,15 @@ type Frontend struct {
 }
 
 // NewFrontend implements CloudEmulator interface for a Libretro frontend.
-func NewFrontend(conf conf.Emulator, log *logger.Logger) *Frontend {
+func NewFrontend(conf conf.Emulator, log *logger.Logger) (*Frontend, error) {
 	log = log.Extend(log.With().Str("[m]", "Libretro"))
 	SetLibretroLogger(log)
 
 	// Check if room is on local storage, if not, pull from GCS to local storage
+	log.Info().Msgf("Local storage path: %v", conf.Storage)
+	if err := os.MkdirAll(conf.Storage, 0755); err != nil && !os.IsExist(err) {
+		return nil, fmt.Errorf("failed to create local storage path: %v, %w", conf.Storage, err)
+	}
 	var store Storage = &StateStorage{Path: conf.Storage}
 	if conf.Libretro.SaveCompression {
 		store = &ZipStorage{Storage: store}
@@ -50,7 +56,7 @@ func NewFrontend(conf conf.Emulator, log *logger.Logger) *Frontend {
 		th:      conf.Threads,
 		log:     log,
 	}
-	return frontend
+	return frontend, nil
 }
 
 func (f *Frontend) Input(player int, data []byte) { f.input.setInput(player, data) }
