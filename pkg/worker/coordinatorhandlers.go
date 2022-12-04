@@ -5,7 +5,7 @@ import (
 	"github.com/giongto35/cloud-game/v2/pkg/com"
 	"github.com/giongto35/cloud-game/v2/pkg/config/worker"
 	"github.com/giongto35/cloud-game/v2/pkg/games"
-	"github.com/giongto35/cloud-game/v2/pkg/webrtc"
+	"github.com/giongto35/cloud-game/v2/pkg/network/webrtc"
 )
 
 func MakeConnectionRequest(id string, conf worker.Worker, address string) (string, error) {

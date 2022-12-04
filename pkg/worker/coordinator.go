@@ -8,7 +8,7 @@ import (
 	"github.com/giongto35/cloud-game/v2/pkg/config/worker"
 	"github.com/giongto35/cloud-game/v2/pkg/logger"
 	"github.com/giongto35/cloud-game/v2/pkg/network"
-	"github.com/giongto35/cloud-game/v2/pkg/webrtc"
+	"github.com/giongto35/cloud-game/v2/pkg/network/webrtc"
 )
 
 type coordinator struct {

@@ -3,7 +3,7 @@ package worker
 import (
 	"github.com/giongto35/cloud-game/v2/pkg/com"
 	"github.com/giongto35/cloud-game/v2/pkg/network"
-	"github.com/giongto35/cloud-game/v2/pkg/webrtc"
+	"github.com/giongto35/cloud-game/v2/pkg/network/webrtc"
 	"github.com/pion/webrtc/v3/pkg/media"
 )
 
@@ -12,16 +12,10 @@ type Router struct {
 	users com.NetMap[*Session]
 }
 
-// Session represents a user session.
-// A WebRTC connection form a browser to the current server.
-//
-// todo rephrase
-// It requires one connection to browser and one connection to the coordinator
-// connection to browser is 1-1. connection to coordinator is n - 1
-// Peerconnection can be from other server to ensure better latency
+// Session represents WebRTC connection of the user.
 type Session struct {
-	conn *webrtc.WebRTC
 	id   network.Uid
+	conn *webrtc.WebRTC
 	pi   int
 	room *Room
 }
@@ -48,9 +42,7 @@ func (r *Router) GetRoom(id string) *Room {
 	return nil
 }
 
-func NewSession(connection *webrtc.WebRTC, id network.Uid) *Session {
-	return &Session{id: id, conn: connection}
-}
+func NewSession(rtc *webrtc.WebRTC, id network.Uid) *Session { return &Session{id: id, conn: rtc} }
 
 func (s *Session) Id() network.Uid                     { return s.id }
 func (s *Session) GetRoom() *Room                      { return s.room }
