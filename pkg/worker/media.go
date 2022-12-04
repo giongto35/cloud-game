@@ -31,7 +31,7 @@ func (r *Room) startAudio(frequency int, onAudio func([]byte, error), conf conf.
 
 	for {
 		select {
-		case <-r.Done:
+		case <-r.done:
 			r.log.Info().Msg("Audio channel has been closed")
 			return
 		case samples := <-r.emulator.GetAudio():
@@ -82,7 +82,7 @@ func (r *Room) startVideo(width, height int, onFrame func(encoder.OutFrame), con
 
 	for {
 		select {
-		case <-r.Done:
+		case <-r.done:
 			r.log.Info().Msg("Video channel has been closed")
 			return
 		case frame := <-r.emulator.GetVideo():

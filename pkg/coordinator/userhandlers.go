@@ -61,9 +61,7 @@ func (u *User) HandleStartGame(rq api.GameStartUserRequest, launcher launcher.La
 	}
 }
 
-func (u *User) HandleQuitGame(rq api.GameQuitRequest) {
-	u.Worker.QuitGame(u.Id(), rq.Room.Rid)
-}
+func (u *User) HandleQuitGame(rq api.GameQuitRequest) { u.Worker.QuitGame(u.Id(), rq.Room.Rid) }
 
 func (u *User) HandleSaveGame() error {
 	resp, err := u.Worker.SaveGame(u.Id(), u.RoomID)

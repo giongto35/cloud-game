@@ -24,23 +24,16 @@ import (
 // Room is a game session. multi webRTC sessions can connect to a same game.
 // A room stores all the channel for interaction between all webRTCs session and emulator
 type Room struct {
-	id string
-	// State of room
-	IsRunning bool
-	// Done channel is to fire exit event when room is closed
-	Done chan struct{}
-	// List of users in the room
-	users    com.NetMap[*Session]
+	id       string
+	active   bool
+	done     chan struct{}
+	users    com.NetMap[*Session] // a list of users in the room
 	emulator emulator.CloudEmulator
-	// Cloud storage to store room state online
-	storage storage.CloudStorage
-
-	onClose func(self *Room)
-
-	rec *recorder.Recording
-
-	vPipe *encoder.VideoPipe
-	log   *logger.Logger
+	storage  storage.CloudStorage // a cloud storage to store room state online
+	onClose  func(self *Room)
+	rec      *recorder.Recording
+	vPipe    *encoder.VideoPipe
+	log      *logger.Logger
 }
 
 func NewRoom(id string, game games.GameMetadata, storage storage.CloudStorage, onClose func(*Room),
@@ -54,12 +47,12 @@ func NewRoom(id string, game games.GameMetadata, storage storage.CloudStorage, o
 	room := &Room{
 		id: id,
 		// this f**** thing
-		IsRunning: true,
-		users:     com.NewNetMap[*Session](),
-		storage:   storage,
-		Done:      make(chan struct{}, 1),
-		onClose:   onClose,
-		log:       log,
+		active:  true,
+		users:   com.NewNetMap[*Session](),
+		storage: storage,
+		done:    make(chan struct{}, 1),
+		onClose: onClose,
+		log:     log,
 	}
 
 	fe, err := nanoarch.NewFrontend(conf.Emulator, log)
@@ -150,7 +143,7 @@ func (r *Room) enableAutosave(periodSec int) {
 	for {
 		select {
 		case <-ticker.C:
-			if !r.IsRunning {
+			if !r.active {
 				continue
 			}
 			if err := r.emulator.SaveGameState(); err != nil {
@@ -158,7 +151,7 @@ func (r *Room) enableAutosave(periodSec int) {
 			} else {
 				r.log.Debug().Msgf("Autosave done")
 			}
-		case <-r.Done:
+		case <-r.done:
 			return
 		}
 	}
@@ -225,11 +218,11 @@ func (r *Room) RemoveUser(user *Session) {
 func (r *Room) HasUser(u *Session) bool { return r != nil && r.users.Has(u.id) }
 
 func (r *Room) Close() {
-	if !r.IsRunning {
+	if !r.active {
 		return
 	}
 
-	r.IsRunning = false
+	r.active = false
 	r.log.Debug().Msg("Closing the room")
 
 	// Save game before quit. Only save for game which was previous saved to avoid flooding database
@@ -247,7 +240,7 @@ func (r *Room) Close() {
 	} else {
 		r.emulator.Close()
 	}
-	close(r.Done)
+	close(r.done)
 
 	if r.onClose != nil {
 		r.onClose(r)

@@ -2,42 +2,32 @@ package api
 
 import "github.com/giongto35/cloud-game/v2/pkg/network"
 
-type (
-	GameInfo struct {
-		Name string `json:"name"`
-		Base string `json:"base"`
-		Path string `json:"path"`
-		Type string `json:"type"`
-	}
-	Room struct {
-		Rid string `json:"room_id"` // room id
-	}
-)
+type GameInfo struct {
+	Name string `json:"name"`
+	Base string `json:"base"`
+	Path string `json:"path"`
+	Type string `json:"type"`
+}
 
 type (
 	ChangePlayerRequest = struct {
-		Stateful
-		Room
+		StatefulRoom
 		Index int `json:"index"`
 	}
 	ChangePlayerResponse = int
 	GameQuitRequest      struct {
-		Stateful
-		Room
+		StatefulRoom
 	}
 	LoadGameRequest struct {
-		Stateful
-		Room
+		StatefulRoom
 	}
 	LoadGameResponse = string
 	SaveGameRequest  struct {
-		Stateful
-		Room
+		StatefulRoom
 	}
 	SaveGameResponse = string
 	StartGameRequest struct {
-		Stateful
-		Room
+		StatefulRoom
 		Record      bool
 		RecordUser  string
 		Game        GameInfo `json:"game"`
@@ -48,8 +38,7 @@ type (
 		Record bool
 	}
 	RecordGameRequest struct {
-		Stateful
-		Room
+		StatefulRoom
 		Active bool   `json:"active"`
 		User   string `json:"user"`
 	}
@@ -58,8 +47,7 @@ type (
 		Stateful
 	}
 	ToggleMultitapRequest struct {
-		Stateful
-		Room
+		StatefulRoom
 	}
 	WebrtcAnswerRequest struct {
 		Stateful

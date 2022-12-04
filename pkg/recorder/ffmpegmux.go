@@ -16,7 +16,8 @@ const demuxFile = "input.txt"
 //
 // ffmpeg concat demuxer, see: https://ffmpeg.org/ffmpeg-formats.html#concat
 // example:
-// 	ffmpeg -f concat -i input.txt \
+//
+//	ffmpeg -f concat -i input.txt \
 //		   -ac 2 -channel_layout stereo -i audio.wav \
 //		   -b:a 192K -crf 23 -vf fps=30 -pix_fmt yuv420p \
 //		   out.mp4

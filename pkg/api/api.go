@@ -8,11 +8,30 @@ import (
 	"github.com/goccy/go-json"
 )
 
-type Stateful struct {
-	Id network.Uid `json:"id"`
-}
+type (
+	Stateful struct {
+		Id network.Uid `json:"id"`
+	}
+	Room struct {
+		Rid string `json:"room_id"` // room id
+	}
+	StatefulRoom struct {
+		Stateful
+		Room
+	}
+	PT uint8
+)
 
-type PT uint8
+type (
+	RoomInterface interface {
+		GetRoom() string
+	}
+)
+
+func StateRoom(id network.Uid, rid string) StatefulRoom {
+	return StatefulRoom{Stateful: Stateful{id}, Room: Room{rid}}
+}
+func (sr StatefulRoom) GetRoom() string { return sr.Rid }
 
 // Packet codes:
 //

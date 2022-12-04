@@ -109,12 +109,11 @@ func (yuv *threadedProcessor) Get() []byte {
 // We divide the input image into chunks by the number of available CPUs.
 // Each chunk should contain 2, 4, 6, and etc. rows of the image.
 //
-//        8x4          CPU (2)
-//  x x x x x x x x  | Coroutine 1
-//  x x x x x x x x  | Coroutine 1
-//  x x x x x x x x  | Coroutine 2
-//  x x x x x x x x  | Coroutine 2
-//
+//	      8x4          CPU (2)
+//	x x x x x x x x  | Coroutine 1
+//	x x x x x x x x  | Coroutine 1
+//	x x x x x x x x  | Coroutine 2
+//	x x x x x x x x  | Coroutine 2
 func (yuv *threadedProcessor) Process(rgba *image.RGBA) ImgProcessor {
 	src := unsafe.Pointer(&rgba.Pix[0])
 	wg := sync.WaitGroup{}
