@@ -28,10 +28,9 @@ func run() {
 		log.Debug().Msgf("config: %+v", conf)
 	}
 
-	wrk := worker.New(conf, log)
-	wrk.Start()
-
 	ctx, cancelCtx := context.WithCancel(context.Background())
+	wrk := worker.New(ctx, conf, log)
+	wrk.Start()
 	defer func() {
 		if err := wrk.Shutdown(ctx); err != nil {
 			log.Error().Err(err).Msg("service shutdown errors")

@@ -59,7 +59,6 @@ func (h *Hub) handleUserConnection(w http.ResponseWriter, r *http.Request) {
 		}
 	}()
 	usr.HandleRequests(h, h.launcher, h.conf)
-	usr.ProcessMessages()
 
 	q := r.URL.Query()
 	roomId := q.Get(api.RoomIdQueryParam)
@@ -84,7 +83,7 @@ func (h *Hub) handleUserConnection(w http.ResponseWriter, r *http.Request) {
 	usr.SetWorker(wkr)
 	h.users.Add(usr)
 	usr.InitSession(wkr.Id().String(), h.conf.Webrtc.IceServers, h.launcher.GetAppNames())
-	usr.Wait()
+	<-usr.Done()
 }
 
 // handleWorkerConnection handles all connections from a new worker to coordinator.

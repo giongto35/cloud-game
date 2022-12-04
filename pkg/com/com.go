@@ -86,8 +86,8 @@ func (c *SocketClient) Close() {
 }
 
 func (c *SocketClient) Id() network.Uid      { return c.id }
-func (c *SocketClient) Listen()              { c.ProcessMessages(); c.Wait() }
+func (c *SocketClient) Listen()              { c.ProcessMessages(); <-c.Done() }
 func (c *SocketClient) ProcessMessages()     { c.wire.Listen() }
 func (c *SocketClient) Route(in In, out Out) { _ = c.wire.Route(in, out) }
 func (c *SocketClient) String() string       { return c.Tag + ":" + string(c.Id()) }
-func (c *SocketClient) Wait()                { <-c.wire.Wait() }
+func (c *SocketClient) Done() chan struct{}  { return c.wire.Wait() }

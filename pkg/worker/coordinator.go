@@ -42,6 +42,9 @@ func (c *coordinator) HandleRequests(h *Service) {
 	if err != nil {
 		c.Log.Panic().Err(err).Msg("WebRTC API creation has been failed")
 	}
+	//
+	c.ProcessMessages()
+	//
 	c.OnPacket(func(x com.In) (err error) {
 		switch x.T {
 		case api.TerminateSession:

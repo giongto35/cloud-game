@@ -16,41 +16,48 @@ type Service struct {
 	address string
 	conf    worker.Config
 	cord    coordinator
+	ctx     context.Context
+	log     *logger.Logger
 	router  Router
 	storage storage.CloudStorage
-	log     *logger.Logger
 }
 
 const retry = 10 * time.Second
 
-func NewHandler(address string, conf worker.Config, log *logger.Logger) *Service {
+func NewHandler(ctx context.Context, address string, conf worker.Config, log *logger.Logger) *Service {
 	return &Service{
 		address: address,
 		conf:    conf,
+		ctx:     ctx,
 		log:     log,
 		storage: storage.GetCloudStorage(conf.Storage.Provider, conf.Storage.Key),
 		router:  NewRouter(),
 	}
 }
 
-func (h *Service) Run() {
-	remoteAddr := h.conf.Worker.Network.CoordinatorAddress
+func (s *Service) Run() {
+	remoteAddr := s.conf.Worker.Network.CoordinatorAddress
 	for {
-		conn, err := connect(remoteAddr, h.conf.Worker, h.address, h.log)
+		conn, err := connect(remoteAddr, s.conf.Worker, s.address, s.log)
 		if err != nil {
-			h.log.Error().Err(err).
+			s.log.Error().Err(err).
 				Msgf("no connection to the coordinator %v. Retrying in %v", remoteAddr, retry)
 			time.Sleep(retry)
 			continue
 		}
-		h.cord = *conn
-		h.cord.Log.Info().Msgf("Connected to the coordinator %v", remoteAddr)
-		h.cord.HandleRequests(h)
-		h.cord.Listen()
-		// block
-		h.cord.Close()
-		h.router.Close()
+		s.cord = *conn
+		s.cord.Log.Info().Msgf("Connected to the coordinator %v", remoteAddr)
+		s.cord.HandleRequests(s)
+		select {
+		case <-s.ctx.Done():
+			s.cord.Close()
+			s.router.Close()
+			return
+		case <-s.cord.Done():
+			s.cord.Close()
+			s.router.Close()
+		}
 	}
 }
 
-func (h *Service) Shutdown(context.Context) error { return nil }
+func (s *Service) Shutdown(context.Context) error { return nil }

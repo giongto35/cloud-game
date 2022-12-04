@@ -44,6 +44,9 @@ func (u *User) Disconnect() {
 }
 
 func (u *User) HandleRequests(info ServerInfo, launcher launcher.Launcher, conf coordinator.Config) {
+	//
+	u.ProcessMessages()
+	//
 	u.OnPacket(func(x com.In) error {
 		// !to use proper channels
 		switch x.T {
