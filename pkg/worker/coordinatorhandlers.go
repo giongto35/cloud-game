@@ -136,7 +136,7 @@ func (c *coordinator) HandleTerminateSession(rq api.TerminateSessionRequest, s *
 func (c *coordinator) HandleQuitGame(rq api.GameQuitRequest, s *Service) {
 	if user := s.router.GetUser(rq.Id); user != nil {
 		if room := s.router.GetRoom(rq.Rid); room != nil {
-			if room.HasUser(user) && !room.IsEmpty() {
+			if !room.IsEmpty() && room.HasUser(user) {
 				room.RemoveUser(user)
 				s.log.Info().Msg("Closing peer connection")
 				if room.IsEmpty() {

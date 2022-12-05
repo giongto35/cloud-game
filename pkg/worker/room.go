@@ -42,8 +42,7 @@ func NewRoom(id string, game games.GameMetadata, storage storage.CloudStorage, o
 		id = session.GenerateRoomID(game.Name)
 	}
 	log = log.Extend(log.With().Str("room", id[:5]))
-	log.Info().Str("game", game.Name).Msg("")
-
+	log.Info().Str("game", game.Name).Send()
 	room := &Room{
 		id: id,
 		// this f**** thing
@@ -263,7 +262,6 @@ func (r *Room) isRoomExisted() bool {
 // SaveGame writes save state on the disk as well as
 // uploads it to a cloud storage.
 func (r *Room) SaveGame() error {
-	// TODO: Move to game view
 	if err := r.emulator.SaveGameState(); err != nil {
 		return err
 	}
@@ -306,14 +304,3 @@ func (r *Room) ToggleRecording(active bool, user string) {
 }
 
 func (r *Room) IsEmpty() bool { return r.users.IsEmpty() }
-
-func (r *Room) HasRunningSessions() (has bool) {
-	has = false
-	r.users.ForEach(func(s *Session) {
-		if s.IsConnected() {
-			has = true
-			return
-		}
-	})
-	return
-}
