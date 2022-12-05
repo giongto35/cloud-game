@@ -23,7 +23,7 @@ func MakeConnectionRequest(id string, conf worker.Worker, address string) (strin
 
 func (c *coordinator) HandleWebrtcInit(rq api.WebrtcInitRequest, s *Service, connApi *webrtc.ApiFactory) com.Out {
 	enc := s.conf.Encoder
-	peer := webrtc.NewWebRTC(s.conf.Webrtc, c.Log, connApi)
+	peer := webrtc.New(c.Log, connApi)
 	localSDP, err := peer.NewCall(enc.Video.Codec, enc.Audio.Codec, func(data any) {
 		candidate, err := api.ToBase64Json(data)
 		if err != nil {

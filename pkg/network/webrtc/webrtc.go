@@ -4,19 +4,16 @@ import (
 	"fmt"
 	"strings"
 
-	conf "github.com/giongto35/cloud-game/v2/pkg/config/webrtc"
 	"github.com/giongto35/cloud-game/v2/pkg/logger"
 	"github.com/pion/webrtc/v3"
 	"github.com/pion/webrtc/v3/pkg/media"
 )
 
-type WebRTC struct {
-	api         *ApiFactory
-	conf        conf.Webrtc
-	conn        *webrtc.PeerConnection
-	isConnected bool
-	log         *logger.Logger
-	OnMessage   func(data []byte)
+type Peer struct {
+	api       *ApiFactory
+	conn      *webrtc.PeerConnection
+	log       *logger.Logger
+	OnMessage func(data []byte)
 
 	aTrack *webrtc.TrackLocalStaticSample
 	vTrack *webrtc.TrackLocalStaticSample
@@ -25,59 +22,57 @@ type WebRTC struct {
 
 type Decoder func(data string, obj any) error
 
-func NewWebRTC(conf conf.Webrtc, log *logger.Logger, api *ApiFactory) *WebRTC {
-	return &WebRTC{api: api, conf: conf, log: log}
-}
+func New(log *logger.Logger, api *ApiFactory) *Peer { return &Peer{api: api, log: log} }
 
-func (w *WebRTC) NewCall(vCodec, aCodec string, onICECandidate func(ice any)) (sdp any, err error) {
-	if w.isConnected {
-		w.log.Warn().Msg("Strange multiple init connection calls with the same peer")
+func (p *Peer) NewCall(vCodec, aCodec string, onICECandidate func(ice any)) (sdp any, err error) {
+	if p.IsConnected() {
+		p.log.Warn().Msg("Strange multiple init connection calls with the same peer")
 		return
 	}
-	w.log.Info().Msg("WebRTC start")
-	if w.conn, err = w.api.NewPeer(); err != nil {
+	p.log.Info().Msg("WebRTC start")
+	if p.conn, err = p.api.NewPeer(); err != nil {
 		return "", err
 	}
-	w.conn.OnICECandidate(w.handleICECandidate(onICECandidate))
+	p.conn.OnICECandidate(p.handleICECandidate(onICECandidate))
 	// plug in the [video] track (out)
 	video, err := newTrack("video", "game-video", vCodec)
 	if err != nil {
 		return "", err
 	}
-	if _, err = w.conn.AddTrack(video); err != nil {
+	if _, err = p.conn.AddTrack(video); err != nil {
 		return "", err
 	}
-	w.vTrack = video
-	w.log.Debug().Msgf("Added [%s] track", video.Codec().MimeType)
+	p.vTrack = video
+	p.log.Debug().Msgf("Added [%s] track", video.Codec().MimeType)
 
 	// plug in the [audio] track (out)
 	audio, err := newTrack("audio", "game-audio", aCodec)
 	if err != nil {
 		return "", err
 	}
-	if _, err = w.conn.AddTrack(audio); err != nil {
+	if _, err = p.conn.AddTrack(audio); err != nil {
 		return "", err
 	}
-	w.log.Debug().Msgf("Added [%s] track", audio.Codec().MimeType)
-	w.aTrack = audio
+	p.log.Debug().Msgf("Added [%s] track", audio.Codec().MimeType)
+	p.aTrack = audio
 
 	// plug in the [input] data channel (in)
-	if err = w.addInputChannel("game-input"); err != nil {
+	if err = p.addInputChannel("game-input"); err != nil {
 		return "", err
 	}
-	w.log.Debug().Msg("Added input channel ")
+	p.log.Debug().Msg("Added [input/bytes] chan")
 
-	w.conn.OnICEConnectionStateChange(w.handleICEState(func() {
-		w.log.Info().Msg("Start streaming")
+	p.conn.OnICEConnectionStateChange(p.handleICEState(func() {
+		p.log.Info().Msg("Start streaming")
 	}))
 	// Stream provider supposes to send offer
-	offer, err := w.conn.CreateOffer(nil)
+	offer, err := p.conn.CreateOffer(nil)
 	if err != nil {
 		return "", err
 	}
-	w.log.Info().Msg("Created Offer")
+	p.log.Info().Msg("Created Offer")
 
-	err = w.conn.SetLocalDescription(offer)
+	err = p.conn.SetLocalDescription(offer)
 	if err != nil {
 		return "", err
 	}
@@ -85,22 +80,22 @@ func (w *WebRTC) NewCall(vCodec, aCodec string, onICECandidate func(ice any)) (s
 	return offer, nil
 }
 
-func (w *WebRTC) SetRemoteSDP(sdp string, decoder Decoder) error {
+func (p *Peer) SetRemoteSDP(sdp string, decoder Decoder) error {
 	var answer webrtc.SessionDescription
 	if err := decoder(sdp, &answer); err != nil {
 		return err
 	}
-	if err := w.conn.SetRemoteDescription(answer); err != nil {
-		w.log.Error().Err(err).Msg("Set remote description from peer failed")
+	if err := p.conn.SetRemoteDescription(answer); err != nil {
+		p.log.Error().Err(err).Msg("Set remote description from peer failed")
 		return err
 	}
-	w.log.Debug().Msg("Set Remote Description")
+	p.log.Debug().Msg("Set Remote Description")
 	return nil
 }
 
-func (w *WebRTC) WriteVideo(sample media.Sample) error { return w.vTrack.WriteSample(sample) }
+func (p *Peer) WriteVideo(sample media.Sample) error { return p.vTrack.WriteSample(sample) }
 
-func (w *WebRTC) WriteAudio(sample media.Sample) error { return w.aTrack.WriteSample(sample) }
+func (p *Peer) WriteAudio(sample media.Sample) error { return p.aTrack.WriteSample(sample) }
 
 func newTrack(id string, label string, codec string) (*webrtc.TrackLocalStaticSample, error) {
 	codec = strings.ToLower(codec)
@@ -125,94 +120,95 @@ func newTrack(id string, label string, codec string) (*webrtc.TrackLocalStaticSa
 	return webrtc.NewTrackLocalStaticSample(webrtc.RTPCodecCapability{MimeType: mime}, id, label)
 }
 
-func (w *WebRTC) handleICECandidate(callback func(any)) func(*webrtc.ICECandidate) {
+func (p *Peer) handleICECandidate(callback func(any)) func(*webrtc.ICECandidate) {
 	return func(ice *webrtc.ICECandidate) {
 		// ICE gathering finish condition
 		if ice == nil {
 			callback(nil)
-			w.log.Debug().Msg("ICE gathering was complete probably")
+			p.log.Debug().Msg("ICE gathering was complete probably")
 			return
 		}
 		candidate := ice.ToJSON()
-		w.log.Debug().Str("candidate", candidate.Candidate).Msg("ICE")
+		p.log.Debug().Str("candidate", candidate.Candidate).Msg("ICE")
 		callback(&candidate)
 	}
 }
 
-func (w *WebRTC) handleICEState(onConnect func()) func(webrtc.ICEConnectionState) {
+func (p *Peer) handleICEState(onConnect func()) func(webrtc.ICEConnectionState) {
 	return func(state webrtc.ICEConnectionState) {
-		w.log.Debug().Str(".state", state.String()).Msg("ICE")
+		p.log.Debug().Str(".state", state.String()).Msg("ICE")
 		switch state {
 		case webrtc.ICEConnectionStateChecking:
 			// nothing
 		case webrtc.ICEConnectionStateConnected:
-			w.isConnected = true
 			onConnect()
 		case webrtc.ICEConnectionStateFailed,
 			webrtc.ICEConnectionStateClosed,
 			webrtc.ICEConnectionStateDisconnected:
-			w.Disconnect()
+			p.Disconnect()
 		default:
-			w.log.Debug().Msg("ICE state is not handled!")
+			p.log.Debug().Msg("ICE state is not handled!")
 		}
 	}
 }
 
-func (w *WebRTC) AddCandidate(candidate string, decoder Decoder) error {
+func (p *Peer) AddCandidate(candidate string, decoder Decoder) error {
 	var iceCandidate webrtc.ICECandidateInit
 	if err := decoder(candidate, &iceCandidate); err != nil {
 		return err
 	}
-	if err := w.conn.AddICECandidate(iceCandidate); err != nil {
+	if err := p.conn.AddICECandidate(iceCandidate); err != nil {
 		return err
 	}
-	w.log.Debug().Str("candidate", iceCandidate.Candidate).Msg("Ice")
+	p.log.Debug().Str("candidate", iceCandidate.Candidate).Msg("Ice")
 	return nil
 }
 
-func (w *WebRTC) Disconnect() {
-	if !w.isConnected {
+func (p *Peer) Disconnect() {
+	if p.conn == nil {
 		return
 	}
-	w.isConnected = false
-	if w.conn != nil {
-		if err := w.conn.Close(); err != nil {
-			w.log.Error().Err(err).Msg("WebRTC close")
+
+	if p.conn.ConnectionState() < webrtc.PeerConnectionStateDisconnected {
+		if err := p.conn.Close(); err != nil {
+			p.log.Error().Err(err).Msg("WebRTC close")
 		}
-		w.conn = nil
+		p.conn = nil
 	}
-	w.log.Debug().Msg("WebRTC stop")
+	p.log.Debug().Msg("WebRTC stop")
 }
 
-func (w *WebRTC) IsConnected() bool { return w.isConnected }
+func (p *Peer) IsConnected() bool {
+	return p.conn != nil && p.conn.ConnectionState() == webrtc.PeerConnectionStateConnected
+}
 
-func (w *WebRTC) SendMessage(data []byte) { _ = w.dTrack.Send(data) }
+func (p *Peer) SendMessage(data []byte) { _ = p.dTrack.Send(data) }
 
 // addInputChannel creates a new WebRTC data channel for user input.
 // Default params -- ordered: true, negotiated: false.
-func (w *WebRTC) addInputChannel(label string) error {
-	ch, err := w.conn.CreateDataChannel(label, nil)
+func (p *Peer) addInputChannel(label string) error {
+	ch, err := p.conn.CreateDataChannel(label, nil)
 	if err != nil {
 		return err
 	}
 	ch.OnOpen(func() {
-		w.log.Debug().Str("label", ch.Label()).Uint16("id", *ch.ID()).Msg("Data channel [input] opened")
+		p.log.Debug().Str("label", ch.Label()).Uint16("id", *ch.ID()).Msg("Data channel [input] opened")
 	})
-	ch.OnError(w.logx)
+	ch.OnError(p.logx)
 	ch.OnMessage(func(mess webrtc.DataChannelMessage) {
 		if len(mess.Data) == 0 {
 			return
 		}
 		// echo string messages (e.g. ping/pong)
 		if mess.IsString {
-			w.logx(ch.Send(mess.Data))
+			p.logx(ch.Send(mess.Data))
 			return
 		}
-		w.OnMessage(mess.Data)
+		p.OnMessage(mess.Data)
 	})
-	w.dTrack = ch
-	ch.OnClose(func() { w.log.Debug().Msg("Data channel [input] has been closed") })
+	p.dTrack = ch
+	ch.OnClose(func() { p.log.Debug().Msg("Data channel [input] has been closed") })
 	return nil
 }
 
-func (w *WebRTC) logx(err error) { w.log.Error().Err(err) }
+func (p *Peer) logx(err error) { p.log.Error().Err(err) }

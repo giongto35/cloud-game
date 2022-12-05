@@ -15,7 +15,7 @@ type Router struct {
 // Session represents WebRTC connection of the user.
 type Session struct {
 	id   network.Uid
-	conn *webrtc.WebRTC
+	conn *webrtc.Peer
 	pi   int
 	room *Room
 }
@@ -42,11 +42,11 @@ func (r *Router) GetRoom(id string) *Room {
 	return nil
 }
 
-func NewSession(rtc *webrtc.WebRTC, id network.Uid) *Session { return &Session{id: id, conn: rtc} }
+func NewSession(rtc *webrtc.Peer, id network.Uid) *Session { return &Session{id: id, conn: rtc} }
 
 func (s *Session) Id() network.Uid                     { return s.id }
 func (s *Session) GetRoom() *Room                      { return s.room }
-func (s *Session) GetPeerConn() *webrtc.WebRTC         { return s.conn }
+func (s *Session) GetPeerConn() *webrtc.Peer           { return s.conn }
 func (s *Session) GetPlayerIndex() int                 { return s.pi }
 func (s *Session) IsConnected() bool                   { return s.conn.IsConnected() }
 func (s *Session) SendVideo(sample media.Sample) error { return s.conn.WriteVideo(sample) }
