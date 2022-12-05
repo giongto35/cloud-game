@@ -76,7 +76,9 @@ func NewConsole(isDebug bool, tag string, noColor bool) *Logger {
 	zerolog.SetGlobalLevel(logLevel)
 	zerolog.TimeFieldFormat = time.RFC3339Nano
 	output := zerolog.ConsoleWriter{Out: os.Stdout, TimeFormat: "15:04:05.0000", NoColor: noColor,
-		PartsOrder: []string{zerolog.TimestampFieldName,
+		PartsOrder: []string{
+			zerolog.TimestampFieldName,
+			"pid",
 			zerolog.LevelFieldName,
 			zerolog.CallerFieldName,
 			"s",
@@ -84,7 +86,7 @@ func NewConsole(isDebug bool, tag string, noColor bool) *Logger {
 			"c",
 			zerolog.MessageFieldName,
 		},
-		FieldsExclude: []string{"s", "c", "d"},
+		FieldsExclude: []string{"s", "c", "d", "pid"},
 	}
 
 	if output.NoColor {
@@ -98,7 +100,7 @@ func NewConsole(isDebug bool, tag string, noColor bool) *Logger {
 
 	//multi := zerolog.MultiLevelWriter(output, os.Stdout)
 	logger := zerolog.New(output).With().
-		Int("pid", pid).
+		Str("pid", fmt.Sprintf("%4x", pid)).
 		Str("s", tag).
 		Str("d", " ").
 		Str("c", " ").

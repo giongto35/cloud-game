@@ -71,7 +71,7 @@ func NewServer(address string, handler func(*Server) http.Handler, options ...Op
 	server.listener = listener
 
 	addr = buildAddress(server.Addr, opts.Zone, *listener)
-	opts.Logger.Info().Msgf("Server address was set to %v (%v)", addr, server.Addr)
+	opts.Logger.Info().Msgf("httpx %v (%v)", addr, server.Addr)
 	server.Addr = addr
 
 	return server, nil
