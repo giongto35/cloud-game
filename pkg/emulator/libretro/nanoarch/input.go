@@ -2,7 +2,6 @@ package nanoarch
 
 import (
 	"sync/atomic"
-	"unsafe"
 )
 
 const (
@@ -29,15 +28,11 @@ func NewGameSessionInput() GameSessionInput {
 }
 
 // setInput sets input state for some player in a game session.
-// Will crash on 0 data slice.
 func (s *GameSessionInput) setInput(player int, data []byte) {
-	atomic.StoreUint32(&s[player].keys, *(*uint32)(unsafe.Pointer(&data[0])))
-	// tf is that
-	// !to add tests
-	// axis = (i+1)*2
+	atomic.StoreUint32(&s[player].keys, uint32(uint16(data[1])<<8+uint16(data[0])))
 	for i, axes := 0, len(data); i < dpadAxes && i<<1+3 < axes; i++ {
-		atomic.StoreInt32(&s[player].axes[i], *(*int32)(unsafe.Pointer(&data[i<<1+2])))
-		//int32(data[axis+1])<<8+int32(data[axis]))
+		axis := i<<1 + 2
+		atomic.StoreInt32(&s[player].axes[i], int32(data[axis+1])<<8+int32(data[axis]))
 	}
 }
 
