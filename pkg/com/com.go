@@ -41,8 +41,8 @@ type SocketClient struct {
 	NetClient
 
 	id   network.Uid
-	Tag  string
 	wire *Client
+	Tag  string
 	Log  *logger.Logger
 }
 

@@ -47,7 +47,7 @@ func NewRoom(id string, game games.GameMetadata, storage storage.CloudStorage, o
 		active:  true,
 		users:   com.NewNetMap[*Session](),
 		storage: storage,
-		done:    make(chan struct{}, 1),
+		done:    make(chan struct{}),
 		onClose: onClose,
 		log:     log,
 	}
@@ -285,10 +285,9 @@ func (r *Room) saveOnlineRoomToLocal(roomID string, savePath string) error {
 	return nil
 }
 
-func (r *Room) LoadGame() error { return r.emulator.LoadGameState() }
-
-func (r *Room) ToggleMultitap() { r.emulator.ToggleMultitap() }
-
+func (r *Room) LoadGame() error   { return r.emulator.LoadGameState() }
+func (r *Room) ToggleMultitap()   { r.emulator.ToggleMultitap() }
+func (r *Room) IsEmpty() bool     { return r.users.IsEmpty() }
 func (r *Room) IsRecording() bool { return r.rec != nil && r.rec.Enabled() }
 
 func (r *Room) ToggleRecording(active bool, user string) {
@@ -298,5 +297,3 @@ func (r *Room) ToggleRecording(active bool, user string) {
 	r.log.Debug().Msgf("[REC] set: %v, %v", active, user)
 	r.rec.Set(active, user)
 }
-
-func (r *Room) IsEmpty() bool { return r.users.IsEmpty() }

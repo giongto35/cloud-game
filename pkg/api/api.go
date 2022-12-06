@@ -38,24 +38,24 @@ func (sr StatefulRoom) GetRoom() string { return sr.Rid }
 //	x, 1xx - user codes
 //	2xx - worker codes
 const (
-	CheckLatency       PT = 3
-	InitSession        PT = 4
-	WebrtcInit         PT = 100
-	WebrtcOffer        PT = 101
-	WebrtcAnswer       PT = 102
-	WebrtcIceCandidate PT = 103
-	StartGame          PT = 104
-	ChangePlayer       PT = 108
-	QuitGame           PT = 105
-	SaveGame           PT = 106
-	LoadGame           PT = 107
-	ToggleMultitap     PT = 109
-	RecordGame         PT = 110
-	GetWorkerList      PT = 111
-	RegisterRoom       PT = 201
-	CloseRoom          PT = 202
-	IceCandidate          = WebrtcIceCandidate
-	TerminateSession   PT = 204
+	CheckLatency     PT = 3
+	InitSession      PT = 4
+	WebrtcInit       PT = 100
+	WebrtcOffer      PT = 101
+	WebrtcAnswer     PT = 102
+	WebrtcIce        PT = 103
+	StartGame        PT = 104
+	ChangePlayer     PT = 108
+	QuitGame         PT = 105
+	SaveGame         PT = 106
+	LoadGame         PT = 107
+	ToggleMultitap   PT = 109
+	RecordGame       PT = 110
+	GetWorkerList    PT = 111
+	RegisterRoom     PT = 201
+	CloseRoom        PT = 202
+	IceCandidate        = WebrtcIce
+	TerminateSession PT = 204
 )
 
 func (p PT) String() string {
@@ -70,8 +70,8 @@ func (p PT) String() string {
 		return "WebrtcOffer"
 	case WebrtcAnswer:
 		return "WebrtcAnswer"
-	case WebrtcIceCandidate:
-		return "WebrtcIceCandidate"
+	case WebrtcIce:
+		return "WebrtcIce"
 	case StartGame:
 		return "StartGame"
 	case ChangePlayer:

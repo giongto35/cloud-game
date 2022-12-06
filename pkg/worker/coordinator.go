@@ -61,7 +61,7 @@ func (c *coordinator) HandleRequests(s *Service) {
 				return api.ErrMalformed
 			}
 			c.HandleWebrtcAnswer(*dat, s)
-		case api.WebrtcIceCandidate:
+		case api.WebrtcIce:
 			dat := api.Unwrap[api.WebrtcIceCandidateRequest](x.Payload)
 			if dat == nil {
 				return api.ErrMalformed

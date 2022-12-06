@@ -64,5 +64,5 @@ type (
 )
 
 func NewWebrtcIceCandidateRequest(id network.Uid, can string) (PT, any) {
-	return WebrtcIceCandidate, WebrtcIceCandidateRequest{Stateful: Stateful{id}, Candidate: can}
+	return WebrtcIce, WebrtcIceCandidateRequest{Stateful: Stateful{id}, Candidate: can}
 }

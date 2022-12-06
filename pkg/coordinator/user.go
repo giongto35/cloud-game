@@ -61,7 +61,7 @@ func (u *User) HandleRequests(info ServerInfo, launcher launcher.Launcher, conf 
 				return api.ErrMalformed
 			}
 			u.HandleWebrtcAnswer(*rq)
-		case api.WebrtcIceCandidate:
+		case api.WebrtcIce:
 			rq := api.Unwrap[api.WebrtcUserIceCandidate](x.Payload)
 			if rq == nil {
 				return api.ErrMalformed

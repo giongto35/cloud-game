@@ -84,9 +84,10 @@ func NewConsole(isDebug bool, tag string, noColor bool) *Logger {
 			"s",
 			"d",
 			"c",
+			"m",
 			zerolog.MessageFieldName,
 		},
-		FieldsExclude: []string{"s", "c", "d", "pid"},
+		FieldsExclude: []string{"s", "c", "d", "m", "pid"},
 	}
 
 	if output.NoColor {
@@ -102,6 +103,7 @@ func NewConsole(isDebug bool, tag string, noColor bool) *Logger {
 	logger := zerolog.New(output).With().
 		Str("pid", fmt.Sprintf("%4x", pid)).
 		Str("s", tag).
+		Str("m", "").
 		Str("d", " ").
 		Str("c", " ").
 		// Str("tag", tag). use when a file writer

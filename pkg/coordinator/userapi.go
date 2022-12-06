@@ -31,7 +31,7 @@ func (u *User) InitSession(wid string, ice []webrtc.IceServer, games []string) {
 func (u *User) SendWebrtcOffer(sdp string) { u.Notify(api.WebrtcOffer, sdp) }
 
 // SendWebrtcIceCandidate sends remote ICE candidate back to the user.
-func (u *User) SendWebrtcIceCandidate(candidate string) { u.Notify(api.WebrtcIceCandidate, candidate) }
+func (u *User) SendWebrtcIceCandidate(candidate string) { u.Notify(api.WebrtcIce, candidate) }
 
 // StartGame signals the user that everything is ready to start a game.
 func (u *User) StartGame() { u.Notify(api.StartGame, u.RoomID) }
