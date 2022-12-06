@@ -8,11 +8,11 @@ import (
 	"net/http/pprof"
 	"strconv"
 
+	"github.com/VictoriaMetrics/metrics"
 	"github.com/giongto35/cloud-game/v2/pkg/config/monitoring"
 	"github.com/giongto35/cloud-game/v2/pkg/logger"
 	"github.com/giongto35/cloud-game/v2/pkg/network/httpx"
 	"github.com/giongto35/cloud-game/v2/pkg/service"
-	"github.com/prometheus/client_golang/prometheus/promhttp"
 )
 
 const debugEndpoint = "/debug/pprof"
@@ -48,7 +48,9 @@ func New(conf monitoring.Config, baseAddr string, log *logger.Logger) *Monitorin
 				h.Handle(prefix+"/threadcreate", pprof.Handler("threadcreate"))
 			}
 			if conf.MetricEnabled {
-				h.Handle(conf.URLPrefix+metricsEndpoint, promhttp.Handler())
+				h.HandleFunc(conf.URLPrefix+metricsEndpoint, func(w http.ResponseWriter, _ *http.Request) {
+					metrics.WritePrometheus(w, true)
+				})
 			}
 			return h
 		},
