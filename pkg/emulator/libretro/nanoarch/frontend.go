@@ -32,7 +32,7 @@ type Frontend struct {
 
 // NewFrontend implements CloudEmulator interface for a Libretro frontend.
 func NewFrontend(conf conf.Emulator, log *logger.Logger) (*Frontend, error) {
-	log = log.Extend(log.With().Str("[m]", "Libretro"))
+	log = log.Extend(log.With().Str("m", "Libretro"))
 	SetLibretroLogger(log)
 
 	// Check if room is on local storage, if not, pull from GCS to local storage
@@ -49,10 +49,10 @@ func NewFrontend(conf conf.Emulator, log *logger.Logger) (*Frontend, error) {
 	frontend = &Frontend{
 		conf:    conf,
 		storage: store,
-		video:   make(chan emulator.GameFrame, 6),
-		audio:   make(chan emulator.GameAudio, 6),
+		video:   make(chan emulator.GameFrame, 1),
+		audio:   make(chan emulator.GameAudio, 1),
 		input:   NewGameSessionInput(),
-		done:    make(chan struct{}, 1),
+		done:    make(chan struct{}),
 		th:      conf.Threads,
 		log:     log,
 	}
@@ -75,22 +75,6 @@ func (f *Frontend) LoadMetadata(emu string) {
 	f.mu.Unlock()
 }
 
-func (f *Frontend) Rotated() bool { return nano.rot != nil && nano.rot.IsEven }
-
-func (f *Frontend) GetFrameSize() (int, int) {
-	return int(nano.sysAvInfo.geometry.base_width), int(nano.sysAvInfo.geometry.base_height)
-}
-
-func (f *Frontend) GetFps() uint { return uint(nano.sysAvInfo.timing.fps) }
-
-func (f *Frontend) GetSampleRate() uint { return uint(nano.sysAvInfo.timing.sample_rate) }
-
-func (f *Frontend) LoadGame(path string) error { return LoadGame(path) }
-
-func (f *Frontend) SetViewport(width int, height int) { f.vw, f.vh = width, height }
-
-func (f *Frontend) SetMainSaveName(name string) { f.storage.SetMainSaveName(name) }
-
 func (f *Frontend) Start() {
 	if err := f.LoadGameState(); err != nil {
 		f.log.Error().Err(err).Msg("couldn't load a save file")
@@ -105,7 +89,6 @@ func (f *Frontend) Start() {
 		f.mu.Lock()
 		run()
 		f.mu.Unlock()
-
 		select {
 		case <-ticker.C:
 			continue
@@ -113,25 +96,28 @@ func (f *Frontend) Start() {
 			nanoarchShutdown()
 			close(f.video)
 			close(f.audio)
-			f.log.Debug().Msg("Closed Director")
 			return
 		}
 	}
 }
 
+func (f *Frontend) GetFrameSize() (int, int) {
+	return int(nano.sysAvInfo.geometry.base_width), int(nano.sysAvInfo.geometry.base_height)
+}
+
 func (f *Frontend) GetAudio() chan emulator.GameAudio { return f.audio }
-
+func (f *Frontend) GetFps() uint                      { return uint(nano.sysAvInfo.timing.fps) }
+func (f *Frontend) GetHashPath() string               { return f.storage.GetSavePath() }
+func (f *Frontend) GetSRAMPath() string               { return f.storage.GetSRAMPath() }
+func (f *Frontend) GetSampleRate() uint               { return uint(nano.sysAvInfo.timing.sample_rate) }
 func (f *Frontend) GetVideo() chan emulator.GameFrame { return f.video }
-
-func (f *Frontend) SaveGameState() error { return f.Save() }
-
-func (f *Frontend) LoadGameState() error { return f.Load() }
-
-func (f *Frontend) ToggleMultitap() { toggleMultitap() }
-
-func (f *Frontend) GetHashPath() string { return f.storage.GetSavePath() }
-
-func (f *Frontend) GetSRAMPath() string { return f.storage.GetSRAMPath() }
+func (f *Frontend) LoadGame(path string) error        { return LoadGame(path) }
+func (f *Frontend) LoadGameState() error              { return f.Load() }
+func (f *Frontend) Rotated() bool                     { return nano.rot != nil && nano.rot.IsEven }
+func (f *Frontend) SaveGameState() error              { return f.Save() }
+func (f *Frontend) SetMainSaveName(name string)       { f.storage.SetMainSaveName(name) }
+func (f *Frontend) SetViewport(width int, height int) { f.vw, f.vh = width, height }
+func (f *Frontend) ToggleMultitap()                   { toggleMultitap() }
 
 func (f *Frontend) Close() {
 	f.mu.Lock()

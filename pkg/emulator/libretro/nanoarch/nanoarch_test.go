@@ -77,7 +77,7 @@ func GetEmulatorMock(room string, system string) *EmulatorMock {
 				MainSave: room,
 			},
 			input: NewGameSessionInput(),
-			done:  make(chan struct{}, 1),
+			done:  make(chan struct{}),
 			th:    conf.Emulator.Threads,
 		},
 
