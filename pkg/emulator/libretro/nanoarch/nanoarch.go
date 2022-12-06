@@ -98,7 +98,7 @@ type (
 var nano = nanoarch{}
 
 var (
-	coreConfig       ConfigProperties
+	coreConfig       *CoreProperties
 	frontend         *Frontend
 	lastFrameTime    int64
 	libretroLogger   = logger.Default()
@@ -287,7 +287,7 @@ func coreEnvironment(cmd C.unsigned, data unsafe.Pointer) C.bool {
 	case C.RETRO_ENVIRONMENT_GET_VARIABLE:
 		variable := (*C.struct_retro_variable)(data)
 		key := C.GoString(variable.key)
-		if val, ok := coreConfig[key]; ok {
+		if val, ok := coreConfig.Get(key); ok {
 			variable.value = val
 			libretroLogger.Debug().Msgf("Set %s=%v", key, C.GoString(val))
 			return true
@@ -410,7 +410,7 @@ func coreLoad(meta emulator.Metadata) {
 	nano.v.isGl = meta.IsGlAllowed
 	usesLibCo = meta.UsesLibCo
 	nano.v.autoGlContext = meta.AutoGlContext
-	coreConfig, err = ScanConfigFile(meta.ConfigPath)
+	coreConfig, err = ReadProperties(meta.ConfigPath)
 	if err != nil {
 		libretroLogger.Warn().Err(err).Msg("config scan has been failed")
 	}
@@ -575,9 +575,7 @@ func nanoarchShutdown() {
 	if err := closeLib(retroHandle); err != nil {
 		libretroLogger.Error().Err(err).Msg("lib close failed")
 	}
-	for _, element := range coreConfig {
-		C.free(unsafe.Pointer(element))
-	}
+	coreConfig.Free()
 	image.Clear()
 }
 
