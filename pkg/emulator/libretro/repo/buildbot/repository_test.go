@@ -7,7 +7,7 @@ import (
 )
 
 func TestBuildbotRepo(t *testing.T) {
-	testAddress := "http://test.me"
+	testAddress := "https://test.me"
 	tests := []struct {
 		file        string
 		compression string

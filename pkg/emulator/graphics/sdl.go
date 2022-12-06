@@ -79,7 +79,7 @@ func NewSDLContext(cfg Config, log *logger.Logger) (*SDL, error) {
 // Deinit destroys SDL/OpenGL context.
 // Uses main thread lock (see thread/mainthread).
 func (s *SDL) Deinit() error {
-	s.log.Debug().Msg("[SDL/OpenGL] deinitialization...")
+	s.log.Debug().Msg("[SDL/OpenGL] shutdown...")
 	destroyFramebuffer()
 	var err error
 	// In OSX 10.14+ window deletion must happen in the main thread
@@ -90,7 +90,7 @@ func (s *SDL) Deinit() error {
 		return fmt.Errorf("[SDL/OpenGL] deinit fail: %w", err)
 	}
 	sdl.Quit()
-	s.log.Debug().Msgf("[SDL/OpenGL] deinitialized codes:(%v, %v)", sdl.GetError(), GetGLError())
+	s.log.Debug().Msgf("[SDL/OpenGL] shutdown codes:(%v, %v)", sdl.GetError(), GetGLError())
 	return nil
 }
 

@@ -13,7 +13,7 @@ type Encoder struct {
 }
 
 func NewEncoder(outFq, channels int, options ...func(*Encoder) error) (*Encoder, error) {
-	encoder, err := NewOpusEncoder(outFq, channels, AppRestrictedLowdelay)
+	encoder, err := NewOpusEncoder(outFq, channels, AppRestrictedLowDelay)
 	if err != nil {
 		return nil, err
 	}

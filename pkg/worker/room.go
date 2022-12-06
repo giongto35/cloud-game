@@ -14,15 +14,14 @@ import (
 	"github.com/giongto35/cloud-game/v2/pkg/encoder"
 	"github.com/giongto35/cloud-game/v2/pkg/games"
 	"github.com/giongto35/cloud-game/v2/pkg/logger"
-	"github.com/giongto35/cloud-game/v2/pkg/network"
 	"github.com/giongto35/cloud-game/v2/pkg/recorder"
 	"github.com/giongto35/cloud-game/v2/pkg/session"
 	"github.com/giongto35/cloud-game/v2/pkg/storage"
 	"github.com/pion/webrtc/v3/pkg/media"
 )
 
-// Room is a game session. multi webRTC sessions can connect to a same game.
-// A room stores all the channel for interaction between all webRTCs session and emulator
+// Room defines a gaming session.
+// It manages all the user WebRTC connections.
 type Room struct {
 	id       string
 	active   bool
@@ -44,8 +43,7 @@ func NewRoom(id string, game games.GameMetadata, storage storage.CloudStorage, o
 	log = log.Extend(log.With().Str("room", id[:5]))
 	log.Info().Str("game", game.Name).Send()
 	room := &Room{
-		id: id,
-		// this f**** thing
+		id:      id,
 		active:  true,
 		users:   com.NewNetMap[*Session](),
 		storage: storage,
@@ -131,8 +129,6 @@ func NewRoom(id string, game games.GameMetadata, storage storage.CloudStorage, o
 
 	return room
 }
-
-func (r *Room) Id() network.Uid { return network.Uid(r.id) }
 
 func (r *Room) enableAutosave(periodSec int) {
 	r.log.Info().Msgf("Autosave is enabled with the period of [%vs]", periodSec)

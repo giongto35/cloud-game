@@ -39,13 +39,13 @@ const (
 	// Optimize encoding for non-voice signals like music
 	//AppAudio = Application(C.OPUS_APPLICATION_AUDIO)
 	// Optimize encoding for low latency applications
-	AppRestrictedLowdelay = Application(C.OPUS_APPLICATION_RESTRICTED_LOWDELAY)
+	AppRestrictedLowDelay = Application(C.OPUS_APPLICATION_RESTRICTED_LOWDELAY)
 
 	// Auto/default setting
 	//BitrateAuto = Bitrate(-1000)
 	//BitrateMax  = Bitrate(-1)
 
-	// 20 kHz bandpass
+	// FullBand is 20 kHz bandpass
 	FullBand = Bandwidth(C.OPUS_BANDWIDTH_FULLBAND)
 )
 

@@ -107,7 +107,7 @@ func (yuv *threadedProcessor) Get() []byte {
 // Threaded version.
 //
 // We divide the input image into chunks by the number of available CPUs.
-// Each chunk should contain 2, 4, 6, and etc. rows of the image.
+// Each chunk should contain 2, 4, 6, etc. rows of the image.
 //
 //	      8x4          CPU (2)
 //	x x x x x x x x  | Coroutine 1

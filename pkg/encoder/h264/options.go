@@ -4,7 +4,7 @@ type Options struct {
 	// Constant Rate Factor (CRF)
 	// This method allows the encoder to attempt to achieve a certain output quality for the whole file
 	// when output file size is of less importance.
-	// The range of the CRF scale is 0–51, where 0 is lossless, 23 is the default, and 51 is worst quality possible.
+	// The range of the CRF scale is 0–51, where 0 is lossless, 23 is the default, and 51 is the worst quality possible.
 	Crf uint8
 	// film, animation, grain, stillimage, psnr, ssim, fastdecode, zerolatency.
 	Tune string
