@@ -1,6 +1,7 @@
 package nanoarch
 
 import (
+	"errors"
 	"fmt"
 	"os"
 	"sync"
@@ -153,7 +154,7 @@ func (f *Frontend) Load() error {
 	defer f.mu.Unlock()
 
 	ss, err := f.storage.Load(f.GetHashPath())
-	if err != nil {
+	if err != nil && !errors.Is(err, os.ErrNotExist) {
 		return err
 	}
 	if err := restoreSaveState(ss); err != nil {
@@ -161,7 +162,7 @@ func (f *Frontend) Load() error {
 	}
 
 	sram, err := f.storage.Load(f.GetSRAMPath())
-	if err != nil {
+	if err != nil && !errors.Is(err, os.ErrNotExist) {
 		return err
 	}
 	if sram != nil {

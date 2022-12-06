@@ -76,7 +76,6 @@ func (c *coordinator) HandleGameStart(rq api.StartGameRequest, s *Service) com.O
 
 	room := s.router.GetRoom(rq.Rid)
 	if room == nil {
-		s.log.Info().Str("room", rq.Rid).Msg("Create room")
 		room = NewRoom(
 			rq.Room.Rid,
 			games.GameMetadata{Name: rq.Game.Name, Base: rq.Game.Base, Type: rq.Game.Type, Path: rq.Game.Path},
@@ -90,9 +89,9 @@ func (c *coordinator) HandleGameStart(rq api.StartGameRequest, s *Service) com.O
 			s.conf,
 			s.log,
 		)
+		s.log.Info().Str("room", room.id).Msg("New room")
 		s.router.SetRoom(room)
 		user.SetPlayerIndex(rq.PlayerIndex)
-		s.log.Info().Msgf("Updated player index to: %d", rq.PlayerIndex)
 		if s.conf.Recording.Enabled {
 			s.log.Info().Msgf("RECORD: %v %v", rq.Record, rq.RecordUser)
 		}
