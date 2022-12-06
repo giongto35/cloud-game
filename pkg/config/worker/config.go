@@ -1,6 +1,7 @@
 package worker
 
 import (
+	"flag"
 	"fmt"
 	"net"
 	"net/url"
@@ -15,7 +16,6 @@ import (
 	"github.com/giongto35/cloud-game/v2/pkg/config/storage"
 	"github.com/giongto35/cloud-game/v2/pkg/config/webrtc"
 	"github.com/giongto35/cloud-game/v2/pkg/os"
-	flag "github.com/spf13/pflag"
 )
 
 type Config struct {
@@ -63,7 +63,7 @@ func (c *Config) ParseFlags() {
 	flag.IntVar(&c.Worker.Monitoring.Port, "monitoring.port", c.Worker.Monitoring.Port, "Monitoring server port")
 	flag.StringVar(&c.Worker.Network.CoordinatorAddress, "coordinatorhost", c.Worker.Network.CoordinatorAddress, "Worker URL to connect")
 	flag.StringVar(&c.Worker.Network.Zone, "zone", c.Worker.Network.Zone, "Worker network zone (us, eu, etc.)")
-	flag.StringVarP(&configPath, "conf", "c", configPath, "Set custom configuration file path")
+	flag.StringVar(&configPath, "w-conf", configPath, "Set custom configuration file path")
 	flag.Parse()
 }
 

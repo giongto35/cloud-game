@@ -1,13 +1,14 @@
 package coordinator
 
 import (
+	"flag"
+
 	"github.com/giongto35/cloud-game/v2/pkg/config"
 	"github.com/giongto35/cloud-game/v2/pkg/config/emulator"
 	"github.com/giongto35/cloud-game/v2/pkg/config/monitoring"
 	"github.com/giongto35/cloud-game/v2/pkg/config/shared"
 	"github.com/giongto35/cloud-game/v2/pkg/config/webrtc"
 	"github.com/giongto35/cloud-game/v2/pkg/games"
-	flag "github.com/spf13/pflag"
 )
 
 type Config struct {
@@ -52,6 +53,6 @@ func NewConfig() (conf Config) {
 func (c *Config) ParseFlags() {
 	c.Coordinator.Server.WithFlags()
 	flag.IntVar(&c.Coordinator.Monitoring.Port, "monitoring.port", c.Coordinator.Monitoring.Port, "Monitoring server port")
-	flag.StringVarP(&configPath, "conf", "c", configPath, "Set custom configuration file path")
+	flag.StringVar(&configPath, "c-conf", configPath, "Set custom configuration file path")
 	flag.Parse()
 }

@@ -2,7 +2,6 @@ package main
 
 import (
 	"context"
-	goflag "flag"
 	"math/rand"
 	"time"
 
@@ -10,7 +9,6 @@ import (
 	"github.com/giongto35/cloud-game/v2/pkg/coordinator"
 	"github.com/giongto35/cloud-game/v2/pkg/logger"
 	"github.com/giongto35/cloud-game/v2/pkg/os"
-	flag "github.com/spf13/pflag"
 )
 
 var Version = "?"
@@ -18,7 +16,6 @@ var Version = "?"
 func main() {
 	rand.Seed(time.Now().UTC().UnixNano())
 	conf := config.NewConfig()
-	flag.CommandLine.AddGoFlagSet(goflag.CommandLine)
 	conf.ParseFlags()
 
 	log := logger.NewConsole(conf.Coordinator.Debug, "c", true)

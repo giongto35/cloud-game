@@ -16,7 +16,6 @@ require (
 	github.com/prometheus/client_golang v1.14.0
 	github.com/rs/xid v1.4.0
 	github.com/rs/zerolog v1.28.0
-	github.com/spf13/pflag v1.0.5
 	github.com/veandco/go-sdl2 v0.4.27
 	golang.org/x/crypto v0.3.0
 	golang.org/x/image v0.1.0

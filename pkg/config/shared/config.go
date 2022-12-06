@@ -1,6 +1,6 @@
 package shared
 
-import flag "github.com/spf13/pflag"
+import "flag"
 
 type Server struct {
 	Address string
