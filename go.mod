@@ -17,7 +17,7 @@ require (
 	github.com/rs/zerolog v1.28.0
 	github.com/veandco/go-sdl2 v0.4.27
 	golang.org/x/crypto v0.4.0
-	golang.org/x/image v0.1.0
+	golang.org/x/image v0.2.0
 )
 
 require (
