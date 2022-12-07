@@ -116,6 +116,9 @@ emulator:
   # special tag {user} will be replaced with current user's home dir
   storage: "{user}/.cr/save"
 
+  # path for storing emulator generated files
+  localPath: "./libretro"
+
   libretro:
     # use zip compression for emulator save states
     saveCompression: false

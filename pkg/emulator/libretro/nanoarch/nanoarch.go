@@ -7,6 +7,7 @@ import (
 	"os/user"
 	"runtime"
 	"strings"
+	"sync"
 	"time"
 	"unsafe"
 
@@ -104,18 +105,25 @@ var (
 	libretroLogger   = logger.Default()
 	sdlCtx           *graphics.SDL
 	usesLibCo        bool
-	cSaveDirectory   = C.CString(".")
-	cSystemDirectory = C.CString("./pkg/emulator/libretro/system")
+	cSaveDirectory   *C.char
+	cSystemDirectory *C.char
 	cUserName        *C.char
+
+	initOnce sync.Once
 )
 
-func init() {
-	usr, err := user.Current()
-	if err == nil {
-		cUserName = C.CString(usr.Name)
-	} else {
-		cUserName = C.CString("retro")
-	}
+func Init(localPath string) {
+	// may be freed
+	initOnce.Do(func() {
+		usr, err := user.Current()
+		if err == nil {
+			cUserName = C.CString(usr.Name)
+		} else {
+			cUserName = C.CString("retro")
+		}
+		cSaveDirectory = C.CString(localPath + string(os.PathSeparator) + "legacy_save")
+		cSystemDirectory = C.CString(localPath + string(os.PathSeparator) + "system")
+	})
 }
 
 //export coreVideoRefresh

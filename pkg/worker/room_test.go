@@ -261,6 +261,8 @@ func fixEmulators(config *worker.Config, autoGlContext bool) {
 		filepath.FromSlash(rootPath + config.Emulator.Libretro.Cores.Paths.Libs)
 	config.Emulator.Libretro.Cores.Paths.Configs =
 		filepath.FromSlash(rootPath + config.Emulator.Libretro.Cores.Paths.Configs)
+	config.Emulator.LocalPath = filepath.FromSlash(filepath.Join(rootPath, "tests", config.Emulator.LocalPath))
+	config.Emulator.Storage = filepath.FromSlash(filepath.Join(rootPath, "tests", "storage"))
 
 	for k, conf := range config.Emulator.Libretro.Cores.List {
 		if conf.IsGlAllowed && autoGlContext {

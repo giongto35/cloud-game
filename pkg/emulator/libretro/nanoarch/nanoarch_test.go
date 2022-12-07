@@ -96,6 +96,8 @@ func GetEmulatorMock(room string, system string) *EmulatorMock {
 	emu.paths.save = cleanPath(emu.GetHashPath())
 	frontend = &emu.Frontend
 
+	Init(cleanPath(conf.Emulator.LocalPath))
+
 	return emu
 }
 

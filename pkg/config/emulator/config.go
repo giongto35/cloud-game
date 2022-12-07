@@ -15,6 +15,7 @@ type Emulator struct {
 		Height int
 	}
 	Storage     string
+	LocalPath   string
 	Libretro    LibretroConfig
 	AutosaveSec int
 }

@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"path/filepath"
 	"sync"
 	"time"
 
@@ -41,6 +42,17 @@ func NewFrontend(conf conf.Emulator, log *logger.Logger) (*Frontend, error) {
 	if err := os.MkdirAll(conf.Storage, 0755); err != nil && !os.IsExist(err) {
 		return nil, fmt.Errorf("failed to create local storage path: %v, %w", conf.Storage, err)
 	}
+
+	path, err := filepath.Abs(conf.LocalPath)
+	if err != nil {
+		return nil, fmt.Errorf("failed to use emulator path: %v, %w", conf.LocalPath, err)
+	}
+	if err := os.MkdirAll(path, 0755); err != nil && !os.IsExist(err) {
+		return nil, fmt.Errorf("failed to create local path: %v, %w", conf.LocalPath, err)
+	}
+	log.Info().Msgf("Emulator save path is %v", path)
+	Init(path)
+
 	var store Storage = &StateStorage{Path: conf.Storage}
 	if conf.Libretro.SaveCompression {
 		store = &ZipStorage{Storage: store}
