@@ -1,10 +1,6 @@
 package opus
 
-import (
-	"fmt"
-
-	"github.com/hashicorp/go-multierror"
-)
+import "fmt"
 
 type Encoder struct {
 	*LibOpusEncoder
@@ -12,22 +8,18 @@ type Encoder struct {
 	buf []byte
 }
 
-func NewEncoder(outFq, channels int, options ...func(*Encoder) error) (*Encoder, error) {
+func NewEncoder(outFq, channels int, options ...func(*Encoder) error) (enc *Encoder, err error) {
 	encoder, err := NewOpusEncoder(outFq, channels, AppRestrictedLowDelay)
 	if err != nil {
 		return nil, err
 	}
-	enc := &Encoder{LibOpusEncoder: encoder, buf: make([]byte, 1000)}
-	var result *multierror.Error
-	result = multierror.Append(result,
-		enc.SetMaxBandwidth(FullBand),
-		enc.SetBitrate(192000),
-		enc.SetComplexity(10),
-	)
+	enc = &Encoder{LibOpusEncoder: encoder, buf: make([]byte, 1000)}
+	err = enc.SetMaxBandwidth(FullBand)
+	err = enc.SetBitrate(192000)
 	for _, option := range options {
-		result = multierror.Append(option(enc))
+		err = option(enc)
 	}
-	return enc, result.ErrorOrNil()
+	return enc, err
 }
 
 func (e *Encoder) Encode(pcm []int16) ([]byte, error) {

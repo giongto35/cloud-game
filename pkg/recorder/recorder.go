@@ -12,7 +12,6 @@ import (
 	"time"
 
 	"github.com/giongto35/cloud-game/v2/pkg/logger"
-	"github.com/hashicorp/go-multierror"
 )
 
 type Recording struct {
@@ -109,19 +108,18 @@ func (r *Recording) Start() {
 	r.video = video
 }
 
-func (r *Recording) Stop() error {
-	var result *multierror.Error
+func (r *Recording) Stop() (err error) {
 	r.Lock()
 	defer r.Unlock()
 	r.enabled = false
-	result = multierror.Append(result, r.audio.Close())
-	result = multierror.Append(result, r.video.Close())
+	err = r.audio.Close()
+	err = r.video.Close()
 
 	path := filepath.Join(r.dir, r.saveDir)
 	// FFMPEG
-	result = multierror.Append(result, createFfmpegMuxFile(path, videoFile, r.vsync, r.opts))
+	err = createFfmpegMuxFile(path, videoFile, r.vsync, r.opts)
 
-	if result.ErrorOrNil() == nil && r.opts.Zip && r.saveDir != "" {
+	if err == nil && r.opts.Zip && r.saveDir != "" {
 		src := filepath.Join(r.dir, r.saveDir)
 		dst := filepath.Join(src, "..", r.saveDir)
 		go func() {
@@ -135,7 +133,7 @@ func (r *Recording) Stop() error {
 		}()
 	}
 	r.vsync = []time.Duration{}
-	return result.ErrorOrNil()
+	return err
 }
 
 func (r *Recording) Set(enable bool, user string) {

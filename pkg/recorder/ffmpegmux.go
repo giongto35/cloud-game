@@ -6,8 +6,6 @@ import (
 	"path/filepath"
 	"strings"
 	"time"
-
-	"github.com/hashicorp/go-multierror"
 )
 
 const demuxFile = "input.txt"
@@ -22,7 +20,6 @@ const demuxFile = "input.txt"
 //		   -b:a 192K -crf 23 -vf fps=30 -pix_fmt yuv420p \
 //		   out.mp4
 func createFfmpegMuxFile(dir string, fPattern string, frameTimes []time.Duration, opts Options) (er error) {
-	var result *multierror.Error
 	demux, err := newFile(dir, demuxFile)
 	if err != nil {
 		return err
@@ -56,14 +53,11 @@ func createFfmpegMuxFile(dir string, fPattern string, frameTimes []time.Duration
 		}
 		inf := fmt.Sprintf("file %v\nduration %f\n", name, dur)
 		if _, err := demux.WriteString(inf); err != nil {
-			result = multierror.Append(result, err)
+			er = err
 		}
 	}
 	if err = demux.Flush(); err != nil {
-		result = multierror.Append(result, err)
+		er = err
 	}
-	if result != nil {
-		return result.ErrorOrNil()
-	}
-	return nil
+	return er
 }
