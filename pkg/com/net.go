@@ -161,6 +161,7 @@ func (c *Client) handleMessage(message []byte, err error) {
 		return
 	}
 
+	// empty id implies that we won't track (wait) the response
 	if !res.Id.Empty() {
 		if task := c.pop(res.Id); task != nil {
 			task.Response = res
@@ -171,6 +172,7 @@ func (c *Client) handleMessage(message []byte, err error) {
 	c.onPacket(res)
 }
 
+// pop extracts and removes a task from the queue by its id.
 func (c *Client) pop(id network.Uid) *call {
 	c.mu.Lock()
 	task := c.queue[id]
@@ -179,6 +181,7 @@ func (c *Client) pop(id network.Uid) *call {
 	return task
 }
 
+// drain cancels all what's left in the task queue.
 func (c *Client) drain(err error) {
 	c.mu.Lock()
 	for _, task := range c.queue {
