@@ -2,7 +2,7 @@ package coordinator
 
 import (
 	"github.com/giongto35/cloud-game/v2/pkg/api"
-	"github.com/giongto35/cloud-game/v2/pkg/launcher"
+	"github.com/giongto35/cloud-game/v2/pkg/games"
 	"github.com/giongto35/cloud-game/v2/pkg/network"
 )
 
@@ -19,7 +19,7 @@ func (w *Worker) WebrtcIceCandidate(id network.Uid, can string) {
 	w.Notify(api.NewWebrtcIceCandidateRequest(id, can))
 }
 
-func (w *Worker) StartGame(id network.Uid, app launcher.AppMeta, req api.GameStartUserRequest) (*api.StartGameResponse, error) {
+func (w *Worker) StartGame(id network.Uid, app games.AppMeta, req api.GameStartUserRequest) (*api.StartGameResponse, error) {
 	rq := api.StartGameRequest{
 		StatefulRoom: api.StateRoom(id, req.RoomId),
 		Game:         api.GameInfo{Name: app.Name, Base: app.Base, Path: app.Path, Type: app.Type},

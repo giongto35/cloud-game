@@ -1,19 +1,25 @@
-package launcher
+package games
 
-import (
-	"fmt"
+import "fmt"
 
-	"github.com/giongto35/cloud-game/v2/pkg/games"
-	"github.com/giongto35/cloud-game/v2/pkg/session"
-)
+type Launcher interface {
+	FindAppByName(name string) (AppMeta, error)
+	ExtractAppNameFromUrl(name string) string
+	GetAppNames() []string
+}
+
+type AppMeta struct {
+	Name string
+	Type string
+	Base string
+	Path string
+}
 
 type GameLauncher struct {
-	lib games.GameLibrary
+	lib GameLibrary
 }
 
-func NewGameLauncher(lib games.GameLibrary) GameLauncher {
-	return GameLauncher{lib: lib}
-}
+func NewGameLauncher(lib GameLibrary) GameLauncher { return GameLauncher{lib: lib} }
 
 func (gl GameLauncher) FindAppByName(name string) (AppMeta, error) {
 	game := gl.lib.FindGameByName(name)
@@ -24,7 +30,7 @@ func (gl GameLauncher) FindAppByName(name string) (AppMeta, error) {
 }
 
 func (gl GameLauncher) ExtractAppNameFromUrl(name string) string {
-	return session.GetGameNameFromRoomID(name)
+	return GetGameNameFromRoomID(name)
 }
 
 func (gl GameLauncher) GetAppNames() []string {

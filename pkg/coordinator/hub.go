@@ -7,7 +7,6 @@ import (
 	"github.com/giongto35/cloud-game/v2/pkg/com"
 	"github.com/giongto35/cloud-game/v2/pkg/config/coordinator"
 	"github.com/giongto35/cloud-game/v2/pkg/games"
-	"github.com/giongto35/cloud-game/v2/pkg/launcher"
 	"github.com/giongto35/cloud-game/v2/pkg/logger"
 	"github.com/giongto35/cloud-game/v2/pkg/network"
 	"github.com/giongto35/cloud-game/v2/pkg/service"
@@ -17,7 +16,7 @@ type Hub struct {
 	service.Service
 
 	conf          coordinator.Config
-	launcher      launcher.Launcher
+	launcher      games.Launcher
 	users         com.NetMap[*User]
 	workers       com.NetMap[*Worker]
 	rooms2workers com.NetMap[com.NetClient]
@@ -32,7 +31,7 @@ func NewHub(conf coordinator.Config, lib games.GameLibrary, log *logger.Logger) 
 		users:         com.NewNetMap[*User](),
 		workers:       com.NewNetMap[*Worker](),
 		rooms2workers: com.NewNetMap[com.NetClient](),
-		launcher:      launcher.NewGameLauncher(lib),
+		launcher:      games.NewGameLauncher(lib),
 		log:           log,
 		wConn: com.NewConnector(
 			com.WithOrigin(conf.Coordinator.Origin.WorkerWs),

@@ -15,7 +15,6 @@ import (
 	"github.com/giongto35/cloud-game/v2/pkg/games"
 	"github.com/giongto35/cloud-game/v2/pkg/logger"
 	"github.com/giongto35/cloud-game/v2/pkg/recorder"
-	"github.com/giongto35/cloud-game/v2/pkg/session"
 	"github.com/giongto35/cloud-game/v2/pkg/storage"
 	"github.com/pion/webrtc/v3/pkg/media"
 )
@@ -38,7 +37,7 @@ type Room struct {
 func NewRoom(id string, game games.GameMetadata, storage storage.CloudStorage, onClose func(*Room),
 	rec bool, recUser string, conf worker.Config, log *logger.Logger) *Room {
 	if id == "" {
-		id = session.GenerateRoomID(game.Name)
+		id = games.GenerateRoomID(game.Name)
 	}
 	log = log.Extend(log.With().Str("room", id[:5]))
 	log.Info().Str("game", game.Name).Send()

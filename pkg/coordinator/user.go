@@ -4,7 +4,7 @@ import (
 	"github.com/giongto35/cloud-game/v2/pkg/api"
 	"github.com/giongto35/cloud-game/v2/pkg/com"
 	"github.com/giongto35/cloud-game/v2/pkg/config/coordinator"
-	"github.com/giongto35/cloud-game/v2/pkg/launcher"
+	"github.com/giongto35/cloud-game/v2/pkg/games"
 )
 
 type User struct {
@@ -43,7 +43,7 @@ func (u *User) Disconnect() {
 	}
 }
 
-func (u *User) HandleRequests(info ServerInfo, launcher launcher.Launcher, conf coordinator.Config) {
+func (u *User) HandleRequests(info ServerInfo, launcher games.Launcher, conf coordinator.Config) {
 	//
 	u.ProcessMessages()
 	//
