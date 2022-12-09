@@ -37,27 +37,29 @@ func NewHandler(ctx context.Context, address string, conf worker.Config, log *lo
 
 func (s *Service) Run() {
 	remoteAddr := s.conf.Worker.Network.CoordinatorAddress
-	for {
-		conn, err := connect(remoteAddr, s.conf.Worker, s.address, s.log)
-		if err != nil {
-			s.log.Error().Err(err).
-				Msgf("no connection to the coordinator %v. Retrying in %v", remoteAddr, retry)
-			time.Sleep(retry)
-			continue
+	go func() {
+		for {
+			conn, err := connect(remoteAddr, s.conf.Worker, s.address, s.log)
+			if err != nil {
+				s.log.Error().Err(err).
+					Msgf("no connection to the coordinator %v. Retrying in %v", remoteAddr, retry)
+				time.Sleep(retry)
+				continue
+			}
+			s.cord = *conn
+			s.cord.Log.Info().Msgf("Connected to the coordinator %v", remoteAddr)
+			s.cord.HandleRequests(s)
+			select {
+			case <-s.ctx.Done():
+				s.cord.Close()
+				s.router.Close()
+				return
+			case <-s.cord.Done():
+				s.cord.Close()
+				s.router.Close()
+			}
 		}
-		s.cord = *conn
-		s.cord.Log.Info().Msgf("Connected to the coordinator %v", remoteAddr)
-		s.cord.HandleRequests(s)
-		select {
-		case <-s.ctx.Done():
-			s.cord.Close()
-			s.router.Close()
-			return
-		case <-s.cord.Done():
-			s.cord.Close()
-			s.router.Close()
-		}
-	}
+	}()
 }
 
 func (s *Service) Shutdown(context.Context) error { return nil }
