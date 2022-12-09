@@ -214,6 +214,10 @@ func (na *naEmulator) Start() {
 }
 
 func (na *naEmulator) SaveGame() error {
+	// !to fix
+	if usesLibCo {
+		return nil
+	}
 	if na.roomID != "" {
 		return na.Save()
 	}
@@ -221,6 +225,10 @@ func (na *naEmulator) SaveGame() error {
 }
 
 func (na *naEmulator) LoadGame() error {
+	// !to fix
+	if usesLibCo {
+		return nil
+	}
 	if na.roomID != "" {
 		err := na.Load()
 		if err != nil {
