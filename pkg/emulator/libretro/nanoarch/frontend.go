@@ -144,6 +144,10 @@ func (f *Frontend) Save() error {
 	f.mu.Lock()
 	defer f.mu.Unlock()
 
+	if usesLibCo {
+		return nil
+	}
+
 	ss, err := getSaveState()
 	if err != nil {
 		return err
@@ -164,6 +168,10 @@ func (f *Frontend) Save() error {
 func (f *Frontend) Load() error {
 	f.mu.Lock()
 	defer f.mu.Unlock()
+
+	if usesLibCo {
+		return nil
+	}
 
 	ss, err := f.storage.Load(f.GetHashPath())
 	if err != nil && !errors.Is(err, os.ErrNotExist) {
