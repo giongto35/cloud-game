@@ -16,7 +16,7 @@ type Service struct {
 
 	address string
 	conf    worker.Config
-	cord    coordinator
+	cord    *coordinator
 	ctx     context.Context
 	log     *logger.Logger
 	router  Router
@@ -43,6 +43,15 @@ func (s *Service) Run() {
 	remoteAddr := s.conf.Worker.Network.CoordinatorAddress
 	go func() {
 		for {
+			select {
+			case <-s.ctx.Done():
+				if s.cord != nil {
+					s.cord.Close()
+				}
+				s.router.Close()
+				return
+			default:
+			}
 			conn, err := connect(remoteAddr, s.conf.Worker, s.address, s.log)
 			if err != nil {
 				s.log.Error().Err(err).
@@ -50,7 +59,7 @@ func (s *Service) Run() {
 				time.Sleep(retry)
 				continue
 			}
-			s.cord = *conn
+			s.cord = conn
 			s.cord.Log.Info().Msgf("Connected to the coordinator %v", remoteAddr)
 			s.cord.HandleRequests(s)
 			select {
