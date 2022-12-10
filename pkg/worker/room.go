@@ -100,9 +100,9 @@ func NewRoom(id string, game games.GameMetadata, storage storage.CloudStorage, o
 
 	go room.startVideo(w, h, func(frame encoder.OutFrame) {
 		sample := media.Sample{Data: frame.Data, Duration: frame.Duration}
-		room.users.ForEach(func(s *Session) {
-			if s.IsConnected() {
-				_ = s.SendVideo(sample)
+		room.users.ForEach(func(u *Session) {
+			if u.IsConnected() {
+				_ = u.SendVideo(sample)
 			}
 		})
 	}, conf.Encoder.Video)
@@ -113,9 +113,9 @@ func NewRoom(id string, game games.GameMetadata, storage storage.CloudStorage, o
 			return
 		}
 		sample := media.Sample{Data: audio, Duration: dur}
-		room.users.ForEach(func(s *Session) {
-			if s.IsConnected() {
-				_ = s.SendAudio(sample)
+		room.users.ForEach(func(u *Session) {
+			if u.IsConnected() {
+				_ = u.SendAudio(sample)
 			}
 		})
 	}, conf.Encoder.Audio)

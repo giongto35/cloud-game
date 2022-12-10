@@ -49,7 +49,11 @@ func (m *NetMap[T]) RemoveAll(client T) {
 	}
 }
 
-func (m *NetMap[T]) IsEmpty() bool { return len(m.m) == 0 }
+func (m *NetMap[T]) IsEmpty() bool {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	return len(m.m) == 0
+}
 
 // List returns the current NetClient map.
 func (m *NetMap[T]) List() map[string]T { return m.m }

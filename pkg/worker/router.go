@@ -7,6 +7,10 @@ import (
 	"github.com/pion/webrtc/v3/pkg/media"
 )
 
+// Router tracks and routes freshly connected users to a game room.
+// Basically, it holds user connection data until some user makes (connects to)
+// a new room (game), then it manages all the cross-references between room and users.
+// Rooms and users has 1-to-n relationship.
 type Router struct {
 	room  *Room
 	users com.NetMap[*Session]
@@ -17,7 +21,7 @@ type Session struct {
 	id   network.Uid
 	conn *webrtc.Peer
 	pi   int
-	room *Room
+	room *Room // back reference
 }
 
 func NewRouter() Router { return Router{users: com.NewNetMap[*Session]()} }
@@ -53,4 +57,4 @@ func (s *Session) SendVideo(sample media.Sample) error { return s.conn.WriteVide
 func (s *Session) SendAudio(sample media.Sample) error { return s.conn.WriteAudio(sample) }
 func (s *Session) SetRoom(room *Room)                  { s.room = room }
 func (s *Session) SetPlayerIndex(index int)            { s.pi = index }
-func (s *Session) Close()                              { s.conn.Disconnect() } // TODO: Use event base
+func (s *Session) Close()                              { s.conn.Disconnect(); s.room = nil } // TODO: Use event base

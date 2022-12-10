@@ -72,7 +72,7 @@ func (c *coordinator) HandleGameStart(rq api.StartGameRequest, s *Service) com.O
 		c.Log.Error().Msgf("no user [%v]", rq.Id)
 		return com.EmptyPacket
 	}
-	s.log.Info().Str("game", rq.Game.Name).Msg("Starting the game")
+	s.log.Info().Msgf("Starting game: %v", rq.Game.Name)
 
 	room := s.router.GetRoom(rq.Rid)
 	if room == nil {
@@ -106,9 +106,9 @@ func (c *coordinator) HandleGameStart(rq api.StartGameRequest, s *Service) com.O
 		room.AddUser(user)
 		room.PollUserInput(user)
 	}
+	user.SetRoom(room)
 
 	c.RegisterRoom(room.id)
-	user.SetRoom(room)
 
 	return com.Out{Payload: api.StartGameResponse{Room: api.Room{Rid: room.id}, Record: s.conf.Recording.Enabled}}
 }
@@ -116,16 +116,17 @@ func (c *coordinator) HandleGameStart(rq api.StartGameRequest, s *Service) com.O
 // HandleTerminateSession handles cases when a user has been disconnected from the websocket of coordinator.
 func (c *coordinator) HandleTerminateSession(rq api.TerminateSessionRequest, s *Service) {
 	if session := s.router.GetUser(rq.Id); session != nil {
-		session.Close()
 		s.router.RemoveUser(session)
 		room := session.GetRoom()
+		session.Close()
 		if room == nil || room.IsEmpty() {
 			return
 		}
-		room.RemoveUser(session)
-		s.log.Info().Msg("Closing peer connection")
+		if room.HasUser(session) {
+			room.RemoveUser(session)
+		}
 		if room.IsEmpty() {
-			s.log.Info().Msg("Closing an empty room")
+			s.log.Debug().Msg("The room is empty")
 			room.Close()
 		}
 	}
@@ -135,13 +136,12 @@ func (c *coordinator) HandleTerminateSession(rq api.TerminateSessionRequest, s *
 func (c *coordinator) HandleQuitGame(rq api.GameQuitRequest, s *Service) {
 	if user := s.router.GetUser(rq.Id); user != nil {
 		if room := s.router.GetRoom(rq.Rid); room != nil {
-			if !room.IsEmpty() && room.HasUser(user) {
+			if room.HasUser(user) {
 				room.RemoveUser(user)
-				s.log.Info().Msg("Closing peer connection")
-				if room.IsEmpty() {
-					s.log.Info().Msg("Closing an empty room")
-					room.Close()
-				}
+			}
+			if room.IsEmpty() {
+				s.log.Debug().Msg("The room is empty")
+				room.Close()
 			}
 		}
 	}

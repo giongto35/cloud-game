@@ -14,9 +14,9 @@ var encoder_ *opus.Encoder
 
 func (r *Room) startAudio(frequency int, onAudio func([]byte, error), conf conf.Audio) {
 	buf := media.NewBuffer(conf.GetFrameSizeFor(frequency))
-	resample, resampleSize := frequency != conf.Frequency, 0
+	resample, frameLen := frequency != conf.Frequency, 0
 	if resample {
-		resampleSize = conf.GetFrameSize()
+		frameLen = conf.GetFrameSize()
 	}
 	// a garbage cache
 	if encoder_ == nil {
@@ -39,7 +39,7 @@ func (r *Room) startAudio(frequency int, onAudio func([]byte, error), conf conf.
 			}
 			buf.Write(samples.Data, func(s media.Samples) {
 				if resample {
-					s = media.ResampleStretch(s, resampleSize)
+					s = media.ResampleStretch(s, frameLen)
 				}
 				onAudio(enc.Encode(s))
 			})
