@@ -1,6 +1,8 @@
 package worker
 
 import (
+	"fmt"
+
 	"github.com/giongto35/cloud-game/v2/pkg/api"
 	"github.com/giongto35/cloud-game/v2/pkg/com"
 	"github.com/giongto35/cloud-game/v2/pkg/config/worker"
@@ -8,11 +10,12 @@ import (
 	"github.com/giongto35/cloud-game/v2/pkg/network/webrtc"
 )
 
-func MakeConnectionRequest(id string, conf worker.Worker, address string) (string, error) {
+// buildConnQuery builds initial connection data query to a coordinator.
+func buildConnQuery[S fmt.Stringer](id S, conf worker.Worker, address string) (string, error) {
 	addr := conf.GetPingAddr(address)
 	return api.ToBase64Json(api.ConnectionRequest{
 		Addr:    addr.Hostname(),
-		Id:      id,
+		Id:      id.String(),
 		IsHTTPS: conf.Server.Https,
 		PingURL: addr.String(),
 		Port:    conf.GetPort(address),

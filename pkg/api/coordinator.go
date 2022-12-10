@@ -3,7 +3,7 @@ package api
 import "github.com/giongto35/cloud-game/v2/pkg/network"
 
 type (
-	CloseRoomRequest  = string
+	CloseRoomRequest  string
 	ConnectionRequest struct {
 		Addr    string `json:"addr,omitempty"`
 		Id      string `json:"id,omitempty"`
@@ -17,7 +17,7 @@ type (
 	GetWorkerListResponse struct {
 		Servers []Server `json:"servers"`
 	}
-	RegisterRoomRequest = string
+	RegisterRoomRequest string
 )
 
 // Server contains a list of server groups.

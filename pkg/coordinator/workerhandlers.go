@@ -16,11 +16,11 @@ func GetConnectionRequest(data string) (*api.ConnectionRequest, error) {
 }
 
 func (w *Worker) HandleRegisterRoom(rq api.RegisterRoomRequest, rooms *com.NetMap[com.NetClient]) {
-	rooms.Put(rq, w)
+	rooms.Put(string(rq), w)
 }
 
 func (w *Worker) HandleCloseRoom(rq api.CloseRoomRequest, rooms *com.NetMap[com.NetClient]) {
-	rooms.RemoveByKey(rq)
+	rooms.RemoveByKey(string(rq))
 }
 
 func (w *Worker) HandleIceCandidate(rq api.WebrtcIceCandidateRequest, crowd *com.NetMap[*User]) {

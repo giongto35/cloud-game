@@ -14,18 +14,18 @@ type (
 		StatefulRoom
 		Index int `json:"index"`
 	}
-	ChangePlayerResponse = int
+	ChangePlayerResponse int
 	GameQuitRequest      struct {
 		StatefulRoom
 	}
 	LoadGameRequest struct {
 		StatefulRoom
 	}
-	LoadGameResponse = string
+	LoadGameResponse string
 	SaveGameRequest  struct {
 		StatefulRoom
 	}
-	SaveGameResponse = string
+	SaveGameResponse string
 	StartGameRequest struct {
 		StatefulRoom
 		Record      bool
@@ -42,7 +42,7 @@ type (
 		Active bool   `json:"active"`
 		User   string `json:"user"`
 	}
-	RecordGameResponse      = string
+	RecordGameResponse      string
 	TerminateSessionRequest struct {
 		Stateful
 	}
@@ -60,7 +60,7 @@ type (
 	WebrtcInitRequest struct {
 		Stateful
 	}
-	WebrtcInitResponse = string
+	WebrtcInitResponse string
 )
 
 func NewWebrtcIceCandidateRequest(id network.Uid, can string) (PT, any) {
