@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"github.com/giongto35/cloud-game/v2/pkg/config/worker"
+	"github.com/giongto35/cloud-game/v2/pkg/emulator/libretro/manager/remotehttp"
 	"github.com/giongto35/cloud-game/v2/pkg/logger"
 	"github.com/giongto35/cloud-game/v2/pkg/service"
 	"github.com/giongto35/cloud-game/v2/pkg/storage"
@@ -24,7 +25,7 @@ type Service struct {
 
 const retry = 10 * time.Second
 
-func NewHandler(ctx context.Context, address string, conf worker.Config, log *logger.Logger) *Service {
+func NewWorkerService(ctx context.Context, address string, conf worker.Config, log *logger.Logger) *Service {
 	return &Service{
 		address: address,
 		conf:    conf,
@@ -36,6 +37,9 @@ func NewHandler(ctx context.Context, address string, conf worker.Config, log *lo
 }
 
 func (s *Service) Run() {
+	if err := remotehttp.CheckCores(s.conf.Emulator, s.log); err != nil {
+		s.log.Error().Err(err).Msg("cores sync error")
+	}
 	remoteAddr := s.conf.Worker.Network.CoordinatorAddress
 	go func() {
 		for {
