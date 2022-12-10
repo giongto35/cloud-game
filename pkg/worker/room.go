@@ -203,10 +203,16 @@ func (r *Room) AddUser(user *Session) {
 	r.log.Debug().Str("user", string(user.Id())).Msg("User has joined the room")
 }
 
-func (r *Room) RemoveUser(user *Session) {
+func (r *Room) CleanupUser(user *Session) {
 	user.SetRoom(nil)
-	r.users.Remove(user)
-	r.log.Debug().Str("user", string(user.Id())).Msg("User has left the room")
+	if r.HasUser(user) {
+		r.users.Remove(user)
+		r.log.Debug().Str("user", string(user.Id())).Msg("User has left the room")
+	}
+	if r.IsEmpty() {
+		r.log.Debug().Msg("The room is empty")
+		r.Close()
+	}
 }
 
 func (r *Room) HasUser(u *Session) bool { return r != nil && r.users.Has(u.id) }

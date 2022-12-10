@@ -117,17 +117,9 @@ func (c *coordinator) HandleGameStart(rq api.StartGameRequest, s *Service) com.O
 func (c *coordinator) HandleTerminateSession(rq api.TerminateSessionRequest, s *Service) {
 	if session := s.router.GetUser(rq.Id); session != nil {
 		s.router.RemoveUser(session)
-		room := session.GetRoom()
-		session.Close()
-		if room == nil || room.IsEmpty() {
-			return
-		}
-		if room.HasUser(session) {
-			room.RemoveUser(session)
-		}
-		if room.IsEmpty() {
-			s.log.Debug().Msg("The room is empty")
-			room.Close()
+		if room := session.GetRoom(); room != nil {
+			session.Close()
+			room.CleanupUser(session)
 		}
 	}
 }
@@ -135,14 +127,11 @@ func (c *coordinator) HandleTerminateSession(rq api.TerminateSessionRequest, s *
 // HandleQuitGame handles cases when a user manually exits the game.
 func (c *coordinator) HandleQuitGame(rq api.GameQuitRequest, s *Service) {
 	if user := s.router.GetUser(rq.Id); user != nil {
+		// we don't strictly need a room id form the request,
+		// since users hold their room reference
+		// !to remove rid, maybe
 		if room := s.router.GetRoom(rq.Rid); room != nil {
-			if room.HasUser(user) {
-				room.RemoveUser(user)
-			}
-			if room.IsEmpty() {
-				s.log.Debug().Msg("The room is empty")
-				room.Close()
-			}
+			room.CleanupUser(user)
 		}
 	}
 }
