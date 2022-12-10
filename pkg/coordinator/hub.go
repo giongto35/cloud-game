@@ -110,31 +110,33 @@ func (h *Hub) handleWorkerConnection(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	wc := &Worker{SocketClient: *conn}
-	wc.Addr = handshake.Addr
-	wc.Zone = handshake.Zone
-	wc.PingServer = handshake.PingURL
-	wc.Port = handshake.Port
-	wc.Tag = handshake.Tag
+	worker := &Worker{
+		SocketClient: *conn,
+		Addr:         handshake.Addr,
+		PingServer:   handshake.PingURL,
+		Port:         handshake.Port,
+		Tag:          handshake.Tag,
+		Zone:         handshake.Zone,
+	}
 	// we duplicate uid from the handshake
 	hid := network.Uid(handshake.Id)
 	if !(handshake.Id == "" || !network.ValidUid(hid)) {
 		conn.SetId(hid)
-		wc.Log.Info().Msgf("worker connection id has changed to %s", hid)
+		worker.Log.Info().Msgf("worker connection id has been changed to %s", hid)
 	}
 	defer func() {
-		if wc != nil {
-			wc.Disconnect()
-			h.workers.Remove(wc)
-			h.rooms2workers.RemoveAll(wc)
+		if worker != nil {
+			worker.Disconnect()
+			h.workers.Remove(worker)
+			h.rooms2workers.RemoveAll(worker)
 		}
 	}()
 
-	h.log.Info().Msgf("New worker -- addr: %v, port: %v, zone: %v, ping addr: %v, tag: %v",
-		wc.Addr, wc.Port, wc.Zone, wc.PingServer, wc.Tag)
-	wc.HandleRequests(&h.rooms2workers, &h.users)
-	h.workers.Add(wc)
-	wc.Listen()
+	h.log.Info().Msgf("+ worker / addr: %v, port: %v, zone: %v, ping addr: %v, tag: %v",
+		worker.Addr, worker.Port, worker.Zone, worker.PingServer, worker.Tag)
+	worker.HandleRequests(&h.rooms2workers, &h.users)
+	h.workers.Add(worker)
+	worker.Listen()
 }
 
 func (h *Hub) getServerList() (r []api.Server) {

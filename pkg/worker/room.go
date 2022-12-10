@@ -14,6 +14,7 @@ import (
 	"github.com/giongto35/cloud-game/v2/pkg/encoder"
 	"github.com/giongto35/cloud-game/v2/pkg/games"
 	"github.com/giongto35/cloud-game/v2/pkg/logger"
+	os2 "github.com/giongto35/cloud-game/v2/pkg/os"
 	"github.com/giongto35/cloud-game/v2/pkg/recorder"
 	"github.com/giongto35/cloud-game/v2/pkg/storage"
 	"github.com/pion/webrtc/v3/pkg/media"
@@ -187,10 +188,7 @@ func (r *Room) whatsFrame(conf conf.Emulator, w, h int) (ww int, hh int) {
 	return
 }
 
-func hasStateSavedLocally(path string) bool {
-	_, err := os.Stat(path)
-	return !os.IsNotExist(err)
-}
+func hasStateSavedLocally(path string) bool { return os2.Exists(path) }
 
 func (r *Room) PollUserInput(session *Session) {
 	r.log.Debug().Msg("Start session input poll")
