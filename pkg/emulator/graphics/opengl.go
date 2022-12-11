@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"unsafe"
 
-	"github.com/giongto35/cloud-game/v2/pkg/emulator/backend/gl"
+	"github.com/giongto35/cloud-game/v2/pkg/emulator/graphics/gl"
 )
 
 type (
