@@ -8,8 +8,8 @@ import (
 	config "github.com/giongto35/cloud-game/v2/pkg/config/worker"
 	"github.com/giongto35/cloud-game/v2/pkg/logger"
 	"github.com/giongto35/cloud-game/v2/pkg/os"
-	"github.com/giongto35/cloud-game/v2/pkg/thread"
 	"github.com/giongto35/cloud-game/v2/pkg/worker"
+	"github.com/giongto35/cloud-game/v2/pkg/worker/thread"
 )
 
 var Version = "?"

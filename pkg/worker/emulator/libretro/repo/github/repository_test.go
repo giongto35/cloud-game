@@ -3,7 +3,7 @@ package github
 import (
 	"testing"
 
-	"github.com/giongto35/cloud-game/v2/pkg/emulator/libretro/core"
+	"github.com/giongto35/cloud-game/v2/pkg/worker/emulator/libretro/core"
 )
 
 func TestBuildbotRepo(t *testing.T) {

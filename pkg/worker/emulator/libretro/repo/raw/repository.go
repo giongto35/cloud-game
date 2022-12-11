@@ -1,6 +1,6 @@
 package raw
 
-import "github.com/giongto35/cloud-game/v2/pkg/emulator/libretro/core"
+import "github.com/giongto35/cloud-game/v2/pkg/worker/emulator/libretro/core"
 
 type Repo struct {
 	Address     string

@@ -1,8 +1,8 @@
 package encoder
 
 import (
-	"github.com/giongto35/cloud-game/v2/pkg/encoder/yuv"
 	"github.com/giongto35/cloud-game/v2/pkg/logger"
+	"github.com/giongto35/cloud-game/v2/pkg/worker/encoder/yuv"
 )
 
 type VideoPipe struct {

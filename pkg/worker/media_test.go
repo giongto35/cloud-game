@@ -6,9 +6,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/giongto35/cloud-game/v2/pkg/encoder"
-	"github.com/giongto35/cloud-game/v2/pkg/encoder/h264"
-	"github.com/giongto35/cloud-game/v2/pkg/encoder/vpx"
+	"github.com/giongto35/cloud-game/v2/pkg/worker/encoder"
+	"github.com/giongto35/cloud-game/v2/pkg/worker/encoder/h264"
+	"github.com/giongto35/cloud-game/v2/pkg/worker/encoder/vpx"
 )
 
 func TestEncoders(t *testing.T) {

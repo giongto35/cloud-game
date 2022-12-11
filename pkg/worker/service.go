@@ -5,10 +5,10 @@ import (
 	"time"
 
 	"github.com/giongto35/cloud-game/v2/pkg/config/worker"
-	"github.com/giongto35/cloud-game/v2/pkg/emulator/libretro/manager/remotehttp"
 	"github.com/giongto35/cloud-game/v2/pkg/logger"
 	"github.com/giongto35/cloud-game/v2/pkg/service"
-	"github.com/giongto35/cloud-game/v2/pkg/storage"
+	"github.com/giongto35/cloud-game/v2/pkg/worker/emulator/libretro/manager/remotehttp"
+	"github.com/giongto35/cloud-game/v2/pkg/worker/storage"
 )
 
 type Service struct {

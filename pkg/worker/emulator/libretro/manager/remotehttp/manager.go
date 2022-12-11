@@ -4,10 +4,10 @@ import (
 	"os"
 
 	"github.com/giongto35/cloud-game/v2/pkg/config/emulator"
-	"github.com/giongto35/cloud-game/v2/pkg/emulator/libretro/core"
-	"github.com/giongto35/cloud-game/v2/pkg/emulator/libretro/manager"
-	"github.com/giongto35/cloud-game/v2/pkg/emulator/libretro/repo"
 	"github.com/giongto35/cloud-game/v2/pkg/logger"
+	"github.com/giongto35/cloud-game/v2/pkg/worker/emulator/libretro/core"
+	"github.com/giongto35/cloud-game/v2/pkg/worker/emulator/libretro/manager"
+	"github.com/giongto35/cloud-game/v2/pkg/worker/emulator/libretro/repo"
 	"github.com/gofrs/flock"
 )
 

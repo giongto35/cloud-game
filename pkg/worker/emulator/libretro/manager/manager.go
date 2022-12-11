@@ -6,7 +6,7 @@ import (
 	"strings"
 
 	"github.com/giongto35/cloud-game/v2/pkg/config/emulator"
-	"github.com/giongto35/cloud-game/v2/pkg/emulator/libretro/core"
+	"github.com/giongto35/cloud-game/v2/pkg/worker/emulator/libretro/core"
 )
 
 type Manager interface {

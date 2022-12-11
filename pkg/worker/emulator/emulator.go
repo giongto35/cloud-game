@@ -4,7 +4,7 @@ import (
 	img "image"
 	"time"
 
-	"github.com/giongto35/cloud-game/v2/pkg/emulator/image"
+	"github.com/giongto35/cloud-game/v2/pkg/worker/emulator/image"
 )
 
 type CloudEmulator interface {

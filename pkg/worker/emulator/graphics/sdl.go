@@ -5,7 +5,7 @@ import (
 	"unsafe"
 
 	"github.com/giongto35/cloud-game/v2/pkg/logger"
-	"github.com/giongto35/cloud-game/v2/pkg/thread"
+	"github.com/giongto35/cloud-game/v2/pkg/worker/thread"
 	"github.com/veandco/go-sdl2/sdl"
 )
 

@@ -7,7 +7,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/giongto35/cloud-game/v2/pkg/emulator"
+	"github.com/giongto35/cloud-game/v2/pkg/worker/emulator"
 )
 
 // Tests a successful emulator state save.

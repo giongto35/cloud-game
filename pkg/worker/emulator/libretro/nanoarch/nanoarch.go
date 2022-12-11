@@ -11,12 +11,12 @@ import (
 	"time"
 	"unsafe"
 
-	"github.com/giongto35/cloud-game/v2/pkg/emulator"
-	"github.com/giongto35/cloud-game/v2/pkg/emulator/graphics"
-	"github.com/giongto35/cloud-game/v2/pkg/emulator/image"
-	"github.com/giongto35/cloud-game/v2/pkg/emulator/libretro/core"
 	"github.com/giongto35/cloud-game/v2/pkg/logger"
-	"github.com/giongto35/cloud-game/v2/pkg/thread"
+	"github.com/giongto35/cloud-game/v2/pkg/worker/emulator"
+	"github.com/giongto35/cloud-game/v2/pkg/worker/emulator/graphics"
+	"github.com/giongto35/cloud-game/v2/pkg/worker/emulator/image"
+	"github.com/giongto35/cloud-game/v2/pkg/worker/emulator/libretro/core"
+	"github.com/giongto35/cloud-game/v2/pkg/worker/thread"
 )
 
 /*

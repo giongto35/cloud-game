@@ -1,8 +1,8 @@
 package github
 
 import (
-	"github.com/giongto35/cloud-game/v2/pkg/emulator/libretro/core"
-	"github.com/giongto35/cloud-game/v2/pkg/emulator/libretro/repo/buildbot"
+	"github.com/giongto35/cloud-game/v2/pkg/worker/emulator/libretro/core"
+	"github.com/giongto35/cloud-game/v2/pkg/worker/emulator/libretro/repo/buildbot"
 )
 
 type RepoGithub struct {

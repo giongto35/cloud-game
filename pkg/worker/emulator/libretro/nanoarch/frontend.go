@@ -9,8 +9,8 @@ import (
 	"time"
 
 	conf "github.com/giongto35/cloud-game/v2/pkg/config/emulator"
-	"github.com/giongto35/cloud-game/v2/pkg/emulator"
 	"github.com/giongto35/cloud-game/v2/pkg/logger"
+	"github.com/giongto35/cloud-game/v2/pkg/worker/emulator"
 )
 
 type Frontend struct {
