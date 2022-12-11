@@ -1,13 +1,23 @@
-package downloader
+package remotehttp
 
 import (
-	"github.com/giongto35/cloud-game/v2/pkg/downloader/backend"
-	"github.com/giongto35/cloud-game/v2/pkg/downloader/pipe"
+	"os"
+
+	"github.com/giongto35/cloud-game/v2/pkg/compression"
 	"github.com/giongto35/cloud-game/v2/pkg/logger"
 )
 
+type Download struct {
+	Key     string
+	Address string
+}
+
+type Client interface {
+	Request(dest string, urls ...Download) ([]string, []string)
+}
+
 type Downloader struct {
-	backend backend.Client
+	backend Client
 	// pipe contains a sequential list of
 	// operations applied to some files and
 	// each operation will return a list of
@@ -20,12 +30,9 @@ type Process func(string, []string, *logger.Logger) []string
 
 func NewDefaultDownloader(log *logger.Logger) Downloader {
 	return Downloader{
-		backend: backend.NewGrabDownloader(log),
-		pipe: []Process{
-			pipe.Unpack,
-			pipe.Delete,
-		},
-		log: log,
+		backend: NewGrabDownloader(log),
+		pipe:    []Process{unpackDelete},
+		log:     log,
 	}
 }
 
@@ -33,10 +40,24 @@ func NewDefaultDownloader(log *logger.Logger) Downloader {
 // put them into the destination folder.
 // It will return a partial or full list of downloaded files,
 // a list of processed files if some pipe processing functions are set.
-func (d *Downloader) Download(dest string, urls ...backend.Download) ([]string, []string) {
+func (d *Downloader) Download(dest string, urls ...Download) ([]string, []string) {
 	files, fails := d.backend.Request(dest, urls...)
 	for _, op := range d.pipe {
 		files = op(dest, files, d.log)
 	}
 	return files, fails
+}
+
+func unpackDelete(dest string, files []string, log *logger.Logger) []string {
+	var res []string
+	for _, file := range files {
+		if unpack := compression.NewFromExt(file, log); unpack != nil {
+			if _, err := unpack.Extract(file, dest); err == nil {
+				if e := os.Remove(file); e == nil {
+					res = append(res, file)
+				}
+			}
+		}
+	}
+	return res
 }

@@ -4,8 +4,6 @@ import (
 	"os"
 
 	"github.com/giongto35/cloud-game/v2/pkg/config/emulator"
-	"github.com/giongto35/cloud-game/v2/pkg/downloader"
-	"github.com/giongto35/cloud-game/v2/pkg/downloader/backend"
 	"github.com/giongto35/cloud-game/v2/pkg/emulator/libretro/core"
 	"github.com/giongto35/cloud-game/v2/pkg/emulator/libretro/manager"
 	"github.com/giongto35/cloud-game/v2/pkg/emulator/libretro/repo"
@@ -19,7 +17,7 @@ type Manager struct {
 	arch    core.ArchInfo
 	repo    repo.Repository
 	altRepo repo.Repository
-	client  downloader.Downloader
+	client  Downloader
 	fmu     *flock.Flock
 	log     *logger.Logger
 }
@@ -42,7 +40,7 @@ func NewRemoteHttpManager(conf emulator.LibretroConfig, log *logger.Logger) Mana
 	m := Manager{
 		BasicManager: manager.BasicManager{Conf: conf},
 		arch:         arch,
-		client:       downloader.NewDefaultDownloader(log),
+		client:       NewDefaultDownloader(log),
 		fmu:          flock.New(fileLock),
 		log:          log,
 	}
@@ -90,9 +88,9 @@ func (m *Manager) Sync() error {
 	return nil
 }
 
-func (m *Manager) getCoreUrls(names []string, repo repo.Repository) (urls []backend.Download) {
+func (m *Manager) getCoreUrls(names []string, repo repo.Repository) (urls []Download) {
 	for _, c := range names {
-		urls = append(urls, backend.Download{Key: c, Address: repo.GetCoreUrl(c, m.arch)})
+		urls = append(urls, Download{Key: c, Address: repo.GetCoreUrl(c, m.arch)})
 	}
 	return
 }
@@ -110,16 +108,16 @@ func (m *Manager) download(cores []emulator.CoreInfo) (failed []string) {
 		}
 	}
 	m.log.Info().Msgf("[core-dl] <<< download | main: %v | alt: %v", prime, second)
-	unavailable := m.down(prime, m.repo)
-	if len(unavailable) > 0 && m.altRepo != nil {
+	primeFails := m.down(prime, m.repo)
+	if len(primeFails) > 0 && m.altRepo != nil {
 		m.log.Warn().Msgf("[core-dl] error: unable to download some cores, trying 2nd repository")
-		failed = append(failed, m.down(unavailable, m.altRepo)...)
+		failed = append(failed, m.down(primeFails, m.altRepo)...)
 	}
 	if m.altRepo != nil {
-		unavailable := m.down(second, m.altRepo)
-		if len(unavailable) > 0 {
+		altFails := m.down(second, m.altRepo)
+		if len(altFails) > 0 {
 			m.log.Error().Msgf("[core-dl] error: unable to download some cores, trying 1st repository")
-			failed = append(failed, m.down(unavailable, m.repo)...)
+			failed = append(failed, m.down(altFails, m.repo)...)
 		}
 	}
 	return

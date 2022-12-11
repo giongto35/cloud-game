@@ -1,4 +1,4 @@
-package backend
+package remotehttp
 
 import (
 	"crypto/tls"
@@ -17,7 +17,7 @@ type GrabDownloader struct {
 func NewGrabDownloader(log *logger.Logger) GrabDownloader {
 	return GrabDownloader{
 		client: &grab.Client{
-			UserAgent: "Cloud-Game/2.0",
+			UserAgent: "Cloud-Game/3.0",
 			HTTPClient: &http.Client{
 				Transport: &http.Transport{
 					Proxy:           http.ProxyFromEnvironment,
