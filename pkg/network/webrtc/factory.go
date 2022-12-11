@@ -29,7 +29,7 @@ func NewApiFactory(conf conf.Webrtc, log *logger.Logger, mod ModApiFun) (api *Ap
 			return
 		}
 	}
-	customLogger := logger.NewPionLogger(log, conf.LogLevel)
+	customLogger := NewPionLogger(log, conf.LogLevel)
 	s := webrtc.SettingEngine{LoggerFactory: customLogger}
 	s.SetIncludeLoopbackCandidate(true)
 	if conf.HasDtlsRole() {
