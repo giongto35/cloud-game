@@ -122,6 +122,8 @@ emulator:
   libretro:
     # use zip compression for emulator save states
     saveCompression: true
+    # Libretro cores logging level: DEBUG = 0, INFO, WARN, ERROR, DUMMY = INT_MAX
+    logLevel: 1
     cores:
       paths:
         libs: assets/cores

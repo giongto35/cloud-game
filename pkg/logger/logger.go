@@ -123,7 +123,7 @@ func (l *Logger) Output(w io.Writer) zerolog.Logger { return l.logger.Output(w) 
 func (l *Logger) With() zerolog.Context { return l.logger.With() }
 
 // Level creates a child logger with the minimum accepted level set to level.
-func (l *Logger) Level(level zerolog.Level) zerolog.Logger { return l.logger.Level(level) }
+func (l *Logger) Level(level Level) zerolog.Logger { return l.logger.Level(zerolog.Level(level)) }
 
 // Sample returns a logger with the s sampler.
 func (l *Logger) Sample(s zerolog.Sampler) zerolog.Logger { return l.logger.Sample(s) }

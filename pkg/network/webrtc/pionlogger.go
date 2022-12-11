@@ -14,7 +14,7 @@ type PionLog struct {
 const trace = zerolog.Level(logger.TraceLevel)
 
 func NewPionLogger(root *logger.Logger, level int) *PionLog {
-	return &PionLog{log: root.Extend(root.Level(zerolog.Level(level)).With())}
+	return &PionLog{log: root.Extend(root.Level(logger.Level(level)).With())}
 }
 
 func (p PionLog) NewLogger(scope string) logging.LeveledLogger {

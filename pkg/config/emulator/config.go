@@ -35,6 +35,7 @@ type LibretroConfig struct {
 		List map[string]LibretroCoreConfig
 	}
 	SaveCompression bool
+	LogLevel        int
 }
 
 type LibretroRepoConfig struct {

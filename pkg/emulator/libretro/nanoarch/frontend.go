@@ -35,7 +35,8 @@ type Frontend struct {
 // NewFrontend implements CloudEmulator interface for a Libretro frontend.
 func NewFrontend(conf conf.Emulator, log *logger.Logger) (*Frontend, error) {
 	log = log.Extend(log.With().Str("m", "Libretro"))
-	SetLibretroLogger(log)
+	ll := log.Extend(log.Level(logger.Level(conf.Libretro.LogLevel)).With())
+	SetLibretroLogger(ll)
 
 	// Check if room is on local storage, if not, pull from GCS to local storage
 	log.Info().Msgf("Local storage path: %v", conf.Storage)
