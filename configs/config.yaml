@@ -75,7 +75,7 @@ worker:
   monitoring:
     # monitoring server port
     port: 6602
-    profilingEnabled: true
+    profilingEnabled: false
     # monitoring server URL prefix
     metricEnabled: false
     urlPrefix: /worker
@@ -99,7 +99,7 @@ emulator:
 
   # set the total number of threads for the image processing
   # (experimental)
-  threads: 4
+  threads: 8
 
   aspectRatio:
     # enable aspect ratio changing
@@ -121,7 +121,7 @@ emulator:
 
   libretro:
     # use zip compression for emulator save states
-    saveCompression: false
+    saveCompression: true
     cores:
       paths:
         libs: assets/cores
