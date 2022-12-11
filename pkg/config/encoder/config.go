@@ -1,15 +1,7 @@
 package encoder
 
 type Encoder struct {
-	Audio Audio
 	Video Video
-}
-
-type Audio struct {
-	Codec     string
-	Channels  int
-	Frame     int
-	Frequency int
 }
 
 type Video struct {
@@ -26,6 +18,3 @@ type Video struct {
 		KeyframeInterval uint
 	}
 }
-
-func (a *Audio) GetFrameSize() int          { return a.GetFrameSizeFor(a.Frequency) }
-func (a *Audio) GetFrameSizeFor(hz int) int { return hz * a.Frame / 1000 * a.Channels }

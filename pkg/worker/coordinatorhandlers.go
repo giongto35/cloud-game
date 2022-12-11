@@ -27,7 +27,7 @@ func buildConnQuery[S fmt.Stringer](id S, conf worker.Worker, address string) (s
 func (c *coordinator) HandleWebrtcInit(rq api.WebrtcInitRequest, s *Service, connApi *webrtc.ApiFactory) com.Out {
 	enc := s.conf.Encoder
 	peer := webrtc.New(c.Log, connApi)
-	localSDP, err := peer.NewCall(enc.Video.Codec, enc.Audio.Codec, func(data any) {
+	localSDP, err := peer.NewCall(enc.Video.Codec, audioCodec, func(data any) {
 		candidate, err := api.ToBase64Json(data)
 		if err != nil {
 			c.Log.Error().Err(err).Msgf("ICE candidate encode fail for [%v]", data)

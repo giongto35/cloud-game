@@ -108,7 +108,7 @@ func NewRoom(id string, game games.GameMetadata, storage storage.CloudStorage, o
 		})
 	}, conf.Encoder.Video)
 
-	dur := time.Duration(conf.Encoder.Audio.Frame) * time.Millisecond
+	dur := time.Duration(audioFrame) * time.Millisecond
 	go room.startAudio(int(room.emulator.GetSampleRate()), func(audio []byte, err error) {
 		if err != nil {
 			return
@@ -119,7 +119,7 @@ func NewRoom(id string, game games.GameMetadata, storage storage.CloudStorage, o
 				_ = u.SendAudio(sample)
 			}
 		})
-	}, conf.Encoder.Audio)
+	})
 
 	if conf.Emulator.AutosaveSec > 0 {
 		go room.enableAutosave(conf.Emulator.AutosaveSec)

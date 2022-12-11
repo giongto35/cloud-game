@@ -12,15 +12,24 @@ import (
 
 var encoder_ *opus.Encoder
 
-func (r *Room) startAudio(frequency int, onAudio func([]byte, error), conf conf.Audio) {
-	buf := media.NewBuffer(conf.GetFrameSizeFor(frequency))
-	resample, frameLen := frequency != conf.Frequency, 0
+const (
+	audioChannels  = 2
+	audioCodec     = "opus"
+	audioFrame     = 20
+	audioFrequency = 48000
+)
+
+func GetFrameSizeFor(hz int) int { return hz * audioFrame / 1000 * audioChannels }
+
+func (r *Room) startAudio(frequency int, onAudio func([]byte, error)) {
+	buf := media.NewBuffer(GetFrameSizeFor(frequency))
+	resample, frameLen := frequency != audioFrequency, 0
 	if resample {
-		frameLen = conf.GetFrameSize()
+		frameLen = GetFrameSizeFor(audioFrequency)
 	}
 	// a garbage cache
 	if encoder_ == nil {
-		enc, err := opus.NewEncoder(conf.Frequency, conf.Channels)
+		enc, err := opus.NewEncoder(audioFrequency, audioChannels)
 		if err != nil {
 			r.log.Fatal().Err(err).Msg("couldn't create audio encoder")
 		}
