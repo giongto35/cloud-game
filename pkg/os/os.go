@@ -14,6 +14,13 @@ func Exists(path string) bool {
 	return !errors.Is(err, fs.ErrNotExist)
 }
 
+func CheckCreateDir(path string) error {
+	if !Exists(path) {
+		return os.Mkdir(path, os.ModeDir)
+	}
+	return nil
+}
+
 func ExpectTermination() chan struct{} {
 	signals := make(chan os.Signal, 1)
 	signal.Notify(signals, os.Interrupt, syscall.SIGTERM)
@@ -31,4 +38,8 @@ func GetUserHome() (string, error) {
 		return "", err
 	}
 	return me.HomeDir, nil
+}
+
+func WriteFile(name string, data []byte, perm os.FileMode) error {
+	return os.WriteFile(name, data, perm)
 }

@@ -2,7 +2,6 @@ package worker
 
 import (
 	"math"
-	"os"
 	"path/filepath"
 	"time"
 
@@ -11,7 +10,7 @@ import (
 	"github.com/giongto35/cloud-game/v2/pkg/config/worker"
 	"github.com/giongto35/cloud-game/v2/pkg/games"
 	"github.com/giongto35/cloud-game/v2/pkg/logger"
-	os2 "github.com/giongto35/cloud-game/v2/pkg/os"
+	"github.com/giongto35/cloud-game/v2/pkg/os"
 	"github.com/giongto35/cloud-game/v2/pkg/worker/emulator"
 	"github.com/giongto35/cloud-game/v2/pkg/worker/emulator/libretro/nanoarch"
 	"github.com/giongto35/cloud-game/v2/pkg/worker/encoder"
@@ -131,7 +130,7 @@ func NewRoom(id string, game games.GameMetadata, storage storage.CloudStorage, o
 }
 
 func (r *Room) enableAutosave(periodSec int) {
-	r.log.Info().Msgf("Autosave is enabled with the period of [%vs]", periodSec)
+	r.log.Info().Msgf("Autosave every [%vs]", periodSec)
 	ticker := time.NewTicker(time.Duration(periodSec) * time.Second)
 	defer ticker.Stop()
 
@@ -188,7 +187,7 @@ func (r *Room) whatsFrame(conf conf.Emulator, w, h int) (ww int, hh int) {
 	return
 }
 
-func hasStateSavedLocally(path string) bool { return os2.Exists(path) }
+func hasStateSavedLocally(path string) bool { return os.Exists(path) }
 
 func (r *Room) PollUserInput(session *Session) {
 	r.log.Debug().Msg("Start session input poll")

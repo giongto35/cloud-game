@@ -12,7 +12,7 @@ import (
 	"time"
 
 	"github.com/giongto35/cloud-game/v2/pkg/logger"
-	os2 "github.com/giongto35/cloud-game/v2/pkg/os"
+	oss "github.com/giongto35/cloud-game/v2/pkg/os"
 )
 
 type Recording struct {
@@ -73,10 +73,8 @@ func NewRecording(meta Meta, log *logger.Logger, opts Options) *Recording {
 	if err != nil {
 		log.Error().Err(err).Send()
 	}
-	if !os2.Exists(savePath) {
-		if err = os.Mkdir(savePath, os.ModeDir); err != nil {
-			log.Error().Err(err).Send()
-		}
+	if err := oss.CheckCreateDir(savePath); err != nil {
+		log.Error().Err(err).Send()
 	}
 	return &Recording{dir: savePath, meta: meta, opts: opts, log: log, vsync: []time.Duration{}}
 }
@@ -91,10 +89,8 @@ func (r *Recording) Start() {
 
 	r.log.Info().Msgf("[recording] path will be [%v]", path)
 
-	if !os2.Exists(path) {
-		if err := os.Mkdir(path, os.ModeDir); err != nil {
-			r.log.Fatal().Err(err)
-		}
+	if err := oss.CheckCreateDir(path); err != nil {
+		r.log.Fatal().Err(err)
 	}
 
 	audio, err := newWavStream(path, r.opts)
