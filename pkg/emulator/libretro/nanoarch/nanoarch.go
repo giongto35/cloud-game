@@ -238,7 +238,7 @@ func coreLog(level C.enum_retro_log_level, msg *C.char) {
 	switch int(level) {
 	// with debug level cores have too much logs
 	case 0: // RETRO_LOG_DEBUG
-	//	libretroLogger.Debug().Msg(message)
+		libretroLogger.Debug().Msg(message)
 	case 1: // RETRO_LOG_INFO
 		libretroLogger.Info().Msg(message)
 	case 2: // RETRO_LOG_WARN
