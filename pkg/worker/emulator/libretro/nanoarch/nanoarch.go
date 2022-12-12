@@ -134,9 +134,6 @@ func coreVideoRefresh(data unsafe.Pointer, width C.unsigned, height C.unsigned, 
 		return
 	}
 
-	// if Libretro renders frame with OpenGL context
-	isOpenGLRender := data == C.RETRO_HW_FRAME_BUFFER_VALID
-
 	// calculate real frame width in pixels from packed data (realWidth >= width)
 	packedWidth := int(pitch) / nano.v.bpp
 	if packedWidth < 1 {
@@ -145,6 +142,8 @@ func coreVideoRefresh(data unsafe.Pointer, width C.unsigned, height C.unsigned, 
 	// calculate space for the video frame
 	bytes := int(height) * packedWidth * nano.v.bpp
 
+	// if Libretro renders frame with OpenGL context
+	isOpenGLRender := data == C.RETRO_HW_FRAME_BUFFER_VALID
 	var data_ []byte
 	if isOpenGLRender {
 		data_ = graphics.ReadFramebuffer(bytes, int(width), int(height))
