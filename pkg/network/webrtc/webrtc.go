@@ -1,10 +1,12 @@
 package webrtc
 
 import (
+	"errors"
 	"fmt"
 	"strings"
 
 	"github.com/giongto35/cloud-game/v2/pkg/logger"
+	"github.com/pion/dtls/v2"
 	"github.com/pion/webrtc/v3"
 	"github.com/pion/webrtc/v3/pkg/media"
 )
@@ -170,11 +172,11 @@ func (p *Peer) Disconnect() {
 	}
 
 	if p.conn.ConnectionState() < webrtc.PeerConnectionStateDisconnected {
-		if err := p.conn.Close(); err != nil {
+		if err := p.conn.Close(); err != nil && !errors.Is(err, dtls.ErrConnClosed) {
 			p.log.Error().Err(err).Msg("WebRTC close")
 		}
-		p.conn = nil
 	}
+	p.conn = nil
 	p.log.Debug().Msg("WebRTC stop")
 }
 

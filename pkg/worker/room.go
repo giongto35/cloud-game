@@ -79,7 +79,7 @@ func NewRoom(id string, game games.GameMetadata, storage storage.CloudStorage, o
 		}
 	}
 
-	log.Info().Str("game", game.Name).Msg("The room is opened")
+	log.Info().Str("game", game.Name).Msg("The room is open")
 
 	if conf.Recording.Enabled {
 		room.rec = recorder.NewRecording(

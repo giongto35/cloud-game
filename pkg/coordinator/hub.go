@@ -122,7 +122,7 @@ func (h *Hub) handleWorkerConnection(w http.ResponseWriter, r *http.Request) {
 	hid := network.Uid(handshake.Id)
 	if !(handshake.Id == "" || !network.ValidUid(hid)) {
 		conn.SetId(hid)
-		worker.Log.Info().Msgf("worker connection id has been changed to %s", hid)
+		worker.Log.Debug().Msgf("connection id has been changed to %s", hid)
 	}
 	defer func() {
 		if worker != nil {
@@ -132,7 +132,7 @@ func (h *Hub) handleWorkerConnection(w http.ResponseWriter, r *http.Request) {
 		}
 	}()
 
-	h.log.Info().Msgf("+ worker / addr: %v, port: %v, zone: %v, ping addr: %v, tag: %v",
+	h.log.Info().Msgf("New worker / addr: %v, port: %v, zone: %v, ping addr: %v, tag: %v",
 		worker.Addr, worker.Port, worker.Zone, worker.PingServer, worker.Tag)
 	worker.HandleRequests(&h.rooms2workers, &h.users)
 	h.workers.Add(worker)

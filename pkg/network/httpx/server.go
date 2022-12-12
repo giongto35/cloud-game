@@ -100,7 +100,7 @@ func (s *Server) run() {
 	}
 	switch err {
 	case http.ErrServerClosed:
-		s.log.Error().Msgf("%s server was closed", protocol)
+		s.log.Debug().Msgf("%s server was closed", protocol)
 		return
 	default:
 		s.log.Error().Err(err)
