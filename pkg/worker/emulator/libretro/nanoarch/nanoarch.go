@@ -169,6 +169,12 @@ func coreVideoRefresh(data unsafe.Pointer, width C.unsigned, height C.unsigned, 
 	dt := time.Duration(t - lastFrameTime)
 	lastFrameTime = t
 
+	if len(frame.Pix) == 0 {
+		// this should not be happening, will crash yuv
+		libretroLogger.Error().Msgf("skip empty frame %v", frame.Bounds())
+		return
+	}
+
 	select {
 	case frontend.video <- emulator.GameFrame{Data: frame, Duration: dt}:
 	default:
