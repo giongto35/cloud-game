@@ -66,9 +66,9 @@
         message.show('Now you can share you game!');
     };
 
-    const onWebrtcMessage = () => {
-        event.pub(PING_RESPONSE);
-    };
+    // const onWebrtcMessage = () => {
+    //     event.pub(PING_RESPONSE);
+    // };
 
     const onConnectionReady = () => {
         // ping / pong
@@ -450,7 +450,6 @@
                         case KEY.QUIT:
                             input.poll().disable();
 
-                            // TODO: Stop game / SPA
                             api.game.quit(room.getId());
                             room.reset();
 

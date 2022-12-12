@@ -142,7 +142,7 @@ const webrtc = (() => {
             event.pub(WEBRTC_SDP_ANSWER, {sdp: answer});
             media.srcObject = mediaStream;
         },
-        setMessageHandler: (handler) => onMessage = handler,
+        // setMessageHandler: (handler) => onMessage = handler,
         addCandidate: (data) => {
             if (data === '') {
                 event.pub(WEBRTC_ICE_CANDIDATES_FLUSH);
@@ -162,15 +162,15 @@ const webrtc = (() => {
             });
             isFlushing = false;
         },
-        message: (mess = '') => {
-            try {
-                inputChannel.send(mess)
-                return true
-            } catch (error) {
-                log.error('[rtc] input channel broken ' + error)
-                return false
-            }
-        },
+        // message: (mess = '') => {
+        //     try {
+        //         inputChannel.send(mess)
+        //         return true
+        //     } catch (error) {
+        //         log.error('[rtc] input channel broken ' + error)
+        //         return false
+        //     }
+        // },
         input: (data) => inputChannel.send(data),
         isConnected: () => connected,
         isInputReady: () => inputReady,
