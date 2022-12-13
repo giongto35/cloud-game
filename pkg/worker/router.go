@@ -41,12 +41,11 @@ func (r *Router) GetRoom(id string) *Room {
 }
 func (r *Router) GetUser(uid network.Uid) *Session { sess, _ := r.users.Find(string(uid)); return sess }
 func (r *Router) RemoveRoom()                      { r.room = nil }
-func (r *Router) RemoveUser(user *Session)         { r.users.Remove(user) }
+func (r *Router) RemoveUser(user *Session)         { r.users.Remove(user); user.Close() }
 
 func NewSession(rtc *webrtc.Peer, id network.Uid) *Session { return &Session{id: id, conn: rtc} }
 
 func (s *Session) Id() network.Uid                     { return s.id }
-func (s *Session) GetRoom() *Room                      { return s.room }
 func (s *Session) GetSetRoom(v *Room) *Room            { vv := s.room; s.room = v; return vv }
 func (s *Session) GetPeerConn() *webrtc.Peer           { return s.conn }
 func (s *Session) GetPlayerIndex() int                 { return s.pi }
