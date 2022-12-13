@@ -32,7 +32,7 @@ func New(conf coordinator.Config, log *logger.Logger) (services service.Group) {
 	return
 }
 
-func NewHTTPServer(conf coordinator.Config, log *logger.Logger, fnMux func(mux *http.ServeMux)) (*httpx.Server, error) {
+func NewHTTPServer(conf coordinator.Config, log *logger.Logger, fnMux func(*http.ServeMux)) (*httpx.Server, error) {
 	return httpx.NewServer(
 		conf.Coordinator.Server.GetAddr(),
 		func(*httpx.Server) http.Handler {
