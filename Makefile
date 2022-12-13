@@ -1,7 +1,3 @@
-# Makefile includes some useful commands to build or format incentives
-# More commands could be added
-
-# Variables
 PROJECT = cloud-game
 REPO_ROOT = github.com/giongto35
 ROOT = ${REPO_ROOT}/${PROJECT}
@@ -12,47 +8,6 @@ fmt:
 
 compile: fmt
 	@go install ./cmd/...
-
-check: fmt
-	@golangci-lint run cmd/... pkg/...
-#	@staticcheck -checks="all,-S1*" ./cmd/... ./pkg/... ./tests/...
-
-dep:
-	go mod download
-#	go mod tidy
-
-# NOTE: there is problem with go mod vendor when it delete github.com/gen2brain/x264-go/x264c causing unable to build. https://github.com/golang/go/issues/26366
-#build.cross: build
-#	CGO_ENABLED=1 GOOS=darwin GOARC=amd64 go build --ldflags '-linkmode external -extldflags "-static"' -o bin/coordinator-darwin ./cmd/coordinator
-#	CGO_ENABLED=1 GOOS=darwin GOARC=amd64 go build --ldflags '-linkmode external -extldflags "-static"' -o bin/worker-darwin ./cmd/worker
-#	CC=arm-linux-musleabihf-gcc GOOS=linux GOARC=amd64 CGO_ENABLED=1 go build --ldflags '-linkmode external -extldflags "-static"' -o bin/coordinator-linu ./cmd/coordinator
-#	CC=arm-linux-musleabihf-gcc GOOS=linux GOARC=amd64 CGO_ENABLED=1 go build --ldflags '-linkmode external -extldflags "-static"' -o bin/worker-linux ./cmd/worker
-
-# A user can invoke tests in different ways:
-#  - make test runs all tests;
-#  - make test TEST_TIMEOUT=10 runs all tests with a timeout of 10 seconds;
-#  - make test TEST_PKG=./model/... only runs tests for the model package;
-#  - make test TEST_ARGS="-v -short" runs tests with the specified arguments;
-#  - make test-race runs tests with race detector enabled.
-TEST_TIMEOUT = 60
-TEST_PKGS ?= ./cmd/... ./pkg/...
-TEST_TARGETS := test-short test-verbose test-race test-cover
-.PHONY: $(TEST_TARGETS) test tests
-test-short:   TEST_ARGS=-short
-test-verbose: TEST_ARGS=-v
-test-race:    TEST_ARGS=-race
-test-cover:   TEST_ARGS=-cover
-$(TEST_TARGETS): test
-
-test: compile
-	@go test -timeout $(TEST_TIMEOUT)s $(TEST_ARGS) $(TEST_PKGS)
-
-test-e2e: compile
-	@go test ./tests/e2e/...
-
-cover:
-	@go test -v -covermode=count -coverprofile=coverage.out $(TEST_PKGS)
-#	@$(GOPATH)/bin/goveralls -coverprofile=coverage.out -service=travis-ci -repotoken $(COVERALLS_TOKEN)
 
 clean:
 	@rm -rf bin
@@ -96,8 +51,8 @@ dev.run-docker:
 # Config params:
 # - RELEASE_DIR: the name of the output folder (default: release).
 # - CONFIG_DIR: search dir for core config files.
-# - DLIB_TOOL: the name of a dynamic lib copy tool (with params) (e.g., ldd -x -y; defalut: ldd).
-# - DLIB_SEARCH_PATTERN: a grep filter of the output of the DLIB_TOOL (e.g., mylib.so; default: .*so).
+# - DLIB_TOOL: the name of a dynamic lib copy tool (with params) (e.g., ldd -x -y; default: ldd).
+# - DLIB_SEARCH_PATTERN: a grep filter of the output of the DLIB_TOOL (e.g., my_lib.so; default: .*so).
 #   Be aware that this search pattern will return only matched regular expression part and not the whole line.
 #   de. -> abc def ghj -> def
 #   Makefile special symbols should be escaped with \.
