@@ -121,7 +121,7 @@ func (c *coordinator) HandleTerminateSession(rq api.TerminateSessionRequest, s *
 	if session := s.router.GetUser(rq.Id); session != nil {
 		s.router.RemoveUser(session)
 		session.Close()
-		if room := session.GetRoom(); room != nil {
+		if room := session.GetSetRoom(nil); room != nil {
 			room.CleanupUser(session)
 		}
 	}

@@ -215,12 +215,14 @@ func (r *Room) CleanupUser(user *Session) {
 func (r *Room) HasUser(u *Session) bool { return r != nil && r.users.Has(u.id) }
 
 func (r *Room) Close() {
+	r.log.Debug().Msg("Closing the room")
 	if !r.active {
+		r.log.Debug().Msg("Close room skip")
 		return
 	}
 
+	r.users = com.NewNetMap[*Session]()
 	r.active = false
-	r.log.Debug().Msg("Closing the room")
 
 	// Save game before quit. Only save for game which was previous saved to avoid flooding database
 	if r.isRoomExisted() {

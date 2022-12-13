@@ -93,11 +93,16 @@ func (f *Frontend) Start() {
 	if err := f.LoadGameState(); err != nil {
 		f.log.Error().Err(err).Msg("couldn't load a save file")
 	}
-
 	ticker := time.NewTicker(time.Second / time.Duration(nano.sysAvInfo.timing.fps))
-	defer ticker.Stop()
-
 	lastFrameTime = time.Now().UnixNano()
+
+	defer func() {
+		ticker.Stop()
+		nanoarchShutdown()
+		close(f.video)
+		close(f.audio)
+		f.log.Debug().Msgf("run loop finished")
+	}()
 
 	for {
 		f.mu.Lock()
@@ -107,9 +112,6 @@ func (f *Frontend) Start() {
 		case <-ticker.C:
 			continue
 		case <-f.done:
-			nanoarchShutdown()
-			close(f.video)
-			close(f.audio)
 			return
 		}
 	}
