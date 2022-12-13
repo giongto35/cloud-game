@@ -35,6 +35,10 @@ type Server struct {
 	Zone     string      `json:"zone,omitempty"`
 }
 
+type HasServerInfo interface {
+	GetServerList() []Server
+}
+
 const (
 	DataQueryParam   = "data"
 	RoomIdQueryParam = "room_id"

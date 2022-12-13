@@ -9,13 +9,7 @@ import (
 
 type User struct {
 	com.SocketClient
-
-	RoomID string
-	Worker *Worker
-}
-
-type ServerInfo interface {
-	getServerList() []api.Server
+	w *Worker // linked worker
 }
 
 func NewUserClientServer(conn *com.SocketClient, err error) (*User, error) {
@@ -25,33 +19,26 @@ func NewUserClientServer(conn *com.SocketClient, err error) (*User, error) {
 	return &User{SocketClient: *conn}, nil
 }
 
-func (u *User) SetRoom(id string) { u.RoomID = id }
-
 func (u *User) SetWorker(w *Worker) {
-	u.Worker = w
-	u.Worker.SetSlots(-1)
+	u.w = w
+	u.w.SetSlots(-1)
 }
 
 func (u *User) Disconnect() {
 	u.SocketClient.Close()
-	if u.Worker == nil {
-		return
-	}
-	u.Worker.SetSlots(+1)
-	if u.Worker != nil {
-		u.Worker.TerminateSession(u.Id())
+	if u.w != nil {
+		u.w.SetSlots(+1)
+		u.w.TerminateSession(u.Id())
 	}
 }
 
-func (u *User) HandleRequests(info ServerInfo, launcher games.Launcher, conf coordinator.Config) {
-	//
+func (u *User) HandleRequests(info api.HasServerInfo, launcher games.Launcher, conf coordinator.Config) {
 	u.ProcessMessages()
-	//
 	u.OnPacket(func(x com.In) error {
 		// !to use proper channels
 		switch x.T {
 		case api.WebrtcInit:
-			if u.Worker == nil {
+			if u.w == nil {
 				return nil
 			}
 			u.HandleWebrtcInit()

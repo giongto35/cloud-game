@@ -136,7 +136,7 @@ func (h *Hub) handleWorkerConnection(w http.ResponseWriter, r *http.Request) {
 	worker.Listen()
 }
 
-func (h *Hub) getServerList() (r []api.Server) {
+func (h *Hub) GetServerList() (r []api.Server) {
 	for _, w := range h.workers.List() {
 		r = append(r, api.Server{
 			Addr:    w.Addr,

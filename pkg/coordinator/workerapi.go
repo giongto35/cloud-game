@@ -29,32 +29,32 @@ func (w *Worker) StartGame(id network.Uid, app games.AppMeta, req api.GameStartU
 	}))
 }
 
-func (w *Worker) QuitGame(id network.Uid, roomId string) {
-	w.Notify(api.QuitGame, api.GameQuitRequest{StatefulRoom: api.StateRoom(id, roomId)})
+func (w *Worker) QuitGame(id network.Uid) {
+	w.Notify(api.QuitGame, api.GameQuitRequest{StatefulRoom: api.StateRoom(id, w.RoomId)})
 }
 
-func (w *Worker) SaveGame(id network.Uid, roomId string) (*api.SaveGameResponse, error) {
+func (w *Worker) SaveGame(id network.Uid) (*api.SaveGameResponse, error) {
 	return api.UnwrapChecked[api.SaveGameResponse](
-		w.Send(api.SaveGame, api.SaveGameRequest{StatefulRoom: api.StateRoom(id, roomId)}))
+		w.Send(api.SaveGame, api.SaveGameRequest{StatefulRoom: api.StateRoom(id, w.RoomId)}))
 }
 
-func (w *Worker) LoadGame(id network.Uid, roomId string) (*api.LoadGameResponse, error) {
+func (w *Worker) LoadGame(id network.Uid) (*api.LoadGameResponse, error) {
 	return api.UnwrapChecked[api.LoadGameResponse](
-		w.Send(api.LoadGame, api.LoadGameRequest{StatefulRoom: api.StateRoom(id, roomId)}))
+		w.Send(api.LoadGame, api.LoadGameRequest{StatefulRoom: api.StateRoom(id, w.RoomId)}))
 }
 
-func (w *Worker) ChangePlayer(id network.Uid, roomId string, index int) (*api.ChangePlayerResponse, error) {
+func (w *Worker) ChangePlayer(id network.Uid, index int) (*api.ChangePlayerResponse, error) {
 	return api.UnwrapChecked[api.ChangePlayerResponse](
-		w.Send(api.ChangePlayer, api.ChangePlayerRequest{StatefulRoom: api.StateRoom(id, roomId), Index: index}))
+		w.Send(api.ChangePlayer, api.ChangePlayerRequest{StatefulRoom: api.StateRoom(id, w.RoomId), Index: index}))
 }
 
-func (w *Worker) ToggleMultitap(id network.Uid, roomId string) {
-	_, _ = w.Send(api.ToggleMultitap, api.ToggleMultitapRequest{StatefulRoom: api.StateRoom(id, roomId)})
+func (w *Worker) ToggleMultitap(id network.Uid) {
+	_, _ = w.Send(api.ToggleMultitap, api.ToggleMultitapRequest{StatefulRoom: api.StateRoom(id, w.RoomId)})
 }
 
-func (w *Worker) RecordGame(id network.Uid, roomId string, rec bool, recUser string) (*api.RecordGameResponse, error) {
+func (w *Worker) RecordGame(id network.Uid, rec bool, recUser string) (*api.RecordGameResponse, error) {
 	return api.UnwrapChecked[api.RecordGameResponse](
-		w.Send(api.RecordGame, api.RecordGameRequest{StatefulRoom: api.StateRoom(id, roomId), Active: rec, User: recUser}))
+		w.Send(api.RecordGame, api.RecordGameRequest{StatefulRoom: api.StateRoom(id, w.RoomId), Active: rec, User: recUser}))
 }
 
 func (w *Worker) TerminateSession(id network.Uid) {

@@ -9,7 +9,7 @@ import (
 )
 
 func (u *User) HandleWebrtcInit() {
-	resp, err := u.Worker.WebrtcInit(u.Id())
+	resp, err := u.w.WebrtcInit(u.Id())
 	if err != nil || resp == nil || *resp == api.EMPTY {
 		u.Log.Error().Err(err).Msg("malformed WebRTC init response")
 		return
@@ -18,11 +18,11 @@ func (u *User) HandleWebrtcInit() {
 }
 
 func (u *User) HandleWebrtcAnswer(rq api.WebrtcAnswerUserRequest) {
-	u.Worker.WebrtcAnswer(u.Id(), string(rq))
+	u.w.WebrtcAnswer(u.Id(), string(rq))
 }
 
 func (u *User) HandleWebrtcIceCandidate(rq api.WebrtcUserIceCandidate) {
-	u.Worker.WebrtcIceCandidate(u.Id(), string(rq))
+	u.w.WebrtcIceCandidate(u.Id(), string(rq))
 }
 
 func (u *User) HandleStartGame(rq api.GameStartUserRequest, launcher games.Launcher, conf coordinator.Config) {
@@ -45,13 +45,15 @@ func (u *User) HandleStartGame(rq api.GameStartUserRequest, launcher games.Launc
 		return
 	}
 
-	startGameResp, err := u.Worker.StartGame(u.Id(), gameInfo, rq)
+	startGameResp, err := u.w.StartGame(u.Id(), gameInfo, rq)
 	if err != nil || startGameResp == nil {
 		u.Log.Error().Err(err).Msg("malformed game start response")
 		return
 	}
-	// Response from worker contains initialized roomID. Set roomID to the session
-	u.SetRoom(startGameResp.Rid)
+	if startGameResp.Rid == "" {
+		u.Log.Error().Msg("there is no room")
+		return
+	}
 	u.Log.Info().Str("id", startGameResp.Rid).Msg("Received room response from worker")
 	u.StartGame()
 
@@ -61,10 +63,14 @@ func (u *User) HandleStartGame(rq api.GameStartUserRequest, launcher games.Launc
 	}
 }
 
-func (u *User) HandleQuitGame(rq api.GameQuitRequest) { u.Worker.QuitGame(u.Id(), rq.Room.Rid) }
+func (u *User) HandleQuitGame(rq api.GameQuitRequest) {
+	if rq.Room.Rid == u.w.RoomId {
+		u.w.QuitGame(u.Id())
+	}
+}
 
 func (u *User) HandleSaveGame() error {
-	resp, err := u.Worker.SaveGame(u.Id(), u.RoomID)
+	resp, err := u.w.SaveGame(u.Id())
 	if err != nil {
 		return err
 	}
@@ -73,7 +79,7 @@ func (u *User) HandleSaveGame() error {
 }
 
 func (u *User) HandleLoadGame() error {
-	resp, err := u.Worker.LoadGame(u.Id(), u.RoomID)
+	resp, err := u.w.LoadGame(u.Id())
 	if err != nil {
 		return err
 	}
@@ -82,7 +88,7 @@ func (u *User) HandleLoadGame() error {
 }
 
 func (u *User) HandleChangePlayer(rq api.ChangePlayerUserRequest) {
-	resp, err := u.Worker.ChangePlayer(u.Id(), u.RoomID, int(rq))
+	resp, err := u.w.ChangePlayer(u.Id(), int(rq))
 	// !to make it a little less convoluted
 	if err != nil || resp == nil || *resp == -1 {
 		u.Log.Error().Err(err).Msg("player switch failed for some reason")
@@ -91,21 +97,21 @@ func (u *User) HandleChangePlayer(rq api.ChangePlayerUserRequest) {
 	u.Notify(api.ChangePlayer, rq)
 }
 
-func (u *User) HandleToggleMultitap() { u.Worker.ToggleMultitap(u.Id(), u.RoomID) }
+func (u *User) HandleToggleMultitap() { u.w.ToggleMultitap(u.Id()) }
 
 func (u *User) HandleRecordGame(rq api.RecordGameRequest) {
-	if u.Worker == nil {
+	if u.w == nil {
 		return
 	}
 
-	u.Log.Debug().Msgf("??? room: %v, rec: %v user: %v", u.RoomID, rq.Active, rq.User)
+	u.Log.Debug().Msgf("??? room: %v, rec: %v user: %v", u.w.RoomId, rq.Active, rq.User)
 
-	if u.RoomID == "" {
+	if u.w.RoomId == "" {
 		u.Log.Error().Msg("Recording in the empty room is not allowed!")
 		return
 	}
 
-	resp, err := u.Worker.RecordGame(u.Id(), u.RoomID, rq.Active, rq.User)
+	resp, err := u.w.RecordGame(u.Id(), rq.Active, rq.User)
 	if err != nil {
 		u.Log.Error().Err(err).Msg("malformed game record request")
 		return
@@ -113,9 +119,9 @@ func (u *User) HandleRecordGame(rq api.RecordGameRequest) {
 	u.Notify(api.RecordGame, resp)
 }
 
-func (u *User) handleGetWorkerList(debug bool, info ServerInfo) {
+func (u *User) handleGetWorkerList(debug bool, info api.HasServerInfo) {
 	response := api.GetWorkerListResponse{}
-	servers := info.getServerList()
+	servers := info.GetServerList()
 
 	if debug {
 		response.Servers = servers
