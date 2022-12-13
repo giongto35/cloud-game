@@ -15,24 +15,22 @@ import (
 type Hub struct {
 	service.Service
 
-	conf          coordinator.Config
-	launcher      games.Launcher
-	users         com.NetMap[*User]
-	workers       com.NetMap[*Worker]
-	rooms2workers com.NetMap[com.NetClient]
-	log           *logger.Logger
+	conf     coordinator.Config
+	launcher games.Launcher
+	users    com.NetMap[*User]
+	workers  com.NetMap[*Worker]
+	log      *logger.Logger
 
 	wConn, uConn *com.Connector
 }
 
 func NewHub(conf coordinator.Config, lib games.GameLibrary, log *logger.Logger) *Hub {
 	return &Hub{
-		conf:          conf,
-		users:         com.NewNetMap[*User](),
-		workers:       com.NewNetMap[*Worker](),
-		rooms2workers: com.NewNetMap[com.NetClient](),
-		launcher:      games.NewGameLauncher(lib),
-		log:           log,
+		conf:     conf,
+		users:    com.NewNetMap[*User](),
+		workers:  com.NewNetMap[*Worker](),
+		launcher: games.NewGameLauncher(lib),
+		log:      log,
 		wConn: com.NewConnector(
 			com.WithOrigin(conf.Coordinator.Origin.WorkerWs),
 			com.WithTag("w"),
@@ -128,13 +126,12 @@ func (h *Hub) handleWorkerConnection(w http.ResponseWriter, r *http.Request) {
 		if worker != nil {
 			worker.Disconnect()
 			h.workers.Remove(worker)
-			h.rooms2workers.RemoveAll(worker)
 		}
 	}()
 
 	h.log.Info().Msgf("New worker / addr: %v, port: %v, zone: %v, ping addr: %v, tag: %v",
 		worker.Addr, worker.Port, worker.Zone, worker.PingServer, worker.Tag)
-	worker.HandleRequests(&h.rooms2workers, &h.users)
+	worker.HandleRequests(&h.users)
 	h.workers.Add(worker)
 	worker.Listen()
 }

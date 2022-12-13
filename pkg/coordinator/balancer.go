@@ -3,20 +3,14 @@ package coordinator
 import (
 	"bytes"
 
-	"github.com/giongto35/cloud-game/v2/pkg/com"
 	"github.com/rs/xid"
 )
 
 func (h *Hub) findWorkerByRoom(id string, region string) *Worker {
-	w, err := h.rooms2workers.Find(id)
-	if err == nil {
-		if w.(com.RegionalClient).In(region) {
-			return w.(*Worker)
-		}
-		// if there is zone param, we need to ensure the worker in that zone,
-		// if not we consider the room is missing
-	}
-	return nil
+	// if there is zone param, we need to ensure the worker in that zone,
+	// if not we consider the room is missing
+	w, _ := h.workers.FindBy(func(w *Worker) bool { return w.RoomId == id && w.In(region) })
+	return w
 }
 
 func (h *Hub) getAvailableWorkers(region string) []*Worker {

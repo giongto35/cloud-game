@@ -15,12 +15,11 @@ func GetConnectionRequest(data string) (*api.ConnectionRequest, error) {
 	return api.UnwrapChecked[api.ConnectionRequest](base64.URLEncoding.DecodeString(data))
 }
 
-func (w *Worker) HandleRegisterRoom(rq api.RegisterRoomRequest, rooms *com.NetMap[com.NetClient]) {
-	rooms.Put(string(rq), w)
-}
-
-func (w *Worker) HandleCloseRoom(rq api.CloseRoomRequest, rooms *com.NetMap[com.NetClient]) {
-	rooms.RemoveByKey(string(rq))
+func (w *Worker) HandleRegisterRoom(rq api.RegisterRoomRequest) { w.RoomId = string(rq) }
+func (w *Worker) HandleCloseRoom(rq api.CloseRoomRequest) {
+	if string(rq) == w.RoomId {
+		w.RoomId = ""
+	}
 }
 
 func (w *Worker) HandleIceCandidate(rq api.WebrtcIceCandidateRequest, crowd *com.NetMap[*User]) {
