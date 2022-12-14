@@ -200,6 +200,11 @@ emulator:
           usesLibCo: true
 
 encoder:
+  audio:
+    # audio frame duration needed for WebRTC (Opus)
+    # most of the emulators have ~1400 samples per a video frame,
+    # so we keep the frame buffer roughly half of that size or 2 RTC packets per frame
+    frame: 10
   video:
     # h264, vpx (VP8)
     codec: h264

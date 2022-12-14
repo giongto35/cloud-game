@@ -45,10 +45,11 @@ func NewHub(conf coordinator.Config, lib games.GameLibrary, log *logger.Logger) 
 // handleUserConnection handles all connections from user/frontend.
 func (h *Hub) handleUserConnection(w http.ResponseWriter, r *http.Request) {
 	h.log.Info().Str("c", "u").Str("d", "←").Msgf("Handshake %v", r.Host)
-	usr, err := NewUserClientServer(h.uConn.NewClientServer(w, r, h.log))
+	conn, err := h.uConn.NewClientServer(w, r, h.log)
 	if err != nil {
 		h.log.Error().Err(err).Msg("couldn't init user connection")
 	}
+	usr := NewUserConnection(conn)
 	defer func() {
 		if usr != nil {
 			usr.Disconnect()

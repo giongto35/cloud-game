@@ -16,8 +16,9 @@ type Worker struct {
 	Port       string
 	RoomId     string // room reference
 	Tag        string
-	users      int32
 	Zone       string
+
+	used int32
 }
 
 func (w *Worker) HandleRequests(users *com.NetMap[*User]) {
@@ -54,19 +55,16 @@ func (w *Worker) HandleRequests(users *com.NetMap[*User]) {
 // Empty region always returns true.
 func (w *Worker) In(region string) bool { return region == "" || region == w.Zone }
 
-// SetSlots adds or removes user slots of the worker.
-// We count users to determine when the worker becomes ready for a game.
-func (w *Worker) SetSlots(n int) {
-	if atomic.AddInt32(&w.users, -int32(n)) < 0 {
-		atomic.StoreInt32(&w.users, 0)
-	}
-}
+// Reserve determines when the worker becomes ready for a game.
+func (w *Worker) Reserve()   { atomic.StoreInt32(&w.used, 1) }
+func (w *Worker) UnReserve() { atomic.StoreInt32(&w.used, 0) }
 
 // HasGameSlot checks if the current worker has a free slot to start a new game.
 // Workers support only one game at a time.
-func (w *Worker) HasGameSlot() bool { return atomic.LoadInt32(&w.users) == 0 }
+func (w *Worker) HasGameSlot() bool { return atomic.LoadInt32(&w.used) == 0 }
 
 func (w *Worker) Disconnect() {
 	w.RoomId = ""
 	w.SocketClient.Close()
+	w.UnReserve()
 }

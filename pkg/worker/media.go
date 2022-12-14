@@ -15,17 +15,17 @@ var encoder_ *opus.Encoder
 const (
 	audioChannels  = 2
 	audioCodec     = "opus"
-	audioFrame     = 20
 	audioFrequency = 48000
 )
 
-func GetFrameSizeFor(hz int) int { return hz * audioFrame / 1000 * audioChannels }
+// GetFrameSizeFor calculates audio frame size, i.e. 48k*frame/1000*2
+func GetFrameSizeFor(hz int, frame int) int { return hz << 1 * frame / 1000 }
 
-func (r *Room) startAudio(frequency int, onAudio func([]byte, error)) {
-	buf := media.NewBuffer(GetFrameSizeFor(frequency))
+func (r *Room) startAudio(frequency int, onAudio func([]byte, error), conf conf.Audio) {
+	buf := media.NewBuffer(GetFrameSizeFor(frequency, conf.Frame))
 	resample, frameLen := frequency != audioFrequency, 0
 	if resample {
-		frameLen = GetFrameSizeFor(audioFrequency)
+		frameLen = GetFrameSizeFor(audioFrequency, conf.Frame)
 	}
 	// a garbage cache
 	if encoder_ == nil {

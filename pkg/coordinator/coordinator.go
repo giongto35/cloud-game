@@ -38,7 +38,7 @@ func NewHTTPServer(conf coordinator.Config, log *logger.Logger, fnMux func(*http
 		func(*httpx.Server) http.Handler {
 			h := http.NewServeMux()
 			h.Handle("/", index(conf, log))
-			h.Handle("/static/", static("./web"))
+			h.Handle("/static/", http.StripPrefix("/static/", http.FileServer(http.Dir("./web"))))
 			fnMux(h)
 			return h
 		},
@@ -67,8 +67,4 @@ func index(conf coordinator.Config, log *logger.Logger) http.Handler {
 			log.Fatal().Err(err).Msg("error with the analytics template file")
 		}
 	})
-}
-
-func static(dir string) http.Handler {
-	return http.StripPrefix("/static/", http.FileServer(http.Dir(dir)))
 }

@@ -1,7 +1,12 @@
 package encoder
 
 type Encoder struct {
+	Audio Audio
 	Video Video
+}
+
+type Audio struct {
+	Frame int
 }
 
 type Video struct {

@@ -12,22 +12,15 @@ type User struct {
 	w *Worker // linked worker
 }
 
-func NewUserClientServer(conn *com.SocketClient, err error) (*User, error) {
-	if err != nil {
-		return nil, err
-	}
-	return &User{SocketClient: *conn}, nil
-}
+// NewUserConnection supposed to be a bidirectional one.
+func NewUserConnection(conn *com.SocketClient) *User { return &User{SocketClient: *conn} }
 
-func (u *User) SetWorker(w *Worker) {
-	u.w = w
-	u.w.SetSlots(-1)
-}
+func (u *User) SetWorker(w *Worker) { u.w = w; u.w.Reserve() }
 
 func (u *User) Disconnect() {
 	u.SocketClient.Close()
 	if u.w != nil {
-		u.w.SetSlots(+1)
+		u.w.UnReserve()
 		u.w.TerminateSession(u.Id())
 	}
 }
@@ -38,10 +31,9 @@ func (u *User) HandleRequests(info api.HasServerInfo, launcher games.Launcher, c
 		// !to use proper channels
 		switch x.T {
 		case api.WebrtcInit:
-			if u.w == nil {
-				return nil
+			if u.w != nil {
+				u.HandleWebrtcInit()
 			}
-			u.HandleWebrtcInit()
 		case api.WebrtcAnswer:
 			rq := api.Unwrap[api.WebrtcAnswerUserRequest](x.Payload)
 			if rq == nil {
