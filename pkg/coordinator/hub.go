@@ -146,7 +146,7 @@ func (h *Hub) GetServerList() (r []api.Server) {
 		r = append(r, api.Server{
 			Addr:    w.Addr,
 			Id:      w.Id(),
-			IsBusy:  !w.HasGameSlot(),
+			IsBusy:  !w.HasSlot(),
 			PingURL: w.PingServer,
 			Port:    w.Port,
 			Tag:     w.Tag,

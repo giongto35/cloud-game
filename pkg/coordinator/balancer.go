@@ -7,6 +7,9 @@ import (
 )
 
 func (h *Hub) findWorkerByRoom(id string, region string) *Worker {
+	if id == "" {
+		return nil
+	}
 	// if there is zone param, we need to ensure the worker in that zone,
 	// if not we consider the room is missing
 	w, _ := h.workers.FindBy(func(w *Worker) bool { return w.RoomId == id && w.In(region) })
@@ -16,7 +19,7 @@ func (h *Hub) findWorkerByRoom(id string, region string) *Worker {
 func (h *Hub) getAvailableWorkers(region string) []*Worker {
 	var workers []*Worker
 	h.workers.ForEach(func(w *Worker) {
-		if w.HasGameSlot() && w.In(region) {
+		if w.HasSlot() && w.In(region) {
 			workers = append(workers, w)
 		}
 	})

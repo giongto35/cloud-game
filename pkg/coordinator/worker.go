@@ -10,6 +10,7 @@ import (
 type Worker struct {
 	com.SocketClient
 	com.RegionalClient
+	slotted
 
 	Addr       string
 	PingServer string
@@ -55,16 +56,28 @@ func (w *Worker) HandleRequests(users *com.NetMap[*User]) {
 // Empty region always returns true.
 func (w *Worker) In(region string) bool { return region == "" || region == w.Zone }
 
-// Reserve determines when the worker becomes ready for a game.
-func (w *Worker) Reserve()   { atomic.StoreInt32(&w.used, 1) }
-func (w *Worker) UnReserve() { atomic.StoreInt32(&w.used, 0) }
+// slotted used for tracking user slots and the availability.
+type slotted int32
 
-// HasGameSlot checks if the current worker has a free slot to start a new game.
-// Workers support only one game at a time.
-func (w *Worker) HasGameSlot() bool { return atomic.LoadInt32(&w.used) == 0 }
+// HasSlot checks if the current worker has a free slot to start a new game.
+// Workers support only one game at a time, so it returns true in case if
+// there are no players in the room (worker).
+func (s *slotted) HasSlot() bool { return atomic.LoadInt32((*int32)(s)) == 0 }
+
+// Reserve increments user counter of the worker.
+func (s *slotted) Reserve() { atomic.AddInt32((*int32)(s), 1) }
+
+// UnReserve decrements user counter of the worker.
+func (s *slotted) UnReserve() {
+	if atomic.AddInt32((*int32)(s), -1) < 0 {
+		atomic.StoreInt32((*int32)(s), 0)
+	}
+}
+
+func (s *slotted) FreeSlots() { atomic.StoreInt32((*int32)(s), 0) }
 
 func (w *Worker) Disconnect() {
-	w.RoomId = ""
 	w.SocketClient.Close()
-	w.UnReserve()
+	w.RoomId = ""
+	w.FreeSlots()
 }
