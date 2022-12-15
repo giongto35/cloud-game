@@ -11,7 +11,7 @@ coordinator:
   #   - allows selecting worker instances
   debug: true
   # get any free workers unconditionally on user connection
-  roundRobin: false
+  roundRobin: true
   # games library
   library:
     # some directory which is gonna be the root folder for the library
