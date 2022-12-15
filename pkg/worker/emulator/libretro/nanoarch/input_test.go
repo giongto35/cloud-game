@@ -18,7 +18,7 @@ func TestConcurrentInput(t *testing.T) {
 		for i := 0; i < events; i++ {
 			player := rand.Intn(maxPort)
 			go func() {
-				players.setInput(player, []byte{0})
+				players.setInput(player, []byte{0, 1})
 				wg.Done()
 			}()
 		}
