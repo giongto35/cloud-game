@@ -4,7 +4,6 @@ import (
 	"image"
 	"math/rand"
 	"testing"
-	"time"
 
 	"github.com/giongto35/cloud-game/v2/pkg/worker/encoder"
 	"github.com/giongto35/cloud-game/v2/pkg/worker/encoder/h264"
@@ -18,8 +17,8 @@ func TestEncoders(t *testing.T) {
 		codec  encoder.VideoCodec
 		frames int
 	}{
-		{n: 3, w: 1920, h: 1080, codec: encoder.H264, frames: 60 * 2},
-		{n: 3, w: 1920, h: 1080, codec: encoder.VP8, frames: 60 * 2},
+		{n: 3, w: 1920, h: 1080, codec: encoder.H264, frames: 60},
+		{n: 3, w: 1920, h: 1080, codec: encoder.VP8, frames: 60},
 	}
 
 	for _, test := range tests {
@@ -42,9 +41,8 @@ func run(w, h int, cod encoder.VideoCodec, count int, a *image.RGBA, b *image.RG
 		enc, _ = vpx.NewEncoder(w, h)
 	}
 
-	pipe := encoder.NewVideoPipe(enc, w, h, nil)
-	go pipe.Start()
-	defer pipe.Stop()
+	ve := encoder.NewVideoEncoder(enc, w, h, nil)
+	defer ve.Stop()
 
 	if a == nil {
 		a = genTestImage(w, h, rand.New(rand.NewSource(int64(1))).Float32())
@@ -58,14 +56,9 @@ func run(w, h int, cod encoder.VideoCodec, count int, a *image.RGBA, b *image.RG
 		if i%2 == 0 {
 			im = b
 		}
-		pipe.Input <- encoder.InFrame{Image: im}
-		select {
-		case _, ok := <-pipe.Output:
-			if !ok {
-				backend.Fatalf("encoder closed abnormally")
-			}
-		case <-time.After(5 * time.Second):
-			backend.Fatalf("encoder didn't produce an image")
+		out := ve.Encode(im)
+		if out == nil {
+			backend.Fatalf("encoder closed abnormally")
 		}
 	}
 }

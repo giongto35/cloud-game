@@ -3,6 +3,7 @@ package worker
 import (
 	"math"
 	"path/filepath"
+	"sync"
 	"time"
 
 	"github.com/giongto35/cloud-game/v2/pkg/com"
@@ -25,14 +26,16 @@ type Room struct {
 	id       string
 	active   bool
 	done     chan struct{}
+	vEncoder *encoder.VideoEncoder
 	users    com.NetMap[*Session] // a list of users in the room
 	emulator emulator.CloudEmulator
 	storage  storage.CloudStorage // a cloud storage to store room state online
 	onClose  func(self *Room)
 	rec      *recorder.Recording
-	vPipe    *encoder.VideoPipe
 	log      *logger.Logger
 }
+
+var samplePool = sync.Pool{New: func() any { return media.Sample{} }}
 
 func NewRoom(id string, game games.GameMetadata, storage storage.CloudStorage, onClose func(*Room),
 	rec bool, recUser string, conf worker.Config, log *logger.Logger) *Room {
@@ -98,38 +101,38 @@ func NewRoom(id string, game games.GameMetadata, storage storage.CloudStorage, o
 		room.ToggleRecording(rec, recUser)
 	}
 
-	go room.startVideo(w, h, func(frame encoder.OutFrame) {
-		sample := media.Sample{Data: frame.Data, Duration: frame.Duration}
-		room.users.ForEach(func(u *Session) {
-			if u.IsConnected() {
-				_ = u.SendVideo(sample)
-			}
-		})
-	}, conf.Encoder.Video)
-
-	dur := time.Duration(conf.Encoder.Audio.Frame) * time.Millisecond
-	go room.startAudio(int(room.emulator.GetSampleRate()), func(audio []byte, err error) {
-		if err != nil {
-			return
-		}
-		sample := media.Sample{Data: audio, Duration: dur}
-		room.users.ForEach(func(u *Session) {
-			if u.IsConnected() {
-				_ = u.SendAudio(sample)
-			}
-		})
-	}, conf.Encoder.Audio)
-
-	if conf.Emulator.AutosaveSec > 0 {
-		go room.enableAutosave(conf.Emulator.AutosaveSec)
-	}
-
-	go room.emulator.Start()
-
+	room.initVideo(w, h, room.defaultVideoHandler, conf.Encoder.Video)
+	room.initAudio(int(room.emulator.GetSampleRate()), room.defaultAudioHandler, conf.Encoder.Audio)
 	return room
 }
 
-func (r *Room) enableAutosave(periodSec int) {
+func (r *Room) StartEmulator() { go r.emulator.Start() }
+
+func (r *Room) defaultAudioHandler(b []byte, dur time.Duration) {
+	sample := samplePool.Get().(media.Sample)
+	sample.Data = b
+	sample.Duration = dur
+	r.users.ForEach(func(u *Session) {
+		if u.IsConnected() {
+			_ = u.SendAudio(sample)
+		}
+	})
+	samplePool.Put(sample)
+}
+
+func (r *Room) defaultVideoHandler(b []byte, dur time.Duration) {
+	sample := samplePool.Get().(media.Sample)
+	sample.Data = b
+	sample.Duration = dur
+	r.users.ForEach(func(u *Session) {
+		if u.IsConnected() {
+			_ = u.SendVideo(sample)
+		}
+	})
+	samplePool.Put(sample)
+}
+
+func (r *Room) autosave(periodSec int) {
 	r.log.Info().Msgf("Autosave every [%vs]", periodSec)
 	ticker := time.NewTicker(time.Duration(periodSec) * time.Second)
 	defer ticker.Stop()
@@ -221,25 +224,22 @@ func (r *Room) Close() {
 		return
 	}
 
-	r.users = com.NewNetMap[*Session]()
+	//r.users = com.NewNetMap[*Session]()
 	r.active = false
 
 	// Save game before quit. Only save for game which was previous saved to avoid flooding database
 	if r.isRoomExisted() {
 		r.log.Debug().Msg("Save game before closing room")
-		// use goroutine here because SaveGameState attempt to acquire an emulator lock.
-		// the lock is holding before coming to close, so it will cause deadlock if SaveGameState is synchronous
-		go func() {
-			// Save before close, so save can have correct state (Not sure) may again cause deadlock
-			if err := r.SaveGame(); err != nil {
-				r.log.Error().Err(err).Msg("couldn't save the game during close")
-			}
-			r.emulator.Close()
-		}()
-	} else {
-		r.emulator.Close()
+		if err := r.SaveGame(); err != nil {
+			r.log.Error().Err(err).Msg("couldn't save the game during close")
+		}
 	}
+	r.emulator.Close()
 	close(r.done)
+
+	if r.vEncoder != nil {
+		r.vEncoder.Stop()
+	}
 
 	if r.onClose != nil {
 		r.onClose(r)
@@ -251,7 +251,6 @@ func (r *Room) Close() {
 }
 
 func (r *Room) isRoomExisted() bool {
-	// Check if room is in online storage
 	_, err := r.storage.Load(r.id)
 	if err == nil {
 		return true

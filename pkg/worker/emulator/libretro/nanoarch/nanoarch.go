@@ -74,6 +74,7 @@ type (
 		rot       *image.Rotate
 		sysInfo   C.struct_retro_system_info
 		sysAvInfo C.struct_retro_system_av_info
+		reserved  chan struct{} // limits concurrent use
 	}
 	video struct {
 		pixFmt        uint32
@@ -96,7 +97,10 @@ type (
 )
 
 // Global link for C callbacks to Go
-var nano = nanoarch{}
+var nano = nanoarch{
+	// this thing forbids concurrent use of the emulator
+	reserved: make(chan struct{}, 1),
+}
 
 var (
 	coreConfig       *CoreProperties
@@ -112,15 +116,25 @@ var (
 	initOnce sync.Once
 )
 
+const rawAudioBuffer = 4096 // 4K
+var (
+	rawAudioPool = sync.Pool{New: func() any { return make([]int16, rawAudioBuffer) }}
+	audioPool    = sync.Pool{New: func() any { return &emulator.GameAudio{} }}
+	videoPool    = sync.Pool{New: func() any { return &emulator.GameFrame{} }}
+)
+
+func init() {
+	nano.reserved <- struct{}{}
+	usr, err := user.Current()
+	if err == nil {
+		cUserName = C.CString(usr.Name)
+	} else {
+		cUserName = C.CString("retro")
+	}
+}
+
 func Init(localPath string) {
-	// may be freed
 	initOnce.Do(func() {
-		usr, err := user.Current()
-		if err == nil {
-			cUserName = C.CString(usr.Name)
-		} else {
-			cUserName = C.CString("retro")
-		}
 		cSaveDirectory = C.CString(localPath + string(os.PathSeparator) + "legacy_save")
 		cSystemDirectory = C.CString(localPath + string(os.PathSeparator) + "system")
 	})
@@ -174,10 +188,11 @@ func coreVideoRefresh(data unsafe.Pointer, width C.unsigned, height C.unsigned, 
 		return
 	}
 
-	select {
-	case frontend.video <- emulator.GameFrame{Data: frame, Duration: dt}:
-	default:
-	}
+	fr := videoPool.Get().(*emulator.GameFrame)
+	fr.Data = frame
+	fr.Duration = dt
+	frontend.onVideo(fr)
+	videoPool.Put(fr)
 }
 
 //export coreInputPoll
@@ -212,17 +227,20 @@ func coreInputState(port C.unsigned, device C.unsigned, index C.unsigned, id C.u
 
 func audioWrite(buf unsafe.Pointer, frames C.size_t) C.size_t {
 	samples := int(frames) << 1
-	pcm := (*[4096]int16)(buf)[:samples:samples]
-	p := make([]int16, samples)
-	copy(p, pcm)
+	src := (*[rawAudioBuffer]int16)(buf)[:samples]
+	dst := rawAudioPool.Get().([]int16)[:samples]
+	copy(dst, src)
 
 	// 1600 = x / 1000 * 48000 * 2
 	estimate := float64(samples) / float64(int(nano.sysAvInfo.timing.sample_rate)<<1) * 1000000000
 
-	select {
-	case frontend.audio <- emulator.GameAudio{Data: p, Duration: time.Duration(estimate)}:
-	default:
-	}
+	fr := audioPool.Get().(*emulator.GameAudio)
+	fr.Data = dst
+	fr.Duration = time.Duration(estimate)
+	frontend.onAudio(fr)
+	audioPool.Put(fr)
+	rawAudioPool.Put(dst)
+
 	return frames
 }
 

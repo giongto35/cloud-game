@@ -8,8 +8,8 @@ import (
 )
 
 type CloudEmulator interface {
-	GetAudio() chan GameAudio
-	GetVideo() chan GameFrame
+	SetAudio(func(audio *GameAudio))
+	SetVideo(func(video *GameFrame))
 	LoadMetadata(name string)
 	LoadGame(path string) error
 	GetFps() uint

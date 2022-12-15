@@ -14,6 +14,7 @@ import (
 	"path/filepath"
 	"runtime"
 	"sync"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -21,6 +22,7 @@ import (
 	"github.com/giongto35/cloud-game/v2/pkg/config/worker"
 	"github.com/giongto35/cloud-game/v2/pkg/games"
 	"github.com/giongto35/cloud-game/v2/pkg/logger"
+	"github.com/giongto35/cloud-game/v2/pkg/worker/emulator"
 	"github.com/giongto35/cloud-game/v2/pkg/worker/emulator/libretro/manager/remotehttp"
 	"github.com/giongto35/cloud-game/v2/pkg/worker/encoder"
 	"github.com/giongto35/cloud-game/v2/pkg/worker/storage"
@@ -38,14 +40,16 @@ var (
 
 type roomMock struct {
 	*Room
+	startEmulator bool
 }
 
 type roomMockConfig struct {
-	roomName      string
-	gamesPath     string
-	game          games.GameMetadata
-	vCodec        encoder.VideoCodec
-	autoGlContext bool
+	roomName          string
+	gamesPath         string
+	game              games.GameMetadata
+	vCodec            encoder.VideoCodec
+	autoGlContext     bool
+	dontStartEmulator bool
 }
 
 // Store absolute path to test games
@@ -90,8 +94,9 @@ func TestRoom(t *testing.T) {
 			game:      test.game,
 			vCodec:    test.vCodec,
 		})
+
 		t.Logf("The game [%v] has been loaded", test.game.Name)
-		waitNOutFrames(test.frames, room.vPipe.Output)
+		waitNFrames(test.frames, room)
 		room.Close()
 	}
 	// hack: wait room destruction
@@ -123,7 +128,7 @@ func TestRoomWithGL(t *testing.T) {
 				vCodec:    test.vCodec,
 			})
 			t.Logf("The game [%v] has been loaded", test.game.Name)
-			waitNOutFrames(test.frames, room.vPipe.Output)
+			waitNFrames(test.frames, room)
 			room.Close()
 		}
 		// hack: wait room destruction
@@ -140,7 +145,7 @@ func TestAllEmulatorRooms(t *testing.T) {
 	}{
 		{
 			game:   games.GameMetadata{Name: "Sushi", Type: "gba", Path: "Sushi The Cat.gba"},
-			frames: 100,
+			frames: 150,
 		},
 		{
 			game:   games.GameMetadata{Name: "Mario", Type: "nes", Path: "Super Mario Bros.nes"},
@@ -156,27 +161,32 @@ func TestAllEmulatorRooms(t *testing.T) {
 
 	for _, test := range tests {
 		room := getRoomMock(roomMockConfig{
-			gamesPath:     whereIsGames,
-			game:          test.game,
-			vCodec:        encoder.VP8,
-			autoGlContext: autoGlContext,
+			gamesPath:         whereIsGames,
+			game:              test.game,
+			vCodec:            encoder.VP8,
+			autoGlContext:     autoGlContext,
+			dontStartEmulator: true,
 		})
 		t.Logf("The game [%v] has been loaded", test.game.Name)
-		frame := waitNFrames(test.frames, room.vPipe.Input)
+		frame := waitNFrames(test.frames, room)
 
 		if renderFrames {
-			tag := fmt.Sprintf("%v-%v-0x%08x", runtime.GOOS, test.game.Type, crc32.Checksum(frame.Image.Pix, crc32q))
-			dumpCanvas(frame.Image, tag, fmt.Sprintf("%v [%v]", tag, test.frames), outputPath)
+			tag := fmt.Sprintf("%v-%v-0x%08x", runtime.GOOS, test.game.Type, crc32.Checksum(frame.Data.Pix, crc32q))
+			dumpCanvas(frame.Data, tag, fmt.Sprintf("%v [%v]", tag, test.frames), outputPath)
 		}
 
 		room.Close()
 		// hack: wait room destruction
-		time.Sleep(2 * time.Second)
+		time.Sleep(1 * time.Second)
 	}
 }
 
+type OpaqueHack struct{ *image.RGBA }
+
+func (o *OpaqueHack) Opaque() bool { return true }
+
 func dumpCanvas(f *image.RGBA, name string, caption string, path string) {
-	frame := *f
+	frame := OpaqueHack{f}
 
 	// slap 'em caption
 	if len(caption) > 0 {
@@ -231,7 +241,12 @@ func getRoomMock(cfg roomMockConfig) roomMock {
 	conf.Encoder.Video.Codec = string(cfg.vCodec)
 
 	cloudStore, _ := storage.NewNoopCloudStorage()
+
 	room := NewRoom(cfg.roomName, cfg.game, cloudStore, nil, false, "", conf, l)
+
+	if !cfg.dontStartEmulator {
+		room.StartEmulator()
+	}
 
 	// loop-wait the room initialization
 	var init sync.WaitGroup
@@ -239,7 +254,7 @@ func getRoomMock(cfg roomMockConfig) roomMock {
 	wasted := 0
 	go func() {
 		sleepDeltaMs := 10
-		for room.emulator == nil || room.vPipe == nil {
+		for room.emulator == nil {
 			time.Sleep(time.Duration(sleepDeltaMs) * time.Millisecond)
 			wasted++
 			if wasted > 1000 {
@@ -249,7 +264,7 @@ func getRoomMock(cfg roomMockConfig) roomMock {
 		init.Done()
 	}()
 	init.Wait()
-	return roomMock{room}
+	return roomMock{Room: room, startEmulator: !cfg.dontStartEmulator}
 }
 
 // fixEmulators makes absolute game paths in global GameList and passes GL context config.
@@ -278,41 +293,22 @@ func getRootPath() string {
 	return p + string(filepath.Separator)
 }
 
-func waitNFrames(n int, ch chan encoder.InFrame) encoder.InFrame {
-	var frames sync.WaitGroup
-	frames.Add(n)
-
-	var last encoder.InFrame
-	done := false
-	go func() {
-		for f := range ch {
-			last = f
-			if done {
-				break
-			}
-			frames.Done()
+func waitNFrames(n int, room roomMock) *emulator.GameFrame {
+	var i = int32(n)
+	wg := sync.WaitGroup{}
+	wg.Add(n)
+	var frame *emulator.GameFrame
+	room.emulator.SetVideo(func(video *emulator.GameFrame) {
+		if atomic.AddInt32(&i, -1) >= 0 {
+			frame = video
+			wg.Done()
 		}
-	}()
-
-	frames.Wait()
-	done = true
-	return last
-}
-
-func waitNOutFrames(n int, ch chan encoder.OutFrame) {
-	var frames sync.WaitGroup
-	frames.Add(n)
-	done := false
-	go func() {
-		for range ch {
-			if done {
-				break
-			}
-			frames.Done()
-		}
-	}()
-	frames.Wait()
-	done = true
+	})
+	if !room.startEmulator {
+		room.StartEmulator()
+	}
+	wg.Wait()
+	return frame
 }
 
 // benchmarkRoom measures app performance for n emulation frames.
@@ -329,7 +325,7 @@ func benchmarkRoom(rom games.GameMetadata, codec encoder.VideoCodec, frames int,
 			game:      rom,
 			vCodec:    codec,
 		})
-		waitNOutFrames(frames, room.vPipe.Output)
+		waitNFrames(frames, room)
 		room.Close()
 	}
 }

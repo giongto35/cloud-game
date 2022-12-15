@@ -32,10 +32,6 @@ type EmulatorMock struct {
 	core string
 	// shared core paths (can't be changed)
 	paths EmulatorPaths
-
-	// channels
-	imageInCh <-chan emulator.GameFrame
-	audioInCh <-chan emulator.GameAudio
 }
 
 // EmulatorPaths defines various emulator file paths.
@@ -61,17 +57,13 @@ func GetEmulatorMock(room string, system string) *EmulatorMock {
 
 	meta := conf.Emulator.GetLibretroCoreConfig(system)
 
-	images := make(chan emulator.GameFrame, 1)
-	audio := make(chan emulator.GameAudio, 1)
-
-	SetLibretroLogger(logger.Default())
+	l := logger.Default()
+	SetLibretroLogger(l.Extend(l.Level(logger.ErrorLevel).With()))
 
 	// an emu
 	emu := &EmulatorMock{
 		Frontend: Frontend{
-			conf:  conf.Emulator,
-			video: images,
-			audio: audio,
+			conf: conf.Emulator,
 			storage: &StateStorage{
 				Path:     os.TempDir(),
 				MainSave: room,
@@ -88,9 +80,6 @@ func GetEmulatorMock(room string, system string) *EmulatorMock {
 			cores:  cleanPath(rootPath + "assets/cores/"),
 			games:  cleanPath(rootPath + "assets/games/"),
 		},
-
-		imageInCh: images,
-		audioInCh: audio,
 	}
 
 	emu.paths.save = cleanPath(emu.GetHashPath())
@@ -107,8 +96,8 @@ func GetEmulatorMock(room string, system string) *EmulatorMock {
 func GetDefaultEmulatorMock(room string, system string, rom string) *EmulatorMock {
 	mock := GetEmulatorMock(room, system)
 	mock.loadRom(rom)
-	go mock.handleVideo(func(_ emulator.GameFrame) {})
-	go mock.handleAudio(func(_ emulator.GameAudio) {})
+	mock.handleVideo(func(_ *emulator.GameFrame) {})
+	mock.handleAudio(func(_ *emulator.GameAudio) {})
 
 	return mock
 }
@@ -130,9 +119,6 @@ func (emu *EmulatorMock) shutdownEmulator() {
 	_ = os.Remove(emu.GetHashPath())
 	_ = os.Remove(emu.GetSRAMPath())
 
-	close(emu.video)
-	close(emu.audio)
-
 	nanoarchShutdown()
 }
 
@@ -145,17 +131,13 @@ func (emu *EmulatorMock) emulateOneFrame() {
 
 // Who needs generics anyway?
 // handleVideo is a custom message handler for the video channel.
-func (emu *EmulatorMock) handleVideo(handler func(image emulator.GameFrame)) {
-	for frame := range emu.imageInCh {
-		handler(frame)
-	}
+func (emu *EmulatorMock) handleVideo(handler func(image *emulator.GameFrame)) {
+	emu.Frontend.onVideo = handler
 }
 
 // handleAudio is a custom message handler for the audio channel.
-func (emu *EmulatorMock) handleAudio(handler func(sample emulator.GameAudio)) {
-	for frame := range emu.audioInCh {
-		handler(frame)
-	}
+func (emu *EmulatorMock) handleAudio(handler func(sample *emulator.GameAudio)) {
+	emu.Frontend.onAudio = handler
 }
 
 // dumpState returns the current emulator state and
@@ -184,7 +166,7 @@ func (emu *EmulatorMock) getStateHash() string {
 
 // getRootPath returns absolute path to the root directory.
 func getRootPath() string {
-	p, _ := filepath.Abs("../../../../")
+	p, _ := filepath.Abs("../../../../../")
 	return p + string(filepath.Separator)
 }
 

@@ -1,7 +1,10 @@
 package worker
 
 import (
+	"time"
+
 	conf "github.com/giongto35/cloud-game/v2/pkg/config/encoder"
+	"github.com/giongto35/cloud-game/v2/pkg/worker/emulator"
 	"github.com/giongto35/cloud-game/v2/pkg/worker/encoder"
 	"github.com/giongto35/cloud-game/v2/pkg/worker/encoder/h264"
 	"github.com/giongto35/cloud-game/v2/pkg/worker/encoder/opus"
@@ -19,14 +22,15 @@ const (
 )
 
 // GetFrameSizeFor calculates audio frame size, i.e. 48k*frame/1000*2
-func GetFrameSizeFor(hz int, frame int) int { return hz << 1 * frame / 1000 }
+func GetFrameSizeFor(hz int, frame int) int { return hz * frame / 1000 * audioChannels }
 
-func (r *Room) startAudio(frequency int, onAudio func([]byte, error), conf conf.Audio) {
+func (r *Room) initAudio(frequency int, onOutFrame func([]byte, time.Duration), conf conf.Audio) {
 	buf := media.NewBuffer(GetFrameSizeFor(frequency, conf.Frame))
 	resample, frameLen := frequency != audioFrequency, 0
 	if resample {
 		frameLen = GetFrameSizeFor(audioFrequency, conf.Frame)
 	}
+
 	// a garbage cache
 	if encoder_ == nil {
 		enc, err := opus.NewEncoder(audioFrequency, audioChannels)
@@ -38,26 +42,27 @@ func (r *Room) startAudio(frequency int, onAudio func([]byte, error), conf conf.
 	enc := *encoder_
 	r.log.Debug().Msgf("OPUS: %v", enc.GetInfo())
 
-	for {
-		select {
-		case <-r.done:
-			return
-		case samples := <-r.emulator.GetAudio():
-			if r.IsRecording() {
-				r.rec.WriteAudio(recorder.Audio{Samples: &samples.Data, Duration: samples.Duration})
-			}
-			buf.Write(samples.Data, func(s media.Samples) {
-				if resample {
-					s = media.ResampleStretch(s, frameLen)
-				}
-				onAudio(enc.Encode(s))
-			})
+	dur := time.Duration(conf.Frame) * time.Millisecond
+
+	r.emulator.SetAudio(func(samples *emulator.GameAudio) {
+		if r.IsRecording() {
+			r.rec.WriteAudio(recorder.Audio{Samples: &samples.Data, Duration: samples.Duration})
 		}
-	}
+		buf.Write(samples.Data, func(s media.Samples) {
+			if resample {
+				s = media.ResampleStretch(s, frameLen)
+			}
+			f, err := enc.Encode(s)
+			media.BufOutAudioPool.Put([]int16(s))
+			if err == nil {
+				onOutFrame(f, dur)
+			}
+		})
+	})
 }
 
-// startVideo processes videoFrames images with an encoder (codec) then pushes the result to WebRTC.
-func (r *Room) startVideo(width, height int, onFrame func(encoder.OutFrame), conf conf.Video) {
+// initVideo processes videoFrames images with an encoder (codec) then pushes the result to WebRTC.
+func (r *Room) initVideo(width, height int, onOutFrame func([]byte, time.Duration), conf conf.Video) {
 	var enc encoder.Encoder
 	var err error
 
@@ -83,25 +88,14 @@ func (r *Room) startVideo(width, height int, onFrame func(encoder.OutFrame), con
 		return
 	}
 
-	// a/v processing pipe
-	r.vPipe = encoder.NewVideoPipe(enc, width, height, r.log)
-	go r.vPipe.Start()
-	defer r.vPipe.Stop()
+	r.vEncoder = encoder.NewVideoEncoder(enc, width, height, r.log)
 
-	for {
-		select {
-		case <-r.done:
-			return
-		case frame := <-r.emulator.GetVideo():
-			if r.IsRecording() {
-				r.rec.WriteVideo(recorder.Video{Image: frame.Data, Duration: frame.Duration})
-			}
-			select {
-			case r.vPipe.Input <- encoder.InFrame{Image: frame.Data, Duration: frame.Duration}:
-			default:
-			}
-		case frame := <-r.vPipe.Output:
-			onFrame(frame)
+	r.emulator.SetVideo(func(frame *emulator.GameFrame) {
+		if r.IsRecording() {
+			r.rec.WriteVideo(recorder.Video{Image: frame.Data, Duration: frame.Duration})
 		}
-	}
+		if fr := r.vEncoder.Encode(frame.Data); fr != nil {
+			onOutFrame(fr, frame.Duration)
+		}
+	})
 }

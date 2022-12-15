@@ -98,6 +98,13 @@ func (c *coordinator) HandleGameStart(rq api.StartGameRequest, s *Service) com.O
 		if s.conf.Recording.Enabled {
 			s.log.Info().Msgf("RECORD: %v %v", rq.Record, rq.RecordUser)
 		}
+
+		room.StartEmulator()
+
+		if s.conf.Emulator.AutosaveSec > 0 {
+			// !to can crash if emulator starts earlier
+			go room.autosave(s.conf.Emulator.AutosaveSec)
+		}
 	}
 
 	if room == nil {

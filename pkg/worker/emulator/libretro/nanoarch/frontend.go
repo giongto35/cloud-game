@@ -14,8 +14,9 @@ import (
 )
 
 type Frontend struct {
-	audio chan emulator.GameAudio
-	video chan emulator.GameFrame
+	onVideo func(*emulator.GameFrame)
+	onAudio func(*emulator.GameAudio)
+
 	input GameSessionInput
 
 	conf    conf.Emulator
@@ -63,8 +64,6 @@ func NewFrontend(conf conf.Emulator, log *logger.Logger) (*Frontend, error) {
 	frontend = &Frontend{
 		conf:    conf,
 		storage: store,
-		video:   make(chan emulator.GameFrame, 1),
-		audio:   make(chan emulator.GameAudio, 1),
 		input:   NewGameSessionInput(),
 		done:    make(chan struct{}),
 		th:      conf.Threads,
@@ -90,20 +89,21 @@ func (f *Frontend) LoadMetadata(emu string) {
 }
 
 func (f *Frontend) Start() {
+	// start only when it is available
+	<-nano.reserved
+
 	if err := f.LoadGameState(); err != nil {
 		f.log.Error().Err(err).Msg("couldn't load a save file")
 	}
 	ticker := time.NewTicker(time.Second / time.Duration(nano.sysAvInfo.timing.fps))
-	lastFrameTime = time.Now().UnixNano()
 
 	defer func() {
 		ticker.Stop()
 		nanoarchShutdown()
-		close(f.video)
-		close(f.audio)
 		f.log.Debug().Msgf("run loop finished")
 	}()
 
+	lastFrameTime = time.Now().UnixNano()
 	for {
 		f.mu.Lock()
 		run()
@@ -121,25 +121,26 @@ func (f *Frontend) GetFrameSize() (int, int) {
 	return int(nano.sysAvInfo.geometry.base_width), int(nano.sysAvInfo.geometry.base_height)
 }
 
-func (f *Frontend) GetAudio() chan emulator.GameAudio { return f.audio }
-func (f *Frontend) GetFps() uint                      { return uint(nano.sysAvInfo.timing.fps) }
-func (f *Frontend) GetHashPath() string               { return f.storage.GetSavePath() }
-func (f *Frontend) GetSRAMPath() string               { return f.storage.GetSRAMPath() }
-func (f *Frontend) GetSampleRate() uint               { return uint(nano.sysAvInfo.timing.sample_rate) }
-func (f *Frontend) GetVideo() chan emulator.GameFrame { return f.video }
-func (f *Frontend) LoadGame(path string) error        { return LoadGame(path) }
-func (f *Frontend) LoadGameState() error              { return f.Load() }
-func (f *Frontend) Rotated() bool                     { return nano.rot != nil && nano.rot.IsEven }
-func (f *Frontend) SaveGameState() error              { return f.Save() }
-func (f *Frontend) SetMainSaveName(name string)       { f.storage.SetMainSaveName(name) }
-func (f *Frontend) SetViewport(width int, height int) { f.vw, f.vh = width, height }
-func (f *Frontend) ToggleMultitap()                   { toggleMultitap() }
+func (f *Frontend) SetAudio(ff func(*emulator.GameAudio)) { f.onAudio = ff }
+func (f *Frontend) SetVideo(ff func(*emulator.GameFrame)) { f.onVideo = ff }
+func (f *Frontend) GetFps() uint                          { return uint(nano.sysAvInfo.timing.fps) }
+func (f *Frontend) GetHashPath() string                   { return f.storage.GetSavePath() }
+func (f *Frontend) GetSRAMPath() string                   { return f.storage.GetSRAMPath() }
+func (f *Frontend) GetSampleRate() uint                   { return uint(nano.sysAvInfo.timing.sample_rate) }
+func (f *Frontend) LoadGame(path string) error            { return LoadGame(path) }
+func (f *Frontend) LoadGameState() error                  { return f.Load() }
+func (f *Frontend) Rotated() bool                         { return nano.rot != nil && nano.rot.IsEven }
+func (f *Frontend) SaveGameState() error                  { return f.Save() }
+func (f *Frontend) SetMainSaveName(name string)           { f.storage.SetMainSaveName(name) }
+func (f *Frontend) SetViewport(width int, height int)     { f.vw, f.vh = width, height }
+func (f *Frontend) ToggleMultitap()                       { toggleMultitap() }
 
 func (f *Frontend) Close() {
 	f.mu.Lock()
 	f.SetViewport(0, 0)
 	f.mu.Unlock()
 	close(f.done)
+	nano.reserved <- struct{}{}
 }
 
 // Save writes the current state to the filesystem.
