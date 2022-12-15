@@ -2,6 +2,9 @@
 # Application configuration file
 #
 
+# for the compatibility purposes
+version: 3
+
 coordinator:
   # debugging switch
   #   - shows debug logs

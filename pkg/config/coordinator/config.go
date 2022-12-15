@@ -16,6 +16,7 @@ type Config struct {
 	Emulator    emulator.Emulator
 	Recording   shared.Recording
 	Webrtc      webrtc.Webrtc
+	Version     shared.Version
 }
 
 type Coordinator struct {

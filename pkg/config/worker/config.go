@@ -25,6 +25,7 @@ type Config struct {
 	Storage   storage.Storage
 	Worker    Worker
 	Webrtc    webrtc.Webrtc
+	Version   shared.Version
 }
 
 type Worker struct {

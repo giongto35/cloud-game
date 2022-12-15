@@ -2,6 +2,8 @@ package shared
 
 import "flag"
 
+type Version int
+
 type Server struct {
 	Address string
 	Https   bool
