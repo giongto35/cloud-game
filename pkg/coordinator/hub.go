@@ -69,6 +69,10 @@ func (h *Hub) handleUserConnection(w http.ResponseWriter, r *http.Request) {
 		usr.Log.Info().Str("room", roomId).Msg("An existing worker has been found")
 	} else if wkr = h.findWorkerById(wid, h.conf.Coordinator.Debug); wkr != nil {
 		usr.Log.Info().Msgf("Worker with id: %v has been found", wid)
+	} else if h.conf.Coordinator.RoundRobin {
+		if wkr = h.find1stFreeWorker(zone); wkr != nil {
+			usr.Log.Info().Msgf("Found next free worker")
+		}
 	} else if wkr = h.findFastestWorker(zone,
 		func(servers []string) (map[string]int64, error) { return usr.CheckLatency(servers) }); wkr != nil {
 		usr.Log.Info().Msg("The fastest worker has been found")
