@@ -135,6 +135,8 @@ func (l *Logger) Hook(h zerolog.Hook) zerolog.Logger { return l.logger.Hook(h) }
 // You must call Msg on the returned event in order to send the event.
 func (l *Logger) Debug() *zerolog.Event { return l.logger.Debug() }
 
+func (l *Logger) Trace() *zerolog.Event { return l.logger.Trace() }
+
 // Info starts a new message with info level.
 // You must call Msg on the returned event in order to send the event.
 func (l *Logger) Info() *zerolog.Event { return l.logger.Info() }
