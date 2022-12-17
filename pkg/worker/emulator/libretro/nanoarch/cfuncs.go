@@ -189,7 +189,7 @@ void *run_loop(void *unused) {
 
 void bridge_execute(void *f) {
 	if (!initialized) {
-		signal(SIGINT, sig_handler);
+		//signal(SIGINT, sig_handler);
 		initialized = 1;
 		pthread_mutex_init(&run_mutex, NULL);
 		pthread_cond_init(&run_cv, NULL);
