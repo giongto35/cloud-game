@@ -164,6 +164,11 @@ func (emu *EmulatorMock) getStateHash() string {
 	return getHash(state)
 }
 
+func (emu *EmulatorMock) Close() {
+	emu.Frontend.Close()
+	<-nano.reserved
+}
+
 // getRootPath returns absolute path to the root directory.
 func getRootPath() string {
 	p, _ := filepath.Abs("../../../../../")

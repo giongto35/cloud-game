@@ -157,14 +157,15 @@ func TestStateConcurrency(t *testing.T) {
 		// quantum lock
 		qLock := &sync.Mutex{}
 		op := 0
+		<-nano.reserved
 
 		mock.loadRom(test.run.rom)
-		go mock.handleVideo(func(frame emulator.GameFrame) {
+		mock.handleVideo(func(frame *emulator.GameFrame) {
 			if len(frame.Data.Pix) == 0 {
 				t.Errorf("It seems that rom video frame was empty, which is strange!")
 			}
 		})
-		go mock.handleAudio(func(_ emulator.GameAudio) {})
+		mock.handleAudio(func(_ *emulator.GameAudio) {})
 
 		rand.Seed(int64(test.seed))
 		t.Logf("Random seed is [%v]\n", test.seed)
