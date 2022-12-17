@@ -70,6 +70,7 @@ func (s *Service) Run() {
 			case <-s.cord.Done():
 				s.cord.Close()
 				s.router.Close()
+				return
 			}
 		}
 	}()
