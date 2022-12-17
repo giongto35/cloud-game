@@ -36,6 +36,7 @@ func run() {
 	}()
 	<-os.ExpectTermination()
 	cancelCtx()
+	time.Sleep(100 * time.Millisecond)
 }
 
 func main() {
