@@ -2,7 +2,6 @@ package coordinator
 
 import (
 	"html/template"
-	"net/http"
 
 	"github.com/giongto35/cloud-game/v2/pkg/config/coordinator"
 	"github.com/giongto35/cloud-game/v2/pkg/config/shared"
@@ -17,9 +16,10 @@ func New(conf coordinator.Config, log *logger.Logger) (services service.Group) {
 	lib := games.NewLibWhitelisted(conf.Coordinator.Library, conf.Emulator, log)
 	lib.Scan()
 	hub := NewHub(conf, lib, log)
-	h, err := NewHTTPServer(conf, log, func(mux *http.ServeMux) {
+	h, err := NewHTTPServer(conf, log, func(mux *httpx.Mux) *httpx.Mux {
 		mux.HandleFunc("/ws", hub.handleUserConnection)
 		mux.HandleFunc("/wso", hub.handleWorkerConnection)
+		return mux
 	})
 	if err != nil {
 		log.Error().Err(err).Msg("http server init fail")
@@ -32,30 +32,28 @@ func New(conf coordinator.Config, log *logger.Logger) (services service.Group) {
 	return
 }
 
-func NewHTTPServer(conf coordinator.Config, log *logger.Logger, fnMux func(*http.ServeMux)) (*httpx.Server, error) {
+func NewHTTPServer(conf coordinator.Config, log *logger.Logger, fnMux func(*httpx.Mux) *httpx.Mux) (*httpx.Server, error) {
 	return httpx.NewServer(
 		conf.Coordinator.Server.GetAddr(),
-		func(*httpx.Server) http.Handler {
-			h := http.NewServeMux()
-			h.Handle("/", index(conf, log))
-			h.Handle("/static/", http.StripPrefix("/static/", http.FileServer(http.Dir("./web"))))
-			fnMux(h)
-			return h
+		func(s *httpx.Server) httpx.Handler {
+			return fnMux(s.Mux().
+				Handle("/", index(conf, log)).
+				Static("/static/", "./web"))
 		},
 		httpx.WithServerConfig(conf.Coordinator.Server),
 		httpx.WithLogger(log),
 	)
 }
 
-func index(conf coordinator.Config, log *logger.Logger) http.Handler {
+func index(conf coordinator.Config, log *logger.Logger) httpx.Handler {
 	tpl, err := template.ParseFiles("./web/index.html")
 	if err != nil {
 		log.Fatal().Err(err).Msg("error with the HTML index page")
 	}
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	return httpx.HandlerFunc(func(w httpx.ResponseWriter, r *httpx.Request) {
 		// return 404 on unknown
 		if r.URL.Path != "/" {
-			http.NotFound(w, r)
+			httpx.NotFound(w)
 			return
 		}
 		// render index page with some tpl values

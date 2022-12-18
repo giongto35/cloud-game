@@ -8,13 +8,11 @@ import (
 	"time"
 
 	"github.com/giongto35/cloud-game/v2/pkg/logger"
-	"github.com/giongto35/cloud-game/v2/pkg/service"
 	"golang.org/x/crypto/acme/autocert"
 )
 
 type Server struct {
 	http.Server
-	service.RunnableService
 
 	autoCert *autocert.Manager
 	opts     Options
@@ -24,7 +22,47 @@ type Server struct {
 	log      *logger.Logger
 }
 
-func NewServer(address string, handler func(*Server) http.Handler, options ...Option) (*Server, error) {
+type (
+	Mux struct {
+		*http.ServeMux
+		prefix string
+	}
+	Handler        = http.Handler
+	HandlerFunc    = http.HandlerFunc
+	ResponseWriter = http.ResponseWriter
+	Request        = http.Request
+)
+
+// NewServeMux allocates and returns a new ServeMux.
+func NewServeMux(prefix string) *Mux {
+	return &Mux{ServeMux: http.NewServeMux(), prefix: prefix}
+}
+
+func (m *Mux) Prefix(v string) { m.prefix = v }
+
+func (m *Mux) HandleW(pattern string, h func(http.ResponseWriter)) *Mux {
+	m.ServeMux.HandleFunc(m.prefix+pattern, func(w http.ResponseWriter, _ *http.Request) { h(w) })
+	return m
+}
+
+func (m *Mux) Handle(pattern string, handler Handler) *Mux {
+	m.ServeMux.Handle(m.prefix+pattern, handler)
+	return m
+}
+
+func (m *Mux) HandleFunc(pattern string, handler func(ResponseWriter, *Request)) *Mux {
+	m.ServeMux.HandleFunc(m.prefix+pattern, handler)
+	return m
+}
+func (m *Mux) ServeHTTP(w ResponseWriter, r *Request) { m.ServeMux.ServeHTTP(w, r) }
+
+func NotFound(w ResponseWriter) { http.Error(w, "404 page not found", http.StatusNotFound) }
+
+func (m *Mux) Static(prefix string, path string) *Mux {
+	return m.Handle(m.prefix+prefix, http.StripPrefix(prefix, http.FileServer(http.Dir(path))))
+}
+
+func NewServer(address string, handler func(*Server) Handler, options ...Option) (*Server, error) {
 	opts := &Options{
 		Https:         false,
 		HttpsRedirect: true,
@@ -76,6 +114,9 @@ func NewServer(address string, handler func(*Server) http.Handler, options ...Op
 
 	return server, nil
 }
+
+func (s *Server) MuxX(prefix string) *Mux { return NewServeMux(prefix) }
+func (s *Server) Mux() *Mux               { return s.MuxX("") }
 
 func (s *Server) Run() { go s.run() }
 
@@ -131,9 +172,9 @@ func (s *Server) redirection() (*Server, error) {
 	}
 	addr := buildAddress(address, s.opts.Zone, *s.listener)
 
-	srv, err := NewServer(s.opts.HttpsRedirectAddress, func(serv *Server) http.Handler {
-		h := http.NewServeMux()
-		h.Handle("/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	srv, err := NewServer(s.opts.HttpsRedirectAddress, func(serv *Server) Handler {
+		h := NewServeMux("")
+		h.Handle("/", HandlerFunc(func(w ResponseWriter, r *Request) {
 			httpsURL := url.URL{Scheme: "https", Host: addr, Path: r.URL.Path, RawQuery: r.URL.RawQuery}
 			rdr := httpsURL.String()
 			if s.log.GetLevel() < logger.InfoLevel {

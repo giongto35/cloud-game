@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"net"
-	"net/http"
 	"net/http/pprof"
 	"strconv"
 
@@ -31,27 +30,29 @@ type Monitoring struct {
 func New(conf monitoring.Config, baseAddr string, log *logger.Logger) *Monitoring {
 	serv, err := httpx.NewServer(
 		net.JoinHostPort(baseAddr, strconv.Itoa(conf.Port)),
-		func(*httpx.Server) http.Handler {
-			h := http.NewServeMux()
+		func(s *httpx.Server) httpx.Handler {
+			h := s.Mux()
 			if conf.ProfilingEnabled {
-				prefix := conf.URLPrefix + debugEndpoint
-				h.HandleFunc(prefix+"/", pprof.Index)
-				h.HandleFunc(prefix+"/cmdline", pprof.Cmdline)
-				h.HandleFunc(prefix+"/profile", pprof.Profile)
-				h.HandleFunc(prefix+"/symbol", pprof.Symbol)
-				h.HandleFunc(prefix+"/trace", pprof.Trace)
-				h.Handle(prefix+"/allocs", pprof.Handler("allocs"))
-				h.Handle(prefix+"/block", pprof.Handler("block"))
-				h.Handle(prefix+"/goroutine", pprof.Handler("goroutine"))
-				h.Handle(prefix+"/heap", pprof.Handler("heap"))
-				h.Handle(prefix+"/mutex", pprof.Handler("mutex"))
-				h.Handle(prefix+"/threadcreate", pprof.Handler("threadcreate"))
+				h.Prefix(conf.URLPrefix + debugEndpoint)
+				h.HandleFunc("/", pprof.Index).
+					HandleFunc("/cmdline", pprof.Cmdline).
+					HandleFunc("/profile", pprof.Profile).
+					HandleFunc("/symbol", pprof.Symbol).
+					HandleFunc("/trace", pprof.Trace).
+					Handle("/allocs", pprof.Handler("allocs")).
+					Handle("/block", pprof.Handler("block")).
+					Handle("/goroutine", pprof.Handler("goroutine")).
+					Handle("/heap", pprof.Handler("heap")).
+					Handle("/mutex", pprof.Handler("mutex")).
+					Handle("/threadcreate", pprof.Handler("threadcreate"))
 			}
 			if conf.MetricEnabled {
-				h.HandleFunc(conf.URLPrefix+metricsEndpoint, func(w http.ResponseWriter, _ *http.Request) {
+				h.Prefix(conf.URLPrefix)
+				h.HandleFunc(metricsEndpoint, func(w httpx.ResponseWriter, _ *httpx.Request) {
 					metrics.WritePrometheus(w, true)
 				})
 			}
+			h.Prefix("")
 			return h
 		},
 		httpx.WithPortRoll(true),

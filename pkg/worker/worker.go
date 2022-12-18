@@ -2,7 +2,6 @@ package worker
 
 import (
 	"context"
-	"net/http"
 	"time"
 
 	"github.com/giongto35/cloud-game/v2/pkg/config/worker"
@@ -32,13 +31,11 @@ func New(ctx context.Context, conf worker.Config, log *logger.Logger) (services 
 	}
 	h, err := httpx.NewServer(
 		conf.Worker.GetAddr(),
-		func(*httpx.Server) http.Handler {
-			h := http.NewServeMux()
-			h.HandleFunc(conf.Worker.Network.PingEndpoint, func(w http.ResponseWriter, _ *http.Request) {
+		func(s *httpx.Server) httpx.Handler {
+			return s.Mux().HandleW(conf.Worker.Network.PingEndpoint, func(w httpx.ResponseWriter) {
 				w.Header().Set("Access-Control-Allow-Origin", "*")
 				_, _ = w.Write([]byte{0x65, 0x63, 0x68, 0x6f}) // echo
 			})
-			return h
 		},
 		httpx.WithServerConfig(conf.Worker.Server),
 		// no need just for one route
