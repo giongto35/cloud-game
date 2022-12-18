@@ -29,14 +29,12 @@ func run() {
 	ctx, cancelCtx := context.WithCancel(context.Background())
 	wrk := worker.New(ctx, conf, log)
 	wrk.Start()
-	defer func() {
-		if err := wrk.Shutdown(ctx); err != nil {
-			log.Error().Err(err).Msg("service shutdown errors")
-		}
-	}()
 	<-os.ExpectTermination()
 	cancelCtx()
 	time.Sleep(100 * time.Millisecond)
+	if err := wrk.Shutdown(ctx); err != nil {
+		log.Error().Err(err).Msg("service shutdown errors")
+	}
 }
 
 func main() {

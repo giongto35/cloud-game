@@ -1,5 +1,3 @@
-//go:build !darwin
-
 package thread
 
 func Wrap(f func()) { f() }

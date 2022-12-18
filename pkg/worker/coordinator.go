@@ -39,8 +39,8 @@ func connect(host string, conf worker.Worker, addr string, log *logger.Logger) (
 	return &coordinator{com.New(conn, "c", id, log)}, nil
 }
 
-func (c *coordinator) HandleRequests(s *Service) {
-	ap, err := webrtc.NewApiFactory(s.conf.Webrtc, c.Log, nil)
+func (c *coordinator) HandleRequests(w *Worker) {
+	ap, err := webrtc.NewApiFactory(w.conf.Webrtc, c.Log, nil)
 	if err != nil {
 		c.Log.Panic().Err(err).Msg("WebRTC API creation has been failed")
 	}
@@ -54,73 +54,73 @@ func (c *coordinator) HandleRequests(s *Service) {
 			if dat := api.Unwrap[api.WebrtcInitRequest](x.Payload); dat == nil {
 				err, out = api.ErrMalformed, com.EmptyPacket
 			} else {
-				out = c.HandleWebrtcInit(*dat, s, ap)
+				out = c.HandleWebrtcInit(*dat, w, ap)
 			}
 		case api.WebrtcAnswer:
 			dat := api.Unwrap[api.WebrtcAnswerRequest](x.Payload)
 			if dat == nil {
 				return api.ErrMalformed
 			}
-			c.HandleWebrtcAnswer(*dat, s)
+			c.HandleWebrtcAnswer(*dat, w)
 		case api.WebrtcIce:
 			dat := api.Unwrap[api.WebrtcIceCandidateRequest](x.Payload)
 			if dat == nil {
 				return api.ErrMalformed
 			}
-			c.HandleWebrtcIceCandidate(*dat, s)
+			c.HandleWebrtcIceCandidate(*dat, w)
 		case api.StartGame:
 			if dat := api.Unwrap[api.StartGameRequest](x.Payload); dat == nil {
 				err, out = api.ErrMalformed, com.EmptyPacket
 			} else {
-				out = c.HandleGameStart(*dat, s)
+				out = c.HandleGameStart(*dat, w)
 			}
 		case api.TerminateSession:
 			dat := api.Unwrap[api.TerminateSessionRequest](x.Payload)
 			if dat == nil {
 				return api.ErrMalformed
 			}
-			c.HandleTerminateSession(*dat, s)
+			c.HandleTerminateSession(*dat, w)
 		case api.QuitGame:
 			dat := api.Unwrap[api.GameQuitRequest](x.Payload)
 			if dat == nil {
 				return api.ErrMalformed
 			}
-			c.HandleQuitGame(*dat, s)
+			c.HandleQuitGame(*dat, w)
 		case api.SaveGame:
 			if dat := api.Unwrap[api.SaveGameRequest](x.Payload); dat == nil {
 				err, out = api.ErrMalformed, com.EmptyPacket
 			} else {
-				out = c.HandleSaveGame(*dat, s)
+				out = c.HandleSaveGame(*dat, w)
 			}
 		case api.LoadGame:
 			if dat := api.Unwrap[api.LoadGameRequest](x.Payload); dat == nil {
 				err, out = api.ErrMalformed, com.EmptyPacket
 			} else {
-				out = c.HandleLoadGame(*dat, s)
+				out = c.HandleLoadGame(*dat, w)
 			}
 		case api.ChangePlayer:
 			if dat := api.Unwrap[api.ChangePlayerRequest](x.Payload); dat == nil {
 				err, out = api.ErrMalformed, com.EmptyPacket
 			} else {
-				out = c.HandleChangePlayer(*dat, s)
+				out = c.HandleChangePlayer(*dat, w)
 			}
 		case api.ToggleMultitap:
 			if dat := api.Unwrap[api.ToggleMultitapRequest](x.Payload); dat == nil {
 				err, out = api.ErrMalformed, com.EmptyPacket
 			} else {
-				c.HandleToggleMultitap(*dat, s)
+				c.HandleToggleMultitap(*dat, w)
 			}
 		case api.RecordGame:
 			if dat := api.Unwrap[api.RecordGameRequest](x.Payload); dat == nil {
 				err, out = api.ErrMalformed, com.EmptyPacket
 			} else {
-				c.HandleRecordGame(*dat, s)
+				c.HandleRecordGame(*dat, w)
 			}
 		default:
 			c.Log.Warn().Msgf("unhandled packet type %v", x.T)
 		}
 		if out != skipped {
-			s.cord.Route(x, out)
+			w.cord.Route(x, out)
 		}
 		return nil
 	})

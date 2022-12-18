@@ -24,8 +24,8 @@ func buildConnQuery[S fmt.Stringer](id S, conf worker.Worker, address string) (s
 	})
 }
 
-func (c *coordinator) HandleWebrtcInit(rq api.WebrtcInitRequest, s *Service, connApi *webrtc.ApiFactory) com.Out {
-	enc := s.conf.Encoder
+func (c *coordinator) HandleWebrtcInit(rq api.WebrtcInitRequest, w *Worker, connApi *webrtc.ApiFactory) com.Out {
+	enc := w.conf.Encoder
 	peer := webrtc.New(c.Log, connApi)
 	localSDP, err := peer.NewCall(enc.Video.Codec, audioCodec, func(data any) {
 		candidate, err := api.ToBase64Json(data)
@@ -47,63 +47,63 @@ func (c *coordinator) HandleWebrtcInit(rq api.WebrtcInitRequest, s *Service, con
 
 	// use user uid from the coordinator
 	user := NewSession(peer, rq.Id)
-	s.router.AddUser(user)
+	w.router.AddUser(user)
 	c.Log.Info().Str("id", string(rq.Id)).Msgf("Peer connection (uid:%s)", user.Id())
 
 	return com.Out{Payload: sdp}
 }
 
-func (c *coordinator) HandleWebrtcAnswer(rq api.WebrtcAnswerRequest, s *Service) {
-	if user := s.router.GetUser(rq.Id); user != nil {
+func (c *coordinator) HandleWebrtcAnswer(rq api.WebrtcAnswerRequest, w *Worker) {
+	if user := w.router.GetUser(rq.Id); user != nil {
 		if err := user.GetPeerConn().SetRemoteSDP(rq.Sdp, api.FromBase64Json); err != nil {
 			c.Log.Error().Err(err).Msgf("cannot set remote SDP of client [%v]", rq.Id)
 		}
 	}
 }
 
-func (c *coordinator) HandleWebrtcIceCandidate(rs api.WebrtcIceCandidateRequest, s *Service) {
-	if user := s.router.GetUser(rs.Id); user != nil {
+func (c *coordinator) HandleWebrtcIceCandidate(rs api.WebrtcIceCandidateRequest, w *Worker) {
+	if user := w.router.GetUser(rs.Id); user != nil {
 		if err := user.GetPeerConn().AddCandidate(rs.Candidate, api.FromBase64Json); err != nil {
 			c.Log.Error().Err(err).Msgf("cannot add ICE candidate of the client [%v]", rs.Id)
 		}
 	}
 }
 
-func (c *coordinator) HandleGameStart(rq api.StartGameRequest, s *Service) com.Out {
-	user := s.router.GetUser(rq.Id)
+func (c *coordinator) HandleGameStart(rq api.StartGameRequest, w *Worker) com.Out {
+	user := w.router.GetUser(rq.Id)
 	if user == nil {
 		c.Log.Error().Msgf("no user [%v]", rq.Id)
 		return com.EmptyPacket
 	}
-	s.log.Info().Msgf("Starting game: %v", rq.Game.Name)
+	w.log.Info().Msgf("Starting game: %v", rq.Game.Name)
 
-	room := s.router.GetRoom(rq.Rid)
+	room := w.router.GetRoom(rq.Rid)
 	if room == nil {
 		room = NewRoom(
 			rq.Room.Rid,
 			games.GameMetadata{Name: rq.Game.Name, Base: rq.Game.Base, Type: rq.Game.Type, Path: rq.Game.Path},
-			s.storage,
+			w.storage,
 			func(room *Room) {
-				s.router.RemoveRoom()
+				w.router.RemoveRoom()
 				c.CloseRoom(room.id)
-				s.log.Debug().Msgf("Room close has been called %v", room.id)
+				w.log.Debug().Msgf("Room close has been called %v", room.id)
 			},
 			rq.Record, rq.RecordUser,
-			s.conf,
-			s.log,
+			w.conf,
+			w.log,
 		)
-		s.log.Info().Str("room", room.id).Msg("New room")
-		s.router.SetRoom(room)
+		w.log.Info().Str("room", room.id).Msg("New room")
+		w.router.SetRoom(room)
 		user.SetPlayerIndex(rq.PlayerIndex)
-		if s.conf.Recording.Enabled {
-			s.log.Info().Msgf("RECORD: %v %v", rq.Record, rq.RecordUser)
+		if w.conf.Recording.Enabled {
+			w.log.Info().Msgf("RECORD: %v %v", rq.Record, rq.RecordUser)
 		}
 
 		room.StartEmulator()
 
-		if s.conf.Emulator.AutosaveSec > 0 {
+		if w.conf.Emulator.AutosaveSec > 0 {
 			// !to can crash if emulator starts earlier
-			go room.autosave(s.conf.Emulator.AutosaveSec)
+			go room.autosave(w.conf.Emulator.AutosaveSec)
 		}
 	}
 
@@ -120,13 +120,13 @@ func (c *coordinator) HandleGameStart(rq api.StartGameRequest, s *Service) com.O
 
 	c.RegisterRoom(room.id)
 
-	return com.Out{Payload: api.StartGameResponse{Room: api.Room{Rid: room.id}, Record: s.conf.Recording.Enabled}}
+	return com.Out{Payload: api.StartGameResponse{Room: api.Room{Rid: room.id}, Record: w.conf.Recording.Enabled}}
 }
 
 // HandleTerminateSession handles cases when a user has been disconnected from the websocket of coordinator.
-func (c *coordinator) HandleTerminateSession(rq api.TerminateSessionRequest, s *Service) {
-	if session := s.router.GetUser(rq.Id); session != nil {
-		s.router.RemoveUser(session)
+func (c *coordinator) HandleTerminateSession(rq api.TerminateSessionRequest, w *Worker) {
+	if session := w.router.GetUser(rq.Id); session != nil {
+		w.router.RemoveUser(session)
 		if room := session.GetSetRoom(nil); room != nil {
 			room.CleanupUser(session)
 		}
@@ -134,19 +134,19 @@ func (c *coordinator) HandleTerminateSession(rq api.TerminateSessionRequest, s *
 }
 
 // HandleQuitGame handles cases when a user manually exits the game.
-func (c *coordinator) HandleQuitGame(rq api.GameQuitRequest, s *Service) {
-	if user := s.router.GetUser(rq.Id); user != nil {
+func (c *coordinator) HandleQuitGame(rq api.GameQuitRequest, w *Worker) {
+	if user := w.router.GetUser(rq.Id); user != nil {
 		// we don't strictly need a room id form the request,
 		// since users hold their room reference
 		// !to remove rid, maybe
-		if room := s.router.GetRoom(rq.Rid); room != nil {
+		if room := w.router.GetRoom(rq.Rid); room != nil {
 			room.CleanupUser(user)
 		}
 	}
 }
 
-func (c *coordinator) HandleSaveGame(rq api.SaveGameRequest, s *Service) com.Out {
-	if room := roomy(rq, s); room != nil {
+func (c *coordinator) HandleSaveGame(rq api.SaveGameRequest, w *Worker) com.Out {
+	if room := roomy(rq, w); room != nil {
 		if err := room.SaveGame(); err != nil {
 			c.Log.Error().Err(err).Msg("cannot save game state")
 			return com.ErrPacket
@@ -156,8 +156,8 @@ func (c *coordinator) HandleSaveGame(rq api.SaveGameRequest, s *Service) com.Out
 	return com.ErrPacket
 }
 
-func (c *coordinator) HandleLoadGame(rq api.LoadGameRequest, s *Service) com.Out {
-	if room := roomy(rq, s); room != nil {
+func (c *coordinator) HandleLoadGame(rq api.LoadGameRequest, w *Worker) com.Out {
+	if room := roomy(rq, w); room != nil {
 		if err := room.LoadGame(); err != nil {
 			c.Log.Error().Err(err).Msg("cannot load game state")
 			return com.ErrPacket
@@ -167,41 +167,41 @@ func (c *coordinator) HandleLoadGame(rq api.LoadGameRequest, s *Service) com.Out
 	return com.ErrPacket
 }
 
-func (c *coordinator) HandleChangePlayer(rq api.ChangePlayerRequest, s *Service) com.Out {
-	user := s.router.GetUser(rq.Id)
-	if user == nil || s.router.GetRoom(rq.Rid) == nil {
+func (c *coordinator) HandleChangePlayer(rq api.ChangePlayerRequest, w *Worker) com.Out {
+	user := w.router.GetUser(rq.Id)
+	if user == nil || w.router.GetRoom(rq.Rid) == nil {
 		return com.Out{Payload: -1} // semi-predicates
 	}
 	user.SetPlayerIndex(rq.Index)
-	s.log.Info().Msgf("Updated player index to: %d", rq.Index)
+	w.log.Info().Msgf("Updated player index to: %d", rq.Index)
 	return com.Out{Payload: rq.Index}
 }
 
-func (c *coordinator) HandleToggleMultitap(rq api.ToggleMultitapRequest, s *Service) com.Out {
-	if room := roomy(rq, s); room != nil {
+func (c *coordinator) HandleToggleMultitap(rq api.ToggleMultitapRequest, w *Worker) com.Out {
+	if room := roomy(rq, w); room != nil {
 		room.ToggleMultitap()
 		return com.OkPacket
 	}
 	return com.ErrPacket
 }
 
-func (c *coordinator) HandleRecordGame(rq api.RecordGameRequest, s *Service) com.Out {
-	if !s.conf.Recording.Enabled {
+func (c *coordinator) HandleRecordGame(rq api.RecordGameRequest, w *Worker) com.Out {
+	if !w.conf.Recording.Enabled {
 		return com.ErrPacket
 	}
-	if room := roomy(rq, s); room != nil {
+	if room := roomy(rq, w); room != nil {
 		room.ToggleRecording(rq.Active, rq.User)
 		return com.OkPacket
 	}
 	return com.ErrPacket
 }
 
-func roomy(rq api.RoomInterface, s *Service) *Room {
+func roomy(rq api.RoomInterface, w *Worker) *Room {
 	rid := rq.GetRoom()
 	if rid == "" {
 		return nil
 	}
-	room := s.router.GetRoom(rid)
+	room := w.router.GetRoom(rid)
 	if room == nil {
 		return nil
 	}
