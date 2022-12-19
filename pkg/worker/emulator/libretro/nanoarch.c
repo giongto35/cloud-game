@@ -3,8 +3,8 @@
 #include <stdbool.h>
 #include <stdarg.h>
 #include <stdio.h>
-#include <stdlib.h>
-#include <signal.h>
+//#include <stdlib.h>
+//#include <signal.h>
 
 void coreLog(enum retro_log_level level, const char *msg);
 
@@ -164,9 +164,9 @@ pthread_mutex_t done_mutex;
 pthread_cond_t done_cv;
 
 // hack: go hangs with run_loop if SIGINT signal, so we handle it here
-static void sig_handler(int _) {
-    exit(0);
-}
+//static void sig_handler(int _) {
+//    exit(0);
+//}
 
 void *run_loop(void *unused) {
     pthread_mutex_lock(&done_mutex);
