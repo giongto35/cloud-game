@@ -1,7 +1,7 @@
 package repo
 
 import (
-	"github.com/giongto35/cloud-game/v2/pkg/worker/emulator/libretro/core"
+	"github.com/giongto35/cloud-game/v2/pkg/worker/emulator/libretro"
 	"github.com/giongto35/cloud-game/v2/pkg/worker/emulator/libretro/repo/buildbot"
 	"github.com/giongto35/cloud-game/v2/pkg/worker/emulator/libretro/repo/github"
 	"github.com/giongto35/cloud-game/v2/pkg/worker/emulator/libretro/repo/raw"
@@ -14,7 +14,7 @@ type (
 	}
 
 	Repository interface {
-		GetCoreUrl(file string, info core.ArchInfo) (url string)
+		GetCoreUrl(file string, info libretro.ArchInfo) (url string)
 	}
 )
 

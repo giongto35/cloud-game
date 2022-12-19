@@ -1,4 +1,4 @@
-package nanoarch
+package libretro
 
 import (
 	"errors"
@@ -15,53 +15,15 @@ import (
 	"github.com/giongto35/cloud-game/v2/pkg/worker/emulator"
 	"github.com/giongto35/cloud-game/v2/pkg/worker/emulator/graphics"
 	"github.com/giongto35/cloud-game/v2/pkg/worker/emulator/image"
-	"github.com/giongto35/cloud-game/v2/pkg/worker/emulator/libretro/core"
 	"github.com/giongto35/cloud-game/v2/pkg/worker/thread"
 )
 
 /*
+#cgo CFLAGS: -Wall -O3
+
 #include "libretro.h"
+#include "nanoarch.h"
 #include <stdlib.h>
-#include <stdio.h>
-#include <string.h>
-
-void bridge_retro_init(void *f);
-void bridge_retro_deinit(void *f);
-unsigned bridge_retro_api_version(void *f);
-void bridge_retro_get_system_info(void *f, struct retro_system_info *si);
-void bridge_retro_get_system_av_info(void *f, struct retro_system_av_info *si);
-bool bridge_retro_set_environment(void *f, void *callback);
-void bridge_retro_set_video_refresh(void *f, void *callback);
-void bridge_retro_set_input_poll(void *f, void *callback);
-void bridge_retro_set_input_state(void *f, void *callback);
-void bridge_retro_set_audio_sample(void *f, void *callback);
-void bridge_retro_set_audio_sample_batch(void *f, void *callback);
-bool bridge_retro_load_game(void *f, struct retro_game_info *gi);
-void bridge_retro_unload_game(void *f);
-void bridge_retro_run(void *f);
-void bridge_retro_set_controller_port_device(void *f, unsigned port, unsigned device);
-
-size_t bridge_retro_get_memory_size(void *f, unsigned id);
-void* bridge_retro_get_memory_data(void *f, unsigned id);
-bool bridge_retro_serialize(void *f, void *data, size_t size);
-bool bridge_retro_unserialize(void *f, void *data, size_t size);
-size_t bridge_retro_serialize_size(void *f);
-
-bool coreEnvironment_cgo(unsigned cmd, void *data);
-void coreVideoRefresh_cgo(void *data, unsigned width, unsigned height, size_t pitch);
-void coreInputPoll_cgo();
-void coreAudioSample_cgo(int16_t left, int16_t right);
-size_t coreAudioSampleBatch_cgo(const int16_t *data, size_t frames);
-int16_t coreInputState_cgo(unsigned port, unsigned device, unsigned index, unsigned id);
-void coreLog_cgo(enum retro_log_level level, const char *msg);
-uintptr_t coreGetCurrentFramebuffer_cgo();
-retro_proc_address_t coreGetProcAddress_cgo(const char *sym);
-
-void bridge_context_reset(retro_hw_context_reset_t f);
-
-void initVideo_cgo();
-void deinitVideo_cgo();
-void bridge_execute(void *f);
 */
 import "C"
 
@@ -319,8 +281,8 @@ func coreEnvironment(cmd C.unsigned, data unsafe.Pointer) C.bool {
 		variable := (*C.struct_retro_variable)(data)
 		key := C.GoString(variable.key)
 		if val, ok := coreConfig.Get(key); ok {
-			variable.value = val
-			libretroLogger.Debug().Msgf("Set %s=%v", key, C.GoString(val))
+			variable.value = (*C.char)(val)
+			libretroLogger.Debug().Msgf("Set %s=%v", key, C.GoString(variable.value))
 			return true
 		}
 		return false
@@ -415,7 +377,7 @@ var (
 	retroDeinit                  unsafe.Pointer
 	retroGetSystemAVInfo         unsafe.Pointer
 	retroGetSystemInfo           unsafe.Pointer
-	retroHandle                  unsafe.Pointer
+	coreLib                      unsafe.Pointer
 	retroInit                    unsafe.Pointer
 	retroLoadGame                unsafe.Pointer
 	retroRun                     unsafe.Pointer
@@ -451,41 +413,41 @@ func coreLoad(meta emulator.Metadata) {
 	nano.multitap.value = 0
 
 	filePath := meta.LibPath
-	if arch, err := core.GetCoreExt(); err == nil {
+	if arch, err := GetCoreExt(); err == nil {
 		filePath = filePath + arch.LibExt
 	} else {
 		libretroLogger.Warn().Err(err).Msg("system arch guesser failed")
 	}
 
-	retroHandle, err = loadLib(filePath)
+	coreLib, err = loadLib(filePath)
 	// fallback to sequential lib loader (first successfully loaded)
 	if err != nil {
-		retroHandle, err = loadLibRollingRollingRolling(filePath)
+		coreLib, err = loadLibRollingRollingRolling(filePath)
 		if err != nil {
 			libretroLogger.Fatal().Err(err).Msgf("core load: %s, %v", filePath, err)
 		}
 	}
 
-	retroInit = loadFunction(retroHandle, "retro_init")
-	retroDeinit = loadFunction(retroHandle, "retro_deinit")
-	//retroAPIVersion = loadFunction(retroHandle, "retro_api_version")
-	retroGetSystemInfo = loadFunction(retroHandle, "retro_get_system_info")
-	retroGetSystemAVInfo = loadFunction(retroHandle, "retro_get_system_av_info")
-	retroSetEnvironment = loadFunction(retroHandle, "retro_set_environment")
-	retroSetVideoRefresh = loadFunction(retroHandle, "retro_set_video_refresh")
-	retroSetInputPoll = loadFunction(retroHandle, "retro_set_input_poll")
-	retroSetInputState = loadFunction(retroHandle, "retro_set_input_state")
-	retroSetAudioSample = loadFunction(retroHandle, "retro_set_audio_sample")
-	retroSetAudioSampleBatch = loadFunction(retroHandle, "retro_set_audio_sample_batch")
-	retroRun = loadFunction(retroHandle, "retro_run")
-	retroLoadGame = loadFunction(retroHandle, "retro_load_game")
-	retroUnloadGame = loadFunction(retroHandle, "retro_unload_game")
-	retroSerializeSize = loadFunction(retroHandle, "retro_serialize_size")
-	retroSerialize = loadFunction(retroHandle, "retro_serialize")
-	retroUnserialize = loadFunction(retroHandle, "retro_unserialize")
-	retroSetControllerPortDevice = loadFunction(retroHandle, "retro_set_controller_port_device")
-	retroGetMemorySize = loadFunction(retroHandle, "retro_get_memory_size")
-	retroGetMemoryData = loadFunction(retroHandle, "retro_get_memory_data")
+	retroInit = loadFunction(coreLib, "retro_init")
+	retroDeinit = loadFunction(coreLib, "retro_deinit")
+	//retroAPIVersion = loadFunction(coreLib, "retro_api_version")
+	retroGetSystemInfo = loadFunction(coreLib, "retro_get_system_info")
+	retroGetSystemAVInfo = loadFunction(coreLib, "retro_get_system_av_info")
+	retroSetEnvironment = loadFunction(coreLib, "retro_set_environment")
+	retroSetVideoRefresh = loadFunction(coreLib, "retro_set_video_refresh")
+	retroSetInputPoll = loadFunction(coreLib, "retro_set_input_poll")
+	retroSetInputState = loadFunction(coreLib, "retro_set_input_state")
+	retroSetAudioSample = loadFunction(coreLib, "retro_set_audio_sample")
+	retroSetAudioSampleBatch = loadFunction(coreLib, "retro_set_audio_sample_batch")
+	retroRun = loadFunction(coreLib, "retro_run")
+	retroLoadGame = loadFunction(coreLib, "retro_load_game")
+	retroUnloadGame = loadFunction(coreLib, "retro_unload_game")
+	retroSerializeSize = loadFunction(coreLib, "retro_serialize_size")
+	retroSerialize = loadFunction(coreLib, "retro_serialize")
+	retroUnserialize = loadFunction(coreLib, "retro_unserialize")
+	retroSetControllerPortDevice = loadFunction(coreLib, "retro_set_controller_port_device")
+	retroGetMemorySize = loadFunction(coreLib, "retro_get_memory_size")
+	retroGetMemoryData = loadFunction(coreLib, "retro_get_memory_data")
 
 	C.bridge_retro_set_environment(retroSetEnvironment, C.coreEnvironment_cgo)
 	C.bridge_retro_set_video_refresh(retroSetVideoRefresh, C.coreVideoRefresh_cgo)
@@ -603,7 +565,7 @@ func nanoarchShutdown() {
 	}
 
 	setRotation(0)
-	if err := closeLib(retroHandle); err != nil {
+	if err := closeLib(coreLib); err != nil {
 		libretroLogger.Error().Err(err).Msg("lib close failed")
 	}
 	coreConfig.Free()

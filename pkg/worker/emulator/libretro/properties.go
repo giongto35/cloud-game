@@ -1,4 +1,4 @@
-package nanoarch
+package libretro
 
 import (
 	"bufio"

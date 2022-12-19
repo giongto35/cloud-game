@@ -1,12 +1,12 @@
 package manager
 
 import (
+	"github.com/giongto35/cloud-game/v2/pkg/worker/emulator/libretro"
 	"os"
 	"path/filepath"
 	"strings"
 
 	"github.com/giongto35/cloud-game/v2/pkg/config/emulator"
-	"github.com/giongto35/cloud-game/v2/pkg/worker/emulator/libretro/core"
 )
 
 type Manager interface {
@@ -19,7 +19,7 @@ type BasicManager struct {
 
 func (m BasicManager) GetInstalled() (installed []emulator.CoreInfo, err error) {
 	dir := m.Conf.GetCoresStorePath()
-	arch, err := core.GetCoreExt()
+	arch, err := libretro.GetCoreExt()
 	if err != nil {
 		return
 	}

@@ -13,7 +13,7 @@ import (
 	"github.com/giongto35/cloud-game/v2/pkg/logger"
 	"github.com/giongto35/cloud-game/v2/pkg/os"
 	"github.com/giongto35/cloud-game/v2/pkg/worker/emulator"
-	"github.com/giongto35/cloud-game/v2/pkg/worker/emulator/libretro/nanoarch"
+	"github.com/giongto35/cloud-game/v2/pkg/worker/emulator/libretro"
 	"github.com/giongto35/cloud-game/v2/pkg/worker/encoder"
 	"github.com/giongto35/cloud-game/v2/pkg/worker/recorder"
 	"github.com/giongto35/cloud-game/v2/pkg/worker/storage"
@@ -54,7 +54,7 @@ func NewRoom(id string, game games.GameMetadata, storage storage.CloudStorage, o
 		log:     log,
 	}
 
-	fe, err := nanoarch.NewFrontend(conf.Emulator, log)
+	fe, err := libretro.NewFrontend(conf.Emulator, log)
 	if err != nil {
 		log.Fatal().Err(err).Send()
 	}

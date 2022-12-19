@@ -1,4 +1,4 @@
-package nanoarch
+package libretro
 
 import (
 	"errors"
@@ -16,17 +16,10 @@ import (
 */
 import "C"
 
-func open(file string) unsafe.Pointer {
-	cs := C.CString(file)
-	defer C.free(unsafe.Pointer(cs))
-	return C.dlopen(cs, C.RTLD_LAZY)
-}
-
 func loadFunction(handle unsafe.Pointer, name string) unsafe.Pointer {
 	cs := C.CString(name)
 	defer C.free(unsafe.Pointer(cs))
-	pointer := C.dlsym(handle, cs)
-	return pointer
+	return C.dlsym(handle, cs)
 }
 
 func loadLib(filepath string) (handle unsafe.Pointer, err error) {
@@ -60,11 +53,16 @@ func loadLibRollingRollingRolling(filepath string) (handle unsafe.Pointer, err e
 	return nil, errors.New("couldn't find 'n load the lib")
 }
 
+func open(file string) unsafe.Pointer {
+	cs := C.CString(file)
+	defer C.free(unsafe.Pointer(cs))
+	return C.dlopen(cs, C.RTLD_LAZY)
+}
+
 func closeLib(handle unsafe.Pointer) (err error) {
 	if handle == nil {
 		return
 	}
-
 	code := int(C.dlclose(handle))
 	if code != 0 {
 		return errors.New("couldn't close the lib (" + strconv.Itoa(code) + ")")

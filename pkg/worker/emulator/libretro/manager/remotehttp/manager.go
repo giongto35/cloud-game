@@ -1,11 +1,11 @@
 package remotehttp
 
 import (
+	"github.com/giongto35/cloud-game/v2/pkg/worker/emulator/libretro"
 	"os"
 
 	"github.com/giongto35/cloud-game/v2/pkg/config/emulator"
 	"github.com/giongto35/cloud-game/v2/pkg/logger"
-	"github.com/giongto35/cloud-game/v2/pkg/worker/emulator/libretro/core"
 	"github.com/giongto35/cloud-game/v2/pkg/worker/emulator/libretro/manager"
 	"github.com/giongto35/cloud-game/v2/pkg/worker/emulator/libretro/repo"
 	"github.com/gofrs/flock"
@@ -14,7 +14,7 @@ import (
 type Manager struct {
 	manager.BasicManager
 
-	arch    core.ArchInfo
+	arch    libretro.ArchInfo
 	repo    repo.Repository
 	altRepo repo.Repository
 	client  Downloader
@@ -32,7 +32,7 @@ func NewRemoteHttpManager(conf emulator.LibretroConfig, log *logger.Logger) Mana
 	}
 	log.Debug().Msgf("Using .lock file: %v", fileLock)
 
-	arch, err := core.GetCoreExt()
+	arch, err := libretro.GetCoreExt()
 	if err != nil {
 		log.Error().Err(err).Msg("couldn't get Libretro core file extension")
 	}

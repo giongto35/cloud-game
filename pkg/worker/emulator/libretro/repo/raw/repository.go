@@ -1,6 +1,8 @@
 package raw
 
-import "github.com/giongto35/cloud-game/v2/pkg/worker/emulator/libretro/core"
+import (
+	"github.com/giongto35/cloud-game/v2/pkg/worker/emulator/libretro"
+)
 
 type Repo struct {
 	Address     string
@@ -13,6 +15,6 @@ func NewRawRepo(address string) Repo {
 	return Repo{Address: address, Compression: "zip"}
 }
 
-func (r Repo) GetCoreUrl(_ string, _ core.ArchInfo) string {
+func (r Repo) GetCoreUrl(_ string, _ libretro.ArchInfo) string {
 	return r.Address
 }

@@ -1,9 +1,8 @@
 package github
 
 import (
+	"github.com/giongto35/cloud-game/v2/pkg/worker/emulator/libretro"
 	"testing"
-
-	"github.com/giongto35/cloud-game/v2/pkg/worker/emulator/libretro/core"
 )
 
 func TestBuildbotRepo(t *testing.T) {
@@ -11,12 +10,12 @@ func TestBuildbotRepo(t *testing.T) {
 	tests := []struct {
 		file        string
 		compression string
-		arch        core.ArchInfo
+		arch        libretro.ArchInfo
 		resultUrl   string
 	}{
 		{
 			file: "uber_core",
-			arch: core.ArchInfo{
+			arch: libretro.ArchInfo{
 				Os:     "linux",
 				Arch:   "x86_64",
 				LibExt: ".so",
@@ -26,7 +25,7 @@ func TestBuildbotRepo(t *testing.T) {
 		{
 			file:        "uber_core",
 			compression: "zip",
-			arch: core.ArchInfo{
+			arch: libretro.ArchInfo{
 				Os:     "linux",
 				Arch:   "x86_64",
 				LibExt: ".so",
@@ -35,7 +34,7 @@ func TestBuildbotRepo(t *testing.T) {
 		},
 		{
 			file: "uber_core",
-			arch: core.ArchInfo{
+			arch: libretro.ArchInfo{
 				Os:     "osx",
 				Arch:   "x86_64",
 				Vendor: "apple",

@@ -1,4 +1,4 @@
-package nanoarch
+package libretro
 
 import (
 	"errors"
@@ -6,6 +6,7 @@ import (
 	"os"
 	"path/filepath"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	conf "github.com/giongto35/cloud-game/v2/pkg/config/emulator"
@@ -17,7 +18,7 @@ type Frontend struct {
 	onVideo func(*emulator.GameFrame)
 	onAudio func(*emulator.GameAudio)
 
-	input GameSessionInput
+	input InputState
 
 	conf    conf.Emulator
 	storage Storage
@@ -32,6 +33,25 @@ type Frontend struct {
 
 	mu sync.Mutex
 }
+
+// InputState stores full controller state.
+// It consists of:
+//   - uint16 button values
+//   - int16 analog stick values
+type (
+	InputState [maxPort]State
+	State      struct {
+		keys uint32
+		axes [dpadAxes]int32
+	}
+)
+
+const (
+	maxPort     = 4
+	dpadAxes    = 4
+	KeyPressed  = 1
+	KeyReleased = 0
+)
 
 // NewFrontend implements CloudEmulator interface for a Libretro frontend.
 func NewFrontend(conf conf.Emulator, log *logger.Logger) (*Frontend, error) {
@@ -103,7 +123,7 @@ func (f *Frontend) Start() {
 		f.log.Debug().Msgf("run loop finished")
 	}()
 
-	lastFrameTime = time.Now().UnixNano()
+	//lastFrameTime = time.Now().UnixNano()
 	for {
 		f.mu.Lock()
 		run()
@@ -193,4 +213,25 @@ func (f *Frontend) Load() error {
 		restoreSaveRAM(sram)
 	}
 	return nil
+}
+
+func NewGameSessionInput() InputState { return [maxPort]State{} }
+
+// setInput sets input state for some player in a game session.
+func (s *InputState) setInput(player int, data []byte) {
+	atomic.StoreUint32(&s[player].keys, uint32(uint16(data[1])<<8+uint16(data[0])))
+	for i, axes := 0, len(data); i < dpadAxes && i<<1+3 < axes; i++ {
+		axis := i<<1 + 2
+		atomic.StoreInt32(&s[player].axes[i], int32(data[axis+1])<<8+int32(data[axis]))
+	}
+}
+
+// isKeyPressed checks if some button is pressed by any player.
+func (s *InputState) isKeyPressed(port uint, key int) int {
+	return int((atomic.LoadUint32(&s[port].keys) >> uint(key)) & 1)
+}
+
+// isDpadTouched checks if D-pad is used by any player.
+func (s *InputState) isDpadTouched(port uint, axis uint) (shift int16) {
+	return int16(atomic.LoadInt32(&s[port].axes[axis]))
 }

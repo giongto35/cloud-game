@@ -1,9 +1,9 @@
 package buildbot
 
 import (
+	"github.com/giongto35/cloud-game/v2/pkg/worker/emulator/libretro"
 	"strings"
 
-	"github.com/giongto35/cloud-game/v2/pkg/worker/emulator/libretro/core"
 	"github.com/giongto35/cloud-game/v2/pkg/worker/emulator/libretro/repo/raw"
 )
 
@@ -20,7 +20,7 @@ func NewBuildbotRepo(address string, compression string) RepoBuildbot {
 	}
 }
 
-func (r RepoBuildbot) GetCoreUrl(file string, info core.ArchInfo) string {
+func (r RepoBuildbot) GetCoreUrl(file string, info libretro.ArchInfo) string {
 	var sb strings.Builder
 	sb.WriteString(r.Address + "/")
 	if info.Vendor != "" {
