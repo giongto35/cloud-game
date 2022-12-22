@@ -7,19 +7,18 @@ import (
 )
 
 type RecordingRoom struct {
-	*Room
-
+	GamingRoom
 	rec *recorder.Recording
 }
 
-func Init(room *Room, rec bool, recUser string, game string, conf worker.Config) *RecordingRoom {
-	rr := &RecordingRoom{Room: room, rec: recorder.NewRecording(
+func WithRecording(room GamingRoom, rec bool, recUser string, game string, conf worker.Config) *RecordingRoom {
+	rr := &RecordingRoom{GamingRoom: room, rec: recorder.NewRecording(
 		recorder.Meta{UserName: recUser},
-		room.log,
+		room.GetLog(),
 		recorder.Options{
 			Dir:                   conf.Recording.Folder,
-			Fps:                   float64(room.emulator.GetFps()),
-			Frequency:             int(room.emulator.GetSampleRate()),
+			Fps:                   float64(room.GetEmulator().GetFps()),
+			Frequency:             int(room.GetEmulator().GetSampleRate()),
 			Game:                  game,
 			ImageCompressionLevel: conf.Recording.CompressLevel,
 			Name:                  conf.Recording.Name,
@@ -33,8 +32,8 @@ func Init(room *Room, rec bool, recUser string, game string, conf worker.Config)
 }
 
 func (r *RecordingRoom) captureAudio() {
-	handler := r.Room.emulator.GetAudio()
-	r.Room.emulator.SetAudio(func(samples *emulator.GameAudio) {
+	handler := r.GetEmulator().GetAudio()
+	r.GetEmulator().SetAudio(func(samples *emulator.GameAudio) {
 		if r.IsRecording() {
 			r.rec.WriteAudio(recorder.Audio{Samples: &samples.Data, Duration: samples.Duration})
 		}
@@ -43,8 +42,8 @@ func (r *RecordingRoom) captureAudio() {
 }
 
 func (r *RecordingRoom) captureVideo() {
-	handler := r.Room.emulator.GetVideo()
-	r.Room.emulator.SetVideo(func(frame *emulator.GameFrame) {
+	handler := r.GetEmulator().GetVideo()
+	r.GetEmulator().SetVideo(func(frame *emulator.GameFrame) {
 		if r.IsRecording() {
 			r.rec.WriteVideo(recorder.Video{Image: frame.Data, Duration: frame.Duration})
 		}
@@ -56,14 +55,14 @@ func (r *RecordingRoom) ToggleRecording(active bool, user string) {
 	if r.rec == nil {
 		return
 	}
-	r.log.Debug().Msgf("[REC] set: %v, %v", active, user)
+	r.GetLog().Debug().Msgf("[REC] set: %v, %v", active, user)
 	r.rec.Set(active, user)
 }
 
 func (r *RecordingRoom) IsRecording() bool { return r.rec != nil && r.rec.Enabled() }
 
 func (r *RecordingRoom) Close() {
-	r.Room.Close()
+	r.GamingRoom.Close()
 	if r.rec != nil {
 		r.rec.Set(false, "")
 	}

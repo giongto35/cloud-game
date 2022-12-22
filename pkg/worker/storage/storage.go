@@ -8,7 +8,7 @@ type CloudStorage interface {
 	IsNoop() bool
 }
 
-func GetCloudStorage(provider, key string) CloudStorage {
+func GetCloudStorage(provider, key string) (CloudStorage, error) {
 	var st CloudStorage
 	var err error
 	switch provider {
@@ -21,5 +21,5 @@ func GetCloudStorage(provider, key string) CloudStorage {
 	if err != nil {
 		st, _ = NewNoopCloudStorage()
 	}
-	return st
+	return st, err
 }

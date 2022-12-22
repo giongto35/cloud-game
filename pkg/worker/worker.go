@@ -52,12 +52,16 @@ func New(ctx context.Context, conf worker.Config, log *logger.Logger) (services 
 	if conf.Worker.Monitoring.IsEnabled() {
 		services.Add(monitoring.New(conf.Worker.Monitoring, h.GetHost(), log))
 	}
+	st, err := storage.GetCloudStorage(conf.Storage.Provider, conf.Storage.Key)
+	if err != nil {
+		log.Error().Err(err).Msgf("cloud storage fail, using dummy cloud storage instead")
+	}
 	services.Add(&Worker{
 		address: h.Addr,
 		conf:    conf,
 		ctx:     ctx,
 		log:     log,
-		storage: storage.GetCloudStorage(conf.Storage.Provider, conf.Storage.Key),
+		storage: st,
 		router:  NewRouter(),
 	})
 

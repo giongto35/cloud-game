@@ -92,11 +92,12 @@ func DrawRgbaImage(encoding uint32, rot *Rotate, scaleType int, flipV bool, w, h
 }
 
 func i565(dst *uint32, px uint32) {
-	*dst = ((px >> 8) & 0xf8) | (((px >> 3) & 0xfc) << 8) | (((px << 3) & 0xfc) << 16) // | 0xff000000
+	*dst = ((px >> 8) & 0xf8) | (((px >> 3) & 0xfc) << 8) | (((px << 3) & 0xfc) << 16) | 0xff000000
+	// setting the last byte to 255 allows saving RGBA images to PNG not as black squares
 }
 
 func ix8888(dst *uint32, px uint32) {
-	*dst = ((px >> 16) & 0xff) | (px & 0xff00) | ((px << 16) & 0xff0000) // | 0xff000000
+	*dst = ((px >> 16) & 0xff) | (px & 0xff00) | ((px << 16) & 0xff0000) | 0xff000000
 }
 
 func Clear() {

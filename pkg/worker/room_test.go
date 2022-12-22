@@ -25,7 +25,6 @@ import (
 	"github.com/giongto35/cloud-game/v2/pkg/worker/emulator"
 	"github.com/giongto35/cloud-game/v2/pkg/worker/emulator/libretro/manager/remotehttp"
 	"github.com/giongto35/cloud-game/v2/pkg/worker/encoder"
-	"github.com/giongto35/cloud-game/v2/pkg/worker/storage"
 	"github.com/giongto35/cloud-game/v2/pkg/worker/thread"
 	"golang.org/x/image/font"
 	"golang.org/x/image/font/basicfont"
@@ -181,18 +180,15 @@ func TestAllEmulatorRooms(t *testing.T) {
 	}
 }
 
-type OpaqueHack struct{ *image.RGBA }
+//type OpaqueHack struct{ *image.RGBA }
+//func (o *OpaqueHack) Opaque() bool { return true }
 
-func (o *OpaqueHack) Opaque() bool { return true }
-
-func dumpCanvas(f *image.RGBA, name string, caption string, path string) {
-	frame := OpaqueHack{f}
-
+func dumpCanvas(frame *image.RGBA, name string, caption string, path string) {
 	// slap 'em caption
 	if len(caption) > 0 {
-		draw.Draw(&frame, image.Rect(8, 8, 8+len(caption)*7+3, 24), &image.Uniform{C: color.RGBA{}}, image.Point{}, draw.Src)
+		draw.Draw(frame, image.Rect(8, 8, 8+len(caption)*7+3, 24), &image.Uniform{C: color.RGBA{}}, image.Point{}, draw.Src)
 		(&font.Drawer{
-			Dst:  &frame,
+			Dst:  frame,
 			Src:  image.NewUniform(color.RGBA{R: 255, G: 255, B: 255, A: 255}),
 			Face: basicfont.Face7x13,
 			Dot:  fixed.Point26_6{X: fixed.Int26_6(10 * 64), Y: fixed.Int26_6(20 * 64)},
@@ -213,7 +209,7 @@ func dumpCanvas(f *image.RGBA, name string, caption string, path string) {
 	}
 
 	if f, err := os.Create(filepath.Join(outPath, name+".png")); err == nil {
-		if err = png.Encode(f, &frame); err != nil {
+		if err = png.Encode(f, frame); err != nil {
 			log.Printf("Couldn't encode the image, %v", err)
 		}
 		_ = f.Close()
@@ -240,9 +236,7 @@ func getRoomMock(cfg roomMockConfig) roomMock {
 	}
 	conf.Encoder.Video.Codec = string(cfg.vCodec)
 
-	cloudStore, _ := storage.NewNoopCloudStorage()
-
-	room := NewRoom(cfg.roomName, cfg.game, cloudStore, nil, conf, l)
+	room := NewRoom(cfg.roomName, cfg.game, nil, conf, l)
 
 	if !cfg.dontStartEmulator {
 		room.StartEmulator()

@@ -15,7 +15,6 @@ import (
 	"github.com/giongto35/cloud-game/v2/pkg/worker/emulator"
 	"github.com/giongto35/cloud-game/v2/pkg/worker/emulator/libretro"
 	"github.com/giongto35/cloud-game/v2/pkg/worker/encoder"
-	"github.com/giongto35/cloud-game/v2/pkg/worker/storage"
 	"github.com/pion/webrtc/v3/pkg/media"
 )
 
@@ -23,6 +22,7 @@ type GamingRoom interface {
 	GetId() string
 	Close()
 	CleanupUser(*Session)
+	HasSave() bool
 	StartEmulator()
 	SaveGame() error
 	LoadGame() error
@@ -31,6 +31,8 @@ type GamingRoom interface {
 	AddUser(*Session)
 	PollUserInput(*Session)
 	EnableAutosave(periodS int)
+	GetEmulator() emulator.Emulator
+	GetLog() *logger.Logger
 }
 
 // Room defines a gaming session.
@@ -42,15 +44,13 @@ type Room struct {
 	vEncoder *encoder.VideoEncoder
 	users    com.NetMap[*Session] // a list of users in the room
 	emulator emulator.Emulator
-	storage  storage.CloudStorage // a cloud storage to store room state online
 	onClose  func(self *Room)
 	log      *logger.Logger
 }
 
 var samplePool = sync.Pool{New: func() any { return media.Sample{} }}
 
-func NewRoom(id string, game games.GameMetadata, storage storage.CloudStorage, onClose func(*Room),
-	conf worker.Config, log *logger.Logger) *Room {
+func NewRoom(id string, game games.GameMetadata, onClose func(*Room), conf worker.Config, log *logger.Logger) *Room {
 	if id == "" {
 		id = games.GenerateRoomID(game.Name)
 	}
@@ -60,7 +60,6 @@ func NewRoom(id string, game games.GameMetadata, storage storage.CloudStorage, o
 		id:      id,
 		active:  true,
 		users:   com.NewNetMap[*Session](),
-		storage: storage,
 		done:    make(chan struct{}),
 		onClose: onClose,
 		log:     log,
@@ -88,12 +87,6 @@ func NewRoom(id string, game games.GameMetadata, storage storage.CloudStorage, o
 	}
 	room.emulator.SetViewport(w, h)
 
-	if !room.storage.IsNoop() {
-		if err := room.saveOnlineRoomToLocal(id, room.emulator.GetHashPath()); err != nil {
-			log.Warn().Err(err).Msg("The room is not in the cloud")
-		}
-	}
-
 	log.Info().Str("game", game.Name).Msg("The room is open")
 
 	room.initVideo(w, h, room.handleVideoFrame, conf.Encoder.Video)
@@ -101,9 +94,12 @@ func NewRoom(id string, game games.GameMetadata, storage storage.CloudStorage, o
 	return room
 }
 
-func (r *Room) GetId() string { return r.id }
-
-func (r *Room) StartEmulator() { go r.emulator.Start() }
+func (r *Room) GetId() string                  { return r.id }
+func (r *Room) GetEmulator() emulator.Emulator { return r.emulator }
+func (r *Room) GetLog() *logger.Logger         { return r.log }
+func (r *Room) HasSave() bool                  { return hasStateSavedLocally(r.emulator.GetHashPath()) }
+func (r *Room) HasUser(u *Session) bool        { return r != nil && r.users.Has(u.id) }
+func (r *Room) StartEmulator()                 { go r.emulator.Start() }
 
 func (r *Room) handleAudioSamples(b []byte, dur time.Duration) {
 	sample := samplePool.Get().(media.Sample)
@@ -212,8 +208,6 @@ func (r *Room) CleanupUser(user *Session) {
 	}
 }
 
-func (r *Room) HasUser(u *Session) bool { return r != nil && r.users.Has(u.id) }
-
 func (r *Room) Close() {
 	r.log.Debug().Msg("Closing the room")
 	if !r.active {
@@ -224,7 +218,7 @@ func (r *Room) Close() {
 	r.active = false
 
 	// Save game before quit. Only save for game which was previous saved to avoid flooding database
-	if r.isRoomExisted() {
+	if r.HasSave() {
 		r.log.Debug().Msg("Save game before closing room")
 		if err := r.SaveGame(); err != nil {
 			r.log.Error().Err(err).Msg("couldn't save the game during close")
@@ -242,41 +236,13 @@ func (r *Room) Close() {
 	}
 }
 
-func (r *Room) isRoomExisted() bool {
-	_, err := r.storage.Load(r.id)
-	if err == nil {
-		return true
-	}
-	return hasStateSavedLocally(r.emulator.GetHashPath())
-}
-
 // SaveGame writes save state on the disk as well as
 // uploads it to a cloud storage.
 func (r *Room) SaveGame() error {
 	if err := r.emulator.SaveGameState(); err != nil {
 		return err
 	}
-	if err := r.storage.Save(r.id, r.emulator.GetHashPath()); err != nil {
-		return err
-	}
-	r.log.Debug().Msg("Cloud save is successful")
-	return nil
-}
-
-// saveOnlineRoomToLocal save online room to local.
-// !Supports only one file of main save state.
-func (r *Room) saveOnlineRoomToLocal(roomID string, savePath string) error {
-	data, err := r.storage.Load(roomID)
-	if err != nil {
-		return err
-	}
-	// Save the data fetched from a cloud provider to the local server
-	if data != nil {
-		if err := os.WriteFile(savePath, data, 0644); err != nil {
-			return err
-		}
-		r.log.Debug().Msg("Successfully downloaded cloud save")
-	}
+	r.log.Debug().Msg("Local save is successful")
 	return nil
 }
 

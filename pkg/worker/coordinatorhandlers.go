@@ -82,7 +82,6 @@ func (c *coordinator) HandleGameStart(rq api.StartGameRequest, w *Worker) com.Ou
 		room = NewRoom(
 			rq.Room.Rid,
 			games.GameMetadata{Name: rq.Game.Name, Base: rq.Game.Base, Type: rq.Game.Type, Path: rq.Game.Path},
-			w.storage,
 			func(room *Room) {
 				w.router.RemoveRoom()
 				c.CloseRoom(room.id)
@@ -93,9 +92,15 @@ func (c *coordinator) HandleGameStart(rq api.StartGameRequest, w *Worker) com.Ou
 		)
 		w.log.Info().Str("room", room.GetId()).Msg("New room")
 		user.SetPlayerIndex(rq.PlayerIndex)
+
+		// cloud maybe?
+		if !w.storage.IsNoop() {
+			room = WithCloudStorage(room, w.storage)
+		}
+		// record maybe?
 		if w.conf.Recording.Enabled {
 			w.log.Info().Msgf("RECORD: %v %v", rq.Record, rq.RecordUser)
-			room = Init(room.(*Room), rq.Record, rq.RecordUser, rq.Game.Name, w.conf)
+			room = WithRecording(room.(*Room), rq.Record, rq.RecordUser, rq.Game.Name, w.conf)
 		}
 		w.router.SetRoom(room)
 
