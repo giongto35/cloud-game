@@ -15,10 +15,23 @@ import (
 	"github.com/giongto35/cloud-game/v2/pkg/worker/emulator"
 	"github.com/giongto35/cloud-game/v2/pkg/worker/emulator/libretro"
 	"github.com/giongto35/cloud-game/v2/pkg/worker/encoder"
-	"github.com/giongto35/cloud-game/v2/pkg/worker/recorder"
 	"github.com/giongto35/cloud-game/v2/pkg/worker/storage"
 	"github.com/pion/webrtc/v3/pkg/media"
 )
+
+type GamingRoom interface {
+	GetId() string
+	Close()
+	CleanupUser(*Session)
+	StartEmulator()
+	SaveGame() error
+	LoadGame() error
+	ToggleMultitap()
+	HasUser(*Session) bool
+	AddUser(*Session)
+	PollUserInput(*Session)
+	EnableAutosave(periodS int)
+}
 
 // Room defines a gaming session.
 // It manages all the user WebRTC connections.
@@ -28,17 +41,16 @@ type Room struct {
 	done     chan struct{}
 	vEncoder *encoder.VideoEncoder
 	users    com.NetMap[*Session] // a list of users in the room
-	emulator emulator.CloudEmulator
+	emulator emulator.Emulator
 	storage  storage.CloudStorage // a cloud storage to store room state online
 	onClose  func(self *Room)
-	rec      *recorder.Recording
 	log      *logger.Logger
 }
 
 var samplePool = sync.Pool{New: func() any { return media.Sample{} }}
 
 func NewRoom(id string, game games.GameMetadata, storage storage.CloudStorage, onClose func(*Room),
-	rec bool, recUser string, conf worker.Config, log *logger.Logger) *Room {
+	conf worker.Config, log *logger.Logger) *Room {
 	if id == "" {
 		id = games.GenerateRoomID(game.Name)
 	}
@@ -54,11 +66,11 @@ func NewRoom(id string, game games.GameMetadata, storage storage.CloudStorage, o
 		log:     log,
 	}
 
-	fe, err := libretro.NewFrontend(conf.Emulator, log)
+	nano, err := libretro.NewFrontend(conf.Emulator, log)
 	if err != nil {
 		log.Fatal().Err(err).Send()
 	}
-	room.emulator = fe
+	room.emulator = nano
 	room.emulator.SetMainSaveName(id)
 	emulatorGuess := conf.Emulator.GetEmulator(game.Type, game.Path)
 	room.emulator.LoadMetadata(emulatorGuess)
@@ -71,7 +83,7 @@ func NewRoom(id string, game games.GameMetadata, storage storage.CloudStorage, o
 	// calc output frame size and rotation
 	fw, fh := room.emulator.GetFrameSize()
 	w, h := room.whatsFrame(conf.Emulator, fw, fh)
-	if room.emulator.Rotated() {
+	if room.emulator.HasVerticalFrame() {
 		w, h = h, w
 	}
 	room.emulator.SetViewport(w, h)
@@ -84,31 +96,16 @@ func NewRoom(id string, game games.GameMetadata, storage storage.CloudStorage, o
 
 	log.Info().Str("game", game.Name).Msg("The room is open")
 
-	if conf.Recording.Enabled {
-		room.rec = recorder.NewRecording(
-			recorder.Meta{UserName: recUser},
-			log,
-			recorder.Options{
-				Dir:                   conf.Recording.Folder,
-				Fps:                   float64(room.emulator.GetFps()),
-				Frequency:             int(room.emulator.GetSampleRate()),
-				Game:                  game.Name,
-				ImageCompressionLevel: conf.Recording.CompressLevel,
-				Name:                  conf.Recording.Name,
-				Zip:                   conf.Recording.Zip,
-				Vsync:                 true,
-			})
-		room.ToggleRecording(rec, recUser)
-	}
-
-	room.initVideo(w, h, room.defaultVideoHandler, conf.Encoder.Video)
-	room.initAudio(int(room.emulator.GetSampleRate()), room.defaultAudioHandler, conf.Encoder.Audio)
+	room.initVideo(w, h, room.handleVideoFrame, conf.Encoder.Video)
+	room.initAudio(int(room.emulator.GetSampleRate()), room.handleAudioSamples, conf.Encoder.Audio)
 	return room
 }
 
+func (r *Room) GetId() string { return r.id }
+
 func (r *Room) StartEmulator() { go r.emulator.Start() }
 
-func (r *Room) defaultAudioHandler(b []byte, dur time.Duration) {
+func (r *Room) handleAudioSamples(b []byte, dur time.Duration) {
 	sample := samplePool.Get().(media.Sample)
 	sample.Data = b
 	sample.Duration = dur
@@ -120,7 +117,7 @@ func (r *Room) defaultAudioHandler(b []byte, dur time.Duration) {
 	samplePool.Put(sample)
 }
 
-func (r *Room) defaultVideoHandler(b []byte, dur time.Duration) {
+func (r *Room) handleVideoFrame(b []byte, dur time.Duration) {
 	sample := samplePool.Get().(media.Sample)
 	sample.Data = b
 	sample.Duration = dur
@@ -132,7 +129,7 @@ func (r *Room) defaultVideoHandler(b []byte, dur time.Duration) {
 	samplePool.Put(sample)
 }
 
-func (r *Room) autosave(periodSec int) {
+func (r *Room) EnableAutosave(periodSec int) {
 	r.log.Info().Msgf("Autosave every [%vs]", periodSec)
 	ticker := time.NewTicker(time.Duration(periodSec) * time.Second)
 	defer ticker.Stop()
@@ -224,7 +221,6 @@ func (r *Room) Close() {
 		return
 	}
 
-	//r.users = com.NewNetMap[*Session]()
 	r.active = false
 
 	// Save game before quit. Only save for game which was previous saved to avoid flooding database
@@ -243,10 +239,6 @@ func (r *Room) Close() {
 
 	if r.onClose != nil {
 		r.onClose(r)
-	}
-
-	if r.rec != nil {
-		r.rec.Set(false, "")
 	}
 }
 
@@ -288,15 +280,6 @@ func (r *Room) saveOnlineRoomToLocal(roomID string, savePath string) error {
 	return nil
 }
 
-func (r *Room) LoadGame() error   { return r.emulator.LoadGameState() }
-func (r *Room) ToggleMultitap()   { r.emulator.ToggleMultitap() }
-func (r *Room) IsEmpty() bool     { return r.users.IsEmpty() }
-func (r *Room) IsRecording() bool { return r.rec != nil && r.rec.Enabled() }
-
-func (r *Room) ToggleRecording(active bool, user string) {
-	if r.rec == nil {
-		return
-	}
-	r.log.Debug().Msgf("[REC] set: %v, %v", active, user)
-	r.rec.Set(active, user)
-}
+func (r *Room) LoadGame() error { return r.emulator.LoadGameState() }
+func (r *Room) ToggleMultitap() { r.emulator.ToggleMultitap() }
+func (r *Room) IsEmpty() bool   { return r.users.IsEmpty() }

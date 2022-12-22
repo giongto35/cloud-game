@@ -242,7 +242,7 @@ func getRoomMock(cfg roomMockConfig) roomMock {
 
 	cloudStore, _ := storage.NewNoopCloudStorage()
 
-	room := NewRoom(cfg.roomName, cfg.game, cloudStore, nil, false, "", conf, l)
+	room := NewRoom(cfg.roomName, cfg.game, cloudStore, nil, conf, l)
 
 	if !cfg.dontStartEmulator {
 		room.StartEmulator()

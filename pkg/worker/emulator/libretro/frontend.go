@@ -53,7 +53,7 @@ const (
 	KeyReleased = 0
 )
 
-// NewFrontend implements CloudEmulator interface for a Libretro frontend.
+// NewFrontend implements Emulator interface for a Libretro frontend.
 func NewFrontend(conf conf.Emulator, log *logger.Logger) (*Frontend, error) {
 	log = log.Extend(log.With().Str("m", "Libretro"))
 	ll := log.Extend(log.Level(logger.Level(conf.Libretro.LogLevel)).With())
@@ -142,14 +142,16 @@ func (f *Frontend) GetFrameSize() (int, int) {
 }
 
 func (f *Frontend) SetAudio(ff func(*emulator.GameAudio)) { f.onAudio = ff }
+func (f *Frontend) GetAudio() func(*emulator.GameAudio)   { return f.onAudio }
 func (f *Frontend) SetVideo(ff func(*emulator.GameFrame)) { f.onVideo = ff }
+func (f *Frontend) GetVideo() func(*emulator.GameFrame)   { return f.onVideo }
 func (f *Frontend) GetFps() uint                          { return uint(nano.sysAvInfo.timing.fps) }
 func (f *Frontend) GetHashPath() string                   { return f.storage.GetSavePath() }
 func (f *Frontend) GetSRAMPath() string                   { return f.storage.GetSRAMPath() }
 func (f *Frontend) GetSampleRate() uint                   { return uint(nano.sysAvInfo.timing.sample_rate) }
 func (f *Frontend) LoadGame(path string) error            { return LoadGame(path) }
 func (f *Frontend) LoadGameState() error                  { return f.Load() }
-func (f *Frontend) Rotated() bool                         { return nano.rot != nil && nano.rot.IsEven }
+func (f *Frontend) HasVerticalFrame() bool                { return nano.rot != nil && nano.rot.IsEven }
 func (f *Frontend) SaveGameState() error                  { return f.Save() }
 func (f *Frontend) SetMainSaveName(name string)           { f.storage.SetMainSaveName(name) }
 func (f *Frontend) SetViewport(width int, height int)     { f.vw, f.vh = width, height }

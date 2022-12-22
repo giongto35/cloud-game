@@ -10,7 +10,6 @@ import (
 	"github.com/giongto35/cloud-game/v2/pkg/worker/encoder/opus"
 	"github.com/giongto35/cloud-game/v2/pkg/worker/encoder/vpx"
 	"github.com/giongto35/cloud-game/v2/pkg/worker/media"
-	"github.com/giongto35/cloud-game/v2/pkg/worker/recorder"
 )
 
 var encoder_ *opus.Encoder
@@ -45,9 +44,6 @@ func (r *Room) initAudio(frequency int, onOutFrame func([]byte, time.Duration), 
 	dur := time.Duration(conf.Frame) * time.Millisecond
 
 	r.emulator.SetAudio(func(samples *emulator.GameAudio) {
-		if r.IsRecording() {
-			r.rec.WriteAudio(recorder.Audio{Samples: &samples.Data, Duration: samples.Duration})
-		}
 		buf.Write(samples.Data, func(s media.Samples) {
 			if resample {
 				s = media.ResampleStretch(s, frameLen)
@@ -91,9 +87,6 @@ func (r *Room) initVideo(width, height int, onOutFrame func([]byte, time.Duratio
 	r.vEncoder = encoder.NewVideoEncoder(enc, width, height, r.log)
 
 	r.emulator.SetVideo(func(frame *emulator.GameFrame) {
-		if r.IsRecording() {
-			r.rec.WriteVideo(recorder.Video{Image: frame.Data, Duration: frame.Duration})
-		}
 		if fr := r.vEncoder.Encode(frame.Data); fr != nil {
 			onOutFrame(fr, frame.Duration)
 		}

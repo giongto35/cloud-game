@@ -114,7 +114,7 @@ func (c *coordinator) HandleRequests(w *Worker) {
 			if dat := api.Unwrap[api.RecordGameRequest](x.Payload); dat == nil {
 				err, out = api.ErrMalformed, com.EmptyPacket
 			} else {
-				c.HandleRecordGame(*dat, w)
+				out = c.HandleRecordGame(*dat, w)
 			}
 		default:
 			c.Log.Warn().Msgf("unhandled packet type %v", x.T)

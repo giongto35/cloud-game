@@ -7,15 +7,19 @@ import (
 	"github.com/giongto35/cloud-game/v2/pkg/worker/emulator/image"
 )
 
-type CloudEmulator interface {
-	SetAudio(func(audio *GameAudio))
-	SetVideo(func(video *GameFrame))
+type Emulator interface {
+	// SetAudio sets the audio callback
+	SetAudio(func(*GameAudio))
+	// SetVideo sets the video callback
+	SetVideo(func(*GameFrame))
+	GetAudio() func(*GameAudio)
+	GetVideo() func(*GameFrame)
 	LoadMetadata(name string)
 	LoadGame(path string) error
 	GetFps() uint
 	GetSampleRate() uint
 	GetFrameSize() (w, h int)
-	Rotated() bool
+	HasVerticalFrame() bool
 	// Start is called after LoadGame
 	Start()
 	// SetViewport sets viewport size

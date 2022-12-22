@@ -88,22 +88,22 @@ func (c *coordinator) HandleGameStart(rq api.StartGameRequest, w *Worker) com.Ou
 				c.CloseRoom(room.id)
 				w.log.Debug().Msgf("Room close has been called %v", room.id)
 			},
-			rq.Record, rq.RecordUser,
 			w.conf,
 			w.log,
 		)
-		w.log.Info().Str("room", room.id).Msg("New room")
-		w.router.SetRoom(room)
+		w.log.Info().Str("room", room.GetId()).Msg("New room")
 		user.SetPlayerIndex(rq.PlayerIndex)
 		if w.conf.Recording.Enabled {
 			w.log.Info().Msgf("RECORD: %v %v", rq.Record, rq.RecordUser)
+			room = Init(room.(*Room), rq.Record, rq.RecordUser, rq.Game.Name, w.conf)
 		}
+		w.router.SetRoom(room)
 
 		room.StartEmulator()
 
 		if w.conf.Emulator.AutosaveSec > 0 {
 			// !to can crash if emulator starts earlier
-			go room.autosave(w.conf.Emulator.AutosaveSec)
+			go room.EnableAutosave(w.conf.Emulator.AutosaveSec)
 		}
 	}
 
@@ -118,9 +118,9 @@ func (c *coordinator) HandleGameStart(rq api.StartGameRequest, w *Worker) com.Ou
 	}
 	user.SetRoom(room)
 
-	c.RegisterRoom(room.id)
+	c.RegisterRoom(room.GetId())
 
-	return com.Out{Payload: api.StartGameResponse{Room: api.Room{Rid: room.id}, Record: w.conf.Recording.Enabled}}
+	return com.Out{Payload: api.StartGameResponse{Room: api.Room{Rid: room.GetId()}, Record: w.conf.Recording.Enabled}}
 }
 
 // HandleTerminateSession handles cases when a user has been disconnected from the websocket of coordinator.
@@ -190,13 +190,13 @@ func (c *coordinator) HandleRecordGame(rq api.RecordGameRequest, w *Worker) com.
 		return com.ErrPacket
 	}
 	if room := roomy(rq, w); room != nil {
-		room.ToggleRecording(rq.Active, rq.User)
+		room.(*RecordingRoom).ToggleRecording(rq.Active, rq.User)
 		return com.OkPacket
 	}
 	return com.ErrPacket
 }
 
-func roomy(rq api.RoomInterface, w *Worker) *Room {
+func roomy(rq api.RoomInterface, w *Worker) GamingRoom {
 	rid := rq.GetRoom()
 	if rid == "" {
 		return nil
