@@ -10,7 +10,6 @@ import (
 	"github.com/giongto35/cloud-game/v2/pkg/network/httpx"
 	"github.com/giongto35/cloud-game/v2/pkg/service"
 	"github.com/giongto35/cloud-game/v2/pkg/worker/emulator/libretro/manager/remotehttp"
-	"github.com/giongto35/cloud-game/v2/pkg/worker/storage"
 )
 
 type Worker struct {
@@ -20,7 +19,7 @@ type Worker struct {
 	ctx     context.Context
 	log     *logger.Logger
 	router  Router
-	storage storage.CloudStorage
+	storage CloudStorage
 }
 
 const retry = 10 * time.Second
@@ -52,7 +51,7 @@ func New(ctx context.Context, conf worker.Config, log *logger.Logger) (services 
 	if conf.Worker.Monitoring.IsEnabled() {
 		services.Add(monitoring.New(conf.Worker.Monitoring, h.GetHost(), log))
 	}
-	st, err := storage.GetCloudStorage(conf.Storage.Provider, conf.Storage.Key)
+	st, err := GetCloudStorage(conf.Storage.Provider, conf.Storage.Key)
 	if err != nil {
 		log.Error().Err(err).Msgf("cloud storage fail, using dummy cloud storage instead")
 	}

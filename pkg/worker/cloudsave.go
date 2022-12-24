@@ -1,17 +1,13 @@
 package worker
 
-import (
-	"os"
-
-	"github.com/giongto35/cloud-game/v2/pkg/worker/storage"
-)
+import "os"
 
 type CloudSaveRoom struct {
 	GamingRoom
-	storage storage.CloudStorage // a cloud storage to store room state online
+	storage CloudStorage // a cloud storage to store room state online
 }
 
-func WithCloudStorage(room GamingRoom, storage storage.CloudStorage) *CloudSaveRoom {
+func WithCloudStorage(room GamingRoom, storage CloudStorage) *CloudSaveRoom {
 	cr := CloudSaveRoom{
 		GamingRoom: room,
 		storage:    storage,

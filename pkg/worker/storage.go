@@ -1,4 +1,4 @@
-package storage
+package worker
 
 import (
 	"bytes"
@@ -12,9 +12,26 @@ import (
 	"time"
 )
 
+type CloudStorage interface {
+	Save(name string, localPath string) (err error)
+	Load(name string) (data []byte, err error)
+}
+
 type OracleDataStorageClient struct {
 	accessURL string
 	client    *http.Client
+}
+
+func GetCloudStorage(provider, key string) (CloudStorage, error) {
+	var st CloudStorage
+	var err error
+	switch provider {
+	case "oracle":
+		st, err = NewOracleDataStorageClient(key)
+	case "coordinator":
+	default:
+	}
+	return st, err
 }
 
 // NewOracleDataStorageClient returns either a new Oracle Data Storage
@@ -100,8 +117,6 @@ func (s *OracleDataStorageClient) Load(name string) (data []byte, err error) {
 
 	return dat, nil
 }
-
-func (s *OracleDataStorageClient) IsNoop() bool { return false }
 
 func md5Hash(data []byte) []byte {
 	hash := md5.New()
