@@ -180,9 +180,6 @@ func TestAllEmulatorRooms(t *testing.T) {
 	}
 }
 
-//type OpaqueHack struct{ *image.RGBA }
-//func (o *OpaqueHack) Opaque() bool { return true }
-
 func dumpCanvas(frame *image.RGBA, name string, caption string, path string) {
 	// slap 'em caption
 	if len(caption) > 0 {

@@ -1,6 +1,7 @@
 package worker
 
 import (
+	"sync"
 	"time"
 
 	conf "github.com/giongto35/cloud-game/v2/pkg/config/encoder"
@@ -10,8 +11,10 @@ import (
 	"github.com/giongto35/cloud-game/v2/pkg/worker/encoder/opus"
 	"github.com/giongto35/cloud-game/v2/pkg/worker/encoder/vpx"
 	"github.com/giongto35/cloud-game/v2/pkg/worker/media"
+	webrtc "github.com/pion/webrtc/v3/pkg/media"
 )
 
+var samplePool = sync.Pool{New: func() any { return webrtc.Sample{} }}
 var encoder_ *opus.Encoder
 
 const (
@@ -23,7 +26,7 @@ const (
 // GetFrameSizeFor calculates audio frame size, i.e. 48k*frame/1000*2
 func GetFrameSizeFor(hz int, frame int) int { return hz * frame / 1000 * audioChannels }
 
-func (r *Room) initAudio(frequency int, onOutFrame func([]byte, time.Duration), conf conf.Audio) {
+func (r *Room) initAudio(frequency int, conf conf.Audio) {
 	buf := media.NewBuffer(GetFrameSizeFor(frequency, conf.Frame))
 	resample, frameLen := frequency != audioFrequency, 0
 	if resample {
@@ -51,14 +54,14 @@ func (r *Room) initAudio(frequency int, onOutFrame func([]byte, time.Duration), 
 			f, err := enc.Encode(s)
 			media.BufOutAudioPool.Put([]int16(s))
 			if err == nil {
-				onOutFrame(f, dur)
+				r.handleSample(f, dur, func(u *Session, s webrtc.Sample) { _ = u.SendAudio(s) })
 			}
 		})
 	})
 }
 
 // initVideo processes videoFrames images with an encoder (codec) then pushes the result to WebRTC.
-func (r *Room) initVideo(width, height int, onOutFrame func([]byte, time.Duration), conf conf.Video) {
+func (r *Room) initVideo(width, height int, conf conf.Video) {
 	var enc encoder.Encoder
 	var err error
 
@@ -88,7 +91,19 @@ func (r *Room) initVideo(width, height int, onOutFrame func([]byte, time.Duratio
 
 	r.emulator.SetVideo(func(frame *emulator.GameFrame) {
 		if fr := r.vEncoder.Encode(frame.Data); fr != nil {
-			onOutFrame(fr, frame.Duration)
+			r.handleSample(fr, frame.Duration, func(u *Session, s webrtc.Sample) { _ = u.SendVideo(s) })
 		}
 	})
+}
+
+func (r *Room) handleSample(b []byte, d time.Duration, fn func(*Session, webrtc.Sample)) {
+	sample := samplePool.Get().(webrtc.Sample)
+	sample.Data = b
+	sample.Duration = d
+	r.users.ForEach(func(u *Session) {
+		if u.IsConnected() {
+			fn(u, sample)
+		}
+	})
+	samplePool.Put(sample)
 }

@@ -80,6 +80,8 @@ type GameMetadata struct {
 	Path string
 }
 
+func (g GameMetadata) FullPath() string { return filepath.Join(g.Base, g.Path) }
+
 func (c Config) GetSupportedExtensions() []string { return c.Supported }
 
 func NewLib(conf Config, log *logger.Logger) GameLibrary { return NewLibWhitelisted(conf, conf, log) }

@@ -1,8 +1,6 @@
 package worker
 
 import (
-	"path/filepath"
-	"sync"
 	"time"
 
 	"github.com/giongto35/cloud-game/v2/pkg/com"
@@ -14,7 +12,6 @@ import (
 	"github.com/giongto35/cloud-game/v2/pkg/worker/emulator"
 	"github.com/giongto35/cloud-game/v2/pkg/worker/emulator/libretro"
 	"github.com/giongto35/cloud-game/v2/pkg/worker/encoder"
-	"github.com/pion/webrtc/v3/pkg/media"
 )
 
 type GamingRoom interface {
@@ -45,8 +42,6 @@ type Room struct {
 	log      *logger.Logger
 }
 
-var samplePool = sync.Pool{New: func() any { return media.Sample{} }}
-
 func NewRoom(id string, game games.GameMetadata, onClose func(*Room), conf worker.Config, log *logger.Logger) *Room {
 	if id == "" {
 		id = games.GenerateRoomID(game.Name)
@@ -61,14 +56,11 @@ func NewRoom(id string, game games.GameMetadata, onClose func(*Room), conf worke
 	}
 	room.emulator = nano
 	room.emulator.SetMainSaveName(id)
-	emulatorGuess := conf.Emulator.GetEmulator(game.Type, game.Path)
-	room.emulator.LoadMetadata(emulatorGuess)
-
-	gamePath := filepath.Join(game.Base, game.Path)
-	if err := room.emulator.LoadGame(gamePath); err != nil {
-		log.Fatal().Msgf("couldn't load the game %v, %v", gamePath, err)
+	room.emulator.LoadMetadata(conf.Emulator.GetEmulator(game.Type, game.Path))
+	err = room.emulator.LoadGame(game.FullPath())
+	if err != nil {
+		log.Fatal().Err(err).Msgf("couldn't load the game %v", game)
 	}
-
 	// calc output frame size and rotation
 	fw, fh := room.emulator.GetFrameSize()
 	w, h := room.whatsFrame(conf.Emulator, fw, fh)
@@ -79,8 +71,8 @@ func NewRoom(id string, game games.GameMetadata, onClose func(*Room), conf worke
 
 	log.Info().Str("game", game.Name).Msg("The room is open")
 
-	room.initVideo(w, h, room.handleVideoFrame, conf.Encoder.Video)
-	room.initAudio(int(room.emulator.GetSampleRate()), room.handleAudioSamples, conf.Encoder.Audio)
+	room.initVideo(w, h, conf.Encoder.Video)
+	room.initAudio(int(room.emulator.GetSampleRate()), conf.Encoder.Audio)
 	log.Info().Str("room", room.GetId()).Msg("New room")
 	return room
 }
@@ -95,30 +87,6 @@ func (r *Room) LoadGame() error                { return r.emulator.LoadGameState
 func (r *Room) SaveGame() error                { return r.emulator.SaveGameState() }
 func (r *Room) StartEmulator()                 { go r.emulator.Start() }
 func (r *Room) ToggleMultitap()                { r.emulator.ToggleMultitap() }
-
-func (r *Room) handleAudioSamples(b []byte, dur time.Duration) {
-	sample := samplePool.Get().(media.Sample)
-	sample.Data = b
-	sample.Duration = dur
-	r.users.ForEach(func(u *Session) {
-		if u.IsConnected() {
-			_ = u.SendAudio(sample)
-		}
-	})
-	samplePool.Put(sample)
-}
-
-func (r *Room) handleVideoFrame(b []byte, dur time.Duration) {
-	sample := samplePool.Get().(media.Sample)
-	sample.Data = b
-	sample.Duration = dur
-	r.users.ForEach(func(u *Session) {
-		if u.IsConnected() {
-			_ = u.SendVideo(sample)
-		}
-	})
-	samplePool.Put(sample)
-}
 
 func (r *Room) EnableAutosave(periodSec int) {
 	r.log.Info().Msgf("Autosave every [%vs]", periodSec)
