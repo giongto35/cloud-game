@@ -25,9 +25,8 @@ func buildConnQuery[S fmt.Stringer](id S, conf worker.Worker, address string) (s
 }
 
 func (c *coordinator) HandleWebrtcInit(rq api.WebrtcInitRequest, w *Worker, connApi *webrtc.ApiFactory) com.Out {
-	enc := w.conf.Encoder
 	peer := webrtc.New(c.Log, connApi)
-	localSDP, err := peer.NewCall(enc.Video.Codec, audioCodec, func(data any) {
+	localSDP, err := peer.NewCall(w.conf.Encoder.Video.Codec, audioCodec, func(data any) {
 		candidate, err := api.ToBase64Json(data)
 		if err != nil {
 			c.Log.Error().Err(err).Msgf("ICE candidate encode fail for [%v]", data)
@@ -90,16 +89,12 @@ func (c *coordinator) HandleGameStart(rq api.StartGameRequest, w *Worker) com.Ou
 			w.conf,
 			w.log,
 		)
-		w.log.Info().Str("room", room.GetId()).Msg("New room")
 		user.SetPlayerIndex(rq.PlayerIndex)
 
-		// cloud maybe?
-		if !w.storage.IsNoop() {
+		if w.storage != nil {
 			room = WithCloudStorage(room, w.storage)
 		}
-		// record maybe?
 		if w.conf.Recording.Enabled {
-			w.log.Info().Msgf("RECORD: %v %v", rq.Record, rq.RecordUser)
 			room = WithRecording(room.(*Room), rq.Record, rq.RecordUser, rq.Game.Name, w.conf)
 		}
 		w.router.SetRoom(room)

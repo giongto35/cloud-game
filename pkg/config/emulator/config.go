@@ -1,6 +1,7 @@
 package emulator
 
 import (
+	"math"
 	"path"
 	"path/filepath"
 	"strings"
@@ -9,15 +10,28 @@ import (
 type Emulator struct {
 	Scale       int
 	Threads     int
-	AspectRatio struct {
-		Keep   bool
-		Width  int
-		Height int
-	}
+	AspectRatio AspectRatio
 	Storage     string
 	LocalPath   string
 	Libretro    LibretroConfig
 	AutosaveSec int
+}
+
+type AspectRatio struct {
+	Keep   bool
+	Width  int
+	Height int
+}
+
+func (a AspectRatio) ResizeToAspect(ratio float64, sw int, sh int) (dw int, dh int) {
+	// ratio is always > 0
+	dw = int(math.Round(float64(sh)*ratio/2) * 2)
+	dh = sh
+	if dw > sw {
+		dw = sw
+		dh = int(math.Round(float64(sw)/ratio/2) * 2)
+	}
+	return
 }
 
 type LibretroConfig struct {

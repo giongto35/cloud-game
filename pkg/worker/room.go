@@ -1,7 +1,6 @@
 package worker
 
 import (
-	"math"
 	"path/filepath"
 	"sync"
 	"time"
@@ -35,16 +34,14 @@ type GamingRoom interface {
 	GetLog() *logger.Logger
 }
 
-// Room defines a gaming session.
-// It manages all the user WebRTC connections.
 type Room struct {
 	id       string
-	active   bool
 	done     chan struct{}
 	vEncoder *encoder.VideoEncoder
 	users    com.NetMap[*Session] // a list of users in the room
 	emulator emulator.Emulator
 	onClose  func(self *Room)
+	closed   bool
 	log      *logger.Logger
 }
 
@@ -56,14 +53,7 @@ func NewRoom(id string, game games.GameMetadata, onClose func(*Room), conf worke
 	}
 	log = log.Extend(log.With().Str("room", id[:5]))
 	log.Info().Str("game", game.Name).Send()
-	room := &Room{
-		id:      id,
-		active:  true,
-		users:   com.NewNetMap[*Session](),
-		done:    make(chan struct{}),
-		onClose: onClose,
-		log:     log,
-	}
+	room := &Room{id: id, users: com.NewNetMap[*Session](), done: make(chan struct{}), onClose: onClose, log: log}
 
 	nano, err := libretro.NewFrontend(conf.Emulator, log)
 	if err != nil {
@@ -91,15 +81,20 @@ func NewRoom(id string, game games.GameMetadata, onClose func(*Room), conf worke
 
 	room.initVideo(w, h, room.handleVideoFrame, conf.Encoder.Video)
 	room.initAudio(int(room.emulator.GetSampleRate()), room.handleAudioSamples, conf.Encoder.Audio)
+	log.Info().Str("room", room.GetId()).Msg("New room")
 	return room
 }
 
-func (r *Room) GetId() string                  { return r.id }
 func (r *Room) GetEmulator() emulator.Emulator { return r.emulator }
+func (r *Room) GetId() string                  { return r.id }
 func (r *Room) GetLog() *logger.Logger         { return r.log }
-func (r *Room) HasSave() bool                  { return hasStateSavedLocally(r.emulator.GetHashPath()) }
+func (r *Room) HasSave() bool                  { return os.Exists(r.emulator.GetHashPath()) }
 func (r *Room) HasUser(u *Session) bool        { return r != nil && r.users.Has(u.id) }
+func (r *Room) IsEmpty() bool                  { return r.users.IsEmpty() }
+func (r *Room) LoadGame() error                { return r.emulator.LoadGameState() }
+func (r *Room) SaveGame() error                { return r.emulator.SaveGameState() }
 func (r *Room) StartEmulator()                 { go r.emulator.Start() }
+func (r *Room) ToggleMultitap()                { r.emulator.ToggleMultitap() }
 
 func (r *Room) handleAudioSamples(b []byte, dur time.Duration) {
 	sample := samplePool.Get().(media.Sample)
@@ -133,7 +128,7 @@ func (r *Room) EnableAutosave(periodSec int) {
 	for {
 		select {
 		case <-ticker.C:
-			if !r.active {
+			if r.closed {
 				continue
 			}
 			if err := r.emulator.SaveGameState(); err != nil {
@@ -147,17 +142,6 @@ func (r *Room) EnableAutosave(periodSec int) {
 	}
 }
 
-func resizeToAspect(ratio float64, sw int, sh int) (dw int, dh int) {
-	// ratio is always > 0
-	dw = int(math.Round(float64(sh)*ratio/2) * 2)
-	dh = sh
-	if dw > sw {
-		dw = sw
-		dh = int(math.Round(float64(sw)/ratio/2) * 2)
-	}
-	return
-}
-
 func (r *Room) whatsFrame(conf conf.Emulator, w, h int) (ww int, hh int) {
 	// nwidth, nheight are the WebRTC output size
 	var nwidth, nheight int
@@ -165,7 +149,7 @@ func (r *Room) whatsFrame(conf conf.Emulator, w, h int) (ww int, hh int) {
 
 	if ar.Keep {
 		baseAspectRatio := float64(w) / float64(ar.Height)
-		nwidth, nheight = resizeToAspect(baseAspectRatio, ar.Width, ar.Height)
+		nwidth, nheight = ar.ResizeToAspect(baseAspectRatio, ar.Width, ar.Height)
 		r.log.Info().Msgf("Viewport size will be changed from %dx%d (%f) -> %dx%d", ar.Width, ar.Height,
 			baseAspectRatio, nwidth, nheight)
 	} else {
@@ -182,8 +166,6 @@ func (r *Room) whatsFrame(conf conf.Emulator, w, h int) (ww int, hh int) {
 	ww, hh = nwidth, nheight
 	return
 }
-
-func hasStateSavedLocally(path string) bool { return os.Exists(path) }
 
 func (r *Room) PollUserInput(session *Session) {
 	r.log.Debug().Msg("Start session input poll")
@@ -210,12 +192,12 @@ func (r *Room) CleanupUser(user *Session) {
 
 func (r *Room) Close() {
 	r.log.Debug().Msg("Closing the room")
-	if !r.active {
+	if r.closed {
 		r.log.Debug().Msg("Close room skip")
 		return
 	}
 
-	r.active = false
+	r.closed = true
 
 	// Save game before quit. Only save for game which was previous saved to avoid flooding database
 	if r.HasSave() {
@@ -235,17 +217,3 @@ func (r *Room) Close() {
 		r.onClose(r)
 	}
 }
-
-// SaveGame writes save state on the disk as well as
-// uploads it to a cloud storage.
-func (r *Room) SaveGame() error {
-	if err := r.emulator.SaveGameState(); err != nil {
-		return err
-	}
-	r.log.Debug().Msg("Local save is successful")
-	return nil
-}
-
-func (r *Room) LoadGame() error { return r.emulator.LoadGameState() }
-func (r *Room) ToggleMultitap() { r.emulator.ToggleMultitap() }
-func (r *Room) IsEmpty() bool   { return r.users.IsEmpty() }

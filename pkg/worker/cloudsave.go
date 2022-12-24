@@ -23,10 +23,6 @@ func WithCloudStorage(room GamingRoom, storage storage.CloudStorage) *CloudSaveR
 }
 
 func (c *CloudSaveRoom) Download() error {
-	if c.storage.IsNoop() {
-		return nil
-	}
-
 	// saveOnlineRoomToLocal save online room to local.
 	// !Supports only one file of main save state.
 
