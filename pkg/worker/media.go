@@ -14,8 +14,7 @@ import (
 	webrtc "github.com/pion/webrtc/v3/pkg/media"
 )
 
-var samplePool = sync.Pool{New: func() any { return webrtc.Sample{} }}
-var encoder_ *opus.Encoder
+var samplePool = sync.Pool{New: func() any { s := webrtc.Sample{}; return &s }}
 
 const (
 	audioChannels  = 2
@@ -34,30 +33,29 @@ func (r *Room) initAudio(frequency int, conf conf.Audio) {
 	}
 
 	// a garbage cache
-	if encoder_ == nil {
-		enc, err := opus.NewEncoder(audioFrequency, audioChannels)
-		if err != nil {
-			r.log.Fatal().Err(err).Msg("couldn't create audio encoder")
-		}
-		encoder_ = enc
+	//if encoder_ == nil {
+	enc, err := opus.NewEncoder(audioFrequency, audioChannels)
+	if err != nil {
+		r.log.Fatal().Err(err).Msg("couldn't create audio encoder")
 	}
-	enc := *encoder_
+	//encoder_ = enc
+	//}
+	//enc := *encoder_
 	r.log.Debug().Msgf("OPUS: %v", enc.GetInfo())
 
 	dur := time.Duration(conf.Frame) * time.Millisecond
 
-	r.emulator.SetAudio(func(samples *emulator.GameAudio) {
-		buf.Write(samples.Data, func(s media.Samples) {
-			if resample {
-				s = media.ResampleStretch(s, frameLen)
-			}
-			f, err := enc.Encode(s)
-			media.BufOutAudioPool.Put([]int16(s))
-			if err == nil {
-				r.handleSample(f, dur, func(u *Session, s webrtc.Sample) { _ = u.SendAudio(s) })
-			}
-		})
-	})
+	fn := func(s media.Samples) {
+		if resample {
+			s = media.ResampleStretch(s, frameLen)
+		}
+		f, err := enc.Encode(s)
+		media.BufOutAudioPool.Put((*[]int16)(&s))
+		if err == nil {
+			r.handleSample(f, dur, func(u *Session, s *webrtc.Sample) { _ = u.SendAudio(s) })
+		}
+	}
+	r.emulator.SetAudio(func(samples *emulator.GameAudio) { buf.Write(samples.Data, fn) })
 }
 
 // initVideo processes videoFrames images with an encoder (codec) then pushes the result to WebRTC.
@@ -91,13 +89,13 @@ func (r *Room) initVideo(width, height int, conf conf.Video) {
 
 	r.emulator.SetVideo(func(frame *emulator.GameFrame) {
 		if fr := r.vEncoder.Encode(frame.Data); fr != nil {
-			r.handleSample(fr, frame.Duration, func(u *Session, s webrtc.Sample) { _ = u.SendVideo(s) })
+			r.handleSample(fr, frame.Duration, func(u *Session, s *webrtc.Sample) { _ = u.SendVideo(s) })
 		}
 	})
 }
 
-func (r *Room) handleSample(b []byte, d time.Duration, fn func(*Session, webrtc.Sample)) {
-	sample := samplePool.Get().(webrtc.Sample)
+func (r *Room) handleSample(b []byte, d time.Duration, fn func(*Session, *webrtc.Sample)) {
+	sample := samplePool.Get().(*webrtc.Sample)
 	sample.Data = b
 	sample.Duration = d
 	r.users.ForEach(func(u *Session) {

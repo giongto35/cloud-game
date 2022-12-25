@@ -650,7 +650,11 @@ type Picture struct {
 	Opaque unsafe.Pointer
 }
 
-func (p *Picture) freePlane(n int) { C.free(p.Img.Plane[n]) }
+func (p *Picture) freePlanes() {
+	for _, ptr := range p.Img.Plane {
+		C.free(ptr)
+	}
+}
 
 func (t *T) cptr() *C.x264_t { return (*C.x264_t)(unsafe.Pointer(t)) }
 

@@ -1,13 +1,12 @@
 package h264
 
 /*
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
+#include <stdint.h>
 */
 import "C"
 import (
 	"fmt"
+	"unsafe"
 )
 
 type H264 struct {
@@ -21,6 +20,7 @@ type H264 struct {
 	nals       []*Nal
 
 	in, out *Picture
+	y, u, v []byte
 }
 
 func NewEncoder(w, h int, options ...Option) (encoder *H264, err error) {
@@ -89,9 +89,13 @@ func NewEncoder(w, h int, options ...Option) (encoder *H264, err error) {
 	picIn.Img.IStride[1] = encoder.width >> 1
 	picIn.Img.IStride[2] = encoder.width >> 1
 
-	picIn.Img.Plane[0] = C.CBytes(make([]byte, encoder.lumaSize))
-	picIn.Img.Plane[1] = C.CBytes(make([]byte, encoder.chromaSize))
-	picIn.Img.Plane[2] = C.CBytes(make([]byte, encoder.chromaSize))
+	picIn.Img.Plane[0] = C.malloc(C.size_t(encoder.lumaSize))
+	picIn.Img.Plane[1] = C.malloc(C.size_t(encoder.chromaSize))
+	picIn.Img.Plane[2] = C.malloc(C.size_t(encoder.chromaSize))
+
+	encoder.y = unsafe.Slice((*byte)(picIn.Img.Plane[0]), encoder.lumaSize)
+	encoder.u = unsafe.Slice((*byte)(picIn.Img.Plane[1]), encoder.chromaSize)
+	encoder.v = unsafe.Slice((*byte)(picIn.Img.Plane[2]), encoder.chromaSize)
 
 	encoder.in = &picIn
 
@@ -105,10 +109,9 @@ func NewEncoder(w, h int, options ...Option) (encoder *H264, err error) {
 func LibVersion() int { return int(Build) }
 
 func (e *H264) Encode(yuv []byte) []byte {
-	const x = 1 << 22
-	copy((*[x]byte)(e.in.Img.Plane[0])[:e.lumaSize], yuv[:e.lumaSize])
-	copy((*[x]byte)(e.in.Img.Plane[1])[:e.chromaSize], yuv[e.lumaSize:e.lumaSize+e.chromaSize])
-	copy((*[x]byte)(e.in.Img.Plane[2])[:e.chromaSize], yuv[e.lumaSize+e.chromaSize:])
+	copy(e.y, yuv[:e.lumaSize])
+	copy(e.u, yuv[e.lumaSize:e.lumaSize+e.chromaSize])
+	copy(e.v, yuv[e.lumaSize+e.chromaSize:])
 
 	e.in.IPts += 1
 
@@ -123,9 +126,10 @@ func (e *H264) IntraRefresh() {
 }
 
 func (e *H264) Shutdown() error {
-	e.in.freePlane(0)
-	e.in.freePlane(1)
-	e.in.freePlane(2)
+	e.y = nil
+	e.u = nil
+	e.v = nil
+	e.in.freePlanes()
 	EncoderClose(e.ref)
 	return nil
 }

@@ -95,9 +95,9 @@ func (p *Peer) SetRemoteSDP(sdp string, decoder Decoder) error {
 	return nil
 }
 
-func (p *Peer) WriteVideo(sample media.Sample) error { return p.vTrack.WriteSample(sample) }
+func (p *Peer) WriteVideo(sample *media.Sample) error { return p.vTrack.WriteSample(*sample) }
 
-func (p *Peer) WriteAudio(sample media.Sample) error { return p.aTrack.WriteSample(sample) }
+func (p *Peer) WriteAudio(sample *media.Sample) error { return p.aTrack.WriteSample(*sample) }
 
 func newTrack(id string, label string, codec string) (*webrtc.TrackLocalStaticSample, error) {
 	codec = strings.ToLower(codec)

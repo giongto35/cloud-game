@@ -217,21 +217,22 @@ func coreAudioSampleBatch(data unsafe.Pointer, frames C.size_t) C.size_t {
 	return audioWrite(data, frames)
 }
 
+func m(m *C.char) string { return strings.TrimRight(C.GoString(m), "\n") }
+
 //export coreLog
 func coreLog(level C.enum_retro_log_level, msg *C.char) {
-	message := strings.TrimRight(C.GoString(msg), "\n")
 	switch int(level) {
 	// with debug level cores have too much logs
 	case 0: // RETRO_LOG_DEBUG
-		libretroLogger.Debug().Msg(message)
+		libretroLogger.Debug().MsgFunc(func() string { return m(msg) })
 	case 1: // RETRO_LOG_INFO
-		libretroLogger.Info().Msg(message)
+		libretroLogger.Info().MsgFunc(func() string { return m(msg) })
 	case 2: // RETRO_LOG_WARN
-		libretroLogger.Warn().Msg(message)
+		libretroLogger.Warn().MsgFunc(func() string { return m(msg) })
 	case 3: // RETRO_LOG_ERROR
-		libretroLogger.Error().Msg(message)
+		libretroLogger.Error().MsgFunc(func() string { return m(msg) })
 	default:
-		libretroLogger.Log().Msg(message)
+		libretroLogger.Log().MsgFunc(func() string { return m(msg) })
 		// RETRO_LOG_DUMMY = INT_MAX
 	}
 }
