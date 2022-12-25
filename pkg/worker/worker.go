@@ -77,9 +77,11 @@ func (w *Worker) Run() {
 			w.router.Close()
 			w.log.Debug().Msgf("Service loop end")
 		}()
+
+		done := w.ctx.Done()
 		for {
 			select {
-			case <-w.ctx.Done():
+			case <-done:
 				return
 			default:
 				conn, err := connect(remoteAddr, w.conf.Worker, w.address, w.log)

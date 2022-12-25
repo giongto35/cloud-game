@@ -81,8 +81,8 @@ func TestRoom(t *testing.T) {
 				Type: "nes",
 				Path: "Super Mario Bros.nes",
 			},
-			vCodec: encoder.VP8,
-			frames: 5,
+			vCodec: encoder.H264,
+			frames: 300,
 		},
 	}
 
@@ -289,7 +289,9 @@ func waitNFrames(n int, room roomMock) *emulator.GameFrame {
 	wg := sync.WaitGroup{}
 	wg.Add(n)
 	var frame *emulator.GameFrame
+	handler := room.emulator.GetVideo()
 	room.emulator.SetVideo(func(video *emulator.GameFrame) {
+		handler(video)
 		if atomic.AddInt32(&i, -1) >= 0 {
 			frame = video
 			wg.Done()

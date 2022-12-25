@@ -12,6 +12,7 @@ type (
 	OutFrame []byte
 	Encoder  interface {
 		Encode(input []byte) []byte
+		IntraRefresh()
 		Shutdown() error
 	}
 )

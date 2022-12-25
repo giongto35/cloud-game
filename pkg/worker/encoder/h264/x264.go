@@ -1,7 +1,14 @@
 package h264
 
+/*
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+*/
 import "C"
-import "fmt"
+import (
+	"fmt"
+)
 
 type H264 struct {
 	ref *T
@@ -13,11 +20,10 @@ type H264 struct {
 	nnals      int32
 	nals       []*Nal
 
-	// keep monotonic pts to suppress warnings
-	pts int64
+	in, out *Picture
 }
 
-func NewEncoder(width, height int, options ...Option) (encoder *H264, err error) {
+func NewEncoder(w, h int, options ...Option) (encoder *H264, err error) {
 	libVersion := LibVersion()
 
 	if libVersion < 150 {
@@ -58,8 +64,8 @@ func NewEncoder(width, height int, options ...Option) (encoder *H264, err error)
 	} else {
 		param.ICsp = 1
 	}
-	param.IWidth = int32(width)
-	param.IHeight = int32(height)
+	param.IWidth = int32(w)
+	param.IHeight = int32(h)
 	param.ILogLevel = opts.LogLevel
 
 	param.Rc.IRcMethod = RcCrf
@@ -67,11 +73,27 @@ func NewEncoder(width, height int, options ...Option) (encoder *H264, err error)
 
 	encoder = &H264{
 		csp:        param.ICsp,
-		lumaSize:   int32(width * height),
-		chromaSize: int32(width*height) / 4,
+		lumaSize:   int32(w * h),
+		chromaSize: int32(w*h) / 4,
 		nals:       make([]*Nal, 1),
-		width:      int32(width),
+		width:      int32(w),
+		out:        new(Picture),
 	}
+
+	// pool
+	var picIn Picture
+
+	picIn.Img.ICsp = encoder.csp
+	picIn.Img.IPlane = 3
+	picIn.Img.IStride[0] = encoder.width
+	picIn.Img.IStride[1] = encoder.width >> 1
+	picIn.Img.IStride[2] = encoder.width >> 1
+
+	picIn.Img.Plane[0] = C.CBytes(make([]byte, encoder.lumaSize))
+	picIn.Img.Plane[1] = C.CBytes(make([]byte, encoder.chromaSize))
+	picIn.Img.Plane[2] = C.CBytes(make([]byte, encoder.chromaSize))
+
+	encoder.in = &picIn
 
 	if encoder.ref = EncoderOpen(&param); encoder.ref == nil {
 		err = fmt.Errorf("x264: cannot open the encoder")
@@ -83,34 +105,27 @@ func NewEncoder(width, height int, options ...Option) (encoder *H264, err error)
 func LibVersion() int { return int(Build) }
 
 func (e *H264) Encode(yuv []byte) []byte {
-	var picIn, picOut Picture
+	const x = 1 << 22
+	copy((*[x]byte)(e.in.Img.Plane[0])[:e.lumaSize], yuv[:e.lumaSize])
+	copy((*[x]byte)(e.in.Img.Plane[1])[:e.chromaSize], yuv[e.lumaSize:e.lumaSize+e.chromaSize])
+	copy((*[x]byte)(e.in.Img.Plane[2])[:e.chromaSize], yuv[e.lumaSize+e.chromaSize:])
 
-	picIn.Img.ICsp = e.csp
-	picIn.Img.IPlane = 3
-	picIn.Img.IStride[0] = e.width
-	picIn.Img.IStride[1] = e.width / 2
-	picIn.Img.IStride[2] = e.width / 2
+	e.in.IPts += 1
 
-	picIn.Img.Plane[0] = C.CBytes(yuv[:e.lumaSize])
-	picIn.Img.Plane[1] = C.CBytes(yuv[e.lumaSize : e.lumaSize+e.chromaSize])
-	picIn.Img.Plane[2] = C.CBytes(yuv[e.lumaSize+e.chromaSize:])
-
-	picIn.IPts = e.pts
-	e.pts++
-
-	defer func() {
-		picIn.freePlane(0)
-		picIn.freePlane(1)
-		picIn.freePlane(2)
-	}()
-
-	if ret := EncoderEncode(e.ref, e.nals, &e.nnals, &picIn, &picOut); ret > 0 {
+	if ret := EncoderEncode(e.ref, e.nals, &e.nnals, e.in, e.out); ret > 0 {
 		return C.GoBytes(e.nals[0].PPayload, C.int(ret))
 	}
 	return []byte{}
 }
 
+func (e *H264) IntraRefresh() {
+	// !to implement
+}
+
 func (e *H264) Shutdown() error {
+	e.in.freePlane(0)
+	e.in.freePlane(1)
+	e.in.freePlane(2)
 	EncoderClose(e.ref)
 	return nil
 }

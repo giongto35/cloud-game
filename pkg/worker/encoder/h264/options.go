@@ -26,8 +26,3 @@ func WithOptions(arg Options) Option {
 		args.LogLevel = arg.LogLevel
 	}
 }
-func Crf(arg uint8) Option      { return func(args *Options) { args.Crf = arg } }
-func Tune(arg string) Option    { return func(args *Options) { args.Tune = arg } }
-func Preset(arg string) Option  { return func(args *Options) { args.Preset = arg } }
-func Profile(arg string) Option { return func(args *Options) { args.Profile = arg } }
-func LogLevel(arg int32) Option { return func(args *Options) { args.LogLevel = arg } }

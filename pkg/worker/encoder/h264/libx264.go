@@ -650,9 +650,7 @@ type Picture struct {
 	Opaque unsafe.Pointer
 }
 
-func (p *Picture) freePlane(n int) {
-	C.free(p.Img.Plane[n])
-}
+func (p *Picture) freePlane(n int) { C.free(p.Img.Plane[n]) }
 
 func (t *T) cptr() *C.x264_t { return (*C.x264_t)(unsafe.Pointer(t)) }
 
@@ -662,33 +660,8 @@ func (p *Param) cptr() *C.x264_param_t { return (*C.x264_param_t)(unsafe.Pointer
 
 func (p *Picture) cptr() *C.x264_picture_t { return (*C.x264_picture_t)(unsafe.Pointer(p)) }
 
-// NalEncode - encode Nal.
-func NalEncode(h *T, dst []byte, nal *Nal) {
-	ch := h.cptr()
-	cdst := (*C.uint8_t)(unsafe.Pointer(&dst[0]))
-	cnal := nal.cptr()
-	C.x264_nal_encode(ch, cdst, cnal)
-}
-
 // ParamDefault - fill Param with default values and do CPU detection.
-func ParamDefault(param *Param) {
-	C.x264_param_default(param.cptr())
-}
-
-// ParamParse - set one parameter by name. Returns 0 on success.
-func ParamParse(param *Param, name string, value string) int32 {
-	cparam := param.cptr()
-
-	cname := C.CString(name)
-	defer C.free(unsafe.Pointer(cname))
-
-	cvalue := C.CString(value)
-	defer C.free(unsafe.Pointer(cvalue))
-
-	ret := C.x264_param_parse(cparam, cname, cvalue)
-	v := (int32)(ret)
-	return v
-}
+func ParamDefault(param *Param) { C.x264_param_default(param.cptr()) }
 
 // ParamDefaultPreset - the same as ParamDefault, but also use the passed preset and tune to modify the default settings
 // (either can be nil, which implies no preset or no tune, respectively).
@@ -701,24 +674,11 @@ func ParamParse(param *Param, name string, value string) int32 {
 //
 // Returns 0 on success, negative on failure (e.g. invalid preset/tune name).
 func ParamDefaultPreset(param *Param, preset string, tune string) int32 {
-	cparam := param.cptr()
-
 	cpreset := C.CString(preset)
 	defer C.free(unsafe.Pointer(cpreset))
-
 	ctune := C.CString(tune)
 	defer C.free(unsafe.Pointer(ctune))
-
-	ret := C.x264_param_default_preset(cparam, cpreset, ctune)
-	v := (int32)(ret)
-	return v
-}
-
-// ParamApplyFastfirstpass - if first-pass mode is set (rc.b_stat_read == 0, rc.b_stat_write == 1),
-// modify the encoder settings to disable options generally not useful on the first pass.
-func ParamApplyFastfirstpass(param *Param) {
-	cparam := param.cptr()
-	C.x264_param_apply_fastfirstpass(cparam)
+	return (int32)(C.x264_param_default_preset(param.cptr(), cpreset, ctune))
 }
 
 // ParamApplyProfile - applies the restrictions of the given profile.
@@ -729,82 +689,15 @@ func ParamApplyFastfirstpass(param *Param) {
 //
 // Returns 0 on success, negative on failure (e.g. invalid profile name).
 func ParamApplyProfile(param *Param, profile string) int32 {
-	cparam := param.cptr()
-
 	cprofile := C.CString(profile)
 	defer C.free(unsafe.Pointer(cprofile))
-
-	ret := C.x264_param_apply_profile(cparam, cprofile)
-	v := (int32)(ret)
-	return v
-}
-
-// PictureInit - initialize an Picture. Needs to be done if the calling application
-// allocates its own Picture as opposed to using PictureAlloc.
-func PictureInit(pic *Picture) {
-	cpic := pic.cptr()
-	C.x264_picture_init(cpic)
-}
-
-// PictureAlloc - alloc data for a Picture. You must call PictureClean on it.
-// Returns 0 on success, or -1 on malloc failure or invalid colorspace.
-func PictureAlloc(pic *Picture, iCsp int32, iWidth int32, iHeight int32) int32 {
-	cpic := pic.cptr()
-
-	ciCsp := (C.int)(iCsp)
-	ciWidth := (C.int)(iWidth)
-	ciHeight := (C.int)(iHeight)
-
-	ret := C.x264_picture_alloc(cpic, ciCsp, ciWidth, ciHeight)
-	v := (int32)(ret)
-	return v
-}
-
-// PictureClean - free associated resource for a Picture allocated with PictureAlloc ONLY.
-func PictureClean(pic *Picture) {
-	cpic := pic.cptr()
-	C.x264_picture_clean(cpic)
+	return (int32)(C.x264_param_apply_profile(param.cptr(), cprofile))
 }
 
 // EncoderOpen - create a new encoder handler, all parameters from Param are copied.
 func EncoderOpen(param *Param) *T {
-	cparam := param.cptr()
-
-	ret := C.x264_encoder_open(cparam)
-	v := *(**T)(unsafe.Pointer(&ret))
-	return v
-}
-
-// EncoderReconfig - various parameters from Param are copied.
-// Returns 0 on success, negative on parameter validation error.
-func EncoderReconfig(enc *T, param *Param) int32 {
-	cenc := enc.cptr()
-	cparam := param.cptr()
-
-	ret := C.x264_encoder_reconfig(cenc, cparam)
-	v := (int32)(ret)
-	return v
-}
-
-// EncoderParameters - copies the current internal set of parameters to the pointer provided.
-func EncoderParameters(enc *T, param *Param) {
-	cenc := enc.cptr()
-	cparam := param.cptr()
-
-	C.x264_encoder_parameters(cenc, cparam)
-}
-
-// EncoderHeaders - return the SPS and PPS that will be used for the whole stream.
-// Returns the number of bytes in the returned NALs or negative on error.
-func EncoderHeaders(enc *T, ppNal []*Nal, piNal *int32) int32 {
-	cenc := enc.cptr()
-
-	cppNal := (**C.x264_nal_t)(unsafe.Pointer(&ppNal[0]))
-	cpiNal := (*C.int)(unsafe.Pointer(piNal))
-
-	ret := C.x264_encoder_headers(cenc, cppNal, cpiNal)
-	v := (int32)(ret)
-	return v
+	ret := C.x264_encoder_open(param.cptr())
+	return *(**T)(unsafe.Pointer(&ret))
 }
 
 // EncoderEncode - encode one picture.
@@ -818,55 +711,15 @@ func EncoderEncode(enc *T, ppNal []*Nal, piNal *int32, picIn *Picture, picOut *P
 	cpicIn := picIn.cptr()
 	cpicOut := picOut.cptr()
 
-	ret := C.x264_encoder_encode(cenc, cppNal, cpiNal, cpicIn, cpicOut)
-	v := (int32)(ret)
-	return v
+	return (int32)(C.x264_encoder_encode(cenc, cppNal, cpiNal, cpicIn, cpicOut))
 }
 
-// EncoderClose - close an encoder handler.
-func EncoderClose(enc *T) {
-	cenc := enc.cptr()
-	C.x264_encoder_close(cenc)
-}
-
-// EncoderDelayedFrames - return the number of currently delayed (buffered) frames.
-// This should be used at the end of the stream, to know when you have all the encoded frames.
-func EncoderDelayedFrames(enc *T) int32 {
-	cenc := enc.cptr()
-
-	ret := C.x264_encoder_delayed_frames(cenc)
-	v := (int32)(ret)
-	return v
-}
-
-// EncoderMaximumDelayedFrames - return the maximum number of delayed (buffered) frames that can occur with the current parameters.
-func EncoderMaximumDelayedFrames(enc *T) int32 {
-	cenc := enc.cptr()
-
-	ret := C.x264_encoder_maximum_delayed_frames(cenc)
-	v := (int32)(ret)
-	return v
-}
+// EncoderClose closes an encoder handler.
+func EncoderClose(enc *T) { C.x264_encoder_close(enc.cptr()) }
 
 // EncoderIntraRefresh - If an intra refresh is not in progress, begin one with the next P-frame.
 // If an intra refresh is in progress, begin one as soon as the current one finishes.
 // Requires that BIntraRefresh be set.
 //
 // Should not be called during an x264_encoder_encode.
-func EncoderIntraRefresh(enc *T) {
-	cenc := enc.cptr()
-	C.x264_encoder_intra_refresh(cenc)
-}
-
-// EncoderInvalidateReference - An interactive error resilience tool, designed for use in a low-latency one-encoder-few-clients system.
-// Should not be called during an EncoderEncode, but multiple calls can be made simultaneously.
-//
-// Returns 0 on success, negative on failure.
-func EncoderInvalidateReference(enc *T, pts int) int32 {
-	cenc := enc.cptr()
-	cpts := (C.int64_t)(pts)
-
-	ret := C.x264_encoder_invalidate_reference(cenc, cpts)
-	v := (int32)(ret)
-	return v
-}
+func EncoderIntraRefresh(enc *T) { C.x264_encoder_intra_refresh(enc.cptr()) }

@@ -149,6 +149,10 @@ func (vpx *Vpx) Encode(yuv []byte) []byte {
 	return C.GoBytes(fb.ptr, fb.size)
 }
 
+func (vpx *Vpx) IntraRefresh() {
+	// !to implement
+}
+
 func (vpx *Vpx) Shutdown() error {
 	if &vpx.image != nil {
 		C.vpx_img_free(&vpx.image)
