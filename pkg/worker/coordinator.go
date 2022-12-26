@@ -122,7 +122,7 @@ func (c *coordinator) HandleRequests(w *Worker) {
 		if out != skipped {
 			w.cord.Route(x, out)
 		}
-		return nil
+		return err
 	})
 }
 
