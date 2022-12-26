@@ -46,11 +46,11 @@ type (
 )
 
 func (conn *deadlineConn) write(t int, mess []byte) error {
+	conn.mu.Lock()
+	defer conn.mu.Unlock()
 	if err := conn.SetWriteDeadline(time.Now().Add(conn.wt)); err != nil {
 		return err
 	}
-	conn.mu.Lock()
-	defer conn.mu.Unlock()
 	return conn.WriteMessage(t, mess)
 }
 
