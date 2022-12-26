@@ -55,14 +55,7 @@ func New(ctx context.Context, conf worker.Config, log *logger.Logger) (services 
 	if err != nil {
 		log.Error().Err(err).Msgf("cloud storage fail, using dummy cloud storage instead")
 	}
-	services.Add(&Worker{
-		address: h.Addr,
-		conf:    conf,
-		ctx:     ctx,
-		log:     log,
-		storage: st,
-		router:  NewRouter(),
-	})
+	services.Add(&Worker{address: h.Addr, conf: conf, ctx: ctx, log: log, storage: st, router: NewRouter()})
 
 	return
 }
