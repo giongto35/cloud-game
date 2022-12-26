@@ -124,7 +124,7 @@ func coreVideoRefresh(data unsafe.Pointer, width C.unsigned, height C.unsigned, 
 	if isOpenGLRender {
 		data_ = graphics.ReadFramebuffer(bytes, int(width), int(height))
 	} else {
-		data_ = (*[1 << 30]byte)(data)[:bytes:bytes]
+		data_ = unsafe.Slice((*byte)(data), bytes)
 	}
 
 	// the image is being resized and de-rotated
@@ -189,7 +189,7 @@ func coreInputState(port C.unsigned, device C.unsigned, index C.unsigned, id C.u
 
 func audioWrite(buf unsafe.Pointer, frames C.size_t) C.size_t {
 	samples := int(frames) << 1
-	src := (*[rawAudioBuffer]int16)(buf)[:samples]
+	src := unsafe.Slice((*int16)(buf), samples)
 	dst := rawAudioPool.Get().([]int16)[:samples]
 	copy(dst, src)
 
