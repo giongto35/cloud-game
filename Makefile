@@ -32,6 +32,11 @@ dev.build-local:
 dev.run: dev.build-local
 	./bin/coordinator &	./bin/worker
 
+dev.run.debug:
+	go build -race -o bin/ ./cmd/coordinator
+	go build -race -gcflags=all=-d=checkptr -o bin/ ./cmd/worker
+	./bin/coordinator &	./bin/worker
+
 dev.run-docker:
 	docker rm cloud-game-local -f || true
 	docker-compose up --build

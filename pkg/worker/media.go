@@ -15,6 +15,8 @@ import (
 )
 
 var samplePool = sync.Pool{New: func() any { s := webrtc.Sample{}; return &s }}
+var opusCoder *opus.Encoder
+var encoderOnce = sync.Once{}
 
 const (
 	audioChannels  = 2
@@ -32,16 +34,17 @@ func (r *Room) initAudio(frequency int, conf conf.Audio) {
 		frameLen = GetFrameSizeFor(audioFrequency, conf.Frame)
 	}
 
-	// a garbage cache
-	//if encoder_ == nil {
-	enc, err := opus.NewEncoder(audioFrequency, audioChannels)
-	if err != nil {
-		r.log.Fatal().Err(err).Msg("couldn't create audio encoder")
+	encoderOnce.Do(func() {
+		enc, err := opus.NewEncoder(audioFrequency)
+		if err != nil {
+			r.log.Fatal().Err(err).Msg("couldn't create audio encoder")
+		}
+		opusCoder = enc
+	})
+	if err := opusCoder.Reset(); err != nil {
+		r.log.Error().Err(err).Msgf("opus state reset fail")
 	}
-	//encoder_ = enc
-	//}
-	//enc := *encoder_
-	r.log.Debug().Msgf("OPUS: %v", enc.GetInfo())
+	r.log.Debug().Msgf("Opus: %v", opusCoder.GetInfo())
 
 	dur := time.Duration(conf.Frame) * time.Millisecond
 
@@ -49,7 +52,7 @@ func (r *Room) initAudio(frequency int, conf conf.Audio) {
 		if resample {
 			s = media.ResampleStretch(s, frameLen)
 		}
-		f, err := enc.Encode(s)
+		f, err := opusCoder.Encode(s)
 		media.BufOutAudioPool.Put((*[]int16)(&s))
 		if err == nil {
 			r.handleSample(f, dur, func(u *Session, s *webrtc.Sample) { _ = u.SendAudio(s) })
