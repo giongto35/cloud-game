@@ -14,9 +14,9 @@ func NewEncoder(outFq int, options ...func(*Encoder) error) (enc *Encoder, err e
 		return nil, err
 	}
 	enc = &Encoder{Opus: encoder, buf: make([]byte, 1024)}
-	err = enc.SetMaxBandwidth(FullBand)
-	err = enc.SetBitrate(96000)
-	err = enc.SetComplexity(5)
+	_ = enc.SetMaxBandwidth(FullBand)
+	_ = enc.SetBitrate(96000)
+	_ = enc.SetComplexity(5)
 	for _, option := range options {
 		err = option(enc)
 	}

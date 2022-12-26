@@ -93,7 +93,7 @@ func NewConsole(isDebug bool, tag string, noColor bool) *Logger {
 	if output.NoColor {
 		output.FormatMessage = func(i any) string {
 			if i == nil {
-				return fmt.Sprintf("%s", "")
+				return ""
 			}
 			return fmt.Sprintf("%v", i)
 		}

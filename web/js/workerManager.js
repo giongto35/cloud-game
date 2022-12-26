@@ -23,7 +23,7 @@ const workerManager = (() => {
             },
             'id': {
                 caption: 'ID',
-                renderer: (data) => data?.is_group ? `${data.id} x ${data['replicas']}` : data.id
+                renderer: (data) => data?.in_group ? `${data.id} x ${data.replicas}` : data.id
             },
             'addr': {
                 caption: 'Address',

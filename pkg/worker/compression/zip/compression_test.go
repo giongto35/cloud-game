@@ -39,6 +39,10 @@ func TestCompression(t *testing.T) {
 				return
 			}
 			got, name, err := Read(got)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("Compress() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			}
 			if name != tt.wantName {
 				t.Errorf("Compress() got name = %v, want %v", name, tt.wantName)
 			}

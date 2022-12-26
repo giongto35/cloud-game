@@ -18,8 +18,6 @@ type Worker struct {
 	RoomId     string // room reference
 	Tag        string
 	Zone       string
-
-	used int32
 }
 
 func (w *Worker) HandleRequests(users *com.NetMap[*User]) {
