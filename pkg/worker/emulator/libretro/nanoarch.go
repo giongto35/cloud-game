@@ -80,9 +80,9 @@ var (
 
 const rawAudioBuffer = 4096 // 4K
 var (
-	rawAudioPool = sync.Pool{New: func() any { return make([]int16, rawAudioBuffer) }}
-	audioPool    = sync.Pool{New: func() any { return &emulator.GameAudio{} }}
-	videoPool    = sync.Pool{New: func() any { return &emulator.GameFrame{} }}
+	rawAudioPool = sync.Pool{New: func() any { b := make([]int16, rawAudioBuffer); return b }}
+	audioPool    = sync.Pool{New: func() any { a := emulator.GameAudio{}; return a }}
+	videoPool    = sync.Pool{New: func() any { f := emulator.GameFrame{}; return f }}
 )
 
 func init() {
@@ -150,10 +150,10 @@ func coreVideoRefresh(data unsafe.Pointer, width C.unsigned, height C.unsigned, 
 		return
 	}
 
-	fr := videoPool.Get().(*emulator.GameFrame)
+	fr := videoPool.Get().(emulator.GameFrame)
 	fr.Data = frame
 	fr.Duration = dt
-	frontend.onVideo(fr)
+	frontend.onVideo(&fr)
 	videoPool.Put(fr)
 }
 
@@ -196,10 +196,10 @@ func audioWrite(buf unsafe.Pointer, frames C.size_t) C.size_t {
 	// 1600 = x / 1000 * 48000 * 2
 	estimate := float64(samples) / float64(int(nano.sysAvInfo.timing.sample_rate)<<1) * 1000000000
 
-	fr := audioPool.Get().(*emulator.GameAudio)
+	fr := audioPool.Get().(emulator.GameAudio)
 	fr.Data = dst
 	fr.Duration = time.Duration(estimate)
-	frontend.onAudio(fr)
+	frontend.onAudio(&fr)
 	audioPool.Put(fr)
 	rawAudioPool.Put(dst)
 

@@ -14,8 +14,7 @@ const (
 
 type imageCache struct {
 	image *image.RGBA
-	w     int
-	h     int
+	w, h  int
 }
 
 func (i *imageCache) get(w, h int) *image.RGBA {
@@ -42,43 +41,12 @@ func DrawRgbaImage(encoding uint32, rot *Rotate, scaleType int, flipV bool, w, h
 	}
 	src := canvas1.get(ww, hh)
 
-	normY := !flipV
 	hn := h / th
 	pwb := packedW * bpp
 	wg.Add(th)
 	for i := 0; i < th; i++ {
 		xx := hn * i
-		go func() {
-			var px uint32
-			var dst *uint32
-			for y, yy, l, lx, row := xx, 0, xx+hn, 0, 0; y < l; y++ {
-				if normY {
-					yy = y
-				} else {
-					yy = (h - 1) - y
-				}
-				row = yy * src.Stride
-				lx = y * pwb
-				for x, k := 0, 0; x < w; x++ {
-					if rot == nil {
-						k = x<<2 + row
-					} else {
-						dx, dy := rot.Call(x, yy, w, h)
-						k = dx<<2 + dy*src.Stride
-					}
-					px = *(*uint32)(unsafe.Pointer(&data[x*bpp+lx]))
-					dst = (*uint32)(unsafe.Pointer(&src.Pix[k]))
-					// LE, BE might not work
-					switch encoding {
-					case BitFormatShort565:
-						i565(dst, px)
-					case BitFormatInt8888Rev:
-						ix8888(dst, px)
-					}
-				}
-			}
-			wg.Done()
-		}()
+		go frame(encoding, src, data, xx, hn, flipV, h, w, pwb, bpp, rot)
 	}
 	wg.Wait()
 
@@ -89,6 +57,37 @@ func DrawRgbaImage(encoding uint32, rot *Rotate, scaleType int, flipV bool, w, h
 		Resize(scaleType, src, out)
 		return out
 	}
+}
+
+func frame(encoding uint32, src *image.RGBA, data []byte, xx int, hn int, flipV bool, h int, w int, pwb int, bpp int, rot *Rotate) {
+	var px uint32
+	var dst *uint32
+	for y, yy, l, lx, row := xx, 0, xx+hn, 0, 0; y < l; y++ {
+		yy = y
+		if flipV {
+			yy = (h - 1) - yy
+		}
+		row = yy * src.Stride
+		lx = y * pwb
+		for x, k := 0, 0; x < w; x++ {
+			if rot == nil {
+				k = x<<2 + row
+			} else {
+				dx, dy := rot.Call(x, yy, w, h)
+				k = dx<<2 + dy*src.Stride
+			}
+			dst = (*uint32)(unsafe.Pointer(&src.Pix[k]))
+			px = *(*uint32)(unsafe.Pointer(&data[x*bpp+lx]))
+			// LE, BE might not work
+			switch encoding {
+			case BitFormatShort565:
+				i565(dst, px)
+			case BitFormatInt8888Rev:
+				ix8888(dst, px)
+			}
+		}
+	}
+	wg.Done()
 }
 
 func i565(dst *uint32, px uint32) {
