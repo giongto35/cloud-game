@@ -39,11 +39,7 @@ type (
 	}
 )
 
-var sentPool = sync.Pool{
-	New: func() any {
-		return Out{}
-	},
-}
+var sentPool = sync.Pool{New: func() any { o := Out{}; return &o }}
 
 type Option = func(c *Connector)
 
@@ -103,9 +99,9 @@ func (c *Client) Close() {
 
 func (c *Client) Call(type_ api.PT, payload any) ([]byte, error) {
 	// !to expose channel instead of results
-	rq := sentPool.Get().(Out)
+	rq := sentPool.Get().(*Out)
 	rq.Id, rq.T, rq.Payload = network.NewUid(), type_, payload
-	r, err := json.Marshal(&rq)
+	r, err := json.Marshal(rq)
 	sentPool.Put(rq)
 	if err != nil {
 		//delete(c.queue, id)
@@ -126,19 +122,20 @@ func (c *Client) Call(type_ api.PT, payload any) ([]byte, error) {
 }
 
 func (c *Client) Send(type_ api.PT, pl any) error {
-	rq := sentPool.Get().(Out)
+	rq := sentPool.Get().(*Out)
 	rq.Id, rq.T, rq.Payload = "", type_, pl
 	defer sentPool.Put(rq)
 	return c.SendPacket(rq)
 }
+
 func (c *Client) Route(p In, pl Out) error {
-	rq := sentPool.Get().(Out)
+	rq := sentPool.Get().(*Out)
 	rq.Id, rq.T, rq.Payload = p.Id, p.T, pl.Payload
 	defer sentPool.Put(rq)
 	return c.SendPacket(rq)
 }
 
-func (c *Client) SendPacket(packet Out) error {
+func (c *Client) SendPacket(packet *Out) error {
 	r, err := json.Marshal(packet)
 	if err != nil {
 		return err
