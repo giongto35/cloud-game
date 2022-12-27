@@ -189,6 +189,7 @@ emulator:
           roms: [ "zip" ]
         nes:
           lib: nestopia_libretro
+          config: nestopia_libretro.cfg
           roms: [ "nes" ]
         snes:
           lib: snes9x_libretro
