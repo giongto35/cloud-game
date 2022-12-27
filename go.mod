@@ -16,7 +16,7 @@ require (
 	github.com/pion/webrtc/v3 v3.1.50
 	github.com/rs/xid v1.4.0
 	github.com/rs/zerolog v1.28.0
-	github.com/veandco/go-sdl2 v0.4.27
+	github.com/veandco/go-sdl2 v0.4.28
 	golang.org/x/crypto v0.4.0
 	golang.org/x/image v0.2.0
 )
