@@ -86,19 +86,24 @@ type Vpx struct {
 	kfi        C.int
 }
 
-func NewEncoder(width, height int, options ...Option) (*Vpx, error) {
+type Options struct {
+	// Target bandwidth to use for this stream, in kilobits per second.
+	Bitrate uint
+	// Force keyframe interval.
+	KeyframeInt uint
+}
+
+func NewEncoder(w, h int, opts *Options) (*Vpx, error) {
 	encoder := &C.vpx_encoders[0]
 	if encoder == nil {
 		return nil, fmt.Errorf("couldn't get the encoder")
 	}
 
-	opts := &Options{
-		Bitrate:     1200,
-		KeyframeInt: 5,
-	}
-
-	for _, opt := range options {
-		opt(opts)
+	if opts == nil {
+		opts = &Options{
+			Bitrate:     1200,
+			KeyframeInt: 5,
+		}
 	}
 
 	vpx := Vpx{
@@ -106,7 +111,7 @@ func NewEncoder(width, height int, options ...Option) (*Vpx, error) {
 		kfi:        C.int(opts.KeyframeInt),
 	}
 
-	if C.vpx_img_alloc(&vpx.image, C.VPX_IMG_FMT_I420, C.uint(width), C.uint(height), 1) == nil {
+	if C.vpx_img_alloc(&vpx.image, C.VPX_IMG_FMT_I420, C.uint(w), C.uint(h), 1) == nil {
 		return nil, fmt.Errorf("vpx_img_alloc failed")
 	}
 
@@ -115,8 +120,8 @@ func NewEncoder(width, height int, options ...Option) (*Vpx, error) {
 		return nil, fmt.Errorf("failed to get default codec config")
 	}
 
-	cfg.g_w = C.uint(width)
-	cfg.g_h = C.uint(height)
+	cfg.g_w = C.uint(w)
+	cfg.g_h = C.uint(h)
 	cfg.rc_target_bitrate = C.uint(opts.Bitrate)
 	cfg.g_error_resilient = 1
 

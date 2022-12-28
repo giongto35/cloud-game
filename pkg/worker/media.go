@@ -77,10 +77,10 @@ func (r *Room) initVideo(width, height int, conf conf.Video) {
 			LogLevel: int32(conf.H264.LogLevel),
 		}))
 	} else {
-		enc, err = vpx.NewEncoder(width, height, vpx.WithOptions(vpx.Options{
+		enc, err = vpx.NewEncoder(width, height, &vpx.Options{
 			Bitrate:     conf.Vpx.Bitrate,
 			KeyframeInt: conf.Vpx.KeyframeInterval,
-		}))
+		})
 	}
 
 	if err != nil {

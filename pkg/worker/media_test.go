@@ -38,7 +38,7 @@ func run(w, h int, cod encoder.VideoCodec, count int, a *image.RGBA, b *image.RG
 	if cod == encoder.H264 {
 		enc, _ = h264.NewEncoder(w, h)
 	} else {
-		enc, _ = vpx.NewEncoder(w, h)
+		enc, _ = vpx.NewEncoder(w, h, nil)
 	}
 
 	ve := encoder.NewVideoEncoder(enc, w, h, nil)
