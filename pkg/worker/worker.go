@@ -1,7 +1,6 @@
 package worker
 
 import (
-	"context"
 	"time"
 
 	"github.com/giongto35/cloud-game/v2/pkg/config/worker"
@@ -16,15 +15,15 @@ type Worker struct {
 	address string
 	conf    worker.Config
 	cord    *coordinator
-	ctx     context.Context
 	log     *logger.Logger
 	router  Router
 	storage CloudStorage
+	done    chan struct{}
 }
 
 const retry = 10 * time.Second
 
-func New(ctx context.Context, conf worker.Config, log *logger.Logger) (services service.Group) {
+func New(conf worker.Config, log *logger.Logger, done chan struct{}) (services service.Group) {
 	if err := remotehttp.CheckCores(conf.Emulator, log); err != nil {
 		log.Error().Err(err).Msg("cores sync error")
 	}
@@ -55,7 +54,7 @@ func New(ctx context.Context, conf worker.Config, log *logger.Logger) (services 
 	if err != nil {
 		log.Error().Err(err).Msgf("cloud storage fail, using dummy cloud storage instead")
 	}
-	services.Add(&Worker{address: h.Addr, conf: conf, ctx: ctx, log: log, storage: st, router: NewRouter()})
+	services.Add(&Worker{address: h.Addr, conf: conf, done: done, log: log, storage: st, router: NewRouter()})
 
 	return
 }
@@ -71,10 +70,9 @@ func (w *Worker) Run() {
 			w.log.Debug().Msgf("Service loop end")
 		}()
 
-		done := w.ctx.Done()
 		for {
 			select {
-			case <-done:
+			case <-w.done:
 				return
 			default:
 				conn, err := connect(remoteAddr, w.conf.Worker, w.address, w.log)
@@ -92,4 +90,4 @@ func (w *Worker) Run() {
 		}
 	}()
 }
-func (w *Worker) Shutdown(context.Context) error { return nil }
+func (w *Worker) Stop() error { return nil }

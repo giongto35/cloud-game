@@ -1,7 +1,6 @@
 package main
 
 import (
-	"context"
 	"math/rand"
 	"time"
 
@@ -26,13 +25,12 @@ func run() {
 		log.Debug().Msgf("config: %+v", conf)
 	}
 
-	ctx, cancelCtx := context.WithCancel(context.Background())
-	wrk := worker.New(ctx, conf, log)
+	done := os.ExpectTermination()
+	wrk := worker.New(conf, log, done)
 	wrk.Start()
-	<-os.ExpectTermination()
-	cancelCtx()
+	<-done
 	time.Sleep(100 * time.Millisecond)
-	if err := wrk.Shutdown(ctx); err != nil {
+	if err := wrk.Stop(); err != nil {
 		log.Error().Err(err).Msg("service shutdown errors")
 	}
 }

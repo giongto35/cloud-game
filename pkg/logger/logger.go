@@ -1,7 +1,6 @@
 package logger
 
 import (
-	"context"
 	"fmt"
 	"io"
 	"os"
@@ -174,10 +173,6 @@ func (l *Logger) Print(v ...any) { l.logger.Print(v...) }
 // Printf sends a log event using debug level and no extra field.
 // Arguments are handled in the manner of fmt.Printf.
 func (l *Logger) Printf(format string, v ...any) { l.logger.Printf(format, v...) }
-
-// Ctx returns the Logger associated with the ctx. If no logger
-// is associated, a disabled logger is returned.
-func (l *Logger) Ctx(ctx context.Context) *Logger { return &Logger{logger: zerolog.Ctx(ctx)} }
 
 // Extend adds some additional context to the existing logger.
 func (l *Logger) Extend(ctx zerolog.Context) *Logger {

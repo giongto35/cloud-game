@@ -1,7 +1,6 @@
 package monitoring
 
 import (
-	"context"
 	"fmt"
 	"net"
 	"net/http/pprof"
@@ -11,15 +10,12 @@ import (
 	"github.com/giongto35/cloud-game/v2/pkg/config/monitoring"
 	"github.com/giongto35/cloud-game/v2/pkg/logger"
 	"github.com/giongto35/cloud-game/v2/pkg/network/httpx"
-	"github.com/giongto35/cloud-game/v2/pkg/service"
 )
 
 const debugEndpoint = "/debug/pprof"
 const metricsEndpoint = "/metrics"
 
 type Monitoring struct {
-	service.RunnableService
-
 	conf   monitoring.Config
 	server *httpx.Server
 	log    *logger.Logger
@@ -69,9 +65,9 @@ func (m *Monitoring) Run() {
 	m.server.Run()
 }
 
-func (m *Monitoring) Shutdown(ctx context.Context) error {
+func (m *Monitoring) Stop() error {
 	m.log.Info().Msg("Shutting down monitoring server")
-	return m.server.Shutdown(ctx)
+	return m.server.Stop()
 }
 
 func (m *Monitoring) String() string {

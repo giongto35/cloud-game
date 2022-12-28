@@ -1,7 +1,6 @@
 package main
 
 import (
-	"context"
 	"math/rand"
 	"time"
 
@@ -27,13 +26,8 @@ func main() {
 	}
 	c := coordinator.New(conf, log)
 	c.Start()
-
-	ctx, cancel := context.WithCancel(context.Background())
-	defer func() {
-		if err := c.Shutdown(ctx); err != nil {
-			log.Error().Err(err).Msg("service shutdown errors")
-		}
-	}()
 	<-os.ExpectTermination()
-	cancel()
+	if err := c.Stop(); err != nil {
+		log.Error().Err(err).Msg("service shutdown errors")
+	}
 }

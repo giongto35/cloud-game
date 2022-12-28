@@ -1,7 +1,6 @@
 package httpx
 
 import (
-	"context"
 	"fmt"
 	"net/http"
 	"net/url"
@@ -148,11 +147,11 @@ func (s *Server) run() {
 	}
 }
 
-func (s *Server) Shutdown(ctx context.Context) error {
+func (s *Server) Stop() error {
 	if s.redirect != nil {
-		_ = s.redirect.Shutdown(ctx)
+		_ = s.redirect.Stop()
 	}
-	return s.Server.Shutdown(ctx)
+	return s.Server.Close()
 }
 
 func (s *Server) GetHost() string { return extractHost(s.Addr) }
