@@ -27,6 +27,13 @@ type VideoEncoder struct {
 	log  *logger.Logger
 }
 
+type VideoCodec string
+
+const (
+	H264 VideoCodec = "h264"
+	VP8  VideoCodec = "vp8"
+)
+
 // NewVideoEncoder returns new video encoder.
 // By default, it waits for RGBA images on the input channel,
 // converts them into YUV I420 format,
