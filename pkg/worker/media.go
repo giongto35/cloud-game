@@ -69,13 +69,13 @@ func (r *Room) initVideo(width, height int, conf conf.Video) {
 	r.log.Info().Msgf("Video codec: %v", conf.Codec)
 	if conf.Codec == string(encoder.H264) {
 		r.log.Debug().Msgf("x264: build v%v", h264.LibVersion())
-		enc, err = h264.NewEncoder(width, height, h264.WithOptions(h264.Options{
+		enc, err = h264.NewEncoder(width, height, &h264.Options{
 			Crf:      conf.H264.Crf,
 			Tune:     conf.H264.Tune,
 			Preset:   conf.H264.Preset,
 			Profile:  conf.H264.Profile,
 			LogLevel: int32(conf.H264.LogLevel),
-		}))
+		})
 	} else {
 		enc, err = vpx.NewEncoder(width, height, &vpx.Options{
 			Bitrate:     conf.Vpx.Bitrate,

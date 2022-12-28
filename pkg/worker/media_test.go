@@ -36,7 +36,7 @@ func BenchmarkVP8(b *testing.B)  { run(1920, 1080, encoder.VP8, b.N, nil, nil, b
 func run(w, h int, cod encoder.VideoCodec, count int, a *image.RGBA, b *image.RGBA, backend testing.TB) {
 	var enc encoder.Encoder
 	if cod == encoder.H264 {
-		enc, _ = h264.NewEncoder(w, h)
+		enc, _ = h264.NewEncoder(w, h, nil)
 	} else {
 		enc, _ = vpx.NewEncoder(w, h, nil)
 	}

@@ -23,22 +23,35 @@ type H264 struct {
 	y, u, v []byte
 }
 
-func NewEncoder(w, h int, options ...Option) (encoder *H264, err error) {
+type Options struct {
+	// Constant Rate Factor (CRF)
+	// This method allows the encoder to attempt to achieve a certain output quality for the whole file
+	// when output file size is of less importance.
+	// The range of the CRF scale is 0–51, where 0 is lossless, 23 is the default, and 51 is the worst quality possible.
+	Crf uint8
+	// film, animation, grain, stillimage, psnr, ssim, fastdecode, zerolatency.
+	Tune string
+	// ultrafast, superfast, veryfast, faster, fast, medium, slow, slower, veryslow, placebo.
+	Preset string
+	// baseline, main, high, high10, high422, high444.
+	Profile  string
+	LogLevel int32
+}
+
+func NewEncoder(w, h int, opts *Options) (encoder *H264, err error) {
 	libVersion := LibVersion()
 
 	if libVersion < 150 {
 		return nil, fmt.Errorf("x264: the library version should be newer than v150, you have got version %v", libVersion)
 	}
 
-	opts := &Options{
-		Crf:     12,
-		Tune:    "zerolatency",
-		Preset:  "superfast",
-		Profile: "baseline",
-	}
-
-	for _, opt := range options {
-		opt(opts)
+	if opts == nil {
+		opts = &Options{
+			Crf:     23,
+			Tune:    "zerolatency",
+			Preset:  "superfast",
+			Profile: "baseline",
+		}
 	}
 
 	param := Param{}
