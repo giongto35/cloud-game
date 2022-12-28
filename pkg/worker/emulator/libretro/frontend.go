@@ -123,6 +123,8 @@ func (f *Frontend) Start() {
 		f.log.Debug().Msgf("run loop finished")
 	}()
 
+	// start time for the first frame
+	lastFrameTime = time.Now().UnixNano()
 	for {
 		f.mu.Lock()
 		run()
