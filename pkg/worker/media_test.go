@@ -5,10 +5,13 @@ import (
 	"math/rand"
 	"testing"
 
+	"github.com/giongto35/cloud-game/v2/pkg/logger"
 	"github.com/giongto35/cloud-game/v2/pkg/worker/encoder"
 	"github.com/giongto35/cloud-game/v2/pkg/worker/encoder/h264"
 	"github.com/giongto35/cloud-game/v2/pkg/worker/encoder/vpx"
 )
+
+var l = logger.New(false)
 
 func TestEncoders(t *testing.T) {
 	tests := []struct {
@@ -41,7 +44,7 @@ func run(w, h int, cod encoder.VideoCodec, count int, a *image.RGBA, b *image.RG
 		enc, _ = vpx.NewEncoder(w, h, nil)
 	}
 
-	ve := encoder.NewVideoEncoder(enc, w, h, nil)
+	ve := encoder.NewVideoEncoder(enc, w, h, 8, l)
 	defer ve.Stop()
 
 	if a == nil {
