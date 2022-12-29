@@ -14,13 +14,6 @@ import (
 	"github.com/goccy/go-json"
 )
 
-const callTimeout = 5 * time.Second
-
-var (
-	errConnClosed = errors.New("connection closed")
-	errTimeout    = errors.New("timeout")
-)
-
 type (
 	Connector struct {
 		tag string
@@ -37,16 +30,19 @@ type (
 		err      error
 		Response In
 	}
+	Option = func(c *Connector)
 )
 
-var sentPool = sync.Pool{New: func() any { o := Out{}; return &o }}
+var (
+	errConnClosed = errors.New("connection closed")
+	errTimeout    = errors.New("timeout")
+)
+var outPool = sync.Pool{New: func() any { o := Out{}; return &o }}
 
-type Option = func(c *Connector)
+func WithOrigin(url string) Option { return func(c *Connector) { c.wu = websocket.NewUpgrader(url) } }
+func WithTag(tag string) Option    { return func(c *Connector) { c.tag = tag } }
 
-func WithOrigin(origin string) Option {
-	return func(c *Connector) { c.wu = websocket.NewUpgrader(origin) }
-}
-func WithTag(tag string) Option { return func(c *Connector) { c.tag = tag } }
+const callTimeout = 5 * time.Second
 
 func NewConnector(opts ...Option) *Connector {
 	c := &Connector{}
@@ -99,10 +95,10 @@ func (c *Client) Close() {
 
 func (c *Client) Call(type_ api.PT, payload any) ([]byte, error) {
 	// !to expose channel instead of results
-	rq := sentPool.Get().(*Out)
+	rq := outPool.Get().(*Out)
 	rq.Id, rq.T, rq.Payload = network.NewUid(), type_, payload
 	r, err := json.Marshal(rq)
-	sentPool.Put(rq)
+	outPool.Put(rq)
 	if err != nil {
 		//delete(c.queue, id)
 		return nil, err
@@ -122,16 +118,16 @@ func (c *Client) Call(type_ api.PT, payload any) ([]byte, error) {
 }
 
 func (c *Client) Send(type_ api.PT, pl any) error {
-	rq := sentPool.Get().(*Out)
+	rq := outPool.Get().(*Out)
 	rq.Id, rq.T, rq.Payload = "", type_, pl
-	defer sentPool.Put(rq)
+	defer outPool.Put(rq)
 	return c.SendPacket(rq)
 }
 
 func (c *Client) Route(p In, pl Out) error {
-	rq := sentPool.Get().(*Out)
+	rq := outPool.Get().(*Out)
 	rq.Id, rq.T, rq.Payload = p.Id, p.T, pl.Payload
-	defer sentPool.Put(rq)
+	defer outPool.Put(rq)
 	return c.SendPacket(rq)
 }
 

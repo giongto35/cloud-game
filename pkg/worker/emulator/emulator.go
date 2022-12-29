@@ -63,7 +63,7 @@ type (
 		Duration time.Duration
 	}
 	GameAudio struct {
-		Data     []int16
+		Data     *[]int16
 		Duration time.Duration
 	}
 	InputEvent struct {

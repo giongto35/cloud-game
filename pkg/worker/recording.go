@@ -37,7 +37,7 @@ func (r *RecordingRoom) captureAudio() {
 	handler := r.GetEmulator().GetAudio()
 	r.GetEmulator().SetAudio(func(samples *emulator.GameAudio) {
 		if r.IsRecording() {
-			r.rec.WriteAudio(recorder.Audio{Samples: &samples.Data, Duration: samples.Duration})
+			r.rec.WriteAudio(recorder.Audio{Samples: samples.Data, Duration: samples.Duration})
 		}
 		handler(samples)
 	})

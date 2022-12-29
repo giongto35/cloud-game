@@ -40,6 +40,17 @@ func TestResampleStretch(t *testing.T) {
 	}
 }
 
+func Benchmark(b *testing.B) {
+	pcm := gen(1764)
+	size := 1920
+	count := 32
+	for i := 0; i < b.N; i++ {
+		for j := 0; j < count; j++ {
+			_ = ResampleStretch(pcm, size)
+		}
+	}
+}
+
 func gen(l int) []int16 {
 	rand.Seed(time.Now().Unix())
 

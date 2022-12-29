@@ -14,9 +14,11 @@ import (
 	webrtc "github.com/pion/webrtc/v3/pkg/media"
 )
 
-var samplePool = sync.Pool{New: func() any { s := webrtc.Sample{}; return &s }}
-var opusCoder *opus.Encoder
-var encoderOnce = sync.Once{}
+var (
+	encoderOnce = sync.Once{}
+	opusCoder   *opus.Encoder
+	samplePool  sync.Pool
+)
 
 const (
 	audioChannels  = 2
@@ -58,7 +60,7 @@ func (r *Room) initAudio(frequency int, conf conf.Audio) {
 			r.handleSample(f, dur, func(u *Session, s *webrtc.Sample) { _ = u.SendAudio(s) })
 		}
 	}
-	r.emulator.SetAudio(func(samples *emulator.GameAudio) { buf.Write(samples.Data, fn) })
+	r.emulator.SetAudio(func(samples *emulator.GameAudio) { buf.Write(*samples.Data, fn) })
 }
 
 // initVideo processes videoFrames images with an encoder (codec) then pushes the result to WebRTC.
@@ -98,7 +100,10 @@ func (r *Room) initVideo(width, height int, conf conf.Video) {
 }
 
 func (r *Room) handleSample(b []byte, d time.Duration, fn func(*Session, *webrtc.Sample)) {
-	sample := samplePool.Get().(*webrtc.Sample)
+	sample, _ := samplePool.Get().(*webrtc.Sample)
+	if sample == nil {
+		sample = new(webrtc.Sample)
+	}
 	sample.Data = b
 	sample.Duration = d
 	r.users.ForEach(func(u *Session) {
