@@ -39,8 +39,12 @@ const (
 // converts them into YUV I420 format,
 // encodes with provided video encoder, and
 // puts the result into the output channel.
-func NewVideoEncoder(enc Encoder, w, h int, log *logger.Logger) *VideoEncoder {
-	return &VideoEncoder{encoder: enc, y: yuv.NewYuvImgProcessor(w, h), w: w, h: h, log: log}
+func NewVideoEncoder(enc Encoder, w, h int, concurrency int, log *logger.Logger) *VideoEncoder {
+	y := yuv.NewYuvImgProcessor(w, h, yuv.Threaded(concurrency > 0), yuv.Threads(concurrency))
+	if concurrency > 0 {
+		log.Info().Msgf("Use concurrent image processor: %v", concurrency)
+	}
+	return &VideoEncoder{encoder: enc, y: y, w: w, h: h, log: log}
 }
 
 func (vp VideoEncoder) Encode(img InFrame) OutFrame {

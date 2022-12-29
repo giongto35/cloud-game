@@ -10,8 +10,9 @@ type Audio struct {
 }
 
 type Video struct {
-	Codec string
-	H264  struct {
+	Codec       string
+	Concurrency int
+	H264        struct {
 		Crf      uint8
 		Preset   string
 		Profile  string

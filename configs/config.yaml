@@ -212,12 +212,14 @@ encoder:
   video:
     # h264, vpx (VP8)
     codec: h264
+    # concurrent execution units (0 - disabled)
+    concurrency: 8
     # see: https://trac.ffmpeg.org/wiki/Encode/H.264
     h264:
       # Constant Rate Factor (CRF) 0-51 (default: 23)
       crf: 23
       # ultrafast, superfast, veryfast, faster, fast, medium, slow, slower, veryslow, placebo
-      preset: veryfast
+      preset: superfast
       # baseline, main, high, high10, high422, high444
       profile: baseline
       # film, animation, grain, stillimage, psnr, ssim, fastdecode, zerolatency

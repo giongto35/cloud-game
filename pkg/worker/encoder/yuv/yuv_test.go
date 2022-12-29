@@ -159,21 +159,21 @@ func randomColor() color.RGBA {
 }
 
 func BenchmarkTopLeft(b *testing.B) {
-	benchmarkConverter(1920, 1080, 0, true, b)
+	benchmarkConverter(1920, 1080, 0, true, 0, b)
 }
 
 func BenchmarkBetweenFour(b *testing.B) {
-	benchmarkConverter(1920, 1080, 1, true, b)
+	benchmarkConverter(1920, 1080, 1, true, 8, b)
 }
 
 func BenchmarkBetweenFourNonThreaded(b *testing.B) {
-	benchmarkConverter(1920, 1080, 1, false, b)
+	benchmarkConverter(1920, 1080, 1, false, 0, b)
 }
 
-func benchmarkConverter(w, h int, chroma ChromaPos, threaded bool, b *testing.B) {
+func benchmarkConverter(w, h int, chroma ChromaPos, threaded bool, threads int, b *testing.B) {
 	b.StopTimer()
 
-	pc := NewYuvImgProcessor(w, h, ChromaP(chroma), Threaded(threaded))
+	pc := NewYuvImgProcessor(w, h, ChromaP(chroma), Threaded(threaded), Threads(threads))
 
 	image1 := genTestImage(w, h, rand.New(rand.NewSource(int64(1))).Float32())
 	image2 := genTestImage(w, h, rand.New(rand.NewSource(int64(2))).Float32())

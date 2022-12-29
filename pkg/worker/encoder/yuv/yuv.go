@@ -39,6 +39,7 @@ type threadedProcessor struct {
 	// cache
 	chromaU C.int
 	chromaV C.int
+	wg      sync.WaitGroup
 }
 
 type ChromaPos uint8
@@ -51,9 +52,8 @@ const (
 // NewYuvImgProcessor creates new YUV image converter from RGBA.
 func NewYuvImgProcessor(w, h int, options ...Option) ImgProcessor {
 	opts := &Options{
-		ChromaP:  BetweenFour,
-		Threaded: false,
-		Threads:  runtime.NumCPU(),
+		ChromaP: BetweenFour,
+		Threads: runtime.NumCPU(),
 	}
 	opts.override(options...)
 
@@ -83,14 +83,13 @@ func NewYuvImgProcessor(w, h int, options ...Option) ImgProcessor {
 			chunk:     chunk,
 			processor: &processor,
 			threads:   opts.Threads,
+			wg:        sync.WaitGroup{},
 		}
 	}
 	return &processor
 }
 
-func (yuv *processor) Get() []byte {
-	return yuv.Data
-}
+func (yuv *processor) Get() []byte { return yuv.Data }
 
 // Process converts RGBA colorspace into YUV I420 format inside the internal buffer.
 // Non-threaded version.
@@ -99,9 +98,7 @@ func (yuv *processor) Process(rgba *image.RGBA) ImgProcessor {
 	return yuv
 }
 
-func (yuv *threadedProcessor) Get() []byte {
-	return yuv.Data
-}
+func (yuv *threadedProcessor) Get() []byte { return yuv.Data }
 
 // Process converts RGBA colorspace into YUV I420 format inside the internal buffer.
 // Threaded version.
@@ -115,23 +112,26 @@ func (yuv *threadedProcessor) Get() []byte {
 //	x x x x x x x x  | Coroutine 2
 //	x x x x x x x x  | Coroutine 2
 func (yuv *threadedProcessor) Process(rgba *image.RGBA) ImgProcessor {
-	src := unsafe.Pointer(&rgba.Pix[0])
-	wg := sync.WaitGroup{}
-	wg.Add(2 * yuv.threads)
+	src := &rgba.Pix[0]
+	yuv.wg.Add(yuv.threads << 1)
 	for i := 0; i < yuv.threads; i++ {
 		pos, hh := C.int(yuv.w*i*yuv.chunk), C.int(yuv.chunk)
-		// we need to know how many pixels left
-		// if the image can't be divided evenly
-		// between all the threads
 		if i == yuv.threads-1 {
 			hh = C.int(yuv.h - i*yuv.chunk)
 		}
-		go func() { defer wg.Done(); C.luma(yuv.dst, src, pos, yuv.ww, hh) }()
-		go func() {
-			defer wg.Done()
-			C.chroma(yuv.dst, src, pos, yuv.chromaU, yuv.chromaV, yuv.ww, hh, yuv.chroma)
-		}()
+		go yuv.luma_(src, pos, hh)
+		go yuv.chroma_(src, pos, hh)
 	}
-	wg.Wait()
+	yuv.wg.Wait()
 	return yuv
+}
+
+func (yuv *threadedProcessor) luma_(src *uint8, pos C.int, hh C.int) {
+	C.luma(yuv.dst, unsafe.Pointer(src), pos, yuv.ww, hh)
+	yuv.wg.Done()
+}
+
+func (yuv *threadedProcessor) chroma_(src *uint8, pos C.int, hh C.int) {
+	C.chroma(yuv.dst, unsafe.Pointer(src), pos, yuv.chromaU, yuv.chromaV, yuv.ww, hh, yuv.chroma)
+	yuv.wg.Done()
 }

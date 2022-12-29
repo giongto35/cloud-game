@@ -88,7 +88,7 @@ func (r *Room) initVideo(width, height int, conf conf.Video) {
 		return
 	}
 
-	r.vEncoder = encoder.NewVideoEncoder(enc, width, height, r.log)
+	r.vEncoder = encoder.NewVideoEncoder(enc, width, height, conf.Concurrency, r.log)
 
 	r.emulator.SetVideo(func(frame *emulator.GameFrame) {
 		if fr := r.vEncoder.Encode(frame.Data); fr != nil {
