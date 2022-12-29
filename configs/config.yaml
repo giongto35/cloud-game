@@ -213,7 +213,7 @@ encoder:
     # h264, vpx (VP8)
     codec: h264
     # concurrent execution units (0 - disabled)
-    concurrency: 8
+    concurrency: 0
     # see: https://trac.ffmpeg.org/wiki/Encode/H.264
     h264:
       # Constant Rate Factor (CRF) 0-51 (default: 23)
