@@ -132,11 +132,14 @@ func NewEncoder(w, h int, opts *Options) (*Vpx, error) {
 	return &vpx, nil
 }
 
+func (vpx *Vpx) LoadBuf(yuv []byte) {
+	C.vpx_img_read(&vpx.image, unsafe.Pointer(&yuv[0]))
+}
+
 // Encode encodes yuv image with the VPX8 encoder.
 // see: https://chromium.googlesource.com/webm/libvpx/+/master/examples/simple_encoder.c
-func (vpx *Vpx) Encode(yuv []byte) []byte {
+func (vpx *Vpx) Encode() []byte {
 	var iter C.vpx_codec_iter_t
-	C.vpx_img_read(&vpx.image, unsafe.Pointer(&yuv[0]))
 
 	var flags C.int
 	if vpx.kfi > 0 && vpx.frameCount%vpx.kfi == 0 {

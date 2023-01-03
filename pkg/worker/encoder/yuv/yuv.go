@@ -2,7 +2,6 @@ package yuv
 
 import (
 	"image"
-	"runtime"
 	"sync"
 	"unsafe"
 )
@@ -15,19 +14,20 @@ import (
 import "C"
 
 type ImgProcessor interface {
-	Process(rgba *image.RGBA) ImgProcessor
-	Get() []byte
+	Process(rgba *image.RGBA) []byte
+	Put(*[]byte)
+}
+
+type Options struct {
+	Threads int
 }
 
 type processor struct {
-	Data []byte
 	w, h int
-	pos  ChromaPos
 
 	// cache
-	dst    unsafe.Pointer
-	ww     C.int
-	chroma C.chromaPos
+	ww   C.int
+	pool sync.Pool
 }
 
 type threadedProcessor struct {
@@ -43,35 +43,21 @@ type threadedProcessor struct {
 	wg      sync.WaitGroup
 }
 
-type ChromaPos uint8
-
-const (
-	TopLeft ChromaPos = iota
-	BetweenFour
-)
-
 // NewYuvImgProcessor creates new YUV image converter from RGBA.
-func NewYuvImgProcessor(w, h int, options ...Option) ImgProcessor {
-	opts := &Options{
-		ChromaP: BetweenFour,
-		Threads: runtime.NumCPU(),
-	}
-	opts.override(options...)
-
+func NewYuvImgProcessor(w, h int, opts *Options) ImgProcessor {
 	bufSize := int(float32(w*h) * 1.5)
-	buf := make([]byte, bufSize)
 
 	processor := processor{
-		Data:   buf,
-		chroma: C.chromaPos(opts.ChromaP),
-		dst:    unsafe.Pointer(&buf[0]),
-		h:      h,
-		pos:    opts.ChromaP,
-		w:      w,
-		ww:     C.int(w),
+		w:  w,
+		h:  h,
+		ww: C.int(w),
+		pool: sync.Pool{New: func() any {
+			b := make([]byte, bufSize)
+			return &b
+		}},
 	}
 
-	if opts.Threaded {
+	if opts != nil && opts.Threads > 0 {
 		// chunks the image evenly
 		chunk := h / opts.Threads
 		if chunk%2 != 0 {
@@ -90,16 +76,15 @@ func NewYuvImgProcessor(w, h int, options ...Option) ImgProcessor {
 	return &processor
 }
 
-func (yuv *processor) Get() []byte { return yuv.Data }
-
 // Process converts RGBA colorspace into YUV I420 format inside the internal buffer.
 // Non-threaded version.
-func (yuv *processor) Process(rgba *image.RGBA) ImgProcessor {
-	C.rgbaToYuv(yuv.dst, unsafe.Pointer(&rgba.Pix[0]), yuv.ww, C.int(yuv.h), yuv.chroma)
-	return yuv
+func (yuv *processor) Process(rgba *image.RGBA) []byte {
+	buf := *yuv.pool.Get().(*[]byte)
+	C.rgbaToYuv(unsafe.Pointer(&buf[0]), unsafe.Pointer(&rgba.Pix[0]), yuv.ww, C.int(yuv.h))
+	return buf
 }
 
-func (yuv *threadedProcessor) Get() []byte { return yuv.Data }
+func (yuv *processor) Put(x *[]byte) { yuv.pool.Put(x) }
 
 // Process converts RGBA colorspace into YUV I420 format inside the internal buffer.
 // Threaded version.
@@ -112,8 +97,10 @@ func (yuv *threadedProcessor) Get() []byte { return yuv.Data }
 //	x x x x x x x x  | Coroutine 1
 //	x x x x x x x x  | Coroutine 2
 //	x x x x x x x x  | Coroutine 2
-func (yuv *threadedProcessor) Process(rgba *image.RGBA) ImgProcessor {
+func (yuv *threadedProcessor) Process(rgba *image.RGBA) []byte {
 	src := unsafe.Pointer(&rgba.Pix[0])
+	buf := *yuv.pool.Get().(*[]byte)
+	dst := unsafe.Pointer(&buf[0])
 	yuv.wg.Add(yuv.threads << 1)
 	chunk := yuv.w * yuv.chunk
 	for i := 0; i < yuv.threads; i++ {
@@ -121,15 +108,19 @@ func (yuv *threadedProcessor) Process(rgba *image.RGBA) ImgProcessor {
 		if i == yuv.threads-1 {
 			hh = C.int(yuv.h - i*yuv.chunk)
 		}
-		go func() {
-			C.chroma(yuv.dst, src, pos, yuv.chromaU, yuv.chromaV, yuv.ww, hh, yuv.chroma)
-			yuv.wg.Done()
-		}()
-		go func() {
-			C.luma(yuv.dst, src, pos, yuv.ww, hh)
-			yuv.wg.Done()
-		}()
+		go yuv.chroma_(src, dst, pos, hh)
+		go yuv.luma_(src, dst, pos, hh)
 	}
 	yuv.wg.Wait()
-	return yuv
+	return buf
+}
+
+func (yuv *threadedProcessor) luma_(src unsafe.Pointer, dst unsafe.Pointer, pos C.int, hh C.int) {
+	C.luma(dst, src, pos, yuv.ww, hh)
+	yuv.wg.Done()
+}
+
+func (yuv *threadedProcessor) chroma_(src unsafe.Pointer, dst unsafe.Pointer, pos C.int, hh C.int) {
+	C.chroma(dst, src, pos, yuv.chromaU, yuv.chromaV, yuv.ww, hh)
+	yuv.wg.Done()
 }

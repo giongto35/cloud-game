@@ -11,7 +11,8 @@ type (
 	InFrame  *image.RGBA
 	OutFrame []byte
 	Encoder  interface {
-		Encode(input []byte) []byte
+		LoadBuf(input []byte)
+		Encode() []byte
 		IntraRefresh()
 		Shutdown() error
 	}
@@ -40,7 +41,7 @@ const (
 // encodes with provided video encoder, and
 // puts the result into the output channel.
 func NewVideoEncoder(enc Encoder, w, h int, concurrency int, log *logger.Logger) *VideoEncoder {
-	y := yuv.NewYuvImgProcessor(w, h, yuv.Threaded(concurrency > 0), yuv.Threads(concurrency))
+	y := yuv.NewYuvImgProcessor(w, h, &yuv.Options{Threads: concurrency})
 	if concurrency > 0 {
 		log.Info().Msgf("Use concurrent image processor: %v", concurrency)
 	}
@@ -48,8 +49,11 @@ func NewVideoEncoder(enc Encoder, w, h int, concurrency int, log *logger.Logger)
 }
 
 func (vp VideoEncoder) Encode(img InFrame) OutFrame {
-	yCbCr := vp.y.Process(img).Get()
-	if frame := vp.encoder.Encode(yCbCr); len(frame) > 0 {
+	yCbCr := vp.y.Process(img)
+	vp.encoder.LoadBuf(yCbCr)
+	vp.y.Put(&yCbCr)
+
+	if frame := vp.encoder.Encode(); len(frame) > 0 {
 		return frame
 	}
 	return nil

@@ -121,13 +121,14 @@ func NewEncoder(w, h int, opts *Options) (encoder *H264, err error) {
 
 func LibVersion() int { return int(Build) }
 
-func (e *H264) Encode(yuv []byte) []byte {
+func (e *H264) LoadBuf(yuv []byte) {
 	copy(e.y, yuv[:e.lumaSize])
 	copy(e.u, yuv[e.lumaSize:e.lumaSize+e.chromaSize])
 	copy(e.v, yuv[e.lumaSize+e.chromaSize:])
+}
 
+func (e *H264) Encode() []byte {
 	e.in.IPts += 1
-
 	if ret := EncoderEncode(e.ref, e.nals, &e.nnals, e.in, e.out); ret > 0 {
 		return C.GoBytes(e.nals[0].PPayload, C.int(ret))
 	}

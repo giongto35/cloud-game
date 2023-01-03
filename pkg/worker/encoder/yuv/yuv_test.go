@@ -1,10 +1,15 @@
 package yuv
 
 import (
+	"fmt"
 	"image"
 	"image/color"
+	"image/png"
+	"math"
 	"math/rand"
+	"os"
 	"reflect"
+	"runtime"
 	"testing"
 	"time"
 )
@@ -13,14 +18,14 @@ func TestYuv(t *testing.T) {
 	size1, size2 := 32, 32
 	for i := 1; i < 100; i++ {
 		img := generateImage(size1, size2, randomColor())
-		pc := NewYuvImgProcessor(size1, size2, Threaded(false))
-		pct := NewYuvImgProcessor(size1, size2, Threaded(true))
+		pc := NewYuvImgProcessor(size1, size2, new(Options))
+		pct := NewYuvImgProcessor(size1, size2, &Options{Threads: runtime.NumCPU()})
 
-		pc.Process(img)
-		pct.Process(img)
+		a := pc.Process(img)
+		b := pct.Process(img)
 
-		if !reflect.DeepEqual(pc.Get(), pct.Get()) {
-			t.Fatalf("couldn't convert %v, \n %v \n %v", img.Pix, pc.Get(), pct.Get())
+		if !reflect.DeepEqual(a, b) {
+			t.Fatalf("couldn't convert %v, \n %v \n %v", img.Pix, a, b)
 		}
 	}
 }
@@ -100,12 +105,12 @@ func TestYuvPredefined(t *testing.T) {
 		94, 94, 94, 94, 94, 94, 94, 94, 94, 94, 94, 94, 94, 94, 94, 94, 94, 94, 94, 94, 94,
 		94, 94, 94, 94, 94, 94, 94, 94, 94, 94, 94, 94, 94, 94, 94, 94, 94, 94, 94, 94, 94,
 		94, 94, 94, 94, 94, 94, 94, 94, 94, 94, 94, 94, 94, 94, 94, 94, 94, 94, 94, 94, 94,
-		94, 94, 94, 94, 94, 94, 94, 94, 94, 105, 47, 47, 47, 47, 47, 47, 47, 47, 47, 47, 47,
-		47, 47, 47, 47, 105, 47, 47, 47, 47, 47, 47, 47, 47, 47, 47, 47, 47, 47, 47, 47, 105,
-		47, 47, 47, 47, 47, 47, 47, 47, 47, 47, 47, 47, 47, 47, 47, 105, 47, 47, 47, 47, 47,
-		47, 47, 47, 47, 47, 47, 47, 47, 47, 47, 105, 47, 47, 47, 47, 47, 47, 47, 47, 47, 47,
-		47, 47, 47, 47, 47, 105, 47, 47, 47, 47, 47, 47, 47, 47, 47, 47, 47, 47, 47, 47, 47,
-		105, 47, 47, 47, 47, 47, 47, 47, 47, 47, 47, 47, 47, 47, 47, 47, 105, 47, 47, 47, 47,
+		94, 94, 94, 94, 94, 94, 94, 94, 94, 106, 47, 47, 47, 47, 47, 47, 47, 47, 47, 47, 47,
+		47, 47, 47, 47, 106, 47, 47, 47, 47, 47, 47, 47, 47, 47, 47, 47, 47, 47, 47, 47, 106,
+		47, 47, 47, 47, 47, 47, 47, 47, 47, 47, 47, 47, 47, 47, 47, 106, 47, 47, 47, 47, 47,
+		47, 47, 47, 47, 47, 47, 47, 47, 47, 47, 106, 47, 47, 47, 47, 47, 47, 47, 47, 47, 47,
+		47, 47, 47, 47, 47, 106, 47, 47, 47, 47, 47, 47, 47, 47, 47, 47, 47, 47, 47, 47, 47,
+		106, 47, 47, 47, 47, 47, 47, 47, 47, 47, 47, 47, 47, 47, 47, 47, 106, 47, 47, 47, 47,
 		47, 47, 47, 47, 47, 47, 47, 47, 47, 47, 47, 76, 47, 47, 47, 47, 47, 47, 47, 47, 47, 47,
 		47, 47, 47, 47, 47, 47, 47, 47, 47, 47, 47, 47, 47, 47, 47, 47, 47, 47, 47, 47, 47, 47,
 		47, 47, 47, 47, 47, 47, 47, 47, 47, 47, 47, 47, 47, 47, 47, 47, 47, 47, 47, 47, 47, 47,
@@ -115,34 +120,31 @@ func TestYuvPredefined(t *testing.T) {
 		47, 47, 47, 47, 47, 47, 47,
 	}
 
-	pc := NewYuvImgProcessor(32, 32, Threaded(false))
-	pct := NewYuvImgProcessor(32, 32, Threaded(true))
+	pc := NewYuvImgProcessor(32, 32, new(Options))
+	pct := NewYuvImgProcessor(32, 32, &Options{Threads: runtime.NumCPU()})
 
 	img := image.NewRGBA(image.Rect(0, 0, 32, 32))
 	img.Pix = im
 
-	pc.Process(img)
-	pct.Process(img)
+	a := pc.Process(img)
+	b := pct.Process(img)
 
-	if !reflect.DeepEqual(pc.Get(), should) {
-		t.Fatalf("couldn't convert with base %v \n %v", pc.Get(), should)
+	if len(a) != len(b) || len(a) != len(should) || len(b) != len(should) {
+		t.Fatalf("diffrent size a: %v, b: %v, o: %v", len(a), len(b), len(should))
 	}
 
-	if !reflect.DeepEqual(pct.Get(), should) {
-		for i := 0; i < len(pct.Get()); i++ {
-			if pct.Get()[i] != should[i] {
-				t.Logf("index is: %v", i)
-			}
+	for i := 0; i < len(a); i++ {
+		if a[i] != b[i] || a[i] != should[i] || b[i] != should[i] {
+			t.Fatalf("diff in %vth, %v != %v != %v \n%v\n%v", i, a[i], b[i], should[i], im, should)
 		}
-		t.Fatalf("couldn't convert with threaded %v \n %v", pct.Get(), should)
 	}
 }
 
-func generateImage(w, h int, pixelColor color.RGBA) *image.RGBA {
+func generateImage(w, h int, color color.RGBA) *image.RGBA {
 	img := image.NewRGBA(image.Rect(0, 0, w, h))
 	for x := 0; x < w; x++ {
 		for y := 0; y < h; y++ {
-			img.Set(x, y, randomColor())
+			img.Set(x, y, color)
 		}
 	}
 	return img
@@ -158,17 +160,39 @@ func randomColor() color.RGBA {
 	}
 }
 
-func BenchmarkTopLeft(b *testing.B)                { benchmarkConverter(1920, 1080, 0, true, 0, b) }
-func BenchmarkBetweenFour(b *testing.B)            { benchmarkConverter(1920, 1080, 1, true, 8, b) }
-func BenchmarkBetweenFourNonThreaded(b *testing.B) { benchmarkConverter(1920, 1080, 1, false, 0, b) }
+func BenchmarkYUV(b *testing.B) {
+	cpu := runtime.NumCPU()
+	tests := []struct {
+		cpu int
+		w   int
+		h   int
+	}{
+		{cpu: cpu * 0, w: 1920, h: 1080},
+		{cpu: cpu * 2, w: 1920, h: 1080},
+		{cpu: cpu * 4, w: 1920, h: 1080},
+		{cpu: cpu * 0, w: 320, h: 240},
+		{cpu: cpu * 2, w: 320, h: 240},
+		{cpu: cpu * 4, w: 320, h: 240},
+	}
+	for _, bn := range tests {
+		b.Run(fmt.Sprintf("%d-%vx%v", bn.cpu, bn.w, bn.h), func(b *testing.B) {
+			_processYUV(bn.w, bn.h, bn.cpu, b)
+		})
+	}
+}
 
-func benchmarkConverter(w, h int, chroma ChromaPos, threaded bool, threads int, b *testing.B) {
+func BenchmarkYUVReference(b *testing.B) { _processYUV(1920, 1080, 0, b) }
+
+func _processYUV(w, h, cpu int, b *testing.B) {
 	b.StopTimer()
 
-	pc := NewYuvImgProcessor(w, h, ChromaP(chroma), Threaded(threaded), Threads(threads))
+	r1 := rand.New(rand.NewSource(int64(1))).Float32()
+	r2 := rand.New(rand.NewSource(int64(2))).Float32()
 
-	image1 := genTestImage(w, h, rand.New(rand.NewSource(int64(1))).Float32())
-	image2 := genTestImage(w, h, rand.New(rand.NewSource(int64(2))).Float32())
+	pc := NewYuvImgProcessor(w, h, &Options{Threads: cpu})
+
+	image1 := genTestImage(w, h, r1)
+	image2 := genTestImage(w, h, r2)
 
 	for i := 0; i < b.N; i++ {
 		im := image1
@@ -192,4 +216,75 @@ func genTestImage(w, h int, seed float32) *image.RGBA {
 		}
 	}
 	return img
+}
+
+func TestGen24bitFull(t *testing.T) {
+	t.Skip()
+	const tau = 2 * math.Pi
+	const deg = 3 * math.Pi / 2
+	//const depth = 1 << 24
+	var wh = 255 //int(math.Sqrt(depth))
+
+	img := image.NewRGBA(image.Rectangle{Max: image.Point{X: wh, Y: wh}})
+
+	centerX, centerY := wh/2, wh/2
+	radius := centerX
+	//if centerY < radius {
+	//	radius = centerY
+	//}
+
+	for y := 0; y < wh; y++ {
+		dy := float64(y - centerY)
+		for x := 0; x < wh; x++ {
+			dx := float64(x - centerX)
+			dist := math.Sqrt(dx*dx + dy*dy)
+			if dist <= float64(radius) {
+				hue := (math.Atan2(dx, dy) + deg) / tau
+				r, g, b := hsb2rgb(hue, linear(0, float64(centerX), dist), 1)
+				img.Set(x, y, color.RGBA{R: uint8(r), G: uint8(g), B: uint8(b), A: 255})
+			}
+		}
+	}
+
+	f, err := os.Create("outimage.png")
+	if err != nil {
+		// Handle error
+	}
+	defer func() { _ = f.Close() }()
+
+	// Encode to `PNG` with `DefaultCompression` level
+	// then save to file
+	err = png.Encode(f, img)
+	if err != nil {
+		// Handle error
+	}
+}
+
+func linear(a, b, x float64) float64 { return (x - a) / (b - a) }
+
+func hsb2rgb(hue, s, bri float64) (r, g, b int) {
+	u := int(bri*255 + 0.5)
+	if s == 0 {
+		return u, u, u
+	}
+	h := (hue - math.Floor(hue)) * 6
+	f := h - math.Floor(h)
+	p := int(bri*(1-s)*255 + 0.5)
+	q := int(bri*(1-s*f)*255 + 0.5)
+	t := int(bri*(1-s*(1-f))*255 + 0.5)
+	switch int(h) {
+	case 0:
+		r, g, b = u, t, p
+	case 1:
+		r, g, b = q, u, p
+	case 2:
+		r, g, b = p, u, t
+	case 3:
+		r, g, b = p, q, u
+	case 4:
+		r, g, b = t, p, u
+	case 5:
+		r, g, b = u, p, q
+	}
+	return
 }
