@@ -9,6 +9,7 @@ import (
 
 /*
 #cgo CFLAGS: -Wall -O3
+#cgo LDFLAGS: -O3
 #include "yuv.h"
 */
 import "C"
@@ -112,26 +113,23 @@ func (yuv *threadedProcessor) Get() []byte { return yuv.Data }
 //	x x x x x x x x  | Coroutine 2
 //	x x x x x x x x  | Coroutine 2
 func (yuv *threadedProcessor) Process(rgba *image.RGBA) ImgProcessor {
-	src := &rgba.Pix[0]
+	src := unsafe.Pointer(&rgba.Pix[0])
 	yuv.wg.Add(yuv.threads << 1)
+	chunk := yuv.w * yuv.chunk
 	for i := 0; i < yuv.threads; i++ {
-		pos, hh := C.int(yuv.w*i*yuv.chunk), C.int(yuv.chunk)
+		pos, hh := C.int(i*chunk), C.int(yuv.chunk)
 		if i == yuv.threads-1 {
 			hh = C.int(yuv.h - i*yuv.chunk)
 		}
-		go yuv.luma_(src, pos, hh)
-		go yuv.chroma_(src, pos, hh)
+		go func() {
+			C.chroma(yuv.dst, src, pos, yuv.chromaU, yuv.chromaV, yuv.ww, hh, yuv.chroma)
+			yuv.wg.Done()
+		}()
+		go func() {
+			C.luma(yuv.dst, src, pos, yuv.ww, hh)
+			yuv.wg.Done()
+		}()
 	}
 	yuv.wg.Wait()
 	return yuv
-}
-
-func (yuv *threadedProcessor) luma_(src *uint8, pos C.int, hh C.int) {
-	C.luma(yuv.dst, unsafe.Pointer(src), pos, yuv.ww, hh)
-	yuv.wg.Done()
-}
-
-func (yuv *threadedProcessor) chroma_(src *uint8, pos C.int, hh C.int) {
-	C.chroma(yuv.dst, unsafe.Pointer(src), pos, yuv.chromaU, yuv.chromaV, yuv.ww, hh, yuv.chroma)
-	yuv.wg.Done()
 }

@@ -158,17 +158,9 @@ func randomColor() color.RGBA {
 	}
 }
 
-func BenchmarkTopLeft(b *testing.B) {
-	benchmarkConverter(1920, 1080, 0, true, 0, b)
-}
-
-func BenchmarkBetweenFour(b *testing.B) {
-	benchmarkConverter(1920, 1080, 1, true, 8, b)
-}
-
-func BenchmarkBetweenFourNonThreaded(b *testing.B) {
-	benchmarkConverter(1920, 1080, 1, false, 0, b)
-}
+func BenchmarkTopLeft(b *testing.B)                { benchmarkConverter(1920, 1080, 0, true, 0, b) }
+func BenchmarkBetweenFour(b *testing.B)            { benchmarkConverter(1920, 1080, 1, true, 8, b) }
+func BenchmarkBetweenFourNonThreaded(b *testing.B) { benchmarkConverter(1920, 1080, 1, false, 0, b) }
 
 func benchmarkConverter(w, h int, chroma ChromaPos, threaded bool, threads int, b *testing.B) {
 	b.StopTimer()
@@ -188,6 +180,7 @@ func benchmarkConverter(w, h int, chroma ChromaPos, threaded bool, threads int, 
 		b.StopTimer()
 		b.SetBytes(int64(len(im.Pix)))
 	}
+	b.ReportAllocs()
 }
 
 func genTestImage(w, h int, seed float32) *image.RGBA {
