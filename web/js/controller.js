@@ -269,8 +269,7 @@
     };
 
     // noop function for the state
-    const _nil = () => {
-    }
+    const _nil = () => ({/*_*/})
 
     const onAxisChanged = (data) => {
         // maybe move it somewhere
@@ -307,21 +306,25 @@
         console.log("recording is ", recording.isActive())
     }
 
+    const _default = {
+        name: 'default',
+        axisChanged: _nil,
+        keyPress: _nil,
+        keyRelease: _nil,
+        menuReady: _nil,
+    }
     const app = {
         state: {
             eden: {
+                ..._default,
                 name: 'eden',
-                axisChanged: _nil,
-                keyPress: _nil,
-                keyRelease: _nil,
                 menuReady: showMenuScreen
             },
 
             settings: {
+                ..._default,
                 _uber: true,
                 name: 'settings',
-                axisChanged: _nil,
-                keyPress: _nil,
                 keyRelease: key => {
                     if (key === KEY.SETTINGS) {
                         const isSettingsOpened = settings.ui.toggle();
@@ -332,6 +335,7 @@
             },
 
             menu: {
+                ..._default,
                 name: 'menu',
                 axisChanged: (id, value) => {
                     if (id === 1) { // Left Stick, Y Axis
@@ -396,17 +400,13 @@
                             break;
                     }
                 },
-                menuReady: _nil
             },
 
             game: {
+                ..._default,
                 name: 'game',
-                axisChanged: (id, value) => {
-                    input.setAxisChanged(id, value);
-                },
-                keyPress: key => {
-                    input.setKeyState(key, true);
-                },
+                axisChanged: (id, value) => input.setAxisChanged(id, value),
+                keyPress: key => input.setKeyState(key, true),
                 keyRelease: function (key) {
                     input.setKeyState(key, false);
 
@@ -466,7 +466,6 @@
                             break;
                     }
                 },
-                menuReady: _nil
             }
         }
     };
