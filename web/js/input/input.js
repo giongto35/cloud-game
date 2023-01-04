@@ -40,12 +40,34 @@ const input = (() => {
         }
     };
 
-    const controllerEncoded = new Array(5).fill(0);
+    const controllerEncoded = [0, 0, 0, 0, 0];
     const keys = Object.keys(controllerState);
+
+    const compare = (a, b) => {
+        if (a.length !== b.length) return false;
+        for (let i = 0; i < a.length; i++) {
+            if (a[i] !== b[i]) {
+                return false;
+            }
+        }
+        return true;
+    };
+
+
+    // let lastState = controllerEncoded;
 
     const sendControllerState = () => {
         if (controllerChangedIndex >= 0) {
-            event.pub(CONTROLLER_UPDATED, _encodeState());
+            const state = _getState();
+
+            // log.debug(state)
+
+            // if (compare(lastState, state)) {
+            //     log.debug('!skip')
+            // } else {
+                event.pub(CONTROLLER_UPDATED, _encodeState(state));
+            // }
+            // lastState = state;
             controllerChangedIndex = -1;
         }
     };
@@ -74,10 +96,14 @@ const input = (() => {
      *
      * @private
      */
-    const _encodeState = () => {
+    const _encodeState = (state) => new Uint16Array(state)
+
+    const _getState = () => {
         controllerEncoded[0] = 0;
-        for (let i = 0, len = keys.length; i < len; i++) controllerEncoded[0] += controllerState[keys[i]] ? 1 << i : 0;
-        return new Uint16Array(controllerEncoded.slice(0, controllerChangedIndex + 1));
+        for (let i = 0, len = keys.length; i < len; i++) {
+            controllerEncoded[0] += controllerState[keys[i]] ? 1 << i : 0;
+        }
+        return controllerEncoded.slice(0, controllerChangedIndex + 1);
     }
 
     return {
