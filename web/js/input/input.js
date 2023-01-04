@@ -1,6 +1,5 @@
 const input = (() => {
-    let pollIntervalMs = 4;
-    let pollIntervalId = 0;
+    const pollingIntervalMs = 4;
     let controllerChangedIndex = -1;
 
     // Libretro config
@@ -24,28 +23,25 @@ const input = (() => {
         [KEY.R3]: false
     };
 
-    const controllerEncoded = new Array(5).fill(0);
-
-    const keys = Object.keys(controllerState);
-
-    const poll = () => {
+    const poll = (intervalMs, callback) => {
+        let _ticker = 0;
         return {
-            setPollInterval: (ms) => pollIntervalMs = ms,
             enable: () => {
-                if (pollIntervalId > 0) return;
-
-                log.info(`[input] poll set to ${pollIntervalMs}ms`);
-                pollIntervalId = setInterval(sendControllerState, pollIntervalMs)
+                if (_ticker > 0) return;
+                log.debug(`[input] poll set to ${intervalMs}ms`);
+                _ticker = setInterval(callback, intervalMs)
             },
             disable: () => {
-                if (pollIntervalId < 1) return;
-
-                log.info('[input] poll has been disabled');
-                clearInterval(pollIntervalId);
-                pollIntervalId = 0;
+                if (_ticker < 1) return;
+                log.debug('[input] poll has been disabled');
+                clearInterval(_ticker);
+                _ticker = 0;
             }
         }
     };
+
+    const controllerEncoded = new Array(5).fill(0);
+    const keys = Object.keys(controllerState);
 
     const sendControllerState = () => {
         if (controllerChangedIndex >= 0) {
@@ -85,8 +81,8 @@ const input = (() => {
     }
 
     return {
-        poll,
+        poll: poll(pollingIntervalMs, sendControllerState),
         setKeyState,
         setAxisChanged,
     }
-})(event, KEY);
+})(event, KEY, log);

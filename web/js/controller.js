@@ -169,13 +169,13 @@
         );
 
         // clear menu screen
-        input.poll().disable();
+        input.poll.disable();
         gui.hide(menuScreen);
         stream.toggle(true);
         gui.show(keyButtons[KEY.SAVE]);
         gui.show(keyButtons[KEY.LOAD]);
         // end clear
-        input.poll().enable();
+        input.poll.enable();
     };
 
     const saveGame = utils.debounce(() => api.game.save(), 1000);
@@ -448,7 +448,7 @@
 
                         // quit
                         case KEY.QUIT:
-                            input.poll().disable();
+                            input.poll.disable();
 
                             api.game.quit(room.getId());
                             room.reset();
@@ -499,7 +499,7 @@
     // event.sub(MEDIA_STREAM_READY, () => rtcp.start());
     event.sub(WEBRTC_CONNECTION_READY, onConnectionReady);
     event.sub(WEBRTC_CONNECTION_CLOSED, () => {
-        input.poll().disable();
+        input.poll.disable();
         // if (pingPong > 0) {
         //     clearInterval(pingPong);
         //     pingPong = 0;
