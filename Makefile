@@ -2,7 +2,7 @@ PROJECT = cloud-game
 REPO_ROOT = github.com/giongto35
 ROOT = ${REPO_ROOT}/${PROJECT}
 
-CGO_CFLAGS='-g -Wall -O3 -funroll-loops'
+CGO_CFLAGS='-g -O3 -funroll-loops'
 CGO_LDFLAGS='-g -O3'
 
 fmt:
@@ -32,8 +32,8 @@ dev.build: compile build
 
 dev.build-local:
 	mkdir -p bin/
-	go build -x -o bin/ ./cmd/coordinator
-	CGO_CFLAGS=${CGO_CFLAGS} CGO_LDFLAGS=${CGO_LDFLAGS} go build -x -o bin/ ./cmd/worker
+	go build -o bin/ ./cmd/coordinator
+	CGO_CFLAGS=${CGO_CFLAGS} CGO_LDFLAGS=${CGO_LDFLAGS} go build -o bin/ ./cmd/worker
 
 dev.run: dev.build-local
 	./bin/coordinator &	./bin/worker
