@@ -6,19 +6,19 @@
 
 #ifdef Y601_STUDIO
 // 66*R+129*G+25*B
-static __inline uint8_t Y(uint8_t *rgb) {
+static __inline int Y(uint8_t *rgb) {
     int R = *rgb;
     int G = *(rgb+1);
     int B = *(rgb+2);
-    return (25*B+(R<<1)+(R<<6)+G+(G<<7)+128) >> 8;
+    return (66*R+129*G+25*B+128)>>8;
 }
 
 // 112*B-38*R-74G
 static __inline int U(uint8_t *rgb) {
-    int R = -38**rgb;
-    int G = -74**(rgb+1);
-    int B = 112**(rgb+2);
-    return (R+G+B+128) >> 8;
+    int R = *rgb;
+    int G = *(rgb+1);
+    int B = *(rgb+2);
+    return (-38*R-74*G+112*B+128) >> 8;
 }
 
 // 112*R-94*G-18*B
@@ -36,7 +36,7 @@ static const int Y_MIN = 16;
 // BT.601 FULL
 
 // 77*R+150*G+29*B
-static __inline uint8_t Y(uint8_t *rgb) {
+static __inline int Y(uint8_t *rgb) {
     int R =  77**(rgb);
     int G = 150**(rgb+1);
     int B =  29**(rgb+2);

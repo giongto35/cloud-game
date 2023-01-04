@@ -4,8 +4,6 @@ package gl
 // Based on https://github.com/go-gl/gl/tree/master/v2.1/gl
 
 /*
-#cgo CFLAGS: -Wall -O3
-
 #cgo egl,windows LDFLAGS: -lEGL
 #cgo egl,darwin  LDFLAGS: -lEGL
 #cgo !gles2,darwin        LDFLAGS: -framework OpenGL

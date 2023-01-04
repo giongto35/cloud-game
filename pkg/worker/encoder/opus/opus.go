@@ -2,7 +2,6 @@ package opus
 
 /*
 #cgo pkg-config: opus
-#cgo CFLAGS: -Wall -O3
 
 #include <opus.h>
 

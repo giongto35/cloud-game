@@ -19,8 +19,6 @@ import (
 )
 
 /*
-#cgo CFLAGS: -Wall -O3
-
 #include "libretro.h"
 #include "nanoarch.h"
 #include <stdlib.h>

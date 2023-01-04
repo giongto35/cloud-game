@@ -6,11 +6,7 @@ import (
 	"unsafe"
 )
 
-/*
-#cgo CFLAGS: -Wall -O3
-#cgo LDFLAGS: -O3
-#include "yuv.h"
-*/
+// #include "yuv.h"
 import "C"
 
 type ImgProcessor interface {

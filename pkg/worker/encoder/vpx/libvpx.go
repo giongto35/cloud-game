@@ -2,7 +2,6 @@ package vpx
 
 /*
 #cgo pkg-config: vpx
-#cgo CFLAGS: -Wall -O3
 
 #include "vpx/vpx_encoder.h"
 #include "vpx/vpx_image.h"

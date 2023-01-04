@@ -2,6 +2,9 @@ PROJECT = cloud-game
 REPO_ROOT = github.com/giongto35
 ROOT = ${REPO_ROOT}/${PROJECT}
 
+CGO_CFLAGS='-g -Wall -O3 -funroll-loops'
+CGO_LDFLAGS='-g -O3'
+
 fmt:
 	@goimports -w cmd pkg tests
 	@gofmt -s -w cmd pkg tests
@@ -17,7 +20,10 @@ clean:
 build:
 	mkdir -p bin/
 	go build -ldflags "-w -s -X 'main.Version=$(GIT_VERSION)'" -o bin/ ./cmd/coordinator
-	go build -buildmode=exe -tags static -ldflags "-w -s -X 'main.Version=$(GIT_VERSION)'" $(EXT_WFLAGS) -o bin/ ./cmd/worker
+	CGO_CFLAGS=${CGO_CFLAGS} CGO_LDFLAGS=${CGO_LDFLAGS} \
+		go build -buildmode=exe -tags static \
+		-ldflags "-w -s -X 'main.Version=$(GIT_VERSION)'" $(EXT_WFLAGS) \
+		-o bin/ ./cmd/worker
 
 verify-cores:
 	go test -run TestAllEmulatorRooms ./pkg/worker -v -renderFrames $(GL_CTX) -outputPath "../../_rendered"
@@ -26,15 +32,16 @@ dev.build: compile build
 
 dev.build-local:
 	mkdir -p bin/
-	go build -o bin/ ./cmd/coordinator
-	go build -o bin/ ./cmd/worker
+	go build -x -o bin/ ./cmd/coordinator
+	CGO_CFLAGS=${CGO_CFLAGS} CGO_LDFLAGS=${CGO_LDFLAGS} go build -x -o bin/ ./cmd/worker
 
 dev.run: dev.build-local
 	./bin/coordinator &	./bin/worker
 
 dev.run.debug:
 	go build -race -o bin/ ./cmd/coordinator
-	go build -race -gcflags=all=-d=checkptr -o bin/ ./cmd/worker
+	CGO_CFLAGS=${CGO_CFLAGS} CGO_LDFLAGS=${CGO_LDFLAGS} \
+		go build -race -gcflags=all=-d=checkptr -o bin/ ./cmd/worker
 	./bin/coordinator &	./bin/worker
 
 dev.run-docker:

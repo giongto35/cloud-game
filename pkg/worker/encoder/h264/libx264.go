@@ -3,7 +3,6 @@ package h264
 
 /*
 #cgo pkg-config: x264
-#cgo CFLAGS: -Wall -O3
 
 #include "stdint.h"
 #include "x264.h"
