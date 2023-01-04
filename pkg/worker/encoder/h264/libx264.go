@@ -16,39 +16,11 @@ const Build = C.X264_BUILD
 // T is opaque handler for encoder
 type T struct{}
 
-/****************************************************************************
- * NAL structure and functions
- ****************************************************************************/
-
-/* enum nal_unit_type_e */
-const (
-	NalUnknown  = 0
-	NalSlice    = 1
-	NalSliceDpa = 2
-	NalSliceDpb = 3
-	NalSliceDpc = 4
-	NalSliceIdr = 5 /* ref_idc != 0 */
-	NalSei      = 6 /* ref_idc == 0 */
-	NalSps      = 7
-	NalPps      = 8
-	NalAud      = 9
-	NalFiller   = 12
-	/* ref_idc == 0 for 6,9,10,11,12 */
-)
-
-/* enum nal_priority_e */
-const (
-	NalPriorityDisposable = 0
-	NalPriorityLow        = 1
-	NalPriorityHigh       = 2
-	NalPriorityHighest    = 3
-)
-
-/* The data within the payload is already NAL-encapsulated; the ref_idc and type
- * are merely in the struct for easy access by the calling application.
- * All data returned in an x264_nal_t, including the data in p_payload, is no longer
- * valid after the next call to x264_encoder_encode.  Thus it must be used or copied
- * before calling x264_encoder_encode or x264_encoder_headers again. */
+// Nal is The data within the payload is already NAL-encapsulated; the ref_idc and type
+// are merely in the struct for easy access by the calling application.
+// All data returned in x264_nal_t, including the data in p_payload, is no longer
+// valid after the next call to x264_encoder_encode. Thus, it must be used or copied
+// before calling x264_encoder_encode or x264_encoder_headers again.
 type Nal struct {
 	IRefIdc        int32 /* nal_priority_e */
 	IType          int32 /* nal_unit_type_e */
@@ -68,175 +40,34 @@ type Nal struct {
 	IPadding int32
 }
 
-/****************************************************************************
- * Encoder parameters
- ****************************************************************************/
-/* CPU flags */
+const RcCrf = 1
 
 const (
-	/* x86 */
-	CpuMmx    uint32 = 1 << 0
-	CpuMmx2   uint32 = 1 << 1 /* MMX2 aka MMXEXT aka ISSE */
-	CpuMmxext        = CpuMmx2
-	CpuSse    uint32 = 1 << 2
-	CpuSse2   uint32 = 1 << 3
-	CpuLzcnt  uint32 = 1 << 4
-	CpuSse3   uint32 = 1 << 5
-	CpuSsse3  uint32 = 1 << 6
-	CpuSse4   uint32 = 1 << 7  /* SSE4.1 */
-	CpuSse42  uint32 = 1 << 8  /* SSE4.2 */
-	CpuAvx    uint32 = 1 << 9  /* Requires OS support even if YMM registers aren't used */
-	CpuXop    uint32 = 1 << 10 /* AMD XOP */
-	CpuFma4   uint32 = 1 << 11 /* AMD FMA4 */
-	CpuFma3   uint32 = 1 << 12
-	CpuBmi1   uint32 = 1 << 13
-	CpuBmi2   uint32 = 1 << 14
-	CpuAvx2   uint32 = 1 << 15
-	CpuAvx512 uint32 = 1 << 16 /* AVX-512 {F, CD, BW, DQ, VL}, requires OS support */
-	/* x86 modifiers */
-	CpuCacheline32 uint32 = 1 << 17 /* avoid memory loads that span the border between two cachelines */
-	CpuCacheline64 uint32 = 1 << 18 /* 32/64 is the size of a cacheline in bytes */
-	CpuSse2IsSlow  uint32 = 1 << 19 /* avoid most SSE2 functions on Athlon64 */
-	CpuSse2IsFast  uint32 = 1 << 20 /* a few functions are only faster on Core2 and Phenom */
-	CpuSlowShuffle uint32 = 1 << 21 /* The Conroe has a slow shuffle unit (relative to overall SSE performance) */
-	CpuStackMod4   uint32 = 1 << 22 /* if stack is only mod4 and not mod16 */
-	CpuSlowAtom    uint32 = 1 << 23 /* The Atom is terrible: slow SSE unaligned loads, slow
-	 * SIMD multiplies, slow SIMD variable shifts, slow pshufb,
-	 * cacheline split penalties -- gather everything here that
-	 * isn't shared by other CPUs to avoid making half a dozen
-	 * new SLOW flags. */
-	CpuSlowPshufb  uint32 = 1 << 24 /* such as on the Intel Atom */
-	CpuSlowPalignr uint32 = 1 << 25 /* such as on the AMD Bobcat */
+	CspI420 = 0x0002 // yuv 4:2:0 planar
 
-	/* PowerPC */
-	CpuAltivec uint32 = 0x0000001
+	// CspMask      = 0x00ff /* */
+	// CspNone      = 0x0000 /* Invalid mode     */
+	// CspI400      = 0x0001 /* monochrome 4:0:0 */
 
-	/* ARM and AArch64 */
-	CpuArmv6       uint32 = 0x0000001
-	CpuNeon        uint32 = 0x0000002 /* ARM NEON */
-	CpuFastNeonMrc uint32 = 0x0000004 /* Transfer from NEON to ARM register is fast (Cortex-A9) */
-	CpuArmv8       uint32 = 0x0000008
-
-	/* MIPS */
-	CpuMsa uint32 = 0x0000001 /* MIPS MSA */
-
-	/* Analyse flags */
-	AnalyseI4x4      uint32 = 0x0001 /* Analyse i4x4 */
-	AnalyseI8x8      uint32 = 0x0002 /* Analyse i8x8 (requires 8x8 transform) */
-	AnalysePsub16x16 uint32 = 0x0010 /* Analyse p16x8, p8x16 and p8x8 */
-	AnalysePsub8x8   uint32 = 0x0020 /* Analyse p8x4, p4x8, p4x4 */
-	AnalyseBsub16x16 uint32 = 0x0100 /* Analyse b16x8, b8x16 and b8x8 */
-
-	DirectPredNone       = 0
-	DirectPredSpatial    = 1
-	DirectPredTemporal   = 2
-	DirectPredAuto       = 3
-	MeDia                = 0
-	MeHex                = 1
-	MeUmh                = 2
-	MeEsa                = 3
-	MeTesa               = 4
-	CqmFlat              = 0
-	CqmJvt               = 1
-	CqmCustom            = 2
-	RcCqp                = 0
-	RcCrf                = 1
-	RcAbr                = 2
-	QpAuto               = 0
-	AqNone               = 0
-	AqVariance           = 1
-	AqAutovariance       = 2
-	AqAutovarianceBiased = 3
-	BAdaptNone           = 0
-	BAdaptFast           = 1
-	BAdaptTrellis        = 2
-	WeightpNone          = 0
-	WeightpSimple        = 1
-	WeightpSmart         = 2
-	BPyramidNone         = 0
-	BPyramidStrict       = 1
-	BPyramidNormal       = 2
-	KeyintMinAuto        = 0
-	KeyintMaxInfinite    = 1 << 30
-
-	/* AVC-Intra flavors */
-	AvcintraFlavorPanasonic = 0
-	AvcintraFlavorSony      = 1
-
-	/* !to add missing names */
-	/* static const char * const x264_direct_pred_names[] = { "none", "spatial", "temporal", "auto", 0 }; */
-	/* static const char * const x264_motion_est_names[] = { "dia", "hex", "umh", "esa", "tesa", 0 }; */
-	/* static const char * const x264_b_pyramid_names[] = { "none", "strict", "normal", 0 }; */
-	/* static const char * const x264_overscan_names[] = { "undef", "show", "crop", 0 }; */
-	/* static const char * const x264_vidformat_names[] = { "component", "pal", "ntsc", "secam", "mac", "undef", 0 }; */
-	/* static const char * const x264_fullrange_names[] = { "off", "on", 0 }; */
-	/* static const char * const x264_colorprim_names[] = { "", "bt709", "undef", "", "bt470m", "bt470bg", "smpte170m", "smpte240m", "film", "bt2020", "smpte428", "smpte431", "smpte432", 0 }; */
-	/* static const char * const x264_transfer_names[] = { "", "bt709", "undef", "", "bt470m", "bt470bg", "smpte170m", "smpte240m", "linear", "log100", "log316", "iec61966-2-4", "bt1361e", "iec61966-2-1", "bt2020-10", "bt2020-12", "smpte2084", "smpte428", "arib-std-b67", 0 }; */
-	/* static const char * const x264_colmatrix_names[] = { "GBR", "bt709", "undef", "", "fcc", "bt470bg", "smpte170m", "smpte240m", "YCgCo", "bt2020nc", "bt2020c", "smpte2085", "chroma-derived-nc", "chroma-derived-c", "ICtCp", 0 }; */
-	/* static const char * const x264_nal_hrd_names[] = { "none", "vbr", "cbr", 0 }; */
-	/* static const char * const x264_avcintra_flavor_names[] = { "panasonic", "sony", 0 }; */
-
-	/* Colorspace type */
-	CspMask      = 0x00ff /* */
-	CspNone      = 0x0000 /* Invalid mode     */
-	CspI400      = 0x0001 /* monochrome 4:0:0 */
-	CspI420      = 0x0002 /* yuv 4:2:0 planar */
-	CspYv12      = 0x0003 /* yvu 4:2:0 planar */
-	CspNv12      = 0x0004 /* yuv 4:2:0, with one y plane and one packed u+v */
-	CspNv21      = 0x0005 /* yuv 4:2:0, with one y plane and one packed v+u */
-	CspI422      = 0x0006 /* yuv 4:2:2 planar */
-	CspYv16      = 0x0007 /* yvu 4:2:2 planar */
-	CspNv16      = 0x0008 /* yuv 4:2:2, with one y plane and one packed u+v */
-	CspYuyv      = 0x0009 /* yuyv 4:2:2 packed */
-	CspUyvy      = 0x000a /* uyvy 4:2:2 packed */
-	CspV210      = 0x000b /* 10-bit yuv 4:2:2 packed in 32 */
-	CspI444      = 0x000c /* yuv 4:4:4 planar */
-	CspYv24      = 0x000d /* yvu 4:4:4 planar */
-	CspBgr       = 0x000e /* packed bgr 24bits */
-	CspBgra      = 0x000f /* packed bgr 32bits */
-	CspRgb       = 0x0010 /* packed rgb 24bits */
-	CspMax       = 0x0011 /* end of list */
-	CspVflip     = 0x1000 /* the csp is vertically flipped */
-	CspHighDepth = 0x2000 /* the csp has a depth of 16 bits per pixel component */
-
-	/* Slice type */
-	TypeAuto     = 0x0000 /* Let x264 choose the right type */
-	TypeIdr      = 0x0001
-	TypeI        = 0x0002
-	TypeP        = 0x0003
-	TypeBref     = 0x0004 /* Non-disposable B-frame */
-	TypeB        = 0x0005
-	TypeKeyframe = 0x0006 /* IDR or I depending on b_open_gop option */
-	/* !to reimplement macro */
-	/* #define IS_X264_TYPE_I(x) ((x)==X264_TYPE_I || (x)==X264_TYPE_IDR || (x)==X264_TYPE_KEYFRAME) */
-	/* #define IS_X264_TYPE_B(x) ((x)==X264_TYPE_B || (x)==X264_TYPE_BREF) */
-
-	/* Log level */
-	LogNone    = -1
-	LogError   = 0
-	LogWarning = 1
-	LogInfo    = 2
-	LogDebug   = 3
-
-	/* Threading */
-	ThreadsAuto       = 0  /* Automatically select optimal number of threads */
-	SyncLookaheadAuto = -1 /* Automatically select optimal lookahead thread buffer size */
-
-	/* HRD */
-	NalHrdNone = 0
-	NalHrdVbr  = 1
-	NalHrdCbr  = 2
+	//CspYv12      = 0x0003 /* yvu 4:2:0 planar */
+	//CspNv12      = 0x0004 /* yuv 4:2:0, with one y plane and one packed u+v */
+	//CspNv21      = 0x0005 /* yuv 4:2:0, with one y plane and one packed v+u */
+	//CspI422      = 0x0006 /* yuv 4:2:2 planar */
+	//CspYv16      = 0x0007 /* yvu 4:2:2 planar */
+	//CspNv16      = 0x0008 /* yuv 4:2:2, with one y plane and one packed u+v */
+	//CspYuyv      = 0x0009 /* yuyv 4:2:2 packed */
+	//CspUyvy      = 0x000a /* uyvy 4:2:2 packed */
+	//CspV210      = 0x000b /* 10-bit yuv 4:2:2 packed in 32 */
+	//CspI444      = 0x000c /* yuv 4:4:4 planar */
+	//CspYv24      = 0x000d /* yvu 4:4:4 planar */
+	//CspBgr       = 0x000e /* packed bgr 24bits */
+	//CspBgra      = 0x000f /* packed bgr 32bits */
+	//CspRgb       = 0x0010 /* packed rgb 24bits */
+	//CspMax       = 0x0011 /* end of list */
+	//CspVflip     = 0x1000 /* the csp is vertically flipped */
+	//CspHighDepth = 0x2000 /* the csp has a depth of 16 bits per pixel component */
 )
 
-const (
-	/* The macroblock is constant and remains unchanged from the previous frame. */
-	MbinfoConstant = 1 << 0
-	/* More flags may be added in the future. */
-)
-
-/* Zones: override ratecontrol or other options for specific sections of the video.
- * See x264_encoder_reconfig() for which options can be changed.
- * If zones overlap, whichever comes later in the list takes precedence. */
 type Zone struct {
 	IStart, IEnd   int32 /* range of frame numbers */
 	BForceQp       int32 /* whether to use qp vs bitrate factor */
@@ -508,18 +339,6 @@ type Level struct {
 
 type PicStruct int32
 
-const (
-	PicStructAuto        = iota // automatically decide (default)
-	PicStructProgressive = 1    // progressive frame
-	// "TOP" and "BOTTOM" are not supported in x264 (PAFF only)
-	PicStructTopBottom       = 4 // top field followed by bottom
-	PicStructBottomTop       = 5 // bottom field followed by top
-	PicStructTopBottomTop    = 6 // top field, bottom field, top field repeated
-	PicStructBottomTopBottom = 7 // bottom field, top field, bottom field repeated
-	PicStructDouble          = 8 // double frame
-	PicStructTriple          = 9 // triple frame
-)
-
 type Hrd struct {
 	CpbInitialArrivalTime float64
 	CpbFinalArrivalTime   float64
@@ -528,14 +347,6 @@ type Hrd struct {
 	DpbOutputTime float64
 }
 
-/* Arbitrary user SEI:
- * Payload size is in bytes and the payload pointer must be valid.
- * Payload types and syntax can be found in Annex D of the H.264 Specification.
- * SEI payload alignment bits as described in Annex D must be included at the
- * end of the payload if needed.
- * The payload should not be NAL-encapsulated.
- * Payloads are written first in order of input, apart from in the case when HRD
- * is enabled where payloads are written after the Buffering Period SEI. */
 type SeiPayload struct {
 	PayloadSize int32
 	PayloadType int32
@@ -556,12 +367,6 @@ type Image struct {
 	Plane   [4]unsafe.Pointer /* Pointers to each plane */
 }
 
-/* All arrays of data here are ordered as follows:
- * each array contains one offset per macroblock, in raster scan order.  In interlaced
- * mode, top-field MBs and bottom-field MBs are interleaved at the row level.
- * Macroblocks are 16x16 blocks of pixels (with respect to the luma plane).  For the
- * purposes of calculating the number of macroblocks, width and height are rounded up to
- * the nearest 16.  If in interlaced mode, height is rounded up to the nearest 32 instead. */
 type ImageProperties struct {
 	/* In: an array of quantizer offsets to be applied to this image during encoding.
 	 *     These are added on top of the decisions made by x264.
@@ -725,4 +530,4 @@ func EncoderClose(enc *T) { C.x264_encoder_close(enc.cptr()) }
 // Requires that BIntraRefresh be set.
 //
 // Should not be called during an x264_encoder_encode.
-func EncoderIntraRefresh(enc *T) { C.x264_encoder_intra_refresh(enc.cptr()) }
+//func EncoderIntraRefresh(enc *T) { C.x264_encoder_intra_refresh(enc.cptr()) }
