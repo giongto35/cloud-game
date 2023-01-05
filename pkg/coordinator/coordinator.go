@@ -2,6 +2,7 @@ package coordinator
 
 import (
 	"html/template"
+	"net/http"
 
 	"github.com/giongto35/cloud-game/v2/pkg/config/coordinator"
 	"github.com/giongto35/cloud-game/v2/pkg/config/shared"
@@ -46,12 +47,9 @@ func NewHTTPServer(conf coordinator.Config, log *logger.Logger, fnMux func(*http
 }
 
 func index(conf coordinator.Config, log *logger.Logger) httpx.Handler {
-	tpl, err := template.ParseFiles("./web/index.html")
-	if err != nil {
-		log.Fatal().Err(err).Msg("error with the HTML index page")
-	}
-	return httpx.HandlerFunc(func(w httpx.ResponseWriter, r *httpx.Request) {
-		// return 404 on unknown
+	const indexHTML = "./web/index.html"
+
+	handler := func(tpl *template.Template, w httpx.ResponseWriter, r *httpx.Request) {
 		if r.URL.Path != "/" {
 			httpx.NotFound(w)
 			return
@@ -61,8 +59,25 @@ func index(conf coordinator.Config, log *logger.Logger) httpx.Handler {
 			Analytics coordinator.Analytics
 			Recording shared.Recording
 		}{conf.Coordinator.Analytics, conf.Recording}
-		if err = tpl.Execute(w, tplData); err != nil {
+		if err := tpl.Execute(w, tplData); err != nil {
 			log.Fatal().Err(err).Msg("error with the analytics template file")
 		}
+	}
+
+	if conf.Coordinator.Debug {
+		log.Info().Msgf("Using auto-reloading index.html")
+		return httpx.HandlerFunc(func(w httpx.ResponseWriter, r *httpx.Request) {
+			tpl, _ := template.ParseFiles(indexHTML)
+			handler(tpl, w, r)
+		})
+	}
+
+	indexTpl, err := template.ParseFiles(indexHTML)
+	if err != nil {
+		log.Fatal().Err(err).Msg("error with the HTML index page")
+	}
+
+	return httpx.HandlerFunc(func(writer http.ResponseWriter, request *http.Request) {
+		handler(indexTpl, writer, request)
 	})
 }
