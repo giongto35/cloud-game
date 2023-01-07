@@ -15,22 +15,21 @@ type Config struct {
 	Coordinator Coordinator
 	Emulator    emulator.Emulator
 	Recording   shared.Recording
-	Webrtc      webrtc.Webrtc
 	Version     shared.Version
+	Webrtc      webrtc.Webrtc
 }
 
 type Coordinator struct {
-	RoundRobin bool
+	Analytics  Analytics
 	Debug      bool
-	DebugHost  string
 	Library    games.Config
 	Monitoring monitoring.Config
 	Origin     struct {
 		UserWs   string
 		WorkerWs string
 	}
-	Server    shared.Server
-	Analytics Analytics
+	Selector string
+	Server   shared.Server
 }
 
 // Analytics is optional Google Analytics
@@ -38,6 +37,11 @@ type Analytics struct {
 	Inject bool
 	Gtag   string
 }
+
+const (
+	SelectAny    = "any"
+	SelectByPing = "ping"
+)
 
 // allows custom config path
 var configPath string

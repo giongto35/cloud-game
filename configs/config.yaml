@@ -10,8 +10,10 @@ coordinator:
   #   - shows debug logs
   #   - allows selecting worker instances
   debug: true
-  # get any free workers unconditionally on user connection
-  roundRobin: true
+  # selects free workers:
+  #   - any (default, any free)
+  #   - ping (with the lowest ping)
+  selector: any
   # games library
   library:
     # some directory which is gonna be the root folder for the library
