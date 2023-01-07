@@ -9,15 +9,14 @@ coordinator:
   # debugging switch
   #   - shows debug logs
   #   - allows selecting worker instances
-  debug: true
+  debug: false
   # selects free workers:
   #   - any (default, any free)
   #   - ping (with the lowest ping)
   selector: any
   # games library
   library:
-    # some directory which is gonna be the root folder for the library
-    # where games are stored
+    # root folder for the library (where games are stored)
     basePath: assets/games
     # an explicit list of supported file extensions
     # which overrides Libretro emulator ROMs configs
@@ -63,7 +62,7 @@ coordinator:
 
 worker:
   # show more logs
-  debug: true
+  debug: false
   network:
     # a coordinator address to connect to
     coordinatorAddress: localhost:8000
@@ -215,7 +214,7 @@ encoder:
     # h264, vpx (VP8)
     codec: h264
     # concurrent execution units (0 - disabled)
-    concurrency: 4
+    concurrency: 0
     # see: https://trac.ffmpeg.org/wiki/Encode/H.264
     h264:
       # Constant Rate Factor (CRF) 0-51 (default: 23)
