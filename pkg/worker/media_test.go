@@ -1,9 +1,12 @@
 package worker
 
 import (
+	"fmt"
 	"image"
 	"math/rand"
+	"reflect"
 	"testing"
+	"time"
 
 	"github.com/giongto35/cloud-game/v2/pkg/logger"
 	"github.com/giongto35/cloud-game/v2/pkg/worker/encoder"
@@ -79,4 +82,133 @@ func genTestImage(w, h int, seed float32) *image.RGBA {
 		}
 	}
 	return img
+}
+
+func TestResampleStretch(t *testing.T) {
+	type args struct {
+		pcm  []int16
+		size int
+	}
+	tests := []struct {
+		name string
+		args args
+		want []int16
+	}{
+		//1764:1920
+		{
+			name: "",
+			args: args{
+				pcm:  gen(1764),
+				size: 1920,
+			},
+			want: nil,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			rez2 := ResampleStretchNew(tt.args.pcm, tt.args.size)
+
+			if rez2[0] != tt.args.pcm[0] || rez2[1] != tt.args.pcm[1] ||
+				rez2[len(rez2)-1] != tt.args.pcm[len(tt.args.pcm)-1] ||
+				rez2[len(rez2)-2] != tt.args.pcm[len(tt.args.pcm)-2] {
+				t.Logf("%v\n%v", tt.args.pcm, rez2)
+				t.Errorf("2nd is wrong (2)")
+			}
+		})
+	}
+}
+
+func BenchmarkResampler(b *testing.B) {
+	tests := []struct {
+		name string
+		fn   func(pcm []int16, size int) []int16
+	}{
+		{name: "new", fn: ResampleStretchNew},
+	}
+	pcm := gen(1764)
+	size := 1920
+	for _, bn := range tests {
+		b.Run(fmt.Sprintf("%v", bn.name), func(b *testing.B) {
+			for i := 0; i < b.N; i++ {
+				bn.fn(pcm, size)
+			}
+		})
+	}
+}
+
+func gen(l int) []int16 {
+	rand.Seed(time.Now().Unix())
+
+	nums := make([]int16, l)
+	for i := range nums {
+		nums[i] = int16(rand.Intn(10))
+	}
+	//for i := len(nums) / 2; i < len(nums)/2+42; i++ {
+	//	nums[i] = 0
+	//}
+
+	return nums
+}
+
+type bufWrite struct {
+	sample int16
+	len    int
+}
+
+func TestBufferWrite(t *testing.T) {
+	tests := []struct {
+		bufLen int
+		writes []bufWrite
+		expect Samples
+	}{
+		{
+			bufLen: 20,
+			writes: []bufWrite{
+				{sample: 1, len: 10},
+				{sample: 2, len: 20},
+				{sample: 3, len: 30},
+			},
+			expect: Samples{3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3},
+		},
+		{
+			bufLen: 11,
+			writes: []bufWrite{
+				{sample: 1, len: 3},
+				{sample: 2, len: 18},
+				{sample: 3, len: 2},
+			},
+			expect: Samples{3, 2, 2, 2, 2, 2, 2, 2, 2, 2, 3},
+		},
+	}
+
+	for _, test := range tests {
+		var lastResult Samples
+		buf := NewBuffer(test.bufLen)
+		for _, w := range test.writes {
+			buf.Write(samplesOf(w.sample, w.len), func(s Samples) { lastResult = s })
+		}
+		if !reflect.DeepEqual(test.expect, lastResult) {
+			t.Errorf("not expted buffer, %v != %v", lastResult, test.expect)
+		}
+	}
+}
+
+func BenchmarkBufferWrite(b *testing.B) {
+	fn := func(_ Samples) {}
+	l := 1920
+	buf := NewBuffer(l)
+	samples1 := samplesOf(1, l/2)
+	samples2 := samplesOf(2, l*2)
+	for i := 0; i < b.N; i++ {
+		buf.Write(samples1, fn)
+		buf.Write(samples2, fn)
+	}
+}
+
+func samplesOf(v int16, len int) (s Samples) {
+	s = make(Samples, len)
+	for i := range s {
+		s[i] = v
+	}
+	return
 }

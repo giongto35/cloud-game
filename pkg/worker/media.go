@@ -10,7 +10,6 @@ import (
 	"github.com/giongto35/cloud-game/v2/pkg/worker/encoder/h264"
 	"github.com/giongto35/cloud-game/v2/pkg/worker/encoder/opus"
 	"github.com/giongto35/cloud-game/v2/pkg/worker/encoder/vpx"
-	"github.com/giongto35/cloud-game/v2/pkg/worker/media"
 	webrtc "github.com/pion/webrtc/v3/pkg/media"
 )
 
@@ -18,6 +17,7 @@ var (
 	encoderOnce = sync.Once{}
 	opusCoder   *opus.Encoder
 	samplePool  sync.Pool
+	audioPool   = sync.Pool{New: func() any { b := make([]int16, 3000); return &b }}
 )
 
 const (
@@ -26,11 +26,50 @@ const (
 	audioFrequency = 48000
 )
 
+// Buffer is a simple non-thread safe ring buffer for audio samples.
+// It should be used for 16bit PCM (LE interleaved) data.
+type (
+	Buffer struct {
+		s  Samples
+		wi int
+	}
+	OnFull  func(s Samples)
+	Samples []int16
+)
+
+func NewBuffer(numSamples int) Buffer { return Buffer{s: make(Samples, numSamples)} }
+
+// Write fills the buffer with data calling a callback function when
+// the internal buffer fills out.
+//
+// Consider two cases:
+//
+// 1. Underflow, when the length of written data is less than the buffer's available space.
+// 2. Overflow, when the length exceeds the current available buffer space.
+// In the both cases we overwrite any previous values in the buffer and move the internal
+// write pointer on the length of written data.
+// In the first case we won't call the callback, but it will be called every time
+// when the internal buffer overflows until all samples are read.
+func (b *Buffer) Write(s Samples, onFull OnFull) (r int) {
+	for r < len(s) {
+		w := copy(b.s[b.wi:], s[r:])
+		r += w
+		b.wi += w
+		if b.wi == len(b.s) {
+			b.wi = 0
+			if onFull != nil {
+				onFull(b.s)
+			}
+		}
+	}
+	return
+}
+
 // GetFrameSizeFor calculates audio frame size, i.e. 48k*frame/1000*2
 func GetFrameSizeFor(hz int, frame int) int { return hz * frame / 1000 * audioChannels }
 
 func (r *Room) initAudio(frequency int, conf conf.Audio) {
-	buf := media.NewBuffer(GetFrameSizeFor(frequency, conf.Frame))
+	buf := NewBuffer(GetFrameSizeFor(frequency, conf.Frame))
 	resample, frameLen := frequency != audioFrequency, 0
 	if resample {
 		frameLen = GetFrameSizeFor(audioFrequency, conf.Frame)
@@ -50,12 +89,12 @@ func (r *Room) initAudio(frequency int, conf conf.Audio) {
 
 	dur := time.Duration(conf.Frame) * time.Millisecond
 
-	fn := func(s media.Samples) {
+	fn := func(s Samples) {
 		if resample {
-			s = media.ResampleStretch(s, frameLen)
+			s = ResampleStretchNew(s, frameLen)
 		}
 		f, err := opusCoder.Encode(s)
-		media.BufOutAudioPool.Put((*[]int16)(&s))
+		audioPool.Put((*[]int16)(&s))
 		if err == nil {
 			r.handleSample(f, dur, func(u *Session, s *webrtc.Sample) { _ = u.SendAudio(s) })
 		}
@@ -112,4 +151,20 @@ func (r *Room) handleSample(b []byte, d time.Duration, fn func(*Session, *webrtc
 		}
 	})
 	samplePool.Put(sample)
+}
+
+// ResampleStretchNew does a simple stretching of audio samples.
+// something like: [1,2,3,4,5,6] -> [1,2,x,x,3,4,x,x,5,6,x,x] -> [1,2,1,2,3,4,3,4,5,6,5,6]
+func ResampleStretchNew(pcm []int16, size int) []int16 {
+	out := (*audioPool.Get().(*[]int16))[:size]
+	n := len(pcm)
+	ratio := float32(size) / float32(n)
+	for i, l, r := 0, 0, 0; i < n; i += 2 {
+		l, r = r, int(float32((i+2)>>1)*ratio)<<1
+		for j := l; j < r-1; j += 2 {
+			out[j] = pcm[i]
+			out[j+1] = pcm[i+1]
+		}
+	}
+	return out
 }

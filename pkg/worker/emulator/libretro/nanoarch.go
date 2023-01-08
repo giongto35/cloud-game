@@ -200,14 +200,14 @@ func audioWrite(buf unsafe.Pointer, frames C.size_t) C.size_t {
 	copy(xx, src)
 
 	// 1600 = x / 1000 * 48000 * 2
-	//estimate := float64(samples) / float64(int(nano.sysAvInfo.timing.sample_rate)<<1) * 1000000000
+	estimate := float64(samples) / float64(int(nano.sysAvInfo.timing.sample_rate)<<1) * 1000000000
 
 	fr, _ := audioPool.Get().(*emulator.GameAudio)
 	if fr == nil {
 		fr = &emulator.GameAudio{}
 	}
 	fr.Data = &xx
-	//fr.Duration = time.Duration(estimate)
+	fr.Duration = time.Duration(estimate) // used in recordings
 	frontend.onAudio(fr)
 	audioPool.Put(fr)
 	audioCopyPool.Put(dst)
@@ -503,7 +503,7 @@ func LoadGame(path string) error {
 	}
 
 	C.bridge_retro_get_system_av_info(retroGetSystemAVInfo, &nano.sysAvInfo)
-	libretroLogger.Debug().Msgf("System A/V >>> %vx%v (%vx%v), [%vfps], AR [%v], audio [%vHz]",
+	libretroLogger.Info().Msgf("System A/V >>> %vx%v (%vx%v), [%vfps], AR [%v], audio [%vHz]",
 		nano.sysAvInfo.geometry.base_width, nano.sysAvInfo.geometry.base_height,
 		nano.sysAvInfo.geometry.max_width, nano.sysAvInfo.geometry.max_height,
 		nano.sysAvInfo.timing.fps, nano.sysAvInfo.geometry.aspect_ratio, nano.sysAvInfo.timing.sample_rate,
