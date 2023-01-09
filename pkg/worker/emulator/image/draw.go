@@ -41,14 +41,21 @@ func DrawRgbaImage(encoding uint32, rot *Rotate, scaleType int, flipV bool, w, h
 	}
 	src := canvas1.get(ww, hh)
 
-	hn := h / th
 	pwb := packedW * bpp
-	wg.Add(th)
-	for i := 0; i < th; i++ {
-		xx := hn * i
-		go frame(encoding, src, data, xx, hn, flipV, h, w, pwb, bpp, rot)
+	if th == 0 {
+		frame(encoding, src, data, 0, h, flipV, h, w, pwb, bpp, rot)
+	} else {
+		hn := h / th
+		wg.Add(th)
+		for i := 0; i < th; i++ {
+			xx := hn * i
+			go func() {
+				frame(encoding, src, data, xx, hn, flipV, h, w, pwb, bpp, rot)
+				wg.Done()
+			}()
+		}
+		wg.Wait()
 	}
-	wg.Wait()
 
 	if ww == dw && hh == dh {
 		return src
@@ -87,7 +94,6 @@ func frame(encoding uint32, src *image.RGBA, data []byte, xx int, hn int, flipV 
 			}
 		}
 	}
-	wg.Done()
 }
 
 func i565(dst *uint32, px uint32) {
@@ -96,7 +102,7 @@ func i565(dst *uint32, px uint32) {
 }
 
 func ix8888(dst *uint32, px uint32) {
-	*dst = ((px >> 16) & 0xff) | (px & 0xff00) | ((px << 16) & 0xff0000) | 0xff000000
+	*dst = ((px >> 16) & 0xff) | (px & 0xff00) | ((px << 16) & 0xff0000) //| 0xff000000
 }
 
 func Clear() {
