@@ -12,7 +12,7 @@ const EnvPrefix = "CLOUD_GAME"
 // The path param specifies a custom path to the configuration file.
 // Reads and puts environment variables with the prefix CLOUD_GAME_.
 // Params from the config should be in uppercase separated with _.
-func LoadConfig(config interface{}, path string) error {
+func LoadConfig(config any, path string) error {
 	dirs := []string{path}
 	if path == "" {
 		dirs = append(dirs, ".", "configs", "../../../configs")
@@ -26,6 +26,6 @@ func LoadConfig(config interface{}, path string) error {
 	return nil
 }
 
-func LoadConfigEnv(config interface{}) error {
+func LoadConfigEnv(config any) error {
 	return fig.Load(config, fig.IgnoreFile(), fig.UseEnv(EnvPrefix))
 }

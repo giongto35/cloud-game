@@ -23,7 +23,7 @@ const workerManager = (() => {
             },
             'id': {
                 caption: 'ID',
-                renderer: (data) => data?.id ? data.xid : `${data.xid} x ${data['replicas']}`
+                renderer: (data) => data?.in_group ? `${data.id} x ${data.replicas}` : data.id
             },
             'addr': {
                 caption: 'Address',
@@ -70,7 +70,7 @@ const workerManager = (() => {
         content.append(header)
 
         const renderRow = (server) => (row) => {
-            if (server?.id && state.lastId && state.lastId === server?.xid) {
+            if (server?.id && state.lastId && state.lastId === server?.id) {
                 row.classList.add('active');
             }
             return fields.forEach(field => {
@@ -85,21 +85,19 @@ const workerManager = (() => {
 
     function handleReload() {
         panel.setLoad(true);
-        socket.getServerList();
+        api.server.getWorkerList();
     }
 
     function renderIdEl(server) {
         const id = String(index.v()).padStart(2, '0');
-        const isActive = server?.id && state.lastId && state.lastId === server?.xid
+        const isActive = server?.id && state.lastId && state.lastId === server?.id
         return `${(isActive ? '>' : '')}${id}`
     }
 
     function renderServerChangeEl(server) {
         const handleServerChange = (e) => {
             e.preventDefault();
-            window.location.search = `wid=${server.xid}`
-            // window.location = window.location.pathname;
-            console.log(server.addr, server.id);
+            window.location.search = `wid=${server.id}`
         }
         return gui.create('a', (el) => {
             el.innerText = '>>';
@@ -116,10 +114,9 @@ const workerManager = (() => {
     })
 
     const checkLatencies = (data) => {
-        const _addresses = data.addresses?.split(',') || [];
         const timeoutMs = 1111;
         // deduplicate
-        const addresses = [...new Set(_addresses)];
+        const addresses = [...new Set(data.addresses || [])];
 
         return Promise.all(addresses.map(address => {
             const start = Date.now();
@@ -134,10 +131,10 @@ const workerManager = (() => {
         _render(state.workers);
     }
 
-    event.sub(GET_SERVER_LIST, onNewData);
+    event.sub(WORKER_LIST_FETCHED, onNewData);
 
     return {
         checkLatencies,
         whoami,
     }
-})(ajax, document, event, gui, log, socket, utils);
+})(ajax, api, document, event, gui, log, utils);

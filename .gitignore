@@ -67,6 +67,9 @@ _output/
 ./build
 release/
 vendor/
+tests/
+!tests/e2e/
+*.exe
 
 .dockerignore
 
@@ -75,3 +78,4 @@ fbneo/
 hi/
 nvram/
 *.mcd
+

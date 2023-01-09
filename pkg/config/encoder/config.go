@@ -1,20 +1,18 @@
 package encoder
 
 type Encoder struct {
-	Audio       Audio
-	Video       Video
-	WithoutGame bool
+	Audio Audio
+	Video Video
 }
 
 type Audio struct {
-	Channels  int
-	Frame     int
-	Frequency int
+	Frame int
 }
 
 type Video struct {
-	Codec string
-	H264  struct {
+	Codec       string
+	Concurrency int
+	H264        struct {
 		Crf      uint8
 		Preset   string
 		Profile  string
@@ -26,6 +24,3 @@ type Video struct {
 		KeyframeInterval uint
 	}
 }
-
-func (a *Audio) GetFrameSize() int          { return a.GetFrameSizeFor(a.Frequency) }
-func (a *Audio) GetFrameSizeFor(hz int) int { return hz * a.Frame / 1000 * a.Channels }

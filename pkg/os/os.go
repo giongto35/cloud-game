@@ -1,15 +1,24 @@
 package os
 
 import (
+	"errors"
+	"io/fs"
 	"os"
 	"os/signal"
 	"os/user"
 	"syscall"
 )
 
-type Signal struct {
-	event chan os.Signal
-	done  chan struct{}
+func Exists(path string) bool {
+	_, err := os.Stat(path)
+	return !errors.Is(err, fs.ErrNotExist)
+}
+
+func CheckCreateDir(path string) error {
+	if !Exists(path) {
+		return os.Mkdir(path, os.ModeDir)
+	}
+	return nil
 }
 
 func ExpectTermination() chan struct{} {
@@ -29,4 +38,8 @@ func GetUserHome() (string, error) {
 		return "", err
 	}
 	return me.HomeDir, nil
+}
+
+func WriteFile(name string, data []byte, perm os.FileMode) error {
+	return os.WriteFile(name, data, perm)
 }

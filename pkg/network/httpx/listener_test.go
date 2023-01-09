@@ -38,7 +38,7 @@ func TestListenerCreation(t *testing.T) {
 			continue
 		}
 
-		defer ls.Close()
+		defer func() { _ = ls.Close() }()
 
 		addr := ls.Addr().(*net.TCPAddr)
 		port := ls.GetPort()

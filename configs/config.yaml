@@ -2,14 +2,21 @@
 # Application configuration file
 #
 
+# for the compatibility purposes
+version: 3
+
 coordinator:
   # debugging switch
+  #   - shows debug logs
   #   - allows selecting worker instances
   debug: false
+  # selects free workers:
+  #   - any (default, any free)
+  #   - ping (with the lowest ping)
+  selector: any
   # games library
   library:
-    # some directory which is gonna be the root folder for the library
-    # where games are stored
+    # root folder for the library (where games are stored)
     basePath: assets/games
     # an explicit list of supported file extensions
     # which overrides Libretro emulator ROMs configs
@@ -54,6 +61,8 @@ coordinator:
     gtag:
 
 worker:
+  # show more logs
+  debug: false
   network:
     # a coordinator address to connect to
     coordinatorAddress: localhost:8000
@@ -111,9 +120,14 @@ emulator:
   # special tag {user} will be replaced with current user's home dir
   storage: "{user}/.cr/save"
 
+  # path for storing emulator generated files
+  localPath: "./libretro"
+
   libretro:
     # use zip compression for emulator save states
-    saveCompression: false
+    saveCompression: true
+    # Libretro cores logging level: DEBUG = 0, INFO, WARN, ERROR, DUMMY = INT_MAX
+    logLevel: 1
     cores:
       paths:
         libs: assets/cores
@@ -176,6 +190,7 @@ emulator:
           roms: [ "zip" ]
         nes:
           lib: nestopia_libretro
+          config: nestopia_libretro.cfg
           roms: [ "nes" ]
         snes:
           lib: snes9x_libretro
@@ -191,21 +206,23 @@ emulator:
 
 encoder:
   audio:
-    channels: 2
     # audio frame duration needed for WebRTC (Opus)
-    frame: 20
-    frequency: 48000
+    # most of the emulators have ~1400 samples per a video frame,
+    # so we keep the frame buffer roughly half of that size or 2 RTC packets per frame
+    frame: 10
   video:
     # h264, vpx (VP8)
     codec: h264
+    # concurrent execution units (0 - disabled)
+    concurrency: 0
     # see: https://trac.ffmpeg.org/wiki/Encode/H.264
     h264:
       # Constant Rate Factor (CRF) 0-51 (default: 23)
-      crf: 17
+      crf: 23
       # ultrafast, superfast, veryfast, faster, fast, medium, slow, slower, veryslow, placebo
-      preset: veryfast
+      preset: superfast
       # baseline, main, high, high10, high422, high444
-      profile: main
+      profile: baseline
       # film, animation, grain, stillimage, psnr, ssim, fastdecode, zerolatency
       tune: zerolatency
       # 0-3
@@ -216,9 +233,6 @@ encoder:
       bitrate: 1200
       # force keyframe interval
       keyframeInterval: 5
-  # run without a game
-  # (experimental)
-  withoutGame: false
 
 # game recording
 # (experimental)
@@ -269,7 +283,7 @@ webrtc:
   dtlsRole:
   # a list of STUN/TURN servers to use
   iceServers:
-    - url: stun:stun.l.google.com:19302
+    - urls: stun:stun.l.google.com:19302
   # configures whether the ice agent should be a lite agent (true/false)
   # (performance)
   # don't use iceServers when enabled
@@ -287,3 +301,6 @@ webrtc:
   # override ICE candidate IP, see: https://github.com/pion/webrtc/issues/835,
   # can be used for Docker bridged network internal IP override
   iceIpMap:
+  # set additional log level for WebRTC separately
+  # -1 - trace, 6 - nothing, ..., debug - 0
+  logLevel: 6

@@ -1,36 +1,79 @@
 package httpx
 
 import (
-	"context"
-	"log"
+	"fmt"
 	"net/http"
 	"net/url"
 	"time"
 
-	"github.com/giongto35/cloud-game/v2/pkg/service"
+	"github.com/giongto35/cloud-game/v2/pkg/logger"
 	"golang.org/x/crypto/acme/autocert"
 )
 
 type Server struct {
 	http.Server
-	service.RunnableService
 
 	autoCert *autocert.Manager
 	opts     Options
 
 	listener *Listener
 	redirect *Server
+	log      *logger.Logger
 }
 
-func NewServer(address string, handler func(*Server) http.Handler, options ...Option) (*Server, error) {
+type (
+	Mux struct {
+		*http.ServeMux
+		prefix string
+	}
+	Handler        = http.Handler
+	HandlerFunc    = http.HandlerFunc
+	ResponseWriter = http.ResponseWriter
+	Request        = http.Request
+)
+
+// NewServeMux allocates and returns a new ServeMux.
+func NewServeMux(prefix string) *Mux {
+	return &Mux{ServeMux: http.NewServeMux(), prefix: prefix}
+}
+
+func (m *Mux) Prefix(v string) { m.prefix = v }
+
+func (m *Mux) HandleW(pattern string, h func(http.ResponseWriter)) *Mux {
+	m.ServeMux.HandleFunc(m.prefix+pattern, func(w http.ResponseWriter, _ *http.Request) { h(w) })
+	return m
+}
+
+func (m *Mux) Handle(pattern string, handler Handler) *Mux {
+	m.ServeMux.Handle(m.prefix+pattern, handler)
+	return m
+}
+
+func (m *Mux) HandleFunc(pattern string, handler func(ResponseWriter, *Request)) *Mux {
+	m.ServeMux.HandleFunc(m.prefix+pattern, handler)
+	return m
+}
+func (m *Mux) ServeHTTP(w ResponseWriter, r *Request) { m.ServeMux.ServeHTTP(w, r) }
+
+func NotFound(w ResponseWriter) { http.Error(w, "404 page not found", http.StatusNotFound) }
+
+func (m *Mux) Static(prefix string, path string) *Mux {
+	return m.Handle(m.prefix+prefix, http.StripPrefix(prefix, http.FileServer(http.Dir(path))))
+}
+
+func NewServer(address string, handler func(*Server) Handler, options ...Option) (*Server, error) {
 	opts := &Options{
 		Https:         false,
 		HttpsRedirect: true,
 		IdleTimeout:   120 * time.Second,
-		ReadTimeout:   5 * time.Second,
-		WriteTimeout:  5 * time.Second,
+		ReadTimeout:   500 * time.Second,
+		WriteTimeout:  500 * time.Second,
 	}
 	opts.override(options...)
+
+	if opts.Logger == nil {
+		opts.Logger = logger.Default()
+	}
 
 	server := &Server{
 		Server: http.Server{
@@ -40,6 +83,7 @@ func NewServer(address string, handler func(*Server) http.Handler, options ...Op
 			WriteTimeout: opts.WriteTimeout,
 		},
 		opts: *opts,
+		log:  opts.Logger,
 	}
 	// (╯°□°)╯︵ ┻━┻
 	server.Handler = handler(server)
@@ -55,7 +99,7 @@ func NewServer(address string, handler func(*Server) http.Handler, options ...Op
 		if opts.Https {
 			addr = ":https"
 		}
-		log.Printf("Warning! Empty server address has been changed to %v", addr)
+		opts.Logger.Warn().Msgf("Empty server address has been changed to %v", addr)
 	}
 	listener, err := NewListener(addr, server.opts.PortRoll)
 	if err != nil {
@@ -64,20 +108,25 @@ func NewServer(address string, handler func(*Server) http.Handler, options ...Op
 	server.listener = listener
 
 	addr = buildAddress(server.Addr, opts.Zone, *listener)
-	log.Printf("[server] address was set to %v (%v)", addr, server.Addr)
+	opts.Logger.Info().Msgf("httpx %v (%v)", addr, server.Addr)
 	server.Addr = addr
 
 	return server, nil
 }
 
-func (s *Server) Run() {
+func (s *Server) MuxX(prefix string) *Mux { return NewServeMux(prefix) }
+func (s *Server) Mux() *Mux               { return s.MuxX("") }
+
+func (s *Server) Run() { go s.run() }
+
+func (s *Server) run() {
 	protocol := s.GetProtocol()
-	log.Printf("Starting %s server on %s", protocol, s.Addr)
+	s.log.Debug().Msgf("Starting %s server on %s", protocol, s.Addr)
 
 	if s.opts.Https && s.opts.HttpsRedirect {
 		rdr, err := s.redirection()
 		if err != nil {
-			log.Fatalf("couldn't init redirection server: %v", err)
+			s.log.Error().Err(err).Msg("couldn't init redirection server")
 		}
 		s.redirect = rdr
 		go s.redirect.Run()
@@ -91,19 +140,18 @@ func (s *Server) Run() {
 	}
 	switch err {
 	case http.ErrServerClosed:
-		log.Printf("%s server was closed", protocol)
+		s.log.Debug().Msgf("%s server was closed", protocol)
 		return
 	default:
-		log.Printf("error: %s", err)
+		s.log.Error().Err(err)
 	}
 }
 
-func (s *Server) Shutdown(ctx context.Context) (err error) {
+func (s *Server) Stop() error {
 	if s.redirect != nil {
-		err = s.redirect.Shutdown(ctx)
+		_ = s.redirect.Stop()
 	}
-	err = s.Server.Shutdown(ctx)
-	return
+	return s.Server.Close()
 }
 
 func (s *Server) GetHost() string { return extractHost(s.Addr) }
@@ -123,22 +171,26 @@ func (s *Server) redirection() (*Server, error) {
 	}
 	addr := buildAddress(address, s.opts.Zone, *s.listener)
 
-	srv, err := NewServer(s.opts.HttpsRedirectAddress, func(serv *Server) http.Handler {
-		h := http.NewServeMux()
-
-		h.Handle("/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	srv, err := NewServer(s.opts.HttpsRedirectAddress, func(serv *Server) Handler {
+		h := NewServeMux("")
+		h.Handle("/", HandlerFunc(func(w ResponseWriter, r *Request) {
 			httpsURL := url.URL{Scheme: "https", Host: addr, Path: r.URL.Path, RawQuery: r.URL.RawQuery}
 			rdr := httpsURL.String()
-			log.Printf("Redirect: http://%s%s -> %s", r.Host, r.URL.String(), rdr)
+			if s.log.GetLevel() < logger.InfoLevel {
+				s.log.Debug().
+					Str("from", fmt.Sprintf("http://%s%s", r.Host, r.URL.String())).
+					Str("to", rdr).
+					Msg("Redirect")
+			}
 			http.Redirect(w, r, rdr, http.StatusFound)
 		}))
-
-		// do we need this after all?
 		if serv.autoCert != nil {
 			return serv.autoCert.HTTPHandler(h)
 		}
 		return h
-	})
-	log.Printf("Starting HTTP->HTTPS redirection server on %s", addr)
+	},
+		WithLogger(s.log),
+	)
+	s.log.Info().Str("addr", addr).Msg("Start HTTPS redirect server")
 	return srv, err
 }

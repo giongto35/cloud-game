@@ -1,56 +1,73 @@
 const input = (() => {
-    let pollIntervalMs = 10;
-    let pollIntervalId = 0;
+    const pollingIntervalMs = 4;
     let controllerChangedIndex = -1;
 
+    // Libretro config
     let controllerState = {
-        // control
-        [KEY.A]: false,
         [KEY.B]: false,
-        [KEY.X]: false,
         [KEY.Y]: false,
-        [KEY.L]: false,
-        [KEY.R]: false,
         [KEY.SELECT]: false,
         [KEY.START]: false,
-        // dpad
         [KEY.UP]: false,
         [KEY.DOWN]: false,
         [KEY.LEFT]: false,
         [KEY.RIGHT]: false,
+        [KEY.A]: false,
+        [KEY.X]: false,
         // extra
-        [KEY.R2]: false,
+        [KEY.L]: false,
+        [KEY.R]: false,
         [KEY.L2]: false,
-        [KEY.R3]: false,
-        [KEY.L3]: false
+        [KEY.R2]: false,
+        [KEY.L3]: false,
+        [KEY.R3]: false
     };
 
-    const controllerEncoded = new Array(5).fill(0);
-
-    const keys = Object.keys(controllerState);
-
-    const poll = () => {
+    const poll = (intervalMs, callback) => {
+        let _ticker = 0;
         return {
-            setPollInterval: (ms) => pollIntervalMs = ms,
             enable: () => {
-                if (pollIntervalId > 0) return;
-
-                log.info(`[input] poll set to ${pollIntervalMs}ms`);
-                pollIntervalId = setInterval(sendControllerState, pollIntervalMs)
+                if (_ticker > 0) return;
+                log.debug(`[input] poll set to ${intervalMs}ms`);
+                _ticker = setInterval(callback, intervalMs)
             },
             disable: () => {
-                if (pollIntervalId < 1) return;
-
-                log.info('[input] poll has been disabled');
-                clearInterval(pollIntervalId);
-                pollIntervalId = 0;
+                if (_ticker < 1) return;
+                log.debug('[input] poll has been disabled');
+                clearInterval(_ticker);
+                _ticker = 0;
             }
         }
     };
 
+    const controllerEncoded = [0, 0, 0, 0, 0];
+    const keys = Object.keys(controllerState);
+
+    const compare = (a, b) => {
+        if (a.length !== b.length) return false;
+        for (let i = 0; i < a.length; i++) {
+            if (a[i] !== b[i]) {
+                return false;
+            }
+        }
+        return true;
+    };
+
+
+    // let lastState = controllerEncoded;
+
     const sendControllerState = () => {
         if (controllerChangedIndex >= 0) {
-            event.pub(CONTROLLER_UPDATED, _encodeState());
+            const state = _getState();
+
+            // log.debug(state)
+
+            // if (compare(lastState, state)) {
+            //     log.debug('!skip')
+            // } else {
+                event.pub(CONTROLLER_UPDATED, _encodeState(state));
+            // }
+            // lastState = state;
             controllerChangedIndex = -1;
         }
     };
@@ -63,9 +80,9 @@ const input = (() => {
     };
 
     const setAxisChanged = (index, value) => {
-        if (controllerEncoded[index+1] !== undefined) {
-            controllerEncoded[index+1] = Math.floor(32767 * value);
-            controllerChangedIndex = Math.max(controllerChangedIndex, index+1);
+        if (controllerEncoded[index + 1] !== undefined) {
+            controllerEncoded[index + 1] = Math.floor(32767 * value);
+            controllerChangedIndex = Math.max(controllerChangedIndex, index + 1);
         }
     };
 
@@ -79,16 +96,19 @@ const input = (() => {
      *
      * @private
      */
-    const _encodeState = () => {
-        controllerEncoded[0] = 0;
-        for (let i = 0, len = keys.length; i < len; i++) controllerEncoded[0] += controllerState[keys[i]] ? 1 << i : 0;
+    const _encodeState = (state) => new Uint16Array(state)
 
-        return new Uint16Array(controllerEncoded.slice(0, controllerChangedIndex+1));
+    const _getState = () => {
+        controllerEncoded[0] = 0;
+        for (let i = 0, len = keys.length; i < len; i++) {
+            controllerEncoded[0] += controllerState[keys[i]] ? 1 << i : 0;
+        }
+        return controllerEncoded.slice(0, controllerChangedIndex + 1);
     }
 
     return {
-        poll,
+        poll: poll(pollingIntervalMs, sendControllerState),
         setKeyState,
         setAxisChanged,
     }
-})(event, KEY);
+})(event, KEY, log);

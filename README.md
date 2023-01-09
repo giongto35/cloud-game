@@ -31,11 +31,6 @@ Because I only hosted the platform on limited servers in US East, US West, Eu, S
 latency issues + connection problem. You can try hosting the service following the instruction the next section to have
 a better sense of performance.
 
-|                   Screenshot                   |                   Screenshot                   |
-| :--------------------------------------------: | :--------------------------------------------: |
-| ![screenshot](docs/img/landing-page-ps-hm.png) | ![screenshot](docs/img/landing-page-ps-x4.png) |
-| ![screenshot](docs/img/landing-page-gb.png)    | ![screenshot](docs/img/landing-page-front.png) |
-
 ## Feature
 
 1. **Cloud gaming**: Game logic and storage is hosted on cloud service. It reduces the cumbersome of game

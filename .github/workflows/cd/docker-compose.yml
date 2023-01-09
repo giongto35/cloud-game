@@ -18,7 +18,7 @@ services:
 
   coordinator:
     <<: *default-params
-    command: coordinator --v=5
+    command: coordinator
     volumes:
       - ${APP_DIR:-/cloud-game}/cache:/usr/local/share/cloud-game/assets/cache
       - ${APP_DIR:-/cloud-game}/games:/usr/local/share/cloud-game/assets/games
@@ -28,7 +28,7 @@ services:
     environment:
       - MESA_GL_VERSION_OVERRIDE=3.3
     entrypoint: [ "/bin/sh", "-c", "xvfb-run -a $$@", "" ]
-    command: worker --v=5 --zone=${ZONE:-}
+    command: worker --zone=${ZONE:-}
     volumes:
       - ${APP_DIR:-/cloud-game}/cache:/usr/local/share/cloud-game/assets/cache
       - ${APP_DIR:-/cloud-game}/cores:/usr/local/share/cloud-game/assets/cores

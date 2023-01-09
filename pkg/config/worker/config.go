@@ -1,9 +1,11 @@
 package worker
 
 import (
-	"log"
+	"flag"
+	"fmt"
 	"net"
 	"net/url"
+	"path/filepath"
 	"strings"
 
 	"github.com/giongto35/cloud-game/v2/pkg/config"
@@ -14,7 +16,6 @@ import (
 	"github.com/giongto35/cloud-game/v2/pkg/config/storage"
 	"github.com/giongto35/cloud-game/v2/pkg/config/webrtc"
 	"github.com/giongto35/cloud-game/v2/pkg/os"
-	flag "github.com/spf13/pflag"
 )
 
 type Config struct {
@@ -24,9 +25,11 @@ type Config struct {
 	Storage   storage.Storage
 	Worker    Worker
 	Webrtc    webrtc.Webrtc
+	Version   shared.Version
 }
 
 type Worker struct {
+	Debug      bool
 	Monitoring monitoring.Config
 	Network    struct {
 		CoordinatorAddress string
@@ -44,14 +47,12 @@ type Worker struct {
 var configPath string
 
 func NewConfig() (conf Config) {
-	_ = config.LoadConfig(&conf, configPath)
-	conf.expandSpecialTags()
-	// with ICE lite we clear ICE servers
-	if !conf.Webrtc.IceLite {
-		conf.Webrtc.AddIceServersEnv()
-	} else {
-		conf.Webrtc.IceServers = []webrtc.IceServer{}
+	err := config.LoadConfig(&conf, configPath)
+	if err != nil {
+		panic(err)
 	}
+	conf.expandSpecialTags()
+	conf.fixValues()
 	return
 }
 
@@ -63,7 +64,7 @@ func (c *Config) ParseFlags() {
 	flag.IntVar(&c.Worker.Monitoring.Port, "monitoring.port", c.Worker.Monitoring.Port, "Monitoring server port")
 	flag.StringVar(&c.Worker.Network.CoordinatorAddress, "coordinatorhost", c.Worker.Network.CoordinatorAddress, "Worker URL to connect")
 	flag.StringVar(&c.Worker.Network.Zone, "zone", c.Worker.Network.Zone, "Worker network zone (us, eu, etc.)")
-	flag.StringVarP(&configPath, "conf", "c", configPath, "Set custom configuration file path")
+	flag.StringVar(&configPath, "w-conf", configPath, "Set custom configuration file path")
 	flag.Parse()
 }
 
@@ -76,9 +77,20 @@ func (c *Config) expandSpecialTags() {
 		}
 		userHomeDir, err := os.GetUserHome()
 		if err != nil {
-			log.Fatalln("couldn't read user home directory", err)
+			panic(fmt.Sprintf("couldn't read user home directory, %v", err))
 		}
 		*dir = strings.Replace(*dir, tag, userHomeDir, -1)
+		*dir = filepath.FromSlash(*dir)
+	}
+}
+
+// fixValues tries to fix some values otherwise hard to set externally.
+func (c *Config) fixValues() {
+	// with ICE lite we clear ICE servers
+	if !c.Webrtc.IceLite {
+		c.Webrtc.AddIceServersEnv()
+	} else {
+		c.Webrtc.IceServers = []webrtc.IceServer{}
 	}
 }
 

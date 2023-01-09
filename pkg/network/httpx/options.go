@@ -4,6 +4,7 @@ import (
 	"time"
 
 	"github.com/giongto35/cloud-game/v2/pkg/config/shared"
+	"github.com/giongto35/cloud-game/v2/pkg/logger"
 )
 
 type (
@@ -18,6 +19,7 @@ type (
 		IdleTimeout          time.Duration
 		ReadTimeout          time.Duration
 		WriteTimeout         time.Duration
+		Logger               *logger.Logger
 		Zone                 string
 	}
 	Option func(*Options)
@@ -54,3 +56,4 @@ func WithServerConfig(conf shared.Server) Option {
 		opts.HttpsRedirectAddress = conf.Address
 	}
 }
+func WithLogger(log *logger.Logger) Option { return func(opts *Options) { opts.Logger = log } }

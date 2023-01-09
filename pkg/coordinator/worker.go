@@ -1,68 +1,81 @@
 package coordinator
 
 import (
-	"fmt"
-	"github.com/rs/xid"
-	"log"
-	"sync"
+	"sync/atomic"
 
-	"github.com/giongto35/cloud-game/v2/pkg/cws"
-	"github.com/gorilla/websocket"
+	"github.com/giongto35/cloud-game/v2/pkg/api"
+	"github.com/giongto35/cloud-game/v2/pkg/com"
 )
 
-type WorkerClient struct {
-	*cws.Client
+type Worker struct {
+	com.SocketClient
+	com.RegionalClient
+	slotted
 
-	Id xid.ID
-
-	WorkerID string
-	Addr     string
-	// public server used for ping check
-	PingServer     string
-	Port           string
-	StunTurnServer string
-	Tag            string
-	userCount      int // may be atomic
-	Zone           string
-
-	mu sync.Mutex
+	Addr       string
+	PingServer string
+	Port       string
+	RoomId     string // room reference
+	Tag        string
+	Zone       string
 }
 
-// NewWorkerClient returns a client connecting to worker.
-// This connection exchanges information between workers and server.
-func NewWorkerClient(c *websocket.Conn, workerID string) *WorkerClient {
-	return &WorkerClient{
-		Client:   cws.NewClient(c),
-		WorkerID: workerID,
+func (w *Worker) HandleRequests(users *com.NetMap[*User]) {
+	// !to make a proper multithreading abstraction
+	w.OnPacket(func(p com.In) error {
+		switch p.T {
+		case api.RegisterRoom:
+			rq := api.Unwrap[api.RegisterRoomRequest](p.Payload)
+			if rq == nil {
+				return api.ErrMalformed
+			}
+			w.Log.Info().Msgf("set room [%v] = %v", w.Id(), *rq)
+			w.HandleRegisterRoom(*rq)
+		case api.CloseRoom:
+			rq := api.Unwrap[api.CloseRoomRequest](p.Payload)
+			if rq == nil {
+				return api.ErrMalformed
+			}
+			w.HandleCloseRoom(*rq)
+		case api.IceCandidate:
+			rq := api.Unwrap[api.WebrtcIceCandidateRequest](p.Payload)
+			if rq == nil {
+				return api.ErrMalformed
+			}
+			w.HandleIceCandidate(*rq, users)
+		default:
+			w.Log.Warn().Msgf("Unknown packet: %+v", p)
+		}
+		return nil
+	})
+}
+
+// In say whether some worker from this region (zone).
+// Empty region always returns true.
+func (w *Worker) In(region string) bool { return region == "" || region == w.Zone }
+
+// slotted used for tracking user slots and the availability.
+type slotted int32
+
+// HasSlot checks if the current worker has a free slot to start a new game.
+// Workers support only one game at a time, so it returns true in case if
+// there are no players in the room (worker).
+func (s *slotted) HasSlot() bool { return atomic.LoadInt32((*int32)(s)) == 0 }
+
+// Reserve increments user counter of the worker.
+func (s *slotted) Reserve() { atomic.AddInt32((*int32)(s), 1) }
+
+// UnReserve decrements user counter of the worker.
+func (s *slotted) UnReserve() {
+	if atomic.AddInt32((*int32)(s), -1) < 0 {
+		atomic.StoreInt32((*int32)(s), 0)
 	}
 }
 
-// ChangeUserQuantityBy increases or decreases the total amount of
-// users connected to the current worker.
-// We count users to determine when the worker becomes new game ready.
-func (wc *WorkerClient) ChangeUserQuantityBy(n int) {
-	wc.mu.Lock()
-	wc.userCount += n
-	// just to be on a safe side
-	if wc.userCount < 0 {
-		wc.userCount = 0
-	}
-	wc.mu.Unlock()
-}
+func (s *slotted) FreeSlots() { atomic.StoreInt32((*int32)(s), 0) }
 
-// HasGameSlot tells whether the current worker has a
-// free slot to start a new game.
-// Workers support only one game at a time.
-func (wc *WorkerClient) HasGameSlot() bool {
-	wc.mu.Lock()
-	defer wc.mu.Unlock()
-	return wc.userCount == 0
-}
-
-func (wc *WorkerClient) Printf(format string, args ...interface{}) {
-	log.Printf(fmt.Sprintf("Worker %s] %s", wc.WorkerID, format), args...)
-}
-
-func (wc *WorkerClient) Println(args ...interface{}) {
-	log.Println(fmt.Sprintf("Worker %s] %s", wc.WorkerID, fmt.Sprint(args...)))
+func (w *Worker) Disconnect() {
+	w.SocketClient.Close()
+	w.RoomId = ""
+	w.FreeSlots()
 }

@@ -5,7 +5,6 @@ import (
 	"strings"
 
 	"github.com/giongto35/cloud-game/v2/pkg/config"
-	"github.com/giongto35/cloud-game/v2/pkg/config/encoder"
 )
 
 type Webrtc struct {
@@ -19,27 +18,28 @@ type Webrtc struct {
 	IceIpMap   string
 	IceLite    bool
 	SinglePort int
+	LogLevel   int
 }
 
 type IceServer struct {
-	Url        string
-	Username   string
-	Credential string
+	Urls       string `json:"urls,omitempty"`
+	Username   string `json:"username,omitempty"`
+	Credential string `json:"credential,omitempty"`
 }
 
-type Config struct {
-	Encoder encoder.Encoder
-	Webrtc  Webrtc
-}
+func (w *Webrtc) HasDtlsRole() bool   { return w.DtlsRole > 0 }
+func (w *Webrtc) HasPortRange() bool  { return w.IcePorts.Min > 0 && w.IcePorts.Max > 0 }
+func (w *Webrtc) HasSinglePort() bool { return w.SinglePort > 0 }
+func (w *Webrtc) HasIceIpMap() bool   { return w.IceIpMap != "" }
 
 func (w *Webrtc) AddIceServersEnv() {
-	cfg := Config{Webrtc: Webrtc{IceServers: []IceServer{{}, {}, {}, {}, {}}}}
+	cfg := Webrtc{IceServers: []IceServer{{}, {}, {}, {}, {}}}
 	_ = config.LoadConfigEnv(&cfg)
-	for i, ice := range cfg.Webrtc.IceServers {
-		if ice.Url == "" {
+	for i, ice := range cfg.IceServers {
+		if ice.Urls == "" {
 			continue
 		}
-		if strings.HasPrefix(ice.Url, "turn:") || strings.HasPrefix(ice.Url, "turns:") {
+		if strings.HasPrefix(ice.Urls, "turn:") || strings.HasPrefix(ice.Urls, "turns:") {
 			if ice.Username == "" || ice.Credential == "" {
 				log.Fatalf("TURN or TURNS servers should have both username and credential: %+v", ice)
 			}
