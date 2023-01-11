@@ -38,7 +38,7 @@ type (
 	}
 	video struct {
 		pixFmt        uint32
-		bpp           int
+		bpp           uint
 		hw            *C.struct_retro_hw_render_callback
 		isGl          bool
 		autoGlContext bool
@@ -101,26 +101,29 @@ func Init(localPath string) {
 }
 
 //export coreVideoRefresh
-func coreVideoRefresh(data unsafe.Pointer, width C.unsigned, height C.unsigned, pitch C.size_t) {
+func coreVideoRefresh(data unsafe.Pointer, width, height uint, pitch uint) {
 	// some cores can return nothing
 	// !to add duplicate if can dup
 	if data == nil {
 		return
 	}
 
+	// some cores or games can have a variable output frame size, i.e. PSX Rearmed
+	// some cores or games output zero pitch, i.e. N64 Mupen
+
 	// calculate real frame width in pixels from packed data (realWidth >= width)
-	packedWidth := int(pitch) / nano.v.bpp
-	if packedWidth < 1 {
-		packedWidth = int(width)
+	packedWidth := pitch / nano.v.bpp
+	if packedWidth == 0 {
+		packedWidth = width
 	}
 	// calculate space for the video frame
-	bytes := int(height) * packedWidth * nano.v.bpp
+	bytes := packedWidth * height * nano.v.bpp
 
 	// if Libretro renders frame with OpenGL context
 	isOpenGLRender := data == C.RETRO_HW_FRAME_BUFFER_VALID
 	var data_ []byte
 	if isOpenGLRender {
-		data_ = graphics.ReadFramebuffer(bytes, int(width), int(height))
+		data_ = graphics.ReadFramebuffer(bytes, width, height)
 	} else {
 		data_ = unsafe.Slice((*byte)(data), bytes)
 	}
@@ -130,7 +133,7 @@ func coreVideoRefresh(data unsafe.Pointer, width C.unsigned, height C.unsigned, 
 		nano.v.pixFmt,
 		nano.rot,
 		image.ScaleNearestNeighbour,
-		int(width), int(height), packedWidth, nano.v.bpp,
+		int(width), int(height), int(packedWidth), int(nano.v.bpp),
 		data_,
 		frontend.vw,
 		frontend.vh,
@@ -511,8 +514,8 @@ func LoadGame(path string) error {
 	if nano.v.isGl {
 		// flip Y coordinates of OpenGL
 		setRotation(uint(image.Flip180))
-		bufS := int(nano.sysAvInfo.geometry.max_width*nano.sysAvInfo.geometry.max_height) * nano.v.bpp
-		graphics.SetBuffer(bufS)
+		bufS := uint(nano.sysAvInfo.geometry.max_width*nano.sysAvInfo.geometry.max_height) * nano.v.bpp
+		graphics.SetBuffer(int(bufS))
 		libretroLogger.Info().Msgf("Set buffer: %v", byteCountBinary(int64(bufS)))
 		if usesLibCo {
 			C.bridge_execute(C.initVideo_cgo)
