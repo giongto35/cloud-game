@@ -30,7 +30,6 @@ func BenchmarkDraw(b *testing.B) {
 				encoding:  BitFormatInt8888Rev,
 				rot:       nil,
 				scaleType: ScaleNearestNeighbour,
-				flipV:     false,
 				w:         256,
 				h:         240,
 				packedW:   256,
@@ -47,7 +46,6 @@ func BenchmarkDraw(b *testing.B) {
 				encoding:  BitFormatInt8888Rev,
 				rot:       nil,
 				scaleType: ScaleNearestNeighbour,
-				flipV:     false,
 				w:         256,
 				h:         240,
 				packedW:   256,
@@ -63,7 +61,7 @@ func BenchmarkDraw(b *testing.B) {
 	for _, bn := range tests {
 		b.Run(fmt.Sprintf("%v", bn.name), func(b *testing.B) {
 			for i := 0; i < b.N; i++ {
-				DrawRgbaImage(bn.args.encoding, bn.args.rot, bn.args.scaleType, bn.args.flipV, bn.args.w, bn.args.h, bn.args.packedW, bn.args.bpp, bn.args.data, bn.args.dw, bn.args.dh, bn.args.th)
+				DrawRgbaImage(bn.args.encoding, bn.args.rot, bn.args.scaleType, bn.args.w, bn.args.h, bn.args.packedW, bn.args.bpp, bn.args.data, bn.args.dw, bn.args.dh, bn.args.th)
 			}
 			b.ReportAllocs()
 		})

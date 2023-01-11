@@ -8,14 +8,16 @@ const (
 	Angle90
 	Angle180
 	Angle270
+	Flip180
 )
 
 // Angles is a helper to choose appropriate rotation based on its angle.
-var Angles = [4]Rotate{
+var Angles = [5]Rotate{
 	Angle0:   {Angle: Angle0, Call: Rotate0},
 	Angle90:  {Angle: Angle90, Call: Rotate90, IsEven: true},
 	Angle180: {Angle: Angle180, Call: Rotate180},
 	Angle270: {Angle: Angle270, Call: Rotate270, IsEven: true},
+	Flip180:  {Angle: Flip180, Call: Invert180},
 }
 
 func GetRotation(angle Angle) Rotate { return Angles[angle] }
@@ -60,6 +62,8 @@ func Rotate180(x, y, w, h int) (int, int) { return (w - 1) - x, (h - 1) - y }
 //	4 5 6 -> 8 5 2
 //	7 8 9    9 6 3
 func Rotate270(x, y, _, h int) (int, int) { return (h - 1) - y, x }
+
+func Invert180(x, y, _, h int) (int, int) { return x, (h - 1) - y }
 
 // ExampleRotate is an example of rotation usage.
 //

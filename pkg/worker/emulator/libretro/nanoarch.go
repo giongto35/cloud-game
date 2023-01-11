@@ -130,7 +130,6 @@ func coreVideoRefresh(data unsafe.Pointer, width C.unsigned, height C.unsigned, 
 		nano.v.pixFmt,
 		nano.rot,
 		image.ScaleNearestNeighbour,
-		isOpenGLRender,
 		int(width), int(height), packedWidth, nano.v.bpp,
 		data_,
 		frontend.vw,
@@ -510,6 +509,8 @@ func LoadGame(path string) error {
 	)
 
 	if nano.v.isGl {
+		// flip Y coordinates of OpenGL
+		setRotation(uint(image.Flip180))
 		bufS := int(nano.sysAvInfo.geometry.max_width*nano.sysAvInfo.geometry.max_height) * nano.v.bpp
 		graphics.SetBuffer(bufS)
 		libretroLogger.Info().Msgf("Set buffer: %v", byteCountBinary(int64(bufS)))

@@ -14,8 +14,7 @@ const (
 
 var wg sync.WaitGroup
 
-func DrawRgbaImage(encoding uint32, rot *Rotate, scaleType int, flipV bool, w, h, packedW, bpp int,
-	data []byte, dw, dh, th int) *image.RGBA {
+func DrawRgbaImage(encoding uint32, rot *Rotate, scaleType int, w, h, packedW, bpp int, data []byte, dw, dh, th int) *image.RGBA {
 	// !to implement own image interfaces img.Pix = bytes[]
 	ww, hh := w, h
 	if rot != nil && rot.IsEven {
@@ -26,14 +25,14 @@ func DrawRgbaImage(encoding uint32, rot *Rotate, scaleType int, flipV bool, w, h
 
 	pwb := packedW * bpp
 	if th == 0 {
-		frame(encoding, src, data, 0, h, flipV, h, w, pwb, bpp, rot)
+		frame(encoding, src, data, 0, h, h, w, pwb, bpp, rot)
 	} else {
 		hn := h / th
 		wg.Add(th)
 		for i := 0; i < th; i++ {
 			xx := hn * i
 			go func() {
-				frame(encoding, src, data, xx, hn, flipV, h, w, pwb, bpp, rot)
+				frame(encoding, src, data, xx, hn, h, w, pwb, bpp, rot)
 				wg.Done()
 			}()
 		}
@@ -49,21 +48,17 @@ func DrawRgbaImage(encoding uint32, rot *Rotate, scaleType int, flipV bool, w, h
 	}
 }
 
-func frame(encoding uint32, src *image.RGBA, data []byte, xx int, hn int, flipV bool, h int, w int, pwb int, bpp int, rot *Rotate) {
+func frame(encoding uint32, src *image.RGBA, data []byte, xx int, hn int, h int, w int, pwb int, bpp int, rot *Rotate) {
 	var px uint32
 	var dst *uint32
-	for y, yy, l, lx, row := xx, 0, xx+hn, 0, 0; y < l; y++ {
-		yy = y
-		if flipV {
-			yy = (h - 1) - yy
-		}
-		row = yy * src.Stride
+	for y, l, lx, row := xx, xx+hn, 0, 0; y < l; y++ {
+		row = y * src.Stride
 		lx = y * pwb
 		for x, k := 0, 0; x < w; x++ {
 			if rot == nil {
 				k = x<<2 + row
 			} else {
-				dx, dy := rot.Call(x, yy, w, h)
+				dx, dy := rot.Call(x, y, w, h)
 				k = dx<<2 + dy*src.Stride
 			}
 			dst = (*uint32)(unsafe.Pointer(&src.Pix[k]))
