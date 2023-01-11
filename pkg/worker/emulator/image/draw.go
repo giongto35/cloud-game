@@ -12,25 +12,7 @@ const (
 	BitFormatShort565          // BIT_FORMAT_SHORT_5_6_5 has 5 bits R, 6 bits G, 5 bits
 )
 
-type imageCache struct {
-	image *image.RGBA
-	w, h  int
-}
-
-func (i *imageCache) get(w, h int) *image.RGBA {
-	if i.w == w && i.h == h {
-		return i.image
-	}
-	i.w, i.h = w, h
-	i.image = image.NewRGBA(image.Rect(0, 0, w, h))
-	return i.image
-}
-
-var (
-	canvas1 = imageCache{image.NewRGBA(image.Rectangle{}), 0, 0}
-	canvas2 = imageCache{image.NewRGBA(image.Rectangle{}), 0, 0}
-	wg      sync.WaitGroup
-)
+var wg sync.WaitGroup
 
 func DrawRgbaImage(encoding uint32, rot *Rotate, scaleType int, flipV bool, w, h, packedW, bpp int,
 	data []byte, dw, dh, th int) *image.RGBA {
@@ -39,7 +21,8 @@ func DrawRgbaImage(encoding uint32, rot *Rotate, scaleType int, flipV bool, w, h
 	if rot != nil && rot.IsEven {
 		ww, hh = hh, ww
 	}
-	src := canvas1.get(ww, hh)
+
+	src := image.NewRGBA(image.Rect(0, 0, ww, hh))
 
 	pwb := packedW * bpp
 	if th == 0 {
@@ -60,7 +43,7 @@ func DrawRgbaImage(encoding uint32, rot *Rotate, scaleType int, flipV bool, w, h
 	if ww == dw && hh == dh {
 		return src
 	} else {
-		out := canvas2.get(dw, dh)
+		out := image.NewRGBA(image.Rect(0, 0, dw, dh))
 		Resize(scaleType, src, out)
 		return out
 	}
@@ -107,6 +90,4 @@ func ix8888(dst *uint32, px uint32) {
 
 func Clear() {
 	wg = sync.WaitGroup{}
-	canvas1.get(0, 0)
-	canvas2.get(0, 0)
 }
