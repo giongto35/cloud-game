@@ -126,12 +126,11 @@ func (f *Frontend) Start() {
 	// start time for the first frame
 	lastFrameTime = time.Now().UnixNano()
 	for {
-		f.mu.Lock()
-		run()
-		f.mu.Unlock()
 		select {
 		case <-ticker.C:
-			continue
+			f.mu.Lock()
+			run()
+			f.mu.Unlock()
 		case <-f.done:
 			return
 		}
@@ -159,10 +158,10 @@ func (f *Frontend) SetViewport(width int, height int)     { f.vw, f.vh = width, 
 func (f *Frontend) ToggleMultitap()                       { toggleMultitap() }
 
 func (f *Frontend) Close() {
+	close(f.done)
 	f.mu.Lock()
 	f.SetViewport(0, 0)
 	f.mu.Unlock()
-	close(f.done)
 	nano.reserved <- struct{}{}
 }
 
