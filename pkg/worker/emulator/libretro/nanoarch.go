@@ -102,52 +102,61 @@ func Init(localPath string) {
 
 //export coreVideoRefresh
 func coreVideoRefresh(data unsafe.Pointer, width, height uint, pitch uint) {
+	// some frames can be rendered slower or faster than internal 1/fps core tick
+	// so track actual frame render time for proper RTP packet timestamps
+	// (and proper frame display time, for example: 1->1/60=16.6ms, 2->10ms, 3->23ms, 4->16.6ms)
+	// !to find docs on Libretro refresh sync and frame times
+	t := time.Now().UnixNano()
+	dt := t - lastFrameTime
+	lastFrameTime = t
+
 	// some cores can return nothing
 	// !to add duplicate if can dup
 	if data == nil {
 		return
 	}
 
-	// some cores or games can have a variable output frame size, i.e. PSX Rearmed
-	// some cores or games output zero pitch, i.e. N64 Mupen
+	// try to save to local because it may change during this call
+	isVertical := frontend.HasVerticalFrame()
+	dstW := frontend.vw
+	dstH := frontend.vh
+	th := frontend.th
+	// frontend.vw vh can be changed (set to 0 on close) during leftover retro draws
+	if dstW == 0 || dstH == 0 {
+		// this should not be happening, will crash yuv
+		libretroLogger.Error().Msgf("skip empty frame, with out: %vx%v", dstW, dstH)
+		return
+	}
 
 	// calculate real frame width in pixels from packed data (realWidth >= width)
 	packedWidth := pitch / nano.v.bpp
+	// some cores or games output zero pitch, i.e. N64 Mupen
 	if packedWidth == 0 {
 		packedWidth = width
 	}
 	// calculate space for the video frame
 	bytes := packedWidth * height * nano.v.bpp
 
-	// if Libretro renders frame with OpenGL context
-	isOpenGLRender := data == C.RETRO_HW_FRAME_BUFFER_VALID
 	var data_ []byte
-	if isOpenGLRender {
-		data_ = graphics.ReadFramebuffer(bytes, width, height)
-	} else {
+	if data != C.RETRO_HW_FRAME_BUFFER_VALID {
 		data_ = unsafe.Slice((*byte)(data), bytes)
+	} else {
+		// if Libretro renders frame with OpenGL context
+		data_ = graphics.ReadFramebuffer(bytes, width, height)
 	}
 
-	// the image is being resized and de-rotated
-	frame := image.DrawRgbaImage(
-		nano.v.pixFmt,
-		nano.rot,
-		image.ScaleNearestNeighbour,
-		int(width), int(height), int(packedWidth), int(nano.v.bpp),
-		data_,
-		frontend.vw,
-		frontend.vh,
-		frontend.th,
-	)
+	ww, hh := int(width), int(height)
+	if isVertical {
+		ww, hh = hh, ww
+	}
+	frame := image.NewRGBA(ww, hh)
+	image.Draw(frame, nano.v.pixFmt, nano.rot, int(width), int(height), int(packedWidth), int(nano.v.bpp), data_, th)
 
-	t := time.Now().UnixNano()
-	dt := time.Duration(t - lastFrameTime)
-	lastFrameTime = t
-
-	if len(frame.Pix) == 0 {
-		// this should not be happening, will crash yuv
-		libretroLogger.Error().Msgf("skip empty frame %v", frame.Bounds())
-		return
+	// some cores or games can have a variable output frame size, i.e. PSX Rearmed
+	// also we have an option of xN output frame magnification
+	// so rescale maybe
+	if frame.Rect.Dx() != dstW || frame.Rect.Dy() != dstH {
+		frame = image.ReScale(image.ScaleNearestNeighbour, dstW, dstH, frame)
 	}
 
 	fr, _ := videoPool.Get().(*emulator.GameFrame)
@@ -155,7 +164,7 @@ func coreVideoRefresh(data unsafe.Pointer, width, height uint, pitch uint) {
 		fr = &emulator.GameFrame{}
 	}
 	fr.Data = frame
-	fr.Duration = dt
+	fr.Duration = time.Duration(dt)
 	frontend.onVideo(fr)
 	videoPool.Put(fr)
 }

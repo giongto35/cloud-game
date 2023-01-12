@@ -59,9 +59,10 @@ func BenchmarkDraw(b *testing.B) {
 	}
 
 	for _, bn := range tests {
+		out := NewRGBA(bn.args.w, bn.args.h)
 		b.Run(fmt.Sprintf("%v", bn.name), func(b *testing.B) {
 			for i := 0; i < b.N; i++ {
-				DrawRgbaImage(bn.args.encoding, bn.args.rot, bn.args.scaleType, bn.args.w, bn.args.h, bn.args.packedW, bn.args.bpp, bn.args.data, bn.args.dw, bn.args.dh, bn.args.th)
+				Draw(out, bn.args.encoding, bn.args.rot, bn.args.w, bn.args.h, bn.args.packedW, bn.args.bpp, bn.args.data, bn.args.th)
 			}
 			b.ReportAllocs()
 		})

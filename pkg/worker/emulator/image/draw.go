@@ -14,38 +14,30 @@ const (
 
 var wg sync.WaitGroup
 
-func DrawRgbaImage(encoding uint32, rot *Rotate, scaleType int, w, h, packedW, bpp int, data []byte, dw, dh, th int) *image.RGBA {
-	// !to implement own image interfaces img.Pix = bytes[]
-	ww, hh := w, h
-	if rot != nil && rot.IsEven {
-		ww, hh = hh, ww
-	}
+func NewRGBA(w, h int) *image.RGBA { return image.NewRGBA(image.Rect(0, 0, w, h)) }
 
-	src := image.NewRGBA(image.Rect(0, 0, ww, hh))
-
+func Draw(dst *image.RGBA, encoding uint32, rot *Rotate, w, h, packedW, bpp int, data []byte, th int) {
 	pwb := packedW * bpp
 	if th == 0 {
-		frame(encoding, src, data, 0, h, h, w, pwb, bpp, rot)
+		frame(encoding, dst, data, 0, h, h, w, pwb, bpp, rot)
 	} else {
 		hn := h / th
 		wg.Add(th)
 		for i := 0; i < th; i++ {
 			xx := hn * i
 			go func() {
-				frame(encoding, src, data, xx, hn, h, w, pwb, bpp, rot)
+				frame(encoding, dst, data, xx, hn, h, w, pwb, bpp, rot)
 				wg.Done()
 			}()
 		}
 		wg.Wait()
 	}
+}
 
-	if ww == dw && hh == dh {
-		return src
-	} else {
-		out := image.NewRGBA(image.Rect(0, 0, dw, dh))
-		Resize(scaleType, src, out)
-		return out
-	}
+func ReScale(scaleType, w, h int, src *image.RGBA) *image.RGBA {
+	out := image.NewRGBA(image.Rect(0, 0, w, h))
+	Resize(scaleType, src, out)
+	return out
 }
 
 func frame(encoding uint32, src *image.RGBA, data []byte, xx int, hn int, h int, w int, pwb int, bpp int, rot *Rotate) {
