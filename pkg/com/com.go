@@ -52,7 +52,7 @@ func New(conn *Client, tag string, id network.Uid, log *logger.Logger) SocketCli
 	if conn.IsServer() {
 		dir = "←"
 	}
-	l.Info().Str("c", tag).Str("d", dir).Msg("Connect")
+	l.Debug().Str("c", tag).Str("d", dir).Msg("Connect")
 	return SocketClient{id: id, wire: conn, Tag: tag, Log: l}
 }
 
@@ -60,7 +60,7 @@ func (c *SocketClient) SetId(id network.Uid) { c.id = id }
 
 func (c *SocketClient) OnPacket(fn func(p In) error) {
 	logFn := func(p In) {
-		c.Log.Info().Str("c", c.Tag).Str("d", "←").Msgf("%s", p.T)
+		c.Log.Debug().Str("c", c.Tag).Str("d", "←").Msgf("%s", p.T)
 		if err := fn(p); err != nil {
 			c.Log.Error().Err(err).Send()
 		}
@@ -70,19 +70,19 @@ func (c *SocketClient) OnPacket(fn func(p In) error) {
 
 // Send makes a blocking call.
 func (c *SocketClient) Send(t api.PT, data any) ([]byte, error) {
-	c.Log.Info().Str("c", c.Tag).Str("d", "→").Msgf("ᵇ%s", t)
+	c.Log.Debug().Str("c", c.Tag).Str("d", "→").Msgf("ᵇ%s", t)
 	return c.wire.Call(t, data)
 }
 
 // Notify just sends a message and goes further.
 func (c *SocketClient) Notify(t api.PT, data any) {
-	c.Log.Info().Str("c", c.Tag).Str("d", "→").Msgf("%s", t)
+	c.Log.Debug().Str("c", c.Tag).Str("d", "→").Msgf("%s", t)
 	_ = c.wire.Send(t, data)
 }
 
 func (c *SocketClient) Close() {
 	c.wire.Close()
-	c.Log.Info().Str("c", c.Tag).Str("d", "x").Msg("Close")
+	c.Log.Debug().Str("c", c.Tag).Str("d", "x").Msg("Close")
 }
 
 func (c *SocketClient) Id() network.Uid      { return c.id }

@@ -12,8 +12,6 @@ type RecordingRoom struct {
 }
 
 func WithRecording(room GamingRoom, rec bool, recUser string, game string, conf worker.Config) *RecordingRoom {
-	room.GetLog().Info().Msgf("RECORD: %v %v", rec, recUser)
-
 	rr := &RecordingRoom{GamingRoom: room, rec: recorder.NewRecording(
 		recorder.Meta{UserName: recUser},
 		room.GetLog(),

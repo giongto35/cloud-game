@@ -44,7 +44,7 @@ func NewHub(conf coordinator.Config, lib games.GameLibrary, log *logger.Logger) 
 
 // handleUserConnection handles all connections from user/frontend.
 func (h *Hub) handleUserConnection(w http.ResponseWriter, r *http.Request) {
-	h.log.Info().Str("c", "u").Str("d", "←").Msgf("Handshake %v", r.Host)
+	h.log.Debug().Str("c", "u").Str("d", "←").Msgf("Handshake %v", r.Host)
 	conn, err := h.uConn.NewClientServer(w, r, h.log)
 	if err != nil {
 		h.log.Error().Err(err).Msg("couldn't init user connection")
@@ -95,7 +95,7 @@ func (h *Hub) handleUserConnection(w http.ResponseWriter, r *http.Request) {
 
 // handleWorkerConnection handles all connections from a new worker to coordinator.
 func (h *Hub) handleWorkerConnection(w http.ResponseWriter, r *http.Request) {
-	h.log.Info().Str("c", "w").Str("d", "←").Msgf("Handshake %v", r.Host)
+	h.log.Debug().Str("c", "w").Str("d", "←").Msgf("Handshake %v", r.Host)
 
 	data := r.URL.Query().Get(api.DataQueryParam)
 	handshake, err := GetConnectionRequest(data)
