@@ -8,6 +8,7 @@ import (
 	"github.com/giongto35/cloud-game/v2/pkg/logger"
 	"github.com/giongto35/cloud-game/v2/pkg/network/socket"
 	"github.com/pion/interceptor"
+	"github.com/pion/interceptor/pkg/report"
 	"github.com/pion/webrtc/v3"
 )
 
@@ -24,10 +25,15 @@ func NewApiFactory(conf conf.Webrtc, log *logger.Logger, mod ModApiFun) (api *Ap
 		return
 	}
 	i := &interceptor.Registry{}
-	if !conf.DisableDefaultInterceptors {
-		if err = webrtc.RegisterDefaultInterceptors(m, i); err != nil {
-			return
+
+	if conf.DisableDefaultInterceptors {
+		sender, err := report.NewSenderInterceptor()
+		if err != nil {
+			return nil, err
 		}
+		i.Add(sender)
+	} else if err = webrtc.RegisterDefaultInterceptors(m, i); err != nil {
+		return
 	}
 	customLogger := NewPionLogger(log, conf.LogLevel)
 	s := webrtc.SettingEngine{LoggerFactory: customLogger}
