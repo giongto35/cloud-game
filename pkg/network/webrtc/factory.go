@@ -9,6 +9,7 @@ import (
 	"github.com/giongto35/cloud-game/v2/pkg/logger"
 	"github.com/giongto35/cloud-game/v2/pkg/network/socket"
 	"github.com/pion/interceptor"
+	"github.com/pion/interceptor/pkg/report"
 	"github.com/pion/webrtc/v3"
 )
 
