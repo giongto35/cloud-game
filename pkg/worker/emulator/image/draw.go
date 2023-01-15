@@ -14,7 +14,13 @@ const (
 
 var wg sync.WaitGroup
 
-func NewRGBA(w, h int) *image.RGBA { return image.NewRGBA(image.Rect(0, 0, w, h)) }
+func NewRGBA(w, h int) *image.RGBA {
+	return &image.RGBA{
+		Pix:    make([]uint8, (w*h)<<2),
+		Stride: w << 2,
+		Rect:   image.Rectangle{Max: image.Point{X: w, Y: h}},
+	}
+}
 
 func Draw(dst *image.RGBA, encoding uint32, rot *Rotate, w, h, packedW, bpp int, data []byte, th int) {
 	pwb := packedW * bpp
@@ -35,7 +41,7 @@ func Draw(dst *image.RGBA, encoding uint32, rot *Rotate, w, h, packedW, bpp int,
 }
 
 func ReScale(scaleType, w, h int, src *image.RGBA) *image.RGBA {
-	out := image.NewRGBA(image.Rect(0, 0, w, h))
+	out := NewRGBA(w, h)
 	Resize(scaleType, src, out)
 	return out
 }
@@ -43,24 +49,41 @@ func ReScale(scaleType, w, h int, src *image.RGBA) *image.RGBA {
 func frame(encoding uint32, src *image.RGBA, data []byte, xx int, hn int, h int, w int, pwb int, bpp int, rot *Rotate) {
 	var px uint32
 	var dst *uint32
-	for y, l, lx, row := xx, xx+hn, 0, 0; y < l; y++ {
-		row = y * src.Stride
-		lx = y * pwb
-		for x, k := 0, 0; x < w; x++ {
-			if rot == nil {
-				k = x<<2 + row
-			} else {
+	var srcPt unsafe.Pointer
+
+	if rot == nil {
+		var dstPt unsafe.Pointer
+		for y, l := xx, xx+hn; y < l; y++ {
+			srcPt = unsafe.Pointer(&data[y*pwb])
+			dstPt = unsafe.Pointer(&src.Pix[y*src.Stride])
+			for x, pxx := 0, 0; x < w; x++ {
+				dst = (*uint32)(unsafe.Add(dstPt, uintptr(x<<2)))
+				px = *(*uint32)(unsafe.Add(srcPt, uintptr(pxx)))
+				// LE, BE might not work
+				switch encoding {
+				case BitFormatShort565:
+					i565(dst, px)
+				case BitFormatInt8888Rev:
+					ix8888(dst, px)
+				}
+				pxx += bpp
+			}
+		}
+	} else {
+		for y, l := xx, xx+hn; y < l; y++ {
+			srcPt = unsafe.Pointer(&data[y*pwb])
+			for x, k, pxx := 0, 0, 0; x < w; x++ {
 				dx, dy := rot.Call(x, y, w, h)
 				k = dx<<2 + dy*src.Stride
-			}
-			dst = (*uint32)(unsafe.Pointer(&src.Pix[k]))
-			px = *(*uint32)(unsafe.Pointer(&data[x*bpp+lx]))
-			// LE, BE might not work
-			switch encoding {
-			case BitFormatShort565:
-				i565(dst, px)
-			case BitFormatInt8888Rev:
-				ix8888(dst, px)
+				dst = (*uint32)(unsafe.Pointer(&src.Pix[k]))
+				px = *(*uint32)(unsafe.Add(srcPt, uintptr(pxx)))
+				switch encoding {
+				case BitFormatShort565:
+					i565(dst, px)
+				case BitFormatInt8888Rev:
+					ix8888(dst, px)
+				}
+				pxx += bpp
 			}
 		}
 	}
