@@ -47,45 +47,65 @@ func ReScale(scaleType, w, h int, src *image.RGBA) *image.RGBA {
 }
 
 func frame(encoding uint32, dst *image.RGBA, data []byte, yy int, hn int, h int, w int, pwb int, bpp int, rot *Rotate) {
-	srcPtr := unsafe.Pointer(&data[yy*pwb])
-	dstPtr := unsafe.Pointer(&dst.Pix[yy*dst.Stride])
+	sPtr := unsafe.Pointer(&data[yy*pwb])
+	dPtr := unsafe.Pointer(&dst.Pix[yy*dst.Stride])
 	// some cores can zero-right-pad rows to the packed width value
 	pad := pwb - w*bpp
 	yn := yy + hn
 
 	if rot == nil {
-		for y := yy; y < yn; y++ {
-			for x := 0; x < w; x++ {
-				// LE, BE might not work
-				switch encoding {
-				case BitFormatShort565:
-					i565((*uint32)(dstPtr), *(*uint16)(srcPtr))
-				case BitFormatInt8888Rev:
-					ix8888((*uint32)(dstPtr), *(*uint32)(srcPtr))
+		// LE, BE might not work
+		switch encoding {
+		case BitFormatShort565:
+			for y := yy; y < yn; y++ {
+				for x := 0; x < w; x++ {
+					i565((*uint32)(dPtr), *(*uint16)(sPtr))
+					sPtr = unsafe.Add(sPtr, uintptr(bpp))
+					dPtr = unsafe.Add(dPtr, uintptr(4))
 				}
-				srcPtr = unsafe.Add(srcPtr, uintptr(bpp))
-				dstPtr = unsafe.Add(dstPtr, uintptr(4))
+				if pad > 0 {
+					sPtr = unsafe.Add(sPtr, uintptr(pad))
+				}
 			}
-			if pad > 0 {
-				srcPtr = unsafe.Add(srcPtr, uintptr(pad))
+		case BitFormatInt8888Rev:
+			for y := yy; y < yn; y++ {
+				for x := 0; x < w; x++ {
+					ix8888((*uint32)(dPtr), *(*uint32)(sPtr))
+					sPtr = unsafe.Add(sPtr, uintptr(bpp))
+					dPtr = unsafe.Add(dPtr, uintptr(4))
+				}
+				if pad > 0 {
+					sPtr = unsafe.Add(sPtr, uintptr(pad))
+				}
 			}
 		}
 	} else {
-		for y := yy; y < yn; y++ {
-			for x, k := 0, 0; x < w; x++ {
-				dx, dy := rot.Call(x, y, w, h)
-				k = dx<<2 + dy*dst.Stride
-				dstPtr = unsafe.Pointer(&dst.Pix[k])
-				switch encoding {
-				case BitFormatShort565:
-					i565((*uint32)(dstPtr), *(*uint16)(srcPtr))
-				case BitFormatInt8888Rev:
-					ix8888((*uint32)(dstPtr), *(*uint32)(srcPtr))
+		switch encoding {
+		case BitFormatShort565:
+			for y := yy; y < yn; y++ {
+				for x, k := 0, 0; x < w; x++ {
+					dx, dy := rot.Call(x, y, w, h)
+					k = dx<<2 + dy*dst.Stride
+					dPtr = unsafe.Pointer(&dst.Pix[k])
+					i565((*uint32)(dPtr), *(*uint16)(sPtr))
+					sPtr = unsafe.Add(sPtr, uintptr(bpp))
 				}
-				srcPtr = unsafe.Add(srcPtr, uintptr(bpp))
+				if pad > 0 {
+					sPtr = unsafe.Add(sPtr, uintptr(pad))
+				}
 			}
-			if pad > 0 {
-				srcPtr = unsafe.Add(srcPtr, uintptr(pad))
+		case BitFormatInt8888Rev:
+			for y := yy; y < yn; y++ {
+				for x, k := 0, 0; x < w; x++ {
+					dx, dy := rot.Call(x, y, w, h)
+					k = dx<<2 + dy*dst.Stride
+					dPtr = unsafe.Pointer(&dst.Pix[k])
+					ix8888((*uint32)(dPtr), *(*uint32)(sPtr))
+					sPtr = unsafe.Add(sPtr, uintptr(bpp))
+				}
+				if pad > 0 {
+					sPtr = unsafe.Add(sPtr, uintptr(pad))
+				}
 			}
 		}
 	}
