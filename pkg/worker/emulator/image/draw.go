@@ -46,51 +46,53 @@ func ReScale(scaleType, w, h int, src *image.RGBA) *image.RGBA {
 	return out
 }
 
-func frame(encoding uint32, src *image.RGBA, data []byte, xx int, hn int, h int, w int, pwb int, bpp int, rot *Rotate) {
-	var px uint32
-	var dst *uint32
-	var srcPt unsafe.Pointer
+func frame(encoding uint32, dst *image.RGBA, data []byte, yy int, hn int, h int, w int, pwb int, bpp int, rot *Rotate) {
+	srcPtr := unsafe.Pointer(&data[yy*pwb])
+	dstPtr := unsafe.Pointer(&dst.Pix[yy*dst.Stride])
+	// some cores can zero-right-pad rows to the packed width value
+	pad := pwb - w*bpp
+	yn := yy + hn
 
 	if rot == nil {
-		var dstPt unsafe.Pointer
-		for y, l := xx, xx+hn; y < l; y++ {
-			srcPt = unsafe.Pointer(&data[y*pwb])
-			dstPt = unsafe.Pointer(&src.Pix[y*src.Stride])
-			for x, pxx := 0, 0; x < w; x++ {
-				dst = (*uint32)(unsafe.Add(dstPt, uintptr(x<<2)))
-				px = *(*uint32)(unsafe.Add(srcPt, uintptr(pxx)))
+		for y := yy; y < yn; y++ {
+			for x := 0; x < w; x++ {
 				// LE, BE might not work
 				switch encoding {
 				case BitFormatShort565:
-					i565(dst, px)
+					i565((*uint32)(dstPtr), *(*uint16)(srcPtr))
 				case BitFormatInt8888Rev:
-					ix8888(dst, px)
+					ix8888((*uint32)(dstPtr), *(*uint32)(srcPtr))
 				}
-				pxx += bpp
+				srcPtr = unsafe.Add(srcPtr, uintptr(bpp))
+				dstPtr = unsafe.Add(dstPtr, uintptr(4))
+			}
+			if pad > 0 {
+				srcPtr = unsafe.Add(srcPtr, uintptr(pad))
 			}
 		}
 	} else {
-		for y, l := xx, xx+hn; y < l; y++ {
-			srcPt = unsafe.Pointer(&data[y*pwb])
-			for x, k, pxx := 0, 0, 0; x < w; x++ {
+		for y := yy; y < yn; y++ {
+			for x, k := 0, 0; x < w; x++ {
 				dx, dy := rot.Call(x, y, w, h)
-				k = dx<<2 + dy*src.Stride
-				dst = (*uint32)(unsafe.Pointer(&src.Pix[k]))
-				px = *(*uint32)(unsafe.Add(srcPt, uintptr(pxx)))
+				k = dx<<2 + dy*dst.Stride
+				dstPtr = unsafe.Pointer(&dst.Pix[k])
 				switch encoding {
 				case BitFormatShort565:
-					i565(dst, px)
+					i565((*uint32)(dstPtr), *(*uint16)(srcPtr))
 				case BitFormatInt8888Rev:
-					ix8888(dst, px)
+					ix8888((*uint32)(dstPtr), *(*uint32)(srcPtr))
 				}
-				pxx += bpp
+				srcPtr = unsafe.Add(srcPtr, uintptr(bpp))
+			}
+			if pad > 0 {
+				srcPtr = unsafe.Add(srcPtr, uintptr(pad))
 			}
 		}
 	}
 }
 
-func i565(dst *uint32, px uint32) {
-	*dst = ((px >> 8) & 0xf8) | (((px >> 3) & 0xfc) << 8) | (((px << 3) & 0xfc) << 16) + 0xff000000
+func i565(dst *uint32, px uint16) {
+	*dst = (uint32(px>>8) & 0xf8) | ((uint32(px>>3) & 0xfc) << 8) | ((uint32(px<<3) & 0xfc) << 16) + 0xff000000
 	// setting the last byte to 255 allows saving RGBA images to PNG not as black squares
 }
 
