@@ -68,3 +68,32 @@ func BenchmarkDraw(b *testing.B) {
 		})
 	}
 }
+
+func Test_ix8888(t *testing.T) {
+	type args struct {
+		dst    *uint32
+		px     uint32
+		expect uint32
+	}
+	tests := []struct {
+		name string
+		args args
+	}{
+		{
+			name: "",
+			args: args{
+				dst:    new(uint32),
+				px:     0x11223344,
+				expect: 0xff443322,
+			},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			ix8888(tt.args.dst, tt.args.px)
+			if *tt.args.dst != tt.args.expect {
+				t.Errorf("nope, %x %x", *tt.args.dst, tt.args.expect)
+			}
+		})
+	}
+}

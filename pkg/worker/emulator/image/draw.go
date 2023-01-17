@@ -2,6 +2,7 @@ package image
 
 import (
 	"image"
+	"math/bits"
 	"sync"
 	"unsafe"
 )
@@ -112,14 +113,13 @@ func frame(encoding uint32, dst *image.RGBA, data []byte, yy int, hn int, h int,
 }
 
 func i565(dst *uint32, px uint16) {
-	*dst = (uint32(px>>8) & 0xf8) | ((uint32(px>>3) & 0xfc) << 8) | ((uint32(px<<3) & 0xfc) << 16) + 0xff000000
+	*dst = (uint32(px>>8) & 0xf8) | ((uint32(px>>3) & 0xfc) << 8) | ((uint32(px<<3) & 0xfc) << 16) | 0xff000000
 	// setting the last byte to 255 allows saving RGBA images to PNG not as black squares
 }
 
 func ix8888(dst *uint32, px uint32) {
-	*dst = ((px >> 16) & 0xff) | (px & 0xff00) | ((px << 16) & 0xff0000) + 0xff000000
+	//*dst = ((px >> 16) & 0xff) | (px & 0xff00) | ((px << 16) & 0xff0000) + 0xff000000
+	*dst = bits.ReverseBytes32(px<<8) | 0xff000000
 }
 
-func Clear() {
-	wg = sync.WaitGroup{}
-}
+func Clear() { wg = sync.WaitGroup{} }
