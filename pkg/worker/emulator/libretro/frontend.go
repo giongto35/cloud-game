@@ -3,7 +3,6 @@ package libretro
 import (
 	"errors"
 	"fmt"
-	"os"
 	"path/filepath"
 	"sync"
 	"sync/atomic"
@@ -11,7 +10,9 @@ import (
 
 	conf "github.com/giongto35/cloud-game/v2/pkg/config/emulator"
 	"github.com/giongto35/cloud-game/v2/pkg/logger"
+	"github.com/giongto35/cloud-game/v2/pkg/os"
 	"github.com/giongto35/cloud-game/v2/pkg/worker/emulator"
+	"github.com/giongto35/cloud-game/v2/pkg/worker/emulator/image"
 )
 
 type Frontend struct {
@@ -27,6 +28,10 @@ type Frontend struct {
 	vw, vh int
 	// draw threads
 	th int
+
+	stopped atomic.Bool
+
+	canvas *image.Canvas
 
 	done chan struct{}
 	log  *logger.Logger
@@ -53,6 +58,11 @@ const (
 	KeyReleased = 0
 )
 
+var (
+	noAudio = func(*emulator.GameAudio) {}
+	noVideo = func(*emulator.GameFrame) {}
+)
+
 // NewFrontend implements Emulator interface for a Libretro frontend.
 func NewFrontend(conf conf.Emulator, log *logger.Logger) (*Frontend, error) {
 	log = log.Extend(log.With().Str("m", "Libretro"))
@@ -61,7 +71,7 @@ func NewFrontend(conf conf.Emulator, log *logger.Logger) (*Frontend, error) {
 
 	// Check if room is on local storage, if not, pull from GCS to local storage
 	log.Info().Msgf("Local storage path: %v", conf.Storage)
-	if err := os.MkdirAll(conf.Storage, 0755); err != nil && !os.IsExist(err) {
+	if err := os.CheckCreateDir(conf.Storage); err != nil {
 		return nil, fmt.Errorf("failed to create local storage path: %v, %w", conf.Storage, err)
 	}
 
@@ -69,7 +79,7 @@ func NewFrontend(conf conf.Emulator, log *logger.Logger) (*Frontend, error) {
 	if err != nil {
 		return nil, fmt.Errorf("failed to use emulator path: %v, %w", conf.LocalPath, err)
 	}
-	if err := os.MkdirAll(path, 0755); err != nil && !os.IsExist(err) {
+	if err := os.CheckCreateDir(path); err != nil {
 		return nil, fmt.Errorf("failed to create local path: %v, %w", conf.LocalPath, err)
 	}
 	log.Info().Msgf("Emulator save path is %v", path)
@@ -88,22 +98,22 @@ func NewFrontend(conf conf.Emulator, log *logger.Logger) (*Frontend, error) {
 		done:    make(chan struct{}),
 		th:      conf.Threads,
 		log:     log,
+		onAudio: noAudio,
+		onVideo: noVideo,
 	}
 	return frontend, nil
 }
 
-func (f *Frontend) Input(player int, data []byte) { f.input.setInput(player, data) }
-
 func (f *Frontend) LoadMetadata(emu string) {
-	libretroConf := f.conf.GetLibretroCoreConfig(emu)
+	config := f.conf.GetLibretroCoreConfig(emu)
 	f.mu.Lock()
 	coreLoad(emulator.Metadata{
-		LibPath:       libretroConf.Lib,
-		ConfigPath:    libretroConf.Config,
-		IsGlAllowed:   libretroConf.IsGlAllowed,
-		UsesLibCo:     libretroConf.UsesLibCo,
-		HasMultitap:   libretroConf.HasMultitap,
-		AutoGlContext: libretroConf.AutoGlContext,
+		LibPath:       config.Lib,
+		ConfigPath:    config.Config,
+		IsGlAllowed:   config.IsGlAllowed,
+		UsesLibCo:     config.UsesLibCo,
+		HasMultitap:   config.HasMultitap,
+		AutoGlContext: config.AutoGlContext,
 	})
 	f.mu.Unlock()
 }
@@ -120,6 +130,11 @@ func (f *Frontend) Start() {
 	defer func() {
 		ticker.Stop()
 		nanoarchShutdown()
+		f.mu.Lock()
+		frontend.canvas.Clear()
+		f.SetAudio(noAudio)
+		f.SetVideo(noVideo)
+		f.mu.Unlock()
 		f.log.Debug().Msgf("run loop finished")
 	}()
 
@@ -149,19 +164,24 @@ func (f *Frontend) GetFps() uint                          { return uint(nano.sys
 func (f *Frontend) GetHashPath() string                   { return f.storage.GetSavePath() }
 func (f *Frontend) GetSRAMPath() string                   { return f.storage.GetSRAMPath() }
 func (f *Frontend) GetSampleRate() uint                   { return uint(nano.sysAvInfo.timing.sample_rate) }
+func (f *Frontend) Input(player int, data []byte)         { f.input.setInput(player, data) }
 func (f *Frontend) LoadGame(path string) error            { return LoadGame(path) }
 func (f *Frontend) LoadGameState() error                  { return f.Load() }
 func (f *Frontend) HasVerticalFrame() bool                { return nano.rot != nil && nano.rot.IsEven }
 func (f *Frontend) SaveGameState() error                  { return f.Save() }
 func (f *Frontend) SetMainSaveName(name string)           { f.storage.SetMainSaveName(name) }
-func (f *Frontend) SetViewport(width int, height int)     { f.vw, f.vh = width, height }
-func (f *Frontend) ToggleMultitap()                       { toggleMultitap() }
+func (f *Frontend) SetViewport(width int, height int) {
+	f.mu.Lock()
+	f.vw, f.vh = width, height
+	size := int(nano.sysAvInfo.geometry.max_width * nano.sysAvInfo.geometry.max_height)
+	f.canvas = image.NewCanvas(width, height, size)
+	f.mu.Unlock()
+}
+func (f *Frontend) ToggleMultitap() { toggleMultitap() }
 
 func (f *Frontend) Close() {
 	close(f.done)
-	f.mu.Lock()
-	f.SetViewport(0, 0)
-	f.mu.Unlock()
+	frontend.stopped.Store(true)
 	nano.reserved <- struct{}{}
 }
 

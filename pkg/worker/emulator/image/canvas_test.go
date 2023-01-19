@@ -10,7 +10,6 @@ func BenchmarkDraw(b *testing.B) {
 		encoding  uint32
 		rot       *Rotate
 		scaleType int
-		flipV     bool
 		w         int
 		h         int
 		packedW   int
@@ -59,10 +58,16 @@ func BenchmarkDraw(b *testing.B) {
 	}
 
 	for _, bn := range tests {
-		out := NewRGBA(bn.args.w, bn.args.h)
+		c := NewCanvas(bn.args.w, bn.args.h, bn.args.w*bn.args.h)
+		img := c.Get(bn.args.w, bn.args.h)
+		c.Put(img)
+		img2 := c.Get(bn.args.w, bn.args.h)
+		c.Put(img2)
+		b.ResetTimer()
 		b.Run(fmt.Sprintf("%v", bn.name), func(b *testing.B) {
 			for i := 0; i < b.N; i++ {
-				Draw(out, bn.args.encoding, bn.args.rot, bn.args.w, bn.args.h, bn.args.packedW, bn.args.bpp, bn.args.data, bn.args.th)
+				p := c.Draw(bn.args.encoding, bn.args.rot, bn.args.w, bn.args.h, bn.args.packedW, bn.args.bpp, bn.args.data, bn.args.th)
+				c.Put(p)
 			}
 			b.ReportAllocs()
 		})

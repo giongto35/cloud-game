@@ -2,6 +2,8 @@ package encoder
 
 import (
 	"image"
+	"sync"
+	"sync/atomic"
 
 	"github.com/giongto35/cloud-game/v2/pkg/logger"
 	"github.com/giongto35/cloud-game/v2/pkg/worker/encoder/yuv"
@@ -20,12 +22,10 @@ type (
 
 type VideoEncoder struct {
 	encoder Encoder
-
-	y yuv.ImgProcessor
-
-	// frame size
-	w, h int
-	log  *logger.Logger
+	log     *logger.Logger
+	stopped atomic.Bool
+	y       yuv.ImgProcessor
+	mu      sync.Mutex
 }
 
 type VideoCodec string
@@ -45,10 +45,16 @@ func NewVideoEncoder(enc Encoder, w, h int, concurrency int, log *logger.Logger)
 	if concurrency > 0 {
 		log.Info().Msgf("Use concurrent image processor: %v", concurrency)
 	}
-	return &VideoEncoder{encoder: enc, y: y, w: w, h: h, log: log}
+	return &VideoEncoder{encoder: enc, y: y, log: log}
 }
 
-func (vp VideoEncoder) Encode(img InFrame) OutFrame {
+func (vp *VideoEncoder) Encode(img InFrame) OutFrame {
+	vp.mu.Lock()
+	defer vp.mu.Unlock()
+	if vp.stopped.Load() {
+		return nil
+	}
+
 	yCbCr := vp.y.Process(img)
 	vp.encoder.LoadBuf(yCbCr)
 	vp.y.Put(&yCbCr)
@@ -59,11 +65,11 @@ func (vp VideoEncoder) Encode(img InFrame) OutFrame {
 	return nil
 }
 
-// Start begins video encoding pipe.
-// Should be wrapped into a goroutine.
-func (vp VideoEncoder) Start() {}
+func (vp *VideoEncoder) Stop() {
+	vp.stopped.Store(true)
+	vp.mu.Lock()
+	defer vp.mu.Unlock()
 
-func (vp VideoEncoder) Stop() {
 	if err := vp.encoder.Shutdown(); err != nil {
 		vp.log.Error().Err(err).Msg("failed to close the encoder")
 	}

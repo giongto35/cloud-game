@@ -101,10 +101,16 @@ func Init(localPath string) {
 }
 
 //export coreVideoRefresh
-func coreVideoRefresh(data unsafe.Pointer, width, height uint, pitch uint) {
+func coreVideoRefresh(data unsafe.Pointer, width, height uint, packed uint) {
+	if frontend.stopped.Load() {
+		libretroLogger.Warn().Msgf(">>> skip video")
+		return
+	}
+
 	// some frames can be rendered slower or faster than internal 1/fps core tick
 	// so track actual frame render time for proper RTP packet timestamps
 	// (and proper frame display time, for example: 1->1/60=16.6ms, 2->10ms, 3->23ms, 4->16.6ms)
+	// this is useful only for cores with variable framerate, for the fixed framerate cores this adds stutter
 	// !to find docs on Libretro refresh sync and frame times
 	t := time.Now().UnixNano()
 	dt := t - lastFrameTime
@@ -116,26 +122,13 @@ func coreVideoRefresh(data unsafe.Pointer, width, height uint, pitch uint) {
 		return
 	}
 
-	// try to save to local because it may change during this call
-	isVertical := frontend.HasVerticalFrame()
-	dstW := frontend.vw
-	dstH := frontend.vh
-	th := frontend.th
-	// frontend.vw vh can be changed (set to 0 on close) during leftover retro draws
-	if dstW == 0 || dstH == 0 {
-		// this should not be happening, will crash yuv
-		libretroLogger.Error().Msgf("skip empty frame, with out: %vx%v", dstW, dstH)
-		return
-	}
-
 	// calculate real frame width in pixels from packed data (realWidth >= width)
-	packedWidth := pitch / nano.v.bpp
 	// some cores or games output zero pitch, i.e. N64 Mupen
-	if packedWidth == 0 {
-		packedWidth = width
+	if packed == 0 {
+		packed = width
 	}
 	// calculate space for the video frame
-	bytes := packedWidth * height * nano.v.bpp
+	bytes := packed * height
 
 	var data_ []byte
 	if data != C.RETRO_HW_FRAME_BUFFER_VALID {
@@ -145,27 +138,19 @@ func coreVideoRefresh(data unsafe.Pointer, width, height uint, pitch uint) {
 		data_ = graphics.ReadFramebuffer(bytes, width, height)
 	}
 
-	ww, hh := int(width), int(height)
-	if isVertical {
-		ww, hh = hh, ww
-	}
-	frame := image.NewRGBA(ww, hh)
-	image.Draw(frame, nano.v.pixFmt, nano.rot, int(width), int(height), int(packedWidth), int(nano.v.bpp), data_, th)
-
-	// some cores or games can have a variable output frame size, i.e. PSX Rearmed
+	// some cores or games have a variable output frame size, i.e. PSX Rearmed
 	// also we have an option of xN output frame magnification
-	// so rescale maybe
-	if frame.Rect.Dx() != dstW || frame.Rect.Dy() != dstH {
-		frame = image.ReScale(image.ScaleNearestNeighbour, dstW, dstH, frame)
-	}
+	// so, it may be rescaled
 
 	fr, _ := videoPool.Get().(*emulator.GameFrame)
 	if fr == nil {
 		fr = &emulator.GameFrame{}
 	}
-	fr.Data = frame
+	fr.Data = frontend.canvas.
+		Draw(nano.v.pixFmt, nano.rot, int(width), int(height), int(packed), int(nano.v.bpp), data_, frontend.th)
 	fr.Duration = time.Duration(dt)
 	frontend.onVideo(fr)
+	frontend.canvas.Put(fr.Data)
 	videoPool.Put(fr)
 }
 
@@ -200,6 +185,11 @@ func coreInputState(port C.unsigned, device C.unsigned, index C.unsigned, id C.u
 }
 
 func audioWrite(buf unsafe.Pointer, frames C.size_t) C.size_t {
+	if frontend.stopped.Load() {
+		libretroLogger.Warn().Msgf(">>> skip audio")
+		return 0
+	}
+
 	samples := int(frames) << 1
 	src := unsafe.Slice((*int16)(buf), samples)
 	dst, _ := audioCopyPool.Get().(*[]int16)
@@ -592,7 +582,6 @@ func nanoarchShutdown() {
 		libretroLogger.Error().Err(err).Msg("lib close failed")
 	}
 	coreConfig.Free()
-	image.Clear()
 }
 
 func run() {

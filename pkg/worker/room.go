@@ -62,18 +62,18 @@ func NewRoom(id string, game games.GameMetadata, onClose func(*Room), conf worke
 		log.Fatal().Err(err).Msgf("couldn't load the game %v", game)
 	}
 	// calc output frame size and rotation
-	fw, fh := room.emulator.GetFrameSize()
-	w, h := room.whatsFrame(conf.Emulator, fw, fh)
+	w, h := room.whatsFrame(conf.Emulator)
 	if room.emulator.HasVerticalFrame() {
 		w, h = h, w
 	}
 	room.emulator.SetViewport(w, h)
 
-	log.Info().Str("game", game.Name).Msg("The room is open")
-
 	room.initVideo(w, h, conf.Encoder.Video)
 	room.initAudio(int(room.emulator.GetSampleRate()), conf.Encoder.Audio)
-	log.Info().Str("room", room.GetId()).Msg("New room")
+
+	log.Info().Str("room", room.GetId()).
+		Str("game", game.Name).
+		Msg("New room")
 	return room
 }
 
@@ -110,7 +110,8 @@ func (r *Room) EnableAutosave(periodSec int) {
 	}
 }
 
-func (r *Room) whatsFrame(conf conf.Emulator, w, h int) (ww int, hh int) {
+func (r *Room) whatsFrame(conf conf.Emulator) (ww int, hh int) {
+	w, h := r.emulator.GetFrameSize()
 	// nwidth, nheight are the WebRTC output size
 	var nwidth, nheight int
 	emu, ar := conf, conf.AspectRatio

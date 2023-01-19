@@ -7,44 +7,75 @@ import (
 	"unsafe"
 )
 
+// Canvas is a stateful drawing surface, i.e. image.RGBA
+type Canvas struct {
+	w, h     int
+	vertical bool
+	pool     sync.Pool
+	wg       sync.WaitGroup
+}
+
 const (
 	BitFormatShort5551  = iota // BIT_FORMAT_SHORT_5_5_5_1 has 5 bits R, 5 bits G, 5 bits B, 1 bit alpha
 	BitFormatInt8888Rev        // BIT_FORMAT_INT_8_8_8_8_REV has 8 bits R, 8 bits G, 8 bits B, 8 bit alpha
 	BitFormatShort565          // BIT_FORMAT_SHORT_5_6_5 has 5 bits R, 6 bits G, 5 bits
 )
 
-var wg sync.WaitGroup
-
-func NewRGBA(w, h int) *image.RGBA {
-	return &image.RGBA{
-		Pix:    make([]uint8, (w*h)<<2),
-		Stride: w << 2,
-		Rect:   image.Rectangle{Max: image.Point{X: w, Y: h}},
+func NewCanvas(w, h, size int) *Canvas {
+	return &Canvas{
+		w:        w,
+		h:        h,
+		vertical: h > w, // input is inverted
+		pool: sync.Pool{New: func() any {
+			return &image.RGBA{
+				Pix:  make([]uint8, size<<2),
+				Rect: image.Rectangle{Max: image.Point{X: w, Y: h}},
+			}
+		}},
 	}
 }
 
-func Draw(dst *image.RGBA, encoding uint32, rot *Rotate, w, h, packedW, bpp int, data []byte, th int) {
-	pwb := packedW * bpp
+func (c *Canvas) Get(w, h int) *image.RGBA {
+	i := c.pool.Get().(*image.RGBA)
+	if c.vertical {
+		w, h = h, w
+	}
+	i.Stride = w << 2
+	i.Pix = i.Pix[:i.Stride*h]
+	i.Rect.Max.X = w
+	i.Rect.Max.Y = h
+	return i
+}
+
+func (c *Canvas) Put(i *image.RGBA) { c.pool.Put(i) }
+func (c *Canvas) Clear()            { c.wg = sync.WaitGroup{} }
+
+func (c *Canvas) Draw(encoding uint32, rot *Rotate, w, h, packedW, bpp int, data []byte, th int) *image.RGBA {
+	dst := c.Get(w, h)
 	if th == 0 {
-		frame(encoding, dst, data, 0, h, h, w, pwb, bpp, rot)
+		frame(encoding, dst, data, 0, h, h, w, packedW, bpp, rot)
 	} else {
 		hn := h / th
-		wg.Add(th)
+		c.wg.Add(th)
 		for i := 0; i < th; i++ {
 			xx := hn * i
 			go func() {
-				frame(encoding, dst, data, xx, hn, h, w, pwb, bpp, rot)
-				wg.Done()
+				frame(encoding, dst, data, xx, hn, h, w, packedW, bpp, rot)
+				c.wg.Done()
 			}()
 		}
-		wg.Wait()
+		c.wg.Wait()
 	}
-}
 
-func ReScale(scaleType, w, h int, src *image.RGBA) *image.RGBA {
-	out := NewRGBA(w, h)
-	Resize(scaleType, src, out)
-	return out
+	// rescale
+	if dst.Rect.Dx() != c.w || dst.Rect.Dy() != c.h {
+		out := c.Get(c.w, c.h)
+		Resize(ScaleNearestNeighbour, dst, out)
+		c.Put(dst)
+		return out
+	}
+
+	return dst
 }
 
 func frame(encoding uint32, dst *image.RGBA, data []byte, yy int, hn int, h int, w int, pwb int, bpp int, rot *Rotate) {
@@ -121,5 +152,3 @@ func ix8888(dst *uint32, px uint32) {
 	//*dst = ((px >> 16) & 0xff) | (px & 0xff00) | ((px << 16) & 0xff0000) + 0xff000000
 	*dst = bits.ReverseBytes32(px<<8) | 0xff000000
 }
-
-func Clear() { wg = sync.WaitGroup{} }

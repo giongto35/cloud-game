@@ -9,6 +9,8 @@ import (
 	"syscall"
 )
 
+var ErrNotExist = os.ErrNotExist
+
 func Exists(path string) bool {
 	_, err := os.Stat(path)
 	return !errors.Is(err, fs.ErrNotExist)
