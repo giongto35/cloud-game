@@ -80,6 +80,8 @@ func NewEncoder(w, h int, opts *Options) (encoder *H264, err error) {
 	param.IWidth = int32(w)
 	param.IHeight = int32(h)
 	param.ILogLevel = opts.LogLevel
+	param.ISyncLookahead = 0
+	param.IThreads = 1
 
 	param.Rc.IRcMethod = RcCrf
 	param.Rc.FRfConstant = float32(opts.Crf)
