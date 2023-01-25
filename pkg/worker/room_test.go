@@ -22,6 +22,7 @@ import (
 	"github.com/giongto35/cloud-game/v2/pkg/games"
 	"github.com/giongto35/cloud-game/v2/pkg/logger"
 	"github.com/giongto35/cloud-game/v2/pkg/worker/emulator"
+	image2 "github.com/giongto35/cloud-game/v2/pkg/worker/emulator/image"
 	"github.com/giongto35/cloud-game/v2/pkg/worker/emulator/libretro/manager/remotehttp"
 	"github.com/giongto35/cloud-game/v2/pkg/worker/encoder"
 	"github.com/giongto35/cloud-game/v2/pkg/worker/thread"
@@ -180,7 +181,7 @@ func TestAllEmulatorRooms(t *testing.T) {
 	}
 }
 
-func dumpCanvas(frame *image.RGBA, name string, caption string, path string) {
+func dumpCanvas(frame *image2.Frame, name string, caption string, path string) {
 	// slap 'em caption
 	if len(caption) > 0 {
 		draw.Draw(frame, image.Rect(8, 8, 8+len(caption)*7+3, 24), &image.Uniform{C: color.RGBA{}}, image.Point{}, draw.Src)
@@ -296,13 +297,10 @@ func waitNFrames(n int, room roomMock) *emulator.GameFrame {
 	room.emulator.SetVideo(func(video *emulator.GameFrame) {
 		handler(video)
 		if atomic.AddInt32(&i, -1) >= 0 {
+			v := video.Data.Copy()
 			frame = emulator.GameFrame{
 				Duration: video.Duration,
-				Data: &image.RGBA{
-					Pix:    append([]uint8{}, video.Data.Pix...),
-					Stride: video.Data.Stride,
-					Rect:   video.Data.Rect,
-				},
+				Data:     &v,
 			}
 			wg.Done()
 		}

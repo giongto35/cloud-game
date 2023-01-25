@@ -15,6 +15,19 @@ type Canvas struct {
 	wg       sync.WaitGroup
 }
 
+type Frame struct {
+	*image.RGBA
+}
+
+func (f *Frame) Opaque() bool { return true }
+func (f *Frame) Copy() Frame {
+	return Frame{&image.RGBA{
+		Pix:    append([]uint8{}, f.Pix...),
+		Stride: f.Stride,
+		Rect:   f.Rect,
+	}}
+}
+
 const (
 	BitFormatShort5551  = iota // BIT_FORMAT_SHORT_5_5_5_1 has 5 bits R, 5 bits G, 5 bits B, 1 bit alpha
 	BitFormatInt8888Rev        // BIT_FORMAT_INT_8_8_8_8_REV has 8 bits R, 8 bits G, 8 bits B, 8 bit alpha
@@ -27,16 +40,16 @@ func NewCanvas(w, h, size int) *Canvas {
 		h:        h,
 		vertical: h > w, // input is inverted
 		pool: sync.Pool{New: func() any {
-			return &image.RGBA{
+			return &Frame{&image.RGBA{
 				Pix:  make([]uint8, size<<2),
 				Rect: image.Rectangle{Max: image.Point{X: w, Y: h}},
-			}
+			}}
 		}},
 	}
 }
 
-func (c *Canvas) Get(w, h int) *image.RGBA {
-	i := c.pool.Get().(*image.RGBA)
+func (c *Canvas) Get(w, h int) *Frame {
+	i := c.pool.Get().(*Frame)
 	if c.vertical {
 		w, h = h, w
 	}
@@ -47,10 +60,10 @@ func (c *Canvas) Get(w, h int) *image.RGBA {
 	return i
 }
 
-func (c *Canvas) Put(i *image.RGBA) { c.pool.Put(i) }
-func (c *Canvas) Clear()            { c.wg = sync.WaitGroup{} }
+func (c *Canvas) Put(i *Frame) { c.pool.Put(i) }
+func (c *Canvas) Clear()       { c.wg = sync.WaitGroup{} }
 
-func (c *Canvas) Draw(encoding uint32, rot *Rotate, w, h, packedW, bpp int, data []byte, th int) *image.RGBA {
+func (c *Canvas) Draw(encoding uint32, rot *Rotate, w, h, packedW, bpp int, data []byte, th int) *Frame {
 	dst := c.Get(w, h)
 	if th == 0 {
 		frame(encoding, dst, data, 0, h, h, w, packedW, bpp, rot)
@@ -70,7 +83,7 @@ func (c *Canvas) Draw(encoding uint32, rot *Rotate, w, h, packedW, bpp int, data
 	// rescale
 	if dst.Rect.Dx() != c.w || dst.Rect.Dy() != c.h {
 		out := c.Get(c.w, c.h)
-		Resize(ScaleNearestNeighbour, dst, out)
+		Resize(ScaleNearestNeighbour, dst.RGBA, out.RGBA)
 		c.Put(dst)
 		return out
 	}
@@ -78,7 +91,7 @@ func (c *Canvas) Draw(encoding uint32, rot *Rotate, w, h, packedW, bpp int, data
 	return dst
 }
 
-func frame(encoding uint32, dst *image.RGBA, data []byte, yy int, hn int, h int, w int, pwb int, bpp int, rot *Rotate) {
+func frame(encoding uint32, dst *Frame, data []byte, yy int, hn int, h int, w int, pwb int, bpp int, rot *Rotate) {
 	sPtr := unsafe.Pointer(&data[yy*pwb])
 	dPtr := unsafe.Pointer(&dst.Pix[yy*dst.Stride])
 	// some cores can zero-right-pad rows to the packed width value
@@ -91,7 +104,7 @@ func frame(encoding uint32, dst *image.RGBA, data []byte, yy int, hn int, h int,
 		case BitFormatShort565:
 			for y := yy; y < yn; y++ {
 				for x := 0; x < w; x++ {
-					i565((*uint32)(dPtr), *(*uint16)(sPtr))
+					i565((*uint32)(dPtr), uint32(*(*uint16)(sPtr)))
 					sPtr = unsafe.Add(sPtr, uintptr(bpp))
 					dPtr = unsafe.Add(dPtr, uintptr(4))
 				}
@@ -119,7 +132,7 @@ func frame(encoding uint32, dst *image.RGBA, data []byte, yy int, hn int, h int,
 					dx, dy := rot.Call(x, y, w, h)
 					k = dx<<2 + dy*dst.Stride
 					dPtr = unsafe.Pointer(&dst.Pix[k])
-					i565((*uint32)(dPtr), *(*uint16)(sPtr))
+					i565((*uint32)(dPtr), uint32(*(*uint16)(sPtr)))
 					sPtr = unsafe.Add(sPtr, uintptr(bpp))
 				}
 				if pad > 0 {
@@ -143,12 +156,12 @@ func frame(encoding uint32, dst *image.RGBA, data []byte, yy int, hn int, h int,
 	}
 }
 
-func i565(dst *uint32, px uint16) {
-	*dst = (uint32(px>>8) & 0xf8) | ((uint32(px>>3) & 0xfc) << 8) | ((uint32(px<<3) & 0xfc) << 16) | 0xff000000
+func i565(dst *uint32, px uint32) {
+	*dst = (px >> 8 & 0xf8) | ((px >> 3 & 0xfc) << 8) | ((px << 3 & 0xfc) << 16) // | 0xff000000
 	// setting the last byte to 255 allows saving RGBA images to PNG not as black squares
 }
 
 func ix8888(dst *uint32, px uint32) {
 	//*dst = ((px >> 16) & 0xff) | (px & 0xff00) | ((px << 16) & 0xff0000) + 0xff000000
-	*dst = bits.ReverseBytes32(px<<8) | 0xff000000
+	*dst = bits.ReverseBytes32(px << 8) //| 0xff000000
 }

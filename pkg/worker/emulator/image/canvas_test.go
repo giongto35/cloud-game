@@ -58,10 +58,10 @@ func BenchmarkDraw(b *testing.B) {
 	}
 
 	for _, bn := range tests {
-		c := NewCanvas(bn.args.w, bn.args.h, bn.args.w*bn.args.h)
-		img := c.Get(bn.args.w, bn.args.h)
+		c := NewCanvas(bn.args.dw, bn.args.dh, bn.args.dw*bn.args.dh)
+		img := c.Get(bn.args.dw, bn.args.dh)
 		c.Put(img)
-		img2 := c.Get(bn.args.w, bn.args.h)
+		img2 := c.Get(bn.args.dw, bn.args.dh)
 		c.Put(img2)
 		b.ResetTimer()
 		b.Run(fmt.Sprintf("%v", bn.name), func(b *testing.B) {

@@ -1,7 +1,6 @@
 package emulator
 
 import (
-	img "image"
 	"time"
 
 	"github.com/giongto35/cloud-game/v2/pkg/worker/emulator/image"
@@ -59,7 +58,7 @@ type Metadata struct {
 
 type (
 	GameFrame struct {
-		Data     *img.RGBA
+		Data     *image.Frame
 		Duration time.Duration
 	}
 	GameAudio struct {
