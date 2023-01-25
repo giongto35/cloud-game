@@ -18,7 +18,7 @@ func run() {
 	conf := config.NewConfig()
 	conf.ParseFlags()
 
-	log := logger.NewConsole(conf.Worker.Debug, "w", true)
+	log := logger.NewConsole(conf.Worker.Debug, "w", false)
 	log.Info().Msgf("version %s", Version)
 	log.Info().Msgf("conf version: %v", conf.Version)
 	if log.GetLevel() < logger.InfoLevel {
