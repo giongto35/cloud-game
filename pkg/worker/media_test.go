@@ -47,6 +47,7 @@ func run(w, h int, cod encoder.VideoCodec, count int, a *image.RGBA, b *image.RG
 		enc, _ = vpx.NewEncoder(w, h, nil)
 	}
 
+	logger.SetGlobalLevel(logger.Disabled)
 	ve := encoder.NewVideoEncoder(enc, w, h, 8, l)
 	defer ve.Stop()
 
