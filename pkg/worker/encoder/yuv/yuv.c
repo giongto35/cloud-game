@@ -6,7 +6,7 @@
 
 #ifdef Y601_STUDIO
 // 66*R+129*G+25*B
-static __inline int Y(uint8_t *rgb) {
+static __inline int Y(uint8_t *__restrict rgb) {
     int R = *rgb;
     int G = *(rgb+1);
     int B = *(rgb+2);
@@ -14,7 +14,7 @@ static __inline int Y(uint8_t *rgb) {
 }
 
 // 112*B-38*R-74G
-static __inline int U(uint8_t *rgb) {
+static __inline int U(uint8_t *__restrict rgb) {
     int R = *rgb;
     int G = *(rgb+1);
     int B = *(rgb+2);
@@ -22,7 +22,7 @@ static __inline int U(uint8_t *rgb) {
 }
 
 // 112*R-94*G-18*B
-static __inline int V(uint8_t *rgb) {
+static __inline int V(uint8_t *__restrict rgb) {
     int R = 56**(rgb);
     int G = 47**(rgb+1);
     int B =    *(rgb+2);
@@ -62,9 +62,9 @@ static __inline int V(uint8_t *rgb) {
 static const int Y_MIN = 0;
 #endif
 
-static __inline void _y(uint8_t *p, uint8_t *y, int size) {
+static __inline void _y(uint8_t *__restrict p, uint8_t *__restrict y, int size) {
     do {
-        *y++ = Y_MIN + Y(p);
+        *y++ = Y(p) + Y_MIN;
         p += 4;
     } while (--size);
 }
@@ -73,7 +73,7 @@ static __inline void _y(uint8_t *p, uint8_t *y, int size) {
 // X   X   X   X
 //   O       O
 // X   X   X   X
-static __inline void _4uv(uint8_t *p, uint8_t *u, uint8_t *v, const int w, const int h) {
+static __inline void _4uv(uint8_t * __restrict p, uint8_t * __restrict u, uint8_t * __restrict v, const int w, const int h) {
     uint8_t *p2, *p3, *p4;
     const int row = w << 2;
     const int next = 4;
@@ -99,13 +99,13 @@ static __inline void _4uv(uint8_t *p, uint8_t *u, uint8_t *v, const int w, const
             x -= 2;
         }
         p += row;
-        y -=2;
+        y -= 2;
         x = w;
     }
 }
 
 // Converts RGBA image to YUV (I420) with BT.601 studio color range.
-void rgbaToYuv(void *destination, void *source, const int w, const int h) {
+void rgbaToYuv(void *__restrict destination, void *__restrict source, const int w, const int h) {
     const int image_size = w * h;
     uint8_t *src = source;
     uint8_t *dst_y = destination;
@@ -113,16 +113,16 @@ void rgbaToYuv(void *destination, void *source, const int w, const int h) {
     uint8_t *dst_v = destination + image_size + image_size / 4;
     _y(src, dst_y, image_size);
     src = source;
-    _4uv(src, dst_u, dst_v, w, h);
+    _4uv(source, dst_u, dst_v, w, h);
 }
 
-void luma(void *destination, void *source, const int pos, const int w, const int h) {
+void luma(void *__restrict destination, void *__restrict source, const int pos, const int w, const int h) {
     uint8_t *rgba = source + 4 * pos;
     uint8_t *dst = destination + pos;
     _y(rgba, dst, w*h);
 }
 
-void chroma(void *dst, void *source, const int pos, const int deu, const int dev, const int w, const int h) {
+void chroma(void *__restrict dst, void *__restrict source, const int pos, const int deu, const int dev, const int w, const int h) {
     uint8_t *src = source + 4 * pos;
     uint8_t *dst_u = dst + deu + pos / 4;
     uint8_t *dst_v = dst + dev + pos / 4;

@@ -8,7 +8,6 @@ import (
 	"image/color"
 	"image/draw"
 	"image/png"
-	"io"
 	"log"
 	"os"
 	"path/filepath"
@@ -23,6 +22,7 @@ import (
 	"github.com/giongto35/cloud-game/v2/pkg/games"
 	"github.com/giongto35/cloud-game/v2/pkg/logger"
 	"github.com/giongto35/cloud-game/v2/pkg/worker/emulator"
+	image2 "github.com/giongto35/cloud-game/v2/pkg/worker/emulator/image"
 	"github.com/giongto35/cloud-game/v2/pkg/worker/emulator/libretro/manager/remotehttp"
 	"github.com/giongto35/cloud-game/v2/pkg/worker/encoder"
 	"github.com/giongto35/cloud-game/v2/pkg/worker/thread"
@@ -49,6 +49,7 @@ type roomMockConfig struct {
 	vCodec            encoder.VideoCodec
 	autoGlContext     bool
 	dontStartEmulator bool
+	noLog             bool
 }
 
 // Store absolute path to test games
@@ -180,7 +181,7 @@ func TestAllEmulatorRooms(t *testing.T) {
 	}
 }
 
-func dumpCanvas(frame *image.RGBA, name string, caption string, path string) {
+func dumpCanvas(frame *image2.Frame, name string, caption string, path string) {
 	// slap 'em caption
 	if len(caption) > 0 {
 		draw.Draw(frame, image.Rect(8, 8, 8+len(caption)*7+3, 24), &image.Uniform{C: color.RGBA{}}, image.Point{}, draw.Src)
@@ -225,6 +226,9 @@ func getRoomMock(cfg roomMockConfig) roomMock {
 	}
 	fixEmulators(&conf, cfg.autoGlContext)
 	l := logger.NewConsole(conf.Worker.Debug, "w", true)
+	if cfg.noLog {
+		logger.SetGlobalLevel(logger.Disabled)
+	}
 
 	// sync cores
 	coreManager := remotehttp.NewRemoteHttpManager(conf.Emulator.Libretro, l)
@@ -288,12 +292,16 @@ func waitNFrames(n int, room roomMock) *emulator.GameFrame {
 	var i = int32(n)
 	wg := sync.WaitGroup{}
 	wg.Add(n)
-	var frame *emulator.GameFrame
+	var frame emulator.GameFrame
 	handler := room.emulator.GetVideo()
 	room.emulator.SetVideo(func(video *emulator.GameFrame) {
 		handler(video)
 		if atomic.AddInt32(&i, -1) >= 0 {
-			frame = video
+			v := video.Data.Copy()
+			frame = emulator.GameFrame{
+				Duration: video.Duration,
+				Data:     &v,
+			}
 			wg.Done()
 		}
 	})
@@ -301,22 +309,18 @@ func waitNFrames(n int, room roomMock) *emulator.GameFrame {
 		room.StartEmulator()
 	}
 	wg.Wait()
-	return frame
+	return &frame
 }
 
 // benchmarkRoom measures app performance for n emulation frames.
 // Measure period: the room initialization, n emulated and encoded frames, the room shutdown.
 func benchmarkRoom(rom games.GameMetadata, codec encoder.VideoCodec, frames int, suppressOutput bool, b *testing.B) {
-	if suppressOutput {
-		log.SetOutput(io.Discard)
-		os.Stdout, _ = os.Open(os.DevNull)
-	}
-
 	for i := 0; i < b.N; i++ {
 		room := getRoomMock(roomMockConfig{
 			gamesPath: whereIsGames,
 			game:      rom,
 			vCodec:    codec,
+			noLog:     suppressOutput,
 		})
 		waitNFrames(frames, room)
 		room.Close()

@@ -206,7 +206,9 @@ func (p *Peer) addInputChannel(label string) error {
 			p.logx(ch.Send(mess.Data))
 			return
 		}
-		p.OnMessage(mess.Data)
+		if p.OnMessage != nil {
+			p.OnMessage(mess.Data)
+		}
 	})
 	p.dTrack = ch
 	ch.OnClose(func() { p.log.Debug().Msg("Data channel [input] has been closed") })

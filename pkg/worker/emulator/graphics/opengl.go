@@ -93,7 +93,7 @@ func destroyFramebuffer() {
 	gl.DeleteTextures(1, &opt.tex)
 }
 
-func ReadFramebuffer(bytes int, w int, h int) []byte {
+func ReadFramebuffer(bytes, w, h uint) []byte {
 	data := buf[:bytes]
 	gl.BindFramebuffer(gl.FRAMEBUFFER, opt.fbo)
 	gl.ReadPixels(0, 0, int32(w), int32(h), opt.pixType, opt.pixFormat, unsafe.Pointer(&data[0]))

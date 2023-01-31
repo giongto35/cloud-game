@@ -10,7 +10,6 @@ func BenchmarkDraw(b *testing.B) {
 		encoding  uint32
 		rot       *Rotate
 		scaleType int
-		flipV     bool
 		w         int
 		h         int
 		packedW   int
@@ -30,7 +29,6 @@ func BenchmarkDraw(b *testing.B) {
 				encoding:  BitFormatInt8888Rev,
 				rot:       nil,
 				scaleType: ScaleNearestNeighbour,
-				flipV:     false,
 				w:         256,
 				h:         240,
 				packedW:   256,
@@ -47,7 +45,6 @@ func BenchmarkDraw(b *testing.B) {
 				encoding:  BitFormatInt8888Rev,
 				rot:       nil,
 				scaleType: ScaleNearestNeighbour,
-				flipV:     false,
 				w:         256,
 				h:         240,
 				packedW:   256,
@@ -61,11 +58,47 @@ func BenchmarkDraw(b *testing.B) {
 	}
 
 	for _, bn := range tests {
+		c := NewCanvas(bn.args.dw, bn.args.dh, bn.args.dw*bn.args.dh)
+		img := c.Get(bn.args.dw, bn.args.dh)
+		c.Put(img)
+		img2 := c.Get(bn.args.dw, bn.args.dh)
+		c.Put(img2)
+		b.ResetTimer()
 		b.Run(fmt.Sprintf("%v", bn.name), func(b *testing.B) {
 			for i := 0; i < b.N; i++ {
-				DrawRgbaImage(bn.args.encoding, bn.args.rot, bn.args.scaleType, bn.args.flipV, bn.args.w, bn.args.h, bn.args.packedW, bn.args.bpp, bn.args.data, bn.args.dw, bn.args.dh, bn.args.th)
+				p := c.Draw(bn.args.encoding, bn.args.rot, bn.args.w, bn.args.h, bn.args.packedW, bn.args.bpp, bn.args.data, bn.args.th)
+				c.Put(p)
 			}
 			b.ReportAllocs()
+		})
+	}
+}
+
+func Test_ix8888(t *testing.T) {
+	type args struct {
+		dst    *uint32
+		px     uint32
+		expect uint32
+	}
+	tests := []struct {
+		name string
+		args args
+	}{
+		{
+			name: "",
+			args: args{
+				dst:    new(uint32),
+				px:     0x11223344,
+				expect: 0xff443322,
+			},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			ix8888(tt.args.dst, tt.args.px)
+			if *tt.args.dst != tt.args.expect {
+				t.Errorf("nope, %x %x", *tt.args.dst, tt.args.expect)
+			}
 		})
 	}
 }

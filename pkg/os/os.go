@@ -9,6 +9,8 @@ import (
 	"syscall"
 )
 
+var ErrNotExist = os.ErrNotExist
+
 func Exists(path string) bool {
 	_, err := os.Stat(path)
 	return !errors.Is(err, fs.ErrNotExist)
@@ -16,7 +18,7 @@ func Exists(path string) bool {
 
 func CheckCreateDir(path string) error {
 	if !Exists(path) {
-		return os.Mkdir(path, os.ModeDir)
+		return os.MkdirAll(path, os.ModeDir|0755)
 	}
 	return nil
 }

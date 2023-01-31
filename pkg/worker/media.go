@@ -132,7 +132,7 @@ func (r *Room) initVideo(width, height int, conf conf.Video) {
 	r.vEncoder = encoder.NewVideoEncoder(enc, width, height, conf.Concurrency, r.log)
 
 	r.emulator.SetVideo(func(frame *emulator.GameFrame) {
-		if fr := r.vEncoder.Encode(frame.Data); fr != nil {
+		if fr := r.vEncoder.Encode(frame.Data.RGBA); fr != nil {
 			r.handleSample(fr, frame.Duration, func(u *Session, s *webrtc.Sample) { _ = u.SendVideo(s) })
 		}
 	})

@@ -12,8 +12,6 @@ type RecordingRoom struct {
 }
 
 func WithRecording(room GamingRoom, rec bool, recUser string, game string, conf worker.Config) *RecordingRoom {
-	room.GetLog().Info().Msgf("RECORD: %v %v", rec, recUser)
-
 	rr := &RecordingRoom{GamingRoom: room, rec: recorder.NewRecording(
 		recorder.Meta{UserName: recUser},
 		room.GetLog(),
@@ -57,7 +55,7 @@ func (r *RecordingRoom) ToggleRecording(active bool, user string) {
 	if r.rec == nil {
 		return
 	}
-	r.GetLog().Debug().Msgf("[REC] set: %v, %v", active, user)
+	r.GetLog().Debug().Msgf("[REC] set: %v, user: %v", active, user)
 	r.rec.Set(active, user)
 }
 

@@ -17,7 +17,7 @@ func main() {
 	conf := config.NewConfig()
 	conf.ParseFlags()
 
-	log := logger.NewConsole(conf.Coordinator.Debug, "c", true)
+	log := logger.NewConsole(conf.Coordinator.Debug, "c", false)
 
 	log.Info().Msgf("version %s", Version)
 	log.Info().Msgf("conf version: %v", conf.Version)

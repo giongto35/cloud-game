@@ -38,7 +38,7 @@ type (
 	}
 	video struct {
 		pixFmt        uint32
-		bpp           int
+		bpp           uint
 		hw            *C.struct_retro_hw_render_callback
 		isGl          bool
 		autoGlContext bool
@@ -101,7 +101,21 @@ func Init(localPath string) {
 }
 
 //export coreVideoRefresh
-func coreVideoRefresh(data unsafe.Pointer, width C.unsigned, height C.unsigned, pitch C.size_t) {
+func coreVideoRefresh(data unsafe.Pointer, width, height uint, packed uint) {
+	if frontend.stopped.Load() {
+		libretroLogger.Warn().Msgf(">>> skip video")
+		return
+	}
+
+	// some frames can be rendered slower or faster than internal 1/fps core tick
+	// so track actual frame render time for proper RTP packet timestamps
+	// (and proper frame display time, for example: 1->1/60=16.6ms, 2->10ms, 3->23ms, 4->16.6ms)
+	// this is useful only for cores with variable framerate, for the fixed framerate cores this adds stutter
+	// !to find docs on Libretro refresh sync and frame times
+	t := time.Now().UnixNano()
+	dt := t - lastFrameTime
+	lastFrameTime = t
+
 	// some cores can return nothing
 	// !to add duplicate if can dup
 	if data == nil {
@@ -109,52 +123,34 @@ func coreVideoRefresh(data unsafe.Pointer, width C.unsigned, height C.unsigned, 
 	}
 
 	// calculate real frame width in pixels from packed data (realWidth >= width)
-	packedWidth := int(pitch) / nano.v.bpp
-	if packedWidth < 1 {
-		packedWidth = int(width)
+	// some cores or games output zero pitch, i.e. N64 Mupen
+	if packed == 0 {
+		packed = width
 	}
 	// calculate space for the video frame
-	bytes := int(height) * packedWidth * nano.v.bpp
+	bytes := packed * height
 
-	// if Libretro renders frame with OpenGL context
-	isOpenGLRender := data == C.RETRO_HW_FRAME_BUFFER_VALID
 	var data_ []byte
-	if isOpenGLRender {
-		data_ = graphics.ReadFramebuffer(bytes, int(width), int(height))
-	} else {
+	if data != C.RETRO_HW_FRAME_BUFFER_VALID {
 		data_ = unsafe.Slice((*byte)(data), bytes)
+	} else {
+		// if Libretro renders frame with OpenGL context
+		data_ = graphics.ReadFramebuffer(bytes, width, height)
 	}
 
-	// the image is being resized and de-rotated
-	frame := image.DrawRgbaImage(
-		nano.v.pixFmt,
-		nano.rot,
-		image.ScaleNearestNeighbour,
-		isOpenGLRender,
-		int(width), int(height), packedWidth, nano.v.bpp,
-		data_,
-		frontend.vw,
-		frontend.vh,
-		frontend.th,
-	)
-
-	t := time.Now().UnixNano()
-	dt := time.Duration(t - lastFrameTime)
-	lastFrameTime = t
-
-	if len(frame.Pix) == 0 {
-		// this should not be happening, will crash yuv
-		libretroLogger.Error().Msgf("skip empty frame %v", frame.Bounds())
-		return
-	}
+	// some cores or games have a variable output frame size, i.e. PSX Rearmed
+	// also we have an option of xN output frame magnification
+	// so, it may be rescaled
 
 	fr, _ := videoPool.Get().(*emulator.GameFrame)
 	if fr == nil {
 		fr = &emulator.GameFrame{}
 	}
-	fr.Data = frame
-	fr.Duration = dt
+	fr.Data = frontend.canvas.
+		Draw(nano.v.pixFmt, nano.rot, int(width), int(height), int(packed), int(nano.v.bpp), data_, frontend.th)
+	fr.Duration = time.Duration(dt)
 	frontend.onVideo(fr)
+	frontend.canvas.Put(fr.Data)
 	videoPool.Put(fr)
 }
 
@@ -189,6 +185,11 @@ func coreInputState(port C.unsigned, device C.unsigned, index C.unsigned, id C.u
 }
 
 func audioWrite(buf unsafe.Pointer, frames C.size_t) C.size_t {
+	if frontend.stopped.Load() {
+		libretroLogger.Warn().Msgf(">>> skip audio")
+		return 0
+	}
+
 	samples := int(frames) << 1
 	src := unsafe.Slice((*int16)(buf), samples)
 	dst, _ := audioCopyPool.Get().(*[]int16)
@@ -510,8 +511,10 @@ func LoadGame(path string) error {
 	)
 
 	if nano.v.isGl {
-		bufS := int(nano.sysAvInfo.geometry.max_width*nano.sysAvInfo.geometry.max_height) * nano.v.bpp
-		graphics.SetBuffer(bufS)
+		// flip Y coordinates of OpenGL
+		setRotation(uint(image.Flip180))
+		bufS := uint(nano.sysAvInfo.geometry.max_width*nano.sysAvInfo.geometry.max_height) * nano.v.bpp
+		graphics.SetBuffer(int(bufS))
 		libretroLogger.Info().Msgf("Set buffer: %v", byteCountBinary(int64(bufS)))
 		if usesLibCo {
 			C.bridge_execute(C.initVideo_cgo)
@@ -579,7 +582,6 @@ func nanoarchShutdown() {
 		libretroLogger.Error().Err(err).Msg("lib close failed")
 	}
 	coreConfig.Free()
-	image.Clear()
 }
 
 func run() {

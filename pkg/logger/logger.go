@@ -110,6 +110,10 @@ func NewConsole(isDebug bool, tag string, noColor bool) *Logger {
 	return &Logger{logger: &logger}
 }
 
+func SetGlobalLevel(l Level) {
+	zerolog.SetGlobalLevel(zerolog.Level(l))
+}
+
 func Default() *Logger { return &Logger{logger: &log.Logger} }
 
 // GetLevel returns the current Level of l.

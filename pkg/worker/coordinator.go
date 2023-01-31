@@ -25,7 +25,7 @@ func connect(host string, conf worker.Worker, addr string, log *logger.Logger) (
 	}
 	address := url.URL{Scheme: scheme, Host: host, Path: conf.Network.Endpoint}
 
-	log.Info().Str("c", "c").Str("d", "→").Msgf("Handshake %s", address.String())
+	log.Debug().Str("c", "c").Str("d", "→").Msgf("Handshake %s", address.String())
 
 	id := network.NewUid()
 	req, err := buildConnQuery(id, conf, addr)
