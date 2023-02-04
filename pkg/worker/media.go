@@ -96,7 +96,11 @@ func (r *Room) initAudio(frequency int, conf conf.Audio) {
 		f, err := opusCoder.Encode(s)
 		audioPool.Put((*[]int16)(&s))
 		if err == nil {
-			r.handleSample(f, dur, func(u *Session, s *webrtc.Sample) { _ = u.SendAudio(s) })
+			r.handleSample(f, dur, func(u *Session, s *webrtc.Sample) {
+				if err := u.SendAudio(s); err != nil {
+					r.log.Error().Err(err).Send()
+				}
+			})
 		}
 	}
 	r.emulator.SetAudio(func(samples *emulator.GameAudio) { buf.Write(*samples.Data, fn) })
@@ -133,7 +137,11 @@ func (r *Room) initVideo(width, height int, conf conf.Video) {
 
 	r.emulator.SetVideo(func(frame *emulator.GameFrame) {
 		if fr := r.vEncoder.Encode(frame.Data.RGBA); fr != nil {
-			r.handleSample(fr, frame.Duration, func(u *Session, s *webrtc.Sample) { _ = u.SendVideo(s) })
+			r.handleSample(fr, frame.Duration, func(u *Session, s *webrtc.Sample) {
+				if err := u.SendVideo(s); err != nil {
+					r.log.Error().Err(err).Send()
+				}
+			})
 		}
 	})
 }
