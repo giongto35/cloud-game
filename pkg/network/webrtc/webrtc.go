@@ -1,12 +1,10 @@
 package webrtc
 
 import (
-	"errors"
 	"fmt"
 	"strings"
 
 	"github.com/giongto35/cloud-game/v2/pkg/logger"
-	"github.com/pion/dtls/v2"
 	"github.com/pion/webrtc/v3"
 	"github.com/pion/webrtc/v3/pkg/media"
 )
@@ -28,7 +26,6 @@ func New(log *logger.Logger, api *ApiFactory) *Peer { return &Peer{api: api, log
 
 func (p *Peer) NewCall(vCodec, aCodec string, onICECandidate func(ice any)) (sdp any, err error) {
 	if p.IsConnected() {
-		p.log.Warn().Msg("Strange multiple init connection calls with the same peer")
 		return
 	}
 	p.log.Info().Msg("WebRTC start")
@@ -170,11 +167,8 @@ func (p *Peer) Disconnect() {
 	if p.conn == nil {
 		return
 	}
-
 	if p.conn.ConnectionState() < webrtc.PeerConnectionStateDisconnected {
-		if err := p.conn.Close(); err != nil && !errors.Is(err, dtls.ErrConnClosed) {
-			p.log.Error().Err(err).Msg("WebRTC close")
-		}
+		_ = p.conn.Close()
 	}
 	p.conn = nil
 	p.log.Debug().Msg("WebRTC stop")

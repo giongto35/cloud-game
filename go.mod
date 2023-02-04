@@ -10,7 +10,6 @@ require (
 	github.com/gofrs/flock v0.8.1
 	github.com/gorilla/websocket v1.5.0
 	github.com/kkyr/fig v0.3.1-0.20220103220255-711af35e3ee2
-	github.com/pion/dtls/v2 v2.1.5
 	github.com/pion/interceptor v0.1.12
 	github.com/pion/logging v0.2.2
 	github.com/pion/webrtc/v3 v3.1.51
@@ -28,6 +27,7 @@ require (
 	github.com/mitchellh/mapstructure v1.5.0 // indirect
 	github.com/pelletier/go-toml v1.9.5 // indirect
 	github.com/pion/datachannel v1.5.5 // indirect
+	github.com/pion/dtls/v2 v2.1.5 // indirect
 	github.com/pion/ice/v2 v2.2.13 // indirect
 	github.com/pion/mdns v0.0.5 // indirect
 	github.com/pion/randutil v0.1.0 // indirect
