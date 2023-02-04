@@ -128,9 +128,10 @@ func (f *Frontend) Start() {
 	ticker := time.NewTicker(time.Second / time.Duration(nano.sysAvInfo.timing.fps))
 
 	defer func() {
+		f.log.Debug().Msgf("run loop cleanup")
 		ticker.Stop()
-		nanoarchShutdown()
 		f.mu.Lock()
+		nanoarchShutdown()
 		frontend.canvas.Clear()
 		f.SetAudio(noAudio)
 		f.SetVideo(noVideo)
@@ -141,13 +142,20 @@ func (f *Frontend) Start() {
 	// start time for the first frame
 	lastFrameTime = time.Now().UnixNano()
 	for {
+		// selection from just two channels may freeze on
+		// ticker, ignoring the close chan for some reason
 		select {
-		case <-ticker.C:
-			f.mu.Lock()
-			run()
-			f.mu.Unlock()
 		case <-f.done:
 			return
+		default:
+			select {
+			case <-ticker.C:
+				f.mu.Lock()
+				run()
+				f.mu.Unlock()
+			case <-f.done:
+				return
+			}
 		}
 	}
 }
@@ -180,6 +188,7 @@ func (f *Frontend) SetViewport(width int, height int) {
 func (f *Frontend) ToggleMultitap() { toggleMultitap() }
 
 func (f *Frontend) Close() {
+	f.log.Debug().Msgf("frontend close called")
 	close(f.done)
 	frontend.stopped.Store(true)
 	nano.reserved <- struct{}{}
