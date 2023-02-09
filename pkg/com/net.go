@@ -96,7 +96,8 @@ func (c *Client) Close() {
 func (c *Client) Call(type_ api.PT, payload any) ([]byte, error) {
 	// !to expose channel instead of results
 	rq := outPool.Get().(*Out)
-	rq.Id, rq.T, rq.Payload = network.NewUid(), type_, payload
+	id := network.NewUid()
+	rq.Id, rq.T, rq.Payload = id, type_, payload
 	r, err := json.Marshal(rq)
 	outPool.Put(rq)
 	if err != nil {
@@ -106,7 +107,7 @@ func (c *Client) Call(type_ api.PT, payload any) ([]byte, error) {
 
 	task := &call{done: make(chan struct{})}
 	c.mu.Lock()
-	c.queue[rq.Id] = task
+	c.queue[id] = task
 	c.conn.Write(r)
 	c.mu.Unlock()
 	select {
