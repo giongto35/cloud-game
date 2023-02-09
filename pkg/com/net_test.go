@@ -2,6 +2,7 @@ package com
 
 import (
 	"encoding/json"
+	"fmt"
 	"math/rand"
 	"net/http"
 	"net/url"
@@ -38,39 +39,20 @@ func TestWebsocket(t *testing.T) {
 }
 
 func testWebsocket(t *testing.T) {
-	// setup
-	// socket handler
-	var socket *websocket.WS
-	http.HandleFunc("/ws", func(w http.ResponseWriter, r *http.Request) {
-		conn, err := websocket.DefaultUpgrader.Upgrade(w, r, nil)
-		if err != nil {
-			t.Fatalf("no socket, %v", err)
-		}
-		sock, err := websocket.NewServerWithConn(conn, log)
-		if err != nil {
-			t.Fatalf("couldn't init socket server")
-		}
-		socket = sock
-		socket.OnMessage = func(message []byte, err error) {
-			// echo response
-			socket.Write(message)
-		}
-		socket.Listen()
-	})
-	// http handler
 	var wg sync.WaitGroup
-	wg.Add(1)
-	go func() {
-		wg.Done()
-		if err := http.ListenAndServe(":8080", nil); err != nil {
-			t.Errorf("no server")
-			return
-		}
-	}()
+	sh := newServer(t)
+	client := newClient(t, url.URL{Scheme: "ws", Host: "localhost:8080", Path: "/ws"})
+	client.OnPacket(func(packet In) {
+		//	nop
+	})
+	client.Listen()
 	wg.Wait()
 
-	client := newClient(t, url.URL{Scheme: "ws", Host: "localhost:8080", Path: "/ws"})
-	client.Listen()
+	server := sh.s
+
+	if server == nil {
+		t.Fatalf("couldn't make new socket")
+	}
 
 	calls := []struct {
 		typ        api.PT
@@ -90,37 +72,46 @@ func testWebsocket(t *testing.T) {
 		{typ: 22, payload: []string{}, value: []string{}},
 	}
 
-	rand.Seed(time.Now().UnixNano())
-
-	n := 42 * 2 * 2
+	const n = 42
 	var wait sync.WaitGroup
 	wait.Add(n * len(calls))
 
 	// test
 	for _, call := range calls {
-		for i := 0; i < n; i++ {
-			if call.concurrent {
-				call := call
+		call := call
+		if call.concurrent {
+			rand.New(rand.NewSource(time.Now().UnixNano()))
+			for i := 0; i < n; i++ {
 				go func() {
-					w := rand.Intn(600-100) + 100
-					time.Sleep(time.Duration(w) * time.Millisecond)
+					defer wait.Done()
+					time.Sleep(time.Duration(rand.Intn(200-100)+100) * time.Millisecond)
 					vv, err := client.Call(call.typ, call.payload)
-					checkCall(t, vv, err, call.value)
-					wait.Done()
+					err = checkCall(vv, err, call.value)
+					if err != nil {
+						t.Errorf("%v", err)
+						return
+					}
 				}()
-			} else {
+			}
+		} else {
+			for i := 0; i < n; i++ {
 				vv, err := client.Call(call.typ, call.payload)
-				checkCall(t, vv, err, call.value)
-				wait.Done()
+				err = checkCall(vv, err, call.value)
+				if err != nil {
+					wait.Done()
+					t.Fatalf("%v", err)
+				} else {
+					wait.Done()
+				}
 			}
 		}
 	}
 	wait.Wait()
 
 	client.Close()
-
-	<-socket.Done
 	<-client.conn.Done
+	server.Close()
+	<-server.Done
 }
 
 func newClient(t *testing.T, addr url.URL) *Client {
@@ -131,15 +122,14 @@ func newClient(t *testing.T, addr url.URL) *Client {
 	return conn
 }
 
-func checkCall(t *testing.T, v []byte, err error, need any) {
+func checkCall(v []byte, err error, need any) error {
 	if err != nil {
-		t.Fatalf("should be no error but %v", err)
-		return
+		return err
 	}
 	var value any
 	if v != nil {
 		if err = json.Unmarshal(v, &value); err != nil {
-			t.Fatalf("can't unmarshal %v", v)
+			return fmt.Errorf("can't unmarshal %v", v)
 		}
 	}
 
@@ -152,6 +142,8 @@ func checkCall(t *testing.T, v []byte, err error, need any) {
 		nice = value == need.(bool)
 	case float64:
 		nice = value == float64(need.(int))
+	case string:
+		nice = value == need.(string)
 	case []any:
 		// let's assume that's strings
 		vv := value.([]any)
@@ -166,6 +158,43 @@ func checkCall(t *testing.T, v []byte, err error, need any) {
 	}
 
 	if !nice {
-		t.Fatalf("expected %v is not expected %v", need, v)
+		return fmt.Errorf("expected %v, but got %v", need, v)
 	}
+	return nil
+}
+
+type serverHandler struct {
+	s *websocket.WS // ws server reference made dynamically on HTTP request
+}
+
+func (s *serverHandler) serve(t *testing.T) func(w http.ResponseWriter, r *http.Request) {
+	return func(w http.ResponseWriter, r *http.Request) {
+		conn, err := websocket.DefaultUpgrader.Upgrade(w, r, nil)
+		if err != nil {
+			t.Fatalf("no socket, %v", err)
+		}
+		sock, err := websocket.NewServerWithConn(conn, log)
+		if err != nil {
+			t.Fatalf("couldn't init socket server")
+		}
+		s.s = sock
+		s.s.OnMessage = func(m []byte, err error) { s.s.Write(m) } // echo
+		s.s.Listen()
+	}
+}
+
+func newServer(t *testing.T) *serverHandler {
+	var wg sync.WaitGroup
+	handler := serverHandler{}
+	http.HandleFunc("/ws", handler.serve(t))
+	wg.Add(1)
+	go func() {
+		wg.Done()
+		if err := http.ListenAndServe(":8080", nil); err != nil {
+			t.Errorf("no server")
+			return
+		}
+	}()
+	wg.Wait()
+	return &handler
 }

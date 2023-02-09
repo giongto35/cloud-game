@@ -7,7 +7,6 @@ import (
 	"net/http"
 	"net/url"
 	"sync"
-	"sync/atomic"
 	"time"
 
 	"github.com/giongto35/cloud-game/v2/pkg/logger"
@@ -29,7 +28,7 @@ type (
 		pingPong  bool
 		once      sync.Once
 		Done      chan struct{}
-		closed    uint32
+		alive     bool
 		log       *logger.Logger
 		server    bool
 	}
@@ -114,7 +113,6 @@ func (ws *WS) IsServer() bool { return ws.server }
 // Blocking, must be called as goroutine. Serializes all websocket reads.
 func (ws *WS) reader() {
 	defer func() {
-		atomic.StoreUint32(&ws.closed, 1)
 		close(ws.send)
 		ws.shutdown()
 	}()
@@ -202,23 +200,28 @@ func newSocket(conn *websocket.Conn, pingPong bool, server bool, log *logger.Log
 }
 
 func (ws *WS) Listen() {
+	ws.alive = true
 	go ws.writer()
 	go ws.reader()
 }
 
 func (ws *WS) Write(data []byte) {
-	if atomic.LoadUint32(&ws.closed) == 0 {
+	if ws.alive {
 		ws.send <- data
 	}
 }
 
-func (ws *WS) Close() { _ = ws.conn.write(websocket.CloseMessage, nil) }
+func (ws *WS) Close() {
+	if ws.alive {
+		_ = ws.conn.write(websocket.CloseMessage, websocket.FormatCloseMessage(websocket.CloseNormalClosure, ""))
+	}
+}
 
-func (ws *WS) shutdown() {
-	ws.once.Do(func() {
-		atomic.StoreUint32(&ws.closed, 1)
-		_ = ws.conn.Close()
-		close(ws.Done)
-		ws.log.Debug().Msg("WebSocket should be closed now")
-	})
+func (ws *WS) shutdown() { ws.once.Do(ws.close) }
+
+func (ws *WS) close() {
+	ws.alive = false
+	_ = ws.conn.Close()
+	close(ws.Done)
+	ws.log.Debug().Msg("WebSocket should be closed now")
 }
