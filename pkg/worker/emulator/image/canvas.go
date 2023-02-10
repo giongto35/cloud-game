@@ -60,8 +60,12 @@ func (c *Canvas) Get(w, h int) *Frame {
 	return i
 }
 
-func (c *Canvas) Put(i *Frame) { c.pool.Put(i) }
-func (c *Canvas) Clear()       { c.wg = sync.WaitGroup{} }
+func (c *Canvas) Put(i *Frame) {
+	if i != nil {
+		c.pool.Put(i)
+	}
+}
+func (c *Canvas) Clear() { c.wg = sync.WaitGroup{} }
 
 func (c *Canvas) Draw(encoding uint32, rot *Rotate, w, h, packedW, bpp int, data []byte, th int) *Frame {
 	dst := c.Get(w, h)
