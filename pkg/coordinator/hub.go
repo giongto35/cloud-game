@@ -1,7 +1,9 @@
 package coordinator
 
 import (
+	"bytes"
 	"net/http"
+	"net/url"
 
 	"github.com/giongto35/cloud-game/v2/pkg/api"
 	"github.com/giongto35/cloud-game/v2/pkg/com"
@@ -10,6 +12,7 @@ import (
 	"github.com/giongto35/cloud-game/v2/pkg/logger"
 	"github.com/giongto35/cloud-game/v2/pkg/network"
 	"github.com/giongto35/cloud-game/v2/pkg/service"
+	"github.com/rs/xid"
 )
 
 type Hub struct {
@@ -58,32 +61,9 @@ func (h *Hub) handleUserConnection(w http.ResponseWriter, r *http.Request) {
 	}()
 	usr.HandleRequests(h, h.launcher, h.conf)
 
-	q := r.URL.Query()
-	roomId := q.Get(api.RoomIdQueryParam)
-	zone := q.Get(api.ZoneQueryParam)
-	wid := q.Get(api.WorkerIdParam)
-
-	usr.Log.Info().Msg("Search available workers")
-	var wkr *Worker
-	if wkr = h.findWorkerByRoom(roomId, zone); wkr != nil {
-		usr.Log.Info().Str("room", roomId).Msg("An existing worker has been found")
-	} else if wkr = h.findWorkerById(wid, h.conf.Coordinator.Debug); wkr != nil {
-		usr.Log.Info().Msgf("Worker with id: %v has been found", wid)
-	} else if h.conf.Coordinator.Selector == "" || h.conf.Coordinator.Selector == coordinator.SelectAny {
-		usr.Log.Debug().Msgf("Searching any free worker...")
-		if wkr = h.find1stFreeWorker(zone); wkr != nil {
-			usr.Log.Info().Msgf("Found next free worker")
-		}
-	} else if h.conf.Coordinator.Selector == coordinator.SelectByPing {
-		usr.Log.Debug().Msgf("Searching fastest free worker...")
-		if wkr = h.findFastestWorker(zone,
-			func(servers []string) (map[string]int64, error) { return usr.CheckLatency(servers) }); wkr != nil {
-			usr.Log.Info().Msg("The fastest worker has been found")
-		}
-	}
-
+	wkr := h.findWorkerFor(usr, r.URL.Query())
 	if wkr == nil {
-		usr.Log.Warn().Msg("no free workers")
+		usr.Log.Info().Msg("no free workers")
 		return
 	}
 
@@ -139,7 +119,7 @@ func (h *Hub) handleWorkerConnection(w http.ResponseWriter, r *http.Request) {
 		}
 	}()
 
-	h.log.Info().Msgf("New worker / addr: %v, port: %v, zone: %v, ping addr: %v, tag: %v",
+	h.log.Info().Msgf("New worker, addr: %v, port: %v, zone: %v, ping addr: %v, tag: %v",
 		worker.Addr, worker.Port, worker.Zone, worker.PingServer, worker.Tag)
 	worker.HandleRequests(&h.users)
 	h.workers.Add(worker)
@@ -159,4 +139,133 @@ func (h *Hub) GetServerList() (r []api.Server) {
 		})
 	}
 	return
+}
+
+// findWorkerFor searches a free worker for the user depending on
+// various conditions.
+func (h *Hub) findWorkerFor(usr *User, q url.Values) *Worker {
+	usr.Log.Debug().Msg("Search available workers")
+	roomId := q.Get(api.RoomIdQueryParam)
+	zone := q.Get(api.ZoneQueryParam)
+	wid := q.Get(api.WorkerIdParam)
+
+	var worker *Worker
+	if worker = h.findWorkerByRoom(roomId, zone); worker != nil {
+		usr.Log.Debug().Str("room", roomId).Msg("An existing worker has been found")
+	} else if worker = h.findWorkerById(wid, h.conf.Coordinator.Debug); worker != nil {
+		usr.Log.Debug().Msgf("Worker with id: %v has been found", wid)
+	} else {
+		switch h.conf.Coordinator.Selector {
+		case coordinator.SelectByPing:
+			usr.Log.Debug().Msgf("Searching fastest free worker...")
+			if worker = h.findFastestWorker(zone,
+				func(servers []string) (map[string]int64, error) { return usr.CheckLatency(servers) }); worker != nil {
+				usr.Log.Debug().Msg("The fastest worker has been found")
+			}
+		default:
+			usr.Log.Debug().Msgf("Searching any free worker...")
+			if worker = h.find1stFreeWorker(zone); worker != nil {
+				usr.Log.Debug().Msgf("Found next free worker")
+			}
+		}
+	}
+	return worker
+}
+
+func (h *Hub) findWorkerByRoom(id string, region string) *Worker {
+	if id == "" {
+		return nil
+	}
+	// if there is zone param, we need to ensure the worker in that zone,
+	// if not we consider the room is missing
+	w, _ := h.workers.FindBy(func(w *Worker) bool { return w.RoomId == id && w.In(region) })
+	return w
+}
+
+func (h *Hub) getAvailableWorkers(region string) []*Worker {
+	var workers []*Worker
+	h.workers.ForEach(func(w *Worker) {
+		if w.HasSlot() && w.In(region) {
+			workers = append(workers, w)
+		}
+	})
+	return workers
+}
+
+func (h *Hub) find1stFreeWorker(region string) *Worker {
+	workers := h.getAvailableWorkers(region)
+	if len(workers) > 0 {
+		return workers[0]
+	}
+	return nil
+}
+
+// findFastestWorker returns the best server for a session.
+// All workers addresses are sent to user and user will ping to get latency.
+// !to rewrite
+func (h *Hub) findFastestWorker(region string, fn func(addresses []string) (map[string]int64, error)) *Worker {
+	workers := h.getAvailableWorkers(region)
+	if len(workers) == 0 {
+		return nil
+	}
+
+	var addresses []string
+	group := map[string][]struct{}{}
+	for _, w := range workers {
+		if _, ok := group[w.PingServer]; !ok {
+			addresses = append(addresses, w.PingServer)
+		}
+		group[w.PingServer] = append(group[w.PingServer], struct{}{})
+	}
+
+	latencies, err := fn(addresses)
+	if len(latencies) == 0 || err != nil {
+		return nil
+	}
+
+	workers = h.getAvailableWorkers(region)
+	if len(workers) == 0 {
+		return nil
+	}
+
+	var bestWorker *Worker
+	var minLatency int64 = 1<<31 - 1
+	// get a worker with the lowest latency
+	for addr, ping := range latencies {
+		if ping < minLatency {
+			for _, w := range workers {
+				if w.PingServer == addr {
+					bestWorker = w
+				}
+			}
+			minLatency = ping
+		}
+	}
+	return bestWorker
+}
+
+func (h *Hub) findWorkerById(workerId string, useAllWorkers bool) *Worker {
+	// when we select one particular worker
+	if workerId != "" {
+		if xid_, err := xid.FromString(workerId); err == nil {
+			if useAllWorkers {
+				for _, w := range h.getAvailableWorkers("") {
+					if xid_.String() == w.Id().String() {
+						return w
+					}
+				}
+			} else {
+				for _, w := range h.getAvailableWorkers("") {
+					xid__, err := xid.FromString(workerId)
+					if err != nil {
+						continue
+					}
+					if bytes.Equal(xid_.Machine(), xid__.Machine()) {
+						return w
+					}
+				}
+			}
+		}
+	}
+	return nil
 }

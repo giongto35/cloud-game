@@ -11,9 +11,9 @@ coordinator:
   #   - allows selecting worker instances
   debug: false
   # selects free workers:
-  #   - any (default, any free)
+  #   - empty value (default, any free)
   #   - ping (with the lowest ping)
-  selector: any
+  selector:
   # games library
   library:
     # root folder for the library (where games are stored)

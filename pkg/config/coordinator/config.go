@@ -38,10 +38,7 @@ type Analytics struct {
 	Gtag   string
 }
 
-const (
-	SelectAny    = "any"
-	SelectByPing = "ping"
-)
+const SelectByPing = "ping"
 
 // allows custom config path
 var configPath string
