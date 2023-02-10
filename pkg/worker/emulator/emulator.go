@@ -54,6 +54,7 @@ type Metadata struct {
 	UsesLibCo       bool
 	AutoGlContext   bool
 	HasMultitap     bool
+	HasVFR          bool
 }
 
 type (

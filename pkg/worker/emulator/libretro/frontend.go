@@ -108,12 +108,13 @@ func (f *Frontend) LoadMetadata(emu string) {
 	config := f.conf.GetLibretroCoreConfig(emu)
 	f.mu.Lock()
 	coreLoad(emulator.Metadata{
-		LibPath:       config.Lib,
-		ConfigPath:    config.Config,
-		IsGlAllowed:   config.IsGlAllowed,
-		UsesLibCo:     config.UsesLibCo,
-		HasMultitap:   config.HasMultitap,
 		AutoGlContext: config.AutoGlContext,
+		ConfigPath:    config.Config,
+		HasMultitap:   config.HasMultitap,
+		HasVFR:        config.VFR,
+		IsGlAllowed:   config.IsGlAllowed,
+		LibPath:       config.Lib,
+		UsesLibCo:     config.UsesLibCo,
 	})
 	f.mu.Unlock()
 }

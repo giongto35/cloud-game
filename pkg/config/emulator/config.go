@@ -59,19 +59,18 @@ type LibretroRepoConfig struct {
 }
 
 type LibretroCoreConfig struct {
-	Lib         string
-	Config      string
-	Roms        []string
-	Folder      string
-	Width       int
-	Height      int
-	IsGlAllowed bool
-	UsesLibCo   bool
-	HasMultitap bool
-	AltRepo     bool
-
-	// hack: keep it here to pass it down the emulator
-	AutoGlContext bool
+	AltRepo       bool
+	AutoGlContext bool // hack: keep it here to pass it down the emulator
+	Config        string
+	Folder        string
+	HasMultitap   bool
+	Height        int
+	IsGlAllowed   bool
+	Lib           string
+	Roms          []string
+	UsesLibCo     bool
+	VFR           bool
+	Width         int
 }
 
 type CoreInfo struct {

@@ -69,6 +69,8 @@ var (
 	libretroLogger   = logger.Default()
 	sdlCtx           *graphics.SDL
 	usesLibCo        bool
+	hasVFR           bool
+	tickTime         int64
 	cSaveDirectory   *C.char
 	cSystemDirectory *C.char
 	cUserName        *C.char
@@ -113,7 +115,11 @@ func coreVideoRefresh(data unsafe.Pointer, width, height uint, packed uint) {
 	// this is useful only for cores with variable framerate, for the fixed framerate cores this adds stutter
 	// !to find docs on Libretro refresh sync and frame times
 	t := time.Now().UnixNano()
-	dt := t - lastFrameTime
+	dt := tickTime
+	// override frame rendering with dynamic frame times
+	if hasVFR {
+		dt = t - lastFrameTime
+	}
 	lastFrameTime = t
 
 	// some cores can return nothing
@@ -414,6 +420,7 @@ func coreLoad(meta emulator.Metadata) {
 	nano.v.isGl = meta.IsGlAllowed
 	usesLibCo = meta.UsesLibCo
 	nano.v.autoGlContext = meta.AutoGlContext
+	hasVFR = meta.HasVFR
 	coreConfig, err = ReadProperties(meta.ConfigPath)
 	if err != nil {
 		libretroLogger.Warn().Err(err).Msg("config scan has been failed")
@@ -509,6 +516,11 @@ func LoadGame(path string) error {
 		nano.sysAvInfo.geometry.max_width, nano.sysAvInfo.geometry.max_height,
 		nano.sysAvInfo.timing.fps, nano.sysAvInfo.geometry.aspect_ratio, nano.sysAvInfo.timing.sample_rate,
 	)
+
+	tickTime = int64(time.Second / time.Duration(nano.sysAvInfo.timing.fps))
+	if hasVFR {
+		libretroLogger.Info().Msgf("variable framerate (VFR) is enabled")
+	}
 
 	if nano.v.isGl {
 		// flip Y coordinates of OpenGL
