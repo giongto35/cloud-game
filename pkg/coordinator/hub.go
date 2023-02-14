@@ -10,7 +10,6 @@ import (
 	"github.com/giongto35/cloud-game/v2/pkg/config/coordinator"
 	"github.com/giongto35/cloud-game/v2/pkg/games"
 	"github.com/giongto35/cloud-game/v2/pkg/logger"
-	"github.com/giongto35/cloud-game/v2/pkg/network"
 	"github.com/giongto35/cloud-game/v2/pkg/service"
 	"github.com/rs/xid"
 )
@@ -77,10 +76,9 @@ func (h *Hub) handleUserConnection(w http.ResponseWriter, r *http.Request) {
 func (h *Hub) handleWorkerConnection(w http.ResponseWriter, r *http.Request) {
 	h.log.Debug().Str("c", "w").Str("d", "←").Msgf("Handshake %v", r.Host)
 
-	data := r.URL.Query().Get(api.DataQueryParam)
-	handshake, err := GetConnectionRequest(data)
-	if err != nil || handshake == nil {
-		h.log.Error().Err(err).Msg("got a malformed request")
+	handshake, err := api.RequestToHandshake(r.URL.Query().Get(api.DataQueryParam))
+	if err != nil {
+		h.log.Error().Err(err).Msg("handshake fail")
 		return
 	}
 
@@ -89,7 +87,7 @@ func (h *Hub) handleWorkerConnection(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if h.conf.Coordinator.Server.Https && !handshake.IsHTTPS {
-		h.log.Warn().Msg("Unsecure connection. The worker may not work properly without HTTPS on its side!")
+		h.log.Warn().Msg("Unsecure worker connection. Unsecure to secure may be bad.")
 	}
 
 	conn, err := h.wConn.NewClientServer(w, r, h.log)
@@ -106,11 +104,10 @@ func (h *Hub) handleWorkerConnection(w http.ResponseWriter, r *http.Request) {
 		Tag:          handshake.Tag,
 		Zone:         handshake.Zone,
 	}
-	// we duplicate uid from the handshake
-	hid := network.Uid(handshake.Id)
-	if !(handshake.Id == "" || !network.ValidUid(hid)) {
-		conn.SetId(hid)
-		worker.Log.Debug().Msgf("connection id has been changed to %s", hid)
+	// set connection uid from the handshake
+	if ok, uid := handshake.HasUID(); ok {
+		worker.Log.Debug().Msgf("connection id will be changed %s->%s", worker.Id(), uid)
+		worker.SetId(uid)
 	}
 	defer func() {
 		if worker != nil {
@@ -119,10 +116,9 @@ func (h *Hub) handleWorkerConnection(w http.ResponseWriter, r *http.Request) {
 		}
 	}()
 
-	h.log.Info().Msgf("New worker, addr: %v, port: %v, zone: %v, ping addr: %v, tag: %v",
-		worker.Addr, worker.Port, worker.Zone, worker.PingServer, worker.Tag)
 	worker.HandleRequests(&h.users)
 	h.workers.Add(worker)
+	h.log.Info().Msgf("> [+] worker %s", worker.PrintInfo())
 	worker.Listen()
 }
 

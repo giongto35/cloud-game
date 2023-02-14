@@ -1,6 +1,7 @@
 package coordinator
 
 import (
+	"fmt"
 	"sync/atomic"
 
 	"github.com/giongto35/cloud-game/v2/pkg/api"
@@ -78,4 +79,9 @@ func (w *Worker) Disconnect() {
 	w.SocketClient.Close()
 	w.RoomId = ""
 	w.FreeSlots()
+}
+
+func (w *Worker) PrintInfo() string {
+	return fmt.Sprintf("id: %v, addr: %v, port: %v, zone: %v, ping addr: %v, tag: %v",
+		w.Id(), w.Addr, w.Port, w.Zone, w.PingServer, w.Tag)
 }
