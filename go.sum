@@ -63,8 +63,9 @@ github.com/pelletier/go-toml v1.9.5 h1:4yBQzkHv+7BHq2PQUZF3Mx0IYxG7LsP222s7Agd3v
 github.com/pelletier/go-toml v1.9.5/go.mod h1:u1nR/EPcESfeI/szUZKdtJ0xRNbUoANCkoOuaOx1Y+c=
 github.com/pion/datachannel v1.5.5 h1:10ef4kwdjije+M9d7Xm9im2Y3O6A6ccQb0zcqZcJew8=
 github.com/pion/datachannel v1.5.5/go.mod h1:iMz+lECmfdCMqFRhXhcA/219B0SQlbpoR2V118yimL0=
-github.com/pion/dtls/v2 v2.2.4 h1:YSfYwDQgrxMYXLBc/m7PFY5BVtWlNm/DN4qoU2CbcWg=
 github.com/pion/dtls/v2 v2.2.4/go.mod h1:WGKfxqhrddne4Kg3p11FUMJrynkOY4lb25zHNO49wuw=
+github.com/pion/dtls/v2 v2.2.5 h1:7mpt+nGik/2LQf9xcaHCuavcYXEvaap9ZyfTAvFfyqI=
+github.com/pion/dtls/v2 v2.2.5/go.mod h1:mbfiyAJBCCXf4N9MYt5cDZU21u8pbj8dSQWNgSxgMY4=
 github.com/pion/ice/v2 v2.3.0 h1:G+ysriabk1p9wbySDpdsnlD+6ZspLlDLagRduRfzJPk=
 github.com/pion/ice/v2 v2.3.0/go.mod h1:+xO/cXVnnVUr6D2ZJcCT5g9LngucUkkTvfnTMqUxKRM=
 github.com/pion/interceptor v0.1.12 h1:CslaNriCFUItiXS5o+hh5lpL0t0ytQkFnUcbbCs2Zq8=
@@ -95,8 +96,9 @@ github.com/pion/transport/v2 v2.0.1 h1:cbSk3gzoSBEIKVGNYeghXQSp47s1H9ttoP5JyLCgx
 github.com/pion/transport/v2 v2.0.1/go.mod h1:93OYg91+mrGxKW+Jrgzmqr80kgXqD7J0yybOrdr7w0Y=
 github.com/pion/turn/v2 v2.1.0 h1:5wGHSgGhJhP/RpabkUb/T9PdsAjkGLS6toYz5HNzoSI=
 github.com/pion/turn/v2 v2.1.0/go.mod h1:yrT5XbXSGX1VFSF31A3c1kCNB5bBZgk/uu5LET162qs=
-github.com/pion/udp v0.1.4 h1:OowsTmu1Od3sD6i3fQUJxJn2fEvJO6L1TidgadtbTI8=
 github.com/pion/udp v0.1.4/go.mod h1:G8LDo56HsFwC24LIcnT4YIDU5qcB6NepqqjP0keL2us=
+github.com/pion/udp/v2 v2.0.0 h1:7FnS6OF29BYNlQs2Jp2vdsmcwP5qKhHSlQXEb23I2II=
+github.com/pion/udp/v2 v2.0.0/go.mod h1:oab6LX/gG7C25UL7EE9y8Vec+1MhqplU58J9E4trbeE=
 github.com/pion/webrtc/v3 v3.1.55 h1:jQt98hZ8DUi/l/s/rtogthBdsKKvKekFgZCX9hMEqRo=
 github.com/pion/webrtc/v3 v3.1.55/go.mod h1:M1gU5mnvvo4e1nnLvF23esYz0nZAFOtbU/wq44MSfbc=
 github.com/pkg/errors v0.9.1/go.mod h1:bwawxfHBFNV+L2hUp1rHADufV3IMtnDRdf1r5NINEl0=
@@ -130,8 +132,8 @@ golang.org/x/crypto v0.0.0-20210921155107-089bfa567519/go.mod h1:GvvjBRRGRdwPK5y
 golang.org/x/crypto v0.5.0/go.mod h1:NK/OQwhpMQP3MwtdjgLlYHnH9ebylxKWv3e0fK+mkQU=
 golang.org/x/crypto v0.6.0 h1:qfktjS5LUO+fFKeJXZ+ikTRijMmljikvG68fpMMruSc=
 golang.org/x/crypto v0.6.0/go.mod h1:OFC/31mSvZgRz0V1QTNCzfAI1aIRzbiufJtkMIlEp58=
-golang.org/x/image v0.4.0 h1:x1RWAiZIvERqkltrFjtQP1ycmiR5pmhjtCfVOtdURuQ=
-golang.org/x/image v0.4.0/go.mod h1:FVC7BI/5Ym8R25iw5OLsgshdUBbT1h5jZTpA+mvAdZ4=
+golang.org/x/image v0.5.0 h1:5JMiNunQeQw++mMOz48/ISeNu3Iweh/JaZU8ZLqHRrI=
+golang.org/x/image v0.5.0/go.mod h1:FVC7BI/5Ym8R25iw5OLsgshdUBbT1h5jZTpA+mvAdZ4=
 golang.org/x/mod v0.3.0/go.mod h1:s0Qsj1ACt9ePp/hMypM3fl4fZqREWJwdYDEqhRiZZUA=
 golang.org/x/mod v0.6.0-dev.0.20220419223038-86c51ed26bb4/go.mod h1:jJ57K6gSWd91VN4djpZkiMVwK6gcyfeH4XE8wZrZaV4=
 golang.org/x/net v0.0.0-20180906233101-161cd47e91fd/go.mod h1:mL1N/T3taQHkDXs73rZJwtUhF3w3ftmwwsq0BUmARs4=
@@ -144,8 +146,9 @@ golang.org/x/net v0.0.0-20210428140749-89ef3d95e781/go.mod h1:OJAsFXCWl8Ukc7SiCT
 golang.org/x/net v0.0.0-20220722155237-a158d28d115b/go.mod h1:XRhObCWvk6IyKnWLug+ECip1KBveYUHfp+8e9klMJ9c=
 golang.org/x/net v0.1.0/go.mod h1:Cx3nUiGt4eDBEyega/BKRp+/AlGL8hYe7U9odMt2Cco=
 golang.org/x/net v0.5.0/go.mod h1:DivGGAXEgPSlEBzxGzZI+ZLohi+xUj054jfeKui00ws=
-golang.org/x/net v0.6.0 h1:L4ZwwTvKW9gr0ZMS1yrHD9GZhIuVjOBBnaKH+SPQK0Q=
 golang.org/x/net v0.6.0/go.mod h1:2Tu9+aMcznHK/AK1HMvgo6xiTLG5rD5rZLDS+rp2Bjs=
+golang.org/x/net v0.7.0 h1:rJrUqqhjsgNp7KqAIc25s9pZnjU7TUcSY7HcVZjdn1g=
+golang.org/x/net v0.7.0/go.mod h1:2Tu9+aMcznHK/AK1HMvgo6xiTLG5rD5rZLDS+rp2Bjs=
 golang.org/x/sync v0.0.0-20180314180146-1d60e4601c6f/go.mod h1:RxMgew5VJxzue5/jJTE5uejpjVlOe/izrB70Jof72aM=
 golang.org/x/sync v0.0.0-20190423024810-112230192c58/go.mod h1:RxMgew5VJxzue5/jJTE5uejpjVlOe/izrB70Jof72aM=
 golang.org/x/sync v0.0.0-20201020160332-67f06af15bc9/go.mod h1:RxMgew5VJxzue5/jJTE5uejpjVlOe/izrB70Jof72aM=
