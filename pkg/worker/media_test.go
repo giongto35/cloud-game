@@ -138,7 +138,7 @@ func BenchmarkResampler(b *testing.B) {
 }
 
 func gen(l int) []int16 {
-	rand.Seed(time.Now().Unix())
+	rand.New(rand.NewSource(time.Now().UnixNano())) // !to remove when bumped to 1.20
 
 	nums := make([]int16, l)
 	for i := range nums {

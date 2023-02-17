@@ -1,6 +1,7 @@
 package zip
 
 import (
+	cr "crypto/rand"
 	"fmt"
 	"math/rand"
 	"reflect"
@@ -62,10 +63,15 @@ func BenchmarkCompressions(b *testing.B) {
 		{name: "compress", size: 1024 * 1024 * 2},
 	}
 	for _, bm := range benchmarks {
-		rand.Seed(time.Now().UnixNano())
+		rand.New(rand.NewSource(time.Now().UnixNano())) // !to remove when bumped to 1.20
 		b.Run(fmt.Sprintf("%v %v", bm.name, bm.size), func(b *testing.B) {
+			b.StopTimer()
 			dat := make([]byte, bm.size)
-			rand.Read(dat)
+			_, err := cr.Read(dat)
+			if err != nil {
+				b.Fatal(err)
+			}
+			b.StartTimer()
 			for i := 0; i < b.N; i++ {
 				_, _ = Compress(dat, "test")
 			}

@@ -13,7 +13,7 @@ import (
 var Version = "?"
 
 func main() {
-	rand.Seed(time.Now().UTC().UnixNano())
+	rand.New(rand.NewSource(time.Now().UnixNano())) // !to remove when bumped to 1.20
 	conf := config.NewConfig()
 	conf.ParseFlags()
 

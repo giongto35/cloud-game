@@ -167,7 +167,7 @@ func TestStateConcurrency(t *testing.T) {
 		})
 		mock.handleAudio(func(_ *emulator.GameAudio) {})
 
-		rand.Seed(int64(test.seed))
+		rand.New(rand.NewSource(int64(test.seed))) // !to remove when bumped to 1.20
 		t.Logf("Random seed is [%v]\n", test.seed)
 		t.Logf("Save path is [%v]\n", mock.paths.save)
 
