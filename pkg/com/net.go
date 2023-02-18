@@ -9,7 +9,6 @@ import (
 
 	"github.com/giongto35/cloud-game/v2/pkg/api"
 	"github.com/giongto35/cloud-game/v2/pkg/logger"
-	"github.com/giongto35/cloud-game/v2/pkg/network"
 	"github.com/giongto35/cloud-game/v2/pkg/network/websocket"
 	"github.com/goccy/go-json"
 )
@@ -21,7 +20,7 @@ type (
 	}
 	Client struct {
 		conn     *websocket.WS
-		queue    map[network.Uid]*call
+		queue    map[api.Uid]*call
 		onPacket func(packet In)
 		mu       sync.Mutex
 	}
@@ -64,7 +63,7 @@ func (co *Connector) NewClientServer(w http.ResponseWriter, r *http.Request, log
 	if err != nil {
 		return nil, err
 	}
-	c := New(conn, co.tag, network.NewUid(), log)
+	c := New(conn, co.tag, api.NewUid(), log)
 	return &c, nil
 }
 
@@ -76,7 +75,7 @@ func connect(conn *websocket.WS, err error) (*Client, error) {
 	if err != nil {
 		return nil, err
 	}
-	client := &Client{conn: conn, queue: make(map[network.Uid]*call, 1)}
+	client := &Client{conn: conn, queue: make(map[api.Uid]*call, 1)}
 	client.conn.OnMessage = client.handleMessage
 	return client, nil
 }
@@ -96,7 +95,7 @@ func (c *Client) Close() {
 func (c *Client) Call(type_ api.PT, payload any) ([]byte, error) {
 	// !to expose channel instead of results
 	rq := outPool.Get().(*Out)
-	id := network.NewUid()
+	id := api.NewUid()
 	rq.Id, rq.T, rq.Payload = id, type_, payload
 	r, err := json.Marshal(rq)
 	outPool.Put(rq)
@@ -120,7 +119,7 @@ func (c *Client) Call(type_ api.PT, payload any) ([]byte, error) {
 
 func (c *Client) Send(type_ api.PT, pl any) error {
 	rq := outPool.Get().(*Out)
-	rq.Id, rq.T, rq.Payload = "", type_, pl
+	rq.Id, rq.T, rq.Payload = api.NilUid, type_, pl
 	defer outPool.Put(rq)
 	return c.SendPacket(rq)
 }
@@ -156,7 +155,7 @@ func (c *Client) handleMessage(message []byte, err error) {
 	}
 
 	// empty id implies that we won't track (wait) the response
-	if !res.Id.Empty() {
+	if !res.Id.IsEmpty() {
 		if task := c.pop(res.Id); task != nil {
 			task.Response = res
 			close(task.done)
@@ -167,7 +166,7 @@ func (c *Client) handleMessage(message []byte, err error) {
 }
 
 // pop extracts and removes a task from the queue by its id.
-func (c *Client) pop(id network.Uid) *call {
+func (c *Client) pop(id api.Uid) *call {
 	c.mu.Lock()
 	task := c.queue[id]
 	delete(c.queue, id)

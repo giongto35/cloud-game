@@ -1,7 +1,5 @@
 package api
 
-import "github.com/giongto35/cloud-game/v2/pkg/network"
-
 type GameInfo struct {
 	Name string `json:"name"`
 	Base string `json:"base"`
@@ -63,6 +61,6 @@ type (
 	WebrtcInitResponse string
 )
 
-func NewWebrtcIceCandidateRequest(id network.Uid, can string) (PT, any) {
+func NewWebrtcIceCandidateRequest(id Uid, can string) (PT, any) {
 	return WebrtcIce, WebrtcIceCandidateRequest{Stateful: Stateful{id}, Candidate: can}
 }

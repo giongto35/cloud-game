@@ -2,9 +2,8 @@ package com
 
 import (
 	"errors"
+	"github.com/giongto35/cloud-game/v2/pkg/api"
 	"sync"
-
-	"github.com/giongto35/cloud-game/v2/pkg/network"
 )
 
 // NetMap defines a thread-safe NetClient list.
@@ -19,7 +18,7 @@ var ErrNotFound = errors.New("not found")
 func NewNetMap[T NetClient]() NetMap[T] { return NetMap[T]{m: make(map[string]T, 10)} }
 
 // Add adds a new NetClient value with its id value as the key.
-func (m *NetMap[T]) Add(client T) { m.Put(string(client.Id()), client) }
+func (m *NetMap[T]) Add(client T) { m.Put(client.Id().String(), client) }
 
 // Put adds a new NetClient value with a custom key value.
 func (m *NetMap[T]) Put(key string, client T) {
@@ -29,7 +28,7 @@ func (m *NetMap[T]) Put(key string, client T) {
 }
 
 // Remove removes NetClient from the map if present.
-func (m *NetMap[T]) Remove(client T) { m.RemoveByKey(string(client.Id())) }
+func (m *NetMap[T]) Remove(client T) { m.RemoveByKey(client.Id().String()) }
 
 // RemoveByKey removes NetClient from the map by a specified key value.
 func (m *NetMap[T]) RemoveByKey(key string) {
@@ -58,8 +57,8 @@ func (m *NetMap[T]) IsEmpty() bool {
 // List returns the current NetClient map.
 func (m *NetMap[T]) List() map[string]T { return m.m }
 
-func (m *NetMap[T]) Has(id network.Uid) bool {
-	_, err := m.Find(string(id))
+func (m *NetMap[T]) Has(id api.Uid) bool {
+	_, err := m.Find(id.String())
 	return err == nil
 }
 

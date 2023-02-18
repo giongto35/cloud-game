@@ -4,13 +4,13 @@ import (
 	"encoding/base64"
 	"fmt"
 
-	"github.com/giongto35/cloud-game/v2/pkg/network"
 	"github.com/goccy/go-json"
+	"github.com/rs/xid"
 )
 
 type (
 	Stateful struct {
-		Id network.Uid `json:"id"`
+		Id Uid `json:"id"`
 	}
 	Room struct {
 		Rid string `json:"room_id"` // room id
@@ -28,7 +28,7 @@ type (
 	}
 )
 
-func StateRoom(id network.Uid, rid string) StatefulRoom {
+func StateRoom(id Uid, rid string) StatefulRoom {
 	return StatefulRoom{Stateful: Stateful{id}, Room: Room{rid}}
 }
 func (sr StatefulRoom) GetRoom() string { return sr.Rid }
@@ -149,3 +149,14 @@ func FromBase64Json(data string, obj any) error {
 	}
 	return nil
 }
+
+type Uid struct {
+	xid.ID
+}
+
+var NilUid = Uid{xid.NilID()}
+
+func NewUid() Uid { return Uid{xid.New()} }
+
+func (u Uid) IsEmpty() bool { return u.IsNil() }
+func (u Uid) Short() string { return u.String()[:3] + "." + u.String()[len(u.String())-3:] }

@@ -1,8 +1,6 @@
 package worker
 
 import (
-	"fmt"
-
 	"github.com/giongto35/cloud-game/v2/pkg/api"
 	"github.com/giongto35/cloud-game/v2/pkg/com"
 	"github.com/giongto35/cloud-game/v2/pkg/config/worker"
@@ -11,11 +9,11 @@ import (
 )
 
 // buildConnQuery builds initial connection data query to a coordinator.
-func buildConnQuery[S fmt.Stringer](id S, conf worker.Worker, address string) (string, error) {
+func buildConnQuery(id api.Uid, conf worker.Worker, address string) (string, error) {
 	addr := conf.GetPingAddr(address)
 	return api.ToBase64Json(api.ConnectionRequest{
 		Addr:    addr.Hostname(),
-		Id:      id.String(),
+		Id:      id,
 		IsHTTPS: conf.Server.Https,
 		PingURL: addr.String(),
 		Port:    conf.GetPort(address),
@@ -47,7 +45,7 @@ func (c *coordinator) HandleWebrtcInit(rq api.WebrtcInitRequest, w *Worker, conn
 	// use user uid from the coordinator
 	user := NewSession(peer, rq.Id)
 	w.router.AddUser(user)
-	c.Log.Info().Str("id", string(rq.Id)).Msgf("Peer connection (uid:%s)", user.Id())
+	c.Log.Info().Str("id", rq.Id.String()).Msgf("Peer connection (uid:%s)", user.Id())
 
 	return com.Out{Payload: sdp}
 }

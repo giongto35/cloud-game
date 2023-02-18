@@ -7,7 +7,6 @@ import (
 	"github.com/giongto35/cloud-game/v2/pkg/com"
 	"github.com/giongto35/cloud-game/v2/pkg/config/worker"
 	"github.com/giongto35/cloud-game/v2/pkg/logger"
-	"github.com/giongto35/cloud-game/v2/pkg/network"
 	"github.com/giongto35/cloud-game/v2/pkg/network/webrtc"
 )
 
@@ -27,7 +26,7 @@ func connect(host string, conf worker.Worker, addr string, log *logger.Logger) (
 
 	log.Debug().Str("c", "c").Str("d", "→").Msgf("Handshake %s", address.String())
 
-	id := network.NewUid()
+	id := api.NewUid()
 	req, err := buildConnQuery(id, conf, addr)
 	if req != "" && err == nil {
 		address.RawQuery = "data=" + req
@@ -130,6 +129,6 @@ func (c *coordinator) RegisterRoom(id string) { c.Notify(api.RegisterRoom, id) }
 
 // CloseRoom sends a signal to coordinator which will remove that room from its list.
 func (c *coordinator) CloseRoom(id string) { c.Notify(api.CloseRoom, id) }
-func (c *coordinator) IceCandidate(candidate string, sessionId network.Uid) {
+func (c *coordinator) IceCandidate(candidate string, sessionId api.Uid) {
 	c.Notify(api.NewWebrtcIceCandidateRequest(sessionId, candidate))
 }

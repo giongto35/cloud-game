@@ -1,8 +1,8 @@
 package worker
 
 import (
+	"github.com/giongto35/cloud-game/v2/pkg/api"
 	"github.com/giongto35/cloud-game/v2/pkg/com"
-	"github.com/giongto35/cloud-game/v2/pkg/network"
 	"github.com/giongto35/cloud-game/v2/pkg/network/webrtc"
 	"github.com/pion/webrtc/v3/pkg/media"
 )
@@ -18,7 +18,7 @@ type Router struct {
 
 // Session represents WebRTC connection of the user.
 type Session struct {
-	id   network.Uid
+	id   api.Uid
 	conn *webrtc.Peer
 	pi   int
 	room GamingRoom // back reference
@@ -39,13 +39,13 @@ func (r *Router) GetRoom(id string) GamingRoom {
 	}
 	return nil
 }
-func (r *Router) GetUser(uid network.Uid) *Session { sess, _ := r.users.Find(string(uid)); return sess }
-func (r *Router) RemoveRoom()                      { r.room = nil }
-func (r *Router) RemoveUser(user *Session)         { r.users.Remove(user); user.Close() }
+func (r *Router) GetUser(uid api.Uid) *Session { sess, _ := r.users.Find(uid.String()); return sess }
+func (r *Router) RemoveRoom()                  { r.room = nil }
+func (r *Router) RemoveUser(user *Session)     { r.users.Remove(user); user.Close() }
 
-func NewSession(rtc *webrtc.Peer, id network.Uid) *Session { return &Session{id: id, conn: rtc} }
+func NewSession(rtc *webrtc.Peer, id api.Uid) *Session { return &Session{id: id, conn: rtc} }
 
-func (s *Session) Id() network.Uid                      { return s.id }
+func (s *Session) Id() api.Uid                          { return s.id }
 func (s *Session) GetSetRoom(v GamingRoom) GamingRoom   { vv := s.room; s.room = v; return vv }
 func (s *Session) GetPeerConn() *webrtc.Peer            { return s.conn }
 func (s *Session) GetPlayerIndex() int                  { return s.pi }

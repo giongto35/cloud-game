@@ -144,14 +144,14 @@ func (r *Room) PollUserInput(session *Session) {
 func (r *Room) AddUser(user *Session) {
 	r.users.Add(user)
 	user.SetRoom(r)
-	r.log.Debug().Str("user", string(user.Id())).Msg("User has joined the room")
+	r.log.Debug().Str("user", user.Id().String()).Msg("User has joined the room")
 }
 
 func (r *Room) CleanupUser(user *Session) {
 	user.SetRoom(nil)
 	if r.HasUser(user) {
 		r.users.Remove(user)
-		r.log.Debug().Str("user", string(user.Id())).Msg("User has left the room")
+		r.log.Debug().Str("user", user.Id().String()).Msg("User has left the room")
 	}
 	if r.IsEmpty() {
 		r.log.Debug().Msg("The room is empty")

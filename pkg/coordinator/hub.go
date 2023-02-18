@@ -105,9 +105,9 @@ func (h *Hub) handleWorkerConnection(w http.ResponseWriter, r *http.Request) {
 		Zone:         handshake.Zone,
 	}
 	// set connection uid from the handshake
-	if ok, uid := handshake.HasUID(); ok {
-		worker.Log.Debug().Msgf("connection id will be changed %s->%s", worker.Id(), uid)
-		worker.SetId(uid)
+	if !handshake.Id.IsEmpty() {
+		worker.Log.Debug().Msgf("connection id will be changed %s->%s", worker.Id(), handshake.Id)
+		worker.SetId(handshake.Id)
 	}
 	defer func() {
 		if worker != nil {
@@ -126,9 +126,9 @@ func (h *Hub) GetServerList() (r []api.Server) {
 	for _, w := range h.workers.List() {
 		r = append(r, api.Server{
 			Addr:    w.Addr,
-			Id:      w.Id().String(),
+			Id:      w.Id(),
 			IsBusy:  !w.HasSlot(),
-			Machine: w.Id().Machine(),
+			Machine: string(w.Id().Machine()),
 			PingURL: w.PingServer,
 			Port:    w.Port,
 			Tag:     w.Tag,

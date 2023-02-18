@@ -3,23 +3,22 @@ package coordinator
 import (
 	"github.com/giongto35/cloud-game/v2/pkg/api"
 	"github.com/giongto35/cloud-game/v2/pkg/games"
-	"github.com/giongto35/cloud-game/v2/pkg/network"
 )
 
-func (w *Worker) WebrtcInit(id network.Uid) (*api.WebrtcInitResponse, error) {
+func (w *Worker) WebrtcInit(id api.Uid) (*api.WebrtcInitResponse, error) {
 	return api.UnwrapChecked[api.WebrtcInitResponse](
 		w.Send(api.WebrtcInit, api.WebrtcInitRequest{Stateful: api.Stateful{Id: id}}))
 }
 
-func (w *Worker) WebrtcAnswer(id network.Uid, sdp string) {
+func (w *Worker) WebrtcAnswer(id api.Uid, sdp string) {
 	w.Notify(api.WebrtcAnswer, api.WebrtcAnswerRequest{Stateful: api.Stateful{Id: id}, Sdp: sdp})
 }
 
-func (w *Worker) WebrtcIceCandidate(id network.Uid, can string) {
+func (w *Worker) WebrtcIceCandidate(id api.Uid, can string) {
 	w.Notify(api.NewWebrtcIceCandidateRequest(id, can))
 }
 
-func (w *Worker) StartGame(id network.Uid, app games.AppMeta, req api.GameStartUserRequest) (*api.StartGameResponse, error) {
+func (w *Worker) StartGame(id api.Uid, app games.AppMeta, req api.GameStartUserRequest) (*api.StartGameResponse, error) {
 	return api.UnwrapChecked[api.StartGameResponse](w.Send(api.StartGame, api.StartGameRequest{
 		StatefulRoom: api.StateRoom(id, req.RoomId),
 		Game:         api.GameInfo{Name: app.Name, Base: app.Base, Path: app.Path, Type: app.Type},
@@ -29,34 +28,34 @@ func (w *Worker) StartGame(id network.Uid, app games.AppMeta, req api.GameStartU
 	}))
 }
 
-func (w *Worker) QuitGame(id network.Uid) {
+func (w *Worker) QuitGame(id api.Uid) {
 	w.Notify(api.QuitGame, api.GameQuitRequest{StatefulRoom: api.StateRoom(id, w.RoomId)})
 }
 
-func (w *Worker) SaveGame(id network.Uid) (*api.SaveGameResponse, error) {
+func (w *Worker) SaveGame(id api.Uid) (*api.SaveGameResponse, error) {
 	return api.UnwrapChecked[api.SaveGameResponse](
 		w.Send(api.SaveGame, api.SaveGameRequest{StatefulRoom: api.StateRoom(id, w.RoomId)}))
 }
 
-func (w *Worker) LoadGame(id network.Uid) (*api.LoadGameResponse, error) {
+func (w *Worker) LoadGame(id api.Uid) (*api.LoadGameResponse, error) {
 	return api.UnwrapChecked[api.LoadGameResponse](
 		w.Send(api.LoadGame, api.LoadGameRequest{StatefulRoom: api.StateRoom(id, w.RoomId)}))
 }
 
-func (w *Worker) ChangePlayer(id network.Uid, index int) (*api.ChangePlayerResponse, error) {
+func (w *Worker) ChangePlayer(id api.Uid, index int) (*api.ChangePlayerResponse, error) {
 	return api.UnwrapChecked[api.ChangePlayerResponse](
 		w.Send(api.ChangePlayer, api.ChangePlayerRequest{StatefulRoom: api.StateRoom(id, w.RoomId), Index: index}))
 }
 
-func (w *Worker) ToggleMultitap(id network.Uid) {
+func (w *Worker) ToggleMultitap(id api.Uid) {
 	_, _ = w.Send(api.ToggleMultitap, api.ToggleMultitapRequest{StatefulRoom: api.StateRoom(id, w.RoomId)})
 }
 
-func (w *Worker) RecordGame(id network.Uid, rec bool, recUser string) (*api.RecordGameResponse, error) {
+func (w *Worker) RecordGame(id api.Uid, rec bool, recUser string) (*api.RecordGameResponse, error) {
 	return api.UnwrapChecked[api.RecordGameResponse](
 		w.Send(api.RecordGame, api.RecordGameRequest{StatefulRoom: api.StateRoom(id, w.RoomId), Active: rec, User: recUser}))
 }
 
-func (w *Worker) TerminateSession(id network.Uid) {
+func (w *Worker) TerminateSession(id api.Uid) {
 	_, _ = w.Send(api.TerminateSession, api.TerminateSessionRequest{Stateful: api.Stateful{Id: id}})
 }

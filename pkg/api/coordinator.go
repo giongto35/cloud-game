@@ -3,15 +3,13 @@ package api
 import (
 	"encoding/base64"
 	"fmt"
-
-	"github.com/giongto35/cloud-game/v2/pkg/network"
 )
 
 type (
 	CloseRoomRequest  string
 	ConnectionRequest struct {
 		Addr    string `json:"addr,omitempty"`
-		Id      string `json:"id,omitempty"`
+		Id      Uid    `json:"id,omitempty"`
 		IsHTTPS bool   `json:"is_https,omitempty"`
 		PingURL string `json:"ping_url,omitempty"`
 		Port    string `json:"port,omitempty"`
@@ -43,20 +41,12 @@ func RequestToHandshake(data string) (*ConnectionRequest, error) {
 	return handshake, nil
 }
 
-func (c ConnectionRequest) HasUID() (bool, network.Uid) {
-	hid := network.Uid(c.Id)
-	if !(c.Id == "" || !network.ValidUid(hid)) {
-		return true, hid
-	}
-	return false, ""
-}
-
 // Server contains a list of server groups.
 // Server is a separate machine that may contain
 // multiple sub-processes.
 type Server struct {
 	Addr     string `json:"addr,omitempty"`
-	Id       string `json:"id,omitempty"`
+	Id       Uid    `json:"id,omitempty"`
 	IsBusy   bool   `json:"is_busy,omitempty"`
 	InGroup  bool   `json:"in_group,omitempty"`
 	Machine  string `json:"machine,omitempty"`

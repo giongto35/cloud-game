@@ -5,19 +5,18 @@ import (
 
 	"github.com/giongto35/cloud-game/v2/pkg/api"
 	"github.com/giongto35/cloud-game/v2/pkg/logger"
-	"github.com/giongto35/cloud-game/v2/pkg/network"
 )
 
 type (
 	In struct {
-		Id      network.Uid     `json:"id,omitempty"`
+		Id      api.Uid         `json:"id,omitempty"`
 		T       api.PT          `json:"t"`
 		Payload json.RawMessage `json:"p,omitempty"`
 	}
 	Out struct {
-		Id      network.Uid `json:"id,omitempty"`
-		T       api.PT      `json:"t"`
-		Payload any         `json:"p,omitempty"`
+		Id      api.Uid `json:"id,omitempty"`
+		T       api.PT  `json:"t"`
+		Payload any     `json:"p,omitempty"`
 	}
 )
 
@@ -30,7 +29,7 @@ var (
 type (
 	NetClient interface {
 		Close()
-		Id() network.Uid
+		Id() api.Uid
 	}
 	RegionalClient interface {
 		In(region string) bool
@@ -40,13 +39,13 @@ type (
 type SocketClient struct {
 	NetClient
 
-	id   network.Uid
+	id   api.Uid
 	wire *Client
 	Tag  string
 	Log  *logger.Logger
 }
 
-func New(conn *Client, tag string, id network.Uid, log *logger.Logger) SocketClient {
+func New(conn *Client, tag string, id api.Uid, log *logger.Logger) SocketClient {
 	l := log.Extend(log.With().Str("cid", id.Short()))
 	dir := "→"
 	if conn.IsServer() {
@@ -56,7 +55,7 @@ func New(conn *Client, tag string, id network.Uid, log *logger.Logger) SocketCli
 	return SocketClient{id: id, wire: conn, Tag: tag, Log: l}
 }
 
-func (c *SocketClient) SetId(id network.Uid) { c.id = id }
+func (c *SocketClient) SetId(id api.Uid) { c.id = id }
 
 func (c *SocketClient) OnPacket(fn func(p In) error) {
 	logFn := func(p In) {
@@ -85,9 +84,9 @@ func (c *SocketClient) Close() {
 	c.Log.Debug().Str("c", c.Tag).Str("d", "x").Msg("Close")
 }
 
-func (c *SocketClient) Id() network.Uid      { return c.id }
+func (c *SocketClient) Id() api.Uid          { return c.id }
 func (c *SocketClient) Listen()              { c.ProcessMessages(); <-c.Done() }
 func (c *SocketClient) ProcessMessages()     { c.wire.Listen() }
 func (c *SocketClient) Route(in In, out Out) { _ = c.wire.Route(in, out) }
-func (c *SocketClient) String() string       { return c.Tag + ":" + string(c.Id()) }
+func (c *SocketClient) String() string       { return c.Tag + ":" + c.Id().String() }
 func (c *SocketClient) Done() chan struct{}  { return c.wire.Wait() }
