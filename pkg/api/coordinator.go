@@ -55,15 +55,16 @@ func (c ConnectionRequest) HasUID() (bool, network.Uid) {
 // Server is a separate machine that may contain
 // multiple sub-processes.
 type Server struct {
-	Addr     string      `json:"addr,omitempty"`
-	Id       network.Uid `json:"id,omitempty"`
-	IsBusy   bool        `json:"is_busy,omitempty"`
-	InGroup  bool        `json:"in_group,omitempty"`
-	PingURL  string      `json:"ping_url"`
-	Port     string      `json:"port,omitempty"`
-	Replicas uint32      `json:"replicas,omitempty"`
-	Tag      string      `json:"tag,omitempty"`
-	Zone     string      `json:"zone,omitempty"`
+	Addr     string `json:"addr,omitempty"`
+	Id       string `json:"id,omitempty"`
+	IsBusy   bool   `json:"is_busy,omitempty"`
+	InGroup  bool   `json:"in_group,omitempty"`
+	Machine  string `json:"machine,omitempty"`
+	PingURL  string `json:"ping_url"`
+	Port     string `json:"port,omitempty"`
+	Replicas uint32 `json:"replicas,omitempty"`
+	Tag      string `json:"tag,omitempty"`
+	Zone     string `json:"zone,omitempty"`
 }
 
 type HasServerInfo interface {

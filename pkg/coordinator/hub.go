@@ -126,8 +126,9 @@ func (h *Hub) GetServerList() (r []api.Server) {
 	for _, w := range h.workers.List() {
 		r = append(r, api.Server{
 			Addr:    w.Addr,
-			Id:      w.Id(),
+			Id:      w.Id().String(),
 			IsBusy:  !w.HasSlot(),
+			Machine: w.Id().Machine(),
 			PingURL: w.PingServer,
 			Port:    w.Port,
 			Tag:     w.Tag,

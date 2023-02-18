@@ -129,7 +129,7 @@ func (u *User) handleGetWorkerList(debug bool, info api.HasServerInfo) {
 		// not sure if []byte to string always reversible :/
 		unique := map[string]*api.Server{}
 		for _, s := range servers {
-			mid := s.Id.Machine()
+			mid := s.Machine
 			if _, ok := unique[mid]; !ok {
 				unique[mid] = &api.Server{Addr: s.Addr, PingURL: s.PingURL, Id: s.Id, InGroup: true}
 			}
