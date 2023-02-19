@@ -18,7 +18,7 @@ func NewUserConnection(conn *com.SocketClient) *User { return &User{SocketClient
 func (u *User) SetWorker(w *Worker) { u.w = w; u.w.Reserve() }
 
 func (u *User) Disconnect() {
-	u.SocketClient.Close()
+	u.SocketClient.Disconnect()
 	if u.w != nil {
 		u.w.UnReserve()
 		u.w.TerminateSession(u.Id())

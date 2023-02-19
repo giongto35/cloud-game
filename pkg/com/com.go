@@ -28,7 +28,7 @@ var (
 
 type (
 	NetClient interface {
-		Close()
+		Disconnect()
 		Id() api.Uid
 	}
 	RegionalClient interface {
@@ -37,8 +37,6 @@ type (
 )
 
 type SocketClient struct {
-	NetClient
-
 	id   api.Uid
 	wire *Client
 	Tag  string
@@ -79,7 +77,7 @@ func (c *SocketClient) Notify(t api.PT, data any) {
 	_ = c.wire.Send(t, data)
 }
 
-func (c *SocketClient) Close() {
+func (c *SocketClient) Disconnect() {
 	c.wire.Close()
 	c.Log.Debug().Str("c", c.Tag).Str("d", "x").Msg("Close")
 }

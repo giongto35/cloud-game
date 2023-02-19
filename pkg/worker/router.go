@@ -39,19 +39,19 @@ func (r *Router) GetRoom(id string) GamingRoom {
 	}
 	return nil
 }
-func (r *Router) GetUser(uid api.Uid) *Session { sess, _ := r.users.Find(uid.String()); return sess }
-func (r *Router) RemoveRoom()                  { r.room = nil }
-func (r *Router) RemoveUser(user *Session)     { r.users.Remove(user); user.Close() }
+func (r *Router) GetUser(uid api.Uid) *Session   { sess, _ := r.users.Find(uid.String()); return sess }
+func (r *Router) RemoveRoom()                    { r.room = nil }
+func (r *Router) RemoveDisconnect(user *Session) { r.users.Remove(user); user.Disconnect() }
 
 func NewSession(rtc *webrtc.Peer, id api.Uid) *Session { return &Session{id: id, conn: rtc} }
 
-func (s *Session) Id() api.Uid                          { return s.id }
-func (s *Session) GetSetRoom(v GamingRoom) GamingRoom   { vv := s.room; s.room = v; return vv }
+func (s *Session) Disconnect()                          { s.conn.Disconnect() }
 func (s *Session) GetPeerConn() *webrtc.Peer            { return s.conn }
 func (s *Session) GetPlayerIndex() int                  { return s.pi }
+func (s *Session) GetSetRoom(v GamingRoom) GamingRoom   { vv := s.room; s.room = v; return vv }
+func (s *Session) Id() api.Uid                          { return s.id }
 func (s *Session) IsConnected() bool                    { return s.conn.IsConnected() }
-func (s *Session) SendVideo(sample *media.Sample) error { return s.conn.WriteVideo(sample) }
 func (s *Session) SendAudio(sample *media.Sample) error { return s.conn.WriteAudio(sample) }
-func (s *Session) SetRoom(room GamingRoom)              { s.room = room }
+func (s *Session) SendVideo(sample *media.Sample) error { return s.conn.WriteVideo(sample) }
 func (s *Session) SetPlayerIndex(index int)             { s.pi = index }
-func (s *Session) Close()                               { s.conn.Disconnect() }
+func (s *Session) SetRoom(room GamingRoom)              { s.room = room }

@@ -30,6 +30,11 @@ func (m *NetMap[T]) Put(key string, client T) {
 // Remove removes NetClient from the map if present.
 func (m *NetMap[T]) Remove(client T) { m.RemoveByKey(client.Id().String()) }
 
+func (m *NetMap[T]) RemoveDisconnect(client T) {
+	client.Disconnect()
+	m.Remove(client)
+}
+
 // RemoveByKey removes NetClient from the map by a specified key value.
 func (m *NetMap[T]) RemoveByKey(key string) {
 	m.mu.Lock()

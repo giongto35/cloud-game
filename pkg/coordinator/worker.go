@@ -21,6 +21,22 @@ type Worker struct {
 	Zone       string
 }
 
+func NewWorkerConnection(conn *com.SocketClient, handshake api.ConnectionRequest) *Worker {
+	worker := &Worker{
+		SocketClient: *conn,
+		Addr:         handshake.Addr,
+		PingServer:   handshake.PingURL,
+		Port:         handshake.Port,
+		Tag:          handshake.Tag,
+		Zone:         handshake.Zone,
+	}
+	// set connection uid from the handshake
+	if !handshake.Id.IsEmpty() {
+		worker.SetId(handshake.Id)
+	}
+	return worker
+}
+
 func (w *Worker) HandleRequests(users *com.NetMap[*User]) {
 	// !to make a proper multithreading abstraction
 	w.OnPacket(func(p com.In) error {
@@ -76,7 +92,7 @@ func (s *slotted) UnReserve() {
 func (s *slotted) FreeSlots() { atomic.StoreInt32((*int32)(s), 0) }
 
 func (w *Worker) Disconnect() {
-	w.SocketClient.Close()
+	w.SocketClient.Disconnect()
 	w.RoomId = ""
 	w.FreeSlots()
 }

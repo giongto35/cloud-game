@@ -64,7 +64,7 @@ func (w *Worker) Run() {
 		remoteAddr := w.conf.Worker.Network.CoordinatorAddress
 		defer func() {
 			if w.cord != nil {
-				w.cord.Close()
+				w.cord.Disconnect()
 			}
 			w.router.Close()
 			w.log.Debug().Msgf("Service loop end")

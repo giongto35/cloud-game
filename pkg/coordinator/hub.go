@@ -52,12 +52,7 @@ func (h *Hub) handleUserConnection(w http.ResponseWriter, r *http.Request) {
 		h.log.Error().Err(err).Msg("couldn't init user connection")
 	}
 	usr := NewUserConnection(conn)
-	defer func() {
-		if usr != nil {
-			usr.Disconnect()
-			h.users.Remove(usr)
-		}
-	}()
+	defer h.users.RemoveDisconnect(usr)
 	usr.HandleRequests(h, h.launcher, h.conf)
 
 	wkr := h.findWorkerFor(usr, r.URL.Query())
@@ -96,29 +91,14 @@ func (h *Hub) handleWorkerConnection(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	worker := &Worker{
-		SocketClient: *conn,
-		Addr:         handshake.Addr,
-		PingServer:   handshake.PingURL,
-		Port:         handshake.Port,
-		Tag:          handshake.Tag,
-		Zone:         handshake.Zone,
-	}
-	// set connection uid from the handshake
 	if !handshake.Id.IsEmpty() {
-		worker.Log.Debug().Msgf("connection id will be changed %s->%s", worker.Id(), handshake.Id)
-		worker.SetId(handshake.Id)
+		h.log.Debug().Msgf("worker uid will be changed to %s", handshake.Id)
 	}
-	defer func() {
-		if worker != nil {
-			worker.Disconnect()
-			h.workers.Remove(worker)
-		}
-	}()
-
+	worker := NewWorkerConnection(conn, *handshake)
+	defer h.workers.RemoveDisconnect(worker)
 	worker.HandleRequests(&h.users)
 	h.workers.Add(worker)
-	h.log.Info().Msgf("> [+] worker %s", worker.PrintInfo())
+	h.log.Info().Msgf("> worker %s", worker.PrintInfo())
 	worker.Listen()
 }
 

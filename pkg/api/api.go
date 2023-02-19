@@ -160,3 +160,5 @@ func NewUid() Uid { return Uid{xid.New()} }
 
 func (u Uid) IsEmpty() bool { return u.IsNil() }
 func (u Uid) Short() string { return u.String()[:3] + "." + u.String()[len(u.String())-3:] }
+
+// todo remove null values

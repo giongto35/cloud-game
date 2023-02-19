@@ -124,7 +124,7 @@ func (c *coordinator) HandleGameStart(rq api.StartGameRequest, w *Worker) com.Ou
 // HandleTerminateSession handles cases when a user has been disconnected from the websocket of coordinator.
 func (c *coordinator) HandleTerminateSession(rq api.TerminateSessionRequest, w *Worker) {
 	if session := w.router.GetUser(rq.Id); session != nil {
-		w.router.RemoveUser(session)
+		w.router.RemoveDisconnect(session)
 		if room := session.GetSetRoom(nil); room != nil {
 			room.CleanupUser(session)
 		}
