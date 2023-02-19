@@ -2,7 +2,6 @@ package com
 
 import (
 	"errors"
-	"github.com/giongto35/cloud-game/v2/pkg/api"
 	"sync"
 )
 
@@ -62,8 +61,8 @@ func (m *NetMap[T]) IsEmpty() bool {
 // List returns the current NetClient map.
 func (m *NetMap[T]) List() map[string]T { return m.m }
 
-func (m *NetMap[T]) Has(id api.Uid) bool {
-	_, err := m.Find(id.String())
+func (m *NetMap[T]) Has(key string) bool {
+	_, err := m.Find(key)
 	return err == nil
 }
 
