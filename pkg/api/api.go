@@ -20,15 +20,6 @@ type (
 	PT uint8
 )
 
-type (
-	RoomInterface interface {
-		GetRoom() string
-	}
-)
-
-func StateRoom(id Uid, rid string) StatefulRoom {
-	return StatefulRoom{Stateful: Stateful{id}, Room: Room{rid}}
-}
 func (sr StatefulRoom) GetRoom() string { return sr.Rid }
 
 // Packet codes:

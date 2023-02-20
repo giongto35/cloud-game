@@ -8,6 +8,10 @@ import (
 	"github.com/giongto35/cloud-game/v2/pkg/network/webrtc"
 )
 
+type HasRoom interface {
+	GetRoom() string
+}
+
 // buildConnQuery builds initial connection data query to a coordinator.
 func buildConnQuery(id api.Uid, conf worker.Worker, address string) (string, error) {
 	addr := conf.GetPingAddr(address)
@@ -194,7 +198,7 @@ func (c *coordinator) HandleRecordGame(rq api.RecordGameRequest, w *Worker) com.
 	return com.ErrPacket
 }
 
-func roomy(rq api.RoomInterface, w *Worker) GamingRoom {
+func roomy(rq HasRoom, w *Worker) GamingRoom {
 	rid := rq.GetRoom()
 	if rid == "" {
 		return nil
