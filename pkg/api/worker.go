@@ -59,7 +59,3 @@ type (
 	}
 	WebrtcInitResponse string
 )
-
-func NewWebrtcIceCandidateRequest(id Uid, can string) (PT, any) {
-	return WebrtcIce, WebrtcIceCandidateRequest{Stateful: Stateful{id}, Candidate: can}
-}

@@ -16,7 +16,7 @@ func (w *Worker) WebrtcAnswer(id api.Uid, sdp string) {
 }
 
 func (w *Worker) WebrtcIceCandidate(id api.Uid, can string) {
-	w.Notify(api.NewWebrtcIceCandidateRequest(id, can))
+	w.Notify(api.WebrtcIce, api.WebrtcIceCandidateRequest{Stateful: api.Stateful{Id: id}, Candidate: can})
 }
 
 func (w *Worker) StartGame(id api.Uid, app games.AppMeta, req api.GameStartUserRequest) (*api.StartGameResponse, error) {
