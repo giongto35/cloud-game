@@ -119,7 +119,7 @@ func (u *User) HandleRecordGame(rq api.RecordGameRequest) {
 	u.Notify(api.RecordGame, resp)
 }
 
-func (u *User) handleGetWorkerList(debug bool, info api.HasServerInfo) {
+func (u *User) handleGetWorkerList(debug bool, info HasServerInfo) {
 	response := api.GetWorkerListResponse{}
 	servers := info.GetServerList()
 

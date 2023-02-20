@@ -40,7 +40,3 @@ type Server struct {
 	Tag      string `json:"tag,omitempty"`
 	Zone     string `json:"zone,omitempty"`
 }
-
-type HasServerInfo interface {
-	GetServerList() []Server
-}

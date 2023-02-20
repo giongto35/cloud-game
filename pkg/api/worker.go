@@ -1,12 +1,5 @@
 package api
 
-type GameInfo struct {
-	Name string `json:"name"`
-	Base string `json:"base"`
-	Path string `json:"path"`
-	Type string `json:"type"`
-}
-
 type (
 	ChangePlayerRequest = struct {
 		StatefulRoom
@@ -30,6 +23,12 @@ type (
 		RecordUser  string
 		Game        GameInfo `json:"game"`
 		PlayerIndex int      `json:"player_index"`
+	}
+	GameInfo struct {
+		Name string `json:"name"`
+		Base string `json:"base"`
+		Path string `json:"path"`
+		Type string `json:"type"`
 	}
 	StartGameResponse struct {
 		Room

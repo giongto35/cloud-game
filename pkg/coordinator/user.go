@@ -12,6 +12,10 @@ type User struct {
 	w *Worker // linked worker
 }
 
+type HasServerInfo interface {
+	GetServerList() []api.Server
+}
+
 // NewUserConnection supposed to be a bidirectional one.
 func NewUserConnection(conn *com.SocketClient) *User { return &User{SocketClient: *conn} }
 
@@ -25,7 +29,7 @@ func (u *User) Disconnect() {
 	}
 }
 
-func (u *User) HandleRequests(info api.HasServerInfo, launcher games.Launcher, conf coordinator.Config) {
+func (u *User) HandleRequests(info HasServerInfo, launcher games.Launcher, conf coordinator.Config) {
 	u.ProcessMessages()
 	u.OnPacket(func(x com.In) error {
 		// !to use proper channels
