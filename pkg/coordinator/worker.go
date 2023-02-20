@@ -21,6 +21,10 @@ type Worker struct {
 	Zone       string
 }
 
+type HasUserRegistry interface {
+	Find(key api.Uid) (*User, error)
+}
+
 func NewWorkerConnection(conn *com.SocketClient, handshake api.ConnectionRequest) *Worker {
 	worker := &Worker{
 		SocketClient: *conn,
@@ -37,7 +41,7 @@ func NewWorkerConnection(conn *com.SocketClient, handshake api.ConnectionRequest
 	return worker
 }
 
-func (w *Worker) HandleRequests(users *com.NetMap[*User]) {
+func (w *Worker) HandleRequests(users HasUserRegistry) {
 	// !to make a proper multithreading abstraction
 	w.OnPacket(func(p com.In) error {
 		switch p.T {

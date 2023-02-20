@@ -28,9 +28,9 @@ var (
 )
 
 type (
-	NetClient interface {
+	NetClient[K comparable] interface {
 		Disconnect()
-		Id() api.Uid
+		Id() K
 	}
 	RegionalClient interface {
 		In(region string) bool

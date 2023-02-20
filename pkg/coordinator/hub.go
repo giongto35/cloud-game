@@ -21,8 +21,8 @@ type Hub struct {
 
 	conf     coordinator.Config
 	launcher games.Launcher
-	users    com.NetMap[*User]
-	workers  com.NetMap[*Worker]
+	users    com.NetMap[api.Uid, *User]
+	workers  com.NetMap[api.Uid, *Worker]
 	log      *logger.Logger
 
 	wConn, uConn *com.Connector
@@ -31,8 +31,8 @@ type Hub struct {
 func NewHub(conf coordinator.Config, lib games.GameLibrary, log *logger.Logger) *Hub {
 	return &Hub{
 		conf:     conf,
-		users:    com.NewNetMap[*User](),
-		workers:  com.NewNetMap[*Worker](),
+		users:    com.NewNetMap[api.Uid, *User](),
+		workers:  com.NewNetMap[api.Uid, *Worker](),
 		launcher: games.NewGameLauncher(lib),
 		log:      log,
 		wConn: com.NewConnector(
