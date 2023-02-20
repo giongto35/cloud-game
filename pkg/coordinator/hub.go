@@ -49,7 +49,7 @@ func NewHub(conf coordinator.Config, lib games.GameLibrary, log *logger.Logger) 
 // handleUserConnection handles all connections from user/frontend.
 func (h *Hub) handleUserConnection(w http.ResponseWriter, r *http.Request) {
 	h.log.Debug().Str("c", "u").Str("d", "←").Msgf("Handshake %v", r.Host)
-	conn, err := h.uConn.NewClientServer(w, r, h.log)
+	conn, err := h.uConn.NewServer(w, r, h.log)
 	if err != nil {
 		h.log.Error().Err(err).Msg("couldn't init user connection")
 	}
@@ -98,15 +98,12 @@ func (h *Hub) handleWorkerConnection(w http.ResponseWriter, r *http.Request) {
 		h.log.Warn().Msg("Unsecure worker connection. Unsecure to secure may be bad.")
 	}
 
-	conn, err := h.wConn.NewClientServer(w, r, h.log)
+	conn, err := h.wConn.NewServer(w, r, h.log)
 	if err != nil {
 		h.log.Error().Err(err).Msg("couldn't init worker connection")
 		return
 	}
 
-	if !handshake.Id.IsEmpty() {
-		h.log.Debug().Msgf("worker uid will be changed to %s", handshake.Id)
-	}
 	worker := NewWorkerConnection(conn, *handshake)
 	defer h.workers.RemoveDisconnect(worker)
 	worker.HandleRequests(&h.users)
@@ -119,7 +116,7 @@ func (h *Hub) GetServerList() (r []api.Server) {
 	for _, w := range h.workers.List() {
 		r = append(r, api.Server{
 			Addr:    w.Addr,
-			Id:      w.Id(),
+			Id:      w.Id().String(),
 			IsBusy:  !w.HasSlot(),
 			Machine: string(w.Id().Machine()),
 			PingURL: w.PingServer,

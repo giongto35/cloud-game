@@ -17,7 +17,7 @@ func buildConnQuery(id api.Uid, conf worker.Worker, address string) (string, err
 	addr := conf.GetPingAddr(address)
 	return com.ToBase64Json(api.ConnectionRequest{
 		Addr:    addr.Hostname(),
-		Id:      id,
+		Id:      id.String(),
 		IsHTTPS: conf.Server.Https,
 		PingURL: addr.String(),
 		Port:    conf.GetPort(address),

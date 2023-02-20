@@ -107,6 +107,14 @@ var NilUid = Uid{xid.NilID()}
 
 func NewUid() Uid { return Uid{xid.New()} }
 
+func NewUidFrom(id string) (Uid, error) {
+	uid, err := xid.FromString(id)
+	if err != nil {
+		return NewUid(), err
+	}
+	return Uid{uid}, nil
+}
+
 func (u Uid) IsEmpty() bool { return u.IsNil() }
 func (u Uid) Short() string { return u.String()[:3] + "." + u.String()[len(u.String())-3:] }
 

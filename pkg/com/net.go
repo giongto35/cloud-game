@@ -54,7 +54,7 @@ func NewConnector(opts ...Option) *Connector {
 	return c
 }
 
-func (co *Connector) NewClientServer(w http.ResponseWriter, r *http.Request, log *logger.Logger) (*SocketClient, error) {
+func (co *Connector) NewServer(w http.ResponseWriter, r *http.Request, log *logger.Logger) (*SocketClient, error) {
 	ws, err := co.wu.Upgrade(w, r, nil)
 	if err != nil {
 		return nil, err

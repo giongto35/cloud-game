@@ -4,14 +4,13 @@ type (
 	CloseRoomRequest  string
 	ConnectionRequest struct {
 		Addr    string `json:"addr,omitempty"`
-		Id      Uid    `json:"id,omitempty"`
+		Id      string `json:"id,omitempty"`
 		IsHTTPS bool   `json:"is_https,omitempty"`
 		PingURL string `json:"ping_url,omitempty"`
 		Port    string `json:"port,omitempty"`
 		Tag     string `json:"tag,omitempty"`
 		Zone    string `json:"zone,omitempty"`
 	}
-	GetWorkerListRequest  struct{}
 	GetWorkerListResponse struct {
 		Servers []Server `json:"servers"`
 	}
@@ -30,7 +29,7 @@ const (
 // multiple sub-processes.
 type Server struct {
 	Addr     string `json:"addr,omitempty"`
-	Id       Uid    `json:"id,omitempty"`
+	Id       string `json:"id,omitempty"`
 	IsBusy   bool   `json:"is_busy,omitempty"`
 	InGroup  bool   `json:"in_group,omitempty"`
 	Machine  string `json:"machine,omitempty"`
