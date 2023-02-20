@@ -35,25 +35,25 @@ func (u *User) HandleRequests(info api.HasServerInfo, launcher games.Launcher, c
 				u.HandleWebrtcInit()
 			}
 		case api.WebrtcAnswer:
-			rq := api.Unwrap[api.WebrtcAnswerUserRequest](x.Payload)
+			rq := com.Unwrap[api.WebrtcAnswerUserRequest](x.Payload)
 			if rq == nil {
 				return api.ErrMalformed
 			}
 			u.HandleWebrtcAnswer(*rq)
 		case api.WebrtcIce:
-			rq := api.Unwrap[api.WebrtcUserIceCandidate](x.Payload)
+			rq := com.Unwrap[api.WebrtcUserIceCandidate](x.Payload)
 			if rq == nil {
 				return api.ErrMalformed
 			}
 			u.HandleWebrtcIceCandidate(*rq)
 		case api.StartGame:
-			rq := api.Unwrap[api.GameStartUserRequest](x.Payload)
+			rq := com.Unwrap[api.GameStartUserRequest](x.Payload)
 			if rq == nil {
 				return api.ErrMalformed
 			}
 			u.HandleStartGame(*rq, launcher, conf)
 		case api.QuitGame:
-			rq := api.Unwrap[api.GameQuitRequest](x.Payload)
+			rq := com.Unwrap[api.GameQuitRequest](x.Payload)
 			if rq == nil {
 				return api.ErrMalformed
 			}
@@ -63,7 +63,7 @@ func (u *User) HandleRequests(info api.HasServerInfo, launcher games.Launcher, c
 		case api.LoadGame:
 			return u.HandleLoadGame()
 		case api.ChangePlayer:
-			rq := api.Unwrap[api.ChangePlayerUserRequest](x.Payload)
+			rq := com.Unwrap[api.ChangePlayerUserRequest](x.Payload)
 			if rq == nil {
 				return api.ErrMalformed
 			}
@@ -74,7 +74,7 @@ func (u *User) HandleRequests(info api.HasServerInfo, launcher games.Launcher, c
 			if !conf.Recording.Enabled {
 				return api.ErrForbidden
 			}
-			rq := api.Unwrap[api.RecordGameRequest](x.Payload)
+			rq := com.Unwrap[api.RecordGameRequest](x.Payload)
 			if rq == nil {
 				return api.ErrMalformed
 			}

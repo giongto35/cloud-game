@@ -1,10 +1,5 @@
 package api
 
-import (
-	"encoding/base64"
-	"fmt"
-)
-
 type (
 	CloseRoomRequest  string
 	ConnectionRequest struct {
@@ -29,17 +24,6 @@ const (
 	ZoneQueryParam   = "zone"
 	WorkerIdParam    = "wid"
 )
-
-func RequestToHandshake(data string) (*ConnectionRequest, error) {
-	if data == "" {
-		return nil, ErrMalformed
-	}
-	handshake, err := UnwrapChecked[ConnectionRequest](base64.URLEncoding.DecodeString(data))
-	if err != nil || handshake == nil {
-		return nil, fmt.Errorf("%v (%v)", err, handshake)
-	}
-	return handshake, nil
-}
 
 // Server contains a list of server groups.
 // Server is a separate machine that may contain

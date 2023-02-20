@@ -110,21 +110,6 @@ var (
 	ErrMalformed = fmt.Errorf("malformed")
 )
 
-func Unwrap[T any](data []byte) *T {
-	out := new(T)
-	if err := json.Unmarshal(data, out); err != nil {
-		return nil
-	}
-	return out
-}
-
-func UnwrapChecked[T any](bytes []byte, err error) (*T, error) {
-	if err != nil {
-		return nil, err
-	}
-	return Unwrap[T](bytes), nil
-}
-
 // ToBase64Json encodes data to a URL-encoded Base64+JSON string.
 func ToBase64Json(data any) (string, error) {
 	if data == nil {

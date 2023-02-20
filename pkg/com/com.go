@@ -43,6 +43,21 @@ type SocketClient struct {
 	Log  *logger.Logger
 }
 
+func Unwrap[T any](data []byte) *T {
+	out := new(T)
+	if err := json.Unmarshal(data, out); err != nil {
+		return nil
+	}
+	return out
+}
+
+func UnwrapChecked[T any](bytes []byte, err error) (*T, error) {
+	if err != nil {
+		return nil, err
+	}
+	return Unwrap[T](bytes), nil
+}
+
 func New(conn *Client, tag string, id api.Uid, log *logger.Logger) SocketClient {
 	l := log.Extend(log.With().Str("cid", id.Short()))
 	dir := "→"

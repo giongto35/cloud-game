@@ -4,6 +4,7 @@ import (
 	"unsafe"
 
 	"github.com/giongto35/cloud-game/v2/pkg/api"
+	"github.com/giongto35/cloud-game/v2/pkg/com"
 	"github.com/giongto35/cloud-game/v2/pkg/config/webrtc"
 )
 
@@ -14,7 +15,7 @@ func (u *User) CheckLatency(req api.CheckLatencyUserResponse) (api.CheckLatencyU
 	if err != nil || data == nil {
 		return nil, err
 	}
-	dat := api.Unwrap[api.CheckLatencyUserRequest](data)
+	dat := com.Unwrap[api.CheckLatencyUserRequest](data)
 	if dat == nil {
 		return api.CheckLatencyUserRequest{}, err
 	}

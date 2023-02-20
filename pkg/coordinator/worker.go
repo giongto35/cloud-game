@@ -42,20 +42,20 @@ func (w *Worker) HandleRequests(users *com.NetMap[*User]) {
 	w.OnPacket(func(p com.In) error {
 		switch p.T {
 		case api.RegisterRoom:
-			rq := api.Unwrap[api.RegisterRoomRequest](p.Payload)
+			rq := com.Unwrap[api.RegisterRoomRequest](p.Payload)
 			if rq == nil {
 				return api.ErrMalformed
 			}
 			w.Log.Info().Msgf("set room [%v] = %v", w.Id(), *rq)
 			w.HandleRegisterRoom(*rq)
 		case api.CloseRoom:
-			rq := api.Unwrap[api.CloseRoomRequest](p.Payload)
+			rq := com.Unwrap[api.CloseRoomRequest](p.Payload)
 			if rq == nil {
 				return api.ErrMalformed
 			}
 			w.HandleCloseRoom(*rq)
 		case api.IceCandidate:
-			rq := api.Unwrap[api.WebrtcIceCandidateRequest](p.Payload)
+			rq := com.Unwrap[api.WebrtcIceCandidateRequest](p.Payload)
 			if rq == nil {
 				return api.ErrMalformed
 			}

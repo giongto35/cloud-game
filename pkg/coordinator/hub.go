@@ -2,6 +2,8 @@ package coordinator
 
 import (
 	"bytes"
+	"encoding/base64"
+	"fmt"
 	"net/http"
 	"net/url"
 
@@ -67,11 +69,22 @@ func (h *Hub) handleUserConnection(w http.ResponseWriter, r *http.Request) {
 	<-usr.Done()
 }
 
+func RequestToHandshake(data string) (*api.ConnectionRequest, error) {
+	if data == "" {
+		return nil, api.ErrMalformed
+	}
+	handshake, err := com.UnwrapChecked[api.ConnectionRequest](base64.URLEncoding.DecodeString(data))
+	if err != nil || handshake == nil {
+		return nil, fmt.Errorf("%v (%v)", err, handshake)
+	}
+	return handshake, nil
+}
+
 // handleWorkerConnection handles all connections from a new worker to coordinator.
 func (h *Hub) handleWorkerConnection(w http.ResponseWriter, r *http.Request) {
 	h.log.Debug().Str("c", "w").Str("d", "←").Msgf("Handshake %v", r.Host)
 
-	handshake, err := api.RequestToHandshake(r.URL.Query().Get(api.DataQueryParam))
+	handshake, err := RequestToHandshake(r.URL.Query().Get(api.DataQueryParam))
 	if err != nil {
 		h.log.Error().Err(err).Msg("handshake fail")
 		return
