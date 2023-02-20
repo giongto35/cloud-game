@@ -11,7 +11,7 @@ import (
 // buildConnQuery builds initial connection data query to a coordinator.
 func buildConnQuery(id api.Uid, conf worker.Worker, address string) (string, error) {
 	addr := conf.GetPingAddr(address)
-	return api.ToBase64Json(api.ConnectionRequest{
+	return com.ToBase64Json(api.ConnectionRequest{
 		Addr:    addr.Hostname(),
 		Id:      id,
 		IsHTTPS: conf.Server.Https,
@@ -25,7 +25,7 @@ func buildConnQuery(id api.Uid, conf worker.Worker, address string) (string, err
 func (c *coordinator) HandleWebrtcInit(rq api.WebrtcInitRequest, w *Worker, connApi *webrtc.ApiFactory) com.Out {
 	peer := webrtc.New(c.Log, connApi)
 	localSDP, err := peer.NewCall(w.conf.Encoder.Video.Codec, audioCodec, func(data any) {
-		candidate, err := api.ToBase64Json(data)
+		candidate, err := com.ToBase64Json(data)
 		if err != nil {
 			c.Log.Error().Err(err).Msgf("ICE candidate encode fail for [%v]", data)
 			return
@@ -36,7 +36,7 @@ func (c *coordinator) HandleWebrtcInit(rq api.WebrtcInitRequest, w *Worker, conn
 		c.Log.Error().Err(err).Msg("cannot create new webrtc session")
 		return com.EmptyPacket
 	}
-	sdp, err := api.ToBase64Json(localSDP)
+	sdp, err := com.ToBase64Json(localSDP)
 	if err != nil {
 		c.Log.Error().Err(err).Msgf("SDP encode fail fro [%v]", localSDP)
 		return com.EmptyPacket
@@ -52,7 +52,7 @@ func (c *coordinator) HandleWebrtcInit(rq api.WebrtcInitRequest, w *Worker, conn
 
 func (c *coordinator) HandleWebrtcAnswer(rq api.WebrtcAnswerRequest, w *Worker) {
 	if user := w.router.GetUser(rq.Id); user != nil {
-		if err := user.GetPeerConn().SetRemoteSDP(rq.Sdp, api.FromBase64Json); err != nil {
+		if err := user.GetPeerConn().SetRemoteSDP(rq.Sdp, com.FromBase64Json); err != nil {
 			c.Log.Error().Err(err).Msgf("cannot set remote SDP of client [%v]", rq.Id)
 		}
 	}
@@ -60,7 +60,7 @@ func (c *coordinator) HandleWebrtcAnswer(rq api.WebrtcAnswerRequest, w *Worker) 
 
 func (c *coordinator) HandleWebrtcIceCandidate(rs api.WebrtcIceCandidateRequest, w *Worker) {
 	if user := w.router.GetUser(rs.Id); user != nil {
-		if err := user.GetPeerConn().AddCandidate(rs.Candidate, api.FromBase64Json); err != nil {
+		if err := user.GetPeerConn().AddCandidate(rs.Candidate, com.FromBase64Json); err != nil {
 			c.Log.Error().Err(err).Msgf("cannot add ICE candidate of the client [%v]", rs.Id)
 		}
 	}

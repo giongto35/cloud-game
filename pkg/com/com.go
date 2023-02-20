@@ -1,10 +1,11 @@
 package com
 
 import (
-	"encoding/json"
+	"encoding/base64"
 
 	"github.com/giongto35/cloud-game/v2/pkg/api"
 	"github.com/giongto35/cloud-game/v2/pkg/logger"
+	"github.com/goccy/go-json"
 )
 
 type (
@@ -103,3 +104,28 @@ func (c *SocketClient) ProcessMessages()     { c.wire.Listen() }
 func (c *SocketClient) Route(in In, out Out) { _ = c.wire.Route(in, out) }
 func (c *SocketClient) String() string       { return c.Tag + ":" + c.Id().String() }
 func (c *SocketClient) Done() chan struct{}  { return c.wire.Wait() }
+
+// ToBase64Json encodes data to a URL-encoded Base64+JSON string.
+func ToBase64Json(data any) (string, error) {
+	if data == nil {
+		return "", nil
+	}
+	b, err := json.Marshal(data)
+	if err != nil {
+		return "", err
+	}
+	return base64.URLEncoding.EncodeToString(b), nil
+}
+
+// FromBase64Json decodes data from a URL-encoded Base64+JSON string.
+func FromBase64Json(data string, obj any) error {
+	b, err := base64.URLEncoding.DecodeString(data)
+	if err != nil {
+		return err
+	}
+	err = json.Unmarshal(b, obj)
+	if err != nil {
+		return err
+	}
+	return nil
+}

@@ -53,7 +53,7 @@ type (
 	}
 	WebrtcIceCandidateRequest struct {
 		Stateful
-		Candidate string `json:"candidate"`
+		Candidate string `json:"candidate"` // Base64-encoded ICE candidate
 	}
 	WebrtcInitRequest struct {
 		Stateful

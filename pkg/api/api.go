@@ -1,10 +1,8 @@
 package api
 
 import (
-	"encoding/base64"
 	"fmt"
 
-	"github.com/goccy/go-json"
 	"github.com/rs/xid"
 )
 
@@ -109,31 +107,6 @@ var (
 	ErrForbidden = fmt.Errorf("forbidden")
 	ErrMalformed = fmt.Errorf("malformed")
 )
-
-// ToBase64Json encodes data to a URL-encoded Base64+JSON string.
-func ToBase64Json(data any) (string, error) {
-	if data == nil {
-		return "", nil
-	}
-	b, err := json.Marshal(data)
-	if err != nil {
-		return "", err
-	}
-	return base64.URLEncoding.EncodeToString(b), nil
-}
-
-// FromBase64Json decodes data from a URL-encoded Base64+JSON string.
-func FromBase64Json(data string, obj any) error {
-	b, err := base64.URLEncoding.DecodeString(data)
-	if err != nil {
-		return err
-	}
-	err = json.Unmarshal(b, obj)
-	if err != nil {
-		return err
-	}
-	return nil
-}
 
 type Uid struct {
 	xid.ID
