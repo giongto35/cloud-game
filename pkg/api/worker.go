@@ -1,24 +1,24 @@
 package api
 
 type (
-	ChangePlayerRequest = struct {
-		StatefulRoom
+	ChangePlayerRequest[T Id] struct {
+		StatefulRoom[T]
 		Index int `json:"index"`
 	}
-	ChangePlayerResponse int
-	GameQuitRequest      struct {
-		StatefulRoom
+	ChangePlayerResponse  int
+	GameQuitRequest[T Id] struct {
+		StatefulRoom[T]
 	}
-	LoadGameRequest struct {
-		StatefulRoom
+	LoadGameRequest[T Id] struct {
+		StatefulRoom[T]
 	}
-	LoadGameResponse string
-	SaveGameRequest  struct {
-		StatefulRoom
+	LoadGameResponse      string
+	SaveGameRequest[T Id] struct {
+		StatefulRoom[T]
 	}
-	SaveGameResponse string
-	StartGameRequest struct {
-		StatefulRoom
+	SaveGameResponse       string
+	StartGameRequest[T Id] struct {
+		StatefulRoom[T]
 		Record      bool
 		RecordUser  string
 		Game        GameInfo `json:"game"`
@@ -34,28 +34,28 @@ type (
 		Room
 		Record bool
 	}
-	RecordGameRequest struct {
-		StatefulRoom
+	RecordGameRequest[T Id] struct {
+		StatefulRoom[T]
 		Active bool   `json:"active"`
 		User   string `json:"user"`
 	}
-	RecordGameResponse      string
-	TerminateSessionRequest struct {
-		Stateful
+	RecordGameResponse            string
+	TerminateSessionRequest[T Id] struct {
+		Stateful[T]
 	}
-	ToggleMultitapRequest struct {
-		StatefulRoom
+	ToggleMultitapRequest[T Id] struct {
+		StatefulRoom[T]
 	}
-	WebrtcAnswerRequest struct {
-		Stateful
+	WebrtcAnswerRequest[T Id] struct {
+		Stateful[T]
 		Sdp string `json:"sdp"`
 	}
-	WebrtcIceCandidateRequest struct {
-		Stateful
+	WebrtcIceCandidateRequest[T Id] struct {
+		Stateful[T]
 		Candidate string `json:"candidate"` // Base64-encoded ICE candidate
 	}
-	WebrtcInitRequest struct {
-		Stateful
+	WebrtcInitRequest[T Id] struct {
+		Stateful[T]
 	}
 	WebrtcInitResponse string
 )

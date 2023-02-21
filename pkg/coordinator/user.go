@@ -13,7 +13,7 @@ type User struct {
 }
 
 type HasServerInfo interface {
-	GetServerList() []api.Server
+	GetServerList() []api.Server[com.Uid]
 }
 
 // NewUserConnection supposed to be a bidirectional one.
@@ -57,7 +57,7 @@ func (u *User) HandleRequests(info HasServerInfo, launcher games.Launcher, conf 
 			}
 			u.HandleStartGame(*rq, launcher, conf)
 		case api.QuitGame:
-			rq := com.Unwrap[api.GameQuitRequest](x.Payload)
+			rq := com.Unwrap[api.GameQuitRequest[com.Uid]](x.Payload)
 			if rq == nil {
 				return api.ErrMalformed
 			}
@@ -78,7 +78,7 @@ func (u *User) HandleRequests(info HasServerInfo, launcher games.Launcher, conf 
 			if !conf.Recording.Enabled {
 				return api.ErrForbidden
 			}
-			rq := com.Unwrap[api.RecordGameRequest](x.Payload)
+			rq := com.Unwrap[api.RecordGameRequest[com.Uid]](x.Payload)
 			if rq == nil {
 				return api.ErrMalformed
 			}

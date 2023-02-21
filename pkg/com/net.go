@@ -20,7 +20,7 @@ type (
 	}
 	Client struct {
 		conn     *websocket.WS
-		queue    map[api.Uid]*call
+		queue    map[Uid]*call
 		onPacket func(packet In)
 		mu       sync.Mutex
 	}
@@ -63,7 +63,7 @@ func (co *Connector) NewServer(w http.ResponseWriter, r *http.Request, log *logg
 	if err != nil {
 		return nil, err
 	}
-	c := New(conn, co.tag, api.NewUid(), log)
+	c := New(conn, co.tag, NewUid(), log)
 	return &c, nil
 }
 
@@ -75,7 +75,7 @@ func connect(conn *websocket.WS, err error) (*Client, error) {
 	if err != nil {
 		return nil, err
 	}
-	client := &Client{conn: conn, queue: make(map[api.Uid]*call, 1)}
+	client := &Client{conn: conn, queue: make(map[Uid]*call, 1)}
 	client.conn.OnMessage = client.handleMessage
 	return client, nil
 }
@@ -95,8 +95,8 @@ func (c *Client) Close() {
 func (c *Client) Call(type_ api.PT, payload any) ([]byte, error) {
 	// !to expose channel instead of results
 	rq := outPool.Get().(*Out)
-	id := api.NewUid()
-	rq.Id, rq.T, rq.Payload = id, type_, payload
+	id := NewUid()
+	rq.Id, rq.T, rq.Payload = id.String(), type_, payload
 	r, err := json.Marshal(rq)
 	outPool.Put(rq)
 	if err != nil {
@@ -119,14 +119,14 @@ func (c *Client) Call(type_ api.PT, payload any) ([]byte, error) {
 
 func (c *Client) Send(type_ api.PT, pl any) error {
 	rq := outPool.Get().(*Out)
-	rq.Id, rq.T, rq.Payload = api.NilUid, type_, pl
+	rq.Id, rq.T, rq.Payload = "", type_, pl
 	defer outPool.Put(rq)
 	return c.SendPacket(rq)
 }
 
 func (c *Client) Route(p In, pl Out) error {
 	rq := outPool.Get().(*Out)
-	rq.Id, rq.T, rq.Payload = p.Id, p.T, pl.Payload
+	rq.Id, rq.T, rq.Payload = p.Id.String(), p.T, pl.Payload
 	defer outPool.Put(rq)
 	return c.SendPacket(rq)
 }
@@ -166,7 +166,7 @@ func (c *Client) handleMessage(message []byte, err error) {
 }
 
 // pop extracts and removes a task from the queue by its id.
-func (c *Client) pop(id api.Uid) *call {
+func (c *Client) pop(id Uid) *call {
 	c.mu.Lock()
 	task := c.queue[id]
 	delete(c.queue, id)

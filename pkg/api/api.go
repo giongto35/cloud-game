@@ -1,26 +1,23 @@
 package api
 
-import (
-	"fmt"
-
-	"github.com/rs/xid"
-)
+import "fmt"
 
 type (
-	Stateful struct {
-		Id Uid `json:"id"`
+	Id interface {
+		comparable
+	}
+	Stateful[T Id] struct {
+		Id T `json:"id"`
 	}
 	Room struct {
 		Rid string `json:"room_id"` // room id
 	}
-	StatefulRoom struct {
-		Stateful
+	StatefulRoom[T Id] struct {
+		Stateful[T]
 		Room
 	}
 	PT uint8
 )
-
-func (sr StatefulRoom) GetRoom() string { return sr.Rid }
 
 // Packet codes:
 //
@@ -98,24 +95,3 @@ var (
 	ErrForbidden = fmt.Errorf("forbidden")
 	ErrMalformed = fmt.Errorf("malformed")
 )
-
-type Uid struct {
-	xid.ID
-}
-
-var NilUid = Uid{xid.NilID()}
-
-func NewUid() Uid { return Uid{xid.New()} }
-
-func NewUidFrom(id string) (Uid, error) {
-	uid, err := xid.FromString(id)
-	if err != nil {
-		return NewUid(), err
-	}
-	return Uid{uid}, nil
-}
-
-func (u Uid) IsEmpty() bool { return u.IsNil() }
-func (u Uid) Short() string { return u.String()[:3] + "." + u.String()[len(u.String())-3:] }
-
-// todo remove null values

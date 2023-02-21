@@ -10,14 +10,14 @@ import (
 
 type (
 	In struct {
-		Id      api.Uid         `json:"id,omitempty"`
+		Id      Uid             `json:"id,omitempty"`
 		T       api.PT          `json:"t"`
 		Payload json.RawMessage `json:"p,omitempty"`
 	}
 	Out struct {
-		Id      api.Uid `json:"id,omitempty"`
-		T       api.PT  `json:"t"`
-		Payload any     `json:"p,omitempty"`
+		Id      string `json:"id,omitempty"`
+		T       api.PT `json:"t"`
+		Payload any    `json:"p,omitempty"`
 	}
 )
 
@@ -38,7 +38,7 @@ type (
 )
 
 type SocketClient struct {
-	id   api.Uid
+	id   Uid
 	wire *Client
 	Tag  string
 	Log  *logger.Logger
@@ -59,7 +59,7 @@ func UnwrapChecked[T any](bytes []byte, err error) (*T, error) {
 	return Unwrap[T](bytes), nil
 }
 
-func New(conn *Client, tag string, id api.Uid, log *logger.Logger) SocketClient {
+func New(conn *Client, tag string, id Uid, log *logger.Logger) SocketClient {
 	l := log.Extend(log.With().Str("cid", id.Short()))
 	dir := "→"
 	if conn.IsServer() {
@@ -69,7 +69,7 @@ func New(conn *Client, tag string, id api.Uid, log *logger.Logger) SocketClient 
 	return SocketClient{id: id, wire: conn, Tag: tag, Log: l}
 }
 
-func (c *SocketClient) SetId(id api.Uid) { c.id = id }
+func (c *SocketClient) SetId(id Uid) { c.id = id }
 
 func (c *SocketClient) OnPacket(fn func(p In) error) {
 	logFn := func(p In) {
@@ -98,7 +98,7 @@ func (c *SocketClient) Disconnect() {
 	c.Log.Debug().Str("c", c.Tag).Str("d", "x").Msg("Close")
 }
 
-func (c *SocketClient) Id() api.Uid          { return c.id }
+func (c *SocketClient) Id() Uid              { return c.id }
 func (c *SocketClient) Listen()              { c.ProcessMessages(); <-c.Done() }
 func (c *SocketClient) ProcessMessages()     { c.wire.Listen() }
 func (c *SocketClient) Route(in In, out Out) { _ = c.wire.Route(in, out) }

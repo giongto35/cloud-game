@@ -1,6 +1,7 @@
 package coordinator
 
 import (
+	"github.com/giongto35/cloud-game/v2/pkg/com"
 	"sort"
 
 	"github.com/giongto35/cloud-game/v2/pkg/api"
@@ -63,7 +64,7 @@ func (u *User) HandleStartGame(rq api.GameStartUserRequest, launcher games.Launc
 	}
 }
 
-func (u *User) HandleQuitGame(rq api.GameQuitRequest) {
+func (u *User) HandleQuitGame(rq api.GameQuitRequest[com.Uid]) {
 	if rq.Room.Rid == u.w.RoomId {
 		u.w.QuitGame(u.Id())
 	}
@@ -99,7 +100,7 @@ func (u *User) HandleChangePlayer(rq api.ChangePlayerUserRequest) {
 
 func (u *User) HandleToggleMultitap() { u.w.ToggleMultitap(u.Id()) }
 
-func (u *User) HandleRecordGame(rq api.RecordGameRequest) {
+func (u *User) HandleRecordGame(rq api.RecordGameRequest[com.Uid]) {
 	if u.w == nil {
 		return
 	}
@@ -120,18 +121,18 @@ func (u *User) HandleRecordGame(rq api.RecordGameRequest) {
 }
 
 func (u *User) handleGetWorkerList(debug bool, info HasServerInfo) {
-	response := api.GetWorkerListResponse{}
+	response := api.GetWorkerListResponse[com.Uid]{}
 	servers := info.GetServerList()
 
 	if debug {
 		response.Servers = servers
 	} else {
 		// not sure if []byte to string always reversible :/
-		unique := map[string]*api.Server{}
+		unique := map[string]*api.Server[com.Uid]{}
 		for _, s := range servers {
 			mid := s.Machine
 			if _, ok := unique[mid]; !ok {
-				unique[mid] = &api.Server{Addr: s.Addr, PingURL: s.PingURL, Id: s.Id, InGroup: true}
+				unique[mid] = &api.Server[com.Uid]{Addr: s.Addr, PingURL: s.PingURL, Id: s.Id, InGroup: true}
 			}
 			unique[mid].Replicas++
 		}

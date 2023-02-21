@@ -21,8 +21,8 @@ type Hub struct {
 
 	conf     coordinator.Config
 	launcher games.Launcher
-	users    com.NetMap[api.Uid, *User]
-	workers  com.NetMap[api.Uid, *Worker]
+	users    com.NetMap[com.Uid, *User]
+	workers  com.NetMap[com.Uid, *Worker]
 	log      *logger.Logger
 
 	wConn, uConn *com.Connector
@@ -31,8 +31,8 @@ type Hub struct {
 func NewHub(conf coordinator.Config, lib games.GameLibrary, log *logger.Logger) *Hub {
 	return &Hub{
 		conf:     conf,
-		users:    com.NewNetMap[api.Uid, *User](),
-		workers:  com.NewNetMap[api.Uid, *Worker](),
+		users:    com.NewNetMap[com.Uid, *User](),
+		workers:  com.NewNetMap[com.Uid, *Worker](),
 		launcher: games.NewGameLauncher(lib),
 		log:      log,
 		wConn: com.NewConnector(
@@ -69,11 +69,11 @@ func (h *Hub) handleUserConnection(w http.ResponseWriter, r *http.Request) {
 	<-usr.Done()
 }
 
-func RequestToHandshake(data string) (*api.ConnectionRequest, error) {
+func RequestToHandshake(data string) (*api.ConnectionRequest[com.Uid], error) {
 	if data == "" {
 		return nil, api.ErrMalformed
 	}
-	handshake, err := com.UnwrapChecked[api.ConnectionRequest](base64.URLEncoding.DecodeString(data))
+	handshake, err := com.UnwrapChecked[api.ConnectionRequest[com.Uid]](base64.URLEncoding.DecodeString(data))
 	if err != nil || handshake == nil {
 		return nil, fmt.Errorf("%v (%v)", err, handshake)
 	}
@@ -112,11 +112,11 @@ func (h *Hub) handleWorkerConnection(w http.ResponseWriter, r *http.Request) {
 	worker.Listen()
 }
 
-func (h *Hub) GetServerList() (r []api.Server) {
+func (h *Hub) GetServerList() (r []api.Server[com.Uid]) {
 	for _, w := range h.workers.List() {
-		r = append(r, api.Server{
+		r = append(r, api.Server[com.Uid]{
 			Addr:    w.Addr,
-			Id:      w.Id().String(),
+			Id:      w.Id(),
 			IsBusy:  !w.HasSlot(),
 			Machine: string(w.Id().Machine()),
 			PingURL: w.PingServer,

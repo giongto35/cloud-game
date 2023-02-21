@@ -1,18 +1,18 @@
 package api
 
 type (
-	CloseRoomRequest  string
-	ConnectionRequest struct {
+	CloseRoomRequest        string
+	ConnectionRequest[T Id] struct {
 		Addr    string `json:"addr,omitempty"`
-		Id      string `json:"id,omitempty"`
+		Id      T      `json:"id,omitempty"`
 		IsHTTPS bool   `json:"is_https,omitempty"`
 		PingURL string `json:"ping_url,omitempty"`
 		Port    string `json:"port,omitempty"`
 		Tag     string `json:"tag,omitempty"`
 		Zone    string `json:"zone,omitempty"`
 	}
-	GetWorkerListResponse struct {
-		Servers []Server `json:"servers"`
+	GetWorkerListResponse[T Id] struct {
+		Servers []Server[T] `json:"servers"`
 	}
 	RegisterRoomRequest string
 )
@@ -27,9 +27,9 @@ const (
 // Server contains a list of server groups.
 // Server is a separate machine that may contain
 // multiple sub-processes.
-type Server struct {
+type Server[T Id] struct {
 	Addr     string `json:"addr,omitempty"`
-	Id       string `json:"id,omitempty"`
+	Id       T      `json:"id,omitempty"`
 	IsBusy   bool   `json:"is_busy,omitempty"`
 	InGroup  bool   `json:"in_group,omitempty"`
 	Machine  string `json:"machine,omitempty"`

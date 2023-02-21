@@ -6,61 +6,62 @@ import (
 	"github.com/giongto35/cloud-game/v2/pkg/games"
 )
 
-func (w *Worker) WebrtcInit(id api.Uid) (*api.WebrtcInitResponse, error) {
+func (w *Worker) WebrtcInit(id com.Uid) (*api.WebrtcInitResponse, error) {
 	return com.UnwrapChecked[api.WebrtcInitResponse](
-		w.Send(api.WebrtcInit, api.WebrtcInitRequest{Stateful: api.Stateful{Id: id}}))
+		w.Send(api.WebrtcInit, api.WebrtcInitRequest[com.Uid]{Stateful: api.Stateful[com.Uid]{Id: id}}))
 }
 
-func (w *Worker) WebrtcAnswer(id api.Uid, sdp string) {
-	w.Notify(api.WebrtcAnswer, api.WebrtcAnswerRequest{Stateful: api.Stateful{Id: id}, Sdp: sdp})
+func (w *Worker) WebrtcAnswer(id com.Uid, sdp string) {
+	w.Notify(api.WebrtcAnswer, api.WebrtcAnswerRequest[com.Uid]{Stateful: api.Stateful[com.Uid]{Id: id}, Sdp: sdp})
 }
 
-func (w *Worker) WebrtcIceCandidate(id api.Uid, can string) {
-	w.Notify(api.WebrtcIce, api.WebrtcIceCandidateRequest{Stateful: api.Stateful{Id: id}, Candidate: can})
+func (w *Worker) WebrtcIceCandidate(id com.Uid, can string) {
+	w.Notify(api.WebrtcIce, api.WebrtcIceCandidateRequest[com.Uid]{Stateful: api.Stateful[com.Uid]{Id: id}, Candidate: can})
 }
 
-func (w *Worker) StartGame(id api.Uid, app games.AppMeta, req api.GameStartUserRequest) (*api.StartGameResponse, error) {
-	return com.UnwrapChecked[api.StartGameResponse](w.Send(api.StartGame, api.StartGameRequest{
-		StatefulRoom: StateRoom(id, req.RoomId),
-		Game:         api.GameInfo{Name: app.Name, Base: app.Base, Path: app.Path, Type: app.Type},
-		PlayerIndex:  req.PlayerIndex,
-		Record:       req.Record,
-		RecordUser:   req.RecordUser,
-	}))
+func (w *Worker) StartGame(id com.Uid, app games.AppMeta, req api.GameStartUserRequest) (*api.StartGameResponse, error) {
+	return com.UnwrapChecked[api.StartGameResponse](
+		w.Send(api.StartGame, api.StartGameRequest[com.Uid]{
+			StatefulRoom: StateRoom(id, req.RoomId),
+			Game:         api.GameInfo{Name: app.Name, Base: app.Base, Path: app.Path, Type: app.Type},
+			PlayerIndex:  req.PlayerIndex,
+			Record:       req.Record,
+			RecordUser:   req.RecordUser,
+		}))
 }
 
-func (w *Worker) QuitGame(id api.Uid) {
-	w.Notify(api.QuitGame, api.GameQuitRequest{StatefulRoom: StateRoom(id, w.RoomId)})
+func (w *Worker) QuitGame(id com.Uid) {
+	w.Notify(api.QuitGame, api.GameQuitRequest[com.Uid]{StatefulRoom: StateRoom(id, w.RoomId)})
 }
 
-func (w *Worker) SaveGame(id api.Uid) (*api.SaveGameResponse, error) {
+func (w *Worker) SaveGame(id com.Uid) (*api.SaveGameResponse, error) {
 	return com.UnwrapChecked[api.SaveGameResponse](
-		w.Send(api.SaveGame, api.SaveGameRequest{StatefulRoom: StateRoom(id, w.RoomId)}))
+		w.Send(api.SaveGame, api.SaveGameRequest[com.Uid]{StatefulRoom: StateRoom(id, w.RoomId)}))
 }
 
-func (w *Worker) LoadGame(id api.Uid) (*api.LoadGameResponse, error) {
+func (w *Worker) LoadGame(id com.Uid) (*api.LoadGameResponse, error) {
 	return com.UnwrapChecked[api.LoadGameResponse](
-		w.Send(api.LoadGame, api.LoadGameRequest{StatefulRoom: StateRoom(id, w.RoomId)}))
+		w.Send(api.LoadGame, api.LoadGameRequest[com.Uid]{StatefulRoom: StateRoom(id, w.RoomId)}))
 }
 
-func (w *Worker) ChangePlayer(id api.Uid, index int) (*api.ChangePlayerResponse, error) {
+func (w *Worker) ChangePlayer(id com.Uid, index int) (*api.ChangePlayerResponse, error) {
 	return com.UnwrapChecked[api.ChangePlayerResponse](
-		w.Send(api.ChangePlayer, api.ChangePlayerRequest{StatefulRoom: StateRoom(id, w.RoomId), Index: index}))
+		w.Send(api.ChangePlayer, api.ChangePlayerRequest[com.Uid]{StatefulRoom: StateRoom(id, w.RoomId), Index: index}))
 }
 
-func (w *Worker) ToggleMultitap(id api.Uid) {
-	_, _ = w.Send(api.ToggleMultitap, api.ToggleMultitapRequest{StatefulRoom: StateRoom(id, w.RoomId)})
+func (w *Worker) ToggleMultitap(id com.Uid) {
+	_, _ = w.Send(api.ToggleMultitap, api.ToggleMultitapRequest[com.Uid]{StatefulRoom: StateRoom(id, w.RoomId)})
 }
 
-func (w *Worker) RecordGame(id api.Uid, rec bool, recUser string) (*api.RecordGameResponse, error) {
+func (w *Worker) RecordGame(id com.Uid, rec bool, recUser string) (*api.RecordGameResponse, error) {
 	return com.UnwrapChecked[api.RecordGameResponse](
-		w.Send(api.RecordGame, api.RecordGameRequest{StatefulRoom: StateRoom(id, w.RoomId), Active: rec, User: recUser}))
+		w.Send(api.RecordGame, api.RecordGameRequest[com.Uid]{StatefulRoom: StateRoom(id, w.RoomId), Active: rec, User: recUser}))
 }
 
-func (w *Worker) TerminateSession(id api.Uid) {
-	_, _ = w.Send(api.TerminateSession, api.TerminateSessionRequest{Stateful: api.Stateful{Id: id}})
+func (w *Worker) TerminateSession(id com.Uid) {
+	_, _ = w.Send(api.TerminateSession, api.TerminateSessionRequest[com.Uid]{Stateful: api.Stateful[com.Uid]{Id: id}})
 }
 
-func StateRoom(id api.Uid, rid string) api.StatefulRoom {
-	return api.StatefulRoom{Stateful: api.Stateful{Id: id}, Room: api.Room{Rid: rid}}
+func StateRoom[T api.Id](id T, rid string) api.StatefulRoom[T] {
+	return api.StatefulRoom[T]{Stateful: api.Stateful[T]{Id: id}, Room: api.Room{Rid: rid}}
 }

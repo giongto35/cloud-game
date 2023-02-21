@@ -26,7 +26,7 @@ func connect(host string, conf worker.Worker, addr string, log *logger.Logger) (
 
 	log.Debug().Str("c", "c").Str("d", "→").Msgf("Handshake %s", address.String())
 
-	id := api.NewUid()
+	id := com.NewUid()
 	req, err := buildConnQuery(id, conf, addr)
 	if req != "" && err == nil {
 		address.RawQuery = "data=" + req
@@ -50,67 +50,67 @@ func (c *coordinator) HandleRequests(w *Worker) {
 		var out com.Out
 		switch x.T {
 		case api.WebrtcInit:
-			if dat := com.Unwrap[api.WebrtcInitRequest](x.Payload); dat == nil {
+			if dat := com.Unwrap[api.WebrtcInitRequest[com.Uid]](x.Payload); dat == nil {
 				err, out = api.ErrMalformed, com.EmptyPacket
 			} else {
 				out = c.HandleWebrtcInit(*dat, w, ap)
 			}
 		case api.WebrtcAnswer:
-			dat := com.Unwrap[api.WebrtcAnswerRequest](x.Payload)
+			dat := com.Unwrap[api.WebrtcAnswerRequest[com.Uid]](x.Payload)
 			if dat == nil {
 				return api.ErrMalformed
 			}
 			c.HandleWebrtcAnswer(*dat, w)
 		case api.WebrtcIce:
-			dat := com.Unwrap[api.WebrtcIceCandidateRequest](x.Payload)
+			dat := com.Unwrap[api.WebrtcIceCandidateRequest[com.Uid]](x.Payload)
 			if dat == nil {
 				return api.ErrMalformed
 			}
 			c.HandleWebrtcIceCandidate(*dat, w)
 		case api.StartGame:
-			if dat := com.Unwrap[api.StartGameRequest](x.Payload); dat == nil {
+			if dat := com.Unwrap[api.StartGameRequest[com.Uid]](x.Payload); dat == nil {
 				err, out = api.ErrMalformed, com.EmptyPacket
 			} else {
 				out = c.HandleGameStart(*dat, w)
 			}
 		case api.TerminateSession:
-			dat := com.Unwrap[api.TerminateSessionRequest](x.Payload)
+			dat := com.Unwrap[api.TerminateSessionRequest[com.Uid]](x.Payload)
 			if dat == nil {
 				return api.ErrMalformed
 			}
 			c.HandleTerminateSession(*dat, w)
 		case api.QuitGame:
-			dat := com.Unwrap[api.GameQuitRequest](x.Payload)
+			dat := com.Unwrap[api.GameQuitRequest[com.Uid]](x.Payload)
 			if dat == nil {
 				return api.ErrMalformed
 			}
 			c.HandleQuitGame(*dat, w)
 		case api.SaveGame:
-			if dat := com.Unwrap[api.SaveGameRequest](x.Payload); dat == nil {
+			if dat := com.Unwrap[api.SaveGameRequest[com.Uid]](x.Payload); dat == nil {
 				err, out = api.ErrMalformed, com.EmptyPacket
 			} else {
 				out = c.HandleSaveGame(*dat, w)
 			}
 		case api.LoadGame:
-			if dat := com.Unwrap[api.LoadGameRequest](x.Payload); dat == nil {
+			if dat := com.Unwrap[api.LoadGameRequest[com.Uid]](x.Payload); dat == nil {
 				err, out = api.ErrMalformed, com.EmptyPacket
 			} else {
 				out = c.HandleLoadGame(*dat, w)
 			}
 		case api.ChangePlayer:
-			if dat := com.Unwrap[api.ChangePlayerRequest](x.Payload); dat == nil {
+			if dat := com.Unwrap[api.ChangePlayerRequest[com.Uid]](x.Payload); dat == nil {
 				err, out = api.ErrMalformed, com.EmptyPacket
 			} else {
 				out = c.HandleChangePlayer(*dat, w)
 			}
 		case api.ToggleMultitap:
-			if dat := com.Unwrap[api.ToggleMultitapRequest](x.Payload); dat == nil {
+			if dat := com.Unwrap[api.ToggleMultitapRequest[com.Uid]](x.Payload); dat == nil {
 				err, out = api.ErrMalformed, com.EmptyPacket
 			} else {
 				c.HandleToggleMultitap(*dat, w)
 			}
 		case api.RecordGame:
-			if dat := com.Unwrap[api.RecordGameRequest](x.Payload); dat == nil {
+			if dat := com.Unwrap[api.RecordGameRequest[com.Uid]](x.Payload); dat == nil {
 				err, out = api.ErrMalformed, com.EmptyPacket
 			} else {
 				out = c.HandleRecordGame(*dat, w)
@@ -129,6 +129,6 @@ func (c *coordinator) RegisterRoom(id string) { c.Notify(api.RegisterRoom, id) }
 
 // CloseRoom sends a signal to coordinator which will remove that room from its list.
 func (c *coordinator) CloseRoom(id string) { c.Notify(api.CloseRoom, id) }
-func (c *coordinator) IceCandidate(candidate string, sessionId api.Uid) {
-	c.Notify(api.WebrtcIce, api.WebrtcIceCandidateRequest{Stateful: api.Stateful{Id: sessionId}, Candidate: candidate})
+func (c *coordinator) IceCandidate(candidate string, sessionId com.Uid) {
+	c.Notify(api.WebrtcIce, api.WebrtcIceCandidateRequest[com.Uid]{Stateful: api.Stateful[com.Uid]{Id: sessionId}, Candidate: candidate})
 }

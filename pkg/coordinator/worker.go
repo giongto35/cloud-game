@@ -22,10 +22,10 @@ type Worker struct {
 }
 
 type HasUserRegistry interface {
-	Find(key api.Uid) (*User, error)
+	Find(key com.Uid) (*User, error)
 }
 
-func NewWorkerConnection(conn *com.SocketClient, handshake api.ConnectionRequest) *Worker {
+func NewWorkerConnection(conn *com.SocketClient, handshake api.ConnectionRequest[com.Uid]) *Worker {
 	worker := &Worker{
 		SocketClient: *conn,
 		Addr:         handshake.Addr,
@@ -35,12 +35,10 @@ func NewWorkerConnection(conn *com.SocketClient, handshake api.ConnectionRequest
 		Zone:         handshake.Zone,
 	}
 	// set connection uid from the handshake
-	if handshake.Id != "" {
-		if uid, err := api.NewUidFrom(handshake.Id); err == nil {
-			old := worker.Id()
-			worker.Log.Debug().Msgf("Worker uid change from %s to %s", old, uid)
-			worker.SetId(uid)
-		}
+	if handshake.Id != com.NilUid {
+		old := worker.Id()
+		worker.Log.Debug().Msgf("Worker uid change from %s to %s", old, handshake.Id)
+		worker.SetId(handshake.Id)
 	}
 	return worker
 }
@@ -63,11 +61,15 @@ func (w *Worker) HandleRequests(users HasUserRegistry) {
 			}
 			w.HandleCloseRoom(*rq)
 		case api.IceCandidate:
-			rq := com.Unwrap[api.WebrtcIceCandidateRequest](p.Payload)
+			rq := com.Unwrap[api.WebrtcIceCandidateRequest[com.Uid]](p.Payload)
 			if rq == nil {
 				return api.ErrMalformed
 			}
-			w.HandleIceCandidate(*rq, users)
+			err := w.HandleIceCandidate(*rq, users)
+			if err != nil {
+				w.Log.Error().Err(err).Send()
+				return api.ErrMalformed
+			}
 		default:
 			w.Log.Warn().Msgf("Unknown packet: %+v", p)
 		}
