@@ -7,7 +7,6 @@ import (
 	"sync"
 	"time"
 
-	"github.com/giongto35/cloud-game/v2/pkg/api"
 	"github.com/giongto35/cloud-game/v2/pkg/logger"
 	"github.com/giongto35/cloud-game/v2/pkg/network/websocket"
 	"github.com/goccy/go-json"
@@ -92,7 +91,7 @@ func (c *Client) Close() {
 	c.drain(errConnClosed)
 }
 
-func (c *Client) Call(type_ api.PT, payload any) ([]byte, error) {
+func (c *Client) Call(type_ uint8, payload any) ([]byte, error) {
 	// !to expose channel instead of results
 	rq := outPool.Get().(*Out)
 	id := NewUid()
@@ -117,7 +116,7 @@ func (c *Client) Call(type_ api.PT, payload any) ([]byte, error) {
 	return task.Response.Payload, task.err
 }
 
-func (c *Client) Send(type_ api.PT, pl any) error {
+func (c *Client) Send(type_ uint8, pl any) error {
 	rq := outPool.Get().(*Out)
 	rq.Id, rq.T, rq.Payload = "", type_, pl
 	defer outPool.Put(rq)
@@ -126,7 +125,7 @@ func (c *Client) Send(type_ api.PT, pl any) error {
 
 func (c *Client) Route(p In, pl Out) error {
 	rq := outPool.Get().(*Out)
-	rq.Id, rq.T, rq.Payload = p.Id.String(), p.T, pl.Payload
+	rq.Id, rq.T, rq.Payload = p.Id.String(), uint8(p.T), pl.Payload
 	defer outPool.Put(rq)
 	return c.SendPacket(rq)
 }

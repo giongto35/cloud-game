@@ -16,7 +16,7 @@ type (
 	}
 	Out struct {
 		Id      string `json:"id,omitempty"`
-		T       api.PT `json:"t"`
+		T       uint8  `json:"t"`
 		Payload any    `json:"p,omitempty"`
 	}
 )
@@ -84,13 +84,13 @@ func (c *SocketClient) OnPacket(fn func(p In) error) {
 // Send makes a blocking call.
 func (c *SocketClient) Send(t api.PT, data any) ([]byte, error) {
 	c.Log.Debug().Str("c", c.Tag).Str("d", "→").Msgf("ᵇ%s", t)
-	return c.wire.Call(t, data)
+	return c.wire.Call(uint8(t), data)
 }
 
 // Notify just sends a message and goes further.
 func (c *SocketClient) Notify(t api.PT, data any) {
 	c.Log.Debug().Str("c", c.Tag).Str("d", "→").Msgf("%s", t)
-	_ = c.wire.Send(t, data)
+	_ = c.wire.Send(uint8(t), data)
 }
 
 func (c *SocketClient) Disconnect() {
