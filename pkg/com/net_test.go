@@ -10,7 +10,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/giongto35/cloud-game/v2/pkg/api"
 	"github.com/giongto35/cloud-game/v2/pkg/logger"
 	"github.com/giongto35/cloud-game/v2/pkg/network/websocket"
 )
@@ -55,21 +54,20 @@ func testWebsocket(t *testing.T) {
 	}
 
 	calls := []struct {
-		typ        api.PT
-		payload    any
+		packet     Out
 		concurrent bool
 		value      any
 	}{
-		{typ: 10, payload: "test", value: "test", concurrent: true},
-		{typ: 10, payload: "test2", value: "test2"},
-		{typ: 11, payload: "test3", value: "test3"},
-		{typ: 99, payload: "", value: ""},
-		{typ: 0},
-		{typ: 12, payload: 123, value: 123},
-		{typ: 10, payload: false, value: false},
-		{typ: 10, payload: true, value: true},
-		{typ: 11, payload: []string{"test", "test", "test"}, value: []string{"test", "test", "test"}},
-		{typ: 22, payload: []string{}, value: []string{}},
+		{packet: Out{T: 10, Payload: "test"}, value: "test", concurrent: true},
+		{packet: Out{T: 10, Payload: "test2"}, value: "test2"},
+		{packet: Out{T: 11, Payload: "test3"}, value: "test3"},
+		{packet: Out{T: 99, Payload: ""}, value: ""},
+		{packet: Out{T: 0}},
+		{packet: Out{T: 12, Payload: 123}, value: 123},
+		{packet: Out{T: 10, Payload: false}, value: false},
+		{packet: Out{T: 10, Payload: true}, value: true},
+		{packet: Out{T: 11, Payload: []string{"test", "test", "test"}}, value: []string{"test", "test", "test"}},
+		{packet: Out{T: 22, Payload: []string{}}, value: []string{}},
 	}
 
 	const n = 42
@@ -82,10 +80,11 @@ func testWebsocket(t *testing.T) {
 		if call.concurrent {
 			rand.New(rand.NewSource(time.Now().UnixNano()))
 			for i := 0; i < n; i++ {
+				packet := call.packet
 				go func() {
 					defer wait.Done()
 					time.Sleep(time.Duration(rand.Intn(200-100)+100) * time.Millisecond)
-					vv, err := client.Call(call.typ, call.payload)
+					vv, err := client.Call(&packet)
 					err = checkCall(vv, err, call.value)
 					if err != nil {
 						t.Errorf("%v", err)
@@ -95,7 +94,8 @@ func testWebsocket(t *testing.T) {
 			}
 		} else {
 			for i := 0; i < n; i++ {
-				vv, err := client.Call(call.typ, call.payload)
+				packet := call.packet
+				vv, err := client.Call(&packet)
 				err = checkCall(vv, err, call.value)
 				if err != nil {
 					wait.Done()

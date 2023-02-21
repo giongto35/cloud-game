@@ -2,6 +2,7 @@ package com
 
 import (
 	"encoding/base64"
+	"sync"
 
 	"github.com/giongto35/cloud-game/v2/pkg/api"
 	"github.com/giongto35/cloud-game/v2/pkg/logger"
@@ -21,11 +22,15 @@ type (
 	}
 )
 
+func (o *Out) SetId(id Uid) { o.Id = id.String() }
+
 var (
 	EmptyPacket = Out{Payload: ""}
 	ErrPacket   = Out{Payload: "err"}
 	OkPacket    = Out{Payload: "ok"}
 )
+
+var outPool = sync.Pool{New: func() any { o := Out{}; return &o }}
 
 type (
 	NetClient[K comparable] interface {
@@ -81,16 +86,29 @@ func (c *SocketClient) OnPacket(fn func(p In) error) {
 	c.wire.OnPacket(logFn)
 }
 
+func (c *SocketClient) Route(in In, out Out) {
+	rq := outPool.Get().(*Out)
+	rq.Id, rq.T, rq.Payload = in.Id.String(), uint8(in.T), out.Payload
+	defer outPool.Put(rq)
+	_ = c.wire.SendPacket(rq)
+}
+
 // Send makes a blocking call.
 func (c *SocketClient) Send(t api.PT, data any) ([]byte, error) {
 	c.Log.Debug().Str("c", c.Tag).Str("d", "→").Msgf("ᵇ%s", t)
-	return c.wire.Call(uint8(t), data)
+	rq := outPool.Get().(*Out)
+	rq.T, rq.Payload = uint8(t), data
+	defer outPool.Put(rq)
+	return c.wire.Call(rq)
 }
 
 // Notify just sends a message and goes further.
 func (c *SocketClient) Notify(t api.PT, data any) {
 	c.Log.Debug().Str("c", c.Tag).Str("d", "→").Msgf("%s", t)
-	_ = c.wire.Send(uint8(t), data)
+	rq := outPool.Get().(*Out)
+	rq.Id, rq.T, rq.Payload = "", uint8(t), data
+	defer outPool.Put(rq)
+	_ = c.wire.SendPacket(rq)
 }
 
 func (c *SocketClient) Disconnect() {
@@ -98,12 +116,11 @@ func (c *SocketClient) Disconnect() {
 	c.Log.Debug().Str("c", c.Tag).Str("d", "x").Msg("Close")
 }
 
-func (c *SocketClient) Id() Uid              { return c.id }
-func (c *SocketClient) Listen()              { c.ProcessMessages(); <-c.Done() }
-func (c *SocketClient) ProcessMessages()     { c.wire.Listen() }
-func (c *SocketClient) Route(in In, out Out) { _ = c.wire.Route(in, out) }
-func (c *SocketClient) String() string       { return c.Tag + ":" + c.Id().String() }
-func (c *SocketClient) Done() chan struct{}  { return c.wire.Wait() }
+func (c *SocketClient) Id() Uid             { return c.id }
+func (c *SocketClient) Listen()             { c.ProcessMessages(); <-c.Done() }
+func (c *SocketClient) ProcessMessages()    { c.wire.Listen() }
+func (c *SocketClient) String() string      { return c.Tag + ":" + c.Id().String() }
+func (c *SocketClient) Done() chan struct{} { return c.wire.Wait() }
 
 // ToBase64Json encodes data to a URL-encoded Base64+JSON string.
 func ToBase64Json(data any) (string, error) {
