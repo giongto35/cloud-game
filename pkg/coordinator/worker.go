@@ -43,7 +43,7 @@ func NewWorkerConnection(conn *com.SocketClient, handshake api.ConnectionRequest
 	return worker
 }
 
-func (w *Worker) HandleRequests(users HasUserRegistry) {
+func (w *Worker) HandleRequests(users HasUserRegistry) chan struct{} {
 	// !to make a proper multithreading abstraction
 	w.OnPacket(func(p com.In) error {
 		switch p.T {
@@ -75,6 +75,7 @@ func (w *Worker) HandleRequests(users HasUserRegistry) {
 		}
 		return nil
 	})
+	return w.Listen()
 }
 
 // In say whether some worker from this region (zone).

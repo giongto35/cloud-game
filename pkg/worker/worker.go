@@ -83,8 +83,7 @@ func (w *Worker) Run() {
 				}
 				w.cord = conn
 				w.cord.Log.Info().Msgf("Connected to the coordinator %v", remoteAddr)
-				w.cord.HandleRequests(w)
-				<-w.cord.Done()
+				<-w.cord.HandleRequests(w)
 				w.router.Close()
 			}
 		}

@@ -116,11 +116,9 @@ func (c *SocketClient) Disconnect() {
 	c.Log.Debug().Str("c", c.Tag).Str("d", "x").Msg("Close")
 }
 
-func (c *SocketClient) Id() Uid             { return c.id }
-func (c *SocketClient) Listen()             { c.ProcessMessages(); <-c.Done() }
-func (c *SocketClient) ProcessMessages()    { c.wire.Listen() }
-func (c *SocketClient) String() string      { return c.Tag + ":" + c.Id().String() }
-func (c *SocketClient) Done() chan struct{} { return c.wire.Wait() }
+func (c *SocketClient) Id() Uid               { return c.id }
+func (c *SocketClient) Listen() chan struct{} { return c.wire.Listen() }
+func (c *SocketClient) String() string        { return c.Tag + ":" + c.Id().String() }
 
 // ToBase64Json encodes data to a URL-encoded Base64+JSON string.
 func ToBase64Json(data any) (string, error) {

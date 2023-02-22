@@ -29,8 +29,7 @@ func (u *User) Disconnect() {
 	}
 }
 
-func (u *User) HandleRequests(info HasServerInfo, launcher games.Launcher, conf coordinator.Config) {
-	u.ProcessMessages()
+func (u *User) HandleRequests(info HasServerInfo, launcher games.Launcher, conf coordinator.Config) chan struct{} {
 	u.OnPacket(func(x com.In) error {
 		// !to use proper channels
 		switch x.T {
@@ -90,4 +89,5 @@ func (u *User) HandleRequests(info HasServerInfo, launcher games.Launcher, conf 
 		}
 		return nil
 	})
+	return u.Listen()
 }

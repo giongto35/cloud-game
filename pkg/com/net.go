@@ -83,9 +83,17 @@ func connect(conn *websocket.WS, err error) (*Client, error) {
 
 func (c *Client) IsServer() bool { return c.conn.IsServer() }
 
-func (c *Client) OnPacket(fn func(packet In)) { c.mu.Lock(); c.onPacket = fn; c.mu.Unlock() }
+func (c *Client) OnPacket(fn func(packet In)) {
+	c.mu.Lock()
+	c.onPacket = fn
+	c.mu.Unlock()
+}
 
-func (c *Client) Listen() { c.mu.Lock(); c.conn.Listen(); c.mu.Unlock() }
+func (c *Client) Listen() chan struct{} {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	return c.conn.Listen()
+}
 
 func (c *Client) Close() {
 	// !to handle error
@@ -126,8 +134,6 @@ func (c *Client) SendPacket(packet any) error {
 	c.mu.Unlock()
 	return nil
 }
-
-func (c *Client) Wait() chan struct{} { return c.conn.Done }
 
 func (c *Client) handleMessage(message []byte, err error) {
 	if err != nil {

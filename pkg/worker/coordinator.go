@@ -38,12 +38,11 @@ func connect(host string, conf worker.Worker, addr string, log *logger.Logger) (
 	return &coordinator{com.New(conn, "c", id, log)}, nil
 }
 
-func (c *coordinator) HandleRequests(w *Worker) {
+func (c *coordinator) HandleRequests(w *Worker) chan struct{} {
 	ap, err := webrtc.NewApiFactory(w.conf.Webrtc, c.Log, nil)
 	if err != nil {
 		c.Log.Panic().Err(err).Msg("WebRTC API creation has been failed")
 	}
-	c.ProcessMessages()
 	skipped := com.Out{}
 
 	c.OnPacket(func(x com.In) (err error) {
@@ -123,6 +122,7 @@ func (c *coordinator) HandleRequests(w *Worker) {
 		}
 		return err
 	})
+	return c.Listen()
 }
 
 func (c *coordinator) RegisterRoom(id string) { c.Notify(api.RegisterRoom, id) }

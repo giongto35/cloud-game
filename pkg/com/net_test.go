@@ -38,18 +38,14 @@ func TestWebsocket(t *testing.T) {
 }
 
 func testWebsocket(t *testing.T) {
-	var wg sync.WaitGroup
-	sh := newServer(t)
+	server := newServer(t)
 	client := newClient(t, url.URL{Scheme: "ws", Host: "localhost:8080", Path: "/ws"})
 	client.OnPacket(func(packet In) {
 		//	nop
 	})
-	client.Listen()
-	wg.Wait()
+	clDone := client.Listen()
 
-	server := sh.s
-
-	if server == nil {
+	if server.conn == nil {
 		t.Fatalf("couldn't make new socket")
 	}
 
@@ -109,9 +105,9 @@ func testWebsocket(t *testing.T) {
 	wait.Wait()
 
 	client.Close()
-	<-client.conn.Done
-	server.Close()
-	<-server.Done
+	<-clDone
+	server.conn.Close()
+	<-server.done
 }
 
 func newClient(t *testing.T, addr url.URL) *Client {
@@ -164,7 +160,8 @@ func checkCall(v []byte, err error, need any) error {
 }
 
 type serverHandler struct {
-	s *websocket.WS // ws server reference made dynamically on HTTP request
+	conn *websocket.WS // ws server reference made dynamically on HTTP request
+	done chan struct{}
 }
 
 func (s *serverHandler) serve(t *testing.T) func(w http.ResponseWriter, r *http.Request) {
@@ -177,9 +174,9 @@ func (s *serverHandler) serve(t *testing.T) func(w http.ResponseWriter, r *http.
 		if err != nil {
 			t.Fatalf("couldn't init socket server")
 		}
-		s.s = sock
-		s.s.OnMessage = func(m []byte, err error) { s.s.Write(m) } // echo
-		s.s.Listen()
+		s.conn = sock
+		s.conn.OnMessage = func(m []byte, err error) { s.conn.Write(m) } // echo
+		s.done = s.conn.Listen()
 	}
 }
 

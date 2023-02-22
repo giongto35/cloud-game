@@ -22,14 +22,14 @@ const (
 
 type (
 	WS struct {
-		conn      deadlineConn
-		send      chan []byte
 		OnMessage WSMessageHandler
-		pingPong  bool
-		once      sync.Once
-		Done      chan struct{}
 		alive     bool
+		conn      deadlineConn
+		done      chan struct{}
 		log       *logger.Logger
+		once      sync.Once
+		pingPong  bool
+		send      chan []byte
 		server    bool
 	}
 	WSMessageHandler func(message []byte, err error)
@@ -191,7 +191,7 @@ func newSocket(conn *websocket.Conn, pingPong bool, server bool, log *logger.Log
 		conn:      deadlineConn{Conn: conn, wt: writeWait},
 		send:      make(chan []byte),
 		once:      sync.Once{},
-		Done:      make(chan struct{}, 1),
+		done:      make(chan struct{}, 1),
 		pingPong:  pingPong,
 		server:    server,
 		OnMessage: func(message []byte, err error) {},
@@ -199,10 +199,11 @@ func newSocket(conn *websocket.Conn, pingPong bool, server bool, log *logger.Log
 	}
 }
 
-func (ws *WS) Listen() {
+func (ws *WS) Listen() chan struct{} {
 	ws.alive = true
 	go ws.writer()
 	go ws.reader()
+	return ws.done
 }
 
 func (ws *WS) Write(data []byte) {
@@ -222,6 +223,6 @@ func (ws *WS) shutdown() { ws.once.Do(ws.close) }
 func (ws *WS) close() {
 	ws.alive = false
 	_ = ws.conn.Close()
-	close(ws.Done)
+	close(ws.done)
 	ws.log.Debug().Msg("WebSocket should be closed now")
 }

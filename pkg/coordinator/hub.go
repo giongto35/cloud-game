@@ -55,7 +55,7 @@ func (h *Hub) handleUserConnection(w http.ResponseWriter, r *http.Request) {
 	}
 	usr := NewUserConnection(conn)
 	defer h.users.RemoveDisconnect(usr)
-	usr.HandleRequests(h, h.launcher, h.conf)
+	done := usr.HandleRequests(h, h.launcher, h.conf)
 
 	wkr := h.findWorkerFor(usr, r.URL.Query())
 	if wkr == nil {
@@ -66,7 +66,7 @@ func (h *Hub) handleUserConnection(w http.ResponseWriter, r *http.Request) {
 	usr.SetWorker(wkr)
 	h.users.Add(usr)
 	usr.InitSession(wkr.Id().String(), h.conf.Webrtc.IceServers, h.launcher.GetAppNames())
-	<-usr.Done()
+	<-done
 }
 
 func RequestToHandshake(data string) (*api.ConnectionRequest[com.Uid], error) {
@@ -106,10 +106,10 @@ func (h *Hub) handleWorkerConnection(w http.ResponseWriter, r *http.Request) {
 
 	worker := NewWorkerConnection(conn, *handshake)
 	defer h.workers.RemoveDisconnect(worker)
-	worker.HandleRequests(&h.users)
+	done := worker.HandleRequests(&h.users)
 	h.workers.Add(worker)
 	h.log.Info().Msgf("> worker %s", worker.PrintInfo())
-	worker.Listen()
+	<-done
 }
 
 func (h *Hub) GetServerList() (r []api.Server[com.Uid]) {
