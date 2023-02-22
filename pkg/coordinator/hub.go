@@ -12,20 +12,18 @@ import (
 	"github.com/giongto35/cloud-game/v2/pkg/config/coordinator"
 	"github.com/giongto35/cloud-game/v2/pkg/games"
 	"github.com/giongto35/cloud-game/v2/pkg/logger"
-	"github.com/giongto35/cloud-game/v2/pkg/service"
 	"github.com/rs/xid"
 )
 
 type Hub struct {
-	service.Service
-
 	conf     coordinator.Config
 	launcher games.Launcher
 	users    com.NetMap[com.Uid, *User]
 	workers  com.NetMap[com.Uid, *Worker]
 	log      *logger.Logger
 
-	wConn, uConn *com.Connector
+	u *com.SocketConnector
+	w *com.SocketConnector
 }
 
 func NewHub(conf coordinator.Config, lib games.GameLibrary, log *logger.Logger) *Hub {
@@ -35,13 +33,15 @@ func NewHub(conf coordinator.Config, lib games.GameLibrary, log *logger.Logger) 
 		workers:  com.NewNetMap[com.Uid, *Worker](),
 		launcher: games.NewGameLauncher(lib),
 		log:      log,
-		wConn: com.NewConnector(
-			com.WithOrigin(conf.Coordinator.Origin.WorkerWs),
-			com.WithTag("w"),
-		),
-		uConn: com.NewConnector(
+		u: com.NewSocketConnector(
 			com.WithOrigin(conf.Coordinator.Origin.UserWs),
 			com.WithTag("u"),
+			com.WithServer(true),
+		),
+		w: com.NewSocketConnector(
+			com.WithOrigin(conf.Coordinator.Origin.WorkerWs),
+			com.WithTag("w"),
+			com.WithServer(true),
 		),
 	}
 }
@@ -50,24 +50,24 @@ func NewHub(conf coordinator.Config, lib games.GameLibrary, log *logger.Logger) 
 func (h *Hub) handleUserConnection(w http.ResponseWriter, r *http.Request) {
 	h.log.Debug().Str("c", "u").Str("d", "←").Msgf("Handshake %v", r.Host)
 
-	conn, err := com.NewConnection(h.uConn, com.Options{IsServer: true, R: r, W: w}, h.log)
+	conn, err := h.u.NewConnection(com.Options{R: r, W: w}, h.log)
 	if err != nil {
 		h.log.Error().Err(err).Msg("couldn't init user connection")
 		return
 	}
-	usr := NewUserConnection(conn)
-	defer h.users.RemoveDisconnect(usr)
-	done := usr.HandleRequests(h, h.launcher, h.conf)
+	user := NewUser(conn)
+	defer h.users.RemoveDisconnect(user)
+	done := user.HandleRequests(h, h.launcher, h.conf)
 
-	wkr := h.findWorkerFor(usr, r.URL.Query())
-	if wkr == nil {
-		usr.Log.Info().Msg("no free workers")
+	worker := h.findWorkerFor(user, r.URL.Query())
+	if worker == nil {
+		user.Log.Info().Msg("no free workers")
 		return
 	}
 
-	usr.SetWorker(wkr)
-	h.users.Add(usr)
-	usr.InitSession(wkr.Id().String(), h.conf.Webrtc.IceServers, h.launcher.GetAppNames())
+	user.SetWorker(worker)
+	h.users.Add(user)
+	user.InitSession(worker.Id().String(), h.conf.Webrtc.IceServers, h.launcher.GetAppNames())
 	<-done
 }
 
@@ -105,13 +105,13 @@ func (h *Hub) handleWorkerConnection(w http.ResponseWriter, r *http.Request) {
 		h.log.Debug().Msgf("Worker uid will be set to %v", handshake.Id)
 	}
 
-	conn, err := com.NewConnection(h.wConn, com.Options{Id: handshake.Id, IsServer: true, R: r, W: w}, h.log)
+	conn, err := h.w.NewConnection(com.Options{Id: handshake.Id, R: r, W: w}, h.log)
 	if err != nil {
 		h.log.Error().Err(err).Msg("couldn't init worker connection")
 		return
 	}
 
-	worker := NewWorkerConnection(conn, *handshake)
+	worker := NewWorker(conn, *handshake)
 	defer h.workers.RemoveDisconnect(worker)
 	done := worker.HandleRequests(&h.users)
 	h.workers.Add(worker)

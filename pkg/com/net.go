@@ -14,8 +14,9 @@ import (
 
 type (
 	Connector struct {
-		tag string
-		wu  *websocket.Upgrader
+		isServer bool
+		tag      string
+		wu       *websocket.Upgrader
 	}
 	Client struct {
 		conn     *websocket.WS
@@ -40,6 +41,7 @@ var (
 )
 
 func WithOrigin(url string) Option { return func(c *Connector) { c.wu = websocket.NewUpgrader(url) } }
+func WithServer(is bool) Option    { return func(c *Connector) { c.isServer = is } }
 func WithTag(tag string) Option    { return func(c *Connector) { c.tag = tag } }
 
 const callTimeout = 5 * time.Second

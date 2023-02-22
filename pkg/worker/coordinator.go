@@ -14,12 +14,9 @@ type coordinator struct {
 	com.SocketClient
 }
 
-var connector = com.NewConnector(
-	com.WithTag("c"),
-)
+var connector = com.NewSocketConnector(com.WithTag("c"))
 
-// connect to a coordinator.
-func connect(host string, conf worker.Worker, addr string, log *logger.Logger) (*coordinator, error) {
+func newCoordinatorConnection(host string, conf worker.Worker, addr string, log *logger.Logger) (*coordinator, error) {
 	scheme := "ws"
 	if conf.Network.Secure {
 		scheme = "wss"
@@ -36,7 +33,7 @@ func connect(host string, conf worker.Worker, addr string, log *logger.Logger) (
 		return nil, err
 	}
 
-	conn, err := com.NewConnection(connector, com.Options{Id: id, Address: address}, log)
+	conn, err := connector.NewConnection(com.Options{Id: id, Address: address}, log)
 	if err != nil {
 		return nil, err
 	}

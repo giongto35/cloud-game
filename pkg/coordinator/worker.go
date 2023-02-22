@@ -25,7 +25,7 @@ type HasUserRegistry interface {
 	Find(key com.Uid) (*User, error)
 }
 
-func NewWorkerConnection(conn *com.SocketClient, handshake api.ConnectionRequest[com.Uid]) *Worker {
+func NewWorker(conn *com.SocketClient, handshake api.ConnectionRequest[com.Uid]) *Worker {
 	worker := &Worker{
 		SocketClient: *conn,
 		Addr:         handshake.Addr,

@@ -16,8 +16,8 @@ type HasServerInfo interface {
 	GetServerList() []api.Server[com.Uid]
 }
 
-// NewUserConnection supposed to be a bidirectional one.
-func NewUserConnection(conn *com.SocketClient) *User { return &User{SocketClient: *conn} }
+// NewUser supposed to be a bidirectional one.
+func NewUser(conn *com.SocketClient) *User { return &User{SocketClient: *conn} }
 
 func (u *User) SetWorker(w *Worker) { u.w = w; u.w.Reserve() }
 

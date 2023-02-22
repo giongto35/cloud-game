@@ -75,13 +75,13 @@ func (w *Worker) Run() {
 			case <-w.done:
 				return
 			default:
-				conn, err := connect(remoteAddr, w.conf.Worker, w.address, w.log)
+				cord, err := newCoordinatorConnection(remoteAddr, w.conf.Worker, w.address, w.log)
 				if err != nil {
 					w.log.Error().Err(err).Msgf("no connection: %v. Retrying in %v", remoteAddr, retry)
 					time.Sleep(retry)
 					continue
 				}
-				w.cord = conn
+				w.cord = cord
 				w.cord.Log.Info().Msgf("Connected to the coordinator %v", remoteAddr)
 				<-w.cord.HandleRequests(w)
 				w.router.Close()

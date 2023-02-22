@@ -44,6 +44,10 @@ type (
 	}
 )
 
+type SocketConnector struct {
+	connector *Connector
+}
+
 type SocketClient struct {
 	id   Uid
 	wire *Client
@@ -52,11 +56,10 @@ type SocketClient struct {
 }
 
 type Options struct {
-	Id       Uid
-	IsServer bool
-	Address  url.URL
-	R        *http.Request
-	W        http.ResponseWriter
+	Id      Uid
+	Address url.URL
+	R       *http.Request
+	W       http.ResponseWriter
 }
 
 func Unwrap[T any](data []byte) *T {
@@ -74,29 +77,33 @@ func UnwrapChecked[T any](bytes []byte, err error) (*T, error) {
 	return Unwrap[T](bytes), nil
 }
 
-func NewConnection(c *Connector, opts Options, log *logger.Logger) (*SocketClient, error) {
+func NewSocketConnector(opts ...Option) *SocketConnector {
+	return &SocketConnector{NewConnector(opts...)}
+}
+
+func (sc *SocketConnector) NewConnection(opts Options, log *logger.Logger) (*SocketClient, error) {
 	id := opts.Id
 	if id.IsNil() {
 		id = NewUid()
 	}
 	l := log.Extend(log.With().Str("cid", id.Short()))
 	dir := "→"
-	if opts.IsServer {
+	if sc.connector.isServer {
 		dir = "←"
 	}
 
-	l.Debug().Str("c", c.tag).Str("d", dir).Msg("Connect")
+	l.Debug().Str("c", sc.connector.tag).Str("d", dir).Msg("Connect")
 	var conn *Client
 	var err error
-	if opts.IsServer {
-		conn, err = c.NewServer(opts.W, opts.R, log)
+	if sc.connector.isServer {
+		conn, err = sc.connector.NewServer(opts.W, opts.R, log)
 	} else {
-		conn, err = c.NewClient(opts.Address, log)
+		conn, err = sc.connector.NewClient(opts.Address, log)
 	}
 	if err != nil {
 		return nil, err
 	}
-	return &SocketClient{id: id, wire: conn, Tag: c.tag, Log: l}, nil
+	return &SocketClient{id: id, wire: conn, Tag: sc.connector.tag, Log: l}, nil
 }
 
 func (c *SocketClient) OnPacket(fn func(p In) error) {
