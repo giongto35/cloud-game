@@ -76,8 +76,6 @@ func connect(conn *websocket.WS, err error) (*Client, error) {
 	return client, nil
 }
 
-func (c *Client) IsServer() bool { return c.conn.IsServer() }
-
 func (c *Client) OnPacket(fn func(packet In)) {
 	c.mu.Lock()
 	c.onPacket = fn

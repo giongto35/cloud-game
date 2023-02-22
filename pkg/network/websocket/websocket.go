@@ -30,7 +30,6 @@ type (
 		once      sync.Once
 		pingPong  bool
 		send      chan []byte
-		server    bool
 	}
 	WSMessageHandler func(message []byte, err error)
 	Upgrader         struct {
@@ -92,7 +91,7 @@ func NewServerWithConn(conn *websocket.Conn, log *logger.Logger) (*WS, error) {
 	if conn == nil {
 		return nil, ErrNilConnection
 	}
-	return newSocket(conn, true, true, log), nil
+	return newSocket(conn, true, log), nil
 }
 
 func NewClient(address url.URL, log *logger.Logger) (*WS, error) {
@@ -104,10 +103,8 @@ func NewClient(address url.URL, log *logger.Logger) (*WS, error) {
 	if err != nil {
 		return nil, err
 	}
-	return newSocket(conn, false, false, log), nil
+	return newSocket(conn, false, log), nil
 }
-
-func (ws *WS) IsServer() bool { return ws.server }
 
 // reader pumps messages from the websocket connection to the OnMessage callback.
 // Blocking, must be called as goroutine. Serializes all websocket reads.
@@ -186,14 +183,13 @@ func (ws *WS) handleMessage(message []byte, ok bool) bool {
 	return true
 }
 
-func newSocket(conn *websocket.Conn, pingPong bool, server bool, log *logger.Logger) *WS {
+func newSocket(conn *websocket.Conn, pingPong bool, log *logger.Logger) *WS {
 	return &WS{
 		conn:      deadlineConn{Conn: conn, wt: writeWait},
 		send:      make(chan []byte),
 		once:      sync.Once{},
 		done:      make(chan struct{}, 1),
 		pingPong:  pingPong,
-		server:    server,
 		OnMessage: func(message []byte, err error) {},
 		log:       log,
 	}
