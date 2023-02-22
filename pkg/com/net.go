@@ -55,17 +55,12 @@ func NewConnector(opts ...Option) *Connector {
 	return c
 }
 
-func (co *Connector) NewServer(w http.ResponseWriter, r *http.Request, log *logger.Logger) (*SocketClient, error) {
+func (co *Connector) NewServer(w http.ResponseWriter, r *http.Request, log *logger.Logger) (*Client, error) {
 	ws, err := co.wu.Upgrade(w, r, nil)
 	if err != nil {
 		return nil, err
 	}
-	conn, err := connect(websocket.NewServerWithConn(ws, log))
-	if err != nil {
-		return nil, err
-	}
-	c := New(conn, co.tag, NewUid(), log)
-	return &c, nil
+	return connect(websocket.NewServerWithConn(ws, log))
 }
 
 func (co *Connector) NewClient(address url.URL, log *logger.Logger) (*Client, error) {

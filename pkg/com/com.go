@@ -2,6 +2,8 @@ package com
 
 import (
 	"encoding/base64"
+	"net/http"
+	"net/url"
 	"sync"
 
 	"github.com/giongto35/cloud-game/v2/pkg/api"
@@ -49,6 +51,14 @@ type SocketClient struct {
 	Log  *logger.Logger
 }
 
+type Options struct {
+	Id       Uid
+	IsServer bool
+	Address  url.URL
+	R        *http.Request
+	W        http.ResponseWriter
+}
+
 func Unwrap[T any](data []byte) *T {
 	out := new(T)
 	if err := json.Unmarshal(data, out); err != nil {
@@ -64,17 +74,30 @@ func UnwrapChecked[T any](bytes []byte, err error) (*T, error) {
 	return Unwrap[T](bytes), nil
 }
 
-func New(conn *Client, tag string, id Uid, log *logger.Logger) SocketClient {
+func NewConnection(c *Connector, opts Options, log *logger.Logger) (*SocketClient, error) {
+	id := opts.Id
+	if id.IsNil() {
+		id = NewUid()
+	}
 	l := log.Extend(log.With().Str("cid", id.Short()))
 	dir := "→"
-	if conn.IsServer() {
+	if opts.IsServer {
 		dir = "←"
 	}
-	l.Debug().Str("c", tag).Str("d", dir).Msg("Connect")
-	return SocketClient{id: id, wire: conn, Tag: tag, Log: l}
-}
 
-func (c *SocketClient) SetId(id Uid) { c.id = id }
+	l.Debug().Str("c", c.tag).Str("d", dir).Msg("Connect")
+	var conn *Client
+	var err error
+	if opts.IsServer {
+		conn, err = c.NewServer(opts.W, opts.R, log)
+	} else {
+		conn, err = c.NewClient(opts.Address, log)
+	}
+	if err != nil {
+		return nil, err
+	}
+	return &SocketClient{id: id, wire: conn, Tag: c.tag, Log: l}, nil
+}
 
 func (c *SocketClient) OnPacket(fn func(p In) error) {
 	logFn := func(p In) {

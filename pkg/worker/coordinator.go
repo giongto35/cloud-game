@@ -14,7 +14,9 @@ type coordinator struct {
 	com.SocketClient
 }
 
-var connector = com.NewConnector()
+var connector = com.NewConnector(
+	com.WithTag("c"),
+)
 
 // connect to a coordinator.
 func connect(host string, conf worker.Worker, addr string, log *logger.Logger) (*coordinator, error) {
@@ -30,12 +32,15 @@ func connect(host string, conf worker.Worker, addr string, log *logger.Logger) (
 	req, err := buildConnQuery(id, conf, addr)
 	if req != "" && err == nil {
 		address.RawQuery = "data=" + req
+	} else {
+		return nil, err
 	}
-	conn, err := connector.NewClient(address, log)
+
+	conn, err := com.NewConnection(connector, com.Options{Id: id, Address: address}, log)
 	if err != nil {
 		return nil, err
 	}
-	return &coordinator{com.New(conn, "c", id, log)}, nil
+	return &coordinator{*conn}, nil
 }
 
 func (c *coordinator) HandleRequests(w *Worker) chan struct{} {

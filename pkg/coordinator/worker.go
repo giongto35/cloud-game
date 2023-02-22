@@ -34,12 +34,6 @@ func NewWorkerConnection(conn *com.SocketClient, handshake api.ConnectionRequest
 		Tag:          handshake.Tag,
 		Zone:         handshake.Zone,
 	}
-	// set connection uid from the handshake
-	if handshake.Id != com.NilUid {
-		old := worker.Id()
-		worker.Log.Debug().Msgf("Worker uid change from %s to %s", old, handshake.Id)
-		worker.SetId(handshake.Id)
-	}
 	return worker
 }
 

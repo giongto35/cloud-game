@@ -49,9 +49,11 @@ func NewHub(conf coordinator.Config, lib games.GameLibrary, log *logger.Logger) 
 // handleUserConnection handles all connections from user/frontend.
 func (h *Hub) handleUserConnection(w http.ResponseWriter, r *http.Request) {
 	h.log.Debug().Str("c", "u").Str("d", "←").Msgf("Handshake %v", r.Host)
-	conn, err := h.uConn.NewServer(w, r, h.log)
+
+	conn, err := com.NewConnection(h.uConn, com.Options{IsServer: true, R: r, W: w}, h.log)
 	if err != nil {
 		h.log.Error().Err(err).Msg("couldn't init user connection")
+		return
 	}
 	usr := NewUserConnection(conn)
 	defer h.users.RemoveDisconnect(usr)
@@ -98,7 +100,12 @@ func (h *Hub) handleWorkerConnection(w http.ResponseWriter, r *http.Request) {
 		h.log.Warn().Msg("Unsecure worker connection. Unsecure to secure may be bad.")
 	}
 
-	conn, err := h.wConn.NewServer(w, r, h.log)
+	// set connection uid from the handshake
+	if handshake.Id != com.NilUid {
+		h.log.Debug().Msgf("Worker uid will be set to %v", handshake.Id)
+	}
+
+	conn, err := com.NewConnection(h.wConn, com.Options{Id: handshake.Id, IsServer: true, R: r, W: w}, h.log)
 	if err != nil {
 		h.log.Error().Err(err).Msg("couldn't init worker connection")
 		return
