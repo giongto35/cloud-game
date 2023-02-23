@@ -18,8 +18,8 @@ func New(conf coordinator.Config, log *logger.Logger) (services service.Group) {
 	lib.Scan()
 	hub := NewHub(conf, lib, log)
 	h, err := NewHTTPServer(conf, log, func(mux *httpx.Mux) *httpx.Mux {
-		mux.HandleFunc("/ws", hub.handleUserConnection)
-		mux.HandleFunc("/wso", hub.handleWorkerConnection)
+		mux.HandleFunc("/ws", hub.handleUserConnection())
+		mux.HandleFunc("/wso", hub.handleWorkerConnection())
 		return mux
 	})
 	if err != nil {

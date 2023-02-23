@@ -18,12 +18,9 @@ import (
 type Hub struct {
 	conf     coordinator.Config
 	launcher games.Launcher
+	log      *logger.Logger
 	users    com.NetMap[com.Uid, *User]
 	workers  com.NetMap[com.Uid, *Worker]
-	log      *logger.Logger
-
-	u *com.SocketConnector
-	w *com.SocketConnector
 }
 
 func NewHub(conf coordinator.Config, lib games.GameLibrary, log *logger.Logger) *Hub {
@@ -33,42 +30,40 @@ func NewHub(conf coordinator.Config, lib games.GameLibrary, log *logger.Logger) 
 		workers:  com.NewNetMap[com.Uid, *Worker](),
 		launcher: games.NewGameLauncher(lib),
 		log:      log,
-		u: com.NewSocketConnector(
-			com.WithOrigin(conf.Coordinator.Origin.UserWs),
-			com.WithTag("u"),
-			com.WithServer(true),
-		),
-		w: com.NewSocketConnector(
-			com.WithOrigin(conf.Coordinator.Origin.WorkerWs),
-			com.WithTag("w"),
-			com.WithServer(true),
-		),
 	}
 }
 
 // handleUserConnection handles all connections from user/frontend.
-func (h *Hub) handleUserConnection(w http.ResponseWriter, r *http.Request) {
-	h.log.Debug().Str("c", "u").Str("d", "←").Msgf("Handshake %v", r.Host)
+func (h *Hub) handleUserConnection() http.HandlerFunc {
+	connector := com.NewSocketConnector(
+		com.WithOrigin(h.conf.Coordinator.Origin.UserWs),
+		com.WithTag("u"),
+		com.WithServer(true),
+	)
 
-	conn, err := h.u.NewConnection(com.Options{R: r, W: w}, h.log)
-	if err != nil {
-		h.log.Error().Err(err).Msg("couldn't init user connection")
-		return
+	return func(w http.ResponseWriter, r *http.Request) {
+		h.log.Debug().Str("c", "u").Str("d", "←").Msgf("Handshake %v", r.Host)
+
+		conn, err := connector.NewConnection(com.Options{R: r, W: w}, h.log)
+		if err != nil {
+			h.log.Error().Err(err).Msg("couldn't init user connection")
+			return
+		}
+		user := NewUser(conn)
+		defer h.users.RemoveDisconnect(user)
+		done := user.HandleRequests(h, h.launcher, h.conf)
+
+		worker := h.findWorkerFor(user, r.URL.Query())
+		if worker == nil {
+			user.Log.Info().Msg("no free workers")
+			return
+		}
+
+		user.SetWorker(worker)
+		h.users.Add(user)
+		user.InitSession(worker.Id().String(), h.conf.Webrtc.IceServers, h.launcher.GetAppNames())
+		<-done
 	}
-	user := NewUser(conn)
-	defer h.users.RemoveDisconnect(user)
-	done := user.HandleRequests(h, h.launcher, h.conf)
-
-	worker := h.findWorkerFor(user, r.URL.Query())
-	if worker == nil {
-		user.Log.Info().Msg("no free workers")
-		return
-	}
-
-	user.SetWorker(worker)
-	h.users.Add(user)
-	user.InitSession(worker.Id().String(), h.conf.Webrtc.IceServers, h.launcher.GetAppNames())
-	<-done
 }
 
 func RequestToHandshake(data string) (*api.ConnectionRequest[com.Uid], error) {
@@ -83,40 +78,48 @@ func RequestToHandshake(data string) (*api.ConnectionRequest[com.Uid], error) {
 }
 
 // handleWorkerConnection handles all connections from a new worker to coordinator.
-func (h *Hub) handleWorkerConnection(w http.ResponseWriter, r *http.Request) {
-	h.log.Debug().Str("c", "w").Str("d", "←").Msgf("Handshake %v", r.Host)
+func (h *Hub) handleWorkerConnection() http.HandlerFunc {
+	connector := com.NewSocketConnector(
+		com.WithOrigin(h.conf.Coordinator.Origin.WorkerWs),
+		com.WithTag("w"),
+		com.WithServer(true),
+	)
 
-	handshake, err := RequestToHandshake(r.URL.Query().Get(api.DataQueryParam))
-	if err != nil {
-		h.log.Error().Err(err).Msg("handshake fail")
-		return
+	return func(w http.ResponseWriter, r *http.Request) {
+		h.log.Debug().Str("c", "w").Str("d", "←").Msgf("Handshake %v", r.Host)
+
+		handshake, err := RequestToHandshake(r.URL.Query().Get(api.DataQueryParam))
+		if err != nil {
+			h.log.Error().Err(err).Msg("handshake fail")
+			return
+		}
+
+		if handshake.PingURL == "" {
+			h.log.Warn().Msg("Ping address is not set")
+		}
+
+		if h.conf.Coordinator.Server.Https && !handshake.IsHTTPS {
+			h.log.Warn().Msg("Unsecure worker connection. Unsecure to secure may be bad.")
+		}
+
+		// set connection uid from the handshake
+		if handshake.Id != com.NilUid {
+			h.log.Debug().Msgf("Worker uid will be set to %v", handshake.Id)
+		}
+
+		conn, err := connector.NewConnection(com.Options{Id: handshake.Id, R: r, W: w}, h.log)
+		if err != nil {
+			h.log.Error().Err(err).Msg("couldn't init worker connection")
+			return
+		}
+
+		worker := NewWorker(conn, *handshake)
+		defer h.workers.RemoveDisconnect(worker)
+		done := worker.HandleRequests(&h.users)
+		h.workers.Add(worker)
+		h.log.Info().Msgf("> worker %s", worker.PrintInfo())
+		<-done
 	}
-
-	if handshake.PingURL == "" {
-		h.log.Warn().Msg("Ping address is not set")
-	}
-
-	if h.conf.Coordinator.Server.Https && !handshake.IsHTTPS {
-		h.log.Warn().Msg("Unsecure worker connection. Unsecure to secure may be bad.")
-	}
-
-	// set connection uid from the handshake
-	if handshake.Id != com.NilUid {
-		h.log.Debug().Msgf("Worker uid will be set to %v", handshake.Id)
-	}
-
-	conn, err := h.w.NewConnection(com.Options{Id: handshake.Id, R: r, W: w}, h.log)
-	if err != nil {
-		h.log.Error().Err(err).Msg("couldn't init worker connection")
-		return
-	}
-
-	worker := NewWorker(conn, *handshake)
-	defer h.workers.RemoveDisconnect(worker)
-	done := worker.HandleRequests(&h.users)
-	h.workers.Add(worker)
-	h.log.Info().Msgf("> worker %s", worker.PrintInfo())
-	<-done
 }
 
 func (h *Hub) GetServerList() (r []api.Server[com.Uid]) {
