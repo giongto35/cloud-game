@@ -96,9 +96,9 @@ func (sc *SocketConnector) NewConnection(opts Options, log *logger.Logger) (*Soc
 	var conn *Client
 	var err error
 	if sc.connector.isServer {
-		conn, err = sc.connector.NewServer(opts.W, opts.R, log)
+		conn, err = sc.connector.NewServer(opts.W, opts.R)
 	} else {
-		conn, err = sc.connector.NewClient(opts.Address, log)
+		conn, err = sc.connector.NewClient(opts.Address)
 	}
 	if err != nil {
 		return nil, err

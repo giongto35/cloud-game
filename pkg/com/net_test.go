@@ -10,18 +10,14 @@ import (
 	"testing"
 	"time"
 
-	"github.com/giongto35/cloud-game/v2/pkg/logger"
 	"github.com/giongto35/cloud-game/v2/pkg/network/websocket"
 )
-
-var log = logger.Default()
 
 func TestPackets(t *testing.T) {
 	r, err := json.Marshal(Out{Payload: "asd"})
 	if err != nil {
 		t.Fatalf("can't marshal packet")
 	}
-
 	t.Logf("PACKET: %v", string(r))
 }
 
@@ -111,7 +107,7 @@ func testWebsocket(t *testing.T) {
 }
 
 func newClient(t *testing.T, addr url.URL) *Client {
-	conn, err := NewConnector().NewClient(addr, log)
+	conn, err := NewConnector().NewClient(addr)
 	if err != nil {
 		t.Fatalf("error: couldn't connect to %v because of %v", addr.String(), err)
 	}
@@ -170,12 +166,12 @@ func (s *serverHandler) serve(t *testing.T) func(w http.ResponseWriter, r *http.
 		if err != nil {
 			t.Fatalf("no socket, %v", err)
 		}
-		sock, err := websocket.NewServerWithConn(conn, log)
+		sock, err := websocket.NewServerWithConn(conn)
 		if err != nil {
 			t.Fatalf("couldn't init socket server")
 		}
 		s.conn = sock
-		s.conn.OnMessage = func(m []byte, err error) { s.conn.Write(m) } // echo
+		s.conn.SetMessageHandler(func(m []byte, err error) { s.conn.Write(m) }) // echo
 		s.done = s.conn.Listen()
 	}
 }

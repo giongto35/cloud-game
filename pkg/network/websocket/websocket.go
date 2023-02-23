@@ -9,7 +9,6 @@ import (
 	"sync"
 	"time"
 
-	"github.com/giongto35/cloud-game/v2/pkg/logger"
 	"github.com/gorilla/websocket"
 )
 
@@ -22,17 +21,15 @@ const (
 
 type (
 	WS struct {
-		OnMessage WSMessageHandler
-		alive     bool
-		conn      deadlineConn
-		done      chan struct{}
-		log       *logger.Logger
-		once      sync.Once
-		pingPong  bool
-		send      chan []byte
+		alive    bool
+		callback func(message []byte, err error)
+		conn     deadlineConn
+		done     chan struct{}
+		once     sync.Once
+		pingPong bool
+		send     chan []byte
 	}
-	WSMessageHandler func(message []byte, err error)
-	Upgrader         struct {
+	Upgrader struct {
 		websocket.Upgrader
 		origin string
 	}
@@ -60,8 +57,8 @@ func (conn *deadlineConn) writeControl(messageType int, data []byte, deadline ti
 
 var DefaultUpgrader = Upgrader{
 	Upgrader: websocket.Upgrader{
-		ReadBufferSize:    1024,
-		WriteBufferSize:   1024,
+		ReadBufferSize:    2048,
+		WriteBufferSize:   2048,
 		WriteBufferPool:   &sync.Pool{},
 		EnableCompression: true,
 	},
@@ -87,14 +84,14 @@ func (u *Upgrader) Upgrade(w http.ResponseWriter, r *http.Request, responseHeade
 	return u.Upgrader.Upgrade(w, r, responseHeader)
 }
 
-func NewServerWithConn(conn *websocket.Conn, log *logger.Logger) (*WS, error) {
+func NewServerWithConn(conn *websocket.Conn) (*WS, error) {
 	if conn == nil {
 		return nil, ErrNilConnection
 	}
-	return newSocket(conn, true, log), nil
+	return newSocket(conn, true), nil
 }
 
-func NewClient(address url.URL, log *logger.Logger) (*WS, error) {
+func NewClient(address url.URL) (*WS, error) {
 	dialer := websocket.DefaultDialer
 	if address.Scheme == "wss" {
 		dialer.TLSClientConfig = &tls.Config{InsecureSkipVerify: true}
@@ -103,15 +100,15 @@ func NewClient(address url.URL, log *logger.Logger) (*WS, error) {
 	if err != nil {
 		return nil, err
 	}
-	return newSocket(conn, false, log), nil
+	return newSocket(conn, false), nil
 }
 
-// reader pumps messages from the websocket connection to the OnMessage callback.
+// reader pumps messages from the websocket connection to the SetMessageHandler callback.
 // Blocking, must be called as goroutine. Serializes all websocket reads.
 func (ws *WS) reader() {
 	defer func() {
 		close(ws.send)
-		ws.shutdown()
+		ws.close()
 	}()
 
 	ws.conn.SetReadLimit(maxMessageSize)
@@ -134,18 +131,18 @@ func (ws *WS) reader() {
 		_, message, err := ws.conn.ReadMessage()
 		if err != nil {
 			if websocket.IsUnexpectedCloseError(err, websocket.CloseNormalClosure, websocket.CloseGoingAway) {
-				ws.log.Error().Err(err).Msg("WebSocket read fail")
+				ws.callback(message, err)
 			}
 			break
 		}
-		ws.OnMessage(message, err)
+		ws.callback(message, err)
 	}
 }
 
 // writer pumps messages from the send channel to the websocket connection.
 // Blocking, must be called as goroutine. Serializes all websocket writes.
 func (ws *WS) writer() {
-	defer ws.shutdown()
+	defer ws.close()
 
 	if ws.pingPong {
 		ticker := time.NewTicker(pingTime)
@@ -183,17 +180,26 @@ func (ws *WS) handleMessage(message []byte, ok bool) bool {
 	return true
 }
 
-func newSocket(conn *websocket.Conn, pingPong bool, log *logger.Logger) *WS {
+func (ws *WS) close() {
+	ws.once.Do(func() {
+		ws.alive = false
+		_ = ws.conn.Close()
+		close(ws.done)
+	})
+}
+
+func newSocket(conn *websocket.Conn, pingPong bool) *WS {
 	return &WS{
-		conn:      deadlineConn{Conn: conn, wt: writeWait},
-		send:      make(chan []byte),
-		once:      sync.Once{},
-		done:      make(chan struct{}, 1),
-		pingPong:  pingPong,
-		OnMessage: func(message []byte, err error) {},
-		log:       log,
+		callback: func(message []byte, err error) {},
+		conn:     deadlineConn{Conn: conn, wt: writeWait},
+		done:     make(chan struct{}, 1),
+		once:     sync.Once{},
+		pingPong: pingPong,
+		send:     make(chan []byte),
 	}
 }
+
+func (ws *WS) SetMessageHandler(fn func([]byte, error)) { ws.callback = fn }
 
 func (ws *WS) Listen() chan struct{} {
 	ws.alive = true
@@ -212,13 +218,4 @@ func (ws *WS) Close() {
 	if ws.alive {
 		_ = ws.conn.write(websocket.CloseMessage, websocket.FormatCloseMessage(websocket.CloseNormalClosure, ""))
 	}
-}
-
-func (ws *WS) shutdown() { ws.once.Do(ws.close) }
-
-func (ws *WS) close() {
-	ws.alive = false
-	_ = ws.conn.Close()
-	close(ws.done)
-	ws.log.Debug().Msg("WebSocket should be closed now")
 }

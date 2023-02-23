@@ -7,7 +7,6 @@ import (
 	"sync"
 	"time"
 
-	"github.com/giongto35/cloud-game/v2/pkg/logger"
 	"github.com/giongto35/cloud-game/v2/pkg/network/websocket"
 	"github.com/goccy/go-json"
 )
@@ -57,16 +56,16 @@ func NewConnector(opts ...Option) *Connector {
 	return c
 }
 
-func (co *Connector) NewServer(w http.ResponseWriter, r *http.Request, log *logger.Logger) (*Client, error) {
+func (co *Connector) NewServer(w http.ResponseWriter, r *http.Request) (*Client, error) {
 	ws, err := co.wu.Upgrade(w, r, nil)
 	if err != nil {
 		return nil, err
 	}
-	return connect(websocket.NewServerWithConn(ws, log))
+	return connect(websocket.NewServerWithConn(ws))
 }
 
-func (co *Connector) NewClient(address url.URL, log *logger.Logger) (*Client, error) {
-	return connect(websocket.NewClient(address, log))
+func (co *Connector) NewClient(address url.URL) (*Client, error) {
+	return connect(websocket.NewClient(address))
 }
 
 func connect(conn *websocket.WS, err error) (*Client, error) {
@@ -74,7 +73,7 @@ func connect(conn *websocket.WS, err error) (*Client, error) {
 		return nil, err
 	}
 	client := &Client{conn: conn, queue: make(map[Uid]*call, 1)}
-	client.conn.OnMessage = client.handleMessage
+	client.conn.SetMessageHandler(client.handleMessage)
 	return client, nil
 }
 
