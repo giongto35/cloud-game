@@ -14,7 +14,7 @@ type coordinator struct {
 	com.SocketClient
 }
 
-var connector = com.NewSocketConnector(com.WithTag("c"))
+var connector com.ClientConnector
 
 func newCoordinatorConnection(host string, conf worker.Worker, addr string, log *logger.Logger) (*coordinator, error) {
 	scheme := "ws"
@@ -23,7 +23,10 @@ func newCoordinatorConnection(host string, conf worker.Worker, addr string, log 
 	}
 	address := url.URL{Scheme: scheme, Host: host, Path: conf.Network.Endpoint}
 
-	log.Debug().Str("c", "c").Str("d", "→").Msgf("Handshake %s", address.String())
+	log.Debug().
+		Str(logger.ClientField, "c").
+		Str(logger.DirectionField, "→").
+		Msgf("Handshake %s", address.String())
 
 	id := com.NewUid()
 	req, err := buildConnQuery(id, conf, addr)
@@ -33,11 +36,11 @@ func newCoordinatorConnection(host string, conf worker.Worker, addr string, log 
 		return nil, err
 	}
 
-	conn, err := connector.NewConnection(com.Options{Id: id, Address: address}, log)
+	conn, err := connector.Connect(address)
 	if err != nil {
 		return nil, err
 	}
-	return &coordinator{*conn}, nil
+	return &coordinator{*com.NewConnection(conn, id, false, "c", log)}, nil
 }
 
 func (c *coordinator) HandleRequests(w *Worker) chan struct{} {

@@ -35,21 +35,21 @@ func NewHub(conf coordinator.Config, lib games.GameLibrary, log *logger.Logger) 
 
 // handleUserConnection handles all connections from user/frontend.
 func (h *Hub) handleUserConnection() http.HandlerFunc {
-	connector := com.NewSocketConnector(
-		com.WithOrigin(h.conf.Coordinator.Origin.UserWs),
-		com.WithTag("u"),
-		com.WithServer(true),
-	)
+	connector := com.ServerConnector{}
+	connector.Origin(h.conf.Coordinator.Origin.UserWs)
 
 	return func(w http.ResponseWriter, r *http.Request) {
-		h.log.Debug().Str("c", "u").Str("d", "←").Msgf("Handshake %v", r.Host)
+		h.log.Debug().
+			Str(logger.ClientField, "u").
+			Str(logger.DirectionField, "←").
+			Msgf("Handshake %v", r.Host)
 
-		conn, err := connector.NewConnection(com.Options{R: r, W: w}, h.log)
+		conn, err := connector.Connect(w, r)
 		if err != nil {
 			h.log.Error().Err(err).Msg("couldn't init user connection")
 			return
 		}
-		user := NewUser(conn)
+		user := &User{SocketClient: *com.NewConnection(conn, com.NewUid(), true, "u", h.log)}
 		defer h.users.RemoveDisconnect(user)
 		done := user.HandleRequests(h, h.launcher, h.conf)
 
@@ -62,6 +62,10 @@ func (h *Hub) handleUserConnection() http.HandlerFunc {
 		user.SetWorker(worker)
 		h.users.Add(user)
 		user.InitSession(worker.Id().String(), h.conf.Webrtc.IceServers, h.launcher.GetAppNames())
+		h.log.Info().
+			Str(logger.DirectionField, "+").
+			Str(logger.ClientField, "u").
+			Msgf("user %s", user)
 		<-done
 	}
 }
@@ -79,14 +83,14 @@ func RequestToHandshake(data string) (*api.ConnectionRequest[com.Uid], error) {
 
 // handleWorkerConnection handles all connections from a new worker to coordinator.
 func (h *Hub) handleWorkerConnection() http.HandlerFunc {
-	connector := com.NewSocketConnector(
-		com.WithOrigin(h.conf.Coordinator.Origin.WorkerWs),
-		com.WithTag("w"),
-		com.WithServer(true),
-	)
+	connector := com.ServerConnector{}
+	connector.Origin(h.conf.Coordinator.Origin.WorkerWs)
 
 	return func(w http.ResponseWriter, r *http.Request) {
-		h.log.Debug().Str("c", "w").Str("d", "←").Msgf("Handshake %v", r.Host)
+		h.log.Debug().
+			Str(logger.ClientField, "w").
+			Str(logger.DirectionField, "←").
+			Msgf("Handshake %v", r.Host)
 
 		handshake, err := RequestToHandshake(r.URL.Query().Get(api.DataQueryParam))
 		if err != nil {
@@ -107,17 +111,22 @@ func (h *Hub) handleWorkerConnection() http.HandlerFunc {
 			h.log.Debug().Msgf("Worker uid will be set to %v", handshake.Id)
 		}
 
-		conn, err := connector.NewConnection(com.Options{Id: handshake.Id, R: r, W: w}, h.log)
+		conn, err := connector.Connect(w, r)
 		if err != nil {
 			h.log.Error().Err(err).Msg("couldn't init worker connection")
 			return
 		}
 
-		worker := NewWorker(conn, *handshake)
+		worker := NewWorker(
+			com.NewConnection(conn, handshake.Id, true, "w", h.log),
+			*handshake)
 		defer h.workers.RemoveDisconnect(worker)
 		done := worker.HandleRequests(&h.users)
 		h.workers.Add(worker)
-		h.log.Info().Msgf("> worker %s", worker.PrintInfo())
+		h.log.Info().
+			Str(logger.DirectionField, "+").
+			Str(logger.ClientField, "w").
+			Msgf("worker %s", worker.PrintInfo())
 		<-done
 	}
 }

@@ -12,13 +12,14 @@ import (
 )
 
 type (
-	Connector struct {
-		isServer bool
-		tag      string
-		wu       *websocket.Upgrader
+	ClientConnector struct {
+		websocket.Client
+	}
+	ServerConnector struct {
+		websocket.Server
 	}
 	Client struct {
-		conn     *websocket.WS
+		conn     *websocket.Connection
 		queue    map[Uid]*call
 		onPacket func(packet In)
 		mu       sync.Mutex
@@ -31,7 +32,6 @@ type (
 	HasCallId interface {
 		SetId(Uid)
 	}
-	Option = func(c *Connector)
 )
 
 var (
@@ -39,36 +39,19 @@ var (
 	errTimeout    = errors.New("timeout")
 )
 
-func WithOrigin(url string) Option { return func(c *Connector) { c.wu = websocket.NewUpgrader(url) } }
-func WithServer(is bool) Option    { return func(c *Connector) { c.isServer = is } }
-func WithTag(tag string) Option    { return func(c *Connector) { c.tag = tag } }
-
 const callTimeout = 5 * time.Second
 
-func NewConnector(opts ...Option) *Connector {
-	c := &Connector{}
-	for _, opt := range opts {
-		opt(c)
-	}
-	if c.wu == nil {
-		c.wu = &websocket.DefaultUpgrader
-	}
-	return c
+func (c *ClientConnector) Connect(address url.URL) (*Client, error) {
+	return connect(c.Client.Connect(address))
 }
 
-func (co *Connector) NewServer(w http.ResponseWriter, r *http.Request) (*Client, error) {
-	ws, err := co.wu.Upgrade(w, r, nil)
-	if err != nil {
-		return nil, err
-	}
-	return connect(websocket.NewServerWithConn(ws))
+func (s *ServerConnector) Origin(host string) { s.Upgrader = websocket.NewUpgrader(host) }
+
+func (s *ServerConnector) Connect(w http.ResponseWriter, r *http.Request) (*Client, error) {
+	return connect(s.Server.Connect(w, r, nil))
 }
 
-func (co *Connector) NewClient(address url.URL) (*Client, error) {
-	return connect(websocket.NewClient(address))
-}
-
-func connect(conn *websocket.WS, err error) (*Client, error) {
+func connect(conn *websocket.Connection, err error) (*Client, error) {
 	if err != nil {
 		return nil, err
 	}

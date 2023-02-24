@@ -107,7 +107,8 @@ func testWebsocket(t *testing.T) {
 }
 
 func newClient(t *testing.T, addr url.URL) *Client {
-	conn, err := NewConnector().NewClient(addr)
+	connector := ClientConnector{}
+	conn, err := connector.Connect(addr)
 	if err != nil {
 		t.Fatalf("error: couldn't connect to %v because of %v", addr.String(), err)
 	}
@@ -156,17 +157,15 @@ func checkCall(v []byte, err error, need any) error {
 }
 
 type serverHandler struct {
-	conn *websocket.WS // ws server reference made dynamically on HTTP request
+	conn *websocket.Connection // ws server reference made dynamically on HTTP request
 	done chan struct{}
 }
 
 func (s *serverHandler) serve(t *testing.T) func(w http.ResponseWriter, r *http.Request) {
+	connector := ServerConnector{}
+
 	return func(w http.ResponseWriter, r *http.Request) {
-		conn, err := websocket.DefaultUpgrader.Upgrade(w, r, nil)
-		if err != nil {
-			t.Fatalf("no socket, %v", err)
-		}
-		sock, err := websocket.NewServerWithConn(conn)
+		sock, err := connector.Server.Connect(w, r, nil)
 		if err != nil {
 			t.Fatalf("couldn't init socket server")
 		}
