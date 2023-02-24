@@ -27,6 +27,11 @@ const (
 	// Values less than TraceLevel are handled as numbers.
 )
 
+const (
+	ClientField    = "c"
+	DirectionField = "d"
+)
+
 func (l Level) String() string {
 	switch l {
 	case TraceLevel:
@@ -81,12 +86,12 @@ func NewConsole(isDebug bool, tag string, noColor bool) *Logger {
 			zerolog.LevelFieldName,
 			zerolog.CallerFieldName,
 			"s",
-			"d",
-			"c",
+			DirectionField,
+			ClientField,
 			"m",
 			zerolog.MessageFieldName,
 		},
-		FieldsExclude: []string{"s", "c", "d", "m", "pid"},
+		FieldsExclude: []string{"s", ClientField, DirectionField, "m", "pid"},
 	}
 
 	if output.NoColor {
@@ -103,8 +108,8 @@ func NewConsole(isDebug bool, tag string, noColor bool) *Logger {
 		Str("pid", fmt.Sprintf("%4x", pid)).
 		Str("s", tag).
 		Str("m", "").
-		Str("d", " ").
-		Str("c", " ").
+		Str(DirectionField, " ").
+		Str(ClientField, " ").
 		// Str("tag", tag). use when a file writer
 		Timestamp().Logger()
 	return &Logger{logger: &logger}
