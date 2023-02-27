@@ -121,18 +121,18 @@ func (u *User) HandleRecordGame(rq api.RecordGameRequest[com.Uid]) {
 }
 
 func (u *User) handleGetWorkerList(debug bool, info HasServerInfo) {
-	response := api.GetWorkerListResponse[com.Uid]{}
+	response := api.GetWorkerListResponse{}
 	servers := info.GetServerList()
 
 	if debug {
 		response.Servers = servers
 	} else {
 		// not sure if []byte to string always reversible :/
-		unique := map[string]*api.Server[com.Uid]{}
+		unique := map[string]*api.Server{}
 		for _, s := range servers {
 			mid := s.Machine
 			if _, ok := unique[mid]; !ok {
-				unique[mid] = &api.Server[com.Uid]{Addr: s.Addr, PingURL: s.PingURL, Id: s.Id, InGroup: true}
+				unique[mid] = &api.Server{Addr: s.Addr, PingURL: s.PingURL, Id: s.Id, InGroup: true}
 			}
 			unique[mid].Replicas++
 		}

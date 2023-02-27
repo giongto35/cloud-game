@@ -8,7 +8,6 @@ import (
 
 type (
 	Id interface {
-		comparable
 		IsEmpty() bool
 		String() string
 	}

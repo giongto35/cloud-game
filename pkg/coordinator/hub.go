@@ -134,9 +134,9 @@ func (h *Hub) handleWorkerConnection() http.HandlerFunc {
 	}
 }
 
-func (h *Hub) GetServerList() (r []api.Server[com.Uid]) {
+func (h *Hub) GetServerList() (r []api.Server) {
 	for _, w := range h.workers.List() {
-		r = append(r, api.Server[com.Uid]{
+		r = append(r, api.Server{
 			Addr:    w.Addr,
 			Id:      w.Id(),
 			IsBusy:  !w.HasSlot(),

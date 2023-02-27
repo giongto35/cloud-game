@@ -15,7 +15,7 @@ type User struct {
 }
 
 type HasServerInfo interface {
-	GetServerList() []api.Server[com.Uid]
+	GetServerList() []api.Server
 }
 
 func (u *User) SetWorker(w *Worker) { u.w = w; u.w.Reserve() }
