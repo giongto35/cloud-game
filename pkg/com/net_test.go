@@ -38,10 +38,7 @@ func TestWebsocket(t *testing.T) {
 func testWebsocket(t *testing.T) {
 	server := newServer(t)
 	client := newClient(t, url.URL{Scheme: "ws", Host: "localhost:8080", Path: "/ws"})
-	client.OnPacket(func(in api.In[Uid]) error {
-		//	nop
-		return nil
-	})
+	client.OnPacket(func(in api.In[Uid]) error { return nil })
 	clDone := client.Listen()
 
 	if server.conn == nil {
@@ -79,7 +76,7 @@ func testWebsocket(t *testing.T) {
 				go func() {
 					defer wait.Done()
 					time.Sleep(time.Duration(rand.Intn(200-100)+100) * time.Millisecond)
-					vv, err := client.transport.SendSync(client.client.conn, &packet)
+					vv, err := client.transport.SendSync(client.sock.conn, &packet)
 					err = checkCall(vv, err, call.value)
 					if err != nil {
 						t.Errorf("%v", err)
@@ -90,7 +87,7 @@ func testWebsocket(t *testing.T) {
 		} else {
 			for i := 0; i < n; i++ {
 				packet := call.packet
-				vv, err := client.transport.SendSync(client.client.conn, &packet)
+				vv, err := client.transport.SendSync(client.sock.conn, &packet)
 				err = checkCall(vv, err, call.value)
 				if err != nil {
 					wait.Done()
@@ -103,7 +100,7 @@ func testWebsocket(t *testing.T) {
 	}
 	wait.Wait()
 
-	client.client.conn.Close()
+	client.sock.conn.Close()
 	client.transport.Clean()
 	<-clDone
 	server.conn.Close()
@@ -118,10 +115,10 @@ func newClient(t *testing.T, addr url.URL) *SocketClient[Uid, api.PT, api.In[Uid
 	}
 
 	transport := new(Transport[Uid, api.PT, api.In[Uid]])
-	transport.queue = Map[Uid, *request]{m: make(map[Uid]*request, 10)}
+	transport.calls = Map[Uid, *request]{m: make(map[Uid]*request, 10)}
 
 	return &SocketClient[Uid, api.PT, api.In[Uid], api.Out, *api.Out]{
-		client:    conn,
+		sock:      conn,
 		log:       logger.Default(),
 		transport: transport,
 	}

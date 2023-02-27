@@ -3,7 +3,6 @@ package com
 import (
 	"errors"
 	"fmt"
-	"log"
 	"net/http"
 	"net/url"
 	"time"
@@ -48,8 +47,10 @@ type Packet2[T any] interface {
 }
 
 type Transport[I Id, T PacketType, P Packet[I, T]] struct {
-	queue    Map[I, *request]
-	onPacket func(P)
+	CallTimeout time.Duration
+	Handler     func(P)
+
+	calls Map[I, *request]
 }
 
 type request struct {
@@ -58,7 +59,7 @@ type request struct {
 	response []byte
 }
 
-const callTimeout = 5 * time.Second
+const DefaultCallTimeout = 5 * time.Second
 
 var errCanceled = errors.New("canceled")
 var errTimeout = errors.New("timeout")
@@ -100,23 +101,24 @@ func (t *Transport[_, _, _]) SendAsync(w Writer, packet any) error {
 }
 
 func (t *Transport[I, _, _]) SendSync(w Writer, rq HasCallId) ([]byte, error) {
+	// generate new uid for the new call
+	// by setting it in the incoming rq param
 	id := I((*new(I)).Generate())
 	rq.SetGetId(id)
-	// !to expose channel instead of results
+
 	r, err := json.Marshal(rq)
 	if err != nil {
 		return nil, err
 	}
-
 	task := &request{done: make(chan struct{})}
-	t.queue.Put(id, task)
+	t.calls.Put(id, task)
 	w.Write(r)
 	select {
 	case <-task.done:
-	case <-time.After(callTimeout):
+	case <-time.After(t.callTimeout()):
 		task.err = errTimeout
 	}
-	t.queue.RemoveByKey(id)
+	t.calls.RemoveByKey(id)
 	return task.response, task.err
 }
 
@@ -127,22 +129,28 @@ func (t *Transport[_, _, P]) handleMessage(message []byte) error {
 	}
 	// if we have an id, then unblock blocking call with that id
 	if res.HasId() {
-		if blocked := t.queue.Pop(res.GetId()); blocked != nil {
+		if blocked := t.calls.Pop(res.GetId()); blocked != nil {
 			blocked.response = res.GetPayload()
 			close(blocked.done)
 			return nil
 		}
 	}
-	t.onPacket(res)
+	if t.Handler != nil {
+		t.Handler(res)
+	}
 	return nil
 }
 
-func (t *Transport[_, _, P]) SetPacketHandler(fn func(P)) { t.onPacket = fn }
+func (t *Transport[_, _, _]) callTimeout() time.Duration {
+	if t.CallTimeout > 0 {
+		return t.CallTimeout
+	}
+	return DefaultCallTimeout
+}
 
 func (t *Transport[_, _, _]) Clean() {
 	// drain cancels all what's left in the task queue.
-	t.queue.ForEach(func(task *request) {
-		log.Printf("%v", task)
+	t.calls.ForEach(func(task *request) {
 		if task.err == nil {
 			task.err = errCanceled
 		}

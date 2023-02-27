@@ -36,7 +36,7 @@ func (i In[I]) GetType() PT        { return i.T }
 func (i In[I]) HasId() bool        { return !i.Id.IsEmpty() }
 
 type Out struct {
-	Id      string `json:"id,omitempty"`
+	Id      string `json:"id,omitempty"` // string because omitempty won't work as intended with arrays
 	T       uint8  `json:"t"`
 	Payload any    `json:"p,omitempty"`
 }
