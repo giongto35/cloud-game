@@ -10,11 +10,13 @@ import (
 	"testing"
 	"time"
 
+	"github.com/giongto35/cloud-game/v2/pkg/api"
+	"github.com/giongto35/cloud-game/v2/pkg/logger"
 	"github.com/giongto35/cloud-game/v2/pkg/network/websocket"
 )
 
 func TestPackets(t *testing.T) {
-	r, err := json.Marshal(Out{Payload: "asd"})
+	r, err := json.Marshal(api.Out{Payload: "asd"})
 	if err != nil {
 		t.Fatalf("can't marshal packet")
 	}
@@ -36,8 +38,9 @@ func TestWebsocket(t *testing.T) {
 func testWebsocket(t *testing.T) {
 	server := newServer(t)
 	client := newClient(t, url.URL{Scheme: "ws", Host: "localhost:8080", Path: "/ws"})
-	client.OnPacket(func(packet In) {
+	client.OnPacket(func(in api.In[Uid]) error {
 		//	nop
+		return nil
 	})
 	clDone := client.Listen()
 
@@ -46,20 +49,20 @@ func testWebsocket(t *testing.T) {
 	}
 
 	calls := []struct {
-		packet     Out
+		packet     api.Out
 		concurrent bool
 		value      any
 	}{
-		{packet: Out{T: 10, Payload: "test"}, value: "test", concurrent: true},
-		{packet: Out{T: 10, Payload: "test2"}, value: "test2"},
-		{packet: Out{T: 11, Payload: "test3"}, value: "test3"},
-		{packet: Out{T: 99, Payload: ""}, value: ""},
-		{packet: Out{T: 0}},
-		{packet: Out{T: 12, Payload: 123}, value: 123},
-		{packet: Out{T: 10, Payload: false}, value: false},
-		{packet: Out{T: 10, Payload: true}, value: true},
-		{packet: Out{T: 11, Payload: []string{"test", "test", "test"}}, value: []string{"test", "test", "test"}},
-		{packet: Out{T: 22, Payload: []string{}}, value: []string{}},
+		{packet: api.Out{T: 10, Payload: "test"}, value: "test", concurrent: true},
+		{packet: api.Out{T: 10, Payload: "test2"}, value: "test2"},
+		{packet: api.Out{T: 11, Payload: "test3"}, value: "test3"},
+		{packet: api.Out{T: 99, Payload: ""}, value: ""},
+		{packet: api.Out{T: 0}},
+		{packet: api.Out{T: 12, Payload: 123}, value: 123},
+		{packet: api.Out{T: 10, Payload: false}, value: false},
+		{packet: api.Out{T: 10, Payload: true}, value: true},
+		{packet: api.Out{T: 11, Payload: []string{"test", "test", "test"}}, value: []string{"test", "test", "test"}},
+		{packet: api.Out{T: 22, Payload: []string{}}, value: []string{}},
 	}
 
 	const n = 42
@@ -76,7 +79,7 @@ func testWebsocket(t *testing.T) {
 				go func() {
 					defer wait.Done()
 					time.Sleep(time.Duration(rand.Intn(200-100)+100) * time.Millisecond)
-					vv, err := client.Call(&packet)
+					vv, err := client.transport.SendSync(client.client.conn, &packet)
 					err = checkCall(vv, err, call.value)
 					if err != nil {
 						t.Errorf("%v", err)
@@ -87,7 +90,7 @@ func testWebsocket(t *testing.T) {
 		} else {
 			for i := 0; i < n; i++ {
 				packet := call.packet
-				vv, err := client.Call(&packet)
+				vv, err := client.transport.SendSync(client.client.conn, &packet)
 				err = checkCall(vv, err, call.value)
 				if err != nil {
 					wait.Done()
@@ -100,19 +103,28 @@ func testWebsocket(t *testing.T) {
 	}
 	wait.Wait()
 
-	client.Close()
+	client.client.conn.Close()
+	client.transport.Clean()
 	<-clDone
 	server.conn.Close()
 	<-server.done
 }
 
-func newClient(t *testing.T, addr url.URL) *Client {
-	connector := ClientConnector{}
+func newClient(t *testing.T, addr url.URL) *SocketClient[Uid, api.PT, api.In[Uid], api.Out, *api.Out] {
+	connector := Client{}
 	conn, err := connector.Connect(addr)
 	if err != nil {
 		t.Fatalf("error: couldn't connect to %v because of %v", addr.String(), err)
 	}
-	return conn
+
+	transport := new(Transport[Uid, api.PT, api.In[Uid]])
+	transport.queue = Map[Uid, *request]{m: make(map[Uid]*request, 10)}
+
+	return &SocketClient[Uid, api.PT, api.In[Uid], api.Out, *api.Out]{
+		client:    conn,
+		log:       logger.Default(),
+		transport: transport,
+	}
 }
 
 func checkCall(v []byte, err error, need any) error {
@@ -162,7 +174,7 @@ type serverHandler struct {
 }
 
 func (s *serverHandler) serve(t *testing.T) func(w http.ResponseWriter, r *http.Request) {
-	connector := ServerConnector{}
+	connector := Server{}
 
 	return func(w http.ResponseWriter, r *http.Request) {
 		sock, err := connector.Server.Connect(w, r, nil)

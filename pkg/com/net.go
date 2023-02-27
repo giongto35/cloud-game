@@ -2,149 +2,150 @@ package com
 
 import (
 	"errors"
+	"fmt"
+	"log"
 	"net/http"
 	"net/url"
-	"sync"
 	"time"
 
 	"github.com/giongto35/cloud-game/v2/pkg/network/websocket"
 	"github.com/goccy/go-json"
 )
 
-type (
-	ClientConnector struct {
-		websocket.Client
-	}
-	ServerConnector struct {
-		websocket.Server
-	}
-	Client struct {
-		conn     *websocket.Connection
-		queue    map[Uid]*call
-		onPacket func(packet In)
-		mu       sync.Mutex
-	}
-	call struct {
-		done     chan struct{}
-		err      error
-		response []byte
-	}
-	HasCallId interface {
-		SetId(Uid)
-	}
-)
+type Id interface {
+	Uid
+	Generate() Uid
+	IsEmpty() bool
+	String() string
+}
 
-var (
-	errConnClosed = errors.New("connection closed")
-	errTimeout    = errors.New("timeout")
-)
+type HasCallId interface {
+	SetGetId(fmt.Stringer)
+}
+
+type Writer interface {
+	Write([]byte)
+}
+
+type PacketType interface {
+	~uint8
+}
+
+type Packet[I Id, T PacketType] interface {
+	GetId() I
+	GetType() T
+	GetPayload() []byte
+	HasId() bool
+}
+
+type Packet2[T any] interface {
+	SetId(string)
+	SetType(uint8)
+	SetPayload(any)
+	SetGetId(fmt.Stringer)
+	GetPayload() any
+	*T // non-interface type constraint element
+}
+
+type Transport[I Id, T PacketType, P Packet[I, T]] struct {
+	queue    Map[I, *request]
+	onPacket func(P)
+}
+
+type request struct {
+	done     chan struct{}
+	err      error
+	response []byte
+}
 
 const callTimeout = 5 * time.Second
 
-func (c *ClientConnector) Connect(address url.URL) (*Client, error) {
-	return connect(c.Client.Connect(address))
-}
+var errCanceled = errors.New("canceled")
+var errTimeout = errors.New("timeout")
 
-func (s *ServerConnector) Origin(host string) { s.Upgrader = websocket.NewUpgrader(host) }
+type (
+	Client struct {
+		websocket.Client
+	}
+	Server struct {
+		websocket.Server
+	}
+	Connection struct {
+		conn *websocket.Connection
+	}
+)
 
-func (s *ServerConnector) Connect(w http.ResponseWriter, r *http.Request) (*Client, error) {
+func (c *Client) Connect(addr url.URL) (*Connection, error) { return connect(c.Client.Connect(addr)) }
+
+func (s *Server) Origin(host string) { s.Upgrader = websocket.NewUpgrader(host) }
+
+func (s *Server) Connect(w http.ResponseWriter, r *http.Request) (*Connection, error) {
 	return connect(s.Server.Connect(w, r, nil))
 }
 
-func connect(conn *websocket.Connection, err error) (*Client, error) {
+func connect(conn *websocket.Connection, err error) (*Connection, error) {
 	if err != nil {
 		return nil, err
 	}
-	client := &Client{conn: conn, queue: make(map[Uid]*call, 1)}
-	client.conn.SetMessageHandler(client.handleMessage)
-	return client, nil
+	return &Connection{conn: conn}, nil
 }
 
-func (c *Client) OnPacket(fn func(packet In)) {
-	c.mu.Lock()
-	c.onPacket = fn
-	c.mu.Unlock()
+func (t *Transport[_, _, _]) SendAsync(w Writer, packet any) error {
+	r, err := json.Marshal(packet)
+	if err != nil {
+		return err
+	}
+	w.Write(r)
+	return nil
 }
 
-func (c *Client) Listen() chan struct{} {
-	c.mu.Lock()
-	defer c.mu.Unlock()
-	return c.conn.Listen()
-}
-
-func (c *Client) Close() {
-	// !to handle error
-	c.conn.Close()
-	c.drain(errConnClosed)
-}
-
-func (c *Client) Call(rq HasCallId) ([]byte, error) {
-	id := NewUid()
-	rq.SetId(id)
+func (t *Transport[I, _, _]) SendSync(w Writer, rq HasCallId) ([]byte, error) {
+	id := I((*new(I)).Generate())
+	rq.SetGetId(id)
 	// !to expose channel instead of results
 	r, err := json.Marshal(rq)
 	if err != nil {
-		//delete(c.queue, id)
 		return nil, err
 	}
 
-	task := &call{done: make(chan struct{})}
-	c.mu.Lock()
-	c.queue[id] = task
-	c.conn.Write(r)
-	c.mu.Unlock()
+	task := &request{done: make(chan struct{})}
+	t.queue.Put(id, task)
+	w.Write(r)
 	select {
 	case <-task.done:
 	case <-time.After(callTimeout):
 		task.err = errTimeout
 	}
+	t.queue.RemoveByKey(id)
 	return task.response, task.err
 }
 
-func (c *Client) SendPacket(packet any) error {
-	r, err := json.Marshal(packet)
-	if err != nil {
+func (t *Transport[_, _, P]) handleMessage(message []byte) error {
+	res := *new(P)
+	if err := json.Unmarshal(message, &res); err != nil {
 		return err
 	}
-	c.mu.Lock()
-	c.conn.Write(r)
-	c.mu.Unlock()
+	// if we have an id, then unblock blocking call with that id
+	if res.HasId() {
+		if blocked := t.queue.Pop(res.GetId()); blocked != nil {
+			blocked.response = res.GetPayload()
+			close(blocked.done)
+			return nil
+		}
+	}
+	t.onPacket(res)
 	return nil
 }
 
-func (c *Client) handleMessage(message []byte, err error) {
-	if err != nil {
-		return
-	}
+func (t *Transport[_, _, P]) SetPacketHandler(fn func(P)) { t.onPacket = fn }
 
-	var res In
-	if err = json.Unmarshal(message, &res); err != nil {
-		return
-	}
-
-	// if we have an id, then unblock blocking call with that id
-	if !res.Id.IsEmpty() {
-		c.mu.Lock()
-		blocked := c.queue[res.Id]
-		delete(c.queue, res.Id)
-		c.mu.Unlock()
-		if blocked != nil {
-			blocked.response = res.Payload
-			close(blocked.done)
-			return
-		}
-	}
-	c.onPacket(res)
-}
-
-// drain cancels all what's left in the task queue.
-func (c *Client) drain(err error) {
-	c.mu.Lock()
-	for _, task := range c.queue {
+func (t *Transport[_, _, _]) Clean() {
+	// drain cancels all what's left in the task queue.
+	t.queue.ForEach(func(task *request) {
+		log.Printf("%v", task)
 		if task.err == nil {
-			task.err = err
+			task.err = errCanceled
 		}
 		close(task.done)
-	}
-	c.mu.Unlock()
+	})
 }

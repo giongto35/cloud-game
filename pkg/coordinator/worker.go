@@ -6,11 +6,12 @@ import (
 
 	"github.com/giongto35/cloud-game/v2/pkg/api"
 	"github.com/giongto35/cloud-game/v2/pkg/com"
+	"github.com/giongto35/cloud-game/v2/pkg/logger"
 )
 
 type Worker struct {
-	com.SocketClient
-	com.RegionalClient
+	Connection
+	RegionalClient
 	slotted
 
 	Addr       string
@@ -19,53 +20,61 @@ type Worker struct {
 	RoomId     string // room reference
 	Tag        string
 	Zone       string
+
+	log *logger.Logger
+}
+
+type RegionalClient interface {
+	In(region string) bool
 }
 
 type HasUserRegistry interface {
 	Find(key com.Uid) (*User, error)
 }
 
-func NewWorker(conn *com.SocketClient, handshake api.ConnectionRequest[com.Uid]) *Worker {
+func NewWorker(conn Connection, handshake api.ConnectionRequest[com.Uid], log *logger.Logger) *Worker {
 	worker := &Worker{
-		SocketClient: *conn,
-		Addr:         handshake.Addr,
-		PingServer:   handshake.PingURL,
-		Port:         handshake.Port,
-		Tag:          handshake.Tag,
-		Zone:         handshake.Zone,
+		Connection: conn,
+		Addr:       handshake.Addr,
+		PingServer: handshake.PingURL,
+		Port:       handshake.Port,
+		Tag:        handshake.Tag,
+		Zone:       handshake.Zone,
+		log:        log,
 	}
 	return worker
 }
 
 func (w *Worker) HandleRequests(users HasUserRegistry) chan struct{} {
 	// !to make a proper multithreading abstraction
-	w.OnPacket(func(p com.In) error {
-		switch p.T {
+	w.OnPacket(func(p api.In[com.Uid]) error {
+		payload := p.GetPayload()
+		switch p.GetType() {
 		case api.RegisterRoom:
-			rq := com.Unwrap[api.RegisterRoomRequest](p.Payload)
+			rq := api.Unwrap[api.RegisterRoomRequest](payload)
 			if rq == nil {
 				return api.ErrMalformed
 			}
-			w.Log.Info().Msgf("set room [%v] = %v", w.Id(), *rq)
+			w.log.Info().Msgf("set room [%v] = %v", w.Id(), *rq)
 			w.HandleRegisterRoom(*rq)
 		case api.CloseRoom:
-			rq := com.Unwrap[api.CloseRoomRequest](p.Payload)
+			rq := api.Unwrap[api.CloseRoomRequest](payload)
 			if rq == nil {
 				return api.ErrMalformed
 			}
 			w.HandleCloseRoom(*rq)
 		case api.IceCandidate:
-			rq := com.Unwrap[api.WebrtcIceCandidateRequest[com.Uid]](p.Payload)
+			rq := api.Unwrap[api.WebrtcIceCandidateRequest[com.Uid]](payload)
 			if rq == nil {
 				return api.ErrMalformed
 			}
 			err := w.HandleIceCandidate(*rq, users)
 			if err != nil {
-				w.Log.Error().Err(err).Send()
+				w.log.Error().Err(err).Send()
 				return api.ErrMalformed
 			}
 		default:
-			w.Log.Warn().Msgf("Unknown packet: %+v", p)
+			w.log.Warn().Msgf("Unknown packet: %+v", p)
 		}
 		return nil
 	})
@@ -97,7 +106,7 @@ func (s *slotted) UnReserve() {
 func (s *slotted) FreeSlots() { atomic.StoreInt32((*int32)(s), 0) }
 
 func (w *Worker) Disconnect() {
-	w.SocketClient.Disconnect()
+	w.Connection.Disconnect()
 	w.RoomId = ""
 	w.FreeSlots()
 }

@@ -2,132 +2,110 @@ package com
 
 import (
 	"encoding/base64"
-	"sync"
 
-	"github.com/giongto35/cloud-game/v2/pkg/api"
 	"github.com/giongto35/cloud-game/v2/pkg/logger"
 	"github.com/goccy/go-json"
 )
 
-type (
-	In struct {
-		Id      Uid             `json:"id,omitempty"`
-		T       api.PT          `json:"t"`
-		Payload json.RawMessage `json:"p,omitempty"`
-	}
-	Out struct {
-		Id      string `json:"id,omitempty"`
-		T       uint8  `json:"t"`
-		Payload any    `json:"p,omitempty"`
-	}
-)
-
-func (o *Out) SetId(id Uid) { o.Id = id.String() }
-
-var (
-	EmptyPacket = Out{Payload: ""}
-	ErrPacket   = Out{Payload: "err"}
-	OkPacket    = Out{Payload: "ok"}
-)
-
-var outPool = sync.Pool{New: func() any { o := Out{}; return &o }}
-
-type (
-	NetClient[K comparable] interface {
-		Disconnect()
-		Id() K
-	}
-	RegionalClient interface {
-		In(region string) bool
-	}
-)
-
-type SocketConnector struct{}
-
-type SocketClient struct {
-	id     Uid
-	client *Client
-	Log    *logger.Logger
-	log    *logger.Logger // special logger with x -> y directions
+type NetClient[K comparable] interface {
+	Disconnect()
+	Id() K
 }
 
-func Unwrap[T any](data []byte) *T {
-	out := new(T)
-	if err := json.Unmarshal(data, out); err != nil {
-		return nil
-	}
-	return out
+type NetMap[K comparable, T NetClient[K]] struct{ Map[K, T] }
+
+func NewNetMap[K comparable, T NetClient[K]]() NetMap[K, T] {
+	return NetMap[K, T]{Map: Map[K, T]{m: make(map[K]T, 10)}}
 }
 
-func UnwrapChecked[T any](bytes []byte, err error) (*T, error) {
-	if err != nil {
-		return nil, err
-	}
-	return Unwrap[T](bytes), nil
+func (m *NetMap[K, T]) Add(client T)              { m.Put(client.Id(), client) }
+func (m *NetMap[K, T]) Remove(client T)           { m.RemoveByKey(client.Id()) }
+func (m *NetMap[K, T]) RemoveDisconnect(client T) { client.Disconnect(); m.Remove(client) }
+
+type SocketClient[I Id, T ~uint8, P Packet[I, T], X any, P2 Packet2[X]] struct {
+	id        Uid
+	client    *Connection
+	transport *Transport[I, T, P]
+	log       *logger.Logger // a special logger for showing x -> y directions
 }
 
-func NewConnection(conn *Client, id Uid, isServer bool, tag string, log *logger.Logger) *SocketClient {
+func NewConnection[I Id, T ~uint8, P Packet[I, T], X any, P2 Packet2[X]](conn *Connection, id Uid, isServer bool, log *logger.Logger) *SocketClient[I, T, P, X, P2] {
 	if id.IsNil() {
 		id = NewUid()
 	}
-	extLog := log.Extend(log.With().Str("cid", id.Short()))
 	dir := "→"
 	if isServer {
 		dir = "←"
 	}
-	intLog := extLog.Extend(
-		extLog.With().
-			Str(logger.ClientField, tag).
-			Str(logger.DirectionField, dir),
+	dirClLog := log.Extend(log.With().
+		Str("cid", id.Short()).
+		Str(logger.DirectionField, dir),
 	)
 
-	intLog.Debug().Msg("Connect")
-	return &SocketClient{id: id, client: conn, log: intLog, Log: extLog}
+	dirClLog.Debug().Msg("Connect")
+
+	transport := new(Transport[I, T, P])
+	transport.queue = Map[I, *request]{m: make(map[I]*request, 10)}
+
+	return &SocketClient[I, T, P, X, P2]{client: conn, id: id, log: dirClLog, transport: transport}
 }
 
-func (c *SocketClient) OnPacket(fn func(p In) error) {
-	logFn := func(p In) {
-		c.log.Debug().Str(logger.DirectionField, "←").Msgf("%s", p.T)
+func (c *SocketClient[_, _, P, _, _]) OnPacket(fn func(in P) error) {
+	c.transport.SetPacketHandler(func(p P) {
+		c.log.Debug().Str(logger.DirectionField, "←").Msgf("%v", p.GetType())
 		if err := fn(p); err != nil {
-			c.Log.Error().Err(err).Send()
+			c.log.Error().Err(err).Send()
 		}
-	}
-	c.client.OnPacket(logFn)
+	})
+	c.client.conn.SetMessageHandler(c.handleMessage)
 }
 
-func (c *SocketClient) Route(in In, out Out) {
-	rq := outPool.Get().(*Out)
-	rq.Id, rq.T, rq.Payload = in.Id.String(), uint8(in.T), out.Payload
-	defer outPool.Put(rq)
-	_ = c.client.SendPacket(rq)
+func (c *SocketClient[_, _, _, _, _]) handleMessage(message []byte, err error) {
+	if err != nil {
+		c.log.Error().Err(err).Send()
+		return
+	}
+	if err = c.transport.handleMessage(message); err != nil {
+		c.log.Error().Err(err).Send()
+		return
+	}
+}
+
+func (c *SocketClient[_, _, P, X, P2]) Route(in P, out P2) {
+	rq := P2(new(X))
+	rq.SetId(in.GetId().String())
+	rq.SetType(uint8(in.GetType()))
+	rq.SetPayload(out.GetPayload())
+	_ = c.transport.SendAsync(c.client.conn, rq)
 }
 
 // Send makes a blocking call.
-func (c *SocketClient) Send(t api.PT, data any) ([]byte, error) {
-	c.log.Debug().Str(logger.DirectionField, "→").Msgf("ᵇ%s", t)
-	rq := outPool.Get().(*Out)
-	rq.T, rq.Payload = uint8(t), data
-	defer outPool.Put(rq)
-	return c.client.Call(rq)
+func (c *SocketClient[_, T, P, X, P2]) Send(t T, data any) ([]byte, error) {
+	c.log.Debug().Str(logger.DirectionField, "→").Msgf("ᵇ%v", t)
+	rq := P2(new(X))
+	rq.SetType(uint8(t))
+	rq.SetPayload(data)
+	return c.transport.SendSync(c.client.conn, rq)
 }
 
 // Notify just sends a message and goes further.
-func (c *SocketClient) Notify(t api.PT, data any) {
-	c.log.Debug().Str(logger.DirectionField, "→").Msgf("%s", t)
-	rq := outPool.Get().(*Out)
-	rq.Id, rq.T, rq.Payload = "", uint8(t), data
-	defer outPool.Put(rq)
-	_ = c.client.SendPacket(rq)
+func (c *SocketClient[_, T, P, X, P2]) Notify(t T, data any) {
+	c.log.Debug().Str(logger.DirectionField, "→").Msgf("%v", t)
+	rq := P2(new(X))
+	rq.SetType(uint8(t))
+	rq.SetPayload(data)
+	_ = c.transport.SendAsync(c.client.conn, rq)
 }
 
-func (c *SocketClient) Disconnect() {
-	c.client.Close()
+func (c *SocketClient[_, _, _, _, _]) Disconnect() {
+	c.client.conn.Close()
+	c.transport.Clean()
 	c.log.Debug().Str(logger.DirectionField, "x").Msg("Close")
 }
 
-func (c *SocketClient) Id() Uid               { return c.id }
-func (c *SocketClient) Listen() chan struct{} { return c.client.Listen() }
-func (c *SocketClient) String() string        { return c.Id().String() }
+func (c *SocketClient[_, _, _, _, _]) Id() Uid               { return c.id }
+func (c *SocketClient[_, _, _, _, _]) Listen() chan struct{} { return c.client.conn.Listen() }
+func (c *SocketClient[_, _, _, _, _]) String() string        { return c.Id().String() }
 
 // ToBase64Json encodes data to a URL-encoded Base64+JSON string.
 func ToBase64Json(data any) (string, error) {

@@ -1,10 +1,10 @@
 package coordinator
 
 import (
-	"github.com/giongto35/cloud-game/v2/pkg/com"
 	"sort"
 
 	"github.com/giongto35/cloud-game/v2/pkg/api"
+	"github.com/giongto35/cloud-game/v2/pkg/com"
 	"github.com/giongto35/cloud-game/v2/pkg/config/coordinator"
 	"github.com/giongto35/cloud-game/v2/pkg/games"
 )
@@ -12,7 +12,7 @@ import (
 func (u *User) HandleWebrtcInit() {
 	resp, err := u.w.WebrtcInit(u.Id())
 	if err != nil || resp == nil || *resp == api.EMPTY {
-		u.Log.Error().Err(err).Msg("malformed WebRTC init response")
+		u.log.Error().Err(err).Msg("malformed WebRTC init response")
 		return
 	}
 	u.SendWebrtcOffer(string(*resp))
@@ -34,7 +34,7 @@ func (u *User) HandleStartGame(rq api.GameStartUserRequest, launcher games.Launc
 	if rq.RoomId != "" {
 		name := launcher.ExtractAppNameFromUrl(rq.RoomId)
 		if name == "" {
-			u.Log.Warn().Msg("couldn't decode game name from the room id")
+			u.log.Warn().Msg("couldn't decode game name from the room id")
 			return
 		}
 		game = name
@@ -42,20 +42,20 @@ func (u *User) HandleStartGame(rq api.GameStartUserRequest, launcher games.Launc
 
 	gameInfo, err := launcher.FindAppByName(game)
 	if err != nil {
-		u.Log.Error().Err(err).Str("game", game).Msg("couldn't find game info")
+		u.log.Error().Err(err).Str("game", game).Msg("couldn't find game info")
 		return
 	}
 
 	startGameResp, err := u.w.StartGame(u.Id(), gameInfo, rq)
 	if err != nil || startGameResp == nil {
-		u.Log.Error().Err(err).Msg("malformed game start response")
+		u.log.Error().Err(err).Msg("malformed game start response")
 		return
 	}
 	if startGameResp.Rid == "" {
-		u.Log.Error().Msg("there is no room")
+		u.log.Error().Msg("there is no room")
 		return
 	}
-	u.Log.Info().Str("id", startGameResp.Rid).Msg("Received room response from worker")
+	u.log.Info().Str("id", startGameResp.Rid).Msg("Received room response from worker")
 	u.StartGame()
 
 	// send back recording status
@@ -92,7 +92,7 @@ func (u *User) HandleChangePlayer(rq api.ChangePlayerUserRequest) {
 	resp, err := u.w.ChangePlayer(u.Id(), int(rq))
 	// !to make it a little less convoluted
 	if err != nil || resp == nil || *resp == -1 {
-		u.Log.Error().Err(err).Msg("player switch failed for some reason")
+		u.log.Error().Err(err).Msg("player switch failed for some reason")
 		return
 	}
 	u.Notify(api.ChangePlayer, rq)
@@ -105,16 +105,16 @@ func (u *User) HandleRecordGame(rq api.RecordGameRequest[com.Uid]) {
 		return
 	}
 
-	u.Log.Debug().Msgf("??? room: %v, rec: %v user: %v", u.w.RoomId, rq.Active, rq.User)
+	u.log.Debug().Msgf("??? room: %v, rec: %v user: %v", u.w.RoomId, rq.Active, rq.User)
 
 	if u.w.RoomId == "" {
-		u.Log.Error().Msg("Recording in the empty room is not allowed!")
+		u.log.Error().Msg("Recording in the empty room is not allowed!")
 		return
 	}
 
 	resp, err := u.w.RecordGame(u.Id(), rq.Active, rq.User)
 	if err != nil {
-		u.Log.Error().Err(err).Msg("malformed game record request")
+		u.log.Error().Err(err).Msg("malformed game record request")
 		return
 	}
 	u.Notify(api.RecordGame, resp)

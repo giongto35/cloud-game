@@ -28,7 +28,7 @@ type Server struct {
 
 type Connection struct {
 	alive    bool
-	callback func(message []byte, err error)
+	callback MessageHandler
 	conn     deadlineConn
 	done     chan struct{}
 	once     sync.Once
@@ -41,6 +41,8 @@ type deadlineConn struct {
 	wt time.Duration
 	mu sync.Mutex // needed for concurrent writes of Gorilla
 }
+
+type MessageHandler func([]byte, error)
 
 type Upgrader struct {
 	websocket.Upgrader
@@ -211,7 +213,7 @@ func newSocket(conn *websocket.Conn, pingPong bool) *Connection {
 	}
 }
 
-func (c *Connection) SetMessageHandler(fn func([]byte, error)) { c.callback = fn }
+func (c *Connection) SetMessageHandler(fn MessageHandler) { c.callback = fn }
 
 func (c *Connection) Listen() chan struct{} {
 	c.alive = true

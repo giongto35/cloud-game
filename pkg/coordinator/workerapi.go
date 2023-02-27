@@ -7,7 +7,7 @@ import (
 )
 
 func (w *Worker) WebrtcInit(id com.Uid) (*api.WebrtcInitResponse, error) {
-	return com.UnwrapChecked[api.WebrtcInitResponse](
+	return api.UnwrapChecked[api.WebrtcInitResponse](
 		w.Send(api.WebrtcInit, api.WebrtcInitRequest[com.Uid]{Stateful: api.Stateful[com.Uid]{Id: id}}))
 }
 
@@ -20,7 +20,7 @@ func (w *Worker) WebrtcIceCandidate(id com.Uid, can string) {
 }
 
 func (w *Worker) StartGame(id com.Uid, app games.AppMeta, req api.GameStartUserRequest) (*api.StartGameResponse, error) {
-	return com.UnwrapChecked[api.StartGameResponse](
+	return api.UnwrapChecked[api.StartGameResponse](
 		w.Send(api.StartGame, api.StartGameRequest[com.Uid]{
 			StatefulRoom: StateRoom(id, req.RoomId),
 			Game:         api.GameInfo{Name: app.Name, Base: app.Base, Path: app.Path, Type: app.Type},
@@ -35,17 +35,17 @@ func (w *Worker) QuitGame(id com.Uid) {
 }
 
 func (w *Worker) SaveGame(id com.Uid) (*api.SaveGameResponse, error) {
-	return com.UnwrapChecked[api.SaveGameResponse](
+	return api.UnwrapChecked[api.SaveGameResponse](
 		w.Send(api.SaveGame, api.SaveGameRequest[com.Uid]{StatefulRoom: StateRoom(id, w.RoomId)}))
 }
 
 func (w *Worker) LoadGame(id com.Uid) (*api.LoadGameResponse, error) {
-	return com.UnwrapChecked[api.LoadGameResponse](
+	return api.UnwrapChecked[api.LoadGameResponse](
 		w.Send(api.LoadGame, api.LoadGameRequest[com.Uid]{StatefulRoom: StateRoom(id, w.RoomId)}))
 }
 
 func (w *Worker) ChangePlayer(id com.Uid, index int) (*api.ChangePlayerResponse, error) {
-	return com.UnwrapChecked[api.ChangePlayerResponse](
+	return api.UnwrapChecked[api.ChangePlayerResponse](
 		w.Send(api.ChangePlayer, api.ChangePlayerRequest[com.Uid]{StatefulRoom: StateRoom(id, w.RoomId), Index: index}))
 }
 
@@ -54,7 +54,7 @@ func (w *Worker) ToggleMultitap(id com.Uid) {
 }
 
 func (w *Worker) RecordGame(id com.Uid, rec bool, recUser string) (*api.RecordGameResponse, error) {
-	return com.UnwrapChecked[api.RecordGameResponse](
+	return api.UnwrapChecked[api.RecordGameResponse](
 		w.Send(api.RecordGame, api.RecordGameRequest[com.Uid]{StatefulRoom: StateRoom(id, w.RoomId), Active: rec, User: recUser}))
 }
 

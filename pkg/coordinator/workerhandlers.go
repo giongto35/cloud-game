@@ -17,7 +17,7 @@ func (w *Worker) HandleIceCandidate(rq api.WebrtcIceCandidateRequest[com.Uid], u
 	if usr, err := users.Find(rq.Id); err == nil {
 		usr.SendWebrtcIceCandidate(rq.Candidate)
 	} else {
-		w.Log.Warn().Str("id", rq.Id.String()).Msg("unknown session")
+		w.log.Warn().Str("id", rq.Id.String()).Msg("unknown session")
 	}
 	return nil
 }
