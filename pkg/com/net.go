@@ -118,7 +118,6 @@ func (t *Transport[I, _, _]) SendSync(w Writer, rq HasCallId) ([]byte, error) {
 	case <-time.After(t.callTimeout()):
 		task.err = errTimeout
 	}
-	t.calls.RemoveByKey(id)
 	return task.response, task.err
 }
 

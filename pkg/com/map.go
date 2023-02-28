@@ -13,12 +13,18 @@ type Map[K comparable, V any] struct {
 
 var ErrNotFound = errors.New("not found")
 
-func (m *Map[K, _]) Has(key K) bool      { _, err := m.Find(key); return err == nil }
-func (m *Map[_, _]) IsEmpty() bool       { m.mu.Lock(); defer m.mu.Unlock(); return len(m.m) == 0 }
-func (m *Map[K, T]) List() map[K]T       { return m.m }
-func (m *Map[K, T]) Pop(key K) T         { m.mu.Lock(); defer m.mu.Unlock(); return m.m[key] }
+func (m *Map[K, _]) Has(key K) bool { _, err := m.Find(key); return err == nil }
+func (m *Map[_, _]) IsEmpty() bool  { m.mu.Lock(); defer m.mu.Unlock(); return len(m.m) == 0 }
+func (m *Map[K, T]) List() map[K]T  { return m.m }
+func (m *Map[K, T]) Pop(key K) T {
+	m.mu.Lock()
+	v := m.m[key]
+	delete(m.m, key)
+	m.mu.Unlock()
+	return v
+}
 func (m *Map[K, T]) Put(key K, client T) { m.mu.Lock(); m.m[key] = client; m.mu.Unlock() }
-func (m *Map[K, _]) RemoveByKey(key K)   { m.mu.Lock(); delete(m.m, key); m.mu.Unlock() }
+func (m *Map[K, _]) Remove(key K)        { m.mu.Lock(); delete(m.m, key); m.mu.Unlock() }
 
 // Find searches for the first match by a specified key value,
 // returns ErrNotFound otherwise.

@@ -14,7 +14,7 @@ func NewNetMap[K comparable, T NetClient[K]]() NetMap[K, T] {
 }
 
 func (m *NetMap[K, T]) Add(client T)              { m.Put(client.Id(), client) }
-func (m *NetMap[K, T]) Remove(client T)           { m.RemoveByKey(client.Id()) }
+func (m *NetMap[K, T]) Remove(client T)           { m.Map.Remove(client.Id()) }
 func (m *NetMap[K, T]) RemoveDisconnect(client T) { client.Disconnect(); m.Remove(client) }
 
 type SocketClient[I Id, T ~uint8, P Packet[I, T], X any, P2 Packet2[X]] struct {
