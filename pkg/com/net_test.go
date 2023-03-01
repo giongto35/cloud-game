@@ -10,13 +10,35 @@ import (
 	"testing"
 	"time"
 
-	"github.com/giongto35/cloud-game/v2/pkg/api"
 	"github.com/giongto35/cloud-game/v2/pkg/logger"
 	"github.com/giongto35/cloud-game/v2/pkg/network/websocket"
 )
 
+type TestIn struct {
+	Id      Uid             `json:"id,omitempty"`
+	T       uint8           `json:"t"`
+	Payload json.RawMessage `json:"p,omitempty"`
+}
+
+func (i TestIn) GetId() Uid         { return i.Id }
+func (i TestIn) GetType() uint8     { return i.T }
+func (i TestIn) GetPayload() []byte { return i.Payload }
+func (i TestIn) HasId() bool        { return !i.Id.IsNil() }
+
+type TestOut struct {
+	Id      string `json:"id,omitempty"`
+	T       uint8  `json:"t"`
+	Payload any    `json:"p,omitempty"`
+}
+
+func (o *TestOut) SetId(s string)                 { o.Id = s }
+func (o *TestOut) SetType(u uint8)                { o.T = u }
+func (o *TestOut) SetPayload(a any)               { o.Payload = a }
+func (o *TestOut) SetGetId(stringer fmt.Stringer) { o.Id = stringer.String() }
+func (o *TestOut) GetPayload() any                { return o.Payload }
+
 func TestPackets(t *testing.T) {
-	r, err := json.Marshal(api.Out{Payload: "asd"})
+	r, err := json.Marshal(TestOut{Payload: "asd"})
 	if err != nil {
 		t.Fatalf("can't marshal packet")
 	}
@@ -38,7 +60,7 @@ func TestWebsocket(t *testing.T) {
 func testWebsocket(t *testing.T) {
 	server := newServer(t)
 	client := newClient(t, url.URL{Scheme: "ws", Host: "localhost:8080", Path: "/ws"})
-	client.OnPacket(func(in api.In[Uid]) error { return nil })
+	client.OnPacket(func(in TestIn) error { return nil })
 	clDone := client.Listen()
 
 	if server.conn == nil {
@@ -46,20 +68,20 @@ func testWebsocket(t *testing.T) {
 	}
 
 	calls := []struct {
-		packet     api.Out
+		packet     TestOut
 		concurrent bool
 		value      any
 	}{
-		{packet: api.Out{T: 10, Payload: "test"}, value: "test", concurrent: true},
-		{packet: api.Out{T: 10, Payload: "test2"}, value: "test2"},
-		{packet: api.Out{T: 11, Payload: "test3"}, value: "test3"},
-		{packet: api.Out{T: 99, Payload: ""}, value: ""},
-		{packet: api.Out{T: 0}},
-		{packet: api.Out{T: 12, Payload: 123}, value: 123},
-		{packet: api.Out{T: 10, Payload: false}, value: false},
-		{packet: api.Out{T: 10, Payload: true}, value: true},
-		{packet: api.Out{T: 11, Payload: []string{"test", "test", "test"}}, value: []string{"test", "test", "test"}},
-		{packet: api.Out{T: 22, Payload: []string{}}, value: []string{}},
+		{packet: TestOut{T: 10, Payload: "test"}, value: "test", concurrent: true},
+		{packet: TestOut{T: 10, Payload: "test2"}, value: "test2"},
+		{packet: TestOut{T: 11, Payload: "test3"}, value: "test3"},
+		{packet: TestOut{T: 99, Payload: ""}, value: ""},
+		{packet: TestOut{T: 0}},
+		{packet: TestOut{T: 12, Payload: 123}, value: 123},
+		{packet: TestOut{T: 10, Payload: false}, value: false},
+		{packet: TestOut{T: 10, Payload: true}, value: true},
+		{packet: TestOut{T: 11, Payload: []string{"test", "test", "test"}}, value: []string{"test", "test", "test"}},
+		{packet: TestOut{T: 22, Payload: []string{}}, value: []string{}},
 	}
 
 	const n = 42
@@ -107,21 +129,15 @@ func testWebsocket(t *testing.T) {
 	<-server.done
 }
 
-func newClient(t *testing.T, addr url.URL) *SocketClient[Uid, api.PT, api.In[Uid], api.Out, *api.Out] {
+func newClient(t *testing.T, addr url.URL) *SocketClient[Uid, uint8, TestIn, TestOut, *TestOut] {
 	connector := Client{}
 	conn, err := connector.Connect(addr)
 	if err != nil {
 		t.Fatalf("error: couldn't connect to %v because of %v", addr.String(), err)
 	}
-
-	transport := new(Transport[Uid, api.PT, api.In[Uid]])
-	transport.calls = Map[Uid, *request]{m: make(map[Uid]*request, 10)}
-
-	return &SocketClient[Uid, api.PT, api.In[Uid], api.Out, *api.Out]{
-		sock:      conn,
-		log:       logger.Default(),
-		transport: transport,
-	}
+	tr := new(Transport[Uid, uint8, TestIn])
+	tr.calls = Map[Uid, *request]{m: make(map[Uid]*request, 10)}
+	return &SocketClient[Uid, uint8, TestIn, TestOut, *TestOut]{sock: conn, log: logger.Default(), transport: tr}
 }
 
 func checkCall(v []byte, err error, need any) error {
