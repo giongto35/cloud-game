@@ -53,10 +53,14 @@ func newCoordinatorConnection(host string, conf worker.Worker, addr string, log 
 		return nil, err
 	}
 
-	log1 := log.Extend(log.With().Str(logger.ClientField, "c"))
-	client := com.NewConnection[com.Uid, api.PT, api.In[com.Uid], api.Out](conn, id, false, log1)
-	cidLog := log.Extend(log.With().Str("cid", client.Id().Short()))
-	return &coordinator{Connection: client, log: cidLog}, nil
+	client := com.NewConnection[com.Uid, api.PT, api.In[com.Uid], api.Out](
+		conn, id,
+		log.Extend(log.With().Str(logger.ClientField, "c")),
+	)
+	return &coordinator{
+		Connection: client,
+		log:        log.Extend(log.With().Str("cid", client.Id().Short())),
+	}, nil
 }
 
 func (c *coordinator) HandleRequests(w *Worker) chan struct{} {

@@ -58,7 +58,7 @@ func (h *Hub) handleUserConnection() http.HandlerFunc {
 			h.log.Error().Err(err).Msg("couldn't init user connection")
 			return
 		}
-		client := com.NewConnection[com.Uid, api.PT, api.In[com.Uid], api.Out](conn, com.NewUid(), true, log1)
+		client := com.NewConnection[com.Uid, api.PT, api.In[com.Uid], api.Out](conn, com.NewUid(), log1)
 		cidLog := h.log.Extend(h.log.With().Str("cid", client.Id().Short()))
 		user := &User{Connection: client, log: cidLog}
 		defer h.users.RemoveDisconnect(user)
@@ -123,7 +123,7 @@ func (h *Hub) handleWorkerConnection() http.HandlerFunc {
 			h.log.Error().Err(err).Msg("couldn't init worker connection")
 			return
 		}
-		client := com.NewConnection[com.Uid, api.PT, api.In[com.Uid], api.Out](conn, handshake.Id, true, cLog)
+		client := com.NewConnection[com.Uid, api.PT, api.In[com.Uid], api.Out](conn, handshake.Id, cLog)
 		cidLog := h.log.Extend(h.log.With().Str("cid", client.Id().Short()))
 		worker := NewWorker(client, *handshake, cidLog)
 		defer h.workers.RemoveDisconnect(worker)

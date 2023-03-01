@@ -213,6 +213,10 @@ func newSocket(conn *websocket.Conn, pingPong bool) *Connection {
 	}
 }
 
+// IsServer returns true if the connection has server capabilities and not just a client.
+// For now, we assume every connection with ping/pong handler is a server.
+func (c *Connection) IsServer() bool { return c.pingPong }
+
 func (c *Connection) SetMessageHandler(fn MessageHandler) { c.callback = fn }
 
 func (c *Connection) Listen() chan struct{} {

@@ -24,12 +24,12 @@ type SocketClient[I Id, T ~uint8, P Packet[I, T], X any, P2 Packet2[X]] struct {
 	log       *logger.Logger // a special logger for showing x -> y directions
 }
 
-func NewConnection[I Id, T ~uint8, P Packet[I, T], X any, P2 Packet2[X]](conn *Connection, id Uid, isServer bool, log *logger.Logger) *SocketClient[I, T, P, X, P2] {
+func NewConnection[I Id, T ~uint8, P Packet[I, T], X any, P2 Packet2[X]](conn *Connection, id Uid, log *logger.Logger) *SocketClient[I, T, P, X, P2] {
 	if id.IsNil() {
 		id = NewUid()
 	}
 	dir := "→"
-	if isServer {
+	if conn.IsServer() {
 		dir = "←"
 	}
 	dirClLog := log.Extend(log.With().
