@@ -129,15 +129,15 @@ func testWebsocket(t *testing.T) {
 	<-server.done
 }
 
-func newClient(t *testing.T, addr url.URL) *SocketClient[Uid, uint8, TestIn, TestOut, *TestOut] {
+func newClient(t *testing.T, addr url.URL) *SocketClient[uint8, TestIn, TestOut, *TestOut] {
 	connector := Client{}
 	conn, err := connector.Connect(addr)
 	if err != nil {
 		t.Fatalf("error: couldn't connect to %v because of %v", addr.String(), err)
 	}
-	tr := new(Transport[Uid, uint8, TestIn])
+	tr := new(Transport[uint8, TestIn])
 	tr.calls = Map[Uid, *request]{m: make(map[Uid]*request, 10)}
-	return &SocketClient[Uid, uint8, TestIn, TestOut, *TestOut]{sock: conn, log: logger.Default(), transport: tr}
+	return &SocketClient[uint8, TestIn, TestOut, *TestOut]{sock: conn, log: logger.Default(), transport: tr}
 }
 
 func checkCall(v []byte, err error, need any) error {

@@ -33,7 +33,7 @@ type HasUserRegistry interface {
 }
 
 func NewWorker(conn *com.Connection, handshake api.ConnectionRequest[com.Uid], log *logger.Logger) *Worker {
-	socket := com.NewConnection[com.Uid, api.PT, api.In[com.Uid], api.Out](conn, handshake.Id, log)
+	socket := com.NewConnection[api.PT, api.In[com.Uid], api.Out](conn, handshake.Id, log)
 	worker := &Worker{
 		Connection: socket,
 		Addr:       handshake.Addr,

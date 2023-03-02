@@ -53,7 +53,7 @@ func newCoordinatorConnection(host string, conf worker.Worker, addr string, log 
 		return nil, err
 	}
 
-	client := com.NewConnection[com.Uid, api.PT, api.In[com.Uid], api.Out](
+	client := com.NewConnection[api.PT, api.In[com.Uid], api.Out](
 		conn, id,
 		log.Extend(log.With().Str(logger.ClientField, "c")),
 	)

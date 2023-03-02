@@ -3,6 +3,7 @@ package com
 import (
 	"errors"
 	"fmt"
+	"github.com/rs/xid"
 	"net/http"
 	"net/url"
 	"time"
@@ -11,12 +12,17 @@ import (
 	"github.com/goccy/go-json"
 )
 
-type Id interface {
-	Uid
-	Generate() Uid
-	IsEmpty() bool
-	String() string
+type Uid struct {
+	xid.ID
 }
+
+var NilUid = Uid{xid.NilID()}
+
+func NewUid() Uid { return Uid{xid.New()} }
+
+func (u Uid) GetId() Uid    { return u }
+func (u Uid) IsEmpty() bool { return u.IsNil() }
+func (u Uid) Short() string { return u.String()[:3] + "." + u.String()[len(u.String())-3:] }
 
 type HasCallId interface {
 	SetGetId(fmt.Stringer)
@@ -26,12 +32,8 @@ type Writer interface {
 	Write([]byte)
 }
 
-type PacketType interface {
-	~uint8
-}
-
-type Packet[I Id, T PacketType] interface {
-	GetId() I
+type Packet[T ~uint8] interface {
+	GetId() Uid
 	GetType() T
 	GetPayload() []byte
 	HasId() bool
@@ -46,11 +48,11 @@ type Packet2[T any] interface {
 	*T // non-interface type constraint element
 }
 
-type Transport[I Id, T PacketType, P Packet[I, T]] struct {
+type Transport[T ~uint8, P Packet[T]] struct {
 	CallTimeout time.Duration
 	Handler     func(P)
 
-	calls Map[I, *request]
+	calls Map[Uid, *request]
 }
 
 type request struct {
@@ -93,7 +95,7 @@ func connect(conn *websocket.Connection, err error) (*Connection, error) {
 	return &Connection{conn: conn}, nil
 }
 
-func (t *Transport[_, _, _]) SendAsync(w Writer, packet any) error {
+func (t *Transport[_, _]) SendAsync(w Writer, packet any) error {
 	r, err := json.Marshal(packet)
 	if err != nil {
 		return err
@@ -102,10 +104,10 @@ func (t *Transport[_, _, _]) SendAsync(w Writer, packet any) error {
 	return nil
 }
 
-func (t *Transport[I, _, _]) SendSync(w Writer, rq HasCallId) ([]byte, error) {
+func (t *Transport[_, _]) SendSync(w Writer, rq HasCallId) ([]byte, error) {
 	// generate new uid for the new call
 	// by setting it in the incoming rq param
-	id := I((*new(I)).Generate())
+	id := NewUid()
 	rq.SetGetId(id)
 
 	r, err := json.Marshal(rq)
@@ -123,7 +125,7 @@ func (t *Transport[I, _, _]) SendSync(w Writer, rq HasCallId) ([]byte, error) {
 	return task.response, task.err
 }
 
-func (t *Transport[_, _, P]) handleMessage(message []byte) error {
+func (t *Transport[_, P]) handleMessage(message []byte) error {
 	res := *new(P)
 	if err := json.Unmarshal(message, &res); err != nil {
 		return err
@@ -142,14 +144,14 @@ func (t *Transport[_, _, P]) handleMessage(message []byte) error {
 	return nil
 }
 
-func (t *Transport[_, _, _]) callTimeout() time.Duration {
+func (t *Transport[_, _]) callTimeout() time.Duration {
 	if t.CallTimeout > 0 {
 		return t.CallTimeout
 	}
 	return DefaultCallTimeout
 }
 
-func (t *Transport[_, _, _]) Clean() {
+func (t *Transport[_, _]) Clean() {
 	// drain cancels all what's left in the task queue.
 	t.calls.ForEach(func(task *request) {
 		if task.err == nil {
