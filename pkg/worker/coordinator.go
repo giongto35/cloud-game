@@ -37,7 +37,7 @@ func newCoordinatorConnection(host string, conf worker.Worker, addr string, log 
 
 	log.Debug().
 		Str(logger.ClientField, "c").
-		Str(logger.DirectionField, "→").
+		Str(logger.DirectionField, logger.MarkOut).
 		Msgf("Handshake %s", address.String())
 
 	id := com.NewUid()

@@ -44,7 +44,9 @@ func (c *SocketClient[I, T, P, _, _]) OnPacket(fn func(in P) error) {
 	transport := new(Transport[I, T, P])
 	transport.calls = Map[I, *request]{m: make(map[I]*request, 10)}
 	transport.Handler = func(p P) {
-		c.log.Debug().Str(logger.DirectionField, "←").Msgf("%v", p.GetType())
+		c.log.Debug().
+			Str(logger.DirectionField, logger.MarkIn).
+			Msgf("%v", p.GetType())
 		if err := fn(p); err != nil {
 			c.log.Error().Err(err).Send()
 		}
@@ -74,7 +76,7 @@ func (c *SocketClient[_, _, P, X, P2]) Route(in P, out P2) {
 
 // Send makes a blocking call.
 func (c *SocketClient[_, T, P, X, P2]) Send(t T, data any) ([]byte, error) {
-	c.log.Debug().Str(logger.DirectionField, "→").Msgf("ᵇ%v", t)
+	c.log.Debug().Str(logger.DirectionField, logger.MarkOut).Msgf("ᵇ%v", t)
 	rq := P2(new(X))
 	rq.SetType(uint8(t))
 	rq.SetPayload(data)
@@ -83,7 +85,7 @@ func (c *SocketClient[_, T, P, X, P2]) Send(t T, data any) ([]byte, error) {
 
 // Notify just sends a message and goes further.
 func (c *SocketClient[_, T, P, X, P2]) Notify(t T, data any) {
-	c.log.Debug().Str(logger.DirectionField, "→").Msgf("%v", t)
+	c.log.Debug().Str(logger.DirectionField, logger.MarkOut).Msgf("%v", t)
 	rq := P2(new(X))
 	rq.SetType(uint8(t))
 	rq.SetPayload(data)
@@ -93,7 +95,7 @@ func (c *SocketClient[_, T, P, X, P2]) Notify(t T, data any) {
 func (c *SocketClient[_, _, _, _, _]) Disconnect() {
 	c.sock.conn.Close()
 	c.transport.Clean()
-	c.log.Debug().Str(logger.DirectionField, "x").Msg("Close")
+	c.log.Debug().Str(logger.DirectionField, logger.MarkCross).Msg("Close")
 }
 
 func (c *SocketClient[_, _, _, _, _]) Id() Uid               { return c.id }

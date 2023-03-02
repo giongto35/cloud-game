@@ -45,35 +45,38 @@ func NewHub(conf coordinator.Config, lib games.GameLibrary, log *logger.Logger) 
 
 // handleUserConnection handles all connections from user/frontend.
 func (h *Hub) handleUserConnection() http.HandlerFunc {
-	connector := com.Server{}
+	var connector com.Server
 	connector.Origin(h.conf.Coordinator.Origin.UserWs)
 
-	log1 := h.log.Extend(h.log.With().Str(logger.ClientField, "u"))
+	log := h.log.Extend(h.log.With().
+		Str(logger.ClientField, "u").
+		Str(logger.DirectionField, logger.MarkIn),
+	)
 
 	return func(w http.ResponseWriter, r *http.Request) {
-		log1.Debug().Str(logger.DirectionField, "←").Msgf("Handshake %v", r.Host)
+		h.log.Debug().Msgf("Handshake %v", r.Host)
 
 		conn, err := connector.Connect(w, r)
 		if err != nil {
-			h.log.Error().Err(err).Msg("couldn't init user connection")
+			h.log.Error().Err(err).Msg("user connection fail")
 			return
 		}
-		client := com.NewConnection[com.Uid, api.PT, api.In[com.Uid], api.Out](conn, com.NewUid(), log1)
-		cidLog := h.log.Extend(h.log.With().Str("cid", client.Id().Short()))
-		user := &User{Connection: client, log: cidLog}
+
+		user := NewUser(conn, log)
 		defer h.users.RemoveDisconnect(user)
 		done := user.HandleRequests(h, h.launcher, h.conf)
-
-		worker := h.findWorkerFor(user, r.URL.Query())
+		params := r.URL.Query()
+		worker := h.findWorkerFor(user, params, h.log.Extend(h.log.With().Str("cid", user.Id().Short())))
 		if worker == nil {
 			h.log.Info().Msg("no free workers")
 			return
 		}
-
-		user.SetWorker(worker)
+		user.Bind(worker)
 		h.users.Add(user)
 		user.InitSession(worker.Id().String(), h.conf.Webrtc.IceServers, h.launcher.GetAppNames())
-		log1.Info().Str(logger.DirectionField, "+").Msgf("user %s", user.Id())
+		log.Info().
+			Str(logger.DirectionField, logger.MarkPlus).
+			Msgf("user %s", user.Id())
 		<-done
 	}
 }
@@ -91,13 +94,16 @@ func RequestToHandshake(data string) (*api.ConnectionRequest[com.Uid], error) {
 
 // handleWorkerConnection handles all connections from a new worker to coordinator.
 func (h *Hub) handleWorkerConnection() http.HandlerFunc {
-	connector := com.Server{}
+	var connector com.Server
 	connector.Origin(h.conf.Coordinator.Origin.WorkerWs)
 
-	cLog := h.log.Extend(h.log.With().Str(logger.ClientField, "w"))
+	log := h.log.Extend(h.log.With().
+		Str(logger.ClientField, "w").
+		Str(logger.DirectionField, logger.MarkIn),
+	)
 
 	return func(w http.ResponseWriter, r *http.Request) {
-		cLog.Debug().Str(logger.DirectionField, "←").Msgf("Handshake %v", r.Host)
+		h.log.Debug().Msgf("Handshake %v", r.Host)
 
 		handshake, err := RequestToHandshake(r.URL.Query().Get(api.DataQueryParam))
 		if err != nil {
@@ -120,16 +126,17 @@ func (h *Hub) handleWorkerConnection() http.HandlerFunc {
 
 		conn, err := connector.Connect(w, r)
 		if err != nil {
-			h.log.Error().Err(err).Msg("couldn't init worker connection")
+			log.Error().Err(err).Msg("worker connection fail")
 			return
 		}
-		client := com.NewConnection[com.Uid, api.PT, api.In[com.Uid], api.Out](conn, handshake.Id, cLog)
-		cidLog := h.log.Extend(h.log.With().Str("cid", client.Id().Short()))
-		worker := NewWorker(client, *handshake, cidLog)
+
+		worker := NewWorker(conn, *handshake, log)
 		defer h.workers.RemoveDisconnect(worker)
 		done := worker.HandleRequests(&h.users)
 		h.workers.Add(worker)
-		cLog.Info().Str(logger.DirectionField, "+").Msgf("worker %s", worker.PrintInfo())
+		log.Info().
+			Str(logger.DirectionField, logger.MarkPlus).
+			Msgf("worker %s", worker.PrintInfo())
 		<-done
 	}
 }
@@ -152,29 +159,29 @@ func (h *Hub) GetServerList() (r []api.Server) {
 
 // findWorkerFor searches a free worker for the user depending on
 // various conditions.
-func (h *Hub) findWorkerFor(usr *User, q url.Values) *Worker {
-	usr.log.Debug().Msg("Search available workers")
+func (h *Hub) findWorkerFor(usr *User, q url.Values, log *logger.Logger) *Worker {
+	log.Debug().Msg("Search available workers")
 	roomId := q.Get(api.RoomIdQueryParam)
 	zone := q.Get(api.ZoneQueryParam)
 	wid := q.Get(api.WorkerIdParam)
 
 	var worker *Worker
 	if worker = h.findWorkerByRoom(roomId, zone); worker != nil {
-		usr.log.Debug().Str("room", roomId).Msg("An existing worker has been found")
+		log.Debug().Str("room", roomId).Msg("An existing worker has been found")
 	} else if worker = h.findWorkerById(wid, h.conf.Coordinator.Debug); worker != nil {
-		usr.log.Debug().Msgf("Worker with id: %v has been found", wid)
+		log.Debug().Msgf("Worker with id: %v has been found", wid)
 	} else {
 		switch h.conf.Coordinator.Selector {
 		case coordinator.SelectByPing:
-			usr.log.Debug().Msgf("Searching fastest free worker...")
+			log.Debug().Msgf("Searching fastest free worker...")
 			if worker = h.findFastestWorker(zone,
 				func(servers []string) (map[string]int64, error) { return usr.CheckLatency(servers) }); worker != nil {
-				usr.log.Debug().Msg("The fastest worker has been found")
+				log.Debug().Msg("The fastest worker has been found")
 			}
 		default:
-			usr.log.Debug().Msgf("Searching any free worker...")
+			log.Debug().Msgf("Searching any free worker...")
 			if worker = h.find1stFreeWorker(zone); worker != nil {
-				usr.log.Debug().Msgf("Found next free worker")
+				log.Debug().Msgf("Found next free worker")
 			}
 		}
 	}

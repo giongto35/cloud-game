@@ -30,6 +30,11 @@ const (
 const (
 	ClientField    = "c"
 	DirectionField = "d"
+	MarkNone       = " "
+	MarkIn         = "←"
+	MarkOut        = "→"
+	MarkPlus       = "+"
+	MarkCross      = "x"
 )
 
 func (l Level) String() string {
@@ -108,8 +113,8 @@ func NewConsole(isDebug bool, tag string, noColor bool) *Logger {
 		Str("pid", fmt.Sprintf("%4x", pid)).
 		Str("s", tag).
 		Str("m", "").
-		Str(DirectionField, " ").
-		Str(ClientField, " ").
+		Str(DirectionField, MarkNone).
+		Str(ClientField, MarkNone).
 		// Str("tag", tag). use when a file writer
 		Timestamp().Logger()
 	return &Logger{logger: &logger}
