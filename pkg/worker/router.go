@@ -12,7 +12,7 @@ import (
 // Rooms and users has 1-to-n relationship.
 type Router struct {
 	room  GamingRoom
-	users com.NetMap[com.Uid, *Session]
+	users com.NetMap[*Session]
 }
 
 // Session represents WebRTC connection of the user.
@@ -23,7 +23,7 @@ type Session struct {
 	room GamingRoom // back reference
 }
 
-func NewRouter() Router { return Router{users: com.NewNetMap[com.Uid, *Session]()} }
+func NewRouter() Router { return Router{users: com.NewNetMap[*Session]()} }
 
 func (r *Router) SetRoom(room GamingRoom) { r.room = room }
 func (r *Router) AddUser(user *Session)   { r.users.Add(user) }

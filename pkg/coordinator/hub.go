@@ -27,15 +27,15 @@ type Hub struct {
 	conf     coordinator.Config
 	launcher games.Launcher
 	log      *logger.Logger
-	users    com.NetMap[com.Uid, *User]
-	workers  com.NetMap[com.Uid, *Worker]
+	users    com.NetMap[*User]
+	workers  com.NetMap[*Worker]
 }
 
 func NewHub(conf coordinator.Config, lib games.GameLibrary, log *logger.Logger) *Hub {
 	return &Hub{
 		conf:     conf,
-		users:    com.NewNetMap[com.Uid, *User](),
-		workers:  com.NewNetMap[com.Uid, *Worker](),
+		users:    com.NewNetMap[*User](),
+		workers:  com.NewNetMap[*Worker](),
 		launcher: games.NewGameLauncher(lib),
 		log:      log,
 	}
@@ -72,9 +72,7 @@ func (h *Hub) handleUserConnection() http.HandlerFunc {
 		user.Bind(worker)
 		h.users.Add(user)
 		user.InitSession(worker.Id().String(), h.conf.Webrtc.IceServers, h.launcher.GetAppNames())
-		log.Info().
-			Str(logger.DirectionField, logger.MarkPlus).
-			Msgf("user %s", user.Id())
+		log.Info().Str(logger.DirectionField, logger.MarkPlus).Msgf("user %s", user.Id())
 		<-done
 	}
 }

@@ -35,7 +35,7 @@ type Room struct {
 	id       string
 	done     chan struct{}
 	vEncoder *encoder.VideoEncoder
-	users    com.NetMap[com.Uid, *Session] // a list of users in the room
+	users    com.NetMap[*Session] // a list of users in the room
 	emulator emulator.Emulator
 	onClose  func(self *Room)
 	closed   bool
@@ -48,7 +48,7 @@ func NewRoom(id string, game games.GameMetadata, onClose func(*Room), conf worke
 	}
 	log = log.Extend(log.With().Str("room", id[:5]))
 	log.Info().Str("game", game.Name).Send()
-	room := &Room{id: id, users: com.NewNetMap[com.Uid, *Session](), done: make(chan struct{}), onClose: onClose, log: log}
+	room := &Room{id: id, users: com.NewNetMap[*Session](), done: make(chan struct{}), onClose: onClose, log: log}
 
 	nano, err := libretro.NewFrontend(conf.Emulator, log)
 	if err != nil {

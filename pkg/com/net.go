@@ -53,9 +53,14 @@ type Packet2[T any] interface {
 	*T // non-interface type constraint element
 }
 
+type Transport interface {
+	SetMessageHandler(func([]byte, error))
+}
+
 type RPC[T ~uint8, P Packet[T]] struct {
 	CallTimeout time.Duration
 	Handler     func(P)
+	Transport   Transport
 
 	calls Map[Uid, *request]
 }
