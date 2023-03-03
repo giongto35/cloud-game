@@ -18,8 +18,7 @@ import (
 type Connection interface {
 	Disconnect()
 	Id() com.Uid
-	Listen() chan struct{}
-	OnPacket(func(api.In[com.Uid]) error)
+	ProcessPackets(func(api.In[com.Uid]) error) chan struct{}
 
 	Send(api.PT, any) ([]byte, error)
 	Notify(api.PT, any)

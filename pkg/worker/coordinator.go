@@ -13,8 +13,7 @@ import (
 type Connection interface {
 	Disconnect()
 	Id() com.Uid
-	Listen() chan struct{}
-	OnPacket(func(api.In[com.Uid]) error)
+	ProcessPackets(func(api.In[com.Uid]) error) chan struct{}
 
 	Send(api.PT, any) ([]byte, error)
 	Notify(api.PT, any)
@@ -70,7 +69,7 @@ func (c *coordinator) HandleRequests(w *Worker) chan struct{} {
 	}
 	skipped := api.Out{}
 
-	c.OnPacket(func(x api.In[com.Uid]) (err error) {
+	return c.ProcessPackets(func(x api.In[com.Uid]) (err error) {
 		var out api.Out
 		switch x.T {
 		case api.WebrtcInit:
@@ -147,7 +146,6 @@ func (c *coordinator) HandleRequests(w *Worker) chan struct{} {
 		}
 		return err
 	})
-	return c.Listen()
 }
 
 func (c *coordinator) RegisterRoom(id string) { c.Notify(api.RegisterRoom, id) }

@@ -49,8 +49,7 @@ func NewWorker(conn *com.Connection, handshake api.ConnectionRequest[com.Uid], l
 }
 
 func (w *Worker) HandleRequests(users HasUserRegistry) chan struct{} {
-	// !to make a proper multithreading abstraction
-	w.OnPacket(func(p api.In[com.Uid]) error {
+	return w.ProcessPackets(func(p api.In[com.Uid]) error {
 		payload := p.GetPayload()
 		switch p.GetType() {
 		case api.RegisterRoom:
@@ -81,7 +80,6 @@ func (w *Worker) HandleRequests(users HasUserRegistry) chan struct{} {
 		}
 		return nil
 	})
-	return w.Listen()
 }
 
 // In say whether some worker from this region (zone).

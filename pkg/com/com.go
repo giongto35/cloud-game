@@ -40,7 +40,7 @@ func NewConnection[T ~uint8, P Packet[T], X any, P2 Packet2[X]](conn *Connection
 	return &SocketClient[T, P, X, P2]{sock: conn, id: id, log: dirClLog}
 }
 
-func (c *SocketClient[T, P, _, _]) OnPacket(fn func(in P) error) {
+func (c *SocketClient[T, P, _, _]) ProcessPackets(fn func(in P) error) chan struct{} {
 	c.rpc = new(RPC[T, P])
 	c.rpc.calls = Map[Uid, *request]{m: make(map[Uid]*request, 10)}
 	c.rpc.Handler = func(p P) {
@@ -50,6 +50,7 @@ func (c *SocketClient[T, P, _, _]) OnPacket(fn func(in P) error) {
 		}
 	}
 	c.sock.conn.SetMessageHandler(c.handleMessage)
+	return c.sock.conn.Listen()
 }
 
 func (c *SocketClient[_, _, _, _]) handleMessage(message []byte, err error) {
@@ -95,6 +96,5 @@ func (c *SocketClient[_, _, _, _]) Disconnect() {
 	c.log.Debug().Str(logger.DirectionField, logger.MarkCross).Msg("Close")
 }
 
-func (c *SocketClient[_, _, _, _]) Id() Uid               { return c.id }
-func (c *SocketClient[_, _, _, _]) Listen() chan struct{} { return c.sock.conn.Listen() }
-func (c *SocketClient[_, _, _, _]) String() string        { return c.Id().String() }
+func (c *SocketClient[_, _, _, _]) Id() Uid        { return c.id }
+func (c *SocketClient[_, _, _, _]) String() string { return c.Id().String() }

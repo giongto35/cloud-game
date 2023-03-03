@@ -3,13 +3,13 @@ package com
 import (
 	"errors"
 	"fmt"
-	"github.com/rs/xid"
 	"net/http"
 	"net/url"
 	"time"
 
 	"github.com/giongto35/cloud-game/v2/pkg/network/websocket"
 	"github.com/goccy/go-json"
+	"github.com/rs/xid"
 )
 
 type Uid struct {
@@ -102,9 +102,8 @@ func (t *RPC[_, _]) Send(w Writer, packet any) error {
 }
 
 func (t *RPC[_, _]) Call(w Writer, rq HasCallId) ([]byte, error) {
-	// generate new uid for the new call
-	// by setting it in the incoming rq param
 	id := NewUid()
+	// set new request id for the external request structure as string
 	rq.SetGetId(id)
 
 	r, err := json.Marshal(rq)

@@ -15,9 +15,9 @@ import (
 )
 
 type TestIn struct {
-	Id      Uid             `json:"id,omitempty"`
-	T       uint8           `json:"t"`
-	Payload json.RawMessage `json:"p,omitempty"`
+	Id      Uid
+	T       uint8
+	Payload json.RawMessage
 }
 
 func (i TestIn) GetId() Uid         { return i.Id }
@@ -25,9 +25,9 @@ func (i TestIn) GetType() uint8     { return i.T }
 func (i TestIn) GetPayload() []byte { return i.Payload }
 
 type TestOut struct {
-	Id      string `json:"id,omitempty"`
-	T       uint8  `json:"t"`
-	Payload any    `json:"p,omitempty"`
+	Id      string
+	T       uint8
+	Payload any
 }
 
 func (o *TestOut) SetId(s string)                 { o.Id = s }
@@ -35,14 +35,6 @@ func (o *TestOut) SetType(u uint8)                { o.T = u }
 func (o *TestOut) SetPayload(a any)               { o.Payload = a }
 func (o *TestOut) SetGetId(stringer fmt.Stringer) { o.Id = stringer.String() }
 func (o *TestOut) GetPayload() any                { return o.Payload }
-
-func TestPackets(t *testing.T) {
-	r, err := json.Marshal(TestOut{Payload: "asd"})
-	if err != nil {
-		t.Fatalf("can't marshal packet")
-	}
-	t.Logf("PACKET: %v", string(r))
-}
 
 func TestWebsocket(t *testing.T) {
 	testCases := []struct {
@@ -59,8 +51,7 @@ func TestWebsocket(t *testing.T) {
 func testWebsocket(t *testing.T) {
 	server := newServer(t)
 	client := newClient(t, url.URL{Scheme: "ws", Host: "localhost:8080", Path: "/ws"})
-	client.OnPacket(func(in TestIn) error { return nil })
-	clDone := client.Listen()
+	clDone := client.ProcessPackets(func(in TestIn) error { return nil })
 
 	if server.conn == nil {
 		t.Fatalf("couldn't make new socket")
