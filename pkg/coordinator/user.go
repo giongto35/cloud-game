@@ -23,6 +23,7 @@ func NewUser(conn *com.Connection, log *logger.Logger) *User {
 	return &User{
 		Connection: socket,
 		log: log.Extend(log.With().
+			Str(logger.ClientField, logger.MarkNone).
 			Str(logger.DirectionField, logger.MarkNone).
 			Str("cid", socket.Id().Short())),
 	}
@@ -44,7 +45,6 @@ func (u *User) Disconnect() {
 
 func (u *User) HandleRequests(info HasServerInfo, launcher games.Launcher, conf coordinator.Config) chan struct{} {
 	return u.ProcessPackets(func(x api.In[com.Uid]) error {
-		// !to use proper channels
 		payload := x.GetPayload()
 		switch x.GetType() {
 		case api.WebrtcInit:

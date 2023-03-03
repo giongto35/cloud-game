@@ -42,7 +42,7 @@ func (u *User) HandleStartGame(rq api.GameStartUserRequest, launcher games.Launc
 
 	gameInfo, err := launcher.FindAppByName(game)
 	if err != nil {
-		u.log.Error().Err(err).Str("game", game).Msg("couldn't find game info")
+		u.log.Error().Err(err).Send()
 		return
 	}
 

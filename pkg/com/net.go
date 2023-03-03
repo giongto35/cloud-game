@@ -105,6 +105,10 @@ func connect(conn *websocket.Connection, err error) (*Connection, error) {
 	return &Connection{conn: conn}, nil
 }
 
+func NewRPC[T ~uint8, P Packet[T]]() *RPC[T, P] {
+	return &RPC[T, P]{calls: Map[Uid, *request]{m: make(map[Uid]*request, 10)}}
+}
+
 func (t *RPC[_, _]) Send(w Writer, packet any) error {
 	r, err := json.Marshal(packet)
 	if err != nil {

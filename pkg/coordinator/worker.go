@@ -42,6 +42,7 @@ func NewWorker(conn *com.Connection, handshake api.ConnectionRequest[com.Uid], l
 		Tag:        handshake.Tag,
 		Zone:       handshake.Zone,
 		log: log.Extend(log.With().
+			Str(logger.ClientField, logger.MarkNone).
 			Str(logger.DirectionField, logger.MarkNone).
 			Str("cid", socket.Id().Short())),
 	}

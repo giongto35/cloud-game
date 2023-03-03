@@ -39,15 +39,14 @@ func NewConnection[T ~uint8, P Packet[T], X any, P2 Packet2[X]](conn *Connection
 }
 
 func (c *SocketClient[T, P, _, _]) ProcessPackets(fn func(in P) error) chan struct{} {
-	c.rpc = new(RPC[T, P])
-	c.rpc.calls = Map[Uid, *request]{m: make(map[Uid]*request, 10)}
+	c.rpc = NewRPC[T, P]()
 	c.rpc.Handler = func(p P) {
 		c.log.Debug().Str(logger.DirectionField, logger.MarkIn).Msgf("%v", p.GetType())
-		if err := fn(p); err != nil {
+		if err := fn(p); err != nil { // 3rd handler
 			c.log.Error().Err(err).Send()
 		}
 	}
-	c.sock.conn.SetMessageHandler(c.handleMessage)
+	c.sock.conn.SetMessageHandler(c.handleMessage) // 1st handler
 	return c.sock.conn.Listen()
 }
 
@@ -56,7 +55,7 @@ func (c *SocketClient[_, _, _, _]) handleMessage(message []byte, err error) {
 		c.log.Error().Err(err).Send()
 		return
 	}
-	if err = c.rpc.handleMessage(message); err != nil {
+	if err = c.rpc.handleMessage(message); err != nil { // 2nd handler
 		c.log.Error().Err(err).Send()
 		return
 	}
@@ -67,7 +66,9 @@ func (c *SocketClient[_, P, X, P2]) Route(in P, out P2) {
 	rq.SetId(in.GetId().String())
 	rq.SetType(uint8(in.GetType()))
 	rq.SetPayload(out.GetPayload())
-	_ = c.rpc.Send(c.sock.conn, rq)
+	if err := c.rpc.Send(c.sock.conn, rq); err != nil {
+		c.log.Error().Err(err).Msgf("message route fail")
+	}
 }
 
 // Send makes a blocking call.
@@ -85,7 +86,9 @@ func (c *SocketClient[T, P, X, P2]) Notify(t T, data any) {
 	rq := P2(new(X))
 	rq.SetType(uint8(t))
 	rq.SetPayload(data)
-	_ = c.rpc.Send(c.sock.conn, rq)
+	if err := c.rpc.Send(c.sock.conn, rq); err != nil {
+		c.log.Error().Err(err).Msgf("notify fail")
+	}
 }
 
 func (c *SocketClient[_, _, _, _]) Disconnect() {
