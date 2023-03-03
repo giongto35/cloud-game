@@ -26,9 +26,9 @@ func NewConnection[T ~uint8, P Packet[T], X any, P2 Packet2[X]](conn *Connection
 	if id.IsNil() {
 		id = NewUid()
 	}
-	dir := "→"
+	dir := logger.MarkOut
 	if conn.IsServer() {
-		dir = "←"
+		dir = logger.MarkIn
 	}
 	dirClLog := log.Extend(log.With().
 		Str("cid", id.Short()).
