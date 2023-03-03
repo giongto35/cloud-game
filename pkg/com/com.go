@@ -18,10 +18,10 @@ func (m *NetMap[K, T]) Remove(client T)           { m.Map.Remove(client.Id()) }
 func (m *NetMap[K, T]) RemoveDisconnect(client T) { client.Disconnect(); m.Remove(client) }
 
 type SocketClient[T ~uint8, P Packet[T], X any, P2 Packet2[X]] struct {
-	id        Uid
-	sock      *Connection
-	transport *Transport[T, P]
-	log       *logger.Logger // a special logger for showing x -> y directions
+	id   Uid
+	rpc  *RPC[T, P]
+	sock *Connection
+	log  *logger.Logger // a special logger for showing x -> y directions
 }
 
 func NewConnection[T ~uint8, P Packet[T], X any, P2 Packet2[X]](conn *Connection, id Uid, log *logger.Logger) *SocketClient[T, P, X, P2] {
@@ -41,17 +41,14 @@ func NewConnection[T ~uint8, P Packet[T], X any, P2 Packet2[X]](conn *Connection
 }
 
 func (c *SocketClient[T, P, _, _]) OnPacket(fn func(in P) error) {
-	transport := new(Transport[T, P])
-	transport.calls = Map[Uid, *request]{m: make(map[Uid]*request, 10)}
-	transport.Handler = func(p P) {
-		c.log.Debug().
-			Str(logger.DirectionField, logger.MarkIn).
-			Msgf("%v", p.GetType())
+	c.rpc = new(RPC[T, P])
+	c.rpc.calls = Map[Uid, *request]{m: make(map[Uid]*request, 10)}
+	c.rpc.Handler = func(p P) {
+		c.log.Debug().Str(logger.DirectionField, logger.MarkIn).Msgf("%v", p.GetType())
 		if err := fn(p); err != nil {
 			c.log.Error().Err(err).Send()
 		}
 	}
-	c.transport = transport
 	c.sock.conn.SetMessageHandler(c.handleMessage)
 }
 
@@ -60,7 +57,7 @@ func (c *SocketClient[_, _, _, _]) handleMessage(message []byte, err error) {
 		c.log.Error().Err(err).Send()
 		return
 	}
-	if err = c.transport.handleMessage(message); err != nil {
+	if err = c.rpc.handleMessage(message); err != nil {
 		c.log.Error().Err(err).Send()
 		return
 	}
@@ -71,7 +68,7 @@ func (c *SocketClient[_, P, X, P2]) Route(in P, out P2) {
 	rq.SetId(in.GetId().String())
 	rq.SetType(uint8(in.GetType()))
 	rq.SetPayload(out.GetPayload())
-	_ = c.transport.SendAsync(c.sock.conn, rq)
+	_ = c.rpc.Send(c.sock.conn, rq)
 }
 
 // Send makes a blocking call.
@@ -80,7 +77,7 @@ func (c *SocketClient[T, P, X, P2]) Send(t T, data any) ([]byte, error) {
 	rq := P2(new(X))
 	rq.SetType(uint8(t))
 	rq.SetPayload(data)
-	return c.transport.SendSync(c.sock.conn, rq)
+	return c.rpc.Call(c.sock.conn, rq)
 }
 
 // Notify just sends a message and goes further.
@@ -89,12 +86,12 @@ func (c *SocketClient[T, P, X, P2]) Notify(t T, data any) {
 	rq := P2(new(X))
 	rq.SetType(uint8(t))
 	rq.SetPayload(data)
-	_ = c.transport.SendAsync(c.sock.conn, rq)
+	_ = c.rpc.Send(c.sock.conn, rq)
 }
 
 func (c *SocketClient[_, _, _, _]) Disconnect() {
 	c.sock.conn.Close()
-	c.transport.Clean()
+	c.rpc.Cleanup()
 	c.log.Debug().Str(logger.DirectionField, logger.MarkCross).Msg("Close")
 }
 

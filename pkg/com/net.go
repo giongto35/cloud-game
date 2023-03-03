@@ -48,7 +48,7 @@ type Packet2[T any] interface {
 	*T // non-interface type constraint element
 }
 
-type Transport[T ~uint8, P Packet[T]] struct {
+type RPC[T ~uint8, P Packet[T]] struct {
 	CallTimeout time.Duration
 	Handler     func(P)
 
@@ -95,7 +95,7 @@ func connect(conn *websocket.Connection, err error) (*Connection, error) {
 	return &Connection{conn: conn}, nil
 }
 
-func (t *Transport[_, _]) SendAsync(w Writer, packet any) error {
+func (t *RPC[_, _]) Send(w Writer, packet any) error {
 	r, err := json.Marshal(packet)
 	if err != nil {
 		return err
@@ -104,7 +104,7 @@ func (t *Transport[_, _]) SendAsync(w Writer, packet any) error {
 	return nil
 }
 
-func (t *Transport[_, _]) SendSync(w Writer, rq HasCallId) ([]byte, error) {
+func (t *RPC[_, _]) Call(w Writer, rq HasCallId) ([]byte, error) {
 	// generate new uid for the new call
 	// by setting it in the incoming rq param
 	id := NewUid()
@@ -125,7 +125,7 @@ func (t *Transport[_, _]) SendSync(w Writer, rq HasCallId) ([]byte, error) {
 	return task.response, task.err
 }
 
-func (t *Transport[_, P]) handleMessage(message []byte) error {
+func (t *RPC[_, P]) handleMessage(message []byte) error {
 	res := *new(P)
 	if err := json.Unmarshal(message, &res); err != nil {
 		return err
@@ -144,14 +144,14 @@ func (t *Transport[_, P]) handleMessage(message []byte) error {
 	return nil
 }
 
-func (t *Transport[_, _]) callTimeout() time.Duration {
+func (t *RPC[_, _]) callTimeout() time.Duration {
 	if t.CallTimeout > 0 {
 		return t.CallTimeout
 	}
 	return DefaultCallTimeout
 }
 
-func (t *Transport[_, _]) Clean() {
+func (t *RPC[_, _]) Cleanup() {
 	// drain cancels all what's left in the task queue.
 	t.calls.ForEach(func(task *request) {
 		if task.err == nil {

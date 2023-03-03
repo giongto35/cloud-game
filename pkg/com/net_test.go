@@ -98,7 +98,7 @@ func testWebsocket(t *testing.T) {
 				go func() {
 					defer wait.Done()
 					time.Sleep(time.Duration(rand.Intn(200-100)+100) * time.Millisecond)
-					vv, err := client.transport.SendSync(client.sock.conn, &packet)
+					vv, err := client.rpc.Call(client.sock.conn, &packet)
 					err = checkCall(vv, err, call.value)
 					if err != nil {
 						t.Errorf("%v", err)
@@ -109,7 +109,7 @@ func testWebsocket(t *testing.T) {
 		} else {
 			for i := 0; i < n; i++ {
 				packet := call.packet
-				vv, err := client.transport.SendSync(client.sock.conn, &packet)
+				vv, err := client.rpc.Call(client.sock.conn, &packet)
 				err = checkCall(vv, err, call.value)
 				if err != nil {
 					wait.Done()
@@ -123,7 +123,7 @@ func testWebsocket(t *testing.T) {
 	wait.Wait()
 
 	client.sock.conn.Close()
-	client.transport.Clean()
+	client.rpc.Cleanup()
 	<-clDone
 	server.conn.Close()
 	<-server.done
@@ -135,9 +135,9 @@ func newClient(t *testing.T, addr url.URL) *SocketClient[uint8, TestIn, TestOut,
 	if err != nil {
 		t.Fatalf("error: couldn't connect to %v because of %v", addr.String(), err)
 	}
-	tr := new(Transport[uint8, TestIn])
-	tr.calls = Map[Uid, *request]{m: make(map[Uid]*request, 10)}
-	return &SocketClient[uint8, TestIn, TestOut, *TestOut]{sock: conn, log: logger.Default(), transport: tr}
+	rpc := new(RPC[uint8, TestIn])
+	rpc.calls = Map[Uid, *request]{m: make(map[Uid]*request, 10)}
+	return &SocketClient[uint8, TestIn, TestOut, *TestOut]{sock: conn, log: logger.Default(), rpc: rpc}
 }
 
 func checkCall(v []byte, err error, need any) error {
