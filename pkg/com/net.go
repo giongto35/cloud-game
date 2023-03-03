@@ -20,8 +20,6 @@ var NilUid = Uid{xid.NilID()}
 
 func NewUid() Uid { return Uid{xid.New()} }
 
-func (u Uid) GetId() Uid    { return u }
-func (u Uid) IsEmpty() bool { return u.IsNil() }
 func (u Uid) Short() string { return u.String()[:3] + "." + u.String()[len(u.String())-3:] }
 
 type HasCallId interface {
@@ -36,7 +34,6 @@ type Packet[T ~uint8] interface {
 	GetId() Uid
 	GetType() T
 	GetPayload() []byte
-	HasId() bool
 }
 
 type Packet2[T any] interface {
@@ -131,8 +128,9 @@ func (t *RPC[_, P]) handleMessage(message []byte) error {
 		return err
 	}
 	// if we have an id, then unblock blocking call with that id
-	if res.HasId() {
-		if blocked := t.calls.Pop(res.GetId()); blocked != nil {
+	id := res.GetId()
+	if id != NilUid {
+		if blocked := t.calls.Pop(id); blocked != nil {
 			blocked.response = res.GetPayload()
 			close(blocked.done)
 			return nil

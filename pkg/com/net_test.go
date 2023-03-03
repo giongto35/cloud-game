@@ -23,7 +23,6 @@ type TestIn struct {
 func (i TestIn) GetId() Uid         { return i.Id }
 func (i TestIn) GetType() uint8     { return i.T }
 func (i TestIn) GetPayload() []byte { return i.Payload }
-func (i TestIn) HasId() bool        { return !i.Id.IsNil() }
 
 type TestOut struct {
 	Id      string `json:"id,omitempty"`

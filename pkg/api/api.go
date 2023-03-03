@@ -23,7 +23,6 @@ import (
 
 type (
 	Id interface {
-		IsEmpty() bool
 		String() string
 	}
 	Stateful[T Id] struct {
@@ -48,7 +47,6 @@ type In[I Id] struct {
 func (i In[I]) GetId() I           { return i.Id }
 func (i In[I]) GetPayload() []byte { return i.Payload }
 func (i In[I]) GetType() PT        { return i.T }
-func (i In[I]) HasId() bool        { return !i.Id.IsEmpty() }
 
 type Out struct {
 	Id      string `json:"id,omitempty"` // string because omitempty won't work as intended with arrays
