@@ -20,6 +20,14 @@ var NilUid = Uid{xid.NilID()}
 
 func NewUid() Uid { return Uid{xid.New()} }
 
+func UidFromString(id string) (Uid, error) {
+	x, err := xid.FromString(id)
+	if err != nil {
+		return NilUid, err
+	}
+	return Uid{x}, nil
+}
+
 func (u Uid) Short() string { return u.String()[:3] + "." + u.String()[len(u.String())-3:] }
 
 type HasCallId interface {

@@ -12,7 +12,6 @@ import (
 	"github.com/giongto35/cloud-game/v2/pkg/config/coordinator"
 	"github.com/giongto35/cloud-game/v2/pkg/games"
 	"github.com/giongto35/cloud-game/v2/pkg/logger"
-	"github.com/rs/xid"
 )
 
 type Connection interface {
@@ -259,28 +258,31 @@ func (h *Hub) findFastestWorker(region string, fn func(addresses []string) (map[
 	return bestWorker
 }
 
-func (h *Hub) findWorkerById(workerId string, useAllWorkers bool) *Worker {
-	// when we select one particular worker
-	if workerId != "" {
-		if xid_, err := xid.FromString(workerId); err == nil {
-			if useAllWorkers {
-				for _, w := range h.getAvailableWorkers("") {
-					if xid_.String() == w.Id().String() {
-						return w
-					}
-				}
-			} else {
-				for _, w := range h.getAvailableWorkers("") {
-					xid__, err := xid.FromString(workerId)
-					if err != nil {
-						continue
-					}
-					if bytes.Equal(xid_.Machine(), xid__.Machine()) {
-						return w
-					}
-				}
+func (h *Hub) findWorkerById(id string, useAllWorkers bool) *Worker {
+	if id == "" {
+		return nil
+	}
+
+	uid, err := com.UidFromString(id)
+	if err != nil {
+		return nil
+	}
+
+	for _, w := range h.getAvailableWorkers("") {
+		if w.Id() == com.NilUid {
+			continue
+		}
+		if useAllWorkers {
+			if uid == w.Id() {
+				return w
+			}
+		} else {
+			// select any worker on the same machine when workers are grouped on the client
+			if bytes.Equal(uid.Machine(), w.Id().Machine()) {
+				return w
 			}
 		}
 	}
+
 	return nil
 }
