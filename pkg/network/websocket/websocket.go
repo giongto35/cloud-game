@@ -220,6 +220,9 @@ func (c *Connection) IsServer() bool { return c.pingPong }
 func (c *Connection) SetMessageHandler(fn MessageHandler) { c.callback = fn }
 
 func (c *Connection) Listen() chan struct{} {
+	if c.alive {
+		return c.done
+	}
 	c.alive = true
 	go c.writer()
 	go c.reader()
