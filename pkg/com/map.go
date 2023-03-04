@@ -23,41 +23,36 @@ func (m *Map[K, T]) Pop(key K) T {
 	m.mu.Unlock()
 	return v
 }
-func (m *Map[K, T]) Put(key K, client T) { m.mu.Lock(); m.m[key] = client; m.mu.Unlock() }
-func (m *Map[K, _]) Remove(key K)        { m.mu.Lock(); delete(m.m, key); m.mu.Unlock() }
+func (m *Map[K, T]) Put(key K, v T) { m.mu.Lock(); m.m[key] = v; m.mu.Unlock() }
+func (m *Map[K, _]) Remove(key K)   { m.mu.Lock(); delete(m.m, key); m.mu.Unlock() }
 
-// Find searches for the first match by a specified key value,
-// returns ErrNotFound otherwise.
-func (m *Map[K, T]) Find(key K) (client T, err error) {
-	var empty K
-	if key == empty {
-		return client, ErrNotFound
-	}
+// Find searches for the first match, returns ErrNotFound otherwise.
+func (m *Map[K, T]) Find(key K) (v T, err error) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
-	if c, ok := m.m[key]; ok {
-		return c, nil
+	if vv, ok := m.m[key]; ok {
+		return vv, nil
 	}
-	return client, ErrNotFound
+	return v, ErrNotFound
 }
 
 // FindBy searches the first key-value with the provided predicate function.
-func (m *Map[K, T]) FindBy(fn func(c T) bool) (client T, err error) {
+func (m *Map[K, T]) FindBy(fn func(v T) bool) (v T, err error) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
-	for _, w := range m.m {
-		if fn(w) {
-			return w, nil
+	for _, vv := range m.m {
+		if fn(vv) {
+			return vv, nil
 		}
 	}
-	return client, ErrNotFound
+	return v, ErrNotFound
 }
 
 // ForEach processes every element with the provided callback function.
-func (m *Map[K, T]) ForEach(fn func(c T)) {
+func (m *Map[K, T]) ForEach(fn func(v T)) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
-	for _, w := range m.m {
-		fn(w)
+	for _, v := range m.m {
+		fn(v)
 	}
 }
