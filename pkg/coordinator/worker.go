@@ -29,12 +29,12 @@ type RegionalClient interface {
 }
 
 type HasUserRegistry interface {
-	Find(key com.Uid) (*User, error)
+	Find(com.Uid) (*User, bool)
 }
 
 func NewWorker(conn *com.Connection, handshake api.ConnectionRequest[com.Uid], log *logger.Logger) *Worker {
 	socket := com.NewConnection[api.PT, api.In[com.Uid], api.Out](conn, handshake.Id, log)
-	worker := &Worker{
+	return &Worker{
 		Connection: socket,
 		Addr:       handshake.Addr,
 		PingServer: handshake.PingURL,
@@ -46,7 +46,6 @@ func NewWorker(conn *com.Connection, handshake api.ConnectionRequest[com.Uid], l
 			Str(logger.DirectionField, logger.MarkNone).
 			Str("cid", socket.Id().Short())),
 	}
-	return worker
 }
 
 func (w *Worker) HandleRequests(users HasUserRegistry) chan struct{} {

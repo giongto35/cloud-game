@@ -6,29 +6,29 @@ func TestMap_InGeneral(t *testing.T) {
 	// map map
 	m := Map[int, int]{m: make(map[int]int)}
 
-	if !m.IsEmpty() {
-		t.Errorf("should be empty, %v", m.m)
+	if m.Len() > 0 {
+		t.Errorf("should be empty, %v %v", m.Len(), m.m)
 	}
 	k := 0
 	m.Put(k, 0)
-	if m.IsEmpty() {
+	if m.Len() == 0 {
 		t.Errorf("should not be empty, %v", m.m)
 	}
 	if !m.Has(k) {
 		t.Errorf("should have the key %v, %v", k, m.m)
 	}
-	v, err := m.Find(k)
-	if v != 0 && err != nil {
-		t.Errorf("should have the key %v and no error, %v %v", k, err, m.m)
+	v, ok := m.Find(k)
+	if v != 0 && !ok {
+		t.Errorf("should have the key %v and ok, %v %v", k, ok, m.m)
 	}
-	v, err = m.Find(k + 1)
-	if err != ErrNotFound {
-		t.Errorf("should not find anything, %v %v", err, m.m)
+	v, ok = m.Find(k + 1)
+	if ok {
+		t.Errorf("should not find anything, %v %v", ok, m.m)
 	}
 	m.Put(1, 1)
-	v, err = m.FindBy(func(v int) bool { return v == 1 })
-	if v != 1 && err != nil {
-		t.Errorf("should have the key %v and no error, %v %v", 1, err, m.m)
+	v, ok = m.FindBy(func(v int) bool { return v == 1 })
+	if v != 1 && !ok {
+		t.Errorf("should have the key %v and ok, %v %v", 1, ok, m.m)
 	}
 	sum := 0
 	m.ForEach(func(v int) { sum += v })
