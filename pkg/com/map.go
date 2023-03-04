@@ -16,7 +16,7 @@ var ErrNotFound = errors.New("not found")
 
 func (m *Map[K, _]) Has(key K) bool { _, err := m.Find(key); return err == nil }
 func (m *Map[_, _]) IsEmpty() bool  { m.mu.Lock(); defer m.mu.Unlock(); return len(m.m) == 0 }
-func (m *Map[K, T]) List() map[K]T  { return m.m }
+func (m *Map[_, _]) Len() int       { return len(m.m) }
 func (m *Map[K, T]) Pop(key K) T {
 	m.mu.Lock()
 	v := m.m[key]

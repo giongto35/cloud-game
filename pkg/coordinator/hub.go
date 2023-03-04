@@ -138,7 +138,7 @@ func (h *Hub) handleWorkerConnection() http.HandlerFunc {
 }
 
 func (h *Hub) GetServerList() (r []api.Server) {
-	for _, w := range h.workers.List() {
+	h.workers.ForEach(func(w *Worker) {
 		r = append(r, api.Server{
 			Addr:    w.Addr,
 			Id:      w.Id(),
@@ -149,7 +149,7 @@ func (h *Hub) GetServerList() (r []api.Server) {
 			Tag:     w.Tag,
 			Zone:    w.Zone,
 		})
-	}
+	})
 	return
 }
 

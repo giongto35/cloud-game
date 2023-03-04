@@ -36,7 +36,7 @@ func TestMap_InGeneral(t *testing.T) {
 		t.Errorf("shoud have exact sum of 1, but have %v", sum)
 	}
 	m.Remove(1)
-	if !m.Has(0) || len(m.List()) > 1 {
+	if !m.Has(0) || m.Len() > 1 {
 		t.Errorf("should remove only one element, but has %v", m.m)
 	}
 	m.Put(3, 3)
@@ -46,7 +46,7 @@ func TestMap_InGeneral(t *testing.T) {
 	}
 	m.Remove(3)
 	m.Remove(0)
-	if len(m.List()) != 0 {
+	if m.Len() != 0 {
 		t.Errorf("should be completely empty, but %v", m.m)
 	}
 }
