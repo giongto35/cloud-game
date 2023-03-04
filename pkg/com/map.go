@@ -6,6 +6,7 @@ import (
 )
 
 // Map defines a concurrent-safe map structure.
+// Keep in mind that underlying map structure will grow indefinitely.
 type Map[K comparable, V any] struct {
 	m  map[K]V
 	mu sync.Mutex
