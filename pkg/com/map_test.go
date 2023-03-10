@@ -2,7 +2,7 @@ package com
 
 import "testing"
 
-func TestMap_InGeneral(t *testing.T) {
+func TestMap_Base(t *testing.T) {
 	// map map
 	m := Map[int, int]{m: make(map[int]int)}
 
