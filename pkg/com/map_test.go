@@ -5,7 +5,7 @@ import (
 	"sync/atomic"
 	"testing"
 
-	"github.com/giongto35/cloud-game/v2/pkg/network"
+	"github.com/giongto35/cloud-game/v3/pkg/network"
 )
 
 type testClient struct {

@@ -3,9 +3,9 @@ package coordinator
 import (
 	"sort"
 
-	"github.com/giongto35/cloud-game/v2/pkg/api"
-	"github.com/giongto35/cloud-game/v2/pkg/config/coordinator"
-	"github.com/giongto35/cloud-game/v2/pkg/games"
+	"github.com/giongto35/cloud-game/v3/pkg/api"
+	"github.com/giongto35/cloud-game/v3/pkg/config/coordinator"
+	"github.com/giongto35/cloud-game/v3/pkg/games"
 )
 
 func (u *User) HandleWebrtcInit() {

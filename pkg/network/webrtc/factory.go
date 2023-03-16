@@ -4,9 +4,9 @@ import (
 	"fmt"
 	"net"
 
-	conf "github.com/giongto35/cloud-game/v2/pkg/config/webrtc"
-	"github.com/giongto35/cloud-game/v2/pkg/logger"
-	"github.com/giongto35/cloud-game/v2/pkg/network/socket"
+	conf "github.com/giongto35/cloud-game/v3/pkg/config/webrtc"
+	"github.com/giongto35/cloud-game/v3/pkg/logger"
+	"github.com/giongto35/cloud-game/v3/pkg/network/socket"
 	"github.com/pion/interceptor"
 	"github.com/pion/interceptor/pkg/report"
 	"github.com/pion/webrtc/v3"

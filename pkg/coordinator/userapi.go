@@ -3,8 +3,8 @@ package coordinator
 import (
 	"unsafe"
 
-	"github.com/giongto35/cloud-game/v2/pkg/api"
-	"github.com/giongto35/cloud-game/v2/pkg/config/webrtc"
+	"github.com/giongto35/cloud-game/v3/pkg/api"
+	"github.com/giongto35/cloud-game/v3/pkg/config/webrtc"
 )
 
 // CheckLatency sends a list of server addresses to the user

@@ -1,4 +1,4 @@
-module github.com/giongto35/cloud-game/v2
+module github.com/giongto35/cloud-game/v3
 
 go 1.18
 

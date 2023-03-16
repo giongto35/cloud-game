@@ -4,7 +4,7 @@ import (
 	"log"
 	"strings"
 
-	"github.com/giongto35/cloud-game/v2/pkg/config"
+	"github.com/giongto35/cloud-game/v3/pkg/config"
 )
 
 type Webrtc struct {

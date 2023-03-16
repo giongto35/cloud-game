@@ -7,10 +7,10 @@ import (
 	"sync"
 	"time"
 
-	"github.com/giongto35/cloud-game/v2/pkg/api"
-	"github.com/giongto35/cloud-game/v2/pkg/logger"
-	"github.com/giongto35/cloud-game/v2/pkg/network"
-	"github.com/giongto35/cloud-game/v2/pkg/network/websocket"
+	"github.com/giongto35/cloud-game/v3/pkg/api"
+	"github.com/giongto35/cloud-game/v3/pkg/logger"
+	"github.com/giongto35/cloud-game/v3/pkg/network"
+	"github.com/giongto35/cloud-game/v3/pkg/network/websocket"
 	"github.com/goccy/go-json"
 )
 

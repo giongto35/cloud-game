@@ -1,6 +1,6 @@
 package api
 
-import "github.com/giongto35/cloud-game/v2/pkg/network"
+import "github.com/giongto35/cloud-game/v3/pkg/network"
 
 type GameInfo struct {
 	Name string `json:"name"`

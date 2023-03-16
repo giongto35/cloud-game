@@ -3,8 +3,8 @@ package httpx
 import (
 	"time"
 
-	"github.com/giongto35/cloud-game/v2/pkg/config/shared"
-	"github.com/giongto35/cloud-game/v2/pkg/logger"
+	"github.com/giongto35/cloud-game/v3/pkg/config/shared"
+	"github.com/giongto35/cloud-game/v3/pkg/logger"
 )
 
 type (

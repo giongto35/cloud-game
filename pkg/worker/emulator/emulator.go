@@ -3,7 +3,7 @@ package emulator
 import (
 	"time"
 
-	"github.com/giongto35/cloud-game/v2/pkg/worker/emulator/image"
+	"github.com/giongto35/cloud-game/v3/pkg/worker/emulator/image"
 )
 
 type Emulator interface {

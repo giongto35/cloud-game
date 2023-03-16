@@ -1,9 +1,9 @@
 package coordinator
 
 import (
-	"github.com/giongto35/cloud-game/v2/pkg/api"
-	"github.com/giongto35/cloud-game/v2/pkg/games"
-	"github.com/giongto35/cloud-game/v2/pkg/network"
+	"github.com/giongto35/cloud-game/v3/pkg/api"
+	"github.com/giongto35/cloud-game/v3/pkg/games"
+	"github.com/giongto35/cloud-game/v3/pkg/network"
 )
 
 func (w *Worker) WebrtcInit(id network.Uid) (*api.WebrtcInitResponse, error) {

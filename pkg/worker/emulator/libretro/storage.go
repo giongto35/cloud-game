@@ -5,7 +5,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/giongto35/cloud-game/v2/pkg/worker/compression/zip"
+	"github.com/giongto35/cloud-game/v3/pkg/worker/compression/zip"
 )
 
 type (

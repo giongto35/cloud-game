@@ -4,7 +4,7 @@ import (
 	"errors"
 	"sync"
 
-	"github.com/giongto35/cloud-game/v2/pkg/network"
+	"github.com/giongto35/cloud-game/v3/pkg/network"
 )
 
 // NetMap defines a thread-safe NetClient list.

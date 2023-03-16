@@ -11,8 +11,8 @@ import (
 	"sync"
 	"time"
 
-	"github.com/giongto35/cloud-game/v2/pkg/logger"
-	oss "github.com/giongto35/cloud-game/v2/pkg/os"
+	"github.com/giongto35/cloud-game/v3/pkg/logger"
+	oss "github.com/giongto35/cloud-game/v3/pkg/os"
 )
 
 type Recording struct {

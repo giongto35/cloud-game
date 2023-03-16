@@ -4,13 +4,13 @@ import (
 	"html/template"
 	"net/http"
 
-	"github.com/giongto35/cloud-game/v2/pkg/config/coordinator"
-	"github.com/giongto35/cloud-game/v2/pkg/config/shared"
-	"github.com/giongto35/cloud-game/v2/pkg/games"
-	"github.com/giongto35/cloud-game/v2/pkg/logger"
-	"github.com/giongto35/cloud-game/v2/pkg/monitoring"
-	"github.com/giongto35/cloud-game/v2/pkg/network/httpx"
-	"github.com/giongto35/cloud-game/v2/pkg/service"
+	"github.com/giongto35/cloud-game/v3/pkg/config/coordinator"
+	"github.com/giongto35/cloud-game/v3/pkg/config/shared"
+	"github.com/giongto35/cloud-game/v3/pkg/games"
+	"github.com/giongto35/cloud-game/v3/pkg/logger"
+	"github.com/giongto35/cloud-game/v3/pkg/monitoring"
+	"github.com/giongto35/cloud-game/v3/pkg/network/httpx"
+	"github.com/giongto35/cloud-game/v3/pkg/service"
 )
 
 func New(conf coordinator.Config, log *logger.Logger) (services service.Group) {

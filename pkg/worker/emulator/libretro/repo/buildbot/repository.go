@@ -1,10 +1,10 @@
 package buildbot
 
 import (
-	"github.com/giongto35/cloud-game/v2/pkg/worker/emulator/libretro"
+	"github.com/giongto35/cloud-game/v3/pkg/worker/emulator/libretro"
 	"strings"
 
-	"github.com/giongto35/cloud-game/v2/pkg/worker/emulator/libretro/repo/raw"
+	"github.com/giongto35/cloud-game/v3/pkg/worker/emulator/libretro/repo/raw"
 )
 
 type RepoBuildbot struct {

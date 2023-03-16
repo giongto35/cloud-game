@@ -3,8 +3,8 @@ package remotehttp
 import (
 	"os"
 
-	"github.com/giongto35/cloud-game/v2/pkg/logger"
-	"github.com/giongto35/cloud-game/v2/pkg/worker/compression"
+	"github.com/giongto35/cloud-game/v3/pkg/logger"
+	"github.com/giongto35/cloud-game/v3/pkg/worker/compression"
 )
 
 type Download struct {

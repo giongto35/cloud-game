@@ -7,9 +7,9 @@ import (
 	"strconv"
 
 	"github.com/VictoriaMetrics/metrics"
-	"github.com/giongto35/cloud-game/v2/pkg/config/monitoring"
-	"github.com/giongto35/cloud-game/v2/pkg/logger"
-	"github.com/giongto35/cloud-game/v2/pkg/network/httpx"
+	"github.com/giongto35/cloud-game/v3/pkg/config/monitoring"
+	"github.com/giongto35/cloud-game/v3/pkg/logger"
+	"github.com/giongto35/cloud-game/v3/pkg/network/httpx"
 )
 
 const debugEndpoint = "/debug/pprof"

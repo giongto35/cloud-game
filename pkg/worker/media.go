@@ -4,12 +4,12 @@ import (
 	"sync"
 	"time"
 
-	conf "github.com/giongto35/cloud-game/v2/pkg/config/encoder"
-	"github.com/giongto35/cloud-game/v2/pkg/worker/emulator"
-	"github.com/giongto35/cloud-game/v2/pkg/worker/encoder"
-	"github.com/giongto35/cloud-game/v2/pkg/worker/encoder/h264"
-	"github.com/giongto35/cloud-game/v2/pkg/worker/encoder/opus"
-	"github.com/giongto35/cloud-game/v2/pkg/worker/encoder/vpx"
+	conf "github.com/giongto35/cloud-game/v3/pkg/config/encoder"
+	"github.com/giongto35/cloud-game/v3/pkg/worker/emulator"
+	"github.com/giongto35/cloud-game/v3/pkg/worker/encoder"
+	"github.com/giongto35/cloud-game/v3/pkg/worker/encoder/h264"
+	"github.com/giongto35/cloud-game/v3/pkg/worker/encoder/opus"
+	"github.com/giongto35/cloud-game/v3/pkg/worker/encoder/vpx"
 	webrtc "github.com/pion/webrtc/v3/pkg/media"
 )
 
