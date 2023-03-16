@@ -19,7 +19,7 @@ type Router struct {
 type Session struct {
 	id   com.Uid
 	conn *webrtc.Peer
-	pi   int
+	pi   int        // player index
 	room GamingRoom // back reference
 }
 
@@ -39,7 +39,6 @@ func (r *Router) GetRoom(id string) GamingRoom {
 	return nil
 }
 func (r *Router) GetUser(uid com.Uid) *Session   { sess, _ := r.users.Find(uid); return sess }
-func (r *Router) RemoveRoom()                    { r.room = nil }
 func (r *Router) RemoveDisconnect(user *Session) { r.users.Remove(user); user.Disconnect() }
 
 func NewSession(rtc *webrtc.Peer, id com.Uid) *Session { return &Session{id: id, conn: rtc} }

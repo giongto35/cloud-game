@@ -83,7 +83,7 @@ func (c *coordinator) HandleGameStart(rq api.StartGameRequest[com.Uid], w *Worke
 			rq.Room.Rid,
 			games.GameMetadata{Name: rq.Game.Name, Base: rq.Game.Base, Type: rq.Game.Type, Path: rq.Game.Path},
 			func(room *Room) {
-				w.router.RemoveRoom()
+				w.router.SetRoom(nil)
 				c.CloseRoom(room.id)
 				w.log.Debug().Msgf("Room close has been called %v", room.id)
 			},
@@ -126,8 +126,7 @@ func (c *coordinator) HandleGameStart(rq api.StartGameRequest[com.Uid], w *Worke
 
 // HandleTerminateSession handles cases when a user has been disconnected from the websocket of coordinator.
 func (c *coordinator) HandleTerminateSession(rq api.TerminateSessionRequest[com.Uid], w *Worker) {
-	session := w.router.GetUser(rq.Id)
-	if session != nil {
+	if session := w.router.GetUser(rq.Id); session != nil {
 		w.router.RemoveDisconnect(session)
 		if room := session.GetSetRoom(nil); room != nil {
 			room.CleanupUser(session)
