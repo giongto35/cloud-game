@@ -5,8 +5,8 @@ import (
 	"sync"
 	"sync/atomic"
 
-	"github.com/giongto35/cloud-game/v2/pkg/logger"
-	"github.com/giongto35/cloud-game/v2/pkg/worker/encoder/yuv"
+	"github.com/giongto35/cloud-game/v3/pkg/logger"
+	"github.com/giongto35/cloud-game/v3/pkg/worker/encoder/yuv"
 )
 
 type (

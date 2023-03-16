@@ -3,15 +3,15 @@ package worker
 import (
 	"time"
 
-	"github.com/giongto35/cloud-game/v2/pkg/com"
-	conf "github.com/giongto35/cloud-game/v2/pkg/config/emulator"
-	"github.com/giongto35/cloud-game/v2/pkg/config/worker"
-	"github.com/giongto35/cloud-game/v2/pkg/games"
-	"github.com/giongto35/cloud-game/v2/pkg/logger"
-	"github.com/giongto35/cloud-game/v2/pkg/os"
-	"github.com/giongto35/cloud-game/v2/pkg/worker/emulator"
-	"github.com/giongto35/cloud-game/v2/pkg/worker/emulator/libretro"
-	"github.com/giongto35/cloud-game/v2/pkg/worker/encoder"
+	"github.com/giongto35/cloud-game/v3/pkg/com"
+	conf "github.com/giongto35/cloud-game/v3/pkg/config/emulator"
+	"github.com/giongto35/cloud-game/v3/pkg/config/worker"
+	"github.com/giongto35/cloud-game/v3/pkg/games"
+	"github.com/giongto35/cloud-game/v3/pkg/logger"
+	"github.com/giongto35/cloud-game/v3/pkg/os"
+	"github.com/giongto35/cloud-game/v3/pkg/worker/emulator"
+	"github.com/giongto35/cloud-game/v3/pkg/worker/emulator/libretro"
+	"github.com/giongto35/cloud-game/v3/pkg/worker/encoder"
 )
 
 type GamingRoom interface {

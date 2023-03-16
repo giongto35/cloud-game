@@ -6,7 +6,7 @@ import (
 	"net/url"
 	"time"
 
-	"github.com/giongto35/cloud-game/v2/pkg/logger"
+	"github.com/giongto35/cloud-game/v3/pkg/logger"
 	"golang.org/x/crypto/acme/autocert"
 )
 

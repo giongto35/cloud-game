@@ -8,14 +8,14 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/giongto35/cloud-game/v2/pkg/config"
-	"github.com/giongto35/cloud-game/v2/pkg/config/emulator"
-	"github.com/giongto35/cloud-game/v2/pkg/config/encoder"
-	"github.com/giongto35/cloud-game/v2/pkg/config/monitoring"
-	"github.com/giongto35/cloud-game/v2/pkg/config/shared"
-	"github.com/giongto35/cloud-game/v2/pkg/config/storage"
-	"github.com/giongto35/cloud-game/v2/pkg/config/webrtc"
-	"github.com/giongto35/cloud-game/v2/pkg/os"
+	"github.com/giongto35/cloud-game/v3/pkg/config"
+	"github.com/giongto35/cloud-game/v3/pkg/config/emulator"
+	"github.com/giongto35/cloud-game/v3/pkg/config/encoder"
+	"github.com/giongto35/cloud-game/v3/pkg/config/monitoring"
+	"github.com/giongto35/cloud-game/v3/pkg/config/shared"
+	"github.com/giongto35/cloud-game/v3/pkg/config/storage"
+	"github.com/giongto35/cloud-game/v3/pkg/config/webrtc"
+	"github.com/giongto35/cloud-game/v3/pkg/os"
 )
 
 type Config struct {

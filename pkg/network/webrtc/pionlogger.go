@@ -4,7 +4,7 @@ import (
 	"github.com/pion/logging"
 	"github.com/rs/zerolog"
 
-	"github.com/giongto35/cloud-game/v2/pkg/logger"
+	"github.com/giongto35/cloud-game/v3/pkg/logger"
 )
 
 type PionLog struct {

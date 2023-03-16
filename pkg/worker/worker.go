@@ -3,12 +3,12 @@ package worker
 import (
 	"time"
 
-	"github.com/giongto35/cloud-game/v2/pkg/config/worker"
-	"github.com/giongto35/cloud-game/v2/pkg/logger"
-	"github.com/giongto35/cloud-game/v2/pkg/monitoring"
-	"github.com/giongto35/cloud-game/v2/pkg/network/httpx"
-	"github.com/giongto35/cloud-game/v2/pkg/service"
-	"github.com/giongto35/cloud-game/v2/pkg/worker/emulator/libretro/manager/remotehttp"
+	"github.com/giongto35/cloud-game/v3/pkg/config/worker"
+	"github.com/giongto35/cloud-game/v3/pkg/logger"
+	"github.com/giongto35/cloud-game/v3/pkg/monitoring"
+	"github.com/giongto35/cloud-game/v3/pkg/network/httpx"
+	"github.com/giongto35/cloud-game/v3/pkg/service"
+	"github.com/giongto35/cloud-game/v3/pkg/worker/emulator/libretro/manager/remotehttp"
 )
 
 type Worker struct {

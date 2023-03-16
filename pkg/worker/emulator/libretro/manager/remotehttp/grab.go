@@ -5,7 +5,7 @@ import (
 	"net/http"
 
 	"github.com/cavaliergopher/grab/v3"
-	"github.com/giongto35/cloud-game/v2/pkg/logger"
+	"github.com/giongto35/cloud-game/v3/pkg/logger"
 )
 
 type GrabDownloader struct {

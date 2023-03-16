@@ -3,7 +3,7 @@ package games
 import (
 	"testing"
 
-	"github.com/giongto35/cloud-game/v2/pkg/logger"
+	"github.com/giongto35/cloud-game/v3/pkg/logger"
 )
 
 func TestLibraryScan(t *testing.T) {

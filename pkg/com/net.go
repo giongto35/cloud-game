@@ -7,7 +7,7 @@ import (
 	"net/url"
 	"time"
 
-	"github.com/giongto35/cloud-game/v2/pkg/network/websocket"
+	"github.com/giongto35/cloud-game/v3/pkg/network/websocket"
 	"github.com/goccy/go-json"
 	"github.com/rs/xid"
 )

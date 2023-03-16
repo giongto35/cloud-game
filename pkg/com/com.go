@@ -1,6 +1,6 @@
 package com
 
-import "github.com/giongto35/cloud-game/v2/pkg/logger"
+import "github.com/giongto35/cloud-game/v3/pkg/logger"
 
 type NetClient interface {
 	Disconnect()

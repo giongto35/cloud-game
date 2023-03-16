@@ -1,8 +1,8 @@
 package worker
 
 import (
-	"github.com/giongto35/cloud-game/v2/pkg/com"
-	"github.com/giongto35/cloud-game/v2/pkg/network/webrtc"
+	"github.com/giongto35/cloud-game/v3/pkg/com"
+	"github.com/giongto35/cloud-game/v3/pkg/network/webrtc"
 	"github.com/pion/webrtc/v3/pkg/media"
 )
 

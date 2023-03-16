@@ -1,12 +1,12 @@
 package manager
 
 import (
-	"github.com/giongto35/cloud-game/v2/pkg/worker/emulator/libretro"
+	"github.com/giongto35/cloud-game/v3/pkg/worker/emulator/libretro"
 	"os"
 	"path/filepath"
 	"strings"
 
-	"github.com/giongto35/cloud-game/v2/pkg/config/emulator"
+	"github.com/giongto35/cloud-game/v3/pkg/config/emulator"
 )
 
 type Manager interface {

@@ -11,10 +11,10 @@ import (
 	"testing"
 	"unsafe"
 
-	"github.com/giongto35/cloud-game/v2/pkg/config"
-	"github.com/giongto35/cloud-game/v2/pkg/config/worker"
-	"github.com/giongto35/cloud-game/v2/pkg/logger"
-	"github.com/giongto35/cloud-game/v2/pkg/worker/emulator"
+	"github.com/giongto35/cloud-game/v3/pkg/config"
+	"github.com/giongto35/cloud-game/v3/pkg/config/worker"
+	"github.com/giongto35/cloud-game/v3/pkg/logger"
+	"github.com/giongto35/cloud-game/v3/pkg/worker/emulator"
 )
 
 type testRun struct {

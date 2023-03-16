@@ -5,7 +5,7 @@ import (
 	"net"
 	"strconv"
 
-	"github.com/giongto35/cloud-game/v2/pkg/network/socket"
+	"github.com/giongto35/cloud-game/v3/pkg/network/socket"
 )
 
 const listenAttempts = 42

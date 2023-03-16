@@ -8,11 +8,11 @@ import (
 	"sync/atomic"
 	"time"
 
-	conf "github.com/giongto35/cloud-game/v2/pkg/config/emulator"
-	"github.com/giongto35/cloud-game/v2/pkg/logger"
-	"github.com/giongto35/cloud-game/v2/pkg/os"
-	"github.com/giongto35/cloud-game/v2/pkg/worker/emulator"
-	"github.com/giongto35/cloud-game/v2/pkg/worker/emulator/image"
+	conf "github.com/giongto35/cloud-game/v3/pkg/config/emulator"
+	"github.com/giongto35/cloud-game/v3/pkg/logger"
+	"github.com/giongto35/cloud-game/v3/pkg/os"
+	"github.com/giongto35/cloud-game/v3/pkg/worker/emulator"
+	"github.com/giongto35/cloud-game/v3/pkg/worker/emulator/image"
 )
 
 type Frontend struct {

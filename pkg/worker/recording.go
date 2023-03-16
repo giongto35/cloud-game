@@ -1,9 +1,9 @@
 package worker
 
 import (
-	"github.com/giongto35/cloud-game/v2/pkg/config/worker"
-	"github.com/giongto35/cloud-game/v2/pkg/worker/emulator"
-	"github.com/giongto35/cloud-game/v2/pkg/worker/recorder"
+	"github.com/giongto35/cloud-game/v3/pkg/config/worker"
+	"github.com/giongto35/cloud-game/v3/pkg/worker/emulator"
+	"github.com/giongto35/cloud-game/v3/pkg/worker/recorder"
 )
 
 type RecordingRoom struct {
