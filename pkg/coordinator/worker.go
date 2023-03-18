@@ -32,10 +32,10 @@ type HasUserRegistry interface {
 	Find(com.Uid) (*User, bool)
 }
 
-func NewWorker(conn *com.Connection, handshake api.ConnectionRequest[com.Uid], log *logger.Logger) *Worker {
-	socket := com.NewConnection[api.PT, api.In[com.Uid], api.Out](conn, handshake.Id, log)
+func NewWorker(sock *com.Connection, handshake api.ConnectionRequest[com.Uid], log *logger.Logger) *Worker {
+	conn := com.NewConnection[api.PT, api.In[com.Uid], api.Out](sock, handshake.Id, log)
 	return &Worker{
-		Connection: socket,
+		Connection: conn,
 		Addr:       handshake.Addr,
 		PingServer: handshake.PingURL,
 		Port:       handshake.Port,
@@ -44,7 +44,7 @@ func NewWorker(conn *com.Connection, handshake api.ConnectionRequest[com.Uid], l
 		log: log.Extend(log.With().
 			Str(logger.ClientField, logger.MarkNone).
 			Str(logger.DirectionField, logger.MarkNone).
-			Str("cid", socket.Id().Short())),
+			Str("cid", conn.Id().Short())),
 	}
 }
 

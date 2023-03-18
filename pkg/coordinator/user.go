@@ -18,18 +18,17 @@ type HasServerInfo interface {
 	GetServerList() []api.Server
 }
 
-func NewUser(conn *com.Connection, log *logger.Logger) *User {
-	socket := com.NewConnection[api.PT, api.In[com.Uid], api.Out](conn, com.NewUid(), log)
+func NewUser(sock *com.Connection, log *logger.Logger) *User {
+	conn := com.NewConnection[api.PT, api.In[com.Uid], api.Out](sock, com.NewUid(), log)
 	return &User{
-		Connection: socket,
+		Connection: conn,
 		log: log.Extend(log.With().
 			Str(logger.ClientField, logger.MarkNone).
 			Str(logger.DirectionField, logger.MarkNone).
-			Str("cid", socket.Id().Short())),
+			Str("cid", conn.Id().Short())),
 	}
 }
 
-// Bind reserves a worker for sole user use.
 func (u *User) Bind(w *Worker) {
 	u.w = w
 	u.w.Reserve()
