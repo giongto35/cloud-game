@@ -13,7 +13,6 @@ import (
 	"path/filepath"
 	"runtime"
 	"sync"
-	"sync/atomic"
 	"testing"
 	"time"
 
@@ -42,6 +41,14 @@ type roomMock struct {
 	startEmulator bool
 }
 
+func (rm roomMock) Close() {
+	rm.Room.Close()
+	// hack: wait room destruction
+	time.Sleep(3 * time.Second)
+}
+
+func (rm roomMock) CloseNowait() { rm.Room.Close() }
+
 type roomMockConfig struct {
 	roomName          string
 	gamesPath         string
@@ -56,6 +63,13 @@ type roomMockConfig struct {
 var whereIsGames = getRootPath() + "assets/games/"
 var whereIsConfigs = getRootPath() + "configs/"
 var testTempDir = filepath.Join(os.TempDir(), "cloud-game-core-tests")
+
+// games
+var (
+	mario = games.GameMetadata{Name: "Super Mario Bros", Type: "nes", Path: "Super Mario Bros.nes"}
+	sushi = games.GameMetadata{Name: "Sushi The Cat", Type: "gba", Path: "Sushi The Cat.gba"}
+	fd    = games.GameMetadata{Name: "Florian Demo", Type: "n64", Path: "Sample Demo by Florian (PD).z64"}
+)
 
 func init() {
 	runtime.LockOSThread()
@@ -77,11 +91,7 @@ func TestRoom(t *testing.T) {
 		frames   int
 	}{
 		{
-			game: games.GameMetadata{
-				Name: "Super Mario Bros",
-				Type: "nes",
-				Path: "Super Mario Bros.nes",
-			},
+			game:   mario,
 			vCodec: encoder.H264,
 			frames: 300,
 		},
@@ -99,8 +109,6 @@ func TestRoom(t *testing.T) {
 		waitNFrames(test.frames, room)
 		room.Close()
 	}
-	// hack: wait room destruction
-	time.Sleep(2 * time.Second)
 }
 
 func TestRoomWithGL(t *testing.T) {
@@ -109,15 +117,7 @@ func TestRoomWithGL(t *testing.T) {
 		vCodec encoder.VideoCodec
 		frames int
 	}{
-		{
-			game: games.GameMetadata{
-				Name: "Sample Demo by Florian (PD)",
-				Type: "n64",
-				Path: "Sample Demo by Florian (PD).z64",
-			},
-			vCodec: encoder.VP8,
-			frames: 50,
-		},
+		{game: fd, vCodec: encoder.VP8, frames: 50},
 	}
 
 	run := func() {
@@ -131,8 +131,6 @@ func TestRoomWithGL(t *testing.T) {
 			waitNFrames(test.frames, room)
 			room.Close()
 		}
-		// hack: wait room destruction
-		time.Sleep(2 * time.Second)
 	}
 
 	thread.Main(run)
@@ -143,18 +141,9 @@ func TestAllEmulatorRooms(t *testing.T) {
 		game   games.GameMetadata
 		frames int
 	}{
-		{
-			game:   games.GameMetadata{Name: "Sushi", Type: "gba", Path: "Sushi The Cat.gba"},
-			frames: 150,
-		},
-		{
-			game:   games.GameMetadata{Name: "Mario", Type: "nes", Path: "Super Mario Bros.nes"},
-			frames: 50,
-		},
-		{
-			game:   games.GameMetadata{Name: "Florian Demo", Type: "n64", Path: "Sample Demo by Florian (PD).z64"},
-			frames: 50,
-		},
+		{game: sushi, frames: 150},
+		{game: mario, frames: 50},
+		{game: fd, frames: 50},
 	}
 
 	crc32q := crc32.MakeTable(0xD5828281)
@@ -174,10 +163,7 @@ func TestAllEmulatorRooms(t *testing.T) {
 			tag := fmt.Sprintf("%v-%v-0x%08x", runtime.GOOS, test.game.Type, crc32.Checksum(frame.Data.Pix, crc32q))
 			dumpCanvas(frame.Data, tag, fmt.Sprintf("%v [%v]", tag, test.frames), outputPath)
 		}
-
 		room.Close()
-		// hack: wait room destruction
-		time.Sleep(1 * time.Second)
 	}
 }
 
@@ -289,42 +275,24 @@ func getRootPath() string {
 }
 
 func waitNFrames(n int, room roomMock) *emulator.GameFrame {
-	var i = int32(n)
-	wg := sync.WaitGroup{}
-	wg.Add(n)
 	var frame emulator.GameFrame
+	var wg sync.WaitGroup
+	wg.Add(n)
 	handler := room.emulator.GetVideo()
 	room.emulator.SetVideo(func(video *emulator.GameFrame) {
 		handler(video)
-		if atomic.AddInt32(&i, -1) >= 0 {
+		if n > 0 {
 			v := video.Data.Copy()
-			frame = emulator.GameFrame{
-				Duration: video.Duration,
-				Data:     &v,
-			}
+			frame = emulator.GameFrame{Duration: video.Duration, Data: &v}
 			wg.Done()
 		}
+		n--
 	})
 	if !room.startEmulator {
 		room.StartEmulator()
 	}
 	wg.Wait()
 	return &frame
-}
-
-// benchmarkRoom measures app performance for n emulation frames.
-// Measure period: the room initialization, n emulated and encoded frames, the room shutdown.
-func benchmarkRoom(rom games.GameMetadata, codec encoder.VideoCodec, frames int, suppressOutput bool, b *testing.B) {
-	for i := 0; i < b.N; i++ {
-		room := getRoomMock(roomMockConfig{
-			gamesPath: whereIsGames,
-			game:      rom,
-			vCodec:    codec,
-			noLog:     suppressOutput,
-		})
-		waitNFrames(frames, room)
-		room.Close()
-	}
 }
 
 // Measures emulation performance of various
@@ -339,31 +307,19 @@ func BenchmarkRoom(b *testing.B) {
 		// warm up
 		{
 			system: "gba",
-			game: games.GameMetadata{
-				Name: "Sushi The Cat",
-				Type: "gba",
-				Path: "Sushi The Cat.gba",
-			},
+			game:   sushi,
 			codecs: []encoder.VideoCodec{encoder.VP8},
 			frames: 50,
 		},
 		{
 			system: "gba",
-			game: games.GameMetadata{
-				Name: "Sushi The Cat",
-				Type: "gba",
-				Path: "Sushi The Cat.gba",
-			},
+			game:   sushi,
 			codecs: []encoder.VideoCodec{encoder.VP8, encoder.H264},
 			frames: 100,
 		},
 		{
 			system: "nes",
-			game: games.GameMetadata{
-				Name: "Super Mario Bros",
-				Type: "nes",
-				Path: "Super Mario Bros.nes",
-			},
+			game:   mario,
 			codecs: []encoder.VideoCodec{encoder.VP8, encoder.H264},
 			frames: 100,
 		},
@@ -372,10 +328,16 @@ func BenchmarkRoom(b *testing.B) {
 	for _, bench := range benches {
 		for _, cod := range bench.codecs {
 			b.Run(fmt.Sprintf("%s-%v-%d", bench.system, cod, bench.frames), func(b *testing.B) {
-				benchmarkRoom(bench.game, cod, bench.frames, true, b)
+				for i := 0; i < b.N; i++ {
+					b.StopTimer()
+					room := getRoomMock(
+						roomMockConfig{gamesPath: whereIsGames, game: bench.game, vCodec: cod, noLog: true})
+					b.StartTimer()
+					waitNFrames(bench.frames, room)
+					b.StopTimer()
+					room.Room.Close()
+				}
 			})
-			// hack: wait room destruction
-			time.Sleep(5 * time.Second)
 		}
 	}
 }

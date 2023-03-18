@@ -122,6 +122,7 @@ func (f *Frontend) LoadMetadata(emu string) {
 func (f *Frontend) Start() {
 	// start only when it is available
 	<-nano.reserved
+	f.log.Debug().Msgf("Frontend start")
 
 	if err := f.LoadGameState(); err != nil {
 		f.log.Error().Err(err).Msg("couldn't load a save file")
