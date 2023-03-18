@@ -82,7 +82,7 @@ func (r *Room) GetId() string                  { return r.id }
 func (r *Room) GetLog() *logger.Logger         { return r.log }
 func (r *Room) HasSave() bool                  { return os.Exists(r.emulator.GetHashPath()) }
 func (r *Room) HasUser(u *Session) bool        { return r != nil && r.users.Has(u.id) }
-func (r *Room) IsEmpty() bool                  { return r.users.IsEmpty() }
+func (r *Room) IsEmpty() bool                  { return r.users.Len() == 0 }
 func (r *Room) LoadGame() error                { return r.emulator.LoadGameState() }
 func (r *Room) SaveGame() error                { return r.emulator.SaveGameState() }
 func (r *Room) StartEmulator()                 { go r.emulator.Start() }
@@ -144,14 +144,14 @@ func (r *Room) PollUserInput(session *Session) {
 func (r *Room) AddUser(user *Session) {
 	r.users.Add(user)
 	user.SetRoom(r)
-	r.log.Debug().Str("user", string(user.Id())).Msg("User has joined the room")
+	r.log.Debug().Str("user", user.Id().String()).Msg("User has joined the room")
 }
 
 func (r *Room) CleanupUser(user *Session) {
 	user.SetRoom(nil)
 	if r.HasUser(user) {
 		r.users.Remove(user)
-		r.log.Debug().Str("user", string(user.Id())).Msg("User has left the room")
+		r.log.Debug().Str("user", user.Id().String()).Msg("User has left the room")
 	}
 	if r.IsEmpty() {
 		r.log.Debug().Msg("The room is empty")

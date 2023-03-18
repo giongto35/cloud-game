@@ -1,68 +1,61 @@
 package api
 
-import "github.com/giongto35/cloud-game/v3/pkg/network"
-
-type GameInfo struct {
-	Name string `json:"name"`
-	Base string `json:"base"`
-	Path string `json:"path"`
-	Type string `json:"type"`
-}
-
 type (
-	ChangePlayerRequest = struct {
-		StatefulRoom
+	ChangePlayerRequest[T Id] struct {
+		StatefulRoom[T]
 		Index int `json:"index"`
 	}
-	ChangePlayerResponse int
-	GameQuitRequest      struct {
-		StatefulRoom
+	ChangePlayerResponse  int
+	GameQuitRequest[T Id] struct {
+		StatefulRoom[T]
 	}
-	LoadGameRequest struct {
-		StatefulRoom
+	LoadGameRequest[T Id] struct {
+		StatefulRoom[T]
 	}
-	LoadGameResponse string
-	SaveGameRequest  struct {
-		StatefulRoom
+	LoadGameResponse      string
+	SaveGameRequest[T Id] struct {
+		StatefulRoom[T]
 	}
-	SaveGameResponse string
-	StartGameRequest struct {
-		StatefulRoom
+	SaveGameResponse       string
+	StartGameRequest[T Id] struct {
+		StatefulRoom[T]
 		Record      bool
 		RecordUser  string
 		Game        GameInfo `json:"game"`
 		PlayerIndex int      `json:"player_index"`
 	}
+	GameInfo struct {
+		Name string `json:"name"`
+		Base string `json:"base"`
+		Path string `json:"path"`
+		Type string `json:"type"`
+	}
 	StartGameResponse struct {
 		Room
 		Record bool
 	}
-	RecordGameRequest struct {
-		StatefulRoom
+	RecordGameRequest[T Id] struct {
+		StatefulRoom[T]
 		Active bool   `json:"active"`
 		User   string `json:"user"`
 	}
-	RecordGameResponse      string
-	TerminateSessionRequest struct {
-		Stateful
+	RecordGameResponse            string
+	TerminateSessionRequest[T Id] struct {
+		Stateful[T]
 	}
-	ToggleMultitapRequest struct {
-		StatefulRoom
+	ToggleMultitapRequest[T Id] struct {
+		StatefulRoom[T]
 	}
-	WebrtcAnswerRequest struct {
-		Stateful
+	WebrtcAnswerRequest[T Id] struct {
+		Stateful[T]
 		Sdp string `json:"sdp"`
 	}
-	WebrtcIceCandidateRequest struct {
-		Stateful
-		Candidate string `json:"candidate"`
+	WebrtcIceCandidateRequest[T Id] struct {
+		Stateful[T]
+		Candidate string `json:"candidate"` // Base64-encoded ICE candidate
 	}
-	WebrtcInitRequest struct {
-		Stateful
+	WebrtcInitRequest[T Id] struct {
+		Stateful[T]
 	}
 	WebrtcInitResponse string
 )
-
-func NewWebrtcIceCandidateRequest(id network.Uid, can string) (PT, any) {
-	return WebrtcIce, WebrtcIceCandidateRequest{Stateful: Stateful{id}, Candidate: can}
-}

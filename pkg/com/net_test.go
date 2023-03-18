@@ -10,21 +10,31 @@ import (
 	"testing"
 	"time"
 
-	"github.com/giongto35/cloud-game/v3/pkg/api"
 	"github.com/giongto35/cloud-game/v3/pkg/logger"
 	"github.com/giongto35/cloud-game/v3/pkg/network/websocket"
 )
 
-var log = logger.Default()
-
-func TestPackets(t *testing.T) {
-	r, err := json.Marshal(Out{Payload: "asd"})
-	if err != nil {
-		t.Fatalf("can't marshal packet")
-	}
-
-	t.Logf("PACKET: %v", string(r))
+type TestIn struct {
+	Id      Uid
+	T       uint8
+	Payload json.RawMessage
 }
+
+func (i TestIn) GetId() Uid         { return i.Id }
+func (i TestIn) GetType() uint8     { return i.T }
+func (i TestIn) GetPayload() []byte { return i.Payload }
+
+type TestOut struct {
+	Id      string
+	T       uint8
+	Payload any
+}
+
+func (o *TestOut) SetId(s string)                 { o.Id = s }
+func (o *TestOut) SetType(u uint8)                { o.T = u }
+func (o *TestOut) SetPayload(a any)               { o.Payload = a }
+func (o *TestOut) SetGetId(stringer fmt.Stringer) { o.Id = stringer.String() }
+func (o *TestOut) GetPayload() any                { return o.Payload }
 
 func TestWebsocket(t *testing.T) {
 	testCases := []struct {
@@ -39,37 +49,29 @@ func TestWebsocket(t *testing.T) {
 }
 
 func testWebsocket(t *testing.T) {
-	var wg sync.WaitGroup
-	sh := newServer(t)
+	server := newServer(t)
 	client := newClient(t, url.URL{Scheme: "ws", Host: "localhost:8080", Path: "/ws"})
-	client.OnPacket(func(packet In) {
-		//	nop
-	})
-	client.Listen()
-	wg.Wait()
+	clDone := client.ProcessPackets(func(in TestIn) error { return nil })
 
-	server := sh.s
-
-	if server == nil {
+	if server.conn == nil {
 		t.Fatalf("couldn't make new socket")
 	}
 
 	calls := []struct {
-		typ        api.PT
-		payload    any
+		packet     TestOut
 		concurrent bool
 		value      any
 	}{
-		{typ: 10, payload: "test", value: "test", concurrent: true},
-		{typ: 10, payload: "test2", value: "test2"},
-		{typ: 11, payload: "test3", value: "test3"},
-		{typ: 99, payload: "", value: ""},
-		{typ: 0},
-		{typ: 12, payload: 123, value: 123},
-		{typ: 10, payload: false, value: false},
-		{typ: 10, payload: true, value: true},
-		{typ: 11, payload: []string{"test", "test", "test"}, value: []string{"test", "test", "test"}},
-		{typ: 22, payload: []string{}, value: []string{}},
+		{packet: TestOut{T: 10, Payload: "test"}, value: "test", concurrent: true},
+		{packet: TestOut{T: 10, Payload: "test2"}, value: "test2"},
+		{packet: TestOut{T: 11, Payload: "test3"}, value: "test3"},
+		{packet: TestOut{T: 99, Payload: ""}, value: ""},
+		{packet: TestOut{T: 0}},
+		{packet: TestOut{T: 12, Payload: 123}, value: 123},
+		{packet: TestOut{T: 10, Payload: false}, value: false},
+		{packet: TestOut{T: 10, Payload: true}, value: true},
+		{packet: TestOut{T: 11, Payload: []string{"test", "test", "test"}}, value: []string{"test", "test", "test"}},
+		{packet: TestOut{T: 22, Payload: []string{}}, value: []string{}},
 	}
 
 	const n = 42
@@ -82,10 +84,11 @@ func testWebsocket(t *testing.T) {
 		if call.concurrent {
 			rand.New(rand.NewSource(time.Now().UnixNano()))
 			for i := 0; i < n; i++ {
+				packet := call.packet
 				go func() {
 					defer wait.Done()
 					time.Sleep(time.Duration(rand.Intn(200-100)+100) * time.Millisecond)
-					vv, err := client.Call(call.typ, call.payload)
+					vv, err := client.rpc.Call(client.sock.conn, &packet)
 					err = checkCall(vv, err, call.value)
 					if err != nil {
 						t.Errorf("%v", err)
@@ -95,7 +98,8 @@ func testWebsocket(t *testing.T) {
 			}
 		} else {
 			for i := 0; i < n; i++ {
-				vv, err := client.Call(call.typ, call.payload)
+				packet := call.packet
+				vv, err := client.rpc.Call(client.sock.conn, &packet)
 				err = checkCall(vv, err, call.value)
 				if err != nil {
 					wait.Done()
@@ -108,18 +112,22 @@ func testWebsocket(t *testing.T) {
 	}
 	wait.Wait()
 
-	client.Close()
-	<-client.conn.Done
-	server.Close()
-	<-server.Done
+	client.sock.conn.Close()
+	client.rpc.Cleanup()
+	<-clDone
+	server.conn.Close()
+	<-server.done
 }
 
-func newClient(t *testing.T, addr url.URL) *Client {
-	conn, err := NewConnector().NewClient(addr, log)
+func newClient(t *testing.T, addr url.URL) *SocketClient[uint8, TestIn, TestOut, *TestOut] {
+	connector := Client{}
+	conn, err := connector.Connect(addr)
 	if err != nil {
 		t.Fatalf("error: couldn't connect to %v because of %v", addr.String(), err)
 	}
-	return conn
+	rpc := new(RPC[uint8, TestIn])
+	rpc.calls = Map[Uid, *request]{m: make(map[Uid]*request, 10)}
+	return &SocketClient[uint8, TestIn, TestOut, *TestOut]{sock: conn, log: logger.Default(), rpc: rpc}
 }
 
 func checkCall(v []byte, err error, need any) error {
@@ -164,22 +172,21 @@ func checkCall(v []byte, err error, need any) error {
 }
 
 type serverHandler struct {
-	s *websocket.WS // ws server reference made dynamically on HTTP request
+	conn *websocket.Connection // ws server reference made dynamically on HTTP request
+	done chan struct{}
 }
 
 func (s *serverHandler) serve(t *testing.T) func(w http.ResponseWriter, r *http.Request) {
+	connector := Server{}
+
 	return func(w http.ResponseWriter, r *http.Request) {
-		conn, err := websocket.DefaultUpgrader.Upgrade(w, r, nil)
-		if err != nil {
-			t.Fatalf("no socket, %v", err)
-		}
-		sock, err := websocket.NewServerWithConn(conn, log)
+		sock, err := connector.Server.Connect(w, r, nil)
 		if err != nil {
 			t.Fatalf("couldn't init socket server")
 		}
-		s.s = sock
-		s.s.OnMessage = func(m []byte, err error) { s.s.Write(m) } // echo
-		s.s.Listen()
+		s.conn = sock
+		s.conn.SetMessageHandler(func(m []byte, err error) { s.conn.Write(m) }) // echo
+		s.done = s.conn.Listen()
 	}
 }
 

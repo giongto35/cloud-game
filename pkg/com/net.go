@@ -2,187 +2,175 @@ package com
 
 import (
 	"errors"
+	"fmt"
 	"net/http"
 	"net/url"
-	"sync"
 	"time"
 
-	"github.com/giongto35/cloud-game/v3/pkg/api"
-	"github.com/giongto35/cloud-game/v3/pkg/logger"
-	"github.com/giongto35/cloud-game/v3/pkg/network"
 	"github.com/giongto35/cloud-game/v3/pkg/network/websocket"
 	"github.com/goccy/go-json"
+	"github.com/rs/xid"
 )
+
+type Uid struct {
+	xid.ID
+}
+
+var NilUid = Uid{xid.NilID()}
+
+func NewUid() Uid { return Uid{xid.New()} }
+
+func UidFromString(id string) (Uid, error) {
+	x, err := xid.FromString(id)
+	if err != nil {
+		return NilUid, err
+	}
+	return Uid{x}, nil
+}
+
+func (u Uid) Short() string { return u.String()[:3] + "." + u.String()[len(u.String())-3:] }
+
+type HasCallId interface {
+	SetGetId(fmt.Stringer)
+}
+
+type Writer interface {
+	Write([]byte)
+}
+
+type Packet[T ~uint8] interface {
+	GetId() Uid
+	GetType() T
+	GetPayload() []byte
+}
+
+type Packet2[T any] interface {
+	SetId(string)
+	SetType(uint8)
+	SetPayload(any)
+	SetGetId(fmt.Stringer)
+	GetPayload() any
+	*T // non-interface type constraint element
+}
+
+type Transport interface {
+	SetMessageHandler(func([]byte, error))
+}
+
+type RPC[T ~uint8, P Packet[T]] struct {
+	CallTimeout time.Duration
+	Handler     func(P)
+	Transport   Transport
+
+	calls Map[Uid, *request]
+}
+
+type request struct {
+	done     chan struct{}
+	err      error
+	response []byte
+}
+
+const DefaultCallTimeout = 5 * time.Second
+
+var errCanceled = errors.New("canceled")
+var errTimeout = errors.New("timeout")
 
 type (
-	Connector struct {
-		tag string
-		wu  *websocket.Upgrader
-	}
 	Client struct {
-		conn     *websocket.WS
-		queue    map[network.Uid]*call
-		onPacket func(packet In)
-		mu       sync.Mutex
+		websocket.Client
 	}
-	call struct {
-		done     chan struct{}
-		err      error
-		Response In
+	Server struct {
+		websocket.Server
 	}
-	Option = func(c *Connector)
+	Connection struct {
+		conn *websocket.Connection
+	}
 )
 
-var (
-	errConnClosed = errors.New("connection closed")
-	errTimeout    = errors.New("timeout")
-)
-var outPool = sync.Pool{New: func() any { o := Out{}; return &o }}
+func (c *Client) Connect(addr url.URL) (*Connection, error) { return connect(c.Client.Connect(addr)) }
 
-func WithOrigin(url string) Option { return func(c *Connector) { c.wu = websocket.NewUpgrader(url) } }
-func WithTag(tag string) Option    { return func(c *Connector) { c.tag = tag } }
+func (s *Server) Origin(host string) { s.Upgrader = websocket.NewUpgrader(host) }
 
-const callTimeout = 5 * time.Second
-
-func NewConnector(opts ...Option) *Connector {
-	c := &Connector{}
-	for _, opt := range opts {
-		opt(c)
-	}
-	if c.wu == nil {
-		c.wu = &websocket.DefaultUpgrader
-	}
-	return c
+func (s *Server) Connect(w http.ResponseWriter, r *http.Request) (*Connection, error) {
+	return connect(s.Server.Connect(w, r, nil))
 }
 
-func (co *Connector) NewClientServer(w http.ResponseWriter, r *http.Request, log *logger.Logger) (*SocketClient, error) {
-	ws, err := co.wu.Upgrade(w, r, nil)
+func (c Connection) IsServer() bool { return c.conn.IsServer() }
+
+func connect(conn *websocket.Connection, err error) (*Connection, error) {
 	if err != nil {
 		return nil, err
 	}
-	conn, err := connect(websocket.NewServerWithConn(ws, log))
-	if err != nil {
-		return nil, err
-	}
-	c := New(conn, co.tag, network.NewUid(), log)
-	return &c, nil
+	return &Connection{conn: conn}, nil
 }
 
-func (co *Connector) NewClient(address url.URL, log *logger.Logger) (*Client, error) {
-	return connect(websocket.NewClient(address, log))
+func NewRPC[T ~uint8, P Packet[T]]() *RPC[T, P] {
+	return &RPC[T, P]{calls: Map[Uid, *request]{m: make(map[Uid]*request, 10)}}
 }
 
-func connect(conn *websocket.WS, err error) (*Client, error) {
-	if err != nil {
-		return nil, err
-	}
-	client := &Client{conn: conn, queue: make(map[network.Uid]*call, 1)}
-	client.conn.OnMessage = client.handleMessage
-	return client, nil
-}
-
-func (c *Client) IsServer() bool { return c.conn.IsServer() }
-
-func (c *Client) OnPacket(fn func(packet In)) { c.mu.Lock(); c.onPacket = fn; c.mu.Unlock() }
-
-func (c *Client) Listen() { c.mu.Lock(); c.conn.Listen(); c.mu.Unlock() }
-
-func (c *Client) Close() {
-	// !to handle error
-	c.conn.Close()
-	c.drain(errConnClosed)
-}
-
-func (c *Client) Call(type_ api.PT, payload any) ([]byte, error) {
-	// !to expose channel instead of results
-	rq := outPool.Get().(*Out)
-	id := network.NewUid()
-	rq.Id, rq.T, rq.Payload = id, type_, payload
-	r, err := json.Marshal(rq)
-	outPool.Put(rq)
-	if err != nil {
-		//delete(c.queue, id)
-		return nil, err
-	}
-
-	task := &call{done: make(chan struct{})}
-	c.mu.Lock()
-	c.queue[id] = task
-	c.conn.Write(r)
-	c.mu.Unlock()
-	select {
-	case <-task.done:
-	case <-time.After(callTimeout):
-		task.err = errTimeout
-	}
-	return task.Response.Payload, task.err
-}
-
-func (c *Client) Send(type_ api.PT, pl any) error {
-	rq := outPool.Get().(*Out)
-	rq.Id, rq.T, rq.Payload = "", type_, pl
-	defer outPool.Put(rq)
-	return c.SendPacket(rq)
-}
-
-func (c *Client) Route(p In, pl Out) error {
-	rq := outPool.Get().(*Out)
-	rq.Id, rq.T, rq.Payload = p.Id, p.T, pl.Payload
-	defer outPool.Put(rq)
-	return c.SendPacket(rq)
-}
-
-func (c *Client) SendPacket(packet *Out) error {
+func (t *RPC[_, _]) Send(w Writer, packet any) error {
 	r, err := json.Marshal(packet)
 	if err != nil {
 		return err
 	}
-	c.mu.Lock()
-	c.conn.Write(r)
-	c.mu.Unlock()
+	w.Write(r)
 	return nil
 }
 
-func (c *Client) Wait() chan struct{} { return c.conn.Done }
+func (t *RPC[_, _]) Call(w Writer, rq HasCallId) ([]byte, error) {
+	id := NewUid()
+	// set new request id for the external request structure as string
+	rq.SetGetId(id)
 
-func (c *Client) handleMessage(message []byte, err error) {
+	r, err := json.Marshal(rq)
 	if err != nil {
-		return
+		return nil, err
 	}
-
-	var res In
-	if err = json.Unmarshal(message, &res); err != nil {
-		return
+	task := &request{done: make(chan struct{})}
+	t.calls.Put(id, task)
+	w.Write(r)
+	select {
+	case <-task.done:
+	case <-time.After(t.callTimeout()):
+		task.err = errTimeout
 	}
+	return task.response, task.err
+}
 
-	// empty id implies that we won't track (wait) the response
-	if !res.Id.Empty() {
-		if task := c.pop(res.Id); task != nil {
-			task.Response = res
-			close(task.done)
-			return
+func (t *RPC[_, P]) handleMessage(message []byte) error {
+	res := *new(P)
+	if err := json.Unmarshal(message, &res); err != nil {
+		return err
+	}
+	// if we have an id, then unblock blocking call with that id
+	id := res.GetId()
+	if id != NilUid {
+		if blocked := t.calls.Pop(id); blocked != nil {
+			blocked.response = res.GetPayload()
+			close(blocked.done)
+			return nil
 		}
 	}
-	c.onPacket(res)
+	if t.Handler != nil {
+		t.Handler(res)
+	}
+	return nil
 }
 
-// pop extracts and removes a task from the queue by its id.
-func (c *Client) pop(id network.Uid) *call {
-	c.mu.Lock()
-	task := c.queue[id]
-	delete(c.queue, id)
-	c.mu.Unlock()
-	return task
+func (t *RPC[_, _]) callTimeout() time.Duration {
+	if t.CallTimeout > 0 {
+		return t.CallTimeout
+	}
+	return DefaultCallTimeout
 }
 
-// drain cancels all what's left in the task queue.
-func (c *Client) drain(err error) {
-	c.mu.Lock()
-	for _, task := range c.queue {
+func (t *RPC[_, _]) Cleanup() {
+	// drain cancels all what's left in the task queue.
+	t.calls.ForEach(func(task *request) {
 		if task.err == nil {
-			task.err = err
+			task.err = errCanceled
 		}
 		close(task.done)
-	}
-	c.mu.Unlock()
+	})
 }

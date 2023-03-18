@@ -23,8 +23,12 @@ func (u *User) CheckLatency(req api.CheckLatencyUserResponse) (api.CheckLatencyU
 
 // InitSession signals the user that the app is ready to go.
 func (u *User) InitSession(wid string, ice []webrtc.IceServer, games []string) {
-	// don't do this at home
-	u.Notify(api.InitSessionResult(*(*[]api.IceServer)(unsafe.Pointer(&ice)), games, wid))
+	u.Notify(api.InitSession, api.InitSessionUserResponse{
+		// don't do this at home
+		Ice:   *(*[]api.IceServer)(unsafe.Pointer(&ice)),
+		Games: games,
+		Wid:   wid,
+	})
 }
 
 // SendWebrtcOffer sends SDP offer back to the user.

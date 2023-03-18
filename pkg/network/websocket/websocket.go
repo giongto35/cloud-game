@@ -2,14 +2,12 @@ package websocket
 
 import (
 	"crypto/tls"
-	"errors"
 	"net"
 	"net/http"
 	"net/url"
 	"sync"
 	"time"
 
-	"github.com/giongto35/cloud-game/v3/pkg/logger"
 	"github.com/gorilla/websocket"
 )
 
@@ -20,29 +18,89 @@ const (
 	writeWait      = 1 * time.Second
 )
 
-type (
-	WS struct {
-		conn      deadlineConn
-		send      chan []byte
-		OnMessage WSMessageHandler
-		pingPong  bool
-		once      sync.Once
-		Done      chan struct{}
-		alive     bool
-		log       *logger.Logger
-		server    bool
+type Client struct {
+	Dialer *websocket.Dialer
+}
+
+type Server struct {
+	Upgrader *Upgrader
+}
+
+type Connection struct {
+	alive    bool
+	callback MessageHandler
+	conn     deadlineConn
+	done     chan struct{}
+	once     sync.Once
+	pingPong bool
+	send     chan []byte
+}
+
+type deadlineConn struct {
+	*websocket.Conn
+	wt time.Duration
+	mu sync.Mutex // needed for concurrent writes of Gorilla
+}
+
+type MessageHandler func([]byte, error)
+
+type Upgrader struct {
+	websocket.Upgrader
+	Origin string
+}
+
+var DefaultDialer = websocket.DefaultDialer
+var DefaultUpgrader = Upgrader{Upgrader: websocket.Upgrader{
+	ReadBufferSize:    2048,
+	WriteBufferSize:   2048,
+	WriteBufferPool:   &sync.Pool{},
+	EnableCompression: true,
+}}
+
+func NewUpgrader(origin string) *Upgrader {
+	u := DefaultUpgrader
+	switch {
+	case origin == "*":
+		u.CheckOrigin = func(r *http.Request) bool { return true }
+	case origin != "":
+		u.CheckOrigin = func(r *http.Request) bool { return r.Header.Get("Origin") == origin }
 	}
-	WSMessageHandler func(message []byte, err error)
-	Upgrader         struct {
-		websocket.Upgrader
-		origin string
+	return &u
+}
+
+func (u *Upgrader) Upgrade(w http.ResponseWriter, r *http.Request, responseHeader http.Header) (*websocket.Conn, error) {
+	if u.Origin != "" {
+		w.Header().Set("Access-Control-Allow-Origin", u.Origin)
 	}
-	deadlineConn struct {
-		*websocket.Conn
-		wt time.Duration
-		mu sync.Mutex // needed for concurrent writes of Gorilla
+	return u.Upgrader.Upgrade(w, r, responseHeader)
+}
+
+func (s *Server) Connect(w http.ResponseWriter, r *http.Request, responseHeader http.Header) (*Connection, error) {
+	u := s.Upgrader
+	if u == nil {
+		u = &DefaultUpgrader
 	}
-)
+	conn, err := u.Upgrade(w, r, responseHeader)
+	if err != nil {
+		return nil, err
+	}
+	return newSocket(conn, true), nil
+}
+
+func (c *Client) Connect(address url.URL) (*Connection, error) {
+	dialer := c.Dialer
+	if dialer == nil {
+		dialer = DefaultDialer
+	}
+	if address.Scheme == "wss" {
+		dialer.TLSClientConfig = &tls.Config{InsecureSkipVerify: true}
+	}
+	conn, _, err := dialer.Dial(address.String(), nil)
+	if err != nil {
+		return nil, err
+	}
+	return newSocket(conn, false), nil
+}
 
 func (conn *deadlineConn) write(t int, mess []byte) error {
 	conn.mu.Lock()
@@ -59,72 +117,22 @@ func (conn *deadlineConn) writeControl(messageType int, data []byte, deadline ti
 	return conn.Conn.WriteControl(messageType, data, deadline)
 }
 
-var DefaultUpgrader = Upgrader{
-	Upgrader: websocket.Upgrader{
-		ReadBufferSize:    1024,
-		WriteBufferSize:   1024,
-		WriteBufferPool:   &sync.Pool{},
-		EnableCompression: true,
-	},
-}
-
-var ErrNilConnection = errors.New("nil connection")
-
-func NewUpgrader(origin string) *Upgrader {
-	u := DefaultUpgrader
-	switch {
-	case origin == "*":
-		u.CheckOrigin = func(r *http.Request) bool { return true }
-	case origin != "":
-		u.CheckOrigin = func(r *http.Request) bool { return r.Header.Get("Origin") == origin }
-	}
-	return &u
-}
-
-func (u *Upgrader) Upgrade(w http.ResponseWriter, r *http.Request, responseHeader http.Header) (*websocket.Conn, error) {
-	if u.origin != "" {
-		w.Header().Set("Access-Control-Allow-Origin", u.origin)
-	}
-	return u.Upgrader.Upgrade(w, r, responseHeader)
-}
-
-func NewServerWithConn(conn *websocket.Conn, log *logger.Logger) (*WS, error) {
-	if conn == nil {
-		return nil, ErrNilConnection
-	}
-	return newSocket(conn, true, true, log), nil
-}
-
-func NewClient(address url.URL, log *logger.Logger) (*WS, error) {
-	dialer := websocket.DefaultDialer
-	if address.Scheme == "wss" {
-		dialer.TLSClientConfig = &tls.Config{InsecureSkipVerify: true}
-	}
-	conn, _, err := dialer.Dial(address.String(), nil)
-	if err != nil {
-		return nil, err
-	}
-	return newSocket(conn, false, false, log), nil
-}
-
-func (ws *WS) IsServer() bool { return ws.server }
-
-// reader pumps messages from the websocket connection to the OnMessage callback.
+// reader pumps messages from the websocket connection to the SetMessageHandler callback.
 // Blocking, must be called as goroutine. Serializes all websocket reads.
-func (ws *WS) reader() {
+func (c *Connection) reader() {
 	defer func() {
-		close(ws.send)
-		ws.shutdown()
+		close(c.send)
+		c.close()
 	}()
 
-	ws.conn.SetReadLimit(maxMessageSize)
-	_ = ws.conn.SetReadDeadline(time.Now().Add(pongTime))
-	if ws.pingPong {
-		ws.conn.SetPongHandler(func(string) error { _ = ws.conn.SetReadDeadline(time.Now().Add(pongTime)); return nil })
+	c.conn.SetReadLimit(maxMessageSize)
+	_ = c.conn.SetReadDeadline(time.Now().Add(pongTime))
+	if c.pingPong {
+		c.conn.SetPongHandler(func(string) error { _ = c.conn.SetReadDeadline(time.Now().Add(pongTime)); return nil })
 	} else {
-		ws.conn.SetPingHandler(func(string) error {
-			_ = ws.conn.SetReadDeadline(time.Now().Add(pongTime))
-			err := ws.conn.writeControl(websocket.PongMessage, nil, time.Now().Add(writeWait))
+		c.conn.SetPingHandler(func(string) error {
+			_ = c.conn.SetReadDeadline(time.Now().Add(pongTime))
+			err := c.conn.writeControl(websocket.PongMessage, nil, time.Now().Add(writeWait))
 			if err == websocket.ErrCloseSent {
 				return nil
 			} else if e, ok := err.(net.Error); ok && e.Timeout() {
@@ -134,94 +142,101 @@ func (ws *WS) reader() {
 		})
 	}
 	for {
-		_, message, err := ws.conn.ReadMessage()
+		_, message, err := c.conn.ReadMessage()
 		if err != nil {
 			if websocket.IsUnexpectedCloseError(err, websocket.CloseNormalClosure, websocket.CloseGoingAway) {
-				ws.log.Error().Err(err).Msg("WebSocket read fail")
+				c.callback(message, err)
 			}
 			break
 		}
-		ws.OnMessage(message, err)
+		c.callback(message, err)
 	}
 }
 
 // writer pumps messages from the send channel to the websocket connection.
 // Blocking, must be called as goroutine. Serializes all websocket writes.
-func (ws *WS) writer() {
-	defer ws.shutdown()
+func (c *Connection) writer() {
+	defer c.close()
 
-	if ws.pingPong {
+	if c.pingPong {
 		ticker := time.NewTicker(pingTime)
 		defer ticker.Stop()
 
 		for {
 			select {
-			case message, ok := <-ws.send:
-				if !ws.handleMessage(message, ok) {
+			case message, ok := <-c.send:
+				if !c.handleMessage(message, ok) {
 					return
 				}
 			case <-ticker.C:
-				if err := ws.conn.write(websocket.PingMessage, nil); err != nil {
+				if err := c.conn.write(websocket.PingMessage, nil); err != nil {
 					return
 				}
 			}
 		}
 	} else {
-		for message := range ws.send {
-			if !ws.handleMessage(message, true) {
+		for message := range c.send {
+			if !c.handleMessage(message, true) {
 				return
 			}
 		}
 	}
 }
 
-func (ws *WS) handleMessage(message []byte, ok bool) bool {
+func (c *Connection) handleMessage(message []byte, ok bool) bool {
 	if !ok {
-		_ = ws.conn.write(websocket.CloseMessage, nil)
+		_ = c.conn.write(websocket.CloseMessage, nil)
 		return false
 	}
-	if err := ws.conn.write(websocket.TextMessage, message); err != nil {
+	if err := c.conn.write(websocket.TextMessage, message); err != nil {
 		return false
 	}
 	return true
 }
 
-func newSocket(conn *websocket.Conn, pingPong bool, server bool, log *logger.Logger) *WS {
-	return &WS{
-		conn:      deadlineConn{Conn: conn, wt: writeWait},
-		send:      make(chan []byte),
-		once:      sync.Once{},
-		Done:      make(chan struct{}, 1),
-		pingPong:  pingPong,
-		server:    server,
-		OnMessage: func(message []byte, err error) {},
-		log:       log,
+func (c *Connection) close() {
+	c.once.Do(func() {
+		c.alive = false
+		_ = c.conn.Close()
+		close(c.done)
+	})
+}
+
+func newSocket(conn *websocket.Conn, pingPong bool) *Connection {
+	return &Connection{
+		callback: func(message []byte, err error) {},
+		conn:     deadlineConn{Conn: conn, wt: writeWait},
+		done:     make(chan struct{}, 1),
+		once:     sync.Once{},
+		pingPong: pingPong,
+		send:     make(chan []byte),
 	}
 }
 
-func (ws *WS) Listen() {
-	ws.alive = true
-	go ws.writer()
-	go ws.reader()
+// IsServer returns true if the connection has server capabilities and not just a client.
+// For now, we assume every connection with ping/pong handler is a server.
+func (c *Connection) IsServer() bool { return c.pingPong }
+
+func (c *Connection) SetMessageHandler(fn MessageHandler) { c.callback = fn }
+
+func (c *Connection) Listen() chan struct{} {
+	if c.alive {
+		return c.done
+	}
+	c.alive = true
+	go c.writer()
+	go c.reader()
+	return c.done
 }
 
-func (ws *WS) Write(data []byte) {
-	if ws.alive {
-		ws.send <- data
+func (c *Connection) Write(data []byte) {
+	if c.alive {
+		c.send <- data
 	}
 }
 
-func (ws *WS) Close() {
-	if ws.alive {
-		_ = ws.conn.write(websocket.CloseMessage, websocket.FormatCloseMessage(websocket.CloseNormalClosure, ""))
+func (c *Connection) Close() {
+	if c.alive {
+		_ = c.conn.write(websocket.CloseMessage, websocket.FormatCloseMessage(websocket.CloseNormalClosure, ""))
 	}
-}
-
-func (ws *WS) shutdown() { ws.once.Do(ws.close) }
-
-func (ws *WS) close() {
-	ws.alive = false
-	_ = ws.conn.Close()
-	close(ws.Done)
-	ws.log.Debug().Msg("WebSocket should be closed now")
 }

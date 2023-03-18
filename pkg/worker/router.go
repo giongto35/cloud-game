@@ -2,7 +2,6 @@ package worker
 
 import (
 	"github.com/giongto35/cloud-game/v3/pkg/com"
-	"github.com/giongto35/cloud-game/v3/pkg/network"
 	"github.com/giongto35/cloud-game/v3/pkg/network/webrtc"
 	"github.com/pion/webrtc/v3/pkg/media"
 )
@@ -18,9 +17,9 @@ type Router struct {
 
 // Session represents WebRTC connection of the user.
 type Session struct {
-	id   network.Uid
+	id   com.Uid
 	conn *webrtc.Peer
-	pi   int
+	pi   int        // player index
 	room GamingRoom // back reference
 }
 
@@ -39,19 +38,18 @@ func (r *Router) GetRoom(id string) GamingRoom {
 	}
 	return nil
 }
-func (r *Router) GetUser(uid network.Uid) *Session { sess, _ := r.users.Find(string(uid)); return sess }
-func (r *Router) RemoveRoom()                      { r.room = nil }
-func (r *Router) RemoveUser(user *Session)         { r.users.Remove(user); user.Close() }
+func (r *Router) GetUser(uid com.Uid) *Session   { sess, _ := r.users.Find(uid); return sess }
+func (r *Router) RemoveDisconnect(user *Session) { r.users.Remove(user); user.Disconnect() }
 
-func NewSession(rtc *webrtc.Peer, id network.Uid) *Session { return &Session{id: id, conn: rtc} }
+func NewSession(rtc *webrtc.Peer, id com.Uid) *Session { return &Session{id: id, conn: rtc} }
 
-func (s *Session) Id() network.Uid                      { return s.id }
-func (s *Session) GetSetRoom(v GamingRoom) GamingRoom   { vv := s.room; s.room = v; return vv }
+func (s *Session) Disconnect()                          { s.conn.Disconnect() }
 func (s *Session) GetPeerConn() *webrtc.Peer            { return s.conn }
 func (s *Session) GetPlayerIndex() int                  { return s.pi }
+func (s *Session) GetSetRoom(v GamingRoom) GamingRoom   { vv := s.room; s.room = v; return vv }
+func (s *Session) Id() com.Uid                          { return s.id }
 func (s *Session) IsConnected() bool                    { return s.conn.IsConnected() }
-func (s *Session) SendVideo(sample *media.Sample) error { return s.conn.WriteVideo(sample) }
 func (s *Session) SendAudio(sample *media.Sample) error { return s.conn.WriteAudio(sample) }
-func (s *Session) SetRoom(room GamingRoom)              { s.room = room }
+func (s *Session) SendVideo(sample *media.Sample) error { return s.conn.WriteVideo(sample) }
 func (s *Session) SetPlayerIndex(index int)             { s.pi = index }
-func (s *Session) Close()                               { s.conn.Disconnect() }
+func (s *Session) SetRoom(room GamingRoom)              { s.room = room }
