@@ -12,7 +12,7 @@ func WithCloudStorage(room GamingRoom, storage CloudStorage) *CloudSaveRoom {
 		GamingRoom: room,
 		storage:    storage,
 	}
-	if err := room.(*CloudSaveRoom).Download(); err != nil {
+	if err := cr.Download(); err != nil {
 		room.GetLog().Warn().Err(err).Msg("The room is not in the cloud")
 	}
 	return &cr
