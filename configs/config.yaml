@@ -103,7 +103,7 @@ emulator:
 
   # set the total number of threads for the image processing
   # (experimental)
-  threads: 4
+  threads: 0
 
   aspectRatio:
     # enable aspect ratio changing
