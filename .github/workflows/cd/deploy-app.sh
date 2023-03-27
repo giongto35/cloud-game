@@ -54,6 +54,10 @@ IP_LIST=${IP_LIST:-}
 # a list of machines mark some addresses to deploy only a coordinator there
 COORDINATORS=${COORDINATORS:-}
 
+if [ -z "$SPLIT_HOSTS" ]; then
+    IP_LIST+=$COORDINATORS
+fi
+
 # Digital Ocean operations
 #DO_TOKEN
 DO_ADDRESS_LIST=${DO_ADDRESS_LIST:-}
@@ -147,6 +151,8 @@ for ip in $IP_LIST; do
     cmd+=" worker"
     deploy_coordinator=0
     deploy_worker=1
+  else
+   cmd+=" worker"
   fi
 
   # override run command
@@ -159,6 +165,8 @@ for ip in $IP_LIST; do
          break
        fi
      done
+  else
+    cmd+=" coordinator"
   fi
 
   # build Docker container env file
