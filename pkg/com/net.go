@@ -71,7 +71,7 @@ type request struct {
 	response []byte
 }
 
-const DefaultCallTimeout = 5 * time.Second
+const DefaultCallTimeout = 7 * time.Second
 
 var errCanceled = errors.New("canceled")
 var errTimeout = errors.New("timeout")

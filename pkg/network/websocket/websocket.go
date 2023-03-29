@@ -14,8 +14,8 @@ import (
 const (
 	maxMessageSize = 10 * 1024
 	pingTime       = pongTime * 9 / 10
-	pongTime       = 5 * time.Second
-	writeWait      = 1 * time.Second
+	pongTime       = 6 * time.Second
+	writeWait      = 2 * time.Second
 )
 
 type Client struct {
