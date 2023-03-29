@@ -128,7 +128,7 @@ echo "IPs:" $IP_LIST
 
 # Run command builder
 #
-# By default it will run docker-compose with both coordinator and worker apps.
+# By default it will run docker compose with both coordinator and worker apps.
 # With the SPLIT_HOSTS parameter specified, it will run either coordinator app
 # if the current server address is found in the IP_LIST variable, otherwise it
 # will run just the worker app.
@@ -146,7 +146,7 @@ for ip in $IP_LIST; do
   fi
 
   # build run command
-  cmd="ZONE=\$zone docker-compose up -d --remove-orphans --scale worker=\${workers:-$WORKERS}"
+  cmd="ZONE=\$zone docker compose up -d --remove-orphans --scale worker=\${workers:-$WORKERS}"
   if [ ! -z "$SPLIT_HOSTS" ]; then
     cmd+=" worker"
     deploy_coordinator=0
@@ -159,7 +159,7 @@ for ip in $IP_LIST; do
   if [ ! -z "$SPLIT_HOSTS" ]; then
     for addr in $COORDINATORS; do
        if [ "$ip" == $addr ]; then
-         cmd="docker-compose up -d --remove-orphans coordinator"
+         cmd="docker compose up -d --remove-orphans coordinator"
          deploy_coordinator=1
          deploy_worker=0
          break
@@ -204,7 +204,7 @@ for ip in $IP_LIST; do
   echo "run.sh:"$'\n'"$run"
   echo ""
 
-  # !to add docker-compose install / warning
+  # !to add docker compose install / warning
 
   # custom scripts
   remote_sudo_run_once $ip "$PROVIDER_DIR" "$ssh_i"
@@ -213,13 +213,13 @@ for ip in $IP_LIST; do
   echo "Update the remote host"
 
   ssh -o ConnectTimeout=10 $USER@$ip ${ssh_i:-} "\
-    docker-compose -v; \
+    docker compose version; \
     mkdir -p $REMOTE_WORK_DIR; \
     cd $REMOTE_WORK_DIR; \
     echo '$compose_src' > ./docker-compose.yml; \
     echo '$run_env' > ./run.env; \
     docker image prune -f -a; \
-    IMAGE_TAG=$DOCKER_IMAGE_TAG docker-compose pull; \
+    IMAGE_TAG=$DOCKER_IMAGE_TAG docker compose pull; \
     echo '$run' > ./run.sh; \
     chmod +x ./run.sh; \
     ./run.sh"
