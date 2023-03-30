@@ -27,10 +27,11 @@ services:
     <<: *default-params
     environment:
       - MESA_GL_VERSION_OVERRIDE=3.3
-    entrypoint: [ "/bin/sh", "-c", "xvfb-run -a $$@", "" ]
+    #entrypoint: [ "/bin/sh", "-c", "xvfb-run -a $$@", "" ]
     command: worker --zone=${ZONE:-}
     volumes:
       - ${APP_DIR:-/cloud-game}/cache:/usr/local/share/cloud-game/assets/cache
       - ${APP_DIR:-/cloud-game}/cores:/usr/local/share/cloud-game/assets/cores
       - ${APP_DIR:-/cloud-game}/games:/usr/local/share/cloud-game/assets/games
+      - ${APP_DIR:-/cloud-game}/libretro:/usr/local/share/cloud-game/libretro
       - ${APP_DIR:-/cloud-game}/home:/root/.cr
