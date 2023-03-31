@@ -283,6 +283,14 @@ func coreEnvironment(cmd C.unsigned, data unsafe.Pointer) C.bool {
 	case C.RETRO_ENVIRONMENT_GET_SAVE_DIRECTORY:
 		*(**C.char)(data) = cSaveDirectory
 		return true
+	case C.RETRO_ENVIRONMENT_SET_MESSAGE:
+		// only with the Libretro debug mode
+		if libretroLogger.GetLevel() < logger.InfoLevel {
+			message := (*C.struct_retro_message)(data)
+			msg := C.GoString(message.msg)
+			libretroLogger.Debug().Msgf("message: %v", msg)
+			return true
+		}
 	case C.RETRO_ENVIRONMENT_SHUTDOWN:
 		//window.SetShouldClose(true)
 		return true
