@@ -68,7 +68,7 @@ REMOTE_WORK_DIR=${REMOTE_WORK_DIR:-"/cloud-game"}
 DOCKER_IMAGE_TAG=${DOCKER_IMAGE_TAG:-latest}
 echo "Docker tag:$DOCKER_IMAGE_TAG"
 # the total number of worker replicas to deploy
-WORKERS=${WORKERS:-5}
+WORKERS=${WORKERS:-4}
 USER=${USER:-root}
 
 compose_src=$(cat $LOCAL_WORK_DIR/docker-compose.yml)
@@ -146,7 +146,7 @@ for ip in $IP_LIST; do
   fi
 
   # build run command
-  cmd="ZONE=\$zone docker compose up -d --remove-orphans --scale worker=\${workers:-$WORKERS}"
+  cmd="ZONE=\$zone docker compose up -d --remove-orphans"
   if [ ! -z "$SPLIT_HOSTS" ]; then
     cmd+=" worker"
     deploy_coordinator=0
@@ -198,7 +198,7 @@ for ip in $IP_LIST; do
   run="#!/bin/bash"$'\n'
   run+=$(remote_run_commands "$ENV_DIR")$'\n'
   run+=$(remote_run_commands "$PROVIDER_DIR")$'\n'
-  run+="IMAGE_TAG=$DOCKER_IMAGE_TAG APP_DIR=$REMOTE_WORK_DIR $cmd"
+  run+="IMAGE_TAG=$DOCKER_IMAGE_TAG APP_DIR=$REMOTE_WORK_DIR WORKER_REPLICAS=$WORKERS $cmd"
 
   echo ""
   echo "run.sh:"$'\n'"$run"

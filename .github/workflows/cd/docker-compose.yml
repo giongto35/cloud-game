@@ -25,6 +25,11 @@ services:
 
   worker:
     <<: *default-params
+    depends_on:
+      - coordinator
+    deploy:
+      mode: replicated
+      replicas: ${WORKER_REPLICAS:-4}
     environment:
       - MESA_GL_VERSION_OVERRIDE=3.3
     #entrypoint: [ "/bin/sh", "-c", "xvfb-run -a $$@", "" ]
