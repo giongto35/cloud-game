@@ -48,13 +48,13 @@ COPY scripts/install.sh install.sh
 RUN bash install.sh && \
     rm -rf /var/lib/apt/lists/* install.sh
 
+COPY --from=build ${BUILD_PATH}/bin/ ./
+RUN cp -s $(pwd)/* /usr/local/bin
 RUN mkdir -p ./assets/cache && \
     mkdir -p ./assets/cores && \
     mkdir -p ./assets/games && \
     mkdir -p ./libretro && \
     mkdir -p /root/.cr
-COPY --from=build ${BUILD_PATH}/bin/ ./
-RUN cp -s $(pwd)/* /usr/local/bin
 COPY assets/cores ./assets/cores
 COPY configs ./configs
 COPY web ./web
