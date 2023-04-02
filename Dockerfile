@@ -20,7 +20,7 @@ RUN apt-get -qq update && apt-get -qq install --no-install-recommends -y \
  && rm -rf /var/lib/apt/lists/*
 
 # go setup layer
-ARG GO=go1.20.linux-amd64.tar.gz
+ARG GO=go1.20.2.linux-amd64.tar.gz
 RUN wget -q https://golang.org/dl/$GO \
     && rm -rf /usr/local/go \
     && tar -C /usr/local -xzf $GO \
@@ -48,6 +48,11 @@ COPY scripts/install.sh install.sh
 RUN bash install.sh && \
     rm -rf /var/lib/apt/lists/* install.sh
 
+RUN mkdir -p ./assets/cache && \
+    mkdir -p ./assets/cores && \
+    mkdir -p ./assets/games && \
+    mkdir -p ./libretro && \
+    mkdir -p /root/.cr
 COPY --from=build ${BUILD_PATH}/bin/ ./
 RUN cp -s $(pwd)/* /usr/local/bin
 COPY assets/cores ./assets/cores
