@@ -131,7 +131,7 @@ func coreVideoRefresh(data unsafe.Pointer, width, height uint, packed uint) {
 	// calculate real frame width in pixels from packed data (realWidth >= width)
 	// some cores or games output zero pitch, i.e. N64 Mupen
 	if packed == 0 {
-		packed = width
+		packed = width * nano.v.bpp
 	}
 	// calculate space for the video frame
 	bytes := packed * height
@@ -152,6 +152,8 @@ func coreVideoRefresh(data unsafe.Pointer, width, height uint, packed uint) {
 	if fr == nil {
 		fr = &emulator.GameFrame{}
 	}
+	// !to fix possible nil pointer dereference
+	// when the internal pool can be nil during first Get???
 	fr.Data = frontend.canvas.
 		Draw(nano.v.pixFmt, nano.rot, int(width), int(height), int(packed), int(nano.v.bpp), data_, frontend.th)
 	fr.Duration = time.Duration(dt)
