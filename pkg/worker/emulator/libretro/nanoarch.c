@@ -6,7 +6,22 @@
 //#include <stdlib.h>
 //#include <signal.h>
 
+int initialized = 0;
+
 void coreLog(enum retro_log_level level, const char *msg);
+
+static bool on_clear_all_thread_waits_cb(unsigned v, void *data) {
+    if (v > 0) {
+        coreLog(RETRO_LOG_DEBUG, "CLEAR_ALL_THREAD_WAITS_CB (1)\n");
+    } else {
+        coreLog(RETRO_LOG_DEBUG, "CLEAR_ALL_THREAD_WAITS_CB (0)\n");
+        void signalStop();
+        signalStop();
+    }
+    return true;
+}
+
+void clear_all_thread_waits_cb(void *data) { *(retro_environment_t *)data = on_clear_all_thread_waits_cb; }
 
 void bridge_retro_init(void *f) {
     coreLog(RETRO_LOG_INFO, "Initialization...\n");
@@ -157,7 +172,6 @@ void deinitVideo_cgo() {
 
 void *function;
 pthread_t thread;
-int initialized = 0;
 pthread_mutex_t run_mutex;
 pthread_cond_t run_cv;
 pthread_mutex_t done_mutex;
@@ -169,11 +183,12 @@ pthread_cond_t done_cv;
 //}
 
 void *run_loop(void *unused) {
+    coreLog(RETRO_LOG_DEBUG, "UnLIBCo run loop start\n");
     pthread_mutex_lock(&done_mutex);
     pthread_mutex_lock(&run_mutex);
     pthread_cond_signal(&done_cv);
     pthread_mutex_unlock(&done_mutex);
-    while (1) {
+    while (initialized) {
         pthread_cond_wait(&run_cv, &run_mutex);
         ((void (*)(void)) function)();
         pthread_mutex_lock(&done_mutex);
@@ -181,6 +196,11 @@ void *run_loop(void *unused) {
         pthread_mutex_unlock(&done_mutex);
     }
     pthread_mutex_unlock(&run_mutex);
+    coreLog(RETRO_LOG_DEBUG, "UnLIBCo run loop stop\n");
+}
+
+void stop_run_loop() {
+    initialized = 0;
 }
 
 void bridge_execute(void *f) {

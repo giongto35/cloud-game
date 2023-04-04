@@ -19,7 +19,7 @@ func TestLibraryScan(t *testing.T) {
 		},
 	}
 
-	l := logger.NewConsole(false, "w", true)
+	l := logger.NewConsole(false, "w", false)
 	for _, test := range tests {
 		library := NewLib(Config{
 			BasePath:  test.directory,

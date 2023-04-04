@@ -22,6 +22,8 @@ import (
 #include "libretro.h"
 #include "nanoarch.h"
 #include <stdlib.h>
+
+#define RETRO_ENVIRONMENT_GET_CLEAR_ALL_THREAD_WAITS_CB (3 | 0x800000)
 */
 import "C"
 
@@ -194,8 +196,8 @@ func coreInputState(port C.unsigned, device C.unsigned, index C.unsigned, id C.u
 
 func audioWrite(buf unsafe.Pointer, frames C.size_t) C.size_t {
 	if frontend.stopped.Load() {
-		libretroLogger.Warn().Msgf(">>> skip audio")
-		return 0
+		libretroLogger.Warn().Msgf(">>> skip %v audio frames", frames)
+		return frames
 	}
 
 	samples := int(frames) << 1
@@ -338,6 +340,8 @@ func coreEnvironment(cmd C.unsigned, data unsafe.Pointer) C.bool {
 			}
 		}
 		return false
+	case C.RETRO_ENVIRONMENT_GET_CLEAR_ALL_THREAD_WAITS_CB:
+		C.clear_all_thread_waits_cb(data)
 	default:
 		return false
 	}
@@ -387,6 +391,11 @@ func initVideo() {
 	if libretroLogger.GetLevel() < logger.InfoLevel {
 		printOpenGLDriverInfo()
 	}
+}
+
+//export signalStop
+func signalStop() {
+	libretroLogger.Debug().Msgf("On UnLibCo stop callback")
 }
 
 //export deinitVideo
@@ -578,6 +587,7 @@ func nanoarchShutdown() {
 			if nano.v.isGl {
 				C.bridge_execute(C.deinitVideo_cgo)
 			}
+			C.bridge_execute(C.stop_run_loop)
 		})
 	} else {
 		if nano.v.isGl {

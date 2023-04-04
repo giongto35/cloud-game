@@ -1,6 +1,9 @@
 #ifndef FRONTEND_H__
 #define FRONTEND_H__
 
+void clear_all_thread_waits_cb(void *data);
+void stop_run_loop();
+
 bool bridge_retro_load_game(void *f, struct retro_game_info *gi);
 bool bridge_retro_serialize(void *f, void *data, size_t size);
 bool bridge_retro_set_environment(void *f, void *callback);

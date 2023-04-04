@@ -211,7 +211,7 @@ func getRoomMock(cfg roomMockConfig) roomMock {
 		panic(err)
 	}
 	fixEmulators(&conf, cfg.autoGlContext)
-	l := logger.NewConsole(conf.Worker.Debug, "w", true)
+	l := logger.NewConsole(conf.Worker.Debug, "w", false)
 	if cfg.noLog {
 		logger.SetGlobalLevel(logger.Disabled)
 	}
