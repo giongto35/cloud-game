@@ -131,7 +131,6 @@ emulator:
     cores:
       paths:
         libs: assets/cores
-        configs: assets/cores
       # Config params for Libretro cores repository,
       # available types are:
       #   - buildbot (the default Libretro nightly repository)
@@ -162,7 +161,6 @@ emulator:
       # Available config params:
       #   - altRepo (bool) prioritize secondary repo as the download source
       #   - lib (string)
-      #   - config (string)
       #   - roms ([]string)
       #   - folder (string)
       #       By default emulator selection is based on the folder named as cores
@@ -181,6 +179,7 @@ emulator:
       #       their tick rate (1/system FPS), but OpenGL cores like N64 may have significant
       #       frame rendering time inconsistencies. In general, VFR for CFR cores leads to
       #       noticeable video stutter (with the current frame rendering time calculations).
+      #   - options ([]string) a list of Libretro core options for tweaking
       list:
         gba:
           lib: mgba_libretro
@@ -190,6 +189,10 @@ emulator:
           roms: [ "cue" ]
           # example of folder override
           folder: psx
+          # see: https://github.com/libretro/pcsx_rearmed/blob/master/frontend/libretro_core_options.h
+          options:
+            pcsx_rearmed_drc: enabled
+            pcsx_rearmed_display_internal_fps: disabled
         # MAME core requires additional manual setup, please read:
         # https://docs.libretro.com/library/fbneo/
         mame:
@@ -197,8 +200,10 @@ emulator:
           roms: [ "zip" ]
         nes:
           lib: nestopia_libretro
-          config: nestopia_libretro.cfg
           roms: [ "nes" ]
+          # see: https://github.com/libretro/nestopia/blob/master/libretro/libretro_core_options.h
+          options:
+            nestopia_audio_type: stereo
         snes:
           lib: snes9x_libretro
           roms: [ "smc", "sfc", "swc", "fig", "bs" ]
@@ -206,11 +211,26 @@ emulator:
         n64:
           lib: mupen64plus_next_libretro
           altRepo: true
-          config: mupen64plus_next_libretro.cfg
           roms: [ "n64", "v64", "z64" ]
           isGlAllowed: true
           usesLibCo: true
           vfr: true
+          # see: https://github.com/libretro/mupen64plus-libretro-nx/blob/master/libretro/libretro_core_options.h
+          options:
+            mupen64plus-169screensize: 640x360
+            mupen64plus-43screensize: 320x240
+            mupen64plus-EnableCopyColorToRDRAM: Off
+            mupen64plus-EnableCopyDepthToRDRAM: Off
+            mupen64plus-EnableEnhancedTextureStorage: True
+            mupen64plus-EnableFBEmulation: True
+            mupen64plus-EnableLegacyBlending: True
+            mupen64plus-FrameDuping: False
+            mupen64plus-MaxTxCacheSize: 8000
+            mupen64plus-ThreadedRenderer: False
+            mupen64plus-cpucore: dynamic_recompiler
+            mupen64plus-pak1: memory
+            mupen64plus-rdp-plugin: gliden64
+            mupen64plus-rsp-plugin: hle
 
 encoder:
   audio:
