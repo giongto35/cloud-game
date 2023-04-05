@@ -37,8 +37,7 @@ func (a AspectRatio) ResizeToAspect(ratio float64, sw int, sh int) (dw int, dh i
 type LibretroConfig struct {
 	Cores struct {
 		Paths struct {
-			Libs    string
-			Configs string
+			Libs string
 		}
 		Repo struct {
 			Sync      bool
@@ -61,12 +60,12 @@ type LibretroRepoConfig struct {
 type LibretroCoreConfig struct {
 	AltRepo       bool
 	AutoGlContext bool // hack: keep it here to pass it down the emulator
-	Config        string
 	Folder        string
 	HasMultitap   bool
 	Height        int
 	IsGlAllowed   bool
 	Lib           string
+	Options       map[string]string
 	Roms          []string
 	UsesLibCo     bool
 	VFR           bool
@@ -83,9 +82,6 @@ func (e Emulator) GetLibretroCoreConfig(emulator string) LibretroCoreConfig {
 	cores := e.Libretro.Cores
 	conf := cores.List[emulator]
 	conf.Lib = path.Join(cores.Paths.Libs, conf.Lib)
-	if conf.Config != "" {
-		conf.Config = path.Join(cores.Paths.Configs, conf.Config)
-	}
 	return conf
 }
 
