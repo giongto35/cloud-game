@@ -217,9 +217,8 @@ func getRoomMock(cfg roomMockConfig) roomMock {
 	}
 
 	// sync cores
-	coreManager := remotehttp.NewRemoteHttpManager(conf.Emulator.Libretro, l)
-	if err := coreManager.Sync(); err != nil {
-		log.Printf("error: cores sync has failed, %v", err)
+	if err := remotehttp.CheckCores(conf.Emulator, l); err != nil {
+		l.Error().Err(err).Msg("cores sync error")
 	}
 	conf.Encoder.Video.Codec = string(cfg.vCodec)
 
