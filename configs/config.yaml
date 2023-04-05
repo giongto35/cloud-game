@@ -186,7 +186,7 @@ emulator:
           roms: [ "gba", "gbc" ]
         pcsx:
           lib: pcsx_rearmed_libretro
-          roms: [ "cue" ]
+          roms: [ "cue", "chd" ]
           # example of folder override
           folder: psx
           # see: https://github.com/libretro/pcsx_rearmed/blob/master/frontend/libretro_core_options.h
