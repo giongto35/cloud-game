@@ -222,8 +222,6 @@ func getRoomMock(cfg roomMockConfig) roomMock {
 	}
 	conf.Encoder.Video.Codec = string(cfg.vCodec)
 
-	//
-
 	room := NewRoom(cfg.roomName, cfg.game, nil, conf, l)
 
 	if !cfg.dontStartEmulator {
