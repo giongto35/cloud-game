@@ -2,16 +2,12 @@ version: "3.9"
 
 x-params:
   &default-params
-  image: ghcr.io/giongto35/cloud-game/cloud-game:${IMAGE_TAG:-latest}
+  image: ghcr.io/giongto35/cloud-game/cloud-game:${IMAGE_TAG:-dev}
   network_mode: "host"
   privileged: true
   restart: always
   logging:
-    driver: "json-file"
-    options:
-      max-size: "32m"
-      max-file: "4"
-      compress: "true"
+    driver: "journald"
 
 services:
 
@@ -21,6 +17,7 @@ services:
     volumes:
       - ${APP_DIR:-/cloud-game}/cache:/usr/local/share/cloud-game/assets/cache
       - ${APP_DIR:-/cloud-game}/games:/usr/local/share/cloud-game/assets/games
+      - ${APP_DIR:-/cloud-game}/home:/root/.cr
 
   worker:
     <<: *default-params

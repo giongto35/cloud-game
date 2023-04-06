@@ -227,7 +227,7 @@ for ip in $IP_LIST; do
     mkdir -p $REMOTE_WORK_DIR/home; \
     echo \"$custom_config\" > $REMOTE_WORK_DIR/home/config.yaml; \
     echo '$compose_src' > ./docker-compose.yml; \
-    docker compose stop; \
+    docker compose down; \
     IMAGE_TAG=$DOCKER_IMAGE_TAG docker compose pull; \
     docker compose up -d;"
 done
