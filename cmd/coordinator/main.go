@@ -1,9 +1,6 @@
 package main
 
 import (
-	"math/rand"
-	"time"
-
 	config "github.com/giongto35/cloud-game/v3/pkg/config/coordinator"
 	"github.com/giongto35/cloud-game/v3/pkg/coordinator"
 	"github.com/giongto35/cloud-game/v3/pkg/logger"
@@ -13,7 +10,6 @@ import (
 var Version = "?"
 
 func main() {
-	rand.New(rand.NewSource(time.Now().UnixNano())) // !to remove when bumped to 1.20
 	conf := config.NewConfig()
 	conf.ParseFlags()
 

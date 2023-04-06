@@ -6,7 +6,6 @@ import (
 	"math/rand"
 	"reflect"
 	"testing"
-	"time"
 
 	"github.com/giongto35/cloud-game/v3/pkg/logger"
 	"github.com/giongto35/cloud-game/v3/pkg/worker/encoder"
@@ -138,8 +137,6 @@ func BenchmarkResampler(b *testing.B) {
 }
 
 func gen(l int) []int16 {
-	rand.New(rand.NewSource(time.Now().UnixNano())) // !to remove when bumped to 1.20
-
 	nums := make([]int16, l)
 	for i := range nums {
 		nums[i] = int16(rand.Intn(10))

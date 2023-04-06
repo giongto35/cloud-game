@@ -65,10 +65,6 @@ type (
 	}
 )
 
-func init() {
-	rand.New(rand.NewSource(time.Now().UnixNano())) // !to remove when bumped to 1.20
-}
-
 // NewRecording creates new media recorder for the emulator.
 func NewRecording(meta Meta, log *logger.Logger, opts Options) *Recording {
 	savePath, err := filepath.Abs(opts.Dir)
