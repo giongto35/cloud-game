@@ -31,7 +31,7 @@ const lastKey = int(C.RETRO_DEVICE_ID_JOYPAD_R3)
 
 type (
 	nanoarch struct {
-		opts      CoreOptions
+		options   *map[string]string
 		v         video
 		multitap  multitap
 		rot       *image.Rotate
@@ -58,25 +58,6 @@ type (
 		size uint
 	}
 )
-
-type CoreOptions struct{ KV map[string]*C.char }
-
-func NewCoreOptions(m *map[string]string) CoreOptions {
-	if m == nil {
-		return CoreOptions{}
-	}
-	opts := CoreOptions{KV: make(map[string]*C.char, len(*m))}
-	for k, v := range *m {
-		opts.KV[k] = C.CString(v)
-	}
-	return opts
-}
-
-func (c *CoreOptions) Free() {
-	for _, v := range c.KV {
-		C.free(unsafe.Pointer(v))
-	}
-}
 
 // Global link for C callbacks to Go
 var nano = nanoarch{
@@ -326,11 +307,18 @@ func coreEnvironment(cmd C.unsigned, data unsafe.Pointer) C.bool {
 		setRotation(*(*uint)(data) % 4)
 		return true
 	case C.RETRO_ENVIRONMENT_GET_VARIABLE:
-		variable := (*C.struct_retro_variable)(data)
-		key := C.GoString(variable.key)
-		if val, ok := nano.opts.KV[key]; ok {
-			variable.value = val
-			libretroLogger.Debug().Msgf("Set %s=%v", key, C.GoString(variable.value))
+		if (*nano.options) == nil {
+			return false
+		}
+		rv := (*C.struct_retro_variable)(data)
+		key := C.GoString(rv.key)
+		if v, ok := (*nano.options)[key]; ok {
+			// make Go strings null-terminated copies ;_;
+			(*nano.options)[key] = v + "\x00"
+			// cast to C string and set the value
+			// we hope the string won't be collected while C needs it
+			rv.value = (*C.char)(unsafe.Pointer(unsafe.StringData((*nano.options)[key])))
+			libretroLogger.Debug().Msgf("Set %s=%v", key, v)
 			return true
 		}
 		return false
@@ -460,7 +448,7 @@ func coreLoad(meta emulator.Metadata) {
 	nano.v.autoGlContext = meta.AutoGlContext
 	hasVFR = meta.HasVFR
 
-	nano.opts = NewCoreOptions(&meta.Options)
+	nano.options = &meta.Options
 
 	nano.multitap.supported = meta.HasMultitap
 	nano.multitap.enabled = false
@@ -630,7 +618,7 @@ func nanoarchShutdown() {
 	if err := closeLib(coreLib); err != nil {
 		libretroLogger.Error().Err(err).Msg("lib close failed")
 	}
-	nano.opts.Free()
+	nano.options = nil
 }
 
 func run() {
