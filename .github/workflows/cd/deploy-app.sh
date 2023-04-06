@@ -72,6 +72,7 @@ WORKERS=${WORKERS:-4}
 USER=${USER:-root}
 
 compose_src=$(cat $LOCAL_WORK_DIR/docker-compose.yml)
+config_src=$(cat $LOCAL_WORK_DIR/configs/config.yaml)
 
 function remote_run_commands() {
   ret=""
@@ -171,7 +172,14 @@ for ip in $IP_LIST; do
 
   # build Docker container env file
   run_env=""
+  custom_config=""
   if [[ ! -z "${ENV_DIR}" ]]; then
+    env_f=$ENV_DIR/config.yaml
+    if [[ -e "$env_f" ]]; then
+        echo "config.yaml found"
+        custom_config=$(cat $env_f)
+    fi
+
     if [ $deploy_coordinator == 1 ]; then
       env_f=$ENV_DIR/coordinator.env
       if [[ -e "$env_f" ]]; then
@@ -216,11 +224,10 @@ for ip in $IP_LIST; do
     docker compose version; \
     mkdir -p $REMOTE_WORK_DIR; \
     cd $REMOTE_WORK_DIR; \
+    mkdir -p $REMOTE_WORK_DIR/home; \
+    echo \"$custom_config\" > $REMOTE_WORK_DIR/home/config.yaml; \
     echo '$compose_src' > ./docker-compose.yml; \
-    echo '$run_env' > ./run.env; \
-    docker image prune -f -a; \
+    docker compose stop; \
     IMAGE_TAG=$DOCKER_IMAGE_TAG docker compose pull; \
-    echo '$run' > ./run.sh; \
-    chmod +x ./run.sh; \
-    ./run.sh"
+    docker compose up -d;"
 done
