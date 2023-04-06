@@ -16,13 +16,23 @@ func LoadConfig(config any, path string) error {
 	dirs := []string{path}
 	if path == "" {
 		dirs = append(dirs, ".", "configs", "../../../configs")
-		if home, err := os.UserHomeDir(); err == nil {
-			dirs = append(dirs, home+"/.cr")
-		}
 	}
+
+	homeDir := ""
+	if home, err := os.UserHomeDir(); err == nil {
+		homeDir = home + "/.cr"
+		dirs = append(dirs, homeDir)
+	}
+
 	if err := fig.Load(config, fig.Dirs(dirs...), fig.UseEnv(EnvPrefix)); err != nil {
 		return err
 	}
+
+	// override from /home
+	if homeDir != "" {
+		_ = fig.Load(config, fig.Dirs(homeDir))
+	}
+
 	return nil
 }
 
