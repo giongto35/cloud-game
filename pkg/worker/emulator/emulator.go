@@ -40,11 +40,7 @@ type Emulator interface {
 }
 
 type Metadata struct {
-	// the full path to some emulator lib
-	LibPath string
-	// the full path to the emulator config
-	ConfigPath string
-
+	LibPath         string // the full path to some emulator lib
 	AudioSampleRate int
 	Fps             float64
 	BaseWidth       int
@@ -55,6 +51,7 @@ type Metadata struct {
 	AutoGlContext   bool
 	HasMultitap     bool
 	HasVFR          bool
+	Options         map[string]string
 }
 
 type (

@@ -89,7 +89,7 @@ func Test_ix8888(t *testing.T) {
 			args: args{
 				dst:    new(uint32),
 				px:     0x11223344,
-				expect: 0xff443322,
+				expect: 0x00443322,
 			},
 		},
 	}

@@ -55,7 +55,6 @@ RUN mkdir -p ./assets/cache && \
     mkdir -p ./assets/games && \
     mkdir -p ./libretro && \
     mkdir -p /root/.cr
-COPY assets/cores ./assets/cores
 COPY configs ./configs
 COPY web ./web
 ARG VERSION

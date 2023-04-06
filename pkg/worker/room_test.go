@@ -217,9 +217,8 @@ func getRoomMock(cfg roomMockConfig) roomMock {
 	}
 
 	// sync cores
-	coreManager := remotehttp.NewRemoteHttpManager(conf.Emulator.Libretro, l)
-	if err := coreManager.Sync(); err != nil {
-		log.Printf("error: cores sync has failed, %v", err)
+	if err := remotehttp.CheckCores(conf.Emulator, l); err != nil {
+		l.Error().Err(err).Msg("cores sync error")
 	}
 	conf.Encoder.Video.Codec = string(cfg.vCodec)
 
@@ -255,8 +254,6 @@ func fixEmulators(config *worker.Config, autoGlContext bool) {
 
 	config.Emulator.Libretro.Cores.Paths.Libs =
 		filepath.FromSlash(rootPath + config.Emulator.Libretro.Cores.Paths.Libs)
-	config.Emulator.Libretro.Cores.Paths.Configs =
-		filepath.FromSlash(rootPath + config.Emulator.Libretro.Cores.Paths.Configs)
 	config.Emulator.LocalPath = filepath.FromSlash(filepath.Join(rootPath, "tests", config.Emulator.LocalPath))
 	config.Emulator.Storage = filepath.FromSlash(filepath.Join(rootPath, "tests", "storage"))
 

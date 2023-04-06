@@ -63,7 +63,7 @@ func CheckCores(conf emulator.Emulator, log *logger.Logger) error {
 	coreManager := NewRemoteHttpManager(conf.Libretro, log)
 	// make a dir for cores
 	dir := coreManager.Conf.GetCoresStorePath()
-	if err := os.MkdirAll(dir, os.ModeDir); err != nil {
+	if err := os.MkdirAll(dir, os.ModeDir|os.ModePerm); err != nil {
 		return err
 	}
 	if err := coreManager.Sync(); err != nil {

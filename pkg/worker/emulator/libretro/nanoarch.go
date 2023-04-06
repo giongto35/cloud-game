@@ -31,6 +31,7 @@ const lastKey = int(C.RETRO_DEVICE_ID_JOYPAD_R3)
 
 type (
 	nanoarch struct {
+		opts      CoreOptions
 		v         video
 		multitap  multitap
 		rot       *image.Rotate
@@ -58,6 +59,25 @@ type (
 	}
 )
 
+type CoreOptions struct{ KV map[string]*C.char }
+
+func NewCoreOptions(m *map[string]string) CoreOptions {
+	if m == nil {
+		return CoreOptions{}
+	}
+	opts := CoreOptions{KV: make(map[string]*C.char, len(*m))}
+	for k, v := range *m {
+		opts.KV[k] = C.CString(v)
+	}
+	return opts
+}
+
+func (c *CoreOptions) Free() {
+	for _, v := range c.KV {
+		C.free(unsafe.Pointer(v))
+	}
+}
+
 // Global link for C callbacks to Go
 var nano = nanoarch{
 	// this thing forbids concurrent use of the emulator
@@ -65,7 +85,6 @@ var nano = nanoarch{
 }
 
 var (
-	coreConfig       *CoreProperties
 	frontend         *Frontend
 	lastFrameTime    int64
 	libretroLogger   = logger.Default()
@@ -309,8 +328,8 @@ func coreEnvironment(cmd C.unsigned, data unsafe.Pointer) C.bool {
 	case C.RETRO_ENVIRONMENT_GET_VARIABLE:
 		variable := (*C.struct_retro_variable)(data)
 		key := C.GoString(variable.key)
-		if val, ok := coreConfig.Get(key); ok {
-			variable.value = (*C.char)(val)
+		if val, ok := nano.opts.KV[key]; ok {
+			variable.value = val
 			libretroLogger.Debug().Msgf("Set %s=%v", key, C.GoString(variable.value))
 			return true
 		}
@@ -440,10 +459,8 @@ func coreLoad(meta emulator.Metadata) {
 	usesLibCo = meta.UsesLibCo
 	nano.v.autoGlContext = meta.AutoGlContext
 	hasVFR = meta.HasVFR
-	coreConfig, err = ReadProperties(meta.ConfigPath)
-	if err != nil {
-		libretroLogger.Warn().Err(err).Msg("config scan has been failed")
-	}
+
+	nano.opts = NewCoreOptions(&meta.Options)
 
 	nano.multitap.supported = meta.HasMultitap
 	nano.multitap.enabled = false
@@ -613,7 +630,7 @@ func nanoarchShutdown() {
 	if err := closeLib(coreLib); err != nil {
 		libretroLogger.Error().Err(err).Msg("lib close failed")
 	}
-	coreConfig.Free()
+	nano.opts.Free()
 }
 
 func run() {

@@ -58,7 +58,8 @@ func GetEmulatorMock(room string, system string) *EmulatorMock {
 	meta := conf.Emulator.GetLibretroCoreConfig(system)
 
 	l := logger.Default()
-	SetLibretroLogger(l.Extend(l.Level(logger.ErrorLevel).With()))
+	l2 := l.Extend(l.Level(logger.ErrorLevel).With())
+	SetLibretroLogger(l2)
 
 	// an emu
 	emu := &EmulatorMock{
@@ -71,6 +72,7 @@ func GetEmulatorMock(room string, system string) *EmulatorMock {
 			input: NewGameSessionInput(),
 			done:  make(chan struct{}),
 			th:    conf.Emulator.Threads,
+			log:   l2,
 		},
 
 		core: path.Base(meta.Lib),

@@ -106,16 +106,17 @@ func NewFrontend(conf conf.Emulator, log *logger.Logger) (*Frontend, error) {
 
 func (f *Frontend) LoadMetadata(emu string) {
 	config := f.conf.GetLibretroCoreConfig(emu)
-	f.mu.Lock()
-	coreLoad(emulator.Metadata{
+	meta := emulator.Metadata{
 		AutoGlContext: config.AutoGlContext,
-		ConfigPath:    config.Config,
 		HasMultitap:   config.HasMultitap,
 		HasVFR:        config.VFR,
 		IsGlAllowed:   config.IsGlAllowed,
 		LibPath:       config.Lib,
+		Options:       config.Options,
 		UsesLibCo:     config.UsesLibCo,
-	})
+	}
+	f.mu.Lock()
+	coreLoad(meta)
 	f.mu.Unlock()
 }
 

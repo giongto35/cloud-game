@@ -13,7 +13,7 @@ jobs:
   docker-publish-stable:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
 
       - run: echo "TAG=${GITHUB_REF/refs\/tags\//}" >> $GITHUB_ENV
 
