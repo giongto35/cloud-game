@@ -349,6 +349,12 @@ func coreEnvironment(cmd C.unsigned, data unsafe.Pointer) C.bool {
 		return false
 	case C.RETRO_ENVIRONMENT_GET_CLEAR_ALL_THREAD_WAITS_CB:
 		C.clear_all_thread_waits_cb(data)
+		return true
+	case C.RETRO_ENVIRONMENT_GET_SAVESTATE_CONTEXT:
+		if ctx := (*C.int)(data); ctx != nil {
+			*ctx = C.int(0)
+		}
+		return true
 	default:
 		return false
 	}
