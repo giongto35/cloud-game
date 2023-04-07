@@ -8,11 +8,12 @@ then
 fi
 
 apt-get -qq update
-apt-get -qq install -y \
+apt-get -qq install --no-install-recommends -y \
     ca-certificates \
-    libvpx6 \
-    libx264-160 \
+    libvpx7 \
+    libx264-164 \
     libopus0 \
-    libgl1-mesa-glx \
-    xvfb \
-    xauth
+    libgl1-mesa-dri \
+    xvfb
+apt-get clean
+apt-get autoremove

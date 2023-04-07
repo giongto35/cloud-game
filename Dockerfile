@@ -2,7 +2,7 @@
 ARG BUILD_PATH=/go/src/github.com/giongto35/cloud-game
 
 # build image
-FROM debian:bullseye-slim AS build
+FROM ubuntu:lunar AS build
 ARG BUILD_PATH
 WORKDIR ${BUILD_PATH}
 
@@ -40,7 +40,7 @@ ARG VERSION
 RUN GIT_VERSION=${VERSION} make build
 
 # base image
-FROM debian:bullseye-slim
+FROM ubuntu:lunar
 ARG BUILD_PATH
 WORKDIR /usr/local/share/cloud-game
 
