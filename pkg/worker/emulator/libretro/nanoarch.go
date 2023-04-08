@@ -578,6 +578,8 @@ func LoadGame(path string) error {
 		C.bridge_retro_set_controller_port_device(retroSetControllerPortDevice, C.uint(i), C.RETRO_DEVICE_JOYPAD)
 	}
 
+	lastFrameTime = 0
+
 	return nil
 }
 
