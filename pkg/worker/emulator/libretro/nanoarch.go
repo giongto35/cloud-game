@@ -241,15 +241,15 @@ func m(m *C.char) string { return strings.TrimRight(C.GoString(m), "\n") }
 
 //export coreLog
 func coreLog(level C.enum_retro_log_level, msg *C.char) {
-	switch int(level) {
+	switch level {
 	// with debug level cores have too much logs
-	case 0: // RETRO_LOG_DEBUG
+	case C.RETRO_LOG_DEBUG:
 		libretroLogger.Debug().MsgFunc(func() string { return m(msg) })
-	case 1: // RETRO_LOG_INFO
+	case C.RETRO_LOG_INFO:
 		libretroLogger.Info().MsgFunc(func() string { return m(msg) })
-	case 2: // RETRO_LOG_WARN
+	case C.RETRO_LOG_WARN:
 		libretroLogger.Warn().MsgFunc(func() string { return m(msg) })
-	case 3: // RETRO_LOG_ERROR
+	case C.RETRO_LOG_ERROR:
 		libretroLogger.Error().MsgFunc(func() string { return m(msg) })
 	default:
 		libretroLogger.Log().MsgFunc(func() string { return m(msg) })
