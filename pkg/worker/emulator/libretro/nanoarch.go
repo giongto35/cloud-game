@@ -745,12 +745,10 @@ func getSaveRAM() state {
 
 // restoreSaveRAM restores game save RAM.
 func restoreSaveRAM(st state) {
-	if len(st) == 0 {
-		return
-	}
-	if memory := ptSaveRAM(); memory != nil {
-		sram := (*[1 << 30]byte)(memory.ptr)[:memory.size:memory.size]
-		copy(sram, st)
+	if len(st) > 0 {
+		if memory := ptSaveRAM(); memory != nil {
+			copy(unsafe.Slice((*byte)(memory.ptr), memory.size), st)
+		}
 	}
 }
 
