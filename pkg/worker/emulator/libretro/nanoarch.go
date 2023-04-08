@@ -352,7 +352,7 @@ func coreEnvironment(cmd C.unsigned, data unsafe.Pointer) C.bool {
 		return true
 	case C.RETRO_ENVIRONMENT_GET_SAVESTATE_CONTEXT:
 		if ctx := (*C.int)(data); ctx != nil {
-			*ctx = C.int(0)
+			*ctx = C.RETRO_SAVESTATE_CONTEXT_NORMAL
 		}
 		return true
 	default:
