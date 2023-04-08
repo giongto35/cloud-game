@@ -3,8 +3,6 @@
 #include <stdbool.h>
 #include <stdarg.h>
 #include <stdio.h>
-//#include <stdlib.h>
-//#include <signal.h>
 
 int initialized = 0;
 
@@ -176,11 +174,6 @@ pthread_mutex_t run_mutex;
 pthread_cond_t run_cv;
 pthread_mutex_t done_mutex;
 pthread_cond_t done_cv;
-
-// hack: go hangs with run_loop if SIGINT signal, so we handle it here
-//static void sig_handler(int _) {
-//    exit(0);
-//}
 
 void *run_loop(void *unused) {
     coreLog(RETRO_LOG_DEBUG, "UnLIBCo run loop start\n");
