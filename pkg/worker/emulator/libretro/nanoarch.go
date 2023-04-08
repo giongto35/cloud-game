@@ -267,6 +267,14 @@ func coreGetProcAddress(sym *C.char) C.retro_proc_address_t {
 
 //export coreEnvironment
 func coreEnvironment(cmd C.unsigned, data unsafe.Pointer) C.bool {
+
+	switch cmd {
+	case C.RETRO_ENVIRONMENT_GET_VARIABLE_UPDATE:
+		return false
+	case C.RETRO_ENVIRONMENT_GET_AUDIO_VIDEO_ENABLE:
+		return false
+	}
+
 	switch cmd {
 	case C.RETRO_ENVIRONMENT_GET_USERNAME:
 		*(**C.char)(data) = cUserName
