@@ -31,13 +31,14 @@ const lastKey = int(C.RETRO_DEVICE_ID_JOYPAD_R3)
 
 type (
 	nanoarch struct {
-		options   *map[string]string
-		v         video
-		multitap  multitap
-		rot       *image.Rotate
-		sysInfo   C.struct_retro_system_info
-		sysAvInfo C.struct_retro_system_av_info
-		reserved  chan struct{} // limits concurrent use
+		options       *map[string]string
+		v             video
+		multitap      multitap
+		rot           *image.Rotate
+		sysInfo       C.struct_retro_system_info
+		sysAvInfo     C.struct_retro_system_av_info
+		reserved      chan struct{} // limits concurrent use
+		serializeSize C.size_t
 	}
 	video struct {
 		pixFmt        uint32
@@ -519,8 +520,6 @@ func coreLoad(meta emulator.Metadata) {
 }
 
 func LoadGame(path string) error {
-	lastFrameTime = 0
-
 	fi, err := os.Stat(path)
 	if err != nil {
 		return err
@@ -552,6 +551,9 @@ func LoadGame(path string) error {
 		nano.sysAvInfo.geometry.max_width, nano.sysAvInfo.geometry.max_height,
 		nano.sysAvInfo.timing.fps, nano.sysAvInfo.geometry.aspect_ratio, nano.sysAvInfo.timing.sample_rate,
 	)
+
+	nano.serializeSize = C.bridge_retro_serialize_size(retroSerializeSize)
+	libretroLogger.Info().Msgf("Save file size: %v", byteCountBinary(int64(nano.serializeSize)))
 
 	tickTime = int64(time.Second / time.Duration(nano.sysAvInfo.timing.fps))
 	if hasVFR {
@@ -707,29 +709,21 @@ func printOpenGLDriverInfo() {
 	libretroLogger.Debug().Msg(openGLInfo.String())
 }
 
-// saveStateSize returns the amount of data the implementation requires
-// to serialize internal state (save states).
-func saveStateSize() uint { return uint(C.bridge_retro_serialize_size(retroSerializeSize)) }
-
 // getSaveState returns emulator internal state.
 func getSaveState() (state, error) {
-	size := saveStateSize()
-	data := C.malloc(C.size_t(size))
-	defer C.free(data)
-	if !bool(C.bridge_retro_serialize(retroSerialize, data, C.size_t(size))) {
+	data := make([]byte, uint(nano.serializeSize))
+	if !bool(C.bridge_retro_serialize(retroSerialize, unsafe.Pointer(&data[0]), nano.serializeSize)) {
 		return nil, errors.New("retro_serialize failed")
 	}
-	return C.GoBytes(data, C.int(size)), nil
+	return data, nil
 }
 
 // restoreSaveState restores emulator internal state.
 func restoreSaveState(st state) error {
-	if len(st) == 0 {
-		return nil
-	}
-	size := saveStateSize()
-	if !bool(C.bridge_retro_unserialize(retroUnserialize, unsafe.Pointer(&st[0]), C.size_t(size))) {
-		return errors.New("retro_unserialize failed")
+	if len(st) > 0 {
+		if !bool(C.bridge_retro_unserialize(retroUnserialize, unsafe.Pointer(&st[0]), nano.serializeSize)) {
+			return errors.New("retro_unserialize failed")
+		}
 	}
 	return nil
 }
