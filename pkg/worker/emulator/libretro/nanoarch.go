@@ -267,7 +267,7 @@ func coreGetProcAddress(sym *C.char) C.retro_proc_address_t {
 
 //export coreEnvironment
 func coreEnvironment(cmd C.unsigned, data unsafe.Pointer) C.bool {
-
+	// spammy
 	switch cmd {
 	case C.RETRO_ENVIRONMENT_GET_VARIABLE_UPDATE:
 		return false
@@ -276,13 +276,19 @@ func coreEnvironment(cmd C.unsigned, data unsafe.Pointer) C.bool {
 	}
 
 	switch cmd {
+	case C.RETRO_ENVIRONMENT_SET_ROTATION:
+		setRotation(*(*uint)(data) % 4)
+		return true
+	case C.RETRO_ENVIRONMENT_GET_CAN_DUPE:
+		*(*C.bool)(data) = C.bool(true)
+		return true
 	case C.RETRO_ENVIRONMENT_GET_USERNAME:
 		*(**C.char)(data) = cUserName
+		return true
 	case C.RETRO_ENVIRONMENT_GET_LOG_INTERFACE:
 		cb := (*C.struct_retro_log_callback)(data)
 		cb.log = (C.retro_log_printf_t)(C.coreLog_cgo)
-	case C.RETRO_ENVIRONMENT_GET_CAN_DUPE:
-		*(*C.bool)(data) = C.bool(true)
+		return true
 	case C.RETRO_ENVIRONMENT_SET_PIXEL_FORMAT:
 		res, err := videoSetPixelFormat(*(*C.enum_retro_pixel_format)(data))
 		if err != nil {
@@ -303,17 +309,10 @@ func coreEnvironment(cmd C.unsigned, data unsafe.Pointer) C.bool {
 			libretroLogger.Debug().Msgf("message: %v", msg)
 			return true
 		}
+		return false
 	case C.RETRO_ENVIRONMENT_SHUTDOWN:
 		//window.SetShouldClose(true)
-		return true
-		/*
-			Sets screen rotation of graphics.
-			Valid values are 0, 1, 2, 3, which rotates screen by 0, 90, 180, 270 degrees
-			ccw respectively.
-		*/
-	case C.RETRO_ENVIRONMENT_SET_ROTATION:
-		setRotation(*(*uint)(data) % 4)
-		return true
+		return false
 	case C.RETRO_ENVIRONMENT_GET_VARIABLE:
 		if (*nano.options) == nil {
 			return false
@@ -339,6 +338,7 @@ func coreEnvironment(cmd C.unsigned, data unsafe.Pointer) C.bool {
 		}
 		return false
 	case C.RETRO_ENVIRONMENT_SET_CONTROLLER_INFO:
+		// !to rewrite
 		if !nano.multitap.supported {
 			return false
 		}
@@ -363,10 +363,8 @@ func coreEnvironment(cmd C.unsigned, data unsafe.Pointer) C.bool {
 			*ctx = C.RETRO_SAVESTATE_CONTEXT_NORMAL
 		}
 		return true
-	default:
-		return false
 	}
-	return true
+	return false
 }
 
 //export initVideo
