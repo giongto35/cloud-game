@@ -1,24 +1,16 @@
 #ifndef FRONTEND_H__
 #define FRONTEND_H__
 
-void clear_all_thread_waits_cb(void *data);
-void stop_run_loop();
-
 bool bridge_retro_load_game(void *f, struct retro_game_info *gi);
+void bridge_retro_unload_game(void *f);
 bool bridge_retro_serialize(void *f, void *data, size_t size);
-bool bridge_retro_set_environment(void *f, void *callback);
-bool bridge_retro_unserialize(void *f, void *data, size_t size);
-bool coreEnvironment_cgo(unsigned cmd, void *data);
-int16_t coreInputState_cgo(unsigned port, unsigned device, unsigned index, unsigned id);
-retro_proc_address_t coreGetProcAddress_cgo(const char *sym);
-size_t bridge_retro_get_memory_size(void *f, unsigned id);
 size_t bridge_retro_serialize_size(void *f);
-size_t coreAudioSampleBatch_cgo(const int16_t *data, size_t frames);
-uintptr_t coreGetCurrentFramebuffer_cgo();
+bool bridge_retro_unserialize(void *f, void *data, size_t size);
+bool bridge_retro_set_environment(void *f, void *callback);
 unsigned bridge_retro_api_version(void *f);
+size_t bridge_retro_get_memory_size(void *f, unsigned id);
 void *bridge_retro_get_memory_data(void *f, unsigned id);
 void bridge_context_reset(retro_hw_context_reset_t f);
-void bridge_execute(void *f);
 void bridge_retro_deinit(void *f);
 void bridge_retro_get_system_av_info(void *f, struct retro_system_av_info *si);
 void bridge_retro_get_system_info(void *f, struct retro_system_info *si);
@@ -30,12 +22,21 @@ void bridge_retro_set_controller_port_device(void *f, unsigned port, unsigned de
 void bridge_retro_set_input_poll(void *f, void *callback);
 void bridge_retro_set_input_state(void *f, void *callback);
 void bridge_retro_set_video_refresh(void *f, void *callback);
-void bridge_retro_unload_game(void *f);
-void coreAudioSample_cgo(int16_t left, int16_t right);
-void coreInputPoll_cgo();
-void coreLog_cgo(int level, const char *msg);
-void coreVideoRefresh_cgo(void *data, unsigned width, unsigned height, size_t pitch);
-void deinitVideo_cgo();
-void initVideo_cgo();
+void bridge_clear_all_thread_waits_cb(void *f);
+
+bool core_environment_cgo(unsigned cmd, void *data);
+int16_t core_input_state_cgo(unsigned port, unsigned device, unsigned index, unsigned id);
+retro_proc_address_t core_get_proc_address_cgo(const char *sym);
+size_t core_audio_sample_batch_cgo(const int16_t *data, size_t frames);
+uintptr_t core_get_current_framebuffer_cgo();
+void core_audio_sample_cgo(int16_t left, int16_t right);
+void core_input_poll_cgo();
+void core_log_cgo(int level, const char *msg);
+void core_video_refresh_cgo(void *data, unsigned width, unsigned height, size_t pitch);
+void init_video_cgo();
+void deinit_video_cgo();
+
+void same_thread(void *f);
+void stop();
 
 #endif
