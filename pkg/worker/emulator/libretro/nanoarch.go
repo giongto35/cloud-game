@@ -288,7 +288,7 @@ func coreEnvironment(cmd C.unsigned, data unsafe.Pointer) C.bool {
 		return true
 	case C.RETRO_ENVIRONMENT_GET_LOG_INTERFACE:
 		cb := (*C.struct_retro_log_callback)(data)
-		cb.log = (C.retro_log_printf_t)(C.coreLog_cgo)
+		cb.log = (C.retro_log_printf_t)(C.core_log_cgo)
 		return true
 	case C.RETRO_ENVIRONMENT_SET_PIXEL_FORMAT:
 		res, err := videoSetPixelFormat(*(*C.enum_retro_pixel_format)(data))
@@ -333,8 +333,8 @@ func coreEnvironment(cmd C.unsigned, data unsafe.Pointer) C.bool {
 	case C.RETRO_ENVIRONMENT_SET_HW_RENDER:
 		if nano.v.isGl {
 			nano.v.hw = (*C.struct_retro_hw_render_callback)(data)
-			nano.v.hw.get_current_framebuffer = (C.retro_hw_get_current_framebuffer_t)(C.coreGetCurrentFramebuffer_cgo)
-			nano.v.hw.get_proc_address = (C.retro_hw_get_proc_address_t)(C.coreGetProcAddress_cgo)
+			nano.v.hw.get_current_framebuffer = (C.retro_hw_get_current_framebuffer_t)(C.core_get_current_framebuffer_cgo)
+			nano.v.hw.get_proc_address = (C.retro_hw_get_proc_address_t)(C.core_get_proc_address_cgo)
 			return true
 		}
 		return false
@@ -357,7 +357,7 @@ func coreEnvironment(cmd C.unsigned, data unsafe.Pointer) C.bool {
 		}
 		return false
 	case C.RETRO_ENVIRONMENT_GET_CLEAR_ALL_THREAD_WAITS_CB:
-		C.clear_all_thread_waits_cb(data)
+		C.bridge_clear_all_thread_waits_cb(data)
 		return true
 	case C.RETRO_ENVIRONMENT_GET_SAVESTATE_CONTEXT:
 		if ctx := (*C.int)(data); ctx != nil {
@@ -411,11 +411,6 @@ func initVideo() {
 	if libretroLogger.GetLevel() < logger.InfoLevel {
 		printOpenGLDriverInfo()
 	}
-}
-
-//export signalStop
-func signalStop() {
-	libretroLogger.Debug().Msgf("On UnLibCo stop callback")
 }
 
 //export deinitVideo
@@ -504,12 +499,12 @@ func coreLoad(meta emulator.Metadata) {
 	retroGetMemorySize = loadFunction(coreLib, "retro_get_memory_size")
 	retroGetMemoryData = loadFunction(coreLib, "retro_get_memory_data")
 
-	C.bridge_retro_set_environment(retroSetEnvironment, C.coreEnvironment_cgo)
-	C.bridge_retro_set_video_refresh(retroSetVideoRefresh, C.coreVideoRefresh_cgo)
-	C.bridge_retro_set_input_poll(retroSetInputPoll, C.coreInputPoll_cgo)
-	C.bridge_retro_set_input_state(retroSetInputState, C.coreInputState_cgo)
-	C.bridge_retro_set_audio_sample(retroSetAudioSample, C.coreAudioSample_cgo)
-	C.bridge_retro_set_audio_sample_batch(retroSetAudioSampleBatch, C.coreAudioSampleBatch_cgo)
+	C.bridge_retro_set_environment(retroSetEnvironment, C.core_environment_cgo)
+	C.bridge_retro_set_video_refresh(retroSetVideoRefresh, C.core_video_refresh_cgo)
+	C.bridge_retro_set_input_poll(retroSetInputPoll, C.core_input_poll_cgo)
+	C.bridge_retro_set_input_state(retroSetInputState, C.core_input_state_cgo)
+	C.bridge_retro_set_audio_sample(retroSetAudioSample, C.core_audio_sample_cgo)
+	C.bridge_retro_set_audio_sample_batch(retroSetAudioSampleBatch, C.core_audio_sample_batch_cgo)
 
 	C.bridge_retro_init(retroInit)
 
@@ -567,7 +562,7 @@ func LoadGame(path string) error {
 		graphics.SetBuffer(int(bufS))
 		libretroLogger.Info().Msgf("Set buffer: %v", byteCountBinary(int64(bufS)))
 		if usesLibCo {
-			C.bridge_execute(C.initVideo_cgo)
+			C.same_thread(C.init_video_cgo)
 		} else {
 			runtime.LockOSThread()
 			initVideo()
@@ -603,12 +598,12 @@ func toggleMultitap() {
 func nanoarchShutdown() {
 	if usesLibCo {
 		thread.Main(func() {
-			C.bridge_execute(retroUnloadGame)
-			C.bridge_execute(retroDeinit)
+			C.same_thread(retroUnloadGame)
+			C.same_thread(retroDeinit)
 			if nano.v.isGl {
-				C.bridge_execute(C.deinitVideo_cgo)
+				C.same_thread(C.deinit_video_cgo)
 			}
-			C.bridge_execute(C.stop_run_loop)
+			C.same_thread(C.stop)
 		})
 	} else {
 		if nano.v.isGl {
@@ -639,7 +634,7 @@ func nanoarchShutdown() {
 
 func run() {
 	if usesLibCo {
-		C.bridge_execute(retroRun)
+		C.same_thread(retroRun)
 	} else {
 		if nano.v.isGl {
 			// running inside a go routine, lock the thread to make sure the OpenGL context stays current
@@ -747,13 +742,13 @@ func restoreSaveRAM(st state) {
 }
 
 // getMemorySize returns memory region size.
-func getMemorySize(id uint) uint {
-	return uint(C.bridge_retro_get_memory_size(retroGetMemorySize, C.uint(id)))
+func getMemorySize(id C.uint) uint {
+	return uint(C.bridge_retro_get_memory_size(retroGetMemorySize, id))
 }
 
 // getMemoryData returns a pointer to memory data.
-func getMemoryData(id uint) unsafe.Pointer {
-	return C.bridge_retro_get_memory_data(retroGetMemoryData, C.uint(id))
+func getMemoryData(id C.uint) unsafe.Pointer {
+	return C.bridge_retro_get_memory_data(retroGetMemoryData, id)
 }
 
 // ptSaveRam return SRAM memory pointer if core supports it or nil.

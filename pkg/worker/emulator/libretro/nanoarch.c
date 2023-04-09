@@ -8,27 +8,14 @@ int initialized = 0;
 
 void coreLog(enum retro_log_level level, const char *msg);
 
-static bool on_clear_all_thread_waits_cb(unsigned v, void *data) {
-    if (v > 0) {
-        coreLog(RETRO_LOG_DEBUG, "CLEAR_ALL_THREAD_WAITS_CB (1)\n");
-    } else {
-        coreLog(RETRO_LOG_DEBUG, "CLEAR_ALL_THREAD_WAITS_CB (0)\n");
-        void signalStop();
-        signalStop();
-    }
-    return true;
-}
-
-void clear_all_thread_waits_cb(void *data) { *(retro_environment_t *)data = on_clear_all_thread_waits_cb; }
-
 void bridge_retro_init(void *f) {
     coreLog(RETRO_LOG_INFO, "Initialization...\n");
-    return ((void (*)(void)) f)();
+    ((void (*)(void)) f)();
 }
 
 void bridge_retro_deinit(void *f) {
     coreLog(RETRO_LOG_INFO, "Deinitialiazation...\n");
-    return ((void (*)(void)) f)();
+    ((void (*)(void)) f)();
 }
 
 unsigned bridge_retro_api_version(void *f) {
@@ -36,11 +23,11 @@ unsigned bridge_retro_api_version(void *f) {
 }
 
 void bridge_retro_get_system_info(void *f, struct retro_system_info *si) {
-    return ((void (*)(struct retro_system_info *)) f)(si);
+    ((void (*)(struct retro_system_info *)) f)(si);
 }
 
 void bridge_retro_get_system_av_info(void *f, struct retro_system_av_info *si) {
-    return ((void (*)(struct retro_system_av_info *)) f)(si);
+    ((void (*)(struct retro_system_av_info *)) f)(si);
 }
 
 bool bridge_retro_set_environment(void *f, void *callback) {
@@ -74,11 +61,11 @@ bool bridge_retro_load_game(void *f, struct retro_game_info *gi) {
 
 void bridge_retro_unload_game(void *f) {
     coreLog(RETRO_LOG_INFO, "Unloading the game...\n");
-    return ((void (*)(void)) f)();
+    ((void (*)(void)) f)();
 }
 
 void bridge_retro_run(void *f) {
-    return ((void (*)(void)) f)();
+    ((void (*)(void)) f)();
 }
 
 size_t bridge_retro_get_memory_size(void *f, unsigned id) {
@@ -90,7 +77,7 @@ void *bridge_retro_get_memory_data(void *f, unsigned id) {
 }
 
 size_t bridge_retro_serialize_size(void *f) {
-    return ((size_t (*)(void)) f)();
+    ((size_t (*)(void)) f)();
 }
 
 bool bridge_retro_serialize(void *f, void *data, size_t size) {
@@ -102,40 +89,53 @@ bool bridge_retro_unserialize(void *f, void *data, size_t size) {
 }
 
 void bridge_retro_set_controller_port_device(void *f, unsigned port, unsigned device) {
-    return ((void (*)(unsigned, unsigned)) f)(port, device);
+    ((void (*)(unsigned, unsigned)) f)(port, device);
 }
 
-bool coreEnvironment_cgo(unsigned cmd, void *data) {
+static bool clear_all_thread_waits_cb(unsigned v, void *data) {
+    if (v > 0) {
+        coreLog(RETRO_LOG_DEBUG, "CLEAR_ALL_THREAD_WAITS_CB (1)\n");
+    } else {
+        coreLog(RETRO_LOG_DEBUG, "CLEAR_ALL_THREAD_WAITS_CB (0)\n");
+    }
+    return true;
+}
+
+void bridge_clear_all_thread_waits_cb(void *data) {
+    *(retro_environment_t *)data = clear_all_thread_waits_cb;
+}
+
+bool core_environment_cgo(unsigned cmd, void *data) {
     bool coreEnvironment(unsigned, void *);
     return coreEnvironment(cmd, data);
 }
 
-void coreVideoRefresh_cgo(void *data, unsigned width, unsigned height, size_t pitch) {
+void core_video_refresh_cgo(void *data, unsigned width, unsigned height, size_t pitch) {
     void coreVideoRefresh(void *, unsigned, unsigned, size_t);
-    return coreVideoRefresh(data, width, height, pitch);
+    coreVideoRefresh(data, width, height, pitch);
 }
 
-void coreInputPoll_cgo() {
+void core_input_poll_cgo() {
     void coreInputPoll();
-    return coreInputPoll();
+    coreInputPoll();
 }
 
-int16_t coreInputState_cgo(unsigned port, unsigned device, unsigned index, unsigned id) {
+int16_t core_input_state_cgo(unsigned port, unsigned device, unsigned index, unsigned id) {
     int16_t coreInputState(unsigned, unsigned, unsigned, unsigned);
     return coreInputState(port, device, index, id);
 }
 
-void coreAudioSample_cgo(int16_t left, int16_t right) {
+void core_audio_sample_cgo(int16_t left, int16_t right) {
     void coreAudioSample(int16_t, int16_t);
     coreAudioSample(left, right);
 }
 
-size_t coreAudioSampleBatch_cgo(const int16_t *data, size_t frames) {
+size_t core_audio_sample_batch_cgo(const int16_t *data, size_t frames) {
     size_t coreAudioSampleBatch(const int16_t *, size_t);
     return coreAudioSampleBatch(data, frames);
 }
 
-void coreLog_cgo(enum retro_log_level level, const char *fmt, ...) {
+void core_log_cgo(enum retro_log_level level, const char *fmt, ...) {
     char msg[4096] = {0};
     va_list va;
     va_start(va, fmt);
@@ -144,12 +144,12 @@ void coreLog_cgo(enum retro_log_level level, const char *fmt, ...) {
     coreLog(level, msg);
 }
 
-uintptr_t coreGetCurrentFramebuffer_cgo() {
+uintptr_t core_get_current_framebuffer_cgo() {
     uintptr_t coreGetCurrentFramebuffer();
     return coreGetCurrentFramebuffer();
 }
 
-retro_proc_address_t coreGetProcAddress_cgo(const char *sym) {
+retro_proc_address_t core_get_proc_address_cgo(const char *sym) {
     retro_proc_address_t coreGetProcAddress(const char *sym);
     return coreGetProcAddress(sym);
 }
@@ -158,14 +158,14 @@ void bridge_context_reset(retro_hw_context_reset_t f) {
     f();
 }
 
-void initVideo_cgo() {
+void init_video_cgo() {
     void initVideo();
-    return initVideo();
+    initVideo();
 }
 
-void deinitVideo_cgo() {
+void deinit_video_cgo() {
     void deinitVideo();
-    return deinitVideo();
+    deinitVideo();
 }
 
 void *function;
@@ -192,13 +192,10 @@ void *run_loop(void *unused) {
     coreLog(RETRO_LOG_DEBUG, "UnLIBCo run loop stop\n");
 }
 
-void stop_run_loop() {
-    initialized = 0;
-}
+void stop() { initialized = 0; }
 
-void bridge_execute(void *f) {
+void same_thread(void *f) {
     if (!initialized) {
-        //signal(SIGINT, sig_handler);
         initialized = 1;
         pthread_mutex_init(&run_mutex, NULL);
         pthread_cond_init(&run_cv, NULL);
