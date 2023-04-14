@@ -125,11 +125,7 @@ func (f *Frontend) Start() {
 	<-nano.reserved
 	f.log.Debug().Msgf("Frontend start")
 
-	if err := f.LoadGameState(); err != nil {
-		f.log.Error().Err(err).Msg("couldn't load a save file")
-	}
 	ticker := time.NewTicker(time.Second / time.Duration(nano.sysAvInfo.timing.fps))
-
 	defer func() {
 		f.log.Debug().Msgf("run loop cleanup")
 		ticker.Stop()
@@ -144,6 +140,16 @@ func (f *Frontend) Start() {
 
 	// start time for the first frame
 	lastFrameTime = time.Now().UnixNano()
+
+	// 1 frame in order for Mupen save state load to work
+	f.mu.Lock()
+	run()
+	f.mu.Unlock()
+
+	if err := f.LoadGameState(); err != nil {
+		f.log.Error().Err(err).Msg("couldn't load a save file")
+	}
+
 	for {
 		// selection from just two channels may freeze on
 		// ticker, ignoring the close chan for some reason
@@ -202,10 +208,6 @@ func (f *Frontend) Save() error {
 	f.mu.Lock()
 	defer f.mu.Unlock()
 
-	if usesLibCo {
-		return nil
-	}
-
 	ss, err := getSaveState()
 	if err != nil {
 		return err
@@ -213,11 +215,13 @@ func (f *Frontend) Save() error {
 	if err := f.storage.Save(f.GetHashPath(), ss); err != nil {
 		return err
 	}
+	ss = nil
 
 	if sram := getSaveRAM(); sram != nil {
 		if err := f.storage.Save(f.GetSRAMPath(), sram); err != nil {
 			return err
 		}
+		sram = nil
 	}
 	return nil
 }
@@ -226,10 +230,6 @@ func (f *Frontend) Save() error {
 func (f *Frontend) Load() error {
 	f.mu.Lock()
 	defer f.mu.Unlock()
-
-	if usesLibCo {
-		return nil
-	}
 
 	ss, err := f.storage.Load(f.GetHashPath())
 	if err != nil && !errors.Is(err, os.ErrNotExist) {

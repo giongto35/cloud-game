@@ -6,15 +6,41 @@
 
 int initialized = 0;
 
-void coreLog(enum retro_log_level level, const char *msg);
+typedef struct {
+	int   type;
+	void* fn;
+	void* arg1;
+	void* arg2;
+	void* result;
+} call_def_t;
+
+call_def_t call;
+
+enum call_type {
+    CALL_VOID = -1,
+    CALL_SERIALIZE = 1,
+    CALL_UNSERIALIZE = 2,
+};
+
+void *same_thread_with_args(void *f, int type, ...);
+
+void core_log_cgo(enum retro_log_level level, const char *fmt, ...) {
+    char msg[2048] = {0};
+    va_list va;
+    va_start(va, fmt);
+    vsnprintf(msg, sizeof(msg), fmt, va);
+    va_end(va);
+    void coreLog(enum retro_log_level level, const char *msg);
+    coreLog(level, msg);
+}
 
 void bridge_retro_init(void *f) {
-    coreLog(RETRO_LOG_INFO, "Initialization...\n");
+    core_log_cgo(RETRO_LOG_DEBUG, "Initialization...\n");
     ((void (*)(void)) f)();
 }
 
 void bridge_retro_deinit(void *f) {
-    coreLog(RETRO_LOG_INFO, "Deinitialiazation...\n");
+    core_log_cgo(RETRO_LOG_DEBUG, "Deinitialiazation...\n");
     ((void (*)(void)) f)();
 }
 
@@ -55,12 +81,12 @@ void bridge_retro_set_audio_sample_batch(void *f, void *callback) {
 }
 
 bool bridge_retro_load_game(void *f, struct retro_game_info *gi) {
-    coreLog(RETRO_LOG_INFO, "Loading the game...\n");
+    core_log_cgo(RETRO_LOG_DEBUG, "Loading the game...\n");
     return ((bool (*)(struct retro_game_info *)) f)(gi);
 }
 
 void bridge_retro_unload_game(void *f) {
-    coreLog(RETRO_LOG_INFO, "Unloading the game...\n");
+    core_log_cgo(RETRO_LOG_DEBUG, "Unloading the game...\n");
     ((void (*)(void)) f)();
 }
 
@@ -93,11 +119,7 @@ void bridge_retro_set_controller_port_device(void *f, unsigned port, unsigned de
 }
 
 static bool clear_all_thread_waits_cb(unsigned v, void *data) {
-    if (v > 0) {
-        coreLog(RETRO_LOG_DEBUG, "CLEAR_ALL_THREAD_WAITS_CB (1)\n");
-    } else {
-        coreLog(RETRO_LOG_DEBUG, "CLEAR_ALL_THREAD_WAITS_CB (0)\n");
-    }
+    core_log_cgo(RETRO_LOG_DEBUG, "CLEAR_ALL_THREAD_WAITS_CB (%d)\n", v);
     return true;
 }
 
@@ -135,15 +157,6 @@ size_t core_audio_sample_batch_cgo(const int16_t *data, size_t frames) {
     return coreAudioSampleBatch(data, frames);
 }
 
-void core_log_cgo(enum retro_log_level level, const char *fmt, ...) {
-    char msg[4096] = {0};
-    va_list va;
-    va_start(va, fmt);
-    vsnprintf(msg, sizeof(msg), fmt, va);
-    va_end(va);
-    coreLog(level, msg);
-}
-
 uintptr_t core_get_current_framebuffer_cgo() {
     uintptr_t coreGetCurrentFramebuffer();
     return coreGetCurrentFramebuffer();
@@ -168,49 +181,105 @@ void deinit_video_cgo() {
     deinitVideo();
 }
 
-void *function;
-pthread_t thread;
-pthread_mutex_t run_mutex;
-pthread_cond_t run_cv;
-pthread_mutex_t done_mutex;
-pthread_cond_t done_cv;
+typedef struct {
+   pthread_mutex_t m;
+   pthread_cond_t cond;
+} mutex_t;
 
-void *run_loop(void *unused) {
-    coreLog(RETRO_LOG_DEBUG, "UnLIBCo run loop start\n");
-    pthread_mutex_lock(&done_mutex);
-    pthread_mutex_lock(&run_mutex);
-    pthread_cond_signal(&done_cv);
-    pthread_mutex_unlock(&done_mutex);
-    while (initialized) {
-        pthread_cond_wait(&run_cv, &run_mutex);
-        ((void (*)(void)) function)();
-        pthread_mutex_lock(&done_mutex);
-        pthread_cond_signal(&done_cv);
-        pthread_mutex_unlock(&done_mutex);
-    }
-    pthread_mutex_unlock(&run_mutex);
-    coreLog(RETRO_LOG_DEBUG, "UnLIBCo run loop stop\n");
+void mutex_init(mutex_t *m) {
+    pthread_mutex_init(&m->m, NULL);
+    pthread_cond_init(&m->cond, NULL);
 }
 
-void stop() { initialized = 0; }
+void mutex_destroy(mutex_t *m) {
+    pthread_mutex_trylock(&m->m);
+    pthread_mutex_unlock(&m->m);
+    pthread_mutex_destroy(&m->m);
+    pthread_cond_signal(&m->cond);
+    pthread_cond_destroy(&m->cond);
+}
 
-void same_thread(void *f) {
+void mutex_lock(mutex_t *m)   { pthread_mutex_lock(&m->m); }
+void mutex_wait(mutex_t *m)   { pthread_cond_wait(&m->cond, &m->m); }
+void mutex_unlock(mutex_t *m) { pthread_mutex_unlock(&m->m); }
+void mutex_signal(mutex_t *m) { pthread_cond_signal(&m->cond); }
+
+static pthread_t thread;
+mutex_t run_mutex, done_mutex;
+
+void *run_loop(void *unused) {
+    core_log_cgo(RETRO_LOG_DEBUG, "UnLibCo run loop start\n");
+    mutex_lock(&done_mutex);
+    mutex_lock(&run_mutex);
+    mutex_signal(&done_mutex);
+    mutex_unlock(&done_mutex);
+    while (initialized) {
+        mutex_wait(&run_mutex);
+        switch (call.type) {
+            case CALL_SERIALIZE:
+            case CALL_UNSERIALIZE:
+              *(bool*)call.result = ((bool (*)(void*, size_t))call.fn)(call.arg1, *(size_t*)call.arg2);
+              break;
+            default:
+                ((void (*)(void)) call.fn)();
+        }
+        mutex_lock(&done_mutex);
+        mutex_signal(&done_mutex);
+        mutex_unlock(&done_mutex);
+    }
+    mutex_destroy(&run_mutex);
+    mutex_destroy(&done_mutex);
+    pthread_detach(thread);
+    core_log_cgo(RETRO_LOG_DEBUG, "UnLibCo run loop stop\n");
+}
+
+void stop() {
+    initialized = 0;
+}
+
+void *same_thread_with_args(void *f, int type, ...) {
     if (!initialized) {
         initialized = 1;
-        pthread_mutex_init(&run_mutex, NULL);
-        pthread_cond_init(&run_cv, NULL);
-        pthread_mutex_init(&done_mutex, NULL);
-        pthread_cond_init(&done_cv, NULL);
-        pthread_mutex_lock(&done_mutex);
+        mutex_init(&run_mutex);
+        mutex_init(&done_mutex);
+        mutex_lock(&done_mutex);
         pthread_create(&thread, NULL, run_loop, NULL);
-        pthread_cond_wait(&done_cv, &done_mutex);
-        pthread_mutex_unlock(&done_mutex);
+        mutex_wait(&done_mutex);
+        mutex_unlock(&done_mutex);
     }
-    pthread_mutex_lock(&run_mutex);
-    pthread_mutex_lock(&done_mutex);
-    function = f;
-    pthread_cond_signal(&run_cv);
-    pthread_mutex_unlock(&run_mutex);
-    pthread_cond_wait(&done_cv, &done_mutex);
-    pthread_mutex_unlock(&done_mutex);
+    mutex_lock(&run_mutex);
+    mutex_lock(&done_mutex);
+
+    call.type = type;
+    call.fn = f;
+
+    if (type != CALL_VOID) {
+        va_list args;
+        va_start(args, type);
+        switch (type) {
+            case CALL_SERIALIZE:
+            case CALL_UNSERIALIZE:
+                call.arg1 = va_arg(args, void*);
+                size_t size;
+                size = va_arg(args, size_t);
+                call.arg2 = &size;
+                bool result;
+                call.result = &result;
+              break;
+        }
+        va_end(args);
+    }
+    mutex_signal(&run_mutex);
+    mutex_unlock(&run_mutex);
+    mutex_wait(&done_mutex);
+    mutex_unlock(&done_mutex);
+    return call.result;
+}
+
+void *same_thread_with_args2(void *f, int type, void *arg1, void *arg2) {
+    return same_thread_with_args(f, type, arg1, arg2);
+}
+
+void same_thread(void *f) {
+    same_thread_with_args(f, CALL_VOID);
 }
