@@ -88,6 +88,11 @@ var (
 	videoPool     sync.Pool
 )
 
+const (
+	CallSerialize   = 1
+	CallUnserialize = 2
+)
+
 func init() {
 	nano.reserved <- struct{}{}
 	usr, err := user.Current()
@@ -506,7 +511,11 @@ func coreLoad(meta emulator.Metadata) {
 	C.bridge_retro_set_audio_sample(retroSetAudioSample, C.core_audio_sample_cgo)
 	C.bridge_retro_set_audio_sample_batch(retroSetAudioSampleBatch, C.core_audio_sample_batch_cgo)
 
-	C.bridge_retro_init(retroInit)
+	if usesLibCo {
+		C.same_thread(retroInit)
+	} else {
+		C.bridge_retro_init(retroInit)
+	}
 
 	C.bridge_retro_get_system_info(retroGetSystemInfo, &nano.sysInfo)
 	libretroLogger.Debug().Msgf("System >>> %s (%s) [%s] nfp: %v",
@@ -707,7 +716,13 @@ func printOpenGLDriverInfo() {
 // getSaveState returns emulator internal state.
 func getSaveState() (state, error) {
 	data := make([]byte, uint(nano.serializeSize))
-	if !bool(C.bridge_retro_serialize(retroSerialize, unsafe.Pointer(&data[0]), nano.serializeSize)) {
+	rez := false
+	if usesLibCo {
+		rez = *(*bool)(C.same_thread_with_args2(retroSerialize, C.int(CallSerialize), unsafe.Pointer(&data[0]), unsafe.Pointer(&nano.serializeSize)))
+	} else {
+		rez = bool(C.bridge_retro_serialize(retroSerialize, unsafe.Pointer(&data[0]), nano.serializeSize))
+	}
+	if !rez {
 		return nil, errors.New("retro_serialize failed")
 	}
 	return data, nil
@@ -716,7 +731,13 @@ func getSaveState() (state, error) {
 // restoreSaveState restores emulator internal state.
 func restoreSaveState(st state) error {
 	if len(st) > 0 {
-		if !bool(C.bridge_retro_unserialize(retroUnserialize, unsafe.Pointer(&st[0]), nano.serializeSize)) {
+		rez := false
+		if usesLibCo {
+			rez = *(*bool)(C.same_thread_with_args2(retroUnserialize, C.int(CallUnserialize), unsafe.Pointer(&st[0]), unsafe.Pointer(&nano.serializeSize)))
+		} else {
+			rez = bool(C.bridge_retro_unserialize(retroUnserialize, unsafe.Pointer(&st[0]), nano.serializeSize))
+		}
+		if !rez {
 			return errors.New("retro_unserialize failed")
 		}
 	}
