@@ -207,7 +207,6 @@ emulator:
           hasMultitap: true
         n64:
           lib: mupen64plus_next_libretro
-          altRepo: true
           roms: [ "n64", "v64", "z64" ]
           isGlAllowed: true
           usesLibCo: true
