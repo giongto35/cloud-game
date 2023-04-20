@@ -477,9 +477,10 @@ func coreLoad(meta emulator.Metadata) {
 	coreLib, err = loadLib(filePath)
 	// fallback to sequential lib loader (first successfully loaded)
 	if err != nil {
+		libretroLogger.Error().Err(err).Msgf("load fail: %v", filePath)
 		coreLib, err = loadLibRollingRollingRolling(filePath)
 		if err != nil {
-			libretroLogger.Fatal().Err(err).Msgf("core load: %s, %v", filePath, err)
+			libretroLogger.Fatal().Err(err).Msgf("core load: %s", filePath)
 		}
 	}
 
@@ -540,9 +541,9 @@ func LoadGame(path string) error {
 		if err != nil {
 			return err
 		}
-		dat := C.CString(string(bytes))
-		gi.data = unsafe.Pointer(dat)
-		defer C.free(unsafe.Pointer(dat))
+		dataPtr := unsafe.Pointer(C.CBytes(bytes))
+		gi.data = dataPtr
+		defer C.free(dataPtr)
 	}
 
 	if ok := C.bridge_retro_load_game(retroLoadGame, &gi); !ok {
