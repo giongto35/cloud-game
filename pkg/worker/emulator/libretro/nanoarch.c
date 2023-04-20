@@ -103,7 +103,7 @@ void *bridge_retro_get_memory_data(void *f, unsigned id) {
 }
 
 size_t bridge_retro_serialize_size(void *f) {
-    ((size_t (*)(void)) f)();
+    return ((size_t (*)(void)) f)();
 }
 
 bool bridge_retro_serialize(void *f, void *data, size_t size) {
