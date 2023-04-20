@@ -35,7 +35,7 @@ jobs:
           password: ${{ secrets.GITHUB_TOKEN }}
       - uses: docker/build-push-action@v4
         with:
-          build_args: VERSION=${{ env.V }}
+          build-args: VERSION=${{ env.V }}
           context: .
           push: true
           provenance: false
