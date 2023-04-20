@@ -141,10 +141,12 @@ func (f *Frontend) Start() {
 	// start time for the first frame
 	lastFrameTime = time.Now().UnixNano()
 
-	// 1 frame in order for Mupen save state load to work
-	f.mu.Lock()
-	run()
-	f.mu.Unlock()
+	// advance 1 frame for Mupen save state
+	if usesLibCo {
+		f.mu.Lock()
+		run()
+		f.mu.Unlock()
+	}
 
 	if err := f.LoadGameState(); err != nil {
 		f.log.Error().Err(err).Msg("couldn't load a save file")
