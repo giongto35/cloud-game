@@ -20,7 +20,7 @@ RUN apt-get -qq update && apt-get -qq install --no-install-recommends -y \
  && rm -rf /var/lib/apt/lists/*
 
 # go setup layer
-ARG GO=go1.20.2.linux-amd64.tar.gz
+ARG GO=go1.20.3.linux-amd64.tar.gz
 RUN wget -q https://golang.org/dl/$GO \
     && rm -rf /usr/local/go \
     && tar -C /usr/local -xzf $GO \
