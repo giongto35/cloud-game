@@ -38,6 +38,6 @@ void deinit_video_cgo();
 
 void same_thread(void *f);
 void *same_thread_with_args2(void *f, int type, void *arg1, void *arg2);
-void stop();
+void same_thread_stop();
 
 #endif

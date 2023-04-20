@@ -233,7 +233,7 @@ void *run_loop(void *unused) {
     core_log_cgo(RETRO_LOG_DEBUG, "UnLibCo run loop stop\n");
 }
 
-void stop() {
+void same_thread_stop() {
     initialized = 0;
 }
 

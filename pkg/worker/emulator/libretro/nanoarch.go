@@ -613,7 +613,7 @@ func nanoarchShutdown() {
 			if nano.v.isGl {
 				C.same_thread(C.deinit_video_cgo)
 			}
-			C.same_thread(C.stop)
+			C.same_thread(C.same_thread_stop)
 		})
 	} else {
 		if nano.v.isGl {
