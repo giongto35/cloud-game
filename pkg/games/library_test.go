@@ -3,6 +3,7 @@ package games
 import (
 	"testing"
 
+	"github.com/giongto35/cloud-game/v3/pkg/config"
 	"github.com/giongto35/cloud-game/v3/pkg/logger"
 )
 
@@ -21,7 +22,7 @@ func TestLibraryScan(t *testing.T) {
 
 	l := logger.NewConsole(false, "w", false)
 	for _, test := range tests {
-		library := NewLib(Config{
+		library := NewLib(config.Library{
 			BasePath:  test.directory,
 			Supported: []string{"gba", "zip", "nes"},
 			Ignored:   []string{"neogeo", "pgm"},

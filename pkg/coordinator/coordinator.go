@@ -4,8 +4,7 @@ import (
 	"html/template"
 	"net/http"
 
-	"github.com/giongto35/cloud-game/v3/pkg/config/coordinator"
-	"github.com/giongto35/cloud-game/v3/pkg/config/shared"
+	"github.com/giongto35/cloud-game/v3/pkg/config"
 	"github.com/giongto35/cloud-game/v3/pkg/games"
 	"github.com/giongto35/cloud-game/v3/pkg/logger"
 	"github.com/giongto35/cloud-game/v3/pkg/monitoring"
@@ -13,7 +12,7 @@ import (
 	"github.com/giongto35/cloud-game/v3/pkg/service"
 )
 
-func New(conf coordinator.Config, log *logger.Logger) (services service.Group) {
+func New(conf config.CoordinatorConfig, log *logger.Logger) (services service.Group) {
 	lib := games.NewLibWhitelisted(conf.Coordinator.Library, conf.Emulator, log)
 	lib.Scan()
 	hub := NewHub(conf, lib, log)
@@ -33,7 +32,7 @@ func New(conf coordinator.Config, log *logger.Logger) (services service.Group) {
 	return
 }
 
-func NewHTTPServer(conf coordinator.Config, log *logger.Logger, fnMux func(*httpx.Mux) *httpx.Mux) (*httpx.Server, error) {
+func NewHTTPServer(conf config.CoordinatorConfig, log *logger.Logger, fnMux func(*httpx.Mux) *httpx.Mux) (*httpx.Server, error) {
 	return httpx.NewServer(
 		conf.Coordinator.Server.GetAddr(),
 		func(s *httpx.Server) httpx.Handler {
@@ -46,7 +45,7 @@ func NewHTTPServer(conf coordinator.Config, log *logger.Logger, fnMux func(*http
 	)
 }
 
-func index(conf coordinator.Config, log *logger.Logger) httpx.Handler {
+func index(conf config.CoordinatorConfig, log *logger.Logger) httpx.Handler {
 	const indexHTML = "./web/index.html"
 
 	handler := func(tpl *template.Template, w httpx.ResponseWriter, r *httpx.Request) {
@@ -56,8 +55,8 @@ func index(conf coordinator.Config, log *logger.Logger) httpx.Handler {
 		}
 		// render index page with some tpl values
 		tplData := struct {
-			Analytics coordinator.Analytics
-			Recording shared.Recording
+			Analytics config.Analytics
+			Recording config.Recording
 		}{conf.Coordinator.Analytics, conf.Recording}
 		if err := tpl.Execute(w, tplData); err != nil {
 			log.Fatal().Err(err).Msg("error with the analytics template file")

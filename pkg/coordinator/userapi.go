@@ -4,7 +4,7 @@ import (
 	"unsafe"
 
 	"github.com/giongto35/cloud-game/v3/pkg/api"
-	"github.com/giongto35/cloud-game/v3/pkg/config/webrtc"
+	"github.com/giongto35/cloud-game/v3/pkg/config"
 )
 
 // CheckLatency sends a list of server addresses to the user
@@ -22,7 +22,7 @@ func (u *User) CheckLatency(req api.CheckLatencyUserResponse) (api.CheckLatencyU
 }
 
 // InitSession signals the user that the app is ready to go.
-func (u *User) InitSession(wid string, ice []webrtc.IceServer, games []string) {
+func (u *User) InitSession(wid string, ice []config.IceServer, games []string) {
 	u.Notify(api.InitSession, api.InitSessionUserResponse{
 		// don't do this at home
 		Ice:   *(*[]api.IceServer)(unsafe.Pointer(&ice)),

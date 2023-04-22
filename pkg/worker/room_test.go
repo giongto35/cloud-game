@@ -17,7 +17,6 @@ import (
 	"time"
 
 	"github.com/giongto35/cloud-game/v3/pkg/config"
-	"github.com/giongto35/cloud-game/v3/pkg/config/worker"
 	"github.com/giongto35/cloud-game/v3/pkg/games"
 	"github.com/giongto35/cloud-game/v3/pkg/logger"
 	"github.com/giongto35/cloud-game/v3/pkg/worker/emulator"
@@ -206,7 +205,7 @@ func dumpCanvas(frame *image2.Frame, name string, caption string, path string) {
 func getRoomMock(cfg roomMockConfig) roomMock {
 	cfg.game.Path = cfg.gamesPath + cfg.game.Path
 
-	var conf worker.Config
+	var conf config.WorkerConfig
 	if err := config.LoadConfig(&conf, whereIsConfigs); err != nil {
 		panic(err)
 	}
@@ -249,7 +248,7 @@ func getRoomMock(cfg roomMockConfig) roomMock {
 
 // fixEmulators makes absolute game paths in global GameList and passes GL context config.
 // hack: emulator paths should be absolute and visible to the tests.
-func fixEmulators(config *worker.Config, autoGlContext bool) {
+func fixEmulators(config *config.WorkerConfig, autoGlContext bool) {
 	rootPath := getRootPath()
 
 	config.Emulator.Libretro.Cores.Paths.Libs =

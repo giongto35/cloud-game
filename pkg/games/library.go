@@ -11,23 +11,9 @@ import (
 	"time"
 
 	"github.com/fsnotify/fsnotify"
+	"github.com/giongto35/cloud-game/v3/pkg/config"
 	"github.com/giongto35/cloud-game/v3/pkg/logger"
 )
-
-// Config is an external configuration
-type Config struct {
-	// some directory which is going to be
-	// the root folder for the library
-	BasePath string
-	// a list of supported file extensions
-	Supported []string
-	// a list of ignored words in the files
-	Ignored []string
-	// print some additional info
-	Verbose bool
-	// enable directory changes watch
-	WatchMode bool
-}
 
 // libConf is an optimized internal library configuration
 type libConf struct {
@@ -82,11 +68,11 @@ type GameMetadata struct {
 
 func (g GameMetadata) FullPath() string { return filepath.Join(g.Base, g.Path) }
 
-func (c Config) GetSupportedExtensions() []string { return c.Supported }
+func NewLib(conf config.Library, log *logger.Logger) GameLibrary {
+	return NewLibWhitelisted(conf, conf, log)
+}
 
-func NewLib(conf Config, log *logger.Logger) GameLibrary { return NewLibWhitelisted(conf, conf, log) }
-
-func NewLibWhitelisted(conf Config, filter FileExtensionWhitelist, log *logger.Logger) GameLibrary {
+func NewLibWhitelisted(conf config.Library, filter FileExtensionWhitelist, log *logger.Logger) GameLibrary {
 	hasSource := true
 	dir, err := filepath.Abs(conf.BasePath)
 	if err != nil {

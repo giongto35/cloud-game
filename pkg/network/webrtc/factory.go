@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"net"
 
-	conf "github.com/giongto35/cloud-game/v3/pkg/config/webrtc"
+	"github.com/giongto35/cloud-game/v3/pkg/config"
 	"github.com/giongto35/cloud-game/v3/pkg/logger"
 	"github.com/giongto35/cloud-game/v3/pkg/network/socket"
 	"github.com/pion/interceptor"
@@ -19,7 +19,7 @@ type ApiFactory struct {
 
 type ModApiFun func(m *webrtc.MediaEngine, i *interceptor.Registry, s *webrtc.SettingEngine)
 
-func NewApiFactory(conf conf.Webrtc, log *logger.Logger, mod ModApiFun) (api *ApiFactory, err error) {
+func NewApiFactory(conf config.Webrtc, log *logger.Logger, mod ModApiFun) (api *ApiFactory, err error) {
 	m := &webrtc.MediaEngine{}
 	if err = m.RegisterDefaultCodecs(); err != nil {
 		return

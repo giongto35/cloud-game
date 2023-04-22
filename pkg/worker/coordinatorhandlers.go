@@ -5,14 +5,14 @@ import (
 
 	"github.com/giongto35/cloud-game/v3/pkg/api"
 	"github.com/giongto35/cloud-game/v3/pkg/com"
-	"github.com/giongto35/cloud-game/v3/pkg/config/worker"
+	"github.com/giongto35/cloud-game/v3/pkg/config"
 	"github.com/giongto35/cloud-game/v3/pkg/games"
 	"github.com/giongto35/cloud-game/v3/pkg/network/webrtc"
 	"github.com/goccy/go-json"
 )
 
 // buildConnQuery builds initial connection data query to a coordinator.
-func buildConnQuery(id com.Uid, conf worker.Worker, address string) (string, error) {
+func buildConnQuery(id com.Uid, conf config.Worker, address string) (string, error) {
 	addr := conf.GetPingAddr(address)
 	return toBase64Json(api.ConnectionRequest[com.Uid]{
 		Addr:    addr.Hostname(),

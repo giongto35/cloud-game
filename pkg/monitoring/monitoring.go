@@ -7,7 +7,7 @@ import (
 	"strconv"
 
 	"github.com/VictoriaMetrics/metrics"
-	"github.com/giongto35/cloud-game/v3/pkg/config/monitoring"
+	"github.com/giongto35/cloud-game/v3/pkg/config"
 	"github.com/giongto35/cloud-game/v3/pkg/logger"
 	"github.com/giongto35/cloud-game/v3/pkg/network/httpx"
 )
@@ -16,14 +16,14 @@ const debugEndpoint = "/debug/pprof"
 const metricsEndpoint = "/metrics"
 
 type Monitoring struct {
-	conf   monitoring.Config
+	conf   config.Monitoring
 	server *httpx.Server
 	log    *logger.Logger
 }
 
 // New creates new monitoring service.
 // The tag param specifies owner label for logs.
-func New(conf monitoring.Config, baseAddr string, log *logger.Logger) *Monitoring {
+func New(conf config.Monitoring, baseAddr string, log *logger.Logger) *Monitoring {
 	serv, err := httpx.NewServer(
 		net.JoinHostPort(baseAddr, strconv.Itoa(conf.Port)),
 		func(s *httpx.Server) httpx.Handler {

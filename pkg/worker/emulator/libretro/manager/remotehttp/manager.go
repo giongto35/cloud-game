@@ -1,11 +1,11 @@
 package remotehttp
 
 import (
-	"github.com/giongto35/cloud-game/v3/pkg/worker/emulator/libretro"
 	"os"
 
-	"github.com/giongto35/cloud-game/v3/pkg/config/emulator"
+	"github.com/giongto35/cloud-game/v3/pkg/config"
 	"github.com/giongto35/cloud-game/v3/pkg/logger"
+	"github.com/giongto35/cloud-game/v3/pkg/worker/emulator/libretro"
 	"github.com/giongto35/cloud-game/v3/pkg/worker/emulator/libretro/manager"
 	"github.com/giongto35/cloud-game/v3/pkg/worker/emulator/libretro/repo"
 	"github.com/gofrs/flock"
@@ -22,7 +22,7 @@ type Manager struct {
 	log     *logger.Logger
 }
 
-func NewRemoteHttpManager(conf emulator.LibretroConfig, log *logger.Logger) Manager {
+func NewRemoteHttpManager(conf config.LibretroConfig, log *logger.Logger) Manager {
 	repoConf := conf.Cores.Repo.Main
 	altRepoConf := conf.Cores.Repo.Secondary
 	// used for synchronization of multiple process
@@ -55,7 +55,7 @@ func NewRemoteHttpManager(conf emulator.LibretroConfig, log *logger.Logger) Mana
 	return m
 }
 
-func CheckCores(conf emulator.Emulator, log *logger.Logger) error {
+func CheckCores(conf config.Emulator, log *logger.Logger) error {
 	if !conf.Libretro.Cores.Repo.Sync {
 		return nil
 	}
@@ -95,7 +95,7 @@ func (m *Manager) getCoreUrls(names []string, repo repo.Repository) (urls []Down
 	return
 }
 
-func (m *Manager) download(cores []emulator.CoreInfo) (failed []string) {
+func (m *Manager) download(cores []config.CoreInfo) (failed []string) {
 	if len(cores) == 0 || m.repo == nil {
 		return
 	}
@@ -132,7 +132,7 @@ func (m *Manager) down(cores []string, repo repo.Repository) (failed []string) {
 }
 
 // diff returns a list of not installed cores.
-func diff(declared, installed []emulator.CoreInfo) (diff []emulator.CoreInfo) {
+func diff(declared, installed []config.CoreInfo) (diff []config.CoreInfo) {
 	if len(declared) == 0 {
 		return
 	}

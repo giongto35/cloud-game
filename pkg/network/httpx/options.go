@@ -3,7 +3,7 @@ package httpx
 import (
 	"time"
 
-	"github.com/giongto35/cloud-game/v3/pkg/config/shared"
+	"github.com/giongto35/cloud-game/v3/pkg/config"
 	"github.com/giongto35/cloud-game/v3/pkg/logger"
 )
 
@@ -47,7 +47,7 @@ func HttpsRedirect(redirect bool) Option {
 
 func WithPortRoll(roll bool) Option { return func(opts *Options) { opts.PortRoll = roll } }
 func WithZone(zone string) Option   { return func(opts *Options) { opts.Zone = zone } }
-func WithServerConfig(conf shared.Server) Option {
+func WithServerConfig(conf config.Server) Option {
 	return func(opts *Options) {
 		opts.Https = conf.Https
 		opts.HttpsCert = conf.Tls.HttpsCert

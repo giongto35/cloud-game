@@ -4,7 +4,7 @@ import (
 	"sync"
 	"time"
 
-	conf "github.com/giongto35/cloud-game/v3/pkg/config/encoder"
+	"github.com/giongto35/cloud-game/v3/pkg/config"
 	"github.com/giongto35/cloud-game/v3/pkg/worker/emulator"
 	"github.com/giongto35/cloud-game/v3/pkg/worker/encoder"
 	"github.com/giongto35/cloud-game/v3/pkg/worker/encoder/h264"
@@ -68,7 +68,7 @@ func (b *Buffer) Write(s Samples, onFull OnFull) (r int) {
 // GetFrameSizeFor calculates audio frame size, i.e. 48k*frame/1000*2
 func GetFrameSizeFor(hz int, frame int) int { return hz * frame / 1000 * audioChannels }
 
-func (r *Room) initAudio(frequency int, conf conf.Audio) {
+func (r *Room) initAudio(frequency int, conf config.Audio) {
 	buf := NewBuffer(GetFrameSizeFor(frequency, conf.Frame))
 	resample, frameLen := frequency != audioFrequency, 0
 	if resample {
@@ -107,7 +107,7 @@ func (r *Room) initAudio(frequency int, conf conf.Audio) {
 }
 
 // initVideo processes videoFrames images with an encoder (codec) then pushes the result to WebRTC.
-func (r *Room) initVideo(width, height int, conf conf.Video) {
+func (r *Room) initVideo(width, height int, conf config.Video) {
 	var enc encoder.Encoder
 	var err error
 

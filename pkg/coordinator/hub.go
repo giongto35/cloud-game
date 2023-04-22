@@ -9,7 +9,7 @@ import (
 
 	"github.com/giongto35/cloud-game/v3/pkg/api"
 	"github.com/giongto35/cloud-game/v3/pkg/com"
-	"github.com/giongto35/cloud-game/v3/pkg/config/coordinator"
+	"github.com/giongto35/cloud-game/v3/pkg/config"
 	"github.com/giongto35/cloud-game/v3/pkg/games"
 	"github.com/giongto35/cloud-game/v3/pkg/logger"
 )
@@ -24,14 +24,14 @@ type Connection interface {
 }
 
 type Hub struct {
-	conf     coordinator.Config
+	conf     config.CoordinatorConfig
 	launcher games.Launcher
 	log      *logger.Logger
 	users    com.NetMap[*User]
 	workers  com.NetMap[*Worker]
 }
 
-func NewHub(conf coordinator.Config, lib games.GameLibrary, log *logger.Logger) *Hub {
+func NewHub(conf config.CoordinatorConfig, lib games.GameLibrary, log *logger.Logger) *Hub {
 	return &Hub{
 		conf:     conf,
 		users:    com.NewNetMap[*User](),
@@ -168,7 +168,7 @@ func (h *Hub) findWorkerFor(usr *User, q url.Values, log *logger.Logger) *Worker
 		log.Debug().Msgf("Worker with id: %v has been found", wid)
 	} else {
 		switch h.conf.Coordinator.Selector {
-		case coordinator.SelectByPing:
+		case config.SelectByPing:
 			log.Debug().Msgf("Searching fastest free worker...")
 			if worker = h.findFastestWorker(zone,
 				func(servers []string) (map[string]int64, error) { return usr.CheckLatency(servers) }); worker != nil {

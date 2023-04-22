@@ -1,7 +1,7 @@
 package main
 
 import (
-	config "github.com/giongto35/cloud-game/v3/pkg/config/coordinator"
+	"github.com/giongto35/cloud-game/v3/pkg/config"
 	"github.com/giongto35/cloud-game/v3/pkg/coordinator"
 	"github.com/giongto35/cloud-game/v3/pkg/logger"
 	"github.com/giongto35/cloud-game/v3/pkg/os"
@@ -10,7 +10,7 @@ import (
 var Version = "?"
 
 func main() {
-	conf := config.NewConfig()
+	conf := config.NewCoordinatorConfig()
 	conf.ParseFlags()
 
 	log := logger.NewConsole(conf.Coordinator.Debug, "c", false)

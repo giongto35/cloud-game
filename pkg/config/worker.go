@@ -1,4 +1,4 @@
-package worker
+package config
 
 import (
 	"flag"
@@ -8,29 +8,27 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/giongto35/cloud-game/v3/pkg/config"
-	"github.com/giongto35/cloud-game/v3/pkg/config/emulator"
-	"github.com/giongto35/cloud-game/v3/pkg/config/encoder"
-	"github.com/giongto35/cloud-game/v3/pkg/config/monitoring"
-	"github.com/giongto35/cloud-game/v3/pkg/config/shared"
-	"github.com/giongto35/cloud-game/v3/pkg/config/storage"
-	"github.com/giongto35/cloud-game/v3/pkg/config/webrtc"
 	"github.com/giongto35/cloud-game/v3/pkg/os"
 )
 
-type Config struct {
-	Encoder   encoder.Encoder
-	Emulator  emulator.Emulator
-	Recording shared.Recording
-	Storage   storage.Storage
+type WorkerConfig struct {
+	Encoder   Encoder
+	Emulator  Emulator
+	Recording Recording
+	Storage   Storage
 	Worker    Worker
-	Webrtc    webrtc.Webrtc
-	Version   shared.Version
+	Webrtc    Webrtc
+	Version   Version
+}
+
+type Storage struct {
+	Provider string
+	Key      string
 }
 
 type Worker struct {
 	Debug      bool
-	Monitoring monitoring.Config
+	Monitoring Monitoring
 	Network    struct {
 		CoordinatorAddress string
 		Endpoint           string
@@ -39,15 +37,40 @@ type Worker struct {
 		Secure             bool
 		Zone               string
 	}
-	Server shared.Server
+	Server Server
 	Tag    string
 }
 
-// allows custom config path
-var configPath string
+type Encoder struct {
+	Audio Audio
+	Video Video
+}
 
-func NewConfig() (conf Config) {
-	err := config.LoadConfig(&conf, configPath)
+type Audio struct {
+	Frame int
+}
+
+type Video struct {
+	Codec       string
+	Concurrency int
+	H264        struct {
+		Crf      uint8
+		Preset   string
+		Profile  string
+		Tune     string
+		LogLevel int
+	}
+	Vpx struct {
+		Bitrate          uint
+		KeyframeInterval uint
+	}
+}
+
+// allows custom config path
+var workerConfigPath string
+
+func NewWorkerConfig() (conf WorkerConfig) {
+	err := LoadConfig(&conf, workerConfigPath)
 	if err != nil {
 		panic(err)
 	}
@@ -59,17 +82,17 @@ func NewConfig() (conf Config) {
 // ParseFlags updates config values from passed runtime flags.
 // Define own flags with default value set to the current config param.
 // Don't forget to call flag.Parse().
-func (c *Config) ParseFlags() {
+func (c *WorkerConfig) ParseFlags() {
 	c.Worker.Server.WithFlags()
 	flag.IntVar(&c.Worker.Monitoring.Port, "monitoring.port", c.Worker.Monitoring.Port, "Monitoring server port")
 	flag.StringVar(&c.Worker.Network.CoordinatorAddress, "coordinatorhost", c.Worker.Network.CoordinatorAddress, "Worker URL to connect")
 	flag.StringVar(&c.Worker.Network.Zone, "zone", c.Worker.Network.Zone, "Worker network zone (us, eu, etc.)")
-	flag.StringVar(&configPath, "w-conf", configPath, "Set custom configuration file path")
+	flag.StringVar(&workerConfigPath, "w-conf", workerConfigPath, "Set custom configuration file path")
 	flag.Parse()
 }
 
 // expandSpecialTags replaces all the special tags in the config.
-func (c *Config) expandSpecialTags() {
+func (c *WorkerConfig) expandSpecialTags() {
 	tag := "{user}"
 	for _, dir := range []*string{&c.Emulator.Storage, &c.Emulator.Libretro.Cores.Repo.ExtLock} {
 		if *dir == "" || !strings.Contains(*dir, tag) {
@@ -85,10 +108,10 @@ func (c *Config) expandSpecialTags() {
 }
 
 // fixValues tries to fix some values otherwise hard to set externally.
-func (c *Config) fixValues() {
+func (c *WorkerConfig) fixValues() {
 	// with ICE lite we clear ICE servers
 	if c.Webrtc.IceLite {
-		c.Webrtc.IceServers = []webrtc.IceServer{}
+		c.Webrtc.IceServers = []IceServer{}
 	}
 }
 

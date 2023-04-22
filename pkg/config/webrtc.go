@@ -1,4 +1,4 @@
-package webrtc
+package config
 
 type Webrtc struct {
 	DisableDefaultInterceptors bool
