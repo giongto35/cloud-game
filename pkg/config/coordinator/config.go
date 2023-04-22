@@ -48,7 +48,6 @@ func NewConfig() (conf Config) {
 	if err != nil {
 		panic(err)
 	}
-	conf.Webrtc.AddIceServersEnv()
 	return
 }
 

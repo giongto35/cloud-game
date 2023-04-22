@@ -87,9 +87,7 @@ func (c *Config) expandSpecialTags() {
 // fixValues tries to fix some values otherwise hard to set externally.
 func (c *Config) fixValues() {
 	// with ICE lite we clear ICE servers
-	if !c.Webrtc.IceLite {
-		c.Webrtc.AddIceServersEnv()
-	} else {
+	if c.Webrtc.IceLite {
 		c.Webrtc.IceServers = []webrtc.IceServer{}
 	}
 }
