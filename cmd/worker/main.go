@@ -3,7 +3,7 @@ package main
 import (
 	"time"
 
-	config "github.com/giongto35/cloud-game/v3/pkg/config/worker"
+	"github.com/giongto35/cloud-game/v3/pkg/config"
 	"github.com/giongto35/cloud-game/v3/pkg/logger"
 	"github.com/giongto35/cloud-game/v3/pkg/os"
 	"github.com/giongto35/cloud-game/v3/pkg/worker"
@@ -13,7 +13,7 @@ import (
 var Version = "?"
 
 func run() {
-	conf := config.NewConfig()
+	conf := config.NewWorkerConfig()
 	conf.ParseFlags()
 
 	log := logger.NewConsole(conf.Worker.Debug, "w", false)

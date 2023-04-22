@@ -3,7 +3,7 @@ package worker
 import (
 	"time"
 
-	"github.com/giongto35/cloud-game/v3/pkg/config/worker"
+	"github.com/giongto35/cloud-game/v3/pkg/config"
 	"github.com/giongto35/cloud-game/v3/pkg/logger"
 	"github.com/giongto35/cloud-game/v3/pkg/monitoring"
 	"github.com/giongto35/cloud-game/v3/pkg/network/httpx"
@@ -13,7 +13,7 @@ import (
 
 type Worker struct {
 	address string
-	conf    worker.Config
+	conf    config.WorkerConfig
 	cord    *coordinator
 	log     *logger.Logger
 	router  Router
@@ -23,7 +23,7 @@ type Worker struct {
 
 const retry = 10 * time.Second
 
-func New(conf worker.Config, log *logger.Logger, done chan struct{}) (services service.Group) {
+func New(conf config.WorkerConfig, log *logger.Logger, done chan struct{}) (services service.Group) {
 	if err := remotehttp.CheckCores(conf.Emulator, log); err != nil {
 		log.Error().Err(err).Msg("cores sync error")
 	}

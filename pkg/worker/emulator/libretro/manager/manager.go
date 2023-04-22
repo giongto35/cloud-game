@@ -1,12 +1,12 @@
 package manager
 
 import (
-	"github.com/giongto35/cloud-game/v3/pkg/worker/emulator/libretro"
 	"os"
 	"path/filepath"
 	"strings"
 
-	"github.com/giongto35/cloud-game/v3/pkg/config/emulator"
+	"github.com/giongto35/cloud-game/v3/pkg/config"
+	"github.com/giongto35/cloud-game/v3/pkg/worker/emulator/libretro"
 )
 
 type Manager interface {
@@ -14,10 +14,10 @@ type Manager interface {
 }
 
 type BasicManager struct {
-	Conf emulator.LibretroConfig
+	Conf config.LibretroConfig
 }
 
-func (m BasicManager) GetInstalled() (installed []emulator.CoreInfo, err error) {
+func (m BasicManager) GetInstalled() (installed []config.CoreInfo, err error) {
 	dir := m.Conf.GetCoresStorePath()
 	arch, err := libretro.GetCoreExt()
 	if err != nil {
@@ -32,7 +32,7 @@ func (m BasicManager) GetInstalled() (installed []emulator.CoreInfo, err error) 
 	for _, file := range files {
 		name := file.Name()
 		if filepath.Ext(name) == arch.LibExt {
-			installed = append(installed, emulator.CoreInfo{Name: strings.TrimSuffix(name, arch.LibExt)})
+			installed = append(installed, config.CoreInfo{Name: strings.TrimSuffix(name, arch.LibExt)})
 		}
 	}
 	return

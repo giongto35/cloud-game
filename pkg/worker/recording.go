@@ -1,7 +1,7 @@
 package worker
 
 import (
-	"github.com/giongto35/cloud-game/v3/pkg/config/worker"
+	"github.com/giongto35/cloud-game/v3/pkg/config"
 	"github.com/giongto35/cloud-game/v3/pkg/worker/emulator"
 	"github.com/giongto35/cloud-game/v3/pkg/worker/recorder"
 )
@@ -11,7 +11,7 @@ type RecordingRoom struct {
 	rec *recorder.Recording
 }
 
-func WithRecording(room GamingRoom, rec bool, recUser string, game string, conf worker.Config) *RecordingRoom {
+func WithRecording(room GamingRoom, rec bool, recUser string, game string, conf config.WorkerConfig) *RecordingRoom {
 	rr := &RecordingRoom{GamingRoom: room, rec: recorder.NewRecording(
 		recorder.Meta{UserName: recUser},
 		room.GetLog(),

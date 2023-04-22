@@ -3,7 +3,7 @@ package coordinator
 import (
 	"github.com/giongto35/cloud-game/v3/pkg/api"
 	"github.com/giongto35/cloud-game/v3/pkg/com"
-	"github.com/giongto35/cloud-game/v3/pkg/config/coordinator"
+	"github.com/giongto35/cloud-game/v3/pkg/config"
 	"github.com/giongto35/cloud-game/v3/pkg/games"
 	"github.com/giongto35/cloud-game/v3/pkg/logger"
 )
@@ -42,7 +42,7 @@ func (u *User) Disconnect() {
 	}
 }
 
-func (u *User) HandleRequests(info HasServerInfo, launcher games.Launcher, conf coordinator.Config) chan struct{} {
+func (u *User) HandleRequests(info HasServerInfo, launcher games.Launcher, conf config.CoordinatorConfig) chan struct{} {
 	return u.ProcessPackets(func(x api.In[com.Uid]) error {
 		payload := x.GetPayload()
 		switch x.GetType() {

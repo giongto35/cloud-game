@@ -1,4 +1,4 @@
-package emulator
+package config
 
 import "testing"
 

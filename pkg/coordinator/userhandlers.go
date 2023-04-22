@@ -5,7 +5,7 @@ import (
 
 	"github.com/giongto35/cloud-game/v3/pkg/api"
 	"github.com/giongto35/cloud-game/v3/pkg/com"
-	"github.com/giongto35/cloud-game/v3/pkg/config/coordinator"
+	"github.com/giongto35/cloud-game/v3/pkg/config"
 	"github.com/giongto35/cloud-game/v3/pkg/games"
 )
 
@@ -26,7 +26,7 @@ func (u *User) HandleWebrtcIceCandidate(rq api.WebrtcUserIceCandidate) {
 	u.w.WebrtcIceCandidate(u.Id(), string(rq))
 }
 
-func (u *User) HandleStartGame(rq api.GameStartUserRequest, launcher games.Launcher, conf coordinator.Config) {
+func (u *User) HandleStartGame(rq api.GameStartUserRequest, launcher games.Launcher, conf config.CoordinatorConfig) {
 	// +injects game data into the original game request
 	// the name of the game either in the `room id` field or
 	// it's in the initial request

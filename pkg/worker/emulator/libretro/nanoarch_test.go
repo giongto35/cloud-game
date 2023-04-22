@@ -12,7 +12,6 @@ import (
 	"unsafe"
 
 	"github.com/giongto35/cloud-game/v3/pkg/config"
-	"github.com/giongto35/cloud-game/v3/pkg/config/worker"
 	"github.com/giongto35/cloud-game/v3/pkg/logger"
 	"github.com/giongto35/cloud-game/v3/pkg/worker/emulator"
 )
@@ -50,7 +49,7 @@ func GetEmulatorMock(room string, system string) *EmulatorMock {
 	rootPath := getRootPath()
 	configPath := rootPath + "configs/"
 
-	var conf worker.Config
+	var conf config.WorkerConfig
 	if err := config.LoadConfig(&conf, configPath); err != nil {
 		panic(err)
 	}

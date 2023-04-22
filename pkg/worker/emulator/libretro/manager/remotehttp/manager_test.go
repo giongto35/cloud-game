@@ -4,7 +4,7 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/giongto35/cloud-game/v3/pkg/config/emulator"
+	"github.com/giongto35/cloud-game/v3/pkg/config"
 )
 
 func TestDiff(t *testing.T) {
@@ -39,9 +39,9 @@ func TestDiff(t *testing.T) {
 		},
 	}
 
-	toCoreInfo := func(names []string) (r []emulator.CoreInfo) {
+	toCoreInfo := func(names []string) (r []config.CoreInfo) {
 		for _, n := range names {
-			r = append(r, emulator.CoreInfo{Name: n})
+			r = append(r, config.CoreInfo{Name: n})
 		}
 		return
 	}

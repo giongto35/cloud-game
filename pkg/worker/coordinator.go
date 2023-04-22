@@ -5,7 +5,7 @@ import (
 
 	"github.com/giongto35/cloud-game/v3/pkg/api"
 	"github.com/giongto35/cloud-game/v3/pkg/com"
-	"github.com/giongto35/cloud-game/v3/pkg/config/worker"
+	"github.com/giongto35/cloud-game/v3/pkg/config"
 	"github.com/giongto35/cloud-game/v3/pkg/logger"
 	"github.com/giongto35/cloud-game/v3/pkg/network/webrtc"
 )
@@ -27,7 +27,7 @@ type coordinator struct {
 
 var connector com.Client
 
-func newCoordinatorConnection(host string, conf worker.Worker, addr string, log *logger.Logger) (*coordinator, error) {
+func newCoordinatorConnection(host string, conf config.Worker, addr string, log *logger.Logger) (*coordinator, error) {
 	scheme := "ws"
 	if conf.Network.Secure {
 		scheme = "wss"

@@ -4,8 +4,7 @@ import (
 	"time"
 
 	"github.com/giongto35/cloud-game/v3/pkg/com"
-	conf "github.com/giongto35/cloud-game/v3/pkg/config/emulator"
-	"github.com/giongto35/cloud-game/v3/pkg/config/worker"
+	"github.com/giongto35/cloud-game/v3/pkg/config"
 	"github.com/giongto35/cloud-game/v3/pkg/games"
 	"github.com/giongto35/cloud-game/v3/pkg/logger"
 	"github.com/giongto35/cloud-game/v3/pkg/os"
@@ -42,7 +41,7 @@ type Room struct {
 	log      *logger.Logger
 }
 
-func NewRoom(id string, game games.GameMetadata, onClose func(*Room), conf worker.Config, log *logger.Logger) *Room {
+func NewRoom(id string, game games.GameMetadata, onClose func(*Room), conf config.WorkerConfig, log *logger.Logger) *Room {
 	if id == "" {
 		id = games.GenerateRoomID(game.Name)
 	}
@@ -110,7 +109,7 @@ func (r *Room) EnableAutosave(periodSec int) {
 	}
 }
 
-func (r *Room) whatsFrame(conf conf.Emulator) (ww int, hh int) {
+func (r *Room) whatsFrame(conf config.Emulator) (ww int, hh int) {
 	w, h := r.emulator.GetFrameSize()
 	// nwidth, nheight are the WebRTC output size
 	var nwidth, nheight int

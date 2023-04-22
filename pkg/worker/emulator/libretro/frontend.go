@@ -8,7 +8,7 @@ import (
 	"sync/atomic"
 	"time"
 
-	conf "github.com/giongto35/cloud-game/v3/pkg/config/emulator"
+	"github.com/giongto35/cloud-game/v3/pkg/config"
 	"github.com/giongto35/cloud-game/v3/pkg/logger"
 	"github.com/giongto35/cloud-game/v3/pkg/os"
 	"github.com/giongto35/cloud-game/v3/pkg/worker/emulator"
@@ -21,7 +21,7 @@ type Frontend struct {
 
 	input InputState
 
-	conf    conf.Emulator
+	conf    config.Emulator
 	storage Storage
 
 	// out frame size
@@ -64,7 +64,7 @@ var (
 )
 
 // NewFrontend implements Emulator interface for a Libretro frontend.
-func NewFrontend(conf conf.Emulator, log *logger.Logger) (*Frontend, error) {
+func NewFrontend(conf config.Emulator, log *logger.Logger) (*Frontend, error) {
 	log = log.Extend(log.With().Str("m", "Libretro"))
 	ll := log.Extend(log.Level(logger.Level(conf.Libretro.LogLevel)).With())
 	SetLibretroLogger(ll)
@@ -105,15 +105,15 @@ func NewFrontend(conf conf.Emulator, log *logger.Logger) (*Frontend, error) {
 }
 
 func (f *Frontend) LoadMetadata(emu string) {
-	config := f.conf.GetLibretroCoreConfig(emu)
+	conf := f.conf.GetLibretroCoreConfig(emu)
 	meta := emulator.Metadata{
-		AutoGlContext: config.AutoGlContext,
-		HasMultitap:   config.HasMultitap,
-		HasVFR:        config.VFR,
-		IsGlAllowed:   config.IsGlAllowed,
-		LibPath:       config.Lib,
-		Options:       config.Options,
-		UsesLibCo:     config.UsesLibCo,
+		AutoGlContext: conf.AutoGlContext,
+		HasMultitap:   conf.HasMultitap,
+		HasVFR:        conf.VFR,
+		IsGlAllowed:   conf.IsGlAllowed,
+		LibPath:       conf.Lib,
+		Options:       conf.Options,
+		UsesLibCo:     conf.UsesLibCo,
 	}
 	f.mu.Lock()
 	coreLoad(meta)
