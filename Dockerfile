@@ -17,6 +17,7 @@ RUN apt-get -qq update && apt-get -qq install --no-install-recommends -y \
     make \
     pkg-config \
     wget \
+    upx \
  && rm -rf /var/lib/apt/lists/*
 
 # go setup layer
@@ -38,6 +39,9 @@ COPY Makefile .
 COPY scripts/version.sh scripts/version.sh
 ARG VERSION
 RUN GIT_VERSION=${VERSION} make build
+# compress
+RUN find ${BUILD_PATH}/bin/* | xargs strip --strip-unneeded
+RUN find ${BUILD_PATH}/bin/* | xargs upx --best --lzma
 
 # base image
 FROM ubuntu:lunar
