@@ -4,6 +4,7 @@ ROOT = ${REPO_ROOT}/${PROJECT}
 
 CGO_CFLAGS='-g -O3 -funroll-loops'
 CGO_LDFLAGS='-g -O3'
+GO_TAGS=static
 
 fmt:
 	@goimports -w cmd pkg tests
@@ -21,7 +22,7 @@ build:
 	mkdir -p bin/
 	go build -ldflags "-w -s -X 'main.Version=$(GIT_VERSION)'" -o bin/ ./cmd/coordinator
 	CGO_CFLAGS=${CGO_CFLAGS} CGO_LDFLAGS=${CGO_LDFLAGS} \
-		go build -buildmode=exe -tags static \
+		go build -buildmode=exe $(if $(GO_TAGS),-tags $(GO_TAGS),) \
 		-ldflags "-w -s -X 'main.Version=$(GIT_VERSION)'" $(EXT_WFLAGS) \
 		-o bin/ ./cmd/worker
 

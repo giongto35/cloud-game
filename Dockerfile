@@ -38,7 +38,7 @@ COPY cmd ./cmd
 COPY Makefile .
 COPY scripts/version.sh scripts/version.sh
 ARG VERSION
-RUN GIT_VERSION=${VERSION} make build
+RUN GIT_VERSION=${VERSION} make GO_TAGS=static,st build
 # compress
 RUN find ${BUILD_PATH}/bin/* | xargs strip --strip-unneeded
 RUN find ${BUILD_PATH}/bin/* | xargs upx --best --lzma

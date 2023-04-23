@@ -2,7 +2,7 @@ package opus
 
 /*
 #cgo pkg-config: opus
-#cgo static LDFLAGS: -l:libopus.a
+#cgo st LDFLAGS: -l:libopus.a
 
 #include <opus.h>
 
