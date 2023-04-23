@@ -49,7 +49,7 @@ ARG BUILD_PATH
 WORKDIR /usr/local/share/cloud-game
 
 COPY scripts/install.sh install.sh
-RUN bash install.sh && \
+RUN bash install.sh x11-only && \
     rm -rf /var/lib/apt/lists/* install.sh
 
 COPY --from=build ${BUILD_PATH}/bin/ ./

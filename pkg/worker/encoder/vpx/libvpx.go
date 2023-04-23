@@ -2,6 +2,7 @@ package vpx
 
 /*
 #cgo pkg-config: vpx
+#cgo static LDFLAGS: -l:libvpx.a
 
 #include "vpx/vpx_encoder.h"
 #include "vpx/vpx_image.h"
