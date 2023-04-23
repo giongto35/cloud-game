@@ -1,3 +1,8 @@
+@font-face {
+    font-family: '6809';
+    src: url('/static/fonts/6809-Chargen.woff2');
+}
+
 html {
     /* force full size for Firefox */
     width: 100%;
@@ -19,10 +24,6 @@ body {
     overflow: hidden;
     width: 556px;
     height: 286px;
-
-    /*-webkit-box-shadow: inset 0px 0px 2px 2px rgba(219, 222, 222, 1);*/
-    /*-moz-box-shadow: inset 0px 0px 2px 2px rgba(219, 222, 222, 1);*/
-    /*box-shadow: inset 0px 0px 2px 2px rgba(219, 222, 222, 1);*/
 
     position: absolute;
     top: 50%;
@@ -515,7 +516,6 @@ body {
     height: 36px;
     background-color: #FFCF9E;
     opacity: 0.75;
-    font-family: 'Roboto';
 
     top: 50%;
     left: 0;
@@ -534,16 +534,6 @@ body {
 }
 
 
-@font-face {
-    font-family: 'Roboto'; /*a name to be used later*/
-    src: url('/static/fonts/Roboto-Regular.ttf'); /*URL to font*/
-}
-
-@font-face {
-    font-family: '6809'; /*a name to be used later*/
-    src: url('/static/fonts/6809 chargen.ttf'); /*URL to font*/
-}
-
 .menu-item {
     display: block;
     position: relative;
@@ -551,9 +541,8 @@ body {
     width: 100%;
     height: 36px; /* 35 + 1 border = 36px */
 
-    font-family: '6809';
+    font-family: '6809', monospace;
     font-size: 19px;
-    /* border-top: 1px dashed blue; */
 }
 
 .menu-item div {
@@ -565,8 +554,6 @@ body {
     top: 5px;
     width: 226px;
     height: 25px;
-
-    /* background-color: yellow; */
 }
 
 .menu-item div span {
@@ -663,7 +650,7 @@ body {
     display: block;
     margin-top: 10px;
     text-align: center;
-    font-family: 'Roboto';
+    font-family: 'Arial', sans-serif;
     font-size: 15px;
 
     color: #bababa;
