@@ -9,7 +9,6 @@ fi
 
 apt-get -qq update
 apt-get -qq install --no-install-recommends -y \
-    ca-certificates \
     libvpx7 \
     libx264-164 \
     libopus0 \
