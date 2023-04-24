@@ -1,7 +1,4 @@
-LOL123L: yolo
-#
-# Application configuration file
-#
+# The main config file
 
 # for the compatibility purposes
 version: 3

@@ -18,13 +18,19 @@ clean:
 	@rm -rf build
 	@go clean ./cmd/*
 
-build:
+
+build.coordinator:
 	mkdir -p bin/
 	go build -ldflags "-w -s -X 'main.Version=$(GIT_VERSION)'" -o bin/ ./cmd/coordinator
+
+build.worker:
+	mkdir -p bin/
 	CGO_CFLAGS=${CGO_CFLAGS} CGO_LDFLAGS=${CGO_LDFLAGS} \
 		go build -buildmode=exe $(if $(GO_TAGS),-tags $(GO_TAGS),) \
 		-ldflags "-w -s -X 'main.Version=$(GIT_VERSION)'" $(EXT_WFLAGS) \
 		-o bin/ ./cmd/worker
+
+build: build.coordinator build.worker
 
 verify-cores:
 	go test -run TestAllEmulatorRooms ./pkg/worker -v -renderFrames $(GL_CTX) -outputPath "../../_rendered"

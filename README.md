@@ -1,4 +1,5 @@
 # CloudRetro
+
 [![Build](https://github.com/giongto35/cloud-game/workflows/build/badge.svg)](https://github.com/giongto35/cloud-game/actions?query=workflow:build)
 [![Latest release](https://img.shields.io/github/v/release/giongto35/cloud-game.svg)](https://github.com/giongto35/cloud-game/releases/latest)
 
@@ -13,7 +14,9 @@ Discord: [Join Us](https://discord.gg/sXRQZa2zeP)
 ![screenshot](https://user-images.githubusercontent.com/846874/235532552-8c8253df-aa8d-48c9-a58e-3f54e284f86e.jpg)
 
 ## Try it at **[cloudretro.io](https://cloudretro.io)**
-Direct play an existing game: **[Pokemon Emerald](https://cloudretro.io/?id=1bd37d4b5dfda87c___Pokemon%20-%20Emerald%20Version%20(U))**
+
+Direct play an existing game: *
+*[Pokemon Emerald](https://cloudretro.io/?id=1bd37d4b5dfda87c___Pokemon%20-%20Emerald%20Version%20(U))**
 
 ## Introduction
 
@@ -85,17 +88,16 @@ __See the `docker-compose.yml` file for Xvfb example config.__
 
 ## Run with Docker
 
-Use makefile script: `make dev.run-docker` or Docker Compose directly: `docker-compose up --build`
-(`CLOUD_GAME_GAMES_PATH` is env variable for games on your host). It will spawn a docker environment and you can access
-the service on `localhost:8000`.
+Use makefile script: `make dev.run-docker` or Docker Compose directly: `docker compose up --build`.
+It will spawn a docker environment and you can access the service on `localhost:8000`.
 
 ## Configuration
 
 The default configuration file is stored in the [`pkg/configs/config.yaml`](pkg/config/config.yaml) file.
 This configuration file will be embedded into the applications and loaded automatically during startup.
-In order to override (change) the default parameters you can specify environment variables with the `CLOUD_GAME_` prefix
-(except list params), or place a custom `config.yaml` file into one of these places: just near the application or in the `configs` folder, 
-`.cr` folder in user's home, or specify own directory with `-w-conf` application param (`worker -w-conf /usr/conf`).
+In order to change the default parameters you can specify environment variables with the `CLOUD_GAME_` prefix, or place
+a custom `config.yaml` file into one of these places: just near the application, `.cr` folder in user's home, or
+specify own directory with `-w-conf` application param (`worker -w-conf /usr/conf`).
 
 ## Deployment
 
@@ -151,7 +153,6 @@ Thanks:
   by [Anna](https://stock.adobe.com/contributor/208277224/anna)
 
 # Announcement
-
 
 **[CloudMorph](https://github.com/giongto35/cloud-morph) is a sibling project that offers a more generic to
 run any offline games/application on browser in Cloud Gaming

@@ -1,68 +1,103 @@
-# The base cloud-game image
-ARG BUILD_PATH=/go/src/github.com/giongto35/cloud-game
+ARG BUILD_PATH=/tmp/cloud-game
+ARG VERSION=master
+ARG GO=1.20.4
 
-# build image
-FROM ubuntu:lunar AS build
+# base build stage
+FROM ubuntu:lunar AS build0
+ARG GO
+
+RUN apt-get -q update && apt-get -q install --no-install-recommends -y \
+    ca-certificates \
+    wget \
+    make \
+    upx
+
+ARG GO_DIST=go${GO}.linux-amd64.tar.gz
+RUN wget -q https://golang.org/dl/$GO_DIST && \
+    rm -rf /usr/local/go && \
+    tar -C /usr/local -xzf $GO_DIST && \
+    rm $GO_DIST
+ENV PATH="${PATH}:/usr/local/go/bin"
+
+# next conditional build stage
+FROM build0 AS build_coordinator
 ARG BUILD_PATH
+ARG VERSION
+ENV GIT_VERSION ${VERSION}
+
 WORKDIR ${BUILD_PATH}
 
-# system libs layer
-RUN apt-get -qq update && apt-get -qq install --no-install-recommends -y \
+# install deps
+RUN rm -rf /var/lib/apt/lists/*
+
+# by default we ignore all except some folders and files, see .dockerignore
+COPY . ./
+RUN --mount=type=cache,target=/root/.cache/go-build make build.coordinator
+RUN find ./bin/* | xargs upx --best --lzma
+
+WORKDIR /usr/local/share/cloud-game
+RUN mv ${BUILD_PATH}/bin/* ./ && \
+    mv ${BUILD_PATH}/web ./web && \
+    mv ${BUILD_PATH}/LICENSE ./
+RUN ${BUILD_PATH}/scripts/version.sh ./web/index.html ${VERSION} && \
+    ${BUILD_PATH}/scripts/mkdirs.sh
+
+# next worker build stage
+FROM build0 AS build_worker
+ARG BUILD_PATH
+ARG VERSION
+ENV GIT_VERSION ${VERSION}
+
+WORKDIR ${BUILD_PATH}
+
+# install deps
+RUN apt-get -q install --no-install-recommends -y \
     gcc \
-    ca-certificates \
     libopus-dev \
     libsdl2-dev \
     libvpx-dev \
     libx264-dev \
-    make \
     pkg-config \
-    wget \
-    upx \
- && rm -rf /var/lib/apt/lists/*
+&& rm -rf /var/lib/apt/lists/*
 
-# go setup layer
-ARG GO=go1.20.3.linux-amd64.tar.gz
-RUN wget -q https://golang.org/dl/$GO \
-    && rm -rf /usr/local/go \
-    && tar -C /usr/local -xzf $GO \
-    && rm $GO
-ENV PATH="${PATH}:/usr/local/go/bin"
+# by default we ignore all except some folders and files, see .dockerignore
+COPY . ./
+RUN --mount=type=cache,target=/root/.cache/go-build make GO_TAGS=static,st build.worker
+RUN find ./bin/* | xargs upx --best --lzma
 
-# go deps layer
-COPY go.mod go.sum ./
-RUN go mod download
+WORKDIR /usr/local/share/cloud-game
+RUN mv ${BUILD_PATH}/bin/* ./ && \
+    mv ${BUILD_PATH}/LICENSE ./
+RUN ${BUILD_PATH}/scripts/mkdirs.sh worker
 
-# app build layer
-COPY pkg ./pkg
-COPY cmd ./cmd
-COPY Makefile .
-COPY scripts/version.sh scripts/version.sh
-ARG VERSION
-RUN GIT_VERSION=${VERSION} make GO_TAGS=static,st build
-# compress
-RUN find ${BUILD_PATH}/bin/* | xargs strip --strip-unneeded
-RUN find ${BUILD_PATH}/bin/* | xargs upx --best --lzma
+RUN wget https://raw.githubusercontent.com/sergystepanov/mesa-llvmpipe/main/release/M23.1.0-LLVM16/libGL.so.1.5.0
 
-# base image
-FROM ubuntu:lunar
-ARG BUILD_PATH
+FROM scratch AS coordinator
+
+COPY --from=build_coordinator /usr/local/share/cloud-game /cloud-game
+# autocertbot (SSL) requires these on the first run
+COPY --from=build_coordinator /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/
+
+FROM ubuntu:lunar AS worker
+
+RUN apt-get -q update && apt-get -q install --no-install-recommends -y \
+    libx11-6 \
+    libxext6 \
+ && apt-get autoremove \
+ && rm -rf /var/lib/apt/lists/* /var/log/* /usr/share/bug /usr/share/doc /usr/share/doc-base \
+    /usr/share/X11/locale/*
+
+COPY --from=build_worker /usr/local/share/cloud-game /cloud-game
+COPY --from=build_worker /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/
+
+RUN mv /cloud-game/libGL.so.1.5.0 /usr/lib/x86_64-linux-gnu/ && \
+    cd /usr/lib/x86_64-linux-gnu && \
+    ln -s libGL.so.1.5.0 libGL.so.1 && \
+    ln -s libGL.so.1 libGL.so
+
+FROM worker AS cloud-game
+
 WORKDIR /usr/local/share/cloud-game
 
-COPY scripts/install.sh install.sh
-RUN bash install.sh x11-only && \
-    rm -rf /var/lib/apt/lists/* install.sh
-
-COPY --from=build ${BUILD_PATH}/bin/ ./
-RUN cp -s $(pwd)/* /usr/local/bin
-RUN mkdir -p ./assets/cache && \
-    mkdir -p ./assets/cores && \
-    mkdir -p ./assets/games && \
-    mkdir -p ./libretro && \
-    mkdir -p /root/.cr
-COPY web ./web
-ARG VERSION
-COPY scripts/version.sh version.sh
-RUN bash ./version.sh ./web/index.html ${VERSION} && \
-    rm -rf version.sh
-
-EXPOSE 8000 9000
+COPY --from=coordinator /cloud-game ./
+COPY --from=worker /cloud-game ./
