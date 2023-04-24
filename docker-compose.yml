@@ -7,20 +7,28 @@ services:
     container_name: cloud-game-local
     environment:
       - DISPLAY=:99
-      - MESA_GL_VERSION_OVERRIDE=3.3
+      - MESA_GL_VERSION_OVERRIDE=4.5
       - CLOUD_GAME_WEBRTC_SINGLEPORT=8443
-      - CLOUD_GAME_WEBRTC_ICEIPMAP=127.0.0.1
+      # - CLOUD_GAME_WEBRTC_ICEIPMAP=127.0.0.1
+      - CLOUD_GAME_COORDINATOR_DEBUG=true
+      - CLOUD_GAME_WORKER_DEBUG=true
       # - PION_LOG_TRACE=all
     ports:
-      - 8000:8000
-      - 9000:9000
-      - 8443:8443/udp
+      - "8000:8000"
+      - "9000:9000"
+      - "8443:8443/udp"
     command: >
-      bash -c "Xvfb :99 & coordinator & worker"
+      bash -c "./coordinator & ./worker"
     volumes:
-      # keep cores persistent in the cloud-game_cores volume
-      - cores:/usr/local/share/cloud-game/assets/cores
-      - ${CLOUD_GAME_GAMES_PATH:-./assets/games}:/usr/local/share/cloud-game/assets/games
+      - ./assets/cores:/usr/local/share/cloud-game/assets/cores
+      - ./assets/games:/usr/local/share/cloud-game/assets/games
+      - x11:/tmp/.X11-unix
+
+  xvfb:
+    image: kcollins/xvfb:latest
+    volumes:
+      - x11:/tmp/.X11-unix
+    command: [ ":99", "-screen", "0", "320x240x16" ]
 
 volumes:
-  cores:
+  x11:

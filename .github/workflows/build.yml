@@ -113,4 +113,4 @@ jobs:
     if: github.event_name == 'pull_request'
     steps:
       - uses: actions/checkout@v3
-      - run: docker build --build-arg VERSION=$(./scripts/version.sh) .
+      - run: DOCKER_BUILDKIT=1 docker build --build-arg VERSION=$(./scripts/version.sh) .
