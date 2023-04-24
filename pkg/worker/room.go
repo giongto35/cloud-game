@@ -56,7 +56,7 @@ func NewRoom(id string, game games.GameMetadata, onClose func(*Room), conf confi
 	room.emulator = nano
 	room.emulator.SetMainSaveName(id)
 	room.emulator.LoadMetadata(conf.Emulator.GetEmulator(game.Type, game.Path))
-	err = room.emulator.LoadGame(game.FullPath())
+	err = room.emulator.LoadGame(game.FullPath(conf.Worker.Library.BasePath))
 	if err != nil {
 		log.Fatal().Err(err).Msgf("couldn't load the game %v", game)
 	}

@@ -203,12 +203,13 @@ func dumpCanvas(frame *image2.Frame, name string, caption string, path string) {
 
 // getRoomMock returns mocked Room struct.
 func getRoomMock(cfg roomMockConfig) roomMock {
-	cfg.game.Path = cfg.gamesPath + cfg.game.Path
-
 	var conf config.WorkerConfig
 	if err := config.LoadConfig(&conf, whereIsConfigs); err != nil {
 		panic(err)
 	}
+
+	conf.Worker.Library.BasePath = cfg.gamesPath
+
 	fixEmulators(&conf, cfg.autoGlContext)
 	l := logger.NewConsole(conf.Worker.Debug, "w", false)
 	if cfg.noLog {

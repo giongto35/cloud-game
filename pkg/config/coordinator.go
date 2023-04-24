@@ -23,22 +23,6 @@ type Coordinator struct {
 	Server   Server
 }
 
-type Library struct {
-	// some directory which is going to be
-	// the root folder for the library
-	BasePath string
-	// a list of supported file extensions
-	Supported []string
-	// a list of ignored words in the files
-	Ignored []string
-	// print some additional info
-	Verbose bool
-	// enable directory changes watch
-	WatchMode bool
-}
-
-func (l Library) GetSupportedExtensions() []string { return l.Supported }
-
 // Analytics is optional Google Analytics
 type Analytics struct {
 	Inject bool
