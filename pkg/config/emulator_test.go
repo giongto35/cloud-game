@@ -38,11 +38,8 @@ func TestGetEmulator(t *testing.T) {
 		},
 	}
 
-	emu := Emulator{
-		Libretro: LibretroConfig{},
-	}
-
 	for _, test := range tests {
+		emu := Emulator{Libretro: LibretroConfig{}}
 		emu.Libretro.Cores.List = test.config
 		em := emu.GetEmulator(test.rom, test.path)
 		if test.emulator != em {

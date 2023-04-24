@@ -66,7 +66,12 @@ type GameMetadata struct {
 	Path string
 }
 
-func (g GameMetadata) FullPath() string { return filepath.Join(g.Base, g.Path) }
+func (g GameMetadata) FullPath(base string) string {
+	if base == "" {
+		return filepath.Join(g.Base, g.Path)
+	}
+	return filepath.Join(base, g.Path)
+}
 
 func NewLib(conf config.Library, log *logger.Logger) GameLibrary {
 	return NewLibWhitelisted(conf, conf, log)

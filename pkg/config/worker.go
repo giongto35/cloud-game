@@ -28,6 +28,7 @@ type Storage struct {
 
 type Worker struct {
 	Debug      bool
+	Library    Library
 	Monitoring Monitoring
 	Network    struct {
 		CoordinatorAddress string

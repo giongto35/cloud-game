@@ -64,6 +64,9 @@ coordinator:
 worker:
   # show more logs
   debug: false
+  library:
+    # root folder for the library (where games are stored)
+    basePath: assets/games
   network:
     # a coordinator address to connect to
     coordinatorAddress: localhost:8000
