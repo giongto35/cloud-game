@@ -85,7 +85,7 @@ const webrtc = (() => {
                     case 'gathering':
                         log.info('[rtc] ice gathering');
                         timeForIceGathering = setTimeout(() => {
-                            log.warning(`[rtc] ice gathering was aborted due to timeout ${ICE_TIMEOUT}ms`);
+                            log.warn(`[rtc] ice gathering was aborted due to timeout ${ICE_TIMEOUT}ms`);
                             // sendCandidates();
                         }, ICE_TIMEOUT);
                         break;
