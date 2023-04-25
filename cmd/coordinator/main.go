@@ -10,12 +10,12 @@ import (
 var Version = "?"
 
 func main() {
-	conf := config.NewCoordinatorConfig()
+	conf, paths := config.NewCoordinatorConfig()
 	conf.ParseFlags()
 
 	log := logger.NewConsole(conf.Coordinator.Debug, "c", false)
 	log.Info().Msgf("version %s", Version)
-	log.Info().Msgf("conf: v%v", conf.Version)
+	log.Info().Msgf("conf: v%v, loaded: %v", conf.Version, paths)
 	if log.GetLevel() < logger.InfoLevel {
 		log.Debug().Msgf("conf: %+v", conf)
 	}
