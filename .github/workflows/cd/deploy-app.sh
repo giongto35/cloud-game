@@ -72,7 +72,6 @@ WORKERS=${WORKERS:-4}
 USER=${USER:-root}
 
 compose_src=$(cat $LOCAL_WORK_DIR/docker-compose.yml)
-config_src=$(cat $LOCAL_WORK_DIR/configs/config.yaml)
 
 function remote_run_commands() {
   ret=""

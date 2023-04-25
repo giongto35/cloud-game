@@ -60,7 +60,6 @@ type roomMockConfig struct {
 
 // Store absolute path to test games
 var whereIsGames = getRootPath() + "assets/games/"
-var whereIsConfigs = getRootPath() + "configs/"
 var testTempDir = filepath.Join(os.TempDir(), "cloud-game-core-tests")
 
 // games
@@ -204,7 +203,7 @@ func dumpCanvas(frame *image2.Frame, name string, caption string, path string) {
 // getRoomMock returns mocked Room struct.
 func getRoomMock(cfg roomMockConfig) roomMock {
 	var conf config.WorkerConfig
-	if err := config.LoadConfig(&conf, whereIsConfigs); err != nil {
+	if _, err := config.LoadConfig(&conf, ""); err != nil {
 		panic(err)
 	}
 

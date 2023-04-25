@@ -47,10 +47,9 @@ type EmulatorPaths struct {
 // Make sure you call shutdownEmulator().
 func GetEmulatorMock(room string, system string) *EmulatorMock {
 	rootPath := getRootPath()
-	configPath := rootPath + "configs/"
 
 	var conf config.WorkerConfig
-	if err := config.LoadConfig(&conf, configPath); err != nil {
+	if _, err := config.LoadConfig(&conf, ""); err != nil {
 		panic(err)
 	}
 

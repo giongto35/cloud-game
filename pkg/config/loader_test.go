@@ -17,7 +17,7 @@ func TestConfigEnv(t *testing.T) {
 		_ = os.Unsetenv("CLOUD_GAME_EMULATOR_LIBRETRO_CORES_LIST_PCSX_OPTIONS__PCSX_REARMED_DRC")
 	}()
 
-	err := LoadConfig(&out, "../../configs")
+	_, err := LoadConfig(&out, "")
 	if err != nil {
 		t.Fatal(err)
 	}

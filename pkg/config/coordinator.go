@@ -34,8 +34,8 @@ const SelectByPing = "ping"
 // allows custom config path
 var coordinatorConfigPath string
 
-func NewCoordinatorConfig() (conf CoordinatorConfig) {
-	err := LoadConfig(&conf, coordinatorConfigPath)
+func NewCoordinatorConfig() (conf CoordinatorConfig, paths []string) {
+	paths, err := LoadConfig(&conf, coordinatorConfigPath)
 	if err != nil {
 		panic(err)
 	}

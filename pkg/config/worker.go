@@ -70,8 +70,8 @@ type Video struct {
 // allows custom config path
 var workerConfigPath string
 
-func NewWorkerConfig() (conf WorkerConfig) {
-	err := LoadConfig(&conf, workerConfigPath)
+func NewWorkerConfig() (conf WorkerConfig, paths []string) {
+	paths, err := LoadConfig(&conf, workerConfigPath)
 	if err != nil {
 		panic(err)
 	}

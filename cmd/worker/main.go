@@ -13,12 +13,12 @@ import (
 var Version = "?"
 
 func run() {
-	conf := config.NewWorkerConfig()
+	conf, paths := config.NewWorkerConfig()
 	conf.ParseFlags()
 
 	log := logger.NewConsole(conf.Worker.Debug, "w", false)
 	log.Info().Msgf("version %s", Version)
-	log.Info().Msgf("conf: v%v", conf.Version)
+	log.Info().Msgf("conf: v%v, loaded: %v", conf.Version, paths)
 	if log.GetLevel() < logger.InfoLevel {
 		log.Debug().Msgf("conf: %+v", conf)
 	}

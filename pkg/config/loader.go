@@ -5,12 +5,18 @@ import (
 	"path/filepath"
 	"strings"
 
+	_ "embed"
 	"github.com/knadh/koanf/maps"
 	"github.com/knadh/koanf/v2"
 	"gopkg.in/yaml.v3"
 )
 
 const EnvPrefix = "CLOUD_GAME_"
+
+var (
+	//go:embed config.yaml
+	conf Bytes
+)
 
 type Kv = map[string]any
 type Bytes []byte
@@ -104,7 +110,7 @@ var k = koanf.New("_")
 // LoadConfig loads a configuration file into the given struct.
 // The path param specifies a custom path to the configuration file.
 // Reads and puts environment variables with the prefix CLOUD_GAME_.
-func LoadConfig(config any, path string) (err error) {
+func LoadConfig(config any, path string) (loaded []string, err error) {
 	dirs := []string{".", "configs", "../../../configs"}
 	if path != "" {
 		dirs = append([]string{path}, dirs...)
@@ -116,23 +122,31 @@ func LoadConfig(config any, path string) (err error) {
 		dirs = append(dirs, homeDir)
 	}
 
+	if err := k.Load(&conf, &YAML{}); err != nil {
+		return nil, err
+	}
+	conf = nil
+	loaded = append(loaded, "default")
+
 	for _, dir := range dirs {
-		f := File(filepath.Join(filepath.Clean(dir), "config.yaml"))
+		path := filepath.Join(filepath.Clean(dir), "config.yaml")
+		f := File(path)
 		if _, err := os.Stat(string(f)); !os.IsNotExist(err) {
 			if err := k.Load(&f, &YAML{}); err != nil {
-				return err
+				return loaded, err
 			}
+			loaded = append(loaded, path)
 		}
 	}
 
 	env := Env(EnvPrefix)
 	if err := k.Load(&env, nil); err != nil {
-		return err
+		return loaded, err
 	}
 
 	if err := k.Unmarshal("", config); err != nil {
-		return err
+		return loaded, err
 	}
 
-	return nil
+	return loaded, nil
 }
