@@ -16,6 +16,7 @@ if [ "$deps" = "x11-only" ]; then
       xvfb
 else
   apt-get -qq install --no-install-recommends -y \
+      ca-certificates \
       libvpx7 \
       libx264-164 \
       libopus0 \
