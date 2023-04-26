@@ -43,7 +43,7 @@ const gui = (() => {
         return el;
     }
 
-    const panel = (root, title = '', cc = '', content, buttons = []) => {
+    const panel = (root, title = '', cc = '', content, buttons = [], onToggle) => {
         const state = {
             shown: false,
             loading: false,
@@ -99,6 +99,9 @@ const gui = (() => {
 
         function toggle(show) {
             state.shown = show;
+            if (onToggle) {
+                onToggle(state.shown, _root)
+            }
             if (state.shown) {
                 gui.show(_root);
             } else {

@@ -7,13 +7,19 @@ const workerManager = (() => {
         _class = 'server-list',
         trigger = document.getElementById('w'),
         panel = gui.panel(document.getElementById(id), 'WORKERS', 'server-list', null, [
-            {
-                caption: '⟳',
-                cl: ['bold'],
-                handler: utils.debounce(handleReload, 1000),
-                title: 'Reload server data',
-            }
-        ]),
+                {
+                    caption: '⟳',
+                    cl: ['bold'],
+                    handler: utils.debounce(handleReload, 1000),
+                    title: 'Reload server data',
+                }
+            ],
+            // hack not transparent jpeg corners :_;
+            ((br) => (state, el) => {
+                state ? el.parentElement.style.borderRadius = '0px' :
+                    br ? el.parentElement.style.borderRadius = br :
+                        br = window.getComputedStyle(el.parentElement).borderRadius
+            })()),
         index = ((i = 1) => ({v: () => i++, r: () => i = 1}))(),
         // caption -- the field caption
         // renderer -- an arbitrary DOM output for the field
