@@ -12,10 +12,12 @@ fi
 apt-get -qq update
 if [ "$deps" = "x11-only" ]; then
   apt-get -qq install --no-install-recommends -y \
+      ca-certificates \
       libgl1-mesa-dri \
       xvfb
 else
   apt-get -qq install --no-install-recommends -y \
+      ca-certificates \
       libvpx7 \
       libx264-164 \
       libopus0 \
