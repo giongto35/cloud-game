@@ -6,7 +6,7 @@ coordinator:
     address:
     https: true
     tls:
-      domain: usw.cloudretro.io
+      domain: cloudretro.io
   analytics:
     inject: true
     gtag: UA-145078282-1
@@ -14,8 +14,8 @@ coordinator:
 worker:
   debug: true
   network:
-    coordinatorAddress: usw.cloudretro.io
-    publicAddress: usw.cloudretro.io
+    coordinatorAddress: cloudretro.io
+    publicAddress: cloudretro.io
     secure: true
   server:
     https: true
