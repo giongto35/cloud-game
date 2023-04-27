@@ -467,6 +467,7 @@ body {
 
     background-image: url('/static/img/screen_background5.png');
     background-size: cover;
+    z-index: 1;
 }
 
 #menu-item-choice {

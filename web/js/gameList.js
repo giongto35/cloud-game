@@ -33,6 +33,8 @@ const gameList = (() => {
         pickGame();
     };
 
+    const pickDelayMs = 150
+
     const pickGame = (index, hold) => {
         let idx = undefined !== index ? index : gameIndex;
 
@@ -42,7 +44,7 @@ const gameList = (() => {
         if (idx >= games.length) idx = 0;
 
         // transition menu box
-        listBox.style['transition'] = 'top 0.2s';
+        listBox.style['transition'] = `top ${pickDelayMs}ms`;
         menuTop = MENU_TOP_POSITION - idx * 36;
         listBox.style['top'] = `${menuTop}px`;
 
@@ -57,7 +59,7 @@ const gameList = (() => {
             listBox.querySelectorAll(`.menu-item span`)[idx].classList.add(cl);
         }, 50)
 
-            gameIndex = idx;
+        gameIndex = idx;
     };
 
     const startGamePickerTimer = (upDirection) => {
@@ -69,18 +71,19 @@ const gameList = (() => {
         // keep rolling the game list if the button is pressed
         gamePickTimer = setInterval(() => {
             pickGame(gameIndex + shift, true);
-        }, 150);
+        }, pickDelayMs);
     };
 
     const stopGamePickerTimer = () => {
         if (gamePickTimer === null) return;
         clearInterval(gamePickTimer);
         gamePickTimer = null;
-        let pick = listBox.querySelectorAll('.menu-item .pick-over')[0];
 
-        pick.classList.remove('pick-over');
-        pick.classList.add('pick');
-
+        const pick = listBox.querySelectorAll('.menu-item .pick-over')[0];
+        if (pick) {
+            pick.classList.remove('pick-over');
+            pick.classList.add('pick');
+        }
     };
 
     const onMenuPressed = (newPosition) => {
