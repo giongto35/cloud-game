@@ -490,6 +490,7 @@ body {
 
     top: 102px; /* 240px - 36 / 2 */
     left: 0;
+    z-index: 1;
 }
 
 
