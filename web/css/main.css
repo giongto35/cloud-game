@@ -35,6 +35,8 @@ body {
     background-repeat: no-repeat;
     background-size: 100% 100%;
     border-radius: 22px;
+
+    user-select: none;
 }
 
 #help-overlay {
@@ -430,15 +432,6 @@ body {
     100% {
         background: yellow;
     }
-}
-
-
-*.unselectable {
-    -moz-user-select: -moz-none;
-    -khtml-user-select: none;
-    -webkit-user-select: none;
-    -ms-user-select: none;
-    user-select: none;
 }
 
 #room-txt {
