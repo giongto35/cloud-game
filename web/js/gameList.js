@@ -27,15 +27,19 @@ const gameList = (() => {
             .join('');
     };
 
+    let pickItems;
+
     const show = () => {
         render();
         menuItemChoice.style.display = "block";
+        pickItems = listBox.querySelectorAll(`.menu-item span`);
         pickGame();
     };
 
     const pickDelayMs = 150
+    let picking = false
 
-    const pickGame = (index, hold) => {
+    const pickGame = (index) => {
         let idx = undefined !== index ? index : gameIndex;
 
         // check boundaries
@@ -48,21 +52,18 @@ const gameList = (() => {
         menuTop = MENU_TOP_POSITION - idx * 36;
         listBox.style['top'] = `${menuTop}px`;
 
-        const cl = hold ? 'pick-over' : 'pick'
-        let pick = listBox.querySelectorAll('.menu-item .pick, .menu-item .pick-over')[0];
-
-        setTimeout(() => {        // overflow marquee
-            if (pick) {
-                pick.classList.remove('pick');
-                pick.classList.remove('pick-over')
-            }
-            listBox.querySelectorAll(`.menu-item span`)[idx].classList.add(cl);
-        }, 50)
-
+        let pick = listBox.querySelectorAll('.menu-item .pick')[0];
+        if (pick) {
+            pick.classList.remove('pick', 'text-move');
+        }
+        const i = pickItems[idx];
+        setTimeout(() => i.classList.add('pick'), 50)
+        !picking && i.classList.add('text-move')
         gameIndex = idx;
     };
 
     const startGamePickerTimer = (upDirection) => {
+        picking = true
         if (gamePickTimer !== null) return;
         const shift = upDirection ? -1 : 1;
         pickGame(gameIndex + shift);
@@ -75,15 +76,12 @@ const gameList = (() => {
     };
 
     const stopGamePickerTimer = () => {
+        picking = false
+        pickItems[gameIndex] && pickItems[gameIndex].classList.add('text-move')
+
         if (gamePickTimer === null) return;
         clearInterval(gamePickTimer);
         gamePickTimer = null;
-
-        const pick = listBox.querySelectorAll('.menu-item .pick-over')[0];
-        if (pick) {
-            pick.classList.remove('pick-over');
-            pick.classList.add('pick');
-        }
     };
 
     const onMenuPressed = (newPosition) => {
