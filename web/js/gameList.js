@@ -33,7 +33,7 @@ const gameList = (() => {
         pickGame();
     };
 
-    const pickGame = (index) => {
+    const pickGame = (index, hold) => {
         let idx = undefined !== index ? index : gameIndex;
 
         // check boundaries
@@ -43,18 +43,21 @@ const gameList = (() => {
 
         // transition menu box
         listBox.style['transition'] = 'top 0.2s';
-
         menuTop = MENU_TOP_POSITION - idx * 36;
         listBox.style['top'] = `${menuTop}px`;
 
-        // overflow marquee
-        let pick = document.querySelectorAll('.menu-item .pick')[0];
-        if (pick) {
-            pick.classList.remove('pick');
-        }
-        document.querySelectorAll(`.menu-item span`)[idx].classList.add('pick');
+        const cl = hold ? 'pick-over' : 'pick'
+        let pick = listBox.querySelectorAll('.menu-item .pick, .menu-item .pick-over')[0];
 
-        gameIndex = idx;
+        setTimeout(() => {        // overflow marquee
+            if (pick) {
+                pick.classList.remove('pick');
+                pick.classList.remove('pick-over')
+            }
+            listBox.querySelectorAll(`.menu-item span`)[idx].classList.add(cl);
+        }, 50)
+
+            gameIndex = idx;
     };
 
     const startGamePickerTimer = (upDirection) => {
@@ -65,14 +68,19 @@ const gameList = (() => {
         // velocity?
         // keep rolling the game list if the button is pressed
         gamePickTimer = setInterval(() => {
-            pickGame(gameIndex + shift);
-        }, 200);
+            pickGame(gameIndex + shift, true);
+        }, 150);
     };
 
     const stopGamePickerTimer = () => {
         if (gamePickTimer === null) return;
         clearInterval(gamePickTimer);
         gamePickTimer = null;
+        let pick = listBox.querySelectorAll('.menu-item .pick-over')[0];
+
+        pick.classList.remove('pick-over');
+        pick.classList.add('pick');
+
     };
 
     const onMenuPressed = (newPosition) => {

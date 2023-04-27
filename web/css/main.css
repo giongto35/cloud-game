@@ -534,6 +534,10 @@ body {
     animation: horizontally 4s linear infinite alternate;
 }
 
+.menu-item div .pick-over {
+    overflow: unset;
+}
+
 
 @-moz-keyframes horizontally {
     0% {
