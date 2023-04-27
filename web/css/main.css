@@ -363,7 +363,7 @@ body {
     width: 65px;
     height: 21px;
 
-    top: 9%;
+    top: 26px;
     left: 55px;
 
     padding: 0;
@@ -372,6 +372,7 @@ body {
     background-image: url('/static/img/ui/bt OPTIONS.png');
 
     opacity: .7;
+    z-index: 1;
 }
 
 #lights-holder {
