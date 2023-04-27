@@ -13,57 +13,58 @@ const gameList = (() => {
     const menuItemChoice = document.getElementById('menu-item-choice');
 
     const MENU_TOP_POSITION = 102;
+    const MENU_SELECT_THRESHOLD_MS = 180;
     let menuTop = MENU_TOP_POSITION;
+    let menuInSelection = false;
+    const MENU_TRANSITION_DEFAULT = `top ${MENU_SELECT_THRESHOLD_MS}ms`;
+
+    listBox.style.transition = MENU_TRANSITION_DEFAULT;
+
+    let gamesElList;
 
     const setGames = (gameList) => {
-        games = gameList.sort((a, b) => a > b ? 1 : -1);
+        games = gameList !== null ? gameList.sort((a, b) => a > b ? 1 : -1) : [];
     };
 
     const render = () => {
         log.debug('[games] load game menu');
-
         listBox.innerHTML = games
             .map(game => `<div class="menu-item"><div><span>${game}</span></div></div>`)
             .join('');
     };
 
-    let pickItems;
-
     const show = () => {
         render();
+        gamesElList = listBox.querySelectorAll(`.menu-item span`);
         menuItemChoice.style.display = "block";
-        pickItems = listBox.querySelectorAll(`.menu-item span`);
         pickGame();
     };
 
-    const pickDelayMs = 150
-    let picking = false
+    const bounds = (i = gameIndex) => (i % games.length + games.length) % games.length
+    const clearPrev = () => {
+        let prev = gamesElList[gameIndex]
+        if (prev) {
+            prev.classList.remove('pick', 'text-move');
+        }
+    }
 
     const pickGame = (index) => {
-        let idx = undefined !== index ? index : gameIndex;
+        clearPrev()
+        gameIndex = bounds(index)
 
-        // check boundaries
-        // cycle
-        if (idx < 0) idx = games.length - 1;
-        if (idx >= games.length) idx = 0;
+        const i = gamesElList[gameIndex];
+        if (i) {
+            setTimeout(() => i.classList.add('pick'), 50)
+            !menuInSelection && i.classList.add('text-move')
+        }
 
         // transition menu box
-        listBox.style['transition'] = `top ${pickDelayMs}ms`;
-        menuTop = MENU_TOP_POSITION - idx * 36;
-        listBox.style['top'] = `${menuTop}px`;
-
-        let pick = listBox.querySelectorAll('.menu-item .pick')[0];
-        if (pick) {
-            pick.classList.remove('pick', 'text-move');
-        }
-        const i = pickItems[idx];
-        setTimeout(() => i.classList.add('pick'), 50)
-        !picking && i.classList.add('text-move')
-        gameIndex = idx;
+        menuTop = MENU_TOP_POSITION - gameIndex * 36;
+        listBox.style.top = `${menuTop}px`;
     };
 
     const startGamePickerTimer = (upDirection) => {
-        picking = true
+        menuInSelection = true
         if (gamePickTimer !== null) return;
         const shift = upDirection ? -1 : 1;
         pickGame(gameIndex + shift);
@@ -72,12 +73,12 @@ const gameList = (() => {
         // keep rolling the game list if the button is pressed
         gamePickTimer = setInterval(() => {
             pickGame(gameIndex + shift, true);
-        }, pickDelayMs);
+        }, MENU_SELECT_THRESHOLD_MS);
     };
 
     const stopGamePickerTimer = () => {
-        picking = false
-        pickItems[gameIndex] && pickItems[gameIndex].classList.add('text-move')
+        menuInSelection = false
+        gamesElList[gameIndex] && gamesElList[gameIndex].classList.add('text-move')
 
         if (gamePickTimer === null) return;
         clearInterval(gamePickTimer);
@@ -85,14 +86,15 @@ const gameList = (() => {
     };
 
     const onMenuPressed = (newPosition) => {
-        listBox.style['transition'] = '';
-        listBox.style['top'] = `${menuTop - newPosition}px`;
+        clearPrev()
+        listBox.style.transition = '';
+        listBox.style.top = `${menuTop - newPosition}px`;
     };
 
     const onMenuReleased = (position) => {
+        listBox.style.transition = MENU_TRANSITION_DEFAULT
         menuTop -= position;
-        const index = Math.round((menuTop - MENU_TOP_POSITION) / -36);
-        pickGame(index);
+        pickGame(Math.round((menuTop - MENU_TOP_POSITION) / -36));
     };
 
     event.sub(MENU_PRESSED, onMenuPressed);
