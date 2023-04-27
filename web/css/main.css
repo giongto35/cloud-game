@@ -372,7 +372,7 @@ body {
     background-image: url('/static/img/ui/bt OPTIONS.png');
 
     opacity: .7;
-    z-index: 1;
+    z-index: 0;
 }
 
 #lights-holder {
