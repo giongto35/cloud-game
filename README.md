@@ -10,10 +10,9 @@ on generic solution for cloudgaming
 
 Discord: [Join Us](https://discord.gg/sXRQZa2zeP)
 
-## Announcement
-**Due to the current economic recession, i'm unable to keep demo server. Google Stadia also shutdown the Cloud service because of high cost and low adoption. I still believe Cloud Gaming is a brilliant idea and it should keep getting more investment. I open source my works so that everyone can experience self-hosting cloud gaming service to hold this spirit. You can check the rest of idea in the wiki**
+![screenshot](https://user-images.githubusercontent.com/846874/235532552-8c8253df-aa8d-48c9-a58e-3f54e284f86e.jpg)
 
-## Try the service at **[cloudretro.io](https://cloudretro.io)**
+## Try it at **[cloudretro.io](https://cloudretro.io)**
 Direct play an existing game: **[Pokemon Emerald](https://cloudretro.io/?id=1bd37d4b5dfda87c___Pokemon%20-%20Emerald%20Version%20(U))**
 
 ## Introduction
@@ -92,10 +91,11 @@ the service on `localhost:8000`.
 
 ## Configuration
 
-The configuration parameters are stored in the [`configs/config.yaml`](configs/config.yaml) file which is shared for all
-application instances on the same host system. It is possible to specify individual configuration files for each
-instance as well as override some parameters, for that purpose, please refer to the list of command-line options of the
-apps.
+The default configuration file is stored in the [`pkg/configs/config.yaml`](pkg/config/config.yaml) file.
+This configuration file will be embedded into the applications and loaded automatically during startup.
+In order to override (change) the default parameters you can specify environment variables with the `CLOUD_GAME_` prefix
+(except list params), or place a custom `config.yaml` file into one of these places: just near the application or in the `configs` folder, 
+`.cr` folder in user's home, or specify own directory with `-w-conf` application param (`worker -w-conf /usr/conf`).
 
 ## Deployment
 
@@ -106,14 +106,10 @@ application [installed](https://docs.docker.com/compose/install/).
 
 ## Technical documents
 
+- [Design document v2](DESIGNv2.md)
 - [webrtchacks Blog: Open Source Cloud Gaming with WebRTC](https://webrtchacks.com/open-source-cloud-gaming-with-webrtc/)
 - [Wiki (outdated)](https://github.com/giongto35/cloud-game/wiki)
-
 - [Code Pointer Wiki](https://github.com/giongto35/cloud-game/wiki/Code-Deep-Dive)
-
-|              High level              |               Worker internal               |
-| :----------------------------------: | :-----------------------------------------: |
-| ![screenshot](docs/img/overview.png) | ![screenshot](docs/img/worker-internal.png) |
 
 ## FAQ
 
@@ -130,11 +126,6 @@ By clicking these deep link, you can join the game directly and play it together
 
 And you can host the new game by yourself by accessing [cloudretro.io](https://cloudretro.io) and click "share" button
 to generate a permanent link to your game.
-
-<p align="center">
-  <img width="420" height="300" src="docs/img/multiplatform.png"> <br>
-Synchronize a game session on multiple devices
-</p>
 
 ## Credits
 
