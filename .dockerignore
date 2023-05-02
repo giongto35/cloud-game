@@ -11,8 +11,8 @@ Dockerfile
 
 LICENSE
 README.md
+DESIGNv2.md
 bin/
-docs/
 release/
 
 assets/games/
