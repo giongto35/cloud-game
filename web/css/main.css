@@ -1,6 +1,6 @@
 @font-face {
     font-family: '6809';
-    src: url('/static/fonts/6809-Chargen.woff2');
+    src: url('/fonts/6809-Chargen.woff2');
 }
 
 html {
@@ -10,7 +10,7 @@ html {
 }
 
 body {
-    background-image: url('/static/img/background.jpg');
+    background-image: url('/img/background.jpg');
     background-repeat: repeat;
 
     align-items: center;
@@ -31,7 +31,7 @@ body {
     margin-right: -50%;
     transform: translate(-50%, -50%);
 
-    background-image: url('/static/img/ui/bg.jpg');
+    background-image: url('/img/ui/bg.jpg');
     background-repeat: no-repeat;
     background-size: 100% 100%;
     border-radius: 22px;
@@ -60,7 +60,7 @@ body {
     height: 100%;
     position: absolute;
 
-    background-image: url('/static/img/help_overlay.png');
+    background-image: url('/img/help_overlay.png');
     background-repeat: no-repeat;
     background-size: 100% 100%;
 }
@@ -74,12 +74,12 @@ body {
     top: 155px;
     left: 22px;
     background-size: contain;
-    background-image: url('/static/img/ui/bt MOVE.png');
+    background-image: url('/img/ui/bt MOVE.png');
     z-index: 1;
 }
 
 .dpad-empty {
-    background-image: url('/static/img/ui/bt MOVE EMPTY.png') !important;
+    background-image: url('/img/ui/bt MOVE EMPTY.png') !important;
 }
 
 #guide-txt {
@@ -105,13 +105,13 @@ body {
     pointer-events: none;
 
     opacity: 0.5;
-    background-image: url('/static/img/ui/bong.png');
+    background-image: url('/img/ui/bong.png');
 }
 
 
 .bong-full {
     opacity: 1.0 !important;
-    background-image: url('/static/img/ui/bong full.png') !important;
+    background-image: url('/img/ui/bong full.png') !important;
 }
 
 .dpad {
@@ -124,13 +124,13 @@ body {
 #player-index {
     background-repeat: no-repeat;
     background-size: contain;
-    background-image: url('/static/img/ui/bt PlayerIndex.png');
+    background-image: url('/img/ui/bt PlayerIndex.png');
 }
 
 #btn-up {
     top: 18px;
     left: 50%;
-    border-bottom: 0px;
+    border-bottom: 0;
     border-radius: 3px;
     transform: translateX(-50%);
 }
@@ -138,7 +138,7 @@ body {
 #btn-down {
     bottom: 18px;
     left: 50%;
-    border-top: 0px;
+    border-top: 0;
     border-radius: 3px;
     transform: translateX(-50%);
 }
@@ -147,7 +147,7 @@ body {
 #btn-left {
     left: 18px;
     top: 50%;
-    border-right: 0px;
+    border-right: 0;
     border-radius: 3px;
     transform: translateY(-50%);
 }
@@ -155,7 +155,7 @@ body {
 #btn-right {
     right: 18px;
     top: 50%;
-    border-left: 0px;
+    border-left: 0;
     border-radius: 3px;
     transform: translateY(-50%);
 }
@@ -176,7 +176,7 @@ body {
 
     border-radius: 5px 5px 5px 5px;
 
-    box-shadow: 0px 0px 2px 2px rgba(25, 25, 25, 1);
+    box-shadow: 0 0 2px 2px rgba(25, 25, 25, 1);
 }
 
 #color-button-holder {
@@ -210,28 +210,28 @@ body {
 }
 
 #btn-help {
-    padding-top: 0px;
+    padding-top: 0;
     width: 20px;
     height: 28px;
 
     top: 16px;
     left: 23px;
 
-    background-image: url('/static/img/ui/Help.png');
+    background-image: url('/img/ui/Help.png');
 }
 
 #btn-load {
     top: 20px;
     left: 435px;
 
-    background-image: url('/static/img/ui/bt LOAD.png');
+    background-image: url('/img/ui/bt LOAD.png');
 }
 
 #btn-save {
     top: 60px;
     left: 435px;
 
-    background-image: url('/static/img/ui/bt SAVE.png');
+    background-image: url('/img/ui/bt SAVE.png');
 }
 
 #btn-join {
@@ -240,7 +240,7 @@ body {
     left: 22px;
     height: 25px;
 
-    background-image: url('/static/img/ui/bt SHARE.png');
+    background-image: url('/img/ui/bt SHARE.png');
 }
 
 #btn-quit {
@@ -249,7 +249,7 @@ body {
     left: 75px;
     height: 25px;
 
-    background-image: url('/static/img/ui/bt QUIT.png');
+    background-image: url('/img/ui/bt QUIT.png');
 }
 
 #btn-rec {
@@ -258,7 +258,7 @@ body {
     left: 373px;
     height: 9px;
 
-    background-image: url('/static/img/ui/bt REC.png');
+    background-image: url('/img/ui/bt REC.png');
 }
 
 .record {
@@ -278,7 +278,7 @@ body {
     border-right-style: hidden;
     border-left-style: hidden;
     border-bottom-style: hidden;
-    background-image: url(/static/img/ui/FrameTEXT.png);
+    background-image: url('/img/ui/FrameTEXT.png');
     background-size: cover;
 }
 
@@ -312,7 +312,7 @@ body {
     left: 435px;
     height: 25px;
 
-    background-image: url('/static/img/ui/bt SELECT.png');
+    background-image: url('/img/ui/bt SELECT.png');
 }
 
 #btn-start {
@@ -320,7 +320,7 @@ body {
     top: 100px;
     left: 489px;
 
-    background-image: url('/static/img/ui/bt START.png');
+    background-image: url('/img/ui/bt START.png');
 }
 
 #btn-a {
@@ -329,7 +329,7 @@ body {
 
     transform: translateY(-50%);
 
-    background-image: url('/static/img/ui/bt A.png');
+    background-image: url('/img/ui/bt A.png');
 }
 
 
@@ -339,7 +339,7 @@ body {
 
     transform: translateX(-50%);
 
-    background-image: url('/static/img/ui/bt B.png');
+    background-image: url('/img/ui/bt B.png');
 }
 
 #btn-x {
@@ -347,7 +347,7 @@ body {
     left: 50%;
     transform: translateX(-50%);
 
-    background-image: url('/static/img/ui/bt X.png');
+    background-image: url('/img/ui/bt X.png');
 }
 
 
@@ -356,7 +356,7 @@ body {
     left: 0;
     transform: translateY(-50%);
 
-    background-image: url('/static/img/ui/bt Y.png');
+    background-image: url('/img/ui/bt Y.png');
 }
 
 #btn-settings {
@@ -369,7 +369,7 @@ body {
     padding: 0;
 
     transform: translateY(-50%);
-    background-image: url('/static/img/ui/bt OPTIONS.png');
+    background-image: url('/img/ui/bt OPTIONS.png');
 
     opacity: .7;
     z-index: 0;
@@ -420,7 +420,7 @@ body {
     top: 48px;
     left: 23px;
     color: #bababa;
-    padding-left: 0px;
+    padding-left: 0;
     border-radius: 6px;
 
     outline: none;
@@ -429,7 +429,7 @@ body {
     border-left-style: hidden;
     border-bottom-style: hidden;
 
-    background-image: url('/static/img/ui/FrameTEXT.png');
+    background-image: url('/img/ui/FrameTEXT.png');
     background-size: cover;
 }
 
@@ -465,7 +465,7 @@ body {
     width: 256px;
     height: 240px;
 
-    background-image: url('/static/img/screen_background5.png');
+    background-image: url('/img/screen_background5.png');
     background-size: cover;
     z-index: 1;
 }
@@ -638,7 +638,7 @@ body {
     background-color: transparent;
     background-repeat: no-repeat;
     background-size: contain;
-    background-image: url('/static/img/ui/FramePlayerIndex.png');
+    background-image: url('/img/ui/FramePlayerIndex.png');
 }
 
 /* Mouse-over effects */
@@ -657,7 +657,7 @@ body {
     background-color: transparent;
     background-repeat: no-repeat;
     background-size: contain;
-    background-image: url('/static/img/ui/bt PlayerIndex.png');
+    background-image: url('/img/ui/bt PlayerIndex.png');
 }
 
 .slider::-moz-range-thumb {
@@ -666,11 +666,11 @@ body {
     height: 25px; /* Slider handle height */
     cursor: pointer; /* Cursor on hover */
 
-    border: 0px;
+    border: 0;
     background-color: transparent;
     background-repeat: no-repeat;
     background-size: contain;
-    background-image: url('/static/img/ui/bt PlayerIndex.png');
+    background-image: url('/img/ui/bt PlayerIndex.png');
 }
 
 * {

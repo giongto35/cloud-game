@@ -57,10 +57,6 @@ func (m *Mux) ServeHTTP(w ResponseWriter, r *Request) { m.ServeMux.ServeHTTP(w, 
 
 func NotFound(w ResponseWriter) { http.Error(w, "404 page not found", http.StatusNotFound) }
 
-func (m *Mux) Static(prefix string, path string) *Mux {
-	return m.Handle(m.prefix+prefix, http.StripPrefix(prefix, http.FileServer(http.Dir(path))))
-}
-
 func NewServer(address string, handler func(*Server) Handler, options ...Option) (*Server, error) {
 	opts := &Options{
 		Https:         false,
@@ -194,3 +190,5 @@ func (s *Server) redirection() (*Server, error) {
 	s.log.Info().Str("addr", addr).Msg("Start HTTPS redirect server")
 	return srv, err
 }
+
+func FileServer(dir string) http.Handler { return http.FileServer(http.Dir(dir)) }

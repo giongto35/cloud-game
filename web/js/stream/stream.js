@@ -9,7 +9,7 @@ const stream = (() => {
 
         let options = {
                 volume: 0.5,
-                poster: '/static/img/screen_loading.gif',
+                poster: '/img/screen_loading.gif',
                 mirrorMode: null,
                 mirrorUpdateRate: 1 / 60,
             },

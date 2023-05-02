@@ -3,6 +3,7 @@ package coordinator
 import (
 	"html/template"
 	"net/http"
+	"strings"
 
 	"github.com/giongto35/cloud-game/v3/pkg/config"
 	"github.com/giongto35/cloud-game/v3/pkg/games"
@@ -35,11 +36,7 @@ func New(conf config.CoordinatorConfig, log *logger.Logger) (services service.Gr
 func NewHTTPServer(conf config.CoordinatorConfig, log *logger.Logger, fnMux func(*httpx.Mux) *httpx.Mux) (*httpx.Server, error) {
 	return httpx.NewServer(
 		conf.Coordinator.Server.GetAddr(),
-		func(s *httpx.Server) httpx.Handler {
-			return fnMux(s.Mux().
-				Handle("/", index(conf, log)).
-				Static("/static/", "./web"))
-		},
+		func(s *httpx.Server) httpx.Handler { return fnMux(s.Mux().Handle("/", index(conf, log))) },
 		httpx.WithServerConfig(conf.Coordinator.Server),
 		httpx.WithLogger(log),
 	)
@@ -48,35 +45,39 @@ func NewHTTPServer(conf config.CoordinatorConfig, log *logger.Logger, fnMux func
 func index(conf config.CoordinatorConfig, log *logger.Logger) httpx.Handler {
 	const indexHTML = "./web/index.html"
 
+	indexTpl := template.Must(template.ParseFiles(indexHTML))
+
+	// render index page with some tpl values
+	tplData := struct {
+		Analytics config.Analytics
+		Recording config.Recording
+	}{conf.Coordinator.Analytics, conf.Recording}
+
 	handler := func(tpl *template.Template, w httpx.ResponseWriter, r *httpx.Request) {
-		if r.URL.Path != "/" {
-			httpx.NotFound(w)
-			return
-		}
-		// render index page with some tpl values
-		tplData := struct {
-			Analytics config.Analytics
-			Recording config.Recording
-		}{conf.Coordinator.Analytics, conf.Recording}
 		if err := tpl.Execute(w, tplData); err != nil {
 			log.Fatal().Err(err).Msg("error with the analytics template file")
 		}
 	}
 
+	h := httpx.FileServer("./web")
+
 	if conf.Coordinator.Debug {
 		log.Info().Msgf("Using auto-reloading index.html")
 		return httpx.HandlerFunc(func(w httpx.ResponseWriter, r *httpx.Request) {
-			tpl, _ := template.ParseFiles(indexHTML)
-			handler(tpl, w, r)
+			if r.URL.Path == "/" || strings.HasSuffix(r.URL.Path, "/index.html") {
+				tpl := template.Must(template.ParseFiles(indexHTML))
+				handler(tpl, w, r)
+				return
+			}
+			h.ServeHTTP(w, r)
 		})
 	}
 
-	indexTpl, err := template.ParseFiles(indexHTML)
-	if err != nil {
-		log.Fatal().Err(err).Msg("error with the HTML index page")
-	}
-
-	return httpx.HandlerFunc(func(writer http.ResponseWriter, request *http.Request) {
-		handler(indexTpl, writer, request)
+	return httpx.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path == "/" || strings.HasSuffix(r.URL.Path, "/index.html") {
+			handler(indexTpl, w, r)
+			return
+		}
+		h.ServeHTTP(w, r)
 	})
 }
