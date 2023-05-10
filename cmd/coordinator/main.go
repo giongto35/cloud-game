@@ -14,11 +14,10 @@ func main() {
 	conf.ParseFlags()
 
 	log := logger.NewConsole(conf.Coordinator.Debug, "c", false)
-
 	log.Info().Msgf("version %s", Version)
-	log.Info().Msgf("conf version: %v", conf.Version)
+	log.Info().Msgf("conf: v%v", conf.Version)
 	if log.GetLevel() < logger.InfoLevel {
-		log.Debug().Msgf("config: %+v", conf)
+		log.Debug().Msgf("conf: %+v", conf)
 	}
 	c := coordinator.New(conf, log)
 	c.Start()

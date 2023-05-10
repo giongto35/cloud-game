@@ -1,3 +1,4 @@
+LOL123L: yolo
 #
 # Application configuration file
 #
@@ -179,7 +180,8 @@ emulator:
       #       their tick rate (1/system FPS), but OpenGL cores like N64 may have significant
       #       frame rendering time inconsistencies. In general, VFR for CFR cores leads to
       #       noticeable video stutter (with the current frame rendering time calculations).
-      #   - options ([]string) a list of Libretro core options for tweaking
+      #   - options ([]string) a list of Libretro core options for tweaking.
+      #       All keys of the options should be in the double quotes in order to preserve upper-case symbols.
       list:
         gba:
           lib: mgba_libretro
@@ -191,8 +193,8 @@ emulator:
           folder: psx
           # see: https://github.com/libretro/pcsx_rearmed/blob/master/frontend/libretro_core_options.h
           options:
-            pcsx_rearmed_drc: enabled
-            pcsx_rearmed_display_internal_fps: disabled
+            "pcsx_rearmed_drc": enabled
+            "pcsx_rearmed_display_internal_fps": disabled
         # MAME core requires additional manual setup, please read:
         # https://docs.libretro.com/library/fbneo/
         mame:
@@ -213,21 +215,21 @@ emulator:
           vfr: true
           # see: https://github.com/libretro/mupen64plus-libretro-nx/blob/master/libretro/libretro_core_options.h
           options:
-            mupen64plus-169screensize: 640x360
-            mupen64plus-43screensize: 320x240
-            mupen64plus-EnableCopyColorToRDRAM: Off
-            mupen64plus-EnableCopyDepthToRDRAM: Off
-            mupen64plus-EnableEnhancedTextureStorage: True
-            mupen64plus-EnableFBEmulation: True
-            mupen64plus-EnableLegacyBlending: True
-            mupen64plus-FrameDuping: False
-            mupen64plus-MaxTxCacheSize: 8000
-            mupen64plus-ThreadedRenderer: False
-            mupen64plus-cpucore: dynamic_recompiler
-            mupen64plus-pak1: memory
-            mupen64plus-rdp-plugin: gliden64
-            mupen64plus-rsp-plugin: hle
-            mupen64plus-astick-sensitivity: 100
+            "mupen64plus-169screensize": 640x360
+            "mupen64plus-43screensize": 320x240
+            "mupen64plus-EnableCopyColorToRDRAM": Off
+            "mupen64plus-EnableCopyDepthToRDRAM": Off
+            "mupen64plus-EnableEnhancedTextureStorage": True
+            "mupen64plus-EnableFBEmulation": True
+            "mupen64plus-EnableLegacyBlending": True
+            "mupen64plus-FrameDuping": False
+            "mupen64plus-MaxTxCacheSize": 8000
+            "mupen64plus-ThreadedRenderer": False
+            "mupen64plus-cpucore": dynamic_recompiler
+            "mupen64plus-pak1": memory
+            "mupen64plus-rdp-plugin": gliden64
+            "mupen64plus-rsp-plugin": hle
+            "mupen64plus-astick-sensitivity": 100
 
 encoder:
   audio:

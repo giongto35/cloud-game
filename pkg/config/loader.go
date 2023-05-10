@@ -12,33 +12,72 @@ import (
 
 const EnvPrefix = "CLOUD_GAME_"
 
+type Kv = map[string]any
+type Bytes []byte
+
+func (b *Bytes) ReadBytes() ([]byte, error) { return *b, nil }
+func (b *Bytes) Read() (Kv, error)          { return nil, nil }
+
 type File string
 
-func (f *File) ReadBytes() ([]byte, error)            { return os.ReadFile(string(*f)) }
-func (f *File) Read() (map[string]interface{}, error) { return nil, nil }
+func (f *File) ReadBytes() ([]byte, error) { return os.ReadFile(string(*f)) }
+func (f *File) Read() (Kv, error)          { return nil, nil }
 
 type YAML struct{}
 
-func (p *YAML) Marshal(map[string]interface{}) ([]byte, error) { return nil, nil }
-func (p *YAML) Unmarshal(b []byte) (map[string]interface{}, error) {
-	var out map[string]interface{}
-	if err := yaml.Unmarshal(b, &out); err != nil {
+func (p *YAML) Marshal(Kv) ([]byte, error) { return nil, nil }
+func (p *YAML) Unmarshal(b []byte) (Kv, error) {
+	var out Kv
+	klw := keysToLower(b)
+	if err := yaml.Unmarshal(klw, &out); err != nil {
 		return nil, err
 	}
 	return out, nil
 }
 
+// keysToLower iterates YAML bytes and tries to lower the keys.
+// Used for merging with environment vars which are lowered as well.
+func keysToLower(in []byte) []byte {
+	l, r, ignore := 0, 0, false
+	for i, b := range in {
+		switch b {
+		case '#': // skip comments
+			ignore = true
+		case ':': // lower left chunk before the next : symbol
+			if ignore {
+				continue
+			}
+			r = i
+			ignore = true
+			for j := l; j <= r; j++ {
+				c := in[j]
+				// we skip the line with the first explicit " string symbol
+				if c == '"' {
+					break
+				}
+				if 'A' <= c && c <= 'Z' {
+					in[j] += 'a' - 'A'
+				}
+			}
+		case '\n':
+			l = i
+			ignore = false
+		}
+	}
+	return in
+}
+
 type Env string
 
 func (e *Env) ReadBytes() ([]byte, error) { return nil, nil }
-func (e *Env) Read() (map[string]interface{}, error) {
+func (e *Env) Read() (Kv, error) {
 	var keys []string
 	for _, k := range os.Environ() {
 		if strings.HasPrefix(k, string(*e)) {
 			keys = append(keys, k)
 		}
 	}
-	mp := make(map[string]interface{})
+	mp := make(Kv)
 	for _, k := range keys {
 		parts := strings.SplitN(k, "=", 2)
 		n := strings.ToLower(strings.TrimPrefix(parts[0], string(*e)))
@@ -65,10 +104,10 @@ var k = koanf.New("_")
 // LoadConfig loads a configuration file into the given struct.
 // The path param specifies a custom path to the configuration file.
 // Reads and puts environment variables with the prefix CLOUD_GAME_.
-func LoadConfig(config any, path string) error {
-	dirs := []string{path}
-	if path == "" {
-		dirs = append(dirs, ".", "configs", "../../../configs")
+func LoadConfig(config any, path string) (err error) {
+	dirs := []string{".", "configs", "../../../configs"}
+	if path != "" {
+		dirs = append([]string{path}, dirs...)
 	}
 
 	homeDir := ""

@@ -2,6 +2,7 @@ package config
 
 import (
 	"os"
+	"reflect"
 	"testing"
 )
 
@@ -28,5 +29,30 @@ func TestConfigEnv(t *testing.T) {
 	v := out.Emulator.Libretro.Cores.List["pcsx"].Options["pcsx_rearmed_drc"]
 	if v != "x" {
 		t.Errorf("%v is not x", v)
+	}
+}
+
+func Test_keysToLower(t *testing.T) {
+	type args struct {
+		in []byte
+	}
+	tests := []struct {
+		name string
+		args args
+		want []byte
+	}{
+		{name: "empty", args: args{in: []byte{}}, want: []byte{}},
+		{name: "case", args: args{
+			in: []byte("KEY:1\n#Comment with:\n      	KeY123_NamE: 1\n\n\n\nAAA:123\n  \"KeyKey\":2\n"),
+		},
+			want: []byte("key:1\n#Comment with:\n      	key123_name: 1\n\n\n\naaa:123\n  \"KeyKey\":2\n"),
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := keysToLower(tt.args.in); !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("keysToLower() = %v, want %v", string(got), string(tt.want))
+			}
+		})
 	}
 }
