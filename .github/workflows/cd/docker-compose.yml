@@ -6,6 +6,8 @@ x-params:
   network_mode: "host"
   privileged: true
   restart: always
+  security_opt:
+    - seccomp:unconfined
   logging:
     driver: "journald"
 
@@ -13,7 +15,9 @@ services:
 
   coordinator:
     <<: *default-params
-    command: coordinator
+    command: ./coordinator
+    environment:
+      - CLOUD_GAME_COORDINATOR_LIBRARY_BASEPATH=/usr/local/share/cloud-game/assets/games
     volumes:
       - ${APP_DIR:-/cloud-game}/cache:/usr/local/share/cloud-game/assets/cache
       - ${APP_DIR:-/cloud-game}/games:/usr/local/share/cloud-game/assets/games
@@ -27,12 +31,24 @@ services:
       mode: replicated
       replicas: 4
     environment:
-      - MESA_GL_VERSION_OVERRIDE=3.3
-    #entrypoint: [ "/bin/sh", "-c", "xvfb-run -a $$@", "" ]
-    command: worker
+      - DISPLAY=:99
+      - MESA_GL_VERSION_OVERRIDE=4.5
+      - CLOUD_GAME_WORKER_LIBRARY_BASEPATH=/usr/local/share/cloud-game/assets/games
+      - CLOUD_GAME_EMULATOR_LIBRETRO_CORES_PATHS_LIBS=/usr/local/share/cloud-game/assets/cores
+    command: ./worker
     volumes:
       - ${APP_DIR:-/cloud-game}/cache:/usr/local/share/cloud-game/assets/cache
       - ${APP_DIR:-/cloud-game}/cores:/usr/local/share/cloud-game/assets/cores
       - ${APP_DIR:-/cloud-game}/games:/usr/local/share/cloud-game/assets/games
       - ${APP_DIR:-/cloud-game}/libretro:/usr/local/share/cloud-game/libretro
       - ${APP_DIR:-/cloud-game}/home:/root/.cr
+      - x11:/tmp/.X11-unix
+
+  xvfb:
+    image: kcollins/xvfb:latest
+    volumes:
+      - x11:/tmp/.X11-unix
+    command: [":99", "-screen", "0", "320x240x16" ]
+
+volumes:
+  x11:
