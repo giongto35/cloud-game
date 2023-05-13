@@ -167,7 +167,8 @@ func (lib *library) Scan() {
 	})
 
 	if err != nil {
-		lib.log.Error().Err(err).Str("dir", dir).Msgf("Lib scan error")
+		lib.log.Error().Err(err).Str("dir", dir).Msgf("Lib scan... failed")
+		return
 	}
 
 	if len(games) > 0 {
