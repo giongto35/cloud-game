@@ -2,7 +2,7 @@
 package h264
 
 /*
-#cgo pkg-config: x264
+#cgo !st pkg-config: x264
 #cgo st LDFLAGS: -l:libx264.a
 
 #include "stdint.h"
