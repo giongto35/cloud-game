@@ -53,7 +53,7 @@ dev.run.debug:
 
 dev.run-docker:
 	docker rm cloud-game-local -f || true
-	docker-compose up --build
+	docker compose up --build
 
 # RELEASE
 # Builds the app for new release.
