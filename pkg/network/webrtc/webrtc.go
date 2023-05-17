@@ -141,8 +141,12 @@ func (p *Peer) handleICEState(onConnect func()) func(webrtc.ICEConnectionState) 
 			// nothing
 		case webrtc.ICEConnectionStateConnected:
 			onConnect()
-		case webrtc.ICEConnectionStateFailed,
-			webrtc.ICEConnectionStateClosed,
+		case webrtc.ICEConnectionStateFailed:
+			p.log.Error().Msgf("WebRTC connection fail! connection: %v, ice: %v, gathering: %v, signalling: %v",
+				p.conn.ConnectionState(), p.conn.ICEConnectionState(), p.conn.ICEGatheringState(),
+				p.conn.SignalingState())
+			p.Disconnect()
+		case webrtc.ICEConnectionStateClosed,
 			webrtc.ICEConnectionStateDisconnected:
 			p.Disconnect()
 		default:

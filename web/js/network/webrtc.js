@@ -105,7 +105,9 @@ const webrtc = (() => {
                         break;
                     }
                     case 'disconnected': {
-                        log.info('[rtc] disconnected...');
+                        log.info(`[rtc] disconnected... ` +
+                            `connection: ${connection.connectionState}, ice: ${connection.iceConnectionState}, ` +
+                            `gathering: ${connection.iceGatheringState}, signalling: ${connection.signalingState}`)
                         connected = false;
                         event.pub(WEBRTC_CONNECTION_CLOSED);
                         break;
