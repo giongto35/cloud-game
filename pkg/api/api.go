@@ -79,6 +79,7 @@ const (
 	ToggleMultitap   PT = 109
 	RecordGame       PT = 110
 	GetWorkerList    PT = 111
+	ErrNoFreeSlots   PT = 112
 	RegisterRoom     PT = 201
 	CloseRoom        PT = 202
 	IceCandidate        = WebrtcIce

@@ -214,6 +214,9 @@
             case api.endpoint.GAME_RECORDING:
                 event.pub(RECORDING_STATUS_CHANGED, payload);
                 break;
+            case api.endpoint.GAME_ERROR_NO_FREE_SLOTS:
+                event.pub(GAME_ERROR_NO_FREE_SLOTS);
+                break;
         }
     }
 
@@ -482,10 +485,8 @@
     event.sub(GAME_PLAYER_IDX_SET, idx => {
         if (!isNaN(+idx)) message.show(+idx + 1);
     });
+    event.sub(GAME_ERROR_NO_FREE_SLOTS, () => message.show("No free slots :(", 2500));
     event.sub(WEBRTC_NEW_CONNECTION, (data) => {
-        // if (pingPong) {
-        //     webrtc.setMessageHandler(onWebrtcMessage);
-        // }
         workerManager.whoami(data.wid);
         webrtc.start(data.ice);
         api.server.initWebrtc()

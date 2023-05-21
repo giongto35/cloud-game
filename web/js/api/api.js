@@ -20,6 +20,7 @@ const api = (() => {
         GAME_TOGGLE_MULTITAP: 109,
         GAME_RECORDING: 110,
         GET_WORKER_LIST: 111,
+        GAME_ERROR_NO_FREE_SLOTS: 112,
     });
 
     const packet = (type, payload, id) => {

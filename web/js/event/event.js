@@ -65,6 +65,7 @@ const GAME_SAVED = 'gameSaved';
 const GAME_LOADED = 'gameLoaded';
 const GAME_PLAYER_IDX = 'gamePlayerIndex';
 const GAME_PLAYER_IDX_SET = 'gamePlayerIndexSet'
+const GAME_ERROR_NO_FREE_SLOTS = 'gameNoFreeSlots'
 
 const WEBRTC_CONNECTION_CLOSED = 'webrtcConnectionClosed';
 const WEBRTC_CONNECTION_READY = 'webrtcConnectionReady';

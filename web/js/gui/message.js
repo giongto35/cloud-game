@@ -12,7 +12,7 @@ const message = (() => {
 
     let isScreenFree = true;
 
-    const _popup = () => {
+    const _popup = (time = 1000) => {
         // recursion edge case:
         // no messages in the queue or one on the screen
         if (!(queue.length > 0 && isScreenFree)) {
@@ -21,7 +21,7 @@ const message = (() => {
 
         isScreenFree = false;
         popupBox.innerText = queue.shift();
-        gui.anim.fadeInOut(popupBox, 1000, .05).finally(() => {
+        gui.anim.fadeInOut(popupBox, time, .05).finally(() => {
             isScreenFree = true;
             _popup();
         })
@@ -33,14 +33,12 @@ const message = (() => {
         }
     }
 
-    const _proceed = (text) => {
+    const _proceed = (text, time) => {
         _storeMessage(text);
-        _popup();
+        _popup(time);
     }
 
-    const show = (text) => {
-        _proceed(text)
-    }
+    const show = (text, time = 1000) => _proceed(text, time)
 
     return Object.freeze({
         show: show

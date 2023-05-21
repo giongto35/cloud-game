@@ -66,6 +66,7 @@ func (h *Hub) handleUserConnection() http.HandlerFunc {
 		params := r.URL.Query()
 		worker := h.findWorkerFor(user, params, h.log.Extend(h.log.With().Str("cid", user.Id().Short())))
 		if worker == nil {
+			user.Notify(api.ErrNoFreeSlots, "")
 			h.log.Info().Msg("no free workers")
 			return
 		}
