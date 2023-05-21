@@ -53,9 +53,8 @@ func (m *Mux) HandleFunc(pattern string, handler func(ResponseWriter, *Request))
 	m.ServeMux.HandleFunc(m.prefix+pattern, handler)
 	return m
 }
-func (m *Mux) ServeHTTP(w ResponseWriter, r *Request) { m.ServeMux.ServeHTTP(w, r) }
 
-func NotFound(w ResponseWriter) { http.Error(w, "404 page not found", http.StatusNotFound) }
+func (m *Mux) ServeHTTP(w ResponseWriter, r *Request) { m.ServeMux.ServeHTTP(w, r) }
 
 func NewServer(address string, handler func(*Server) Handler, options ...Option) (*Server, error) {
 	opts := &Options{
