@@ -15,7 +15,7 @@ func TestLibraryScan(t *testing.T) {
 		{
 			directory: "../../assets/games",
 			expected: []string{
-				"Super Mario Bros", "Sushi The Cat", "anguna",
+				"Alwa's Awakening (Demo)", "Sushi The Cat", "anguna",
 			},
 		},
 	}

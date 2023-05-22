@@ -66,7 +66,7 @@ func TestLoad(t *testing.T) {
 		{
 			room:           "test_load_00",
 			system:         "nes",
-			rom:            "Super Mario Bros.nes",
+			rom:            "Alwa's Awakening (Demo).nes",
 			emulationTicks: 100,
 		},
 		{

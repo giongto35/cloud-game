@@ -64,7 +64,7 @@ var testTempDir = filepath.Join(os.TempDir(), "cloud-game-core-tests")
 
 // games
 var (
-	mario = games.GameMetadata{Name: "Super Mario Bros", Type: "nes", Path: "Super Mario Bros.nes"}
+	alwas = games.GameMetadata{Name: "Alwa's Awakening (Demo)", Type: "nes", Path: "Alwa's Awakening (Demo).nes"}
 	sushi = games.GameMetadata{Name: "Sushi The Cat", Type: "gba", Path: "Sushi The Cat.gba"}
 	fd    = games.GameMetadata{Name: "Florian Demo", Type: "n64", Path: "Sample Demo by Florian (PD).z64"}
 )
@@ -89,7 +89,7 @@ func TestRoom(t *testing.T) {
 		frames   int
 	}{
 		{
-			game:   mario,
+			game:   alwas,
 			vCodec: encoder.H264,
 			frames: 300,
 		},
@@ -140,7 +140,7 @@ func TestAllEmulatorRooms(t *testing.T) {
 		frames int
 	}{
 		{game: sushi, frames: 150},
-		{game: mario, frames: 50},
+		{game: alwas, frames: 50},
 		{game: fd, frames: 50},
 	}
 
@@ -315,7 +315,7 @@ func BenchmarkRoom(b *testing.B) {
 		},
 		{
 			system: "nes",
-			game:   mario,
+			game:   alwas,
 			codecs: []encoder.VideoCodec{encoder.VP8, encoder.H264},
 			frames: 100,
 		},

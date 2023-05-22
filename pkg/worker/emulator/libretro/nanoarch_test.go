@@ -207,7 +207,7 @@ func BenchmarkEmulatorGba(b *testing.B) {
 }
 
 func BenchmarkEmulatorNes(b *testing.B) {
-	benchmarkEmulator("nes", "Super Mario Bros.nes", b)
+	benchmarkEmulator("nes", "Alwa's Awakening (Demo).nes", b)
 }
 
 func TestSwap(t *testing.T) {
