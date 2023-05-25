@@ -106,7 +106,7 @@ func TestResampleStretch(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			rez2 := ResampleStretchNew(tt.args.pcm, tt.args.size)
+			rez2 := resampleStretch(tt.args.pcm, tt.args.size)
 
 			if rez2[0] != tt.args.pcm[0] || rez2[1] != tt.args.pcm[1] ||
 				rez2[len(rez2)-1] != tt.args.pcm[len(tt.args.pcm)-1] ||
@@ -123,7 +123,7 @@ func BenchmarkResampler(b *testing.B) {
 		name string
 		fn   func(pcm []int16, size int) []int16
 	}{
-		{name: "new", fn: ResampleStretchNew},
+		{name: "new", fn: resampleStretch},
 	}
 	pcm := gen(1764)
 	size := 1920
@@ -141,10 +141,6 @@ func gen(l int) []int16 {
 	for i := range nums {
 		nums[i] = int16(rand.Intn(10))
 	}
-	//for i := len(nums) / 2; i < len(nums)/2+42; i++ {
-	//	nums[i] = 0
-	//}
-
 	return nums
 }
 
@@ -157,7 +153,7 @@ func TestBufferWrite(t *testing.T) {
 	tests := []struct {
 		bufLen int
 		writes []bufWrite
-		expect Samples
+		expect samples
 	}{
 		{
 			bufLen: 20,
@@ -166,7 +162,7 @@ func TestBufferWrite(t *testing.T) {
 				{sample: 2, len: 20},
 				{sample: 3, len: 30},
 			},
-			expect: Samples{3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3},
+			expect: samples{3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3},
 		},
 		{
 			bufLen: 11,
@@ -175,15 +171,15 @@ func TestBufferWrite(t *testing.T) {
 				{sample: 2, len: 18},
 				{sample: 3, len: 2},
 			},
-			expect: Samples{3, 2, 2, 2, 2, 2, 2, 2, 2, 2, 3},
+			expect: samples{3, 2, 2, 2, 2, 2, 2, 2, 2, 2, 3},
 		},
 	}
 
 	for _, test := range tests {
-		var lastResult Samples
-		buf := NewBuffer(test.bufLen)
+		var lastResult samples
+		buf := newBuffer(test.bufLen)
 		for _, w := range test.writes {
-			buf.Write(samplesOf(w.sample, w.len), func(s Samples) { lastResult = s })
+			buf.write(samplesOf(w.sample, w.len), func(s samples) { lastResult = s })
 		}
 		if !reflect.DeepEqual(test.expect, lastResult) {
 			t.Errorf("not expted buffer, %v != %v", lastResult, test.expect)
@@ -192,19 +188,19 @@ func TestBufferWrite(t *testing.T) {
 }
 
 func BenchmarkBufferWrite(b *testing.B) {
-	fn := func(_ Samples) {}
+	fn := func(_ samples) {}
 	l := 1920
-	buf := NewBuffer(l)
+	buf := newBuffer(l)
 	samples1 := samplesOf(1, l/2)
 	samples2 := samplesOf(2, l*2)
 	for i := 0; i < b.N; i++ {
-		buf.Write(samples1, fn)
-		buf.Write(samples2, fn)
+		buf.write(samples1, fn)
+		buf.write(samples2, fn)
 	}
 }
 
-func samplesOf(v int16, len int) (s Samples) {
-	s = make(Samples, len)
+func samplesOf(v int16, len int) (s samples) {
+	s = make(samples, len)
 	for i := range s {
 		s[i] = v
 	}
