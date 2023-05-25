@@ -1,7 +1,6 @@
 package worker
 
 import (
-	"fmt"
 	"image"
 	"math/rand"
 	"reflect"
@@ -86,7 +85,7 @@ func genTestImage(w, h int, seed float32) *image.RGBA {
 
 func TestResampleStretch(t *testing.T) {
 	type args struct {
-		pcm  []int16
+		pcm  samples
 		size int
 	}
 	tests := []struct {
@@ -106,7 +105,7 @@ func TestResampleStretch(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			rez2 := resampleStretch(tt.args.pcm, tt.args.size)
+			rez2 := tt.args.pcm.stretch(tt.args.size)
 
 			if rez2[0] != tt.args.pcm[0] || rez2[1] != tt.args.pcm[1] ||
 				rez2[len(rez2)-1] != tt.args.pcm[len(tt.args.pcm)-1] ||
@@ -119,20 +118,10 @@ func TestResampleStretch(t *testing.T) {
 }
 
 func BenchmarkResampler(b *testing.B) {
-	tests := []struct {
-		name string
-		fn   func(pcm []int16, size int) []int16
-	}{
-		{name: "new", fn: resampleStretch},
-	}
-	pcm := gen(1764)
+	pcm := samples(gen(1764))
 	size := 1920
-	for _, bn := range tests {
-		b.Run(fmt.Sprintf("%v", bn.name), func(b *testing.B) {
-			for i := 0; i < b.N; i++ {
-				bn.fn(pcm, size)
-			}
-		})
+	for i := 0; i < b.N; i++ {
+		pcm.stretch(size)
 	}
 }
 
@@ -205,4 +194,25 @@ func samplesOf(v int16, len int) (s samples) {
 		s[i] = v
 	}
 	return
+}
+
+func Test_frame(t *testing.T) {
+	type args struct {
+		hz    int
+		frame int
+	}
+	tests := []struct {
+		name string
+		args args
+		want int
+	}{
+		{name: "mGBA", args: args{hz: 32768, frame: 10}, want: 654},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := frame(tt.args.hz, tt.args.frame); got != tt.want {
+				t.Errorf("frame() = %v, want %v", got, tt.want)
+			}
+		})
+	}
 }

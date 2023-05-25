@@ -3,6 +3,7 @@ package worker
 import (
 	"sync"
 	"time"
+	"unsafe"
 
 	"github.com/giongto35/cloud-game/v3/pkg/config"
 	"github.com/giongto35/cloud-game/v3/pkg/worker/emulator"
@@ -13,39 +14,44 @@ import (
 	webrtc "github.com/pion/webrtc/v3/pkg/media"
 )
 
-var (
-	encoderOnce = sync.Once{}
-	opusCoder   *opus.Encoder
-	samplePool  sync.Pool
-	audioPool   = sync.Pool{New: func() any { b := make([]int16, 3000); return &b }}
-)
-
 const (
-	audioChannels  = 2
-	audioCodec     = "opus"
-	audioFrequency = 48000
+	dstHz        = 48000
+	sampleBufLen = 1024 * 4
 )
 
 // buffer is a simple non-concurrent safe ring buffer for audio samples.
 type (
 	buffer struct {
-		s  samples
-		wi int
+		s       samples
+		wi      int
+		dst     int
+		stretch bool
 	}
 	samples []int16
 )
 
-func newBuffer(numSamples int) buffer { return buffer{s: make(samples, numSamples)} }
+var (
+	encoderOnce = sync.Once{}
+	opusCoder   *opus.Encoder
+	samplePool  sync.Pool
+	audioPool   = sync.Pool{New: func() any { b := make([]int16, sampleBufLen); return &b }}
+)
 
-// write fills the buffer until it's full then passing gathered data into a callback.
+func newBuffer(srcLen int) buffer { return buffer{s: make(samples, srcLen)} }
+
+// enableStretch adds a simple stretching of buffer to a desired size before
+// the onFull callback call.
+func (b *buffer) enableStretch(l int) { b.stretch = true; b.dst = l }
+
+// write fills the buffer until it's full and then passes the gathered data into a callback.
 //
-// Consider two cases:
-//
-// 1. Underflow, when the length of written data is less than the buffer's available space.
+// There are two cases to consider:
+// 1. Underflow, when the length of the written data is less than the buffer's available space.
 // 2. Overflow, when the length exceeds the current available buffer space.
-// In the both cases we overwrite any previous values in the buffer and move the internal
-// write pointer on the length of written data.
-// In the first case we won't call the callback, but it will be called every time
+//
+// We overwrite any previous values in the buffer and move the internal write pointer
+// by the length of the written data.
+// In the first case, we won't call the callback, but it will be called every time
 // when the internal buffer overflows until all samples are read.
 func (b *buffer) write(s samples, onFull func(samples)) (r int) {
 	for r < len(s) {
@@ -54,34 +60,39 @@ func (b *buffer) write(s samples, onFull func(samples)) (r int) {
 		b.wi += w
 		if b.wi == len(b.s) {
 			b.wi = 0
-			onFull(b.s)
+			if b.stretch {
+				onFull(b.s.stretch(b.dst))
+			} else {
+				onFull(b.s)
+			}
 		}
 	}
 	return
 }
 
-// frame calculates an audio frame size, i.e. 48k*frame/1000*2
-func frame(hz int, frame int) int { return hz * frame / 1000 * audioChannels }
+// frame calculates an audio stereo frame size, i.e. 48k*frame/1000*2
+func frame(hz int, frame int) int { return hz * frame / 1000 * 2 }
 
-// resampleStretch does a simple stretching of audio samples.
+// stretch does a simple stretching of audio samples.
 // something like: [1,2,3,4,5,6] -> [1,2,x,x,3,4,x,x,5,6,x,x] -> [1,2,1,2,3,4,3,4,5,6,5,6]
-func resampleStretch(pcm []int16, size int) []int16 {
+func (s samples) stretch(size int) []int16 {
 	out := (*audioPool.Get().(*[]int16))[:size]
-	n := len(pcm)
+	n := len(s)
 	ratio := float32(size) / float32(n)
+	sPtr := unsafe.Pointer(&s[0])
 	for i, l, r := 0, 0, 0; i < n; i += 2 {
-		l, r = r, int(float32((i+2)>>1)*ratio)<<1
-		for j := l; j < r-1; j += 2 {
-			out[j] = pcm[i]
-			out[j+1] = pcm[i+1]
+		l, r = r, int(float32((i+2)>>1)*ratio)<<1 // index in src * ratio -> approximated index in dst *2 due to int16
+		for j := l; j < r; j += 2 {
+			*(*int32)(unsafe.Pointer(&out[j])) = *(*int32)(sPtr) // out[j] = s[i]; out[j+1] = s[i+1]
 		}
+		sPtr = unsafe.Add(sPtr, uintptr(4))
 	}
 	return out
 }
 
-func (r *Room) initAudio(frequency int, conf config.Audio) {
+func (r *Room) initAudio(srcHz int, conf config.Audio) {
 	encoderOnce.Do(func() {
-		enc, err := opus.NewEncoder(audioFrequency)
+		enc, err := opus.NewEncoder(dstHz)
 		if err != nil {
 			r.log.Fatal().Err(err).Msg("couldn't create audio encoder")
 		}
@@ -92,25 +103,22 @@ func (r *Room) initAudio(frequency int, conf config.Audio) {
 	}
 	r.log.Debug().Msgf("Opus: %v", opusCoder.GetInfo())
 
-	buf := newBuffer(frame(frequency, conf.Frame))
-	dur := time.Duration(conf.Frame) * time.Millisecond
-	resample, frameLen := frequency != audioFrequency, 0
-	if resample {
-		frameLen = frame(audioFrequency, conf.Frame)
+	buf := newBuffer(frame(srcHz, conf.Frame))
+	if srcHz != dstHz {
+		buf.enableStretch(frame(dstHz, conf.Frame))
+		r.log.Debug().Msgf("Resample %vHz -> %vHz", srcHz, dstHz)
 	}
+	frameDur := time.Duration(conf.Frame) * time.Millisecond
 
-	r.emulator.SetAudio(func(smp *emulator.GameAudio) {
-		buf.write(*smp.Data, func(s samples) {
-			if resample {
-				s = resampleStretch(s, frameLen)
-			}
-			encoded, err := opusCoder.Encode(s)
-			audioPool.Put((*[]int16)(&s))
+	r.emulator.SetAudio(func(raw *emulator.GameAudio) {
+		buf.write(*raw.Data, func(pcm samples) {
+			data, err := opusCoder.Encode(pcm)
+			audioPool.Put((*[]int16)(&pcm))
 			if err != nil {
 				r.log.Error().Err(err).Msgf("opus encode fail")
 				return
 			}
-			r.handleSample(encoded, dur, func(u *Session, s *webrtc.Sample) {
+			r.handleSample(data, frameDur, func(u *Session, s *webrtc.Sample) {
 				if err := u.SendAudio(s); err != nil {
 					r.log.Error().Err(err).Send()
 				}
