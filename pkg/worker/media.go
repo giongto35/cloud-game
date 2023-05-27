@@ -3,6 +3,7 @@ package worker
 import (
 	"sync"
 	"time"
+	"unsafe"
 
 	"github.com/giongto35/cloud-game/v3/pkg/config"
 	"github.com/giongto35/cloud-game/v3/pkg/worker/emulator"
@@ -13,51 +14,55 @@ import (
 	webrtc "github.com/pion/webrtc/v3/pkg/media"
 )
 
+const (
+	dstHz        = 48000
+	sampleBufLen = 1024 * 4
+)
+
+// buffer is a simple non-concurrent safe ring buffer for audio samples.
+type (
+	buffer struct {
+		s       samples
+		wi      int
+		dst     int
+		stretch bool
+	}
+	samples []int16
+)
+
 var (
 	encoderOnce = sync.Once{}
 	opusCoder   *opus.Encoder
 	samplePool  sync.Pool
-	audioPool   = sync.Pool{New: func() any { b := make([]int16, 3000); return &b }}
+	audioPool   = sync.Pool{New: func() any { b := make([]int16, sampleBufLen); return &b }}
 )
 
-const (
-	audioChannels  = 2
-	audioCodec     = "opus"
-	audioFrequency = 48000
-)
+func newBuffer(srcLen int) buffer { return buffer{s: make(samples, srcLen)} }
 
-// Buffer is a simple non-thread safe ring buffer for audio samples.
-// It should be used for 16bit PCM (LE interleaved) data.
-type (
-	Buffer struct {
-		s  Samples
-		wi int
-	}
-	OnFull  func(s Samples)
-	Samples []int16
-)
+// enableStretch adds a simple stretching of buffer to a desired size before
+// the onFull callback call.
+func (b *buffer) enableStretch(l int) { b.stretch = true; b.dst = l }
 
-func NewBuffer(numSamples int) Buffer { return Buffer{s: make(Samples, numSamples)} }
-
-// Write fills the buffer with data calling a callback function when
-// the internal buffer fills out.
+// write fills the buffer until it's full and then passes the gathered data into a callback.
 //
-// Consider two cases:
-//
-// 1. Underflow, when the length of written data is less than the buffer's available space.
+// There are two cases to consider:
+// 1. Underflow, when the length of the written data is less than the buffer's available space.
 // 2. Overflow, when the length exceeds the current available buffer space.
-// In the both cases we overwrite any previous values in the buffer and move the internal
-// write pointer on the length of written data.
-// In the first case we won't call the callback, but it will be called every time
+//
+// We overwrite any previous values in the buffer and move the internal write pointer
+// by the length of the written data.
+// In the first case, we won't call the callback, but it will be called every time
 // when the internal buffer overflows until all samples are read.
-func (b *Buffer) Write(s Samples, onFull OnFull) (r int) {
+func (b *buffer) write(s samples, onFull func(samples)) (r int) {
 	for r < len(s) {
 		w := copy(b.s[b.wi:], s[r:])
 		r += w
 		b.wi += w
 		if b.wi == len(b.s) {
 			b.wi = 0
-			if onFull != nil {
+			if b.stretch {
+				onFull(b.s.stretch(b.dst))
+			} else {
 				onFull(b.s)
 			}
 		}
@@ -65,18 +70,29 @@ func (b *Buffer) Write(s Samples, onFull OnFull) (r int) {
 	return
 }
 
-// GetFrameSizeFor calculates audio frame size, i.e. 48k*frame/1000*2
-func GetFrameSizeFor(hz int, frame int) int { return hz * frame / 1000 * audioChannels }
+// frame calculates an audio stereo frame size, i.e. 48k*frame/1000*2
+func frame(hz int, frame int) int { return hz * frame / 1000 * 2 }
 
-func (r *Room) initAudio(frequency int, conf config.Audio) {
-	buf := NewBuffer(GetFrameSizeFor(frequency, conf.Frame))
-	resample, frameLen := frequency != audioFrequency, 0
-	if resample {
-		frameLen = GetFrameSizeFor(audioFrequency, conf.Frame)
+// stretch does a simple stretching of audio samples.
+// something like: [1,2,3,4,5,6] -> [1,2,x,x,3,4,x,x,5,6,x,x] -> [1,2,1,2,3,4,3,4,5,6,5,6]
+func (s samples) stretch(size int) []int16 {
+	out := (*audioPool.Get().(*[]int16))[:size]
+	n := len(s)
+	ratio := float32(size) / float32(n)
+	sPtr := unsafe.Pointer(&s[0])
+	for i, l, r := 0, 0, 0; i < n; i += 2 {
+		l, r = r, int(float32((i+2)>>1)*ratio)<<1 // index in src * ratio -> approximated index in dst *2 due to int16
+		for j := l; j < r; j += 2 {
+			*(*int32)(unsafe.Pointer(&out[j])) = *(*int32)(sPtr) // out[j] = s[i]; out[j+1] = s[i+1]
+		}
+		sPtr = unsafe.Add(sPtr, uintptr(4))
 	}
+	return out
+}
 
+func (r *Room) initAudio(srcHz int, conf config.Audio) {
 	encoderOnce.Do(func() {
-		enc, err := opus.NewEncoder(audioFrequency)
+		enc, err := opus.NewEncoder(dstHz)
 		if err != nil {
 			r.log.Fatal().Err(err).Msg("couldn't create audio encoder")
 		}
@@ -87,23 +103,28 @@ func (r *Room) initAudio(frequency int, conf config.Audio) {
 	}
 	r.log.Debug().Msgf("Opus: %v", opusCoder.GetInfo())
 
-	dur := time.Duration(conf.Frame) * time.Millisecond
+	buf := newBuffer(frame(srcHz, conf.Frame))
+	if srcHz != dstHz {
+		buf.enableStretch(frame(dstHz, conf.Frame))
+		r.log.Debug().Msgf("Resample %vHz -> %vHz", srcHz, dstHz)
+	}
+	frameDur := time.Duration(conf.Frame) * time.Millisecond
 
-	fn := func(s Samples) {
-		if resample {
-			s = ResampleStretchNew(s, frameLen)
-		}
-		f, err := opusCoder.Encode(s)
-		audioPool.Put((*[]int16)(&s))
-		if err == nil {
-			r.handleSample(f, dur, func(u *Session, s *webrtc.Sample) {
+	r.emulator.SetAudio(func(raw *emulator.GameAudio) {
+		buf.write(*raw.Data, func(pcm samples) {
+			data, err := opusCoder.Encode(pcm)
+			audioPool.Put((*[]int16)(&pcm))
+			if err != nil {
+				r.log.Error().Err(err).Msgf("opus encode fail")
+				return
+			}
+			r.handleSample(data, frameDur, func(u *Session, s *webrtc.Sample) {
 				if err := u.SendAudio(s); err != nil {
 					r.log.Error().Err(err).Send()
 				}
 			})
-		}
-	}
-	r.emulator.SetAudio(func(samples *emulator.GameAudio) { buf.Write(*samples.Data, fn) })
+		})
+	})
 }
 
 // initVideo processes videoFrames images with an encoder (codec) then pushes the result to WebRTC.
@@ -159,20 +180,4 @@ func (r *Room) handleSample(b []byte, d time.Duration, fn func(*Session, *webrtc
 		}
 	})
 	samplePool.Put(sample)
-}
-
-// ResampleStretchNew does a simple stretching of audio samples.
-// something like: [1,2,3,4,5,6] -> [1,2,x,x,3,4,x,x,5,6,x,x] -> [1,2,1,2,3,4,3,4,5,6,5,6]
-func ResampleStretchNew(pcm []int16, size int) []int16 {
-	out := (*audioPool.Get().(*[]int16))[:size]
-	n := len(pcm)
-	ratio := float32(size) / float32(n)
-	for i, l, r := 0, 0, 0; i < n; i += 2 {
-		l, r = r, int(float32((i+2)>>1)*ratio)<<1
-		for j := l; j < r-1; j += 2 {
-			out[j] = pcm[i]
-			out[j+1] = pcm[i+1]
-		}
-	}
-	return out
 }
