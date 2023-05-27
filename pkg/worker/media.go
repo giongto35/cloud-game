@@ -118,11 +118,7 @@ func (r *Room) initAudio(srcHz int, conf config.Audio) {
 				r.log.Error().Err(err).Msgf("opus encode fail")
 				return
 			}
-			r.handleSample(data, frameDur, func(u *Session, s *webrtc.Sample) {
-				if err := u.SendAudio(s); err != nil {
-					r.log.Error().Err(err).Send()
-				}
-			})
+			r.handleSample(data, frameDur, func(u *Session, s *webrtc.Sample) error { return u.SendAudio(s) })
 		})
 	})
 }
@@ -156,18 +152,17 @@ func (r *Room) initVideo(width, height int, conf config.Video) {
 
 	r.vEncoder = encoder.NewVideoEncoder(enc, width, height, conf.Concurrency, r.log)
 
-	r.emulator.SetVideo(func(frame *emulator.GameFrame) {
-		if fr := r.vEncoder.Encode(frame.Data.RGBA); fr != nil {
-			r.handleSample(fr, frame.Duration, func(u *Session, s *webrtc.Sample) {
-				if err := u.SendVideo(s); err != nil {
-					r.log.Error().Err(err).Send()
-				}
-			})
+	r.emulator.SetVideo(func(raw *emulator.GameFrame) {
+		data := r.vEncoder.Encode(raw.Data.RGBA)
+		if data == nil {
+			r.log.Warn().Msgf("no data after video encoding")
+			return
 		}
+		r.handleSample(data, raw.Duration, func(u *Session, s *webrtc.Sample) error { return u.SendVideo(s) })
 	})
 }
 
-func (r *Room) handleSample(b []byte, d time.Duration, fn func(*Session, *webrtc.Sample)) {
+func (r *Room) handleSample(b []byte, d time.Duration, fn func(*Session, *webrtc.Sample) error) {
 	sample, _ := samplePool.Get().(*webrtc.Sample)
 	if sample == nil {
 		sample = new(webrtc.Sample)
@@ -176,7 +171,9 @@ func (r *Room) handleSample(b []byte, d time.Duration, fn func(*Session, *webrtc
 	sample.Duration = d
 	r.users.ForEach(func(u *Session) {
 		if u.IsConnected() {
-			fn(u, sample)
+			if err := fn(u, sample); err != nil {
+				r.log.Error().Err(err).Send()
+			}
 		}
 	})
 	samplePool.Put(sample)

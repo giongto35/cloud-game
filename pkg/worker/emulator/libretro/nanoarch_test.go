@@ -111,7 +111,11 @@ func (emu *EmulatorMock) loadRom(game string) {
 	if err != nil {
 		log.Fatal(err)
 	}
-	emu.SetViewport(emu.GetFrameSize())
+	w, h := emu.GetFrameSize()
+	if emu.conf.Scale == 0 {
+		emu.conf.Scale = 1
+	}
+	emu.SetViewport(w, h, emu.conf.Scale)
 }
 
 // shutdownEmulator closes the emulator and cleans its resources.

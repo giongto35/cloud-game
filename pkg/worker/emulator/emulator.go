@@ -22,7 +22,7 @@ type Emulator interface {
 	// Start is called after LoadGame
 	Start()
 	// SetViewport sets viewport size
-	SetViewport(width int, height int)
+	SetViewport(width int, height int, scale int)
 	// SetMainSaveName sets distinct name for saves naming
 	SetMainSaveName(name string)
 	// SaveGameState save game state

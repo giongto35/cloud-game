@@ -65,7 +65,7 @@ func NewRoom(id string, game games.GameMetadata, onClose func(*Room), conf confi
 	if room.emulator.HasVerticalFrame() {
 		w, h = h, w
 	}
-	room.emulator.SetViewport(w, h)
+	room.emulator.SetViewport(w, h, conf.Emulator.Scale)
 
 	room.initVideo(w, h, conf.Encoder.Video)
 	room.initAudio(int(room.emulator.GetSampleRate()), conf.Encoder.Audio)

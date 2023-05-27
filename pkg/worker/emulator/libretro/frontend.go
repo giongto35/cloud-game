@@ -189,10 +189,10 @@ func (f *Frontend) LoadGameState() error                  { return f.Load() }
 func (f *Frontend) HasVerticalFrame() bool                { return nano.rot != nil && nano.rot.IsEven }
 func (f *Frontend) SaveGameState() error                  { return f.Save() }
 func (f *Frontend) SetMainSaveName(name string)           { f.storage.SetMainSaveName(name) }
-func (f *Frontend) SetViewport(width int, height int) {
+func (f *Frontend) SetViewport(width int, height int, scale int) {
 	f.mu.Lock()
 	f.vw, f.vh = width, height
-	size := int(nano.sysAvInfo.geometry.max_width * nano.sysAvInfo.geometry.max_height)
+	size := int(nano.sysAvInfo.geometry.max_width) * scale * int(nano.sysAvInfo.geometry.max_height) * scale
 	f.canvas = image.NewCanvas(width, height, size)
 	f.mu.Unlock()
 }
