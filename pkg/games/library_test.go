@@ -25,16 +25,12 @@ func TestLibraryScan(t *testing.T) {
 		library := NewLib(config.Library{
 			BasePath:  test.directory,
 			Supported: []string{"gba", "zip", "nes"},
-			Ignored:   []string{"neogeo", "pgm"},
 		}, l)
 		library.Scan()
 		games := library.GetAll()
 
-		list := _map(games, func(meta GameMetadata) string {
-			return meta.Name
-		})
+		list := _map(games, func(g GameMetadata) string { return g.Name })
 
-		// ^2 complexity (;
 		all := true
 		for _, expect := range test.expected {
 			found := false
@@ -49,6 +45,20 @@ func TestLibraryScan(t *testing.T) {
 		if !all {
 			t.Errorf("Test fail for dir %v with %v != %v", test.directory, list, test.expected)
 		}
+	}
+}
+
+func Benchmark(b *testing.B) {
+	log := logger.Default()
+	logger.SetGlobalLevel(logger.Disabled)
+	library := NewLib(config.Library{
+		BasePath:  "../../assets/games",
+		Supported: []string{"gba", "zip", "nes"},
+	}, log)
+
+	for i := 0; i < b.N; i++ {
+		library.Scan()
+		_ = library.GetAll()
 	}
 }
 

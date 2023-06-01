@@ -1,10 +1,7 @@
 package games
 
 import (
-	"crypto/md5"
-	"fmt"
-	"io"
-	"os"
+	"io/fs"
 	"path/filepath"
 	"strings"
 	"sync"
@@ -18,8 +15,8 @@ import (
 // libConf is an optimized internal library configuration
 type libConf struct {
 	path      string
-	supported map[string]bool
-	ignored   map[string]bool
+	supported map[string]struct{}
+	ignored   map[string]struct{}
 	verbose   bool
 	watchMode bool
 }
@@ -37,9 +34,8 @@ type library struct {
 	games map[string]GameMetadata
 	log   *logger.Logger
 
-	// to restrict parallel execution
-	// or throttling
-	// !CAS would be better
+	// to restrict parallel execution or throttling
+	// for file watch mode
 	mu                sync.Mutex
 	isScanning        bool
 	isScanningDelayed bool
@@ -56,7 +52,6 @@ type FileExtensionWhitelist interface {
 }
 
 type GameMetadata struct {
-	uid string
 	// the display name of the game
 	Name string
 	// the game file extension (e.g. nes, n64)
@@ -150,16 +145,14 @@ func (lib *library) Scan() {
 	start := time.Now()
 	var games []GameMetadata
 	dir := lib.config.path
-	err := filepath.Walk(dir, func(path string, info os.FileInfo, err error) error {
+	err := filepath.WalkDir(dir, func(path string, info fs.DirEntry, err error) error {
 		if err != nil {
 			return err
 		}
 
-		if info != nil && !info.IsDir() && lib.isFileExtensionSupported(path) {
+		if info != nil && !info.IsDir() && lib.isExtAllowed(path) {
 			meta := getMetadata(path, dir)
-			meta.uid = hash(path)
-
-			if !lib.config.ignored[meta.Name] {
+			if _, ok := lib.config.ignored[meta.Name]; !ok {
 				games = append(games, meta)
 			}
 		}
@@ -239,12 +232,13 @@ func (lib *library) set(games []GameMetadata) {
 	lib.games = res
 }
 
-func (lib *library) isFileExtensionSupported(path string) bool {
+func (lib *library) isExtAllowed(path string) bool {
 	ext := filepath.Ext(path)
 	if ext == "" {
 		return false
 	}
-	return lib.config.supported[ext[1:]]
+	_, ok := lib.config.supported[ext[1:]]
+	return ok
 }
 
 // getMetadata returns game info from a path
@@ -278,20 +272,10 @@ func (lib *library) dumpLibrary() {
 		gameList.String(), len(lib.games), lib.lastScanDuration)
 }
 
-// hash makes an MD5 hash of the string
-func hash(str string) string {
-	h := md5.New()
-	_, err := io.WriteString(h, str)
-	if err != nil {
-		return ""
-	}
-	return fmt.Sprintf("%x", h.Sum(nil))
-}
-
-func toMap(list []string) map[string]bool {
-	res := make(map[string]bool)
+func toMap(list []string) map[string]struct{} {
+	res := make(map[string]struct{}, len(list))
 	for _, s := range list {
-		res[s] = true
+		res[s] = struct{}{}
 	}
 	return res
 }
