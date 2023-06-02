@@ -1,6 +1,7 @@
 package games
 
 import (
+	"fmt"
 	"io/fs"
 	"path/filepath"
 	"strings"
@@ -34,6 +35,8 @@ type library struct {
 	games map[string]GameMetadata
 	log   *logger.Logger
 
+	emuConf WithEmulatorInfo
+
 	// to restrict parallel execution or throttling
 	// for file watch mode
 	mu                sync.Mutex
@@ -47,8 +50,9 @@ type GameLibrary interface {
 	Scan()
 }
 
-type FileExtensionWhitelist interface {
+type WithEmulatorInfo interface {
 	GetSupportedExtensions() []string
+	GetEmulator(rom string, path string) string
 }
 
 type GameMetadata struct {
@@ -58,7 +62,8 @@ type GameMetadata struct {
 	Type string
 	Base string
 	// the game path relative to the library base path
-	Path string
+	Path   string
+	System string
 }
 
 func (g GameMetadata) FullPath(base string) string {
@@ -68,11 +73,7 @@ func (g GameMetadata) FullPath(base string) string {
 	return filepath.Join(base, g.Path)
 }
 
-func NewLib(conf config.Library, log *logger.Logger) GameLibrary {
-	return NewLibWhitelisted(conf, conf, log)
-}
-
-func NewLibWhitelisted(conf config.Library, filter FileExtensionWhitelist, log *logger.Logger) GameLibrary {
+func NewLib(conf config.Library, emu WithEmulatorInfo, log *logger.Logger) GameLibrary {
 	hasSource := true
 	dir, err := filepath.Abs(conf.BasePath)
 	if err != nil {
@@ -81,7 +82,7 @@ func NewLibWhitelisted(conf config.Library, filter FileExtensionWhitelist, log *
 	}
 
 	if len(conf.Supported) == 0 {
-		conf.Supported = filter.GetSupportedExtensions()
+		conf.Supported = emu.GetSupportedExtensions()
 	}
 
 	library := &library{
@@ -96,6 +97,7 @@ func NewLibWhitelisted(conf config.Library, filter FileExtensionWhitelist, log *
 		games:     map[string]GameMetadata{},
 		hasSource: hasSource,
 		log:       log,
+		emuConf:   emu,
 	}
 
 	if conf.WatchMode && hasSource {
@@ -152,6 +154,9 @@ func (lib *library) Scan() {
 
 		if info != nil && !info.IsDir() && lib.isExtAllowed(path) {
 			meta := getMetadata(path, dir)
+
+			meta.System = lib.emuConf.GetEmulator(meta.Type, meta.Path)
+
 			if _, ok := lib.config.ignored[meta.Name]; !ok {
 				games = append(games, meta)
 			}
@@ -258,7 +263,7 @@ func getMetadata(path string, basePath string) GameMetadata {
 func (lib *library) dumpLibrary() {
 	var gameList strings.Builder
 	for _, game := range lib.games {
-		gameList.WriteString("    " + game.Name + " (" + game.Path + ")" + "\n")
+		gameList.WriteString(fmt.Sprintf("    %5s   %s (%s)\n", game.System, game.Name, game.Path))
 	}
 
 	lib.log.Debug().Msgf("Lib dump\n"+

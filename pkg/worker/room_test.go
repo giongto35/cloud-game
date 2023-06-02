@@ -43,7 +43,7 @@ type roomMock struct {
 func (rm roomMock) Close() {
 	rm.Room.Close()
 	// hack: wait room destruction
-	time.Sleep(3 * time.Second)
+	time.Sleep(2 * time.Second)
 }
 
 func (rm roomMock) CloseNowait() { rm.Room.Close() }
@@ -64,9 +64,9 @@ var testTempDir = filepath.Join(os.TempDir(), "cloud-game-core-tests")
 
 // games
 var (
-	alwas = games.GameMetadata{Name: "Alwa's Awakening (Demo)", Type: "nes", Path: "Alwa's Awakening (Demo).nes"}
-	sushi = games.GameMetadata{Name: "Sushi The Cat", Type: "gba", Path: "Sushi The Cat.gba"}
-	fd    = games.GameMetadata{Name: "Florian Demo", Type: "n64", Path: "Sample Demo by Florian (PD).z64"}
+	alwas = games.GameMetadata{Name: "Alwa's Awakening (Demo)", Type: "nes", Path: "Alwa's Awakening (Demo).nes", System: "nes"}
+	sushi = games.GameMetadata{Name: "Sushi The Cat", Type: "gba", Path: "Sushi The Cat.gba", System: "gba"}
+	fd    = games.GameMetadata{Name: "Florian Demo", Type: "n64", Path: "Sample Demo by Florian (PD).z64", System: "n64"}
 )
 
 func init() {

@@ -14,10 +14,11 @@ type Launcher interface {
 }
 
 type AppMeta struct {
-	Name string
-	Type string
-	Base string
-	Path string
+	Name   string
+	Type   string
+	Base   string
+	Path   string
+	System string
 }
 
 type GameLauncher struct {
@@ -31,7 +32,7 @@ func (gl GameLauncher) FindAppByName(name string) (AppMeta, error) {
 	if game.Path == "" {
 		return AppMeta{}, fmt.Errorf("couldn't find game info for the game %v", name)
 	}
-	return AppMeta{Name: game.Name, Base: game.Base, Type: game.Type, Path: game.Path}, nil
+	return AppMeta{Name: game.Name, Base: game.Base, Type: game.Type, Path: game.Path, System: game.System}, nil
 }
 
 func (gl GameLauncher) ExtractAppNameFromUrl(name string) string { return ExtractGame(name) }
