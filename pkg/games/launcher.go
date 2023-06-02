@@ -1,6 +1,11 @@
 package games
 
-import "fmt"
+import (
+	"fmt"
+	"math/rand"
+	"strconv"
+	"strings"
+)
 
 type Launcher interface {
 	FindAppByName(name string) (AppMeta, error)
@@ -29,9 +34,7 @@ func (gl GameLauncher) FindAppByName(name string) (AppMeta, error) {
 	return AppMeta{Name: game.Name, Base: game.Base, Type: game.Type, Path: game.Path}, nil
 }
 
-func (gl GameLauncher) ExtractAppNameFromUrl(name string) string {
-	return GetGameNameFromRoomID(name)
-}
+func (gl GameLauncher) ExtractAppNameFromUrl(name string) string { return ExtractGame(name) }
 
 func (gl GameLauncher) GetAppNames() []string {
 	var gameList []string
@@ -39,4 +42,22 @@ func (gl GameLauncher) GetAppNames() []string {
 		gameList = append(gameList, game.Name)
 	}
 	return gameList
+}
+
+const separator = "___"
+
+// ExtractGame parses game room link returning the name of the game "encoded" there.
+func ExtractGame(roomID string) string {
+	parts := strings.Split(roomID, separator)
+	if len(parts) > 1 {
+		return parts[1]
+	}
+	return ""
+}
+
+// GenerateRoomID generate a unique room ID containing 16 digits.
+// RoomID contains random number + gameName
+// Next time when we only get roomID, we can launch game based on gameName
+func GenerateRoomID(title string) string {
+	return strconv.FormatInt(rand.Int63(), 16) + separator + title
 }
