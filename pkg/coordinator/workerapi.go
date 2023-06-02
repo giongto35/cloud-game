@@ -23,7 +23,7 @@ func (w *Worker) StartGame(id com.Uid, app games.AppMeta, req api.GameStartUserR
 	return api.UnwrapChecked[api.StartGameResponse](
 		w.Send(api.StartGame, api.StartGameRequest[com.Uid]{
 			StatefulRoom: StateRoom(id, req.RoomId),
-			Game:         api.GameInfo{Name: app.Name, Base: app.Base, Path: app.Path, Type: app.Type},
+			Game:         api.GameInfo{Name: app.Name, Base: app.Base, Path: app.Path, System: app.System, Type: app.Type},
 			PlayerIndex:  req.PlayerIndex,
 			Record:       req.Record,
 			RecordUser:   req.RecordUser,

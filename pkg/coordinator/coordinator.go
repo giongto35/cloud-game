@@ -14,7 +14,7 @@ import (
 )
 
 func New(conf config.CoordinatorConfig, log *logger.Logger) (services service.Group) {
-	lib := games.NewLibWhitelisted(conf.Coordinator.Library, conf.Emulator, log)
+	lib := games.NewLib(conf.Coordinator.Library, conf.Emulator, log)
 	lib.Scan()
 	hub := NewHub(conf, lib, log)
 	h, err := NewHTTPServer(conf, log, func(mux *httpx.Mux) *httpx.Mux {

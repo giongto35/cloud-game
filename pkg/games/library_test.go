@@ -10,14 +10,28 @@ import (
 func TestLibraryScan(t *testing.T) {
 	tests := []struct {
 		directory string
-		expected  []string
+		expected  []struct {
+			name   string
+			system string
+		}
 	}{
 		{
 			directory: "../../assets/games",
-			expected: []string{
-				"Alwa's Awakening (Demo)", "Sushi The Cat", "anguna",
+			expected: []struct {
+				name   string
+				system string
+			}{
+				{name: "Alwa's Awakening (Demo)", system: "nes"},
+				{name: "Sushi The Cat", system: "gba"},
+				{name: "anguna", system: "gba"},
 			},
 		},
+	}
+
+	emuConf := config.Emulator{Libretro: config.LibretroConfig{}}
+	emuConf.Libretro.Cores.List = map[string]config.LibretroCoreConfig{
+		"nes": {Roms: []string{"nes"}},
+		"gba": {Roms: []string{"gba"}},
 	}
 
 	l := logger.NewConsole(false, "w", false)
@@ -25,17 +39,15 @@ func TestLibraryScan(t *testing.T) {
 		library := NewLib(config.Library{
 			BasePath:  test.directory,
 			Supported: []string{"gba", "zip", "nes"},
-		}, l)
+		}, emuConf, l)
 		library.Scan()
 		games := library.GetAll()
-
-		list := _map(games, func(g GameMetadata) string { return g.Name })
 
 		all := true
 		for _, expect := range test.expected {
 			found := false
-			for _, game := range list {
-				if game == expect {
+			for _, game := range games {
+				if game.Name == expect.name && (expect.system != "" && expect.system == game.System) {
 					found = true
 					break
 				}
@@ -43,7 +55,7 @@ func TestLibraryScan(t *testing.T) {
 			all = all && found
 		}
 		if !all {
-			t.Errorf("Test fail for dir %v with %v != %v", test.directory, list, test.expected)
+			t.Errorf("Test fail for dir %v with %v != %v", test.directory, games, test.expected)
 		}
 	}
 }
@@ -54,18 +66,10 @@ func Benchmark(b *testing.B) {
 	library := NewLib(config.Library{
 		BasePath:  "../../assets/games",
 		Supported: []string{"gba", "zip", "nes"},
-	}, log)
+	}, config.Emulator{}, log)
 
 	for i := 0; i < b.N; i++ {
 		library.Scan()
 		_ = library.GetAll()
 	}
-}
-
-func _map(vs []GameMetadata, f func(info GameMetadata) string) []string {
-	vsm := make([]string, len(vs))
-	for i, v := range vs {
-		vsm[i] = f(v)
-	}
-	return vsm
 }
