@@ -18,8 +18,12 @@ type (
 	}
 	InitSessionUserResponse struct {
 		Ice   []IceServer `json:"ice"`
-		Games []string    `json:"games"`
+		Games []AppMeta   `json:"games"`
 		Wid   string      `json:"wid"`
+	}
+	AppMeta struct {
+		Title  string `json:"title"`
+		System string `json:"system"`
 	}
 	WebrtcAnswerUserRequest string
 	WebrtcUserIceCandidate  string

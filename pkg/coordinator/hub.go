@@ -72,7 +72,12 @@ func (h *Hub) handleUserConnection() http.HandlerFunc {
 		}
 		user.Bind(worker)
 		h.users.Add(user)
-		user.InitSession(worker.Id().String(), h.conf.Webrtc.IceServers, h.launcher.GetAppNames())
+		apps := h.launcher.GetAppNames()
+		list := make([]api.AppMeta, len(apps))
+		for i := range apps {
+			list[i] = api.AppMeta{Title: apps[i].Name, System: apps[i].System}
+		}
+		user.InitSession(worker.Id().String(), h.conf.Webrtc.IceServers, list)
 		log.Info().Str(logger.DirectionField, logger.MarkPlus).Msgf("user %s", user.Id())
 		<-done
 	}

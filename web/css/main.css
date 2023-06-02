@@ -508,7 +508,7 @@ body {
     font-size: 19px;
 }
 
-.menu-item div {
+.menu-item div:first-child {
     overflow: hidden;
     display: block;
     position: absolute;
@@ -532,6 +532,14 @@ body {
 
 .menu-item div .pick {
     overflow: unset;
+}
+
+.menu-item__info {
+    display: none;
+    color: white;
+    font-size: 50%;
+    position: absolute;
+    right: 15px;
 }
 
 .text-move {
