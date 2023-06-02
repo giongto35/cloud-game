@@ -23,19 +23,22 @@ const gameList = (() => {
     let gamesElList;
 
     const setGames = (gameList) => {
-        games = gameList !== null ? gameList.sort((a, b) => a > b ? 1 : -1) : [];
+        games = gameList !== null ? gameList.sort((a, b) => a.title > b.title ? 1 : -1) : [];
     };
 
     const render = () => {
         log.debug('[games] load game menu');
         listBox.innerHTML = games
-            .map(game => `<div class="menu-item"><div><span>${game}</span></div></div>`)
+            .map(game => `<div class="menu-item"><div><span>${game.title}</span></div><div class="menu-item__info">${game.system}</div></div>`)
             .join('');
     };
 
+    const getTitleEl = (parent) => parent.firstChild.firstChild
+    const getDescEl = (parent) => parent.children[1]
+
     const show = () => {
         render();
-        gamesElList = listBox.querySelectorAll(`.menu-item span`);
+        gamesElList = listBox.querySelectorAll(`.menu-item`);
         menuItemChoice.style.display = "block";
         pickGame();
     };
@@ -44,7 +47,8 @@ const gameList = (() => {
     const clearPrev = () => {
         let prev = gamesElList[gameIndex]
         if (prev) {
-            prev.classList.remove('pick', 'text-move');
+            getTitleEl(prev).classList.remove('pick', 'text-move');
+            getDescEl(prev).style.display = 'none'
         }
     }
 
@@ -54,8 +58,12 @@ const gameList = (() => {
 
         const i = gamesElList[gameIndex];
         if (i) {
-            setTimeout(() => i.classList.add('pick'), 50)
-            !menuInSelection && i.classList.add('text-move')
+            const title = getTitleEl(i)
+            setTimeout(() => {
+                title.classList.add('pick')
+                !menuInSelection && (getDescEl(i).style.display = 'block')
+            }, 50)
+            !menuInSelection && title.classList.add('text-move')
         }
 
         // transition menu box
@@ -78,7 +86,11 @@ const gameList = (() => {
 
     const stopGamePickerTimer = () => {
         menuInSelection = false
-        gamesElList[gameIndex] && gamesElList[gameIndex].classList.add('text-move')
+        const item = gamesElList[gameIndex]
+        if (item) {
+            getTitleEl(item).classList.add('text-move')
+            getDescEl(item).style.display = 'block'
+        }
 
         if (gamePickTimer === null) return;
         clearInterval(gamePickTimer);
@@ -86,7 +98,7 @@ const gameList = (() => {
     };
 
     const onMenuPressed = (newPosition) => {
-        clearPrev()
+        clearPrev(true)
         listBox.style.transition = '';
         listBox.style.top = `${menuTop - newPosition}px`;
     };
@@ -106,6 +118,6 @@ const gameList = (() => {
         pickGame: pickGame,
         show: show,
         set: setGames,
-        getCurrentGame: () => games[gameIndex]
+        getCurrentGame: () => games[gameIndex].title
     }
 })(document, event, log);

@@ -22,10 +22,9 @@ func (u *User) CheckLatency(req api.CheckLatencyUserResponse) (api.CheckLatencyU
 }
 
 // InitSession signals the user that the app is ready to go.
-func (u *User) InitSession(wid string, ice []config.IceServer, games []string) {
+func (u *User) InitSession(wid string, ice []config.IceServer, games []api.AppMeta) {
 	u.Notify(api.InitSession, api.InitSessionUserResponse{
-		// don't do this at home
-		Ice:   *(*[]api.IceServer)(unsafe.Pointer(&ice)),
+		Ice:   *(*[]api.IceServer)(unsafe.Pointer(&ice)), // don't do this at home
 		Games: games,
 		Wid:   wid,
 	})

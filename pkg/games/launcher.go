@@ -10,7 +10,7 @@ import (
 type Launcher interface {
 	FindAppByName(name string) (AppMeta, error)
 	ExtractAppNameFromUrl(name string) string
-	GetAppNames() []string
+	GetAppNames() []AppMeta
 }
 
 type AppMeta struct {
@@ -37,12 +37,11 @@ func (gl GameLauncher) FindAppByName(name string) (AppMeta, error) {
 
 func (gl GameLauncher) ExtractAppNameFromUrl(name string) string { return ExtractGame(name) }
 
-func (gl GameLauncher) GetAppNames() []string {
-	var gameList []string
+func (gl GameLauncher) GetAppNames() (apps []AppMeta) {
 	for _, game := range gl.lib.GetAll() {
-		gameList = append(gameList, game.Name)
+		apps = append(apps, AppMeta{Name: game.Name, System: game.System})
 	}
-	return gameList
+	return
 }
 
 const separator = "___"
