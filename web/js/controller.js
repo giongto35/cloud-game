@@ -12,16 +12,6 @@
 
     // ping-pong
     // let pingPong = 0;
-
-    const DIR = (() => {
-        return {
-            IDLE: 'idle',
-            UP: 'up',
-            DOWN: 'down',
-        }
-    })();
-    let prevDir = DIR.IDLE;
-
     const menuScreen = document.getElementById('menu-screen');
     const helpOverlay = document.getElementById('help-overlay');
     const playerIndex = document.getElementById('playeridx');
@@ -161,7 +151,7 @@
         // so there's no point in doing this and this' really confusing
 
         api.game.start(
-            gameList.getCurrentGame(),
+            gameList.selected,
             room.getId(),
             recording.isActive(),
             recording.getUser(),
@@ -340,32 +330,12 @@
             menu: {
                 ..._default,
                 name: 'menu',
-                axisChanged: (id, value) => {
-                    if (id === 1) { // Left Stick, Y Axis
-                        let dir = DIR.IDLE;
-                        if (value < -0.5) dir = DIR.UP;
-                        if (value > 0.5) dir = DIR.DOWN;
-                        if (dir !== prevDir) {
-                            prevDir = dir;
-                            switch (dir) {
-                                case DIR.IDLE:
-                                    gameList.stopGamePickerTimer();
-                                    break;
-                                case DIR.UP:
-                                    gameList.startGamePickerTimer(true);
-                                    break;
-                                case DIR.DOWN:
-                                    gameList.startGamePickerTimer(false);
-                                    break;
-                            }
-                        }
-                    }
-                },
+                axisChanged: (id, val) => id === 1 && gameList.scroll(val < -.5 ? -1 : val > .5 ? 1 : 0),
                 keyPress: (key) => {
                     switch (key) {
                         case KEY.UP:
                         case KEY.DOWN:
-                            gameList.startGamePickerTimer(key === KEY.UP);
+                            gameList.scroll(key === KEY.UP ? -1 : 1)
                             break;
                     }
                 },
@@ -373,7 +343,7 @@
                     switch (key) {
                         case KEY.UP:
                         case KEY.DOWN:
-                            gameList.stopGamePickerTimer();
+                            gameList.scroll(0);
                             break;
                         case KEY.JOIN:
                         case KEY.A:
