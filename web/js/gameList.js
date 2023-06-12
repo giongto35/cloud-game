@@ -3,121 +3,228 @@
  * @version 1
  */
 const gameList = (() => {
-    // state
-    let games = [];
-    let gameIndex = 1;
-    let gamePickTimer = null;
+    const TOP_POSITION = 102
+    const SELECT_THRESHOLD_MS = 160
 
-    // UI
-    const listBox = document.getElementById('menu-container');
-    const menuItemChoice = document.getElementById('menu-item-choice');
+    const games = (() => {
+        let list = [], index = 0
+        return {
+            get index() {
+                return index
+            },
+            get list() {
+                return list
+            },
+            get selected() {
+                return list[index].title // selected by the game title, oof
+            },
+            set index(i) {
+                //-2 |
+                //-1 | |
+                // 0 < | <
+                // 1   | |
+                // 2 < < |
+                //+1 |   |
+                //+2 |
+                index = i < -1 ? i = 0 :
+                    i > list.length ? i = list.length - 1 :
+                        (i % list.length + list.length) % list.length
+            },
+            set: (data = []) => list = data.sort((a, b) => a.title > b.title ? 1 : -1),
+            empty: () => list.length === 0
+        }
+    })()
 
-    const MENU_TOP_POSITION = 102;
-    const MENU_SELECT_THRESHOLD_MS = 180;
-    let menuTop = MENU_TOP_POSITION;
-    let menuInSelection = false;
-    const MENU_TRANSITION_DEFAULT = `top ${MENU_SELECT_THRESHOLD_MS}ms`;
+    const scroll = ((DEFAULT_INTERVAL) => {
+        const state = {
+            IDLE: 0, UP: -1, DOWN: 1, DRAG: 3
+        }
+        let last = state.IDLE
+        let _si
+        let onShift, onStop
 
-    listBox.style.transition = MENU_TRANSITION_DEFAULT;
+        const shift = (delta) => {
+            if (scroll.scrolling) return
+            onShift(delta)
+            // velocity?
+            // keep rolling the game list if the button is pressed
+            _si = setInterval(() => onShift(delta), DEFAULT_INTERVAL)
+        }
 
-    let gamesElList;
+        const stop = () => {
+            onStop()
+            _si && (clearInterval(_si) && (_si = null))
+        }
 
-    const setGames = (gameList) => {
-        games = gameList !== null ? gameList.sort((a, b) => a.title > b.title ? 1 : -1) : [];
-    };
+        const handle = {[state.IDLE]: stop, [state.UP]: shift, [state.DOWN]: shift, [state.DRAG]: null}
 
-    const render = () => {
-        log.debug('[games] load game menu');
-        listBox.innerHTML = games
-            .map(game => `<div class="menu-item"><div><span>${game.title}</span></div><div class="menu-item__info">${game.system}</div></div>`)
-            .join('');
-    };
+        return {
+            scroll: (move = state.IDLE) => {
+                handle[move] && handle[move](move)
+                last = move
+            },
+            get scrolling() {
+                return last !== state.IDLE
+            },
+            set onShift(fn) {
+                onShift = fn
+            },
+            set onStop(fn) {
+                onStop = fn
+            },
+            state,
+            last: () => last
+        }
+    })(SELECT_THRESHOLD_MS)
 
-    const getTitleEl = (parent) => parent.firstChild.firstChild
-    const getDescEl = (parent) => parent.children[1]
+    const ui = (() => {
+        const rootEl = document.getElementById('menu-container')
+        const choiceMarkerEl = document.getElementById('menu-item-choice')
+
+        const TRANSITION_DEFAULT = `top ${SELECT_THRESHOLD_MS}ms`
+        let listTopPos = TOP_POSITION
+
+        rootEl.style.transition = TRANSITION_DEFAULT
+
+        let onTransitionEnd = () => ({})
+
+        rootEl.addEventListener('transitionend', () => onTransitionEnd())
+
+        let items = []
+
+        const item = (parent) => {
+            const title = parent.firstChild.firstChild
+            const desc = parent.children[1]
+
+            const _desc = {
+                hide: () => gui.hide(desc),
+                show: async () => {
+                    gui.show(desc)
+                    await gui.anim.fadeIn(desc, .054321)
+                },
+            }
+
+            const _title = {
+                animate: () => title.classList.add('text-move'),
+                pick: () => title.classList.add('pick'),
+                reset: () => title.classList.remove('pick', 'text-move'),
+            }
+
+            const clear = () => {
+                _title.reset()
+                _desc.hide()
+            }
+
+            return {
+                get description() {
+                    return _desc
+                },
+                get title() {
+                    return _title
+                },
+                clear,
+            }
+        }
+
+        const render = () => {
+            rootEl.innerHTML = games.list.map(game =>
+                `<div class="menu-item">` +
+                `<div><span>${game.title}</span></div>` +
+                `<div class="menu-item__info hidden">${game.system}</div>` +
+                `</div>`)
+                .join('')
+            items = [...rootEl.querySelectorAll('.menu-item')].map(x => item(x))
+        }
+
+        return {
+            get selected() {
+                return items[games.index]
+            },
+            get roundIndex() {
+                const closest = Math.round((listTopPos - TOP_POSITION) / -36)
+                return closest < 0 ? 0 :
+                    closest > games.list.length - 1 ? games.list.length - 1 :
+                        closest // don't wrap the list on drag
+            },
+            set onTransitionEnd(x) {
+                onTransitionEnd = x
+            },
+            set pos(idx) {
+                listTopPos = TOP_POSITION - idx * 36
+                rootEl.style.top = `${listTopPos}px`
+            },
+            drag: {
+                startPos: (pos) => {
+                    rootEl.style.top = `${listTopPos - pos}px`
+                    rootEl.style.transition = ''
+                },
+                stopPos: (pos) => {
+                    listTopPos -= pos
+                    rootEl.style.transition = TRANSITION_DEFAULT
+                },
+            },
+            render,
+            marker: {
+                show: () => gui.show(choiceMarkerEl)
+            }
+        }
+    })(TOP_POSITION, SELECT_THRESHOLD_MS, games)
 
     const show = () => {
-        render();
-        gamesElList = listBox.querySelectorAll(`.menu-item`);
-        menuItemChoice.style.display = "block";
-        pickGame();
-    };
+        ui.render()
+        ui.marker.show() // we show square pseudo-selection marker only after rendering
+        scroll.scroll(scroll.state.DOWN) // interactively moves games select down
+        scroll.scroll(scroll.state.IDLE)
+    }
 
-    const bounds = (i = gameIndex) => (i % games.length + games.length) % games.length
-    const clearPrev = () => {
-        let prev = gamesElList[gameIndex]
-        if (prev) {
-            getTitleEl(prev).classList.remove('pick', 'text-move');
-            getDescEl(prev).style.display = 'none'
+    const select = (index) => {
+        ui.selected && ui.selected.clear()
+        games.index = index
+        ui.pos = games.index
+    }
+
+    scroll.onShift = (delta) => select(games.index + delta)
+
+    let hasTransition = true // needed for cases when MENU_RELEASE called instead MENU_PRESSED
+
+    scroll.onStop = () => {
+        const item = ui.selected
+        if (item) {
+            item.title.pick()
+            item.title.animate()
+            hasTransition ? (ui.onTransitionEnd = item.description.show) : item.description.show()
         }
     }
 
-    const pickGame = (index) => {
-        clearPrev()
-        gameIndex = bounds(index)
+    event.sub(MENU_PRESSED, (position) => {
+        if (games.empty()) return
+        hasTransition = false
+        scroll.scroll(scroll.state.DRAG)
+        ui.selected && ui.selected.clear()
+        ui.drag.startPos(position)
+    })
 
-        const i = gamesElList[gameIndex];
-        if (i) {
-            const title = getTitleEl(i)
-            setTimeout(() => {
-                title.classList.add('pick')
-                !menuInSelection && (getDescEl(i).style.display = 'block')
-            }, 50)
-            !menuInSelection && title.classList.add('text-move')
-        }
-
-        // transition menu box
-        menuTop = MENU_TOP_POSITION - gameIndex * 36;
-        listBox.style.top = `${menuTop}px`;
-    };
-
-    const startGamePickerTimer = (upDirection) => {
-        menuInSelection = true
-        if (gamePickTimer !== null) return;
-        const shift = upDirection ? -1 : 1;
-        pickGame(gameIndex + shift);
-
-        // velocity?
-        // keep rolling the game list if the button is pressed
-        gamePickTimer = setInterval(() => {
-            pickGame(gameIndex + shift, true);
-        }, MENU_SELECT_THRESHOLD_MS);
-    };
-
-    const stopGamePickerTimer = () => {
-        menuInSelection = false
-        const item = gamesElList[gameIndex]
-        if (item) {
-            getTitleEl(item).classList.add('text-move')
-            getDescEl(item).style.display = 'block'
-        }
-
-        if (gamePickTimer === null) return;
-        clearInterval(gamePickTimer);
-        gamePickTimer = null;
-    };
-
-    const onMenuPressed = (newPosition) => {
-        clearPrev(true)
-        listBox.style.transition = '';
-        listBox.style.top = `${menuTop - newPosition}px`;
-    };
-
-    const onMenuReleased = (position) => {
-        listBox.style.transition = MENU_TRANSITION_DEFAULT
-        menuTop -= position;
-        pickGame(Math.round((menuTop - MENU_TOP_POSITION) / -36));
-    };
-
-    event.sub(MENU_PRESSED, onMenuPressed);
-    event.sub(MENU_RELEASED, onMenuReleased);
+    event.sub(MENU_RELEASED, (position) => {
+        if (games.empty()) return
+        ui.drag.stopPos(position)
+        select(ui.roundIndex)
+        hasTransition = !hasTransition
+        scroll.scroll(scroll.state.IDLE)
+        hasTransition = true
+    })
 
     return {
-        startGamePickerTimer: startGamePickerTimer,
-        stopGamePickerTimer: stopGamePickerTimer,
-        pickGame: pickGame,
-        show: show,
-        set: setGames,
-        getCurrentGame: () => games[gameIndex].title
+        scroll: (x) => {
+            if (games.empty()) return
+            scroll.scroll(x)
+        },
+        get selected() {
+            return games.selected
+        },
+        set: games.set,
+        show: () => {
+            if (games.empty()) return
+            show()
+        },
     }
-})(document, event, log);
+})(document, event, gui)

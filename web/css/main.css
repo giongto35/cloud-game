@@ -535,7 +535,6 @@ body {
 }
 
 .menu-item__info {
-    display: none;
     color: white;
     font-size: 50%;
     position: absolute;
