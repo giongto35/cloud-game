@@ -261,9 +261,6 @@ body {
     background-image: url('/img/ui/bt REC.png');
 }
 
-.record {
-}
-
 .record-user {
     position: absolute;
     padding-left: 6px;
@@ -293,7 +290,6 @@ body {
     left: 4px;
     top: 7px;
 }
-
 
 .record.blink:before {
     animation: blinker 1s linear infinite;
@@ -382,36 +378,6 @@ body {
     position: absolute;
     top: 0;
     left: 460px;
-}
-
-@-webkit-keyframes blink {
-    0% {
-        background: #7a7e7d;
-    }
-
-    100% {
-        background: yellow;
-    }
-}
-
-@-moz-keyframes blink {
-    0% {
-        background: #7a7e7d;
-    }
-
-    100% {
-        background: yellow;
-    }
-}
-
-@keyframes blink {
-    0% {
-        background: #7a7e7d;
-    }
-
-    100% {
-        background: yellow;
-    }
 }
 
 #room-txt {
