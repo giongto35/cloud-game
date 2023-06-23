@@ -182,6 +182,10 @@ emulator:
       #       noticeable video stutter (with the current frame rendering time calculations).
       #   - options ([]string) a list of Libretro core options for tweaking.
       #       All keys of the options should be in the double quotes in order to preserve upper-case symbols.
+      #   - hacks ([]string) a list of hacks.
+      #       Available:
+      #       - skip_hw_context_destroy -- don't destroy OpenGL context during Libretro core deinit.
+      #                                    May help with crashes, for example, with PPSSPP.
       list:
         gba:
           lib: mgba_libretro

@@ -108,6 +108,7 @@ func (f *Frontend) LoadMetadata(emu string) {
 	conf := f.conf.GetLibretroCoreConfig(emu)
 	meta := emulator.Metadata{
 		AutoGlContext: conf.AutoGlContext,
+		Hacks:         conf.Hacks,
 		HasMultitap:   conf.HasMultitap,
 		HasVFR:        conf.VFR,
 		IsGlAllowed:   conf.IsGlAllowed,

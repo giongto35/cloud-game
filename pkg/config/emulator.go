@@ -61,6 +61,7 @@ type LibretroCoreConfig struct {
 	AltRepo       bool
 	AutoGlContext bool // hack: keep it here to pass it down the emulator
 	Folder        string
+	Hacks         []string
 	HasMultitap   bool
 	Height        int
 	IsGlAllowed   bool

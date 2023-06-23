@@ -78,6 +78,8 @@ var (
 	cSystemDirectory *C.char
 	cUserName        *C.char
 
+	hackSkipHwContextDestroy bool
+
 	initOnce sync.Once
 )
 
@@ -420,12 +422,15 @@ func initVideo() {
 
 //export deinitVideo
 func deinitVideo() {
-	C.bridge_context_reset(nano.v.hw.context_destroy)
+	if !hackSkipHwContextDestroy {
+		C.bridge_context_reset(nano.v.hw.context_destroy)
+	}
 	if err := sdlCtx.Deinit(); err != nil {
 		libretroLogger.Error().Err(err).Msg("deinit fail")
 	}
 	nano.v.isGl = false
 	nano.v.autoGlContext = false
+	hackSkipHwContextDestroy = false
 }
 
 var (
@@ -460,6 +465,9 @@ func coreLoad(meta emulator.Metadata) {
 	usesLibCo = meta.UsesLibCo
 	nano.v.autoGlContext = meta.AutoGlContext
 	hasVFR = meta.HasVFR
+
+	// hacks
+	hackSkipHwContextDestroy = meta.HasHack("skip_hw_context_destroy")
 
 	nano.options = &meta.Options
 

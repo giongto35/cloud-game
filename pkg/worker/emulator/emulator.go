@@ -52,6 +52,16 @@ type Metadata struct {
 	HasMultitap     bool
 	HasVFR          bool
 	Options         map[string]string
+	Hacks           []string
+}
+
+func (m Metadata) HasHack(h string) bool {
+	for _, n := range m.Hacks {
+		if h == n {
+			return true
+		}
+	}
+	return false
 }
 
 type (
