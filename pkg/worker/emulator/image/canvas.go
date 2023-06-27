@@ -86,12 +86,13 @@ func (c *Canvas) Draw(encoding uint32, rot *Rotate, w, h, packedW, bpp int, data
 
 	// rescale
 	if dst.Rect.Dx() != c.w || dst.Rect.Dy() != c.h {
-		ww, hh := c.w, c.h
+		ww := c.w
+		hh := c.h
 		// w, h supposedly have been swapped before
 		if c.vertical {
-			ww, hh = hh, ww
+			ww, hh = c.h, c.w
 		}
-		out := c.Get(c.w, c.h)
+		out := c.Get(ww, hh)
 		Resize(ScaleNearestNeighbour, dst.RGBA, out.RGBA)
 		c.Put(dst)
 		return out

@@ -13,8 +13,6 @@ import (
 )
 
 type pngStream struct {
-	videoStream
-
 	dir string
 	e   *png.Encoder
 	id  uint32

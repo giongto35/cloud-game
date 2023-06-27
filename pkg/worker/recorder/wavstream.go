@@ -1,10 +1,11 @@
 package recorder
 
-import "encoding/binary"
+import (
+	"encoding/binary"
+	"errors"
+)
 
 type wavStream struct {
-	audioStream
-
 	frequency int
 	wav       *file
 }
@@ -33,14 +34,20 @@ func (w *wavStream) Close() (err error) {
 	err = w.wav.Flush()
 	size, er := w.wav.Size()
 	if er != nil {
-		err = er
+		err = errors.Join(err, er)
 	}
 	if size > 0 {
 		// write an actual RIFF header
-		err = w.wav.WriteAtStart(rIFFWavHeader(uint32(size), w.frequency))
-		err = w.wav.Flush()
+		if er = w.wav.WriteAtStart(rIFFWavHeader(uint32(size), w.frequency)); er != nil {
+			err = errors.Join(err, er)
+		}
+		if er = w.wav.Flush(); er != nil {
+			err = errors.Join(err, er)
+		}
 	}
-	err = w.wav.Close()
+	if er = w.wav.Close(); er != nil {
+		err = errors.Join(err, er)
+	}
 	return
 }
 

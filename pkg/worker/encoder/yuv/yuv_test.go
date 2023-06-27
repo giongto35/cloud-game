@@ -246,18 +246,12 @@ func TestGen24bitFull(t *testing.T) {
 		}
 	}
 
-	f, err := os.Create("outimage.png")
-	if err != nil {
-		// Handle error
-	}
+	f, _ := os.Create("out_image.png")
 	defer func() { _ = f.Close() }()
 
 	// Encode to `PNG` with `DefaultCompression` level
 	// then save to file
-	err = png.Encode(f, img)
-	if err != nil {
-		// Handle error
-	}
+	_ = png.Encode(f, img)
 }
 
 func linear(a, b, x float64) float64 { return (x - a) / (b - a) }

@@ -162,9 +162,9 @@ func (vpx *Vpx) IntraRefresh() {
 }
 
 func (vpx *Vpx) Shutdown() error {
-	if &vpx.image != nil {
-		C.vpx_img_free(&vpx.image)
-	}
+	//if &vpx.image != nil {
+	C.vpx_img_free(&vpx.image)
+	//}
 	C.vpx_codec_destroy(&vpx.codecCtx)
 	return nil
 }

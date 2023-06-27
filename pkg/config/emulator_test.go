@@ -29,9 +29,9 @@ func TestGetEmulator(t *testing.T) {
 		},
 		{
 			rom:  "nes",
-			path: "test/game.nes",
+			path: "test2/game.nes",
 			config: map[string]LibretroCoreConfig{
-				"snes": {Roms: []string{"nes"}},
+				"snes": {Roms: []string{"snes"}},
 				"nes":  {Roms: []string{"nes"}},
 			},
 			emulator: "nes",
