@@ -48,7 +48,7 @@ func New(conf config.WorkerConfig, log *logger.Logger, done chan struct{}) (serv
 	}
 	services.Add(h)
 	if conf.Worker.Monitoring.IsEnabled() {
-		services.Add(monitoring.New(conf.Worker.Monitoring, h.GetHost(), log))
+		services.Add(monitoring.New(conf.Worker.Monitoring, conf.Worker.Server, h.GetHost(), log))
 	}
 	st, err := GetCloudStorage(conf.Storage.Provider, conf.Storage.Key)
 	if err != nil {
