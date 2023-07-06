@@ -53,6 +53,7 @@ func New(conf config.Monitoring, servConf config.Server, baseAddr string, log *l
 		},
 		httpx.WithPortRoll(true),
 		httpx.WithServerConfig(servConf),
+		httpx.HttpsRedirect(false),
 		httpx.WithLogger(log),
 	)
 	if err != nil {
