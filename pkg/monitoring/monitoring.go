@@ -23,7 +23,7 @@ type Monitoring struct {
 
 // New creates new monitoring service.
 // The tag param specifies owner label for logs.
-func New(conf config.Monitoring, servConf config.Server, baseAddr string, log *logger.Logger) *Monitoring {
+func New(conf config.Monitoring, baseAddr string, log *logger.Logger) *Monitoring {
 	serv, err := httpx.NewServer(
 		net.JoinHostPort(baseAddr, strconv.Itoa(conf.Port)),
 		func(s *httpx.Server) httpx.Handler {
@@ -52,7 +52,6 @@ func New(conf config.Monitoring, servConf config.Server, baseAddr string, log *l
 			return h
 		},
 		httpx.WithPortRoll(true),
-		httpx.WithServerConfig(servConf),
 		httpx.HttpsRedirect(false),
 		httpx.WithLogger(log),
 	)

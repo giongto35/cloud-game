@@ -28,7 +28,7 @@ func New(conf config.CoordinatorConfig, log *logger.Logger) (services service.Gr
 	}
 	services.Add(hub, h)
 	if conf.Coordinator.Monitoring.IsEnabled() {
-		services.Add(monitoring.New(conf.Coordinator.Monitoring, conf.Coordinator.Server, h.GetHost(), log))
+		services.Add(monitoring.New(conf.Coordinator.Monitoring, h.GetHost(), log))
 	}
 	return
 }

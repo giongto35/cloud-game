@@ -89,7 +89,7 @@ func RequestToHandshake(data string) (*api.ConnectionRequest[com.Uid], error) {
 	}
 	handshake, err := api.UnwrapChecked[api.ConnectionRequest[com.Uid]](base64.URLEncoding.DecodeString(data))
 	if err != nil || handshake == nil {
-		return nil, fmt.Errorf("%v (%v)", err, handshake)
+		return nil, fmt.Errorf("%w (%v)", err, handshake)
 	}
 	return handshake, nil
 }

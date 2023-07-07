@@ -1,6 +1,7 @@
 package httpx
 
 import (
+	"errors"
 	"fmt"
 	"net/http"
 	"net/url"
@@ -133,13 +134,12 @@ func (s *Server) run() {
 	} else {
 		err = s.Serve(*s.listener)
 	}
-	switch err {
-	case http.ErrServerClosed:
+
+	if errors.Is(err, http.ErrServerClosed) {
 		s.log.Debug().Msgf("%s server was closed", protocol)
 		return
-	default:
-		s.log.Error().Err(err)
 	}
+	s.log.Error().Err(err)
 }
 
 func (s *Server) Stop() error {
