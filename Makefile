@@ -26,7 +26,7 @@ build.coordinator:
 build.worker:
 	mkdir -p bin/
 	CGO_CFLAGS=${CGO_CFLAGS} CGO_LDFLAGS=${CGO_LDFLAGS} \
-		go build -buildmode=exe $(if $(GO_TAGS),-tags $(GO_TAGS),) \
+		go build -pgo=auto -buildmode=exe $(if $(GO_TAGS),-tags $(GO_TAGS),) \
 		-ldflags "-w -s -X 'main.Version=$(GIT_VERSION)'" $(EXT_WFLAGS) \
 		-o bin/ ./cmd/worker
 
@@ -40,7 +40,7 @@ dev.build: compile build
 dev.build-local:
 	mkdir -p bin/
 	go build -o bin/ ./cmd/coordinator
-	CGO_CFLAGS=${CGO_CFLAGS} CGO_LDFLAGS=${CGO_LDFLAGS} go build -o bin/ ./cmd/worker
+	CGO_CFLAGS=${CGO_CFLAGS} CGO_LDFLAGS=${CGO_LDFLAGS} go build -pgo=auto -o bin/ ./cmd/worker
 
 dev.run: dev.build-local
 	./bin/coordinator &	./bin/worker
