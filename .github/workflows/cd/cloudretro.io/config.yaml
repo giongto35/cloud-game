@@ -32,3 +32,5 @@ emulator:
         mame:
           options:
             fbneo-cpu-speed-adjust: 200%
+        pcsx:
+          altRepo: true

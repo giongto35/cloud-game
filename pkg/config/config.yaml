@@ -150,7 +150,7 @@ emulator:
         # a secondary repo to use i.e. for not found in the main cores
         secondary:
           type: github
-          url: https://github.com/sergystepanov/libretro-spiegel/blob/main
+          url: https://github.com/sergystepanov/libretro-spiegel/raw/main
           compression: zip
       # Libretro core configuration
       #
