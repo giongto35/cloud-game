@@ -19,7 +19,7 @@ type HasServerInfo interface {
 }
 
 func NewUser(sock *com.Connection, log *logger.Logger) *User {
-	conn := com.NewConnection[api.PT, api.In[com.Uid], api.Out](sock, com.NewUid(), log)
+	conn := com.NewConnection[api.PT, api.In[com.Uid], api.Out, *api.Out](sock, com.NewUid(), log)
 	return &User{
 		Connection: conn,
 		log: log.Extend(log.With().

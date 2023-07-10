@@ -8,6 +8,9 @@ import (
 	"github.com/giongto35/cloud-game/v3/pkg/config"
 	"github.com/giongto35/cloud-game/v3/pkg/games"
 	"github.com/giongto35/cloud-game/v3/pkg/network/webrtc"
+	"github.com/giongto35/cloud-game/v3/pkg/worker/caged"
+	"github.com/giongto35/cloud-game/v3/pkg/worker/media"
+	"github.com/giongto35/cloud-game/v3/pkg/worker/room"
 	"github.com/goccy/go-json"
 )
 
@@ -25,8 +28,8 @@ func buildConnQuery(id com.Uid, conf config.Worker, address string) (string, err
 	})
 }
 
-func (c *coordinator) HandleWebrtcInit(rq api.WebrtcInitRequest[com.Uid], w *Worker, connApi *webrtc.ApiFactory) api.Out {
-	peer := webrtc.New(c.log, connApi)
+func (c *coordinator) HandleWebrtcInit(rq api.WebrtcInitRequest[com.Uid], w *Worker, factory *webrtc.ApiFactory) api.Out {
+	peer := webrtc.New(c.log, factory)
 	localSDP, err := peer.NewCall(w.conf.Encoder.Video.Codec, "opus", func(data any) {
 		candidate, err := toBase64Json(data)
 		if err != nil {
@@ -45,113 +48,114 @@ func (c *coordinator) HandleWebrtcInit(rq api.WebrtcInitRequest[com.Uid], w *Wor
 		return api.EmptyPacket
 	}
 
-	// use user uid from the coordinator
-	user := NewSession(peer, rq.Id)
+	user := room.NewGameSession(rq.Id, peer) // use user uid from the coordinator
 	w.router.AddUser(user)
-	c.log.Info().Str("id", rq.Id.String()).Msgf("Peer connection (uid:%s)", user.Id())
+	c.log.Info().Msgf("Peer connection: %s", user.Id())
 
 	return api.Out{Payload: sdp}
 }
 
 func (c *coordinator) HandleWebrtcAnswer(rq api.WebrtcAnswerRequest[com.Uid], w *Worker) {
-	if user := w.router.GetUser(rq.Id); user != nil {
-		if err := user.GetPeerConn().SetRemoteSDP(rq.Sdp, fromBase64Json); err != nil {
+	if user := w.router.FindUser(rq.Id); user != nil {
+		if err := room.WithWebRTC(user.Session).SetRemoteSDP(rq.Sdp, fromBase64Json); err != nil {
 			c.log.Error().Err(err).Msgf("cannot set remote SDP of client [%v]", rq.Id)
 		}
 	}
 }
 
 func (c *coordinator) HandleWebrtcIceCandidate(rs api.WebrtcIceCandidateRequest[com.Uid], w *Worker) {
-	if user := w.router.GetUser(rs.Id); user != nil {
-		if err := user.GetPeerConn().AddCandidate(rs.Candidate, fromBase64Json); err != nil {
+	if user := w.router.FindUser(rs.Id); user != nil {
+		if err := room.WithWebRTC(user.Session).AddCandidate(rs.Candidate, fromBase64Json); err != nil {
 			c.log.Error().Err(err).Msgf("cannot add ICE candidate of the client [%v]", rs.Id)
 		}
 	}
 }
 
 func (c *coordinator) HandleGameStart(rq api.StartGameRequest[com.Uid], w *Worker) api.Out {
-	user := w.router.GetUser(rq.Id)
+	user := w.router.FindUser(rq.Id)
 	if user == nil {
 		c.log.Error().Msgf("no user [%v]", rq.Id)
 		return api.EmptyPacket
 	}
-	w.log.Info().Msgf("Starting game: %v", rq.Game.Name)
+	user.Index = rq.PlayerIndex
 
-	room := w.router.GetRoom(rq.Rid)
-	if room == nil {
-		room = NewRoom(
-			rq.Room.Rid,
-			games.GameMetadata(rq.Game),
-			func(room *Room) {
-				w.router.SetRoom(nil)
-				c.CloseRoom(room.id)
-				w.log.Debug().Msgf("Room close has been called %v", room.id)
-			},
-			w.conf,
-			w.log,
-		)
-		user.SetPlayerIndex(rq.PlayerIndex)
+	r := w.router.FindRoom(rq.Rid)
 
-		if w.storage != nil {
-			room = WithCloudStorage(room, w.storage)
+	if r == nil {
+		uid := rq.Room.Rid
+		if uid == "" {
+			uid = games.GenerateRoomID(rq.Game.Name)
 		}
-		if w.conf.Recording.Enabled {
-			room = WithRecording(room.(*Room), rq.Record, rq.RecordUser, rq.Game.Name, w.conf)
-		}
-		w.router.SetRoom(room)
 
-		room.StartEmulator()
+		// start the emulator
+		app := room.WithEmulator(w.mana.Get(caged.Libretro))
+		app.ReloadFrontend()
+		app.SetSessionId(uid)
+		app.SetSaveOnClose(true)
+		app.EnableCloudStorage(uid, w.storage)
+		app.EnableRecording(rq.Record, rq.RecordUser, rq.Game.Name)
 
-		if w.conf.Emulator.AutosaveSec > 0 {
-			// !to can crash if emulator starts earlier
-			go room.EnableAutosave(w.conf.Emulator.AutosaveSec)
+		w.log.Info().Msgf("Starting game: %v", rq.Game.Name)
+		game := games.GameMetadata(rq.Game)
+		if err := app.Load(game, w.conf.Worker.Library.BasePath); err != nil {
+			c.log.Error().Err(err).Msgf("couldn't load the game %v", game)
+			app.Close()
+			return api.EmptyPacket
 		}
+
+		m := media.NewWebRtcMediaPipe(w.conf.Encoder.Audio, w.conf.Encoder.Video, w.log)
+		m.AudioSrcHz = app.AudioSampleRate()
+		m.AudioFrame = w.conf.Encoder.Audio.Frame
+		m.VideoW, m.VideoH = app.ViewportSize()
+		if err := m.Init(); err != nil {
+			c.log.Error().Err(err).Msgf("couldn't init the media")
+			app.Close()
+			return api.EmptyPacket
+		}
+
+		// make the room
+		r = room.NewRoom[*room.GameSession](uid, app, w.router.Users(), m)
+		r.HandleClose = func() {
+			w.router.Close()
+			c.CloseRoom(uid)
+			w.log.Debug().Msgf("Closed room %v", uid)
+		}
+
+		w.router.SetRoom(r)
+		c.log.Info().Str("room", r.Id()).Str("game", game.Name).Msg("New room")
+
+		r.StartApp()
 	}
 
-	if room == nil {
-		c.log.Error().Msgf("couldn't create a room [%v]", rq.Id)
-		return api.EmptyPacket
-	}
+	c.log.Debug().Msg("Start session input poll")
+	room.WithWebRTC(user.Session).OnMessage = func(data []byte) { r.App().SendControl(user.Index, data) }
 
-	if !room.HasUser(user) {
-		room.AddUser(user)
-		room.PollUserInput(user)
-	}
-	user.SetRoom(room)
+	c.RegisterRoom(r.Id())
 
-	c.RegisterRoom(room.GetId())
-
-	return api.Out{Payload: api.StartGameResponse{Room: api.Room{Rid: room.GetId()}, Record: w.conf.Recording.Enabled}}
+	return api.Out{Payload: api.StartGameResponse{Room: api.Room{Rid: r.Id()}, Record: w.conf.Recording.Enabled}}
 }
 
 // HandleTerminateSession handles cases when a user has been disconnected from the websocket of coordinator.
 func (c *coordinator) HandleTerminateSession(rq api.TerminateSessionRequest[com.Uid], w *Worker) {
-	if session := w.router.GetUser(rq.Id); session != nil {
-		w.router.RemoveDisconnect(session)
-		if room := session.GetSetRoom(nil); room != nil {
-			room.CleanupUser(session)
-		}
+	if user := w.router.FindUser(rq.Id); user != nil {
+		w.router.Remove(user)
+		user.Disconnect()
 	}
 }
 
 // HandleQuitGame handles cases when a user manually exits the game.
 func (c *coordinator) HandleQuitGame(rq api.GameQuitRequest[com.Uid], w *Worker) {
-	if user := w.router.GetUser(rq.Id); user != nil {
-		// we don't strictly need a room id form the request,
-		// since users hold their room reference
-		// !to remove rid, maybe
-		if room := w.router.GetRoom(rq.Rid); room != nil {
-			room.CleanupUser(user)
-		}
+	if user := w.router.FindUser(rq.Id); user != nil {
+		w.router.Remove(user)
 	}
 }
 
 func (c *coordinator) HandleSaveGame(rq api.SaveGameRequest[com.Uid], w *Worker) api.Out {
-	room := w.router.GetRoom(rq.Rid)
-	if room == nil {
+	r := w.router.FindRoom(rq.Rid)
+	if r == nil {
 		return api.ErrPacket
 	}
-	if err := room.SaveGame(); err != nil {
+	if err := room.WithEmulator(r.App()).SaveGameState(); err != nil {
 		c.log.Error().Err(err).Msg("cannot save game state")
 		return api.ErrPacket
 	}
@@ -159,11 +163,11 @@ func (c *coordinator) HandleSaveGame(rq api.SaveGameRequest[com.Uid], w *Worker)
 }
 
 func (c *coordinator) HandleLoadGame(rq api.LoadGameRequest[com.Uid], w *Worker) api.Out {
-	room := w.router.GetRoom(rq.Rid)
-	if room == nil {
+	r := w.router.FindRoom(rq.Rid)
+	if r == nil {
 		return api.ErrPacket
 	}
-	if err := room.LoadGame(); err != nil {
+	if err := room.WithEmulator(r.App()).RestoreGameState(); err != nil {
 		c.log.Error().Err(err).Msg("cannot load game state")
 		return api.ErrPacket
 	}
@@ -171,21 +175,21 @@ func (c *coordinator) HandleLoadGame(rq api.LoadGameRequest[com.Uid], w *Worker)
 }
 
 func (c *coordinator) HandleChangePlayer(rq api.ChangePlayerRequest[com.Uid], w *Worker) api.Out {
-	user := w.router.GetUser(rq.Id)
-	if user == nil || w.router.GetRoom(rq.Rid) == nil {
+	user := w.router.FindUser(rq.Id)
+	if user == nil || w.router.FindRoom(rq.Rid) == nil {
 		return api.Out{Payload: -1} // semi-predicates
 	}
-	user.SetPlayerIndex(rq.Index)
+	user.Index = rq.Index
 	w.log.Info().Msgf("Updated player index to: %d", rq.Index)
 	return api.Out{Payload: rq.Index}
 }
 
 func (c *coordinator) HandleToggleMultitap(rq api.ToggleMultitapRequest[com.Uid], w *Worker) api.Out {
-	room := w.router.GetRoom(rq.Rid)
-	if room == nil {
+	r := w.router.FindRoom(rq.Rid)
+	if r == nil {
 		return api.ErrPacket
 	}
-	room.ToggleMultitap()
+	room.WithEmulator(r.App()).ToggleMultitap()
 	return api.OkPacket
 }
 
@@ -193,11 +197,11 @@ func (c *coordinator) HandleRecordGame(rq api.RecordGameRequest[com.Uid], w *Wor
 	if !w.conf.Recording.Enabled {
 		return api.ErrPacket
 	}
-	room := w.router.GetRoom(rq.Rid)
-	if room == nil {
+	r := w.router.FindRoom(rq.Rid)
+	if r == nil {
 		return api.ErrPacket
 	}
-	room.(*RecordingRoom).ToggleRecording(rq.Active, rq.User)
+	room.WithRecorder(r.App()).ToggleRecording(rq.Active, rq.User)
 	return api.OkPacket
 }
 

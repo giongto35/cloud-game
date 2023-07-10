@@ -56,7 +56,7 @@ type videoStream interface {
 
 type (
 	Audio struct {
-		Samples  *[]int16
+		Samples  []int16
 		Duration time.Duration
 	}
 	Video struct {
@@ -133,9 +133,11 @@ func (r *Recording) Stop() (err error) {
 
 func (r *Recording) Set(enable bool, user string) {
 	r.Lock()
+	r.meta.UserName = user
 	if !r.enabled && enable {
 		r.Unlock()
 		r.Start()
+		r.log.Debug().Msgf("[REC] set: +, user: %v", user)
 		r.Lock()
 	} else {
 		if r.enabled && !enable {
@@ -148,9 +150,11 @@ func (r *Recording) Set(enable bool, user string) {
 		}
 	}
 	r.enabled = enable
-	r.meta.UserName = user
 	r.Unlock()
 }
+
+func (r *Recording) SetFramerate(fps float64) { r.opts.Fps = fps }
+func (r *Recording) SetAudioFrequency(fq int) { r.opts.Frequency = fq }
 
 func (r *Recording) Enabled() bool {
 	r.Lock()

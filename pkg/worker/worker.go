@@ -9,7 +9,9 @@ import (
 	"github.com/giongto35/cloud-game/v3/pkg/logger"
 	"github.com/giongto35/cloud-game/v3/pkg/monitoring"
 	"github.com/giongto35/cloud-game/v3/pkg/network/httpx"
-	"github.com/giongto35/cloud-game/v3/pkg/worker/emulator/libretro/manager/remotehttp"
+	"github.com/giongto35/cloud-game/v3/pkg/worker/caged"
+	"github.com/giongto35/cloud-game/v3/pkg/worker/cloud"
+	"github.com/giongto35/cloud-game/v3/pkg/worker/room"
 )
 
 type Worker struct {
@@ -17,24 +19,25 @@ type Worker struct {
 	conf     config.WorkerConfig
 	cord     *coordinator
 	log      *logger.Logger
-	router   Router
-	services [2]runnable
-	storage  CloudStorage
+	mana     *caged.Manager
+	router   *room.GameRouter
+	services [2]interface {
+		Run()
+		Stop() error
+	}
+	storage cloud.Storage
 }
 
-type runnable interface {
-	Run()
-	Stop() error
-}
+func (w *Worker) Reset() { w.router.Close() }
 
 const retry = 10 * time.Second
 
 func New(conf config.WorkerConfig, log *logger.Logger) (*Worker, error) {
-	if err := remotehttp.CheckCores(conf.Emulator, log); err != nil {
-		log.Warn().Err(err).Msgf("a Libretro cores sync fail")
+	manager := caged.NewManager(log)
+	if err := manager.Load(caged.Libretro, conf); err != nil {
+		return nil, fmt.Errorf("couldn't cage libretro: %v", err)
 	}
-
-	worker := &Worker{conf: conf, log: log, router: NewRouter()}
+	worker := &Worker{conf: conf, log: log, mana: manager, router: room.NewGameRouter()}
 
 	h, err := httpx.NewServer(
 		conf.Worker.GetAddr(),
@@ -58,9 +61,9 @@ func New(conf config.WorkerConfig, log *logger.Logger) (*Worker, error) {
 	if conf.Worker.Monitoring.IsEnabled() {
 		worker.services[1] = monitoring.New(conf.Worker.Monitoring, h.GetHost(), log)
 	}
-	st, err := GetCloudStorage(conf.Storage.Provider, conf.Storage.Key)
+	st, err := cloud.Store(conf.Storage.Provider, conf.Storage.Key)
 	if err != nil {
-		log.Warn().Err(err).Msgf("cloud storage fail, using dummy cloud storage instead")
+		log.Warn().Err(err).Msgf("cloud storage fail, using no storage")
 	}
 	worker.storage = st
 
@@ -79,7 +82,7 @@ func (w *Worker) Start(done chan struct{}) {
 			if w.cord != nil {
 				w.cord.Disconnect()
 			}
-			w.router.Close()
+			w.Reset()
 		}()
 
 		for {
@@ -96,7 +99,7 @@ func (w *Worker) Start(done chan struct{}) {
 				w.cord = cord
 				w.cord.log.Info().Msgf("Connected to the coordinator %v", remoteAddr)
 				<-w.cord.HandleRequests(w)
-				w.router.Close()
+				w.Reset()
 			}
 		}
 	}()

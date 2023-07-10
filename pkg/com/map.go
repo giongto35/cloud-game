@@ -18,8 +18,14 @@ func (m *Map[K, V]) Pop(key K) V {
 	m.mu.Unlock()
 	return v
 }
-func (m *Map[K, V]) Put(key K, v V) { m.mu.Lock(); m.m[key] = v; m.mu.Unlock() }
-func (m *Map[K, _]) Remove(key K)   { m.mu.Lock(); delete(m.m, key); m.mu.Unlock() }
+func (m *Map[K, V]) Put(key K, v V) bool {
+	m.mu.Lock()
+	_, ok := m.m[key]
+	m.m[key] = v
+	m.mu.Unlock()
+	return ok
+}
+func (m *Map[K, _]) Remove(key K) { m.mu.Lock(); delete(m.m, key); m.mu.Unlock() }
 
 // Find returns the first value found and a boolean flag if its found or not.
 func (m *Map[K, V]) Find(key K) (v V, ok bool) {

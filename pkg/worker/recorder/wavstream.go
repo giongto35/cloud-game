@@ -52,7 +52,7 @@ func (w *wavStream) Close() (err error) {
 }
 
 func (w *wavStream) Write(data Audio) {
-	pcm := *data.Samples
+	pcm := data.Samples
 	bs := make([]byte, len(pcm)*2)
 	// int & 0xFF + (int >> 8) & 0xFF
 	for i, ln := 0, len(pcm); i < ln; i++ {
