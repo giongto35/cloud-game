@@ -1,32 +1,41 @@
 package worker
 
 import (
+	"errors"
+	"fmt"
 	"time"
 
 	"github.com/giongto35/cloud-game/v3/pkg/config"
 	"github.com/giongto35/cloud-game/v3/pkg/logger"
 	"github.com/giongto35/cloud-game/v3/pkg/monitoring"
 	"github.com/giongto35/cloud-game/v3/pkg/network/httpx"
-	"github.com/giongto35/cloud-game/v3/pkg/service"
 	"github.com/giongto35/cloud-game/v3/pkg/worker/emulator/libretro/manager/remotehttp"
 )
 
 type Worker struct {
-	address string
-	conf    config.WorkerConfig
-	cord    *coordinator
-	log     *logger.Logger
-	router  Router
-	storage CloudStorage
-	done    chan struct{}
+	address  string
+	conf     config.WorkerConfig
+	cord     *coordinator
+	log      *logger.Logger
+	router   Router
+	services [2]runnable
+	storage  CloudStorage
+}
+
+type runnable interface {
+	Run()
+	Stop() error
 }
 
 const retry = 10 * time.Second
 
-func New(conf config.WorkerConfig, log *logger.Logger, done chan struct{}) (services service.Group) {
+func New(conf config.WorkerConfig, log *logger.Logger) (*Worker, error) {
 	if err := remotehttp.CheckCores(conf.Emulator, log); err != nil {
-		log.Error().Err(err).Msg("cores sync error")
+		log.Warn().Err(err).Msgf("a Libretro cores sync fail")
 	}
+
+	worker := &Worker{conf: conf, log: log, router: NewRouter()}
+
 	h, err := httpx.NewServer(
 		conf.Worker.GetAddr(),
 		func(s *httpx.Server) httpx.Handler {
@@ -36,30 +45,34 @@ func New(conf config.WorkerConfig, log *logger.Logger, done chan struct{}) (serv
 			})
 		},
 		httpx.WithServerConfig(conf.Worker.Server),
-		// no need just for one route
 		httpx.HttpsRedirect(false),
 		httpx.WithPortRoll(true),
 		httpx.WithZone(conf.Worker.Network.Zone),
 		httpx.WithLogger(log),
 	)
 	if err != nil {
-		log.Error().Err(err).Msg("http init fail")
-		return
+		return nil, fmt.Errorf("http init fail: %w", err)
 	}
-	services.Add(h)
+	worker.address = h.Addr
+	worker.services[0] = h
 	if conf.Worker.Monitoring.IsEnabled() {
-		services.Add(monitoring.New(conf.Worker.Monitoring, h.GetHost(), log))
+		worker.services[1] = monitoring.New(conf.Worker.Monitoring, h.GetHost(), log)
 	}
 	st, err := GetCloudStorage(conf.Storage.Provider, conf.Storage.Key)
 	if err != nil {
-		log.Error().Err(err).Msgf("cloud storage fail, using dummy cloud storage instead")
+		log.Warn().Err(err).Msgf("cloud storage fail, using dummy cloud storage instead")
 	}
-	services.Add(&Worker{address: h.Addr, conf: conf, done: done, log: log, storage: st, router: NewRouter()})
+	worker.storage = st
 
-	return
+	return worker, nil
 }
 
-func (w *Worker) Run() {
+func (w *Worker) Start(done chan struct{}) {
+	for _, s := range w.services {
+		if s != nil {
+			s.Run()
+		}
+	}
 	go func() {
 		remoteAddr := w.conf.Worker.Network.CoordinatorAddress
 		defer func() {
@@ -67,17 +80,16 @@ func (w *Worker) Run() {
 				w.cord.Disconnect()
 			}
 			w.router.Close()
-			w.log.Debug().Msgf("Service loop end")
 		}()
 
 		for {
 			select {
-			case <-w.done:
+			case <-done:
 				return
 			default:
 				cord, err := newCoordinatorConnection(remoteAddr, w.conf.Worker, w.address, w.log)
 				if err != nil {
-					w.log.Error().Err(err).Msgf("no connection: %v. Retrying in %v", remoteAddr, retry)
+					w.log.Warn().Err(err).Msgf("no connection: %v. Retrying in %v", remoteAddr, retry)
 					time.Sleep(retry)
 					continue
 				}
@@ -89,4 +101,14 @@ func (w *Worker) Run() {
 		}
 	}()
 }
-func (w *Worker) Stop() error { return nil }
+
+func (w *Worker) Stop() error {
+	var err error
+	for _, s := range w.services {
+		if s != nil {
+			err0 := s.Stop()
+			err = errors.Join(err, err0)
+		}
+	}
+	return err
+}

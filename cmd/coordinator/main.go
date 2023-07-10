@@ -19,10 +19,14 @@ func main() {
 	if log.GetLevel() < logger.InfoLevel {
 		log.Debug().Msgf("conf: %+v", conf)
 	}
-	c := coordinator.New(conf, log)
+	c, err := coordinator.New(conf, log)
+	if err != nil {
+		log.Error().Err(err).Msgf("init fail")
+		return
+	}
 	c.Start()
 	<-os.ExpectTermination()
 	if err := c.Stop(); err != nil {
-		log.Error().Err(err).Msg("service shutdown errors")
+		log.Error().Err(err).Msg("shutdown fail")
 	}
 }

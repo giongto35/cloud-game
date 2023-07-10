@@ -1,6 +1,8 @@
 package coordinator
 
 import (
+	"errors"
+	"fmt"
 	"html/template"
 	"net/http"
 	"strings"
@@ -10,27 +12,55 @@ import (
 	"github.com/giongto35/cloud-game/v3/pkg/logger"
 	"github.com/giongto35/cloud-game/v3/pkg/monitoring"
 	"github.com/giongto35/cloud-game/v3/pkg/network/httpx"
-	"github.com/giongto35/cloud-game/v3/pkg/service"
 )
 
-func New(conf config.CoordinatorConfig, log *logger.Logger) (services service.Group) {
+type Coordinator struct {
+	hub      *Hub
+	services [2]runnable
+}
+
+type runnable interface {
+	Run()
+	Stop() error
+}
+
+func New(conf config.CoordinatorConfig, log *logger.Logger) (*Coordinator, error) {
+	coordinator := &Coordinator{}
 	lib := games.NewLib(conf.Coordinator.Library, conf.Emulator, log)
 	lib.Scan()
-	hub := NewHub(conf, lib, log)
+	coordinator.hub = NewHub(conf, lib, log)
 	h, err := NewHTTPServer(conf, log, func(mux *httpx.Mux) *httpx.Mux {
-		mux.HandleFunc("/ws", hub.handleUserConnection())
-		mux.HandleFunc("/wso", hub.handleWorkerConnection())
+		mux.HandleFunc("/ws", coordinator.hub.handleUserConnection())
+		mux.HandleFunc("/wso", coordinator.hub.handleWorkerConnection())
 		return mux
 	})
 	if err != nil {
-		log.Error().Err(err).Msg("http server init fail")
-		return
+		return nil, fmt.Errorf("http init fail: %w", err)
 	}
-	services.Add(hub, h)
+	coordinator.services[0] = h
 	if conf.Coordinator.Monitoring.IsEnabled() {
-		services.Add(monitoring.New(conf.Coordinator.Monitoring, h.GetHost(), log))
+		coordinator.services[1] = monitoring.New(conf.Coordinator.Monitoring, h.GetHost(), log)
 	}
-	return
+	return coordinator, nil
+}
+
+func (c *Coordinator) Start() {
+	for _, s := range c.services {
+		if s != nil {
+			s.Run()
+		}
+	}
+}
+
+func (c *Coordinator) Stop() error {
+	var err error
+	for _, s := range c.services {
+		if s != nil {
+			err0 := s.Stop()
+			err = errors.Join(err, err0)
+		}
+	}
+	return err
 }
 
 func NewHTTPServer(conf config.CoordinatorConfig, log *logger.Logger, fnMux func(*httpx.Mux) *httpx.Mux) (*httpx.Server, error) {

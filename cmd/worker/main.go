@@ -24,15 +24,17 @@ func run() {
 	}
 
 	done := os.ExpectTermination()
-	wrk := worker.New(conf, log, done)
-	wrk.Start()
+	w, err := worker.New(conf, log)
+	if err != nil {
+		log.Error().Err(err).Msgf("init fail")
+		return
+	}
+	w.Start(done)
 	<-done
-	time.Sleep(100 * time.Millisecond)
-	if err := wrk.Stop(); err != nil {
-		log.Error().Err(err).Msg("service shutdown errors")
+	time.Sleep(100 * time.Millisecond) // hack
+	if err := w.Stop(); err != nil {
+		log.Error().Err(err).Msg("shutdown fail")
 	}
 }
 
-func main() {
-	thread.Wrap(run)
-}
+func main() { thread.Wrap(run) }
