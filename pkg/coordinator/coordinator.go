@@ -16,12 +16,10 @@ import (
 
 type Coordinator struct {
 	hub      *Hub
-	services [2]runnable
-}
-
-type runnable interface {
-	Run()
-	Stop() error
+	services [2]interface {
+		Run()
+		Stop() error
+	}
 }
 
 func New(conf config.CoordinatorConfig, log *logger.Logger) (*Coordinator, error) {

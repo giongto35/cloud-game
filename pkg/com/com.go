@@ -2,18 +2,21 @@ package com
 
 import "github.com/giongto35/cloud-game/v3/pkg/logger"
 
-type NetClient interface {
+type NetClient[K comparable] interface {
 	Disconnect()
-	Id() Uid
+	Id() K
 }
 
-type NetMap[T NetClient] struct{ Map[Uid, T] }
+type NetMap[K comparable, T NetClient[K]] struct{ Map[K, T] }
 
-func NewNetMap[T NetClient]() NetMap[T] { return NetMap[T]{Map: Map[Uid, T]{m: make(map[Uid]T, 10)}} }
+func NewNetMap[K comparable, T NetClient[K]]() NetMap[K, T] {
+	return NetMap[K, T]{Map: Map[K, T]{m: make(map[K]T, 10)}}
+}
 
-func (m *NetMap[T]) Add(client T)              { m.Put(client.Id(), client) }
-func (m *NetMap[T]) Remove(client T)           { m.Map.Remove(client.Id()) }
-func (m *NetMap[T]) RemoveDisconnect(client T) { client.Disconnect(); m.Remove(client) }
+func (m *NetMap[K, T]) Add(client T) bool         { return m.Put(client.Id(), client) }
+func (m *NetMap[K, T]) Remove(client T)           { m.Map.Remove(client.Id()) }
+func (m *NetMap[K, T]) Reset()                    { m.Map = Map[K, T]{m: make(map[K]T, 10)} }
+func (m *NetMap[K, T]) RemoveDisconnect(client T) { client.Disconnect(); m.Remove(client) }
 
 type SocketClient[T ~uint8, P Packet[T], X any, P2 Packet2[X]] struct {
 	id   Uid

@@ -33,7 +33,7 @@ build.worker:
 build: build.coordinator build.worker
 
 verify-cores:
-	go test -run TestAllEmulatorRooms ./pkg/worker -v -renderFrames $(GL_CTX) -outputPath "../../_rendered"
+	go test -run TestAll ./pkg/worker/room -v -renderFrames $(GL_CTX) -outputPath "../../../_rendered"
 
 dev.build: compile build
 

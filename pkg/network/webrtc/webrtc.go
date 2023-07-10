@@ -3,6 +3,7 @@ package webrtc
 import (
 	"fmt"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/giongto35/cloud-game/v3/pkg/logger"
@@ -16,27 +17,19 @@ type Peer struct {
 	log       *logger.Logger
 	OnMessage func(data []byte)
 
-	aTrack *webrtc.TrackLocalStaticSample
-	vTrack *webrtc.TrackLocalStaticSample
-	dTrack *webrtc.DataChannel
+	a *webrtc.TrackLocalStaticSample
+	v *webrtc.TrackLocalStaticSample
+	d *webrtc.DataChannel
 }
 
-// A Sample contains encoded media and timing information
-type Sample struct {
-	Data               []byte
-	Timestamp          time.Time
-	Duration           time.Duration
-	PacketTimestamp    uint32
-	PrevDroppedPackets uint16
-	Metadata           interface{}
-}
+var samplePool sync.Pool
 
 type Decoder func(data string, obj any) error
 
 func New(log *logger.Logger, api *ApiFactory) *Peer { return &Peer{api: api, log: log} }
 
 func (p *Peer) NewCall(vCodec, aCodec string, onICECandidate func(ice any)) (sdp any, err error) {
-	if p.IsConnected() {
+	if p.conn != nil && p.conn.ConnectionState() == webrtc.PeerConnectionStateConnected {
 		return
 	}
 	p.log.Info().Msg("WebRTC start")
@@ -52,7 +45,7 @@ func (p *Peer) NewCall(vCodec, aCodec string, onICECandidate func(ice any)) (sdp
 	if _, err = p.conn.AddTrack(video); err != nil {
 		return "", err
 	}
-	p.vTrack = video
+	p.v = video
 	p.log.Debug().Msgf("Added [%s] track", video.Codec().MimeType)
 
 	// plug in the [audio] track (out)
@@ -64,7 +57,7 @@ func (p *Peer) NewCall(vCodec, aCodec string, onICECandidate func(ice any)) (sdp
 		return "", err
 	}
 	p.log.Debug().Msgf("Added [%s] track", audio.Codec().MimeType)
-	p.aTrack = audio
+	p.a = audio
 
 	// plug in the [input] data channel (in)
 	if err = p.addInputChannel("game-input"); err != nil {
@@ -90,6 +83,35 @@ func (p *Peer) NewCall(vCodec, aCodec string, onICECandidate func(ice any)) (sdp
 	return offer, nil
 }
 
+func (p *Peer) SendAudio(dat []byte, dur int32) {
+	if err := p.send(dat, int64(dur), p.a.WriteSample); err != nil {
+		p.log.Error().Err(err).Send()
+	}
+}
+
+func (p *Peer) SendVideo(data []byte, dur int32) {
+	if err := p.send(data, int64(dur), p.v.WriteSample); err != nil {
+		p.log.Error().Err(err).Send()
+	}
+}
+
+func (p *Peer) SendData(data []byte) { _ = p.d.Send(data) }
+
+func (p *Peer) send(data []byte, duration int64, fn func(media.Sample) error) error {
+	sample, _ := samplePool.Get().(*media.Sample)
+	if sample == nil {
+		sample = new(media.Sample)
+	}
+	sample.Data = data
+	sample.Duration = time.Duration(duration)
+	err := fn(*sample)
+	if err != nil {
+		return err
+	}
+	samplePool.Put(sample)
+	return nil
+}
+
 func (p *Peer) SetRemoteSDP(sdp string, decoder Decoder) error {
 	var answer webrtc.SessionDescription
 	if err := decoder(sdp, &answer); err != nil {
@@ -102,9 +124,6 @@ func (p *Peer) SetRemoteSDP(sdp string, decoder Decoder) error {
 	p.log.Debug().Msg("Set Remote Description")
 	return nil
 }
-
-func (p *Peer) WriteVideo(s Sample) error { return p.vTrack.WriteSample(media.Sample(s)) }
-func (p *Peer) WriteAudio(s Sample) error { return p.aTrack.WriteSample(media.Sample(s)) }
 
 func newTrack(id string, label string, codec string) (*webrtc.TrackLocalStaticSample, error) {
 	codec = strings.ToLower(codec)
@@ -189,12 +208,6 @@ func (p *Peer) Disconnect() {
 	p.log.Debug().Msg("WebRTC stop")
 }
 
-func (p *Peer) IsConnected() bool {
-	return p.conn != nil && p.conn.ConnectionState() == webrtc.PeerConnectionStateConnected
-}
-
-func (p *Peer) SendMessage(data []byte) { _ = p.dTrack.Send(data) }
-
 // addInputChannel creates a new WebRTC data channel for user input.
 // Default params -- ordered: true, negotiated: false.
 func (p *Peer) addInputChannel(label string) error {
@@ -214,7 +227,7 @@ func (p *Peer) addInputChannel(label string) error {
 			p.OnMessage(m.Data)
 		}
 	})
-	p.dTrack = ch
+	p.d = ch
 	ch.OnClose(func() { p.log.Debug().Msg("Data channel [input] has been closed") })
 	return nil
 }
