@@ -81,9 +81,7 @@ func (c *coordinator) HandleGameStart(rq api.StartGameRequest[com.Uid], w *Worke
 	if room == nil {
 		room = NewRoom(
 			rq.Room.Rid,
-			games.GameMetadata{
-				Name: rq.Game.Name, Base: rq.Game.Base, Type: rq.Game.Type, Path: rq.Game.Path, System: rq.Game.System,
-			},
+			games.GameMetadata(rq.Game),
 			func(room *Room) {
 				w.router.SetRoom(nil)
 				c.CloseRoom(room.id)

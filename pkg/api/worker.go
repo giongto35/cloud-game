@@ -25,8 +25,8 @@ type (
 		PlayerIndex int      `json:"player_index"`
 	}
 	GameInfo struct {
-		Name   string `json:"name"`
 		Base   string `json:"base"`
+		Name   string `json:"name"`
 		Path   string `json:"path"`
 		System string `json:"system"`
 		Type   string `json:"type"`

@@ -56,14 +56,11 @@ type WithEmulatorInfo interface {
 }
 
 type GameMetadata struct {
-	// the display name of the game
-	Name string
-	// the game file extension (e.g. nes, n64)
-	Type string
-	Base string
-	// the game path relative to the library base path
-	Path   string
+	Base   string
+	Name   string // the display name of the game
+	Path   string // the game path relative to the library base path
 	System string
+	Type   string // the game file extension (e.g. nes, n64)
 }
 
 func (g GameMetadata) FullPath(base string) string {
