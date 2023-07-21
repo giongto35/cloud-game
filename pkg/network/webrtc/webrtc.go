@@ -6,8 +6,8 @@ import (
 	"time"
 
 	"github.com/giongto35/cloud-game/v3/pkg/logger"
-	"github.com/pion/webrtc/v3"
-	"github.com/pion/webrtc/v3/pkg/media"
+	"github.com/pion/webrtc/v4"
+	"github.com/pion/webrtc/v4/pkg/media"
 )
 
 type Peer struct {
@@ -28,6 +28,7 @@ type Sample struct {
 	Duration           time.Duration
 	PacketTimestamp    uint32
 	PrevDroppedPackets uint16
+	Metadata           interface{}
 }
 
 type Decoder func(data string, obj any) error
