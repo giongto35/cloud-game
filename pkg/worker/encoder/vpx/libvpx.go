@@ -90,7 +90,7 @@ type Options struct {
 	// Target bandwidth to use for this stream, in kilobits per second.
 	Bitrate uint
 	// Force keyframe interval.
-	KeyframeInt uint
+	KeyframeInterval uint
 }
 
 func NewEncoder(w, h int, opts *Options) (*Vpx, error) {
@@ -101,14 +101,14 @@ func NewEncoder(w, h int, opts *Options) (*Vpx, error) {
 
 	if opts == nil {
 		opts = &Options{
-			Bitrate:     1200,
-			KeyframeInt: 5,
+			Bitrate:          1200,
+			KeyframeInterval: 5,
 		}
 	}
 
 	vpx := Vpx{
 		frameCount: C.int(0),
-		kfi:        C.int(opts.KeyframeInt),
+		kfi:        C.int(opts.KeyframeInterval),
 	}
 
 	if C.vpx_img_alloc(&vpx.image, C.VPX_IMG_FMT_I420, C.uint(w), C.uint(h), 1) == nil {

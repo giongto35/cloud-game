@@ -56,10 +56,10 @@ type Video struct {
 	Concurrency int
 	H264        struct {
 		Crf      uint8
+		LogLevel int32
 		Preset   string
 		Profile  string
 		Tune     string
-		LogLevel int
 	}
 	Vpx struct {
 		Bitrate          uint
