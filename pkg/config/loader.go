@@ -1,6 +1,7 @@
 package config
 
 import (
+	"bytes"
 	"os"
 	"path/filepath"
 	"strings"
@@ -35,7 +36,8 @@ func (p *YAML) Marshal(Kv) ([]byte, error) { return nil, nil }
 func (p *YAML) Unmarshal(b []byte) (Kv, error) {
 	var out Kv
 	klw := keysToLower(b)
-	if err := yaml.Unmarshal(klw, &out); err != nil {
+	decoder := yaml.NewDecoder(bytes.NewReader(klw))
+	if err := decoder.Decode(&out); err != nil {
 		return nil, err
 	}
 	return out, nil
@@ -105,8 +107,6 @@ func (e *Env) Read() (Kv, error) {
 	return maps.Unflatten(mp, "."), nil
 }
 
-var k = koanf.New("_")
-
 // LoadConfig loads a configuration file into the given struct.
 // The path param specifies a custom path to the configuration file.
 // Reads and puts environment variables with the prefix CLOUD_GAME_.
@@ -122,6 +122,8 @@ func LoadConfig(config any, path string) (loaded []string, err error) {
 		dirs = append(dirs, homeDir)
 	}
 
+	k := koanf.New("_") // move to global scope if configs become dynamic
+	defer k.Delete("")
 	if err := k.Load(&conf, &YAML{}); err != nil {
 		return nil, err
 	}
