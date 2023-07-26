@@ -2,11 +2,11 @@ package config
 
 import (
 	"bytes"
+	"embed"
 	"os"
 	"path/filepath"
 	"strings"
 
-	_ "embed"
 	"github.com/knadh/koanf/maps"
 	"github.com/knadh/koanf/v2"
 	"gopkg.in/yaml.v3"
@@ -16,7 +16,7 @@ const EnvPrefix = "CLOUD_GAME_"
 
 var (
 	//go:embed config.yaml
-	conf Bytes
+	conf embed.FS
 )
 
 type Kv = map[string]any
@@ -124,10 +124,14 @@ func LoadConfig(config any, path string) (loaded []string, err error) {
 
 	k := koanf.New("_") // move to global scope if configs become dynamic
 	defer k.Delete("")
+	data, err := conf.ReadFile("config.yaml")
+	if err != nil {
+		return nil, err
+	}
+	conf := Bytes(data)
 	if err := k.Load(&conf, &YAML{}); err != nil {
 		return nil, err
 	}
-	conf = nil
 	loaded = append(loaded, "default")
 
 	for _, dir := range dirs {
