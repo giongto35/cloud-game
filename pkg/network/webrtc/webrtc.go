@@ -3,6 +3,7 @@ package webrtc
 import (
 	"fmt"
 	"strings"
+	"time"
 
 	"github.com/giongto35/cloud-game/v3/pkg/logger"
 	"github.com/pion/webrtc/v3"
@@ -18,6 +19,15 @@ type Peer struct {
 	aTrack *webrtc.TrackLocalStaticSample
 	vTrack *webrtc.TrackLocalStaticSample
 	dTrack *webrtc.DataChannel
+}
+
+// A Sample contains encoded media and timing information
+type Sample struct {
+	Data               []byte
+	Timestamp          time.Time
+	Duration           time.Duration
+	PacketTimestamp    uint32
+	PrevDroppedPackets uint16
 }
 
 type Decoder func(data string, obj any) error
@@ -92,9 +102,8 @@ func (p *Peer) SetRemoteSDP(sdp string, decoder Decoder) error {
 	return nil
 }
 
-func (p *Peer) WriteVideo(sample *media.Sample) error { return p.vTrack.WriteSample(*sample) }
-
-func (p *Peer) WriteAudio(sample *media.Sample) error { return p.aTrack.WriteSample(*sample) }
+func (p *Peer) WriteVideo(s Sample) error { return p.vTrack.WriteSample(media.Sample(s)) }
+func (p *Peer) WriteAudio(s Sample) error { return p.aTrack.WriteSample(media.Sample(s)) }
 
 func newTrack(id string, label string, codec string) (*webrtc.TrackLocalStaticSample, error) {
 	codec = strings.ToLower(codec)
@@ -172,6 +181,7 @@ func (p *Peer) Disconnect() {
 		return
 	}
 	if p.conn.ConnectionState() < webrtc.PeerConnectionStateDisconnected {
+		// ignore this due to DTLS fatal: conn is closed
 		_ = p.conn.Close()
 	}
 	p.conn = nil
@@ -195,17 +205,12 @@ func (p *Peer) addInputChannel(label string) error {
 		p.log.Debug().Str("label", ch.Label()).Uint16("id", *ch.ID()).Msg("Data channel [input] opened")
 	})
 	ch.OnError(p.logx)
-	ch.OnMessage(func(mess webrtc.DataChannelMessage) {
-		if len(mess.Data) == 0 {
-			return
-		}
-		// echo string messages (e.g. ping/pong)
-		if mess.IsString {
-			p.logx(ch.Send(mess.Data))
+	ch.OnMessage(func(m webrtc.DataChannelMessage) {
+		if len(m.Data) == 0 {
 			return
 		}
 		if p.OnMessage != nil {
-			p.OnMessage(mess.Data)
+			p.OnMessage(m.Data)
 		}
 	})
 	p.dTrack = ch
