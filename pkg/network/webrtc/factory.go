@@ -2,6 +2,7 @@ package webrtc
 
 import (
 	"fmt"
+	"github.com/pion/ice/v2"
 	"net"
 
 	"github.com/giongto35/cloud-game/v3/pkg/config"
@@ -71,6 +72,8 @@ func NewApiFactory(conf config.Webrtc, log *logger.Logger, mod ModApiFun) (api *
 		s.SetNAT1To1IPs([]string{conf.IceIpMap}, webrtc.ICECandidateTypeHost)
 		log.Info().Msgf("The NAT mapping is active for %v", conf.IceIpMap)
 	}
+
+	s.SetICEMulticastDNSMode(ice.MulticastDNSModeDisabled)
 
 	if mod != nil {
 		mod(m, i, &s)
