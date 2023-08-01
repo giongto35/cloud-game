@@ -90,6 +90,10 @@ func NewFrontend(conf config.Emulator, log *logger.Logger) (*Frontend, error) {
 		store = &ZipStorage{Storage: store}
 	}
 
+	last := frontend
+	if last != nil {
+		last.mu.Lock()
+	}
 	// set global link to the Libretro
 	frontend = &Frontend{
 		conf:    conf,
@@ -100,6 +104,9 @@ func NewFrontend(conf config.Emulator, log *logger.Logger) (*Frontend, error) {
 		log:     log,
 		onAudio: noAudio,
 		onVideo: noVideo,
+	}
+	if last != nil {
+		last.mu.Unlock()
 	}
 	return frontend, nil
 }
