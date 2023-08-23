@@ -31,7 +31,8 @@ type Frontend struct {
 
 	stopped atomic.Bool
 
-	canvas *image.Canvas
+	Canvas            *image.Canvas
+	DisableCanvasPool bool
 
 	done chan struct{}
 	log  *logger.Logger
@@ -139,7 +140,7 @@ func (f *Frontend) Start() {
 		ticker.Stop()
 		f.mu.Lock()
 		nanoarchShutdown()
-		frontend.canvas.Clear()
+		frontend.Canvas.Clear()
 		f.SetAudio(noAudio)
 		f.SetVideo(noVideo)
 		f.mu.Unlock()
@@ -201,7 +202,10 @@ func (f *Frontend) SetViewport(width int, height int, scale int) {
 	f.mu.Lock()
 	f.vw, f.vh = width, height
 	size := int(nano.sysAvInfo.geometry.max_width) * scale * int(nano.sysAvInfo.geometry.max_height) * scale
-	f.canvas = image.NewCanvas(width, height, size)
+	f.Canvas = image.NewCanvas(width, height, size)
+	if f.DisableCanvasPool {
+		f.Canvas.SetEnabled(false)
+	}
 	f.mu.Unlock()
 }
 func (f *Frontend) ToggleMultitap() { toggleMultitap() }

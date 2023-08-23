@@ -53,6 +53,9 @@ func NewRoom(id string, game games.GameMetadata, onClose func(*Room), conf confi
 	if err != nil {
 		log.Fatal().Err(err).Send()
 	}
+	if conf.Recording.Enabled {
+		nano.DisableCanvasPool = true
+	}
 	room.emulator = nano
 	room.emulator.SetMainSaveName(id)
 	room.emulator.LoadMetadata(game.System)

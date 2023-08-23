@@ -9,6 +9,7 @@ import (
 
 // Canvas is a stateful drawing surface, i.e. image.RGBA
 type Canvas struct {
+	enabled  bool
 	w, h     int
 	vertical bool
 	pool     sync.Pool
@@ -36,6 +37,7 @@ const (
 
 func NewCanvas(w, h, size int) *Canvas {
 	return &Canvas{
+		enabled:  true,
 		w:        w,
 		h:        h,
 		vertical: h > w, // input is inverted
@@ -61,11 +63,12 @@ func (c *Canvas) Get(w, h int) *Frame {
 }
 
 func (c *Canvas) Put(i *Frame) {
-	if i != nil {
+	if c.enabled && i != nil {
 		c.pool.Put(i)
 	}
 }
-func (c *Canvas) Clear() { c.wg = sync.WaitGroup{} }
+func (c *Canvas) Clear()                  { c.wg = sync.WaitGroup{} }
+func (c *Canvas) SetEnabled(enabled bool) { c.enabled = enabled }
 
 func (c *Canvas) Draw(encoding uint32, rot *Rotate, w, h, packedW, bpp int, data []byte, th int) *Frame {
 	dst := c.Get(w, h)

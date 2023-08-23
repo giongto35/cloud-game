@@ -164,11 +164,11 @@ func coreVideoRefresh(data unsafe.Pointer, width, height uint, packed uint) {
 	}
 	// !to fix possible nil pointer dereference
 	// when the internal pool can be nil during first Get???
-	fr.Data = frontend.canvas.
+	fr.Data = frontend.Canvas.
 		Draw(nano.v.pixFmt, nano.rot, int(width), int(height), int(packed), int(nano.v.bpp), data_, frontend.th)
 	fr.Duration = time.Duration(dt)
 	frontend.onVideo(fr)
-	frontend.canvas.Put(fr.Data)
+	frontend.Canvas.Put(fr.Data)
 	videoPool.Put(fr)
 }
 
