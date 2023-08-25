@@ -43,7 +43,11 @@ dev.build-local:
 	CGO_CFLAGS=${CGO_CFLAGS} CGO_LDFLAGS=${CGO_LDFLAGS} go build -pgo=auto -o bin/ ./cmd/worker
 
 dev.run: dev.build-local
+ifeq ($(OS),Windows_NT)
+	./bin/coordinator.exe &	./bin/worker.exe
+else
 	./bin/coordinator &	./bin/worker
+endif
 
 dev.run.debug:
 	go build -race -o bin/ ./cmd/coordinator
