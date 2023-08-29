@@ -49,8 +49,9 @@ func TestWebsocket(t *testing.T) {
 }
 
 func testWebsocket(t *testing.T) {
-	server := newServer(t)
-	client := newClient(t, url.URL{Scheme: "ws", Host: "localhost:8080", Path: "/ws"})
+	addr := ":8989"
+	server := newServer(addr, t)
+	client := newClient(t, url.URL{Scheme: "ws", Host: "localhost" + addr, Path: "/ws"})
 	clDone := client.ProcessPackets(func(in TestIn) error { return nil })
 
 	if server.conn == nil {
@@ -190,15 +191,15 @@ func (s *serverHandler) serve(t *testing.T) func(w http.ResponseWriter, r *http.
 	}
 }
 
-func newServer(t *testing.T) *serverHandler {
+func newServer(addr string, t *testing.T) *serverHandler {
 	var wg sync.WaitGroup
 	handler := serverHandler{}
 	http.HandleFunc("/ws", handler.serve(t))
 	wg.Add(1)
 	go func() {
 		wg.Done()
-		if err := http.ListenAndServe(":8080", nil); err != nil {
-			t.Errorf("no server")
+		if err := http.ListenAndServe(addr, nil); err != nil {
+			t.Errorf("no server, %v", err)
 			return
 		}
 	}()

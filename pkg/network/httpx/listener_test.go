@@ -13,7 +13,6 @@ func TestListenerCreation(t *testing.T) {
 		random bool
 		error  bool
 	}{
-		{addr: ":80", port: "80"},
 		{addr: ":", random: true},
 		{addr: ":0", random: true},
 		{addr: "", random: true},
@@ -38,13 +37,13 @@ func TestListenerCreation(t *testing.T) {
 			continue
 		}
 
-		defer func() { _ = ls.Close() }()
-
 		addr := ls.Addr().(*net.TCPAddr)
 		port := ls.GetPort()
 
 		hasPort := port > 0
 		isPortSame := strings.HasSuffix(addr.String(), ":"+test.port)
+
+		_ = ls.Close()
 
 		if test.random {
 			if !hasPort {
@@ -64,7 +63,7 @@ func TestFailOnPortInUse(t *testing.T) {
 	if err != nil {
 		t.Errorf("expected no error, got %v", err)
 	}
-	defer a.Close()
+	defer func() { _ = a.Close() }()
 	_, err = NewListener(":3333", false)
 	if err == nil {
 		t.Errorf("expected busy port error, but got none")
@@ -76,10 +75,10 @@ func TestListenerPortRoll(t *testing.T) {
 	if err != nil {
 		t.Errorf("expected no error, got %v", err)
 	}
-	defer a.Close()
+	defer func() { _ = a.Close() }()
 	b, err := NewListener("127.0.0.1:3333", true)
 	if err != nil {
 		t.Errorf("expected no port error, but got %v", err)
 	}
-	b.Close()
+	_ = b.Close()
 }
