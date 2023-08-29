@@ -227,22 +227,6 @@ func getRoomMock(cfg roomMockConfig) roomMock {
 		room.StartEmulator()
 	}
 
-	// loop-wait the room initialization
-	var init sync.WaitGroup
-	init.Add(1)
-	wasted := 0
-	go func() {
-		sleepDeltaMs := 10
-		for room.emulator == nil {
-			time.Sleep(time.Duration(sleepDeltaMs) * time.Millisecond)
-			wasted++
-			if wasted > 1000 {
-				break
-			}
-		}
-		init.Done()
-	}()
-	init.Wait()
 	return roomMock{Room: room, startEmulator: !cfg.dontStartEmulator}
 }
 
