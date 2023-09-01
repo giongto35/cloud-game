@@ -166,7 +166,8 @@ const gameList = (() => {
             render,
             marker: {
                 show: () => gui.show(choiceMarkerEl)
-            }
+            },
+            NO_TRANSITION: onTransitionEnd(),
         }
     })(TOP_POSITION, SELECT_THRESHOLD_MS, games)
 
@@ -198,6 +199,7 @@ const gameList = (() => {
 
     event.sub(MENU_PRESSED, (position) => {
         if (games.empty()) return
+        ui.onTransitionEnd = ui.NO_TRANSITION
         hasTransition = false
         scroll.scroll(scroll.state.DRAG)
         ui.selected && ui.selected.clear()
