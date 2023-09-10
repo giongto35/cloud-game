@@ -72,10 +72,10 @@ const (
 	WebrtcAnswer     PT = 102
 	WebrtcIce        PT = 103
 	StartGame        PT = 104
-	ChangePlayer     PT = 108
 	QuitGame         PT = 105
 	SaveGame         PT = 106
 	LoadGame         PT = 107
+	ChangePlayer     PT = 108
 	ToggleMultitap   PT = 109
 	RecordGame       PT = 110
 	GetWorkerList    PT = 111
@@ -116,6 +116,8 @@ func (p PT) String() string {
 		return "RecordGame"
 	case GetWorkerList:
 		return "GetWorkerList"
+	case ErrNoFreeSlots:
+		return "NoFreeSlots"
 	case RegisterRoom:
 		return "RegisterRoom"
 	case CloseRoom:
