@@ -502,9 +502,9 @@ body {
 
 .menu-item__info {
     color: white;
-    font-size: 50%;
+    font-size: 30%;
     position: absolute;
-    right: 15px;
+    left: 15px;
 }
 
 .text-move {
