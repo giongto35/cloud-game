@@ -112,7 +112,7 @@ const gameList = (() => {
 
             const clear = () => {
                 _title.reset()
-                _desc.hide()
+                // _desc.hide()
             }
 
             return {
@@ -130,13 +130,16 @@ const gameList = (() => {
             rootEl.innerHTML = games.list.map(game =>
                 `<div class="menu-item">` +
                 `<div><span>${game.title}</span></div>` +
-                `<div class="menu-item__info hidden">${game.system}</div>` +
+                //`<div class="menu-item__info">${game.system}</div>` +
                 `</div>`)
                 .join('')
             items = [...rootEl.querySelectorAll('.menu-item')].map(x => item(x))
         }
 
         return {
+            get items() {
+                return items
+            },
             get selected() {
                 return items[games.index]
             },
@@ -179,7 +182,7 @@ const gameList = (() => {
     }
 
     const select = (index) => {
-        ui.selected && ui.selected.clear()
+        ui.items.forEach(i => i.clear()) // !to rewrite
         games.index = index
         ui.pos = games.index
     }
@@ -193,7 +196,7 @@ const gameList = (() => {
         if (item) {
             item.title.pick()
             item.title.animate()
-            hasTransition ? (ui.onTransitionEnd = item.description.show) : item.description.show()
+            // hasTransition ? (ui.onTransitionEnd = item.description.show) : item.description.show()
         }
     }
 
