@@ -8,8 +8,9 @@ import (
 	"fmt"
 	"io"
 	"net/http"
-	"os"
 	"time"
+
+	"github.com/giongto35/cloud-game/v3/pkg/os"
 )
 
 // !to replace all with unified s3 api

@@ -1,13 +1,18 @@
 package os
 
 import (
+	"bufio"
+	"bytes"
 	"errors"
+	"io"
 	"io/fs"
 	"os"
 	"os/signal"
 	"os/user"
 	"syscall"
 )
+
+const ReadChunk = 1024
 
 var ErrNotExist = os.ErrNotExist
 
@@ -44,4 +49,38 @@ func GetUserHome() (string, error) {
 
 func WriteFile(name string, data []byte, perm os.FileMode) error {
 	return os.WriteFile(name, data, perm)
+}
+
+func ReadFile(name string) (dat []byte, err error) {
+	f, err := os.Open(name)
+	if err != nil {
+		return nil, err
+	}
+	defer func() { _ = f.Close() }()
+
+	r := bufio.NewReader(f)
+	buf := bytes.NewBuffer(make([]byte, 0))
+	chunk := make([]byte, ReadChunk)
+
+	c := 0
+	for {
+		if c, err = r.Read(chunk); err != nil {
+			break
+		}
+		buf.Write(chunk[:c])
+	}
+
+	if err == io.EOF {
+		err = nil
+	}
+
+	return buf.Bytes(), err
+}
+
+func StatSize(path string) (int64, error) {
+	fi, err := os.Stat(path)
+	if err != nil {
+		return 0, err
+	}
+	return fi.Size(), nil
 }
