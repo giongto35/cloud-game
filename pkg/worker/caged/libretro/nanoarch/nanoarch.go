@@ -3,7 +3,6 @@ package nanoarch
 import (
 	"errors"
 	"fmt"
-	"os"
 	"runtime"
 	"strings"
 	"sync/atomic"
@@ -11,6 +10,7 @@ import (
 	"unsafe"
 
 	"github.com/giongto35/cloud-game/v3/pkg/logger"
+	"github.com/giongto35/cloud-game/v3/pkg/os"
 	"github.com/giongto35/cloud-game/v3/pkg/worker/caged/libretro/graphics"
 	"github.com/giongto35/cloud-game/v3/pkg/worker/caged/libretro/image"
 	"github.com/giongto35/cloud-game/v3/pkg/worker/caged/libretro/repo/arch"
@@ -115,10 +115,9 @@ func init() { Nan0.reserved <- struct{}{} }
 
 func NewNano(localPath string) *Nanoarch {
 	nano := &Nan0
-	nano.cSaveDirectory = C.CString(localPath + string(os.PathSeparator) + "legacy_save")
-	nano.cSystemDirectory = C.CString(localPath + string(os.PathSeparator) + "system")
+	nano.cSaveDirectory = C.CString(localPath + "/legacy_save")
+	nano.cSystemDirectory = C.CString(localPath + "/system")
 	nano.cUserName = C.CString("retro")
-
 	return nano
 }
 
@@ -209,29 +208,33 @@ func (n *Nanoarch) CoreLoad(meta Metadata) {
 }
 
 func (n *Nanoarch) LoadGame(path string) error {
-	fi, err := os.Stat(path)
-	if err != nil {
-		return err
-	}
-	fileSize := fi.Size()
+	game := C.struct_retro_game_info{}
 
-	n.log.Debug().Msgf("ROM size: %v", byteCountBinary(fileSize))
-
-	fPath := C.CString(path)
-	defer C.free(unsafe.Pointer(fPath))
-	gi := C.struct_retro_game_info{path: fPath, size: C.size_t(fileSize)}
-
-	if !bool(n.sysInfo.need_fullpath) {
+	big := bool(n.sysInfo.need_fullpath) // big ROMs are loaded by cores later
+	if big {
+		size, err := os.StatSize(path)
+		if err != nil {
+			return err
+		}
+		game.size = C.size_t(size)
+	} else {
 		bytes, err := os.ReadFile(path)
 		if err != nil {
 			return err
 		}
-		dataPtr := unsafe.Pointer(C.CBytes(bytes))
-		gi.data = dataPtr
-		defer C.free(dataPtr)
+		// !to pin in 1.21
+		ptr := unsafe.Pointer(C.CBytes(bytes))
+		game.data = ptr
+		game.size = C.size_t(len(bytes))
+		defer C.free(ptr)
 	}
+	fp := C.CString(path)
+	defer C.free(unsafe.Pointer(fp))
+	game.path = fp
 
-	if ok := C.bridge_retro_load_game(retroLoadGame, &gi); !ok {
+	n.log.Debug().Msgf("ROM - big: %v, size: %v", big, byteCountBinary(int64(game.size)))
+
+	if ok := C.bridge_retro_load_game(retroLoadGame, &game); !ok {
 		return fmt.Errorf("core failed to load ROM: %v", path)
 	}
 
@@ -467,6 +470,7 @@ func SaveRAM() State {
 func RestoreSaveRAM(st State) {
 	if len(st) > 0 {
 		if memory := ptSaveRAM(); memory != nil {
+			//noinspection GoRedundantConversion
 			copy(unsafe.Slice((*byte)(memory.ptr), memory.size), st)
 		}
 	}
@@ -573,6 +577,7 @@ func coreVideoRefresh(data unsafe.Pointer, width, height uint, packed uint) {
 
 	var data_ []byte
 	if data != C.RETRO_HW_FRAME_BUFFER_VALID {
+		//noinspection GoRedundantConversion
 		data_ = unsafe.Slice((*byte)(data), bytes)
 	} else {
 		// if Libretro renders frame with OpenGL context
