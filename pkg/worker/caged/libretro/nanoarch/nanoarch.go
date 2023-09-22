@@ -44,7 +44,7 @@ type Nanoarch struct {
 	}
 	options          *map[string]string
 	reserved         chan struct{} // limits concurrent use
-	Rot              *image.Rotate
+	Rot              image.Rotation
 	serializeSize    C.size_t
 	stopped          atomic.Bool
 	sysAvInfo        C.struct_retro_system_av_info
@@ -82,19 +82,14 @@ type FrameInfo struct {
 }
 
 type Metadata struct {
-	LibPath         string // the full path to some emulator lib
-	AudioSampleRate int
-	Fps             float64
-	BaseWidth       int
-	BaseHeight      int
-	Rotation        image.Rotate
-	IsGlAllowed     bool
-	UsesLibCo       bool
-	AutoGlContext   bool
-	HasMultitap     bool
-	HasVFR          bool
-	Options         map[string]string
-	Hacks           []string
+	LibPath       string // the full path to some emulator lib
+	IsGlAllowed   bool
+	UsesLibCo     bool
+	AutoGlContext bool
+	HasMultitap   bool
+	HasVFR        bool
+	Options       map[string]string
+	Hacks         []string
 }
 
 // Nan0 is a global link for C callbacks to Go
@@ -123,7 +118,7 @@ func NewNano(localPath string) *Nanoarch {
 
 func (n *Nanoarch) AudioSampleRate() int { return int(n.sysAvInfo.timing.sample_rate) }
 func (n *Nanoarch) VideoFramerate() int  { return int(n.sysAvInfo.timing.fps) }
-func (n *Nanoarch) IsPortrait() bool     { return n.Rot != nil && n.Rot.IsEven }
+func (n *Nanoarch) IsPortrait() bool     { return n.Rot == image.A90 || n.Rot == image.A270 }
 func (n *Nanoarch) GeometryBase() (int, int) {
 	return int(n.sysAvInfo.geometry.base_width), int(n.sysAvInfo.geometry.base_height)
 }
@@ -256,8 +251,7 @@ func (n *Nanoarch) LoadGame(path string) error {
 	n.stopped.Store(false)
 
 	if n.Video.gl.enabled {
-		// flip Y coordinates of OpenGL
-		setRotation(uint(image.Flip180))
+		setRotation(image.F180) // flip Y coordinates of OpenGL
 		bufS := uint(n.sysAvInfo.geometry.max_width*n.sysAvInfo.geometry.max_height) * n.Video.BPP
 		graphics.SetBuffer(int(bufS))
 		n.log.Info().Msgf("Set buffer: %v", byteCountBinary(int64(bufS)))
@@ -387,17 +381,9 @@ func videoSetPixelFormat(format uint32) (C.bool, error) {
 	return true, nil
 }
 
-func setRotation(rotation uint) {
-	if Nan0.Rot != nil && rotation == uint(Nan0.Rot.Angle) {
-		return
-	}
-	if rotation > 0 {
-		r := image.GetRotation(image.Angle(rotation))
-		Nan0.Rot = &r
-	} else {
-		Nan0.Rot = nil
-	}
-	Nan0.log.Debug().Msgf("Image rotated %v°", map[uint]uint{0: 0, 1: 90, 2: 180, 3: 270}[rotation])
+func setRotation(rotation image.Rotation) {
+	Nan0.Rot = rotation
+	Nan0.log.Debug().Msgf("Image rotated %v°", map[uint]uint{0: 0, 1: 90, 2: 180, 3: 270}[uint(rotation)])
 }
 
 func printOpenGLDriverInfo() {
@@ -679,7 +665,7 @@ func coreEnvironment(cmd C.unsigned, data unsafe.Pointer) C.bool {
 
 	switch cmd {
 	case C.RETRO_ENVIRONMENT_SET_ROTATION:
-		setRotation(*(*uint)(data) % 4)
+		setRotation(image.Rotation(*(*uint)(data) % 4))
 		return true
 	case C.RETRO_ENVIRONMENT_GET_CAN_DUPE:
 		*(*C.bool)(data) = C.bool(true)
