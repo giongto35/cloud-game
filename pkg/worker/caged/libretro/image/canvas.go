@@ -138,21 +138,22 @@ func (c *Canvas) Draw(encoding uint32, rot Rotation, w, h, packedW, bpp int, dat
 
 func frame(encoding uint32, dst *Frame, data []byte, yy int, hn int, w int, h int, pwb int, bpp int, rot Rotation) {
 	sPtr := unsafe.Pointer(&data[yy*pwb])
-	dPtr := unsafe.Pointer(&dst.Pix[yy*dst.Stride])
 	// some cores can zero-right-pad rows to the packed width value
 	pad := pwb - w*bpp
 	if pad < 0 {
 		pad = 0
 	}
-	if rot != 0 {
-		dPtr = unsafe.Pointer(&dst.Pix[0])
+	ds := 0
+	if rot == 0 {
+		ds = yy * dst.Stride
 	}
+	dPtr := (*C.uint32_t)(unsafe.Pointer(&dst.Pix[ds]))
 	C.RGBA(C.int(encoding), dPtr, sPtr, C.int(yy), C.int(yy+hn), C.int(w), C.int(h), C.int(dst.Stride>>2), C.int(pad), C.int(rot))
 }
 
-func _8888rev(px uint32) uint32 { return uint32(C.px8888rev(C.uint32_t(px))) }
+func _8888rev(px uint32) uint32 { return uint32(C._8888rev(C.uint32_t(px))) }
 
 func rotate(t int, x int, y int, w int, h int) (int, int) {
-	return int(C.rot_x(C.int(t), C.int(x), C.int(y), C.int(w), C.int(h))),
-		int(C.rot_y(C.int(t), C.int(x), C.int(y), C.int(w), C.int(h)))
+	var rot C.xy = C.rotate(C.int(t), C.int(x), C.int(y), C.int(w), C.int(h))
+	return int(rot.x), int(rot.y)
 }
