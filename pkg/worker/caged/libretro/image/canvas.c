@@ -34,12 +34,14 @@ __inline uint32_t _8888rev(uint32_t px) {
 void RGBA(int pix, uint32_t *__restrict dst, void *__restrict source, int y, int h, int w, int hh, int dw, int pad, int rot) {
     int x;
     xy rxy;
+    uint16_t *src16;
+    uint32_t *src32;
 
     switch (pix) {
         //case BIT_SHORT5551:
         //    break;
         case BIT_INT_8888REV:
-            uint32_t *src32 = source;
+            src32 = (uint32_t *)source;
             int pad32 = pad >> 2;
             if (rot == NO_ROT) {
                 for (; y < h; ++y) {
@@ -59,7 +61,7 @@ void RGBA(int pix, uint32_t *__restrict dst, void *__restrict source, int y, int
             }
             break;
         case BIT_SHORT565:
-            uint16_t *src16 = source;
+            src16 = (uint16_t *)source;
             int pad16 = pad >> 1;
             if (rot == NO_ROT) {
                 for (; y < h; ++y) {
