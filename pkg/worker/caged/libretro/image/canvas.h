@@ -7,6 +7,12 @@
 #define BIT_INT_8888REV 1
 #define BIT_SHORT565 2
 
+#define NO_ROT 0
+#define	A90 1
+#define	A180 2
+#define	A270 3
+#define	F180 4
+
 // Rotate90 is 90° CCW or 270° CW.
 #define r90_x(x, y, w, h) ( y )
 #define r90_y(x, y, w, h) ( (w - 1) - x )
@@ -23,20 +29,15 @@
 #define fy180_x(x, y, w, h) ( x )
 #define fy180_y(x, y, w, h) ( (h - 1) - y )
 
-int rot_x(int t, int x, int y, int w, int h);
-int rot_y(int t, int x, int y, int w, int h);
+typedef struct XY {
+    int x, y;
+} xy;
 
-#define _565(x) ((x >> 8 & 0xf8) | ((x >> 3 & 0xfc) << 8) | ((x << 3 & 0xfc) << 16)); // | 0xff000000
-#define _8888rev(px) (((px >> 16) & 0xff) | (px & 0xff00) | ((px << 16) & 0xff0000)); // | 0xff000000)
+xy rotate(int t, int x, int y, int w, int h);
 
+void RGBA(int pix, uint32_t *dst, void *source, int y, int h, int w, int hh, int dw, int pad, int rot);
 
-void RGBA(int pix, void *destination, void *source, int yy, int yn, int xw, int xh, int dw, int pad, int rot);
-
-void i565(void *destination, void *source, int yy, int yn, int xw, int pad);
-void i8888(void *destination, void *source, int yy, int yn, int xw, int pad);
-void i565r(void *destination, void *source, int yy, int yn, int xw, int xh, int dw, int pad, int rot);
-void i8888r(void *destination, void *source, int yy, int yn, int xw, int xh, int dw, int pad, int rot);
-
-uint32_t px8888rev(uint32_t px);
+uint32_t _565(uint32_t x);
+uint32_t _8888rev(uint32_t px);
 
 #endif
