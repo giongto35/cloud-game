@@ -10,8 +10,6 @@
     // first user interaction
     let interacted = false;
 
-    // ping-pong
-    // let pingPong = 0;
     const menuScreen = document.getElementById('menu-screen');
     const helpOverlay = document.getElementById('help-overlay');
     const playerIndex = document.getElementById('playeridx');
@@ -56,23 +54,7 @@
         message.show('Now you can share you game!');
     };
 
-    // const onWebrtcMessage = () => {
-    //     event.pub(PING_RESPONSE);
-    // };
-
     const onConnectionReady = () => {
-        // ping / pong
-        // if (pingPong === 0) {
-        //     pingPong = setInterval(() => {
-        //         if (!webrtc.message('x')) {
-        //             clearInterval(pingPong);
-        //             pingPong = 0;
-        //             log.info("ping-pong was disabled due to remote channel error");
-        //         }
-        //         event.pub(PING_REQUEST, {time: Date.now()})
-        //     }, 10000);
-        // }
-
         // start a game right away or show the menu
         if (room.getId()) {
             startGame();
@@ -471,10 +453,6 @@
     event.sub(WEBRTC_CONNECTION_READY, onConnectionReady);
     event.sub(WEBRTC_CONNECTION_CLOSED, () => {
         input.poll.disable();
-        // if (pingPong > 0) {
-        //     clearInterval(pingPong);
-        //     pingPong = 0;
-        // }
         webrtc.stop();
     });
     event.sub(LATENCY_CHECK_REQUESTED, onLatencyCheck);
