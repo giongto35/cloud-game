@@ -381,8 +381,6 @@
                         case KEY.FULL:
                             stream.video.toggleFullscreen();
                             break;
-
-                        // update player index
                         case KEY.PAD1:
                             updatePlayerIndex(0);
                             break;
@@ -395,24 +393,15 @@
                         case KEY.PAD4:
                             updatePlayerIndex(3);
                             break;
-
-                        // toggle multitap
                         case KEY.MULTITAP:
                             api.game.toggleMultitap();
                             break;
-
-                        // quit
                         case KEY.QUIT:
                             input.poll.disable();
-
                             api.game.quit(room.getId());
                             room.reset();
-
-                            message.show('Quit!');
-
                             window.location = window.location.pathname;
                             break;
-
                         case KEY.STATS:
                             event.pub(STATS_TOGGLE);
                             break;
