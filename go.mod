@@ -16,7 +16,7 @@ require (
 	github.com/pion/logging v0.2.2
 	github.com/pion/webrtc/v4 v4.0.0-beta.3
 	github.com/rs/xid v1.5.0
-	github.com/rs/zerolog v1.30.0
+	github.com/rs/zerolog v1.31.0
 	github.com/veandco/go-sdl2 v0.4.35
 	golang.org/x/crypto v0.13.0
 	golang.org/x/image v0.12.0
@@ -36,7 +36,7 @@ require (
 	github.com/pion/mdns v0.0.9 // indirect
 	github.com/pion/randutil v0.1.0 // indirect
 	github.com/pion/rtcp v1.2.10 // indirect
-	github.com/pion/rtp v1.8.1 // indirect
+	github.com/pion/rtp v1.8.2 // indirect
 	github.com/pion/sctp v1.8.9 // indirect
 	github.com/pion/sdp/v3 v3.0.6 // indirect
 	github.com/pion/srtp/v3 v3.0.0 // indirect
