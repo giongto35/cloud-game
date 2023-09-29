@@ -24,6 +24,7 @@ type Emulator interface {
 	LoadCore(name string)
 	LoadGame(path string) error
 	FPS() int
+	Flipped() bool
 	AudioSampleRate() int
 	IsPortrait() bool
 	// Start is called after LoadGame
@@ -239,6 +240,7 @@ func (f *Frontend) Start() {
 	}
 }
 
+func (f *Frontend) Flipped() bool                 { return f.nano.IsGL() }
 func (f *Frontend) FrameSize() (int, int)         { return f.nano.GeometryBase() }
 func (f *Frontend) FPS() int                      { return f.nano.VideoFramerate() }
 func (f *Frontend) HashPath() string              { return f.storage.GetSavePath() }

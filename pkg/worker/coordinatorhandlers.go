@@ -112,6 +112,9 @@ func (c *coordinator) HandleGameStart(rq api.StartGameRequest[com.Uid], w *Worke
 			app.Close()
 			return api.EmptyPacket
 		}
+		if app.Flipped() {
+			m.SetVideoFlip(true)
+		}
 
 		// make the room
 		r = room.NewRoom[*room.GameSession](uid, app, w.router.Users(), m)
