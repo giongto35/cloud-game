@@ -251,7 +251,7 @@ func (n *Nanoarch) LoadGame(path string) error {
 	n.stopped.Store(false)
 
 	if n.Video.gl.enabled {
-		setRotation(image.F180) // flip Y coordinates of OpenGL
+		//setRotation(image.F180) // flip Y coordinates of OpenGL
 		bufS := uint(n.sysAvInfo.geometry.max_width*n.sysAvInfo.geometry.max_height) * n.Video.BPP
 		graphics.SetBuffer(int(bufS))
 		n.log.Info().Msgf("Set buffer: %v", byteCountBinary(int64(bufS)))
@@ -351,6 +351,7 @@ func (n *Nanoarch) Run() {
 	}
 }
 
+func (n *Nanoarch) IsGL() bool      { return n.Video.gl.enabled }
 func (n *Nanoarch) IsStopped() bool { return n.stopped.Load() }
 
 func videoSetPixelFormat(format uint32) (C.bool, error) {

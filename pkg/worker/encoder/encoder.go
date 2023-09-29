@@ -16,6 +16,7 @@ type (
 		LoadBuf(input []byte)
 		Encode() []byte
 		IntraRefresh()
+		SetFlip(bool)
 		Shutdown() error
 	}
 )
@@ -64,6 +65,8 @@ func (vp *VideoEncoder) Encode(img InFrame) OutFrame {
 	}
 	return nil
 }
+
+func (vp *VideoEncoder) SetFlip(b bool) { vp.encoder.SetFlip(b) }
 
 func (vp *VideoEncoder) Stop() {
 	vp.stopped.Store(true)

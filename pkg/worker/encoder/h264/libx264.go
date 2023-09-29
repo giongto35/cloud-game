@@ -44,7 +44,8 @@ type Nal struct {
 const RcCrf = 1
 
 const (
-	CspI420 = 0x0002 // yuv 4:2:0 planar
+	CspI420  = 0x0002 // yuv 4:2:0 planar
+	CspVflip = 0x1000 /* the csp is vertically flipped */
 
 	// CspMask      = 0x00ff /* */
 	// CspNone      = 0x0000 /* Invalid mode     */
@@ -65,7 +66,6 @@ const (
 	//CspBgra      = 0x000f /* packed bgr 32bits */
 	//CspRgb       = 0x0010 /* packed rgb 24bits */
 	//CspMax       = 0x0011 /* end of list */
-	//CspVflip     = 0x1000 /* the csp is vertically flipped */
 	//CspHighDepth = 0x2000 /* the csp has a depth of 16 bits per pixel component */
 )
 

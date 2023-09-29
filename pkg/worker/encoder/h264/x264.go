@@ -139,6 +139,14 @@ func (e *H264) IntraRefresh() {
 	// !to implement
 }
 
+func (e *H264) SetFlip(b bool) {
+	if b {
+		e.in.Img.ICsp |= CspVflip
+	} else {
+		e.in.Img.ICsp &= ^CspVflip
+	}
+}
+
 func (e *H264) Shutdown() error {
 	e.y = nil
 	e.u = nil

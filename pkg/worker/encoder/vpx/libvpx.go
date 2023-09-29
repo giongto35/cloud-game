@@ -84,7 +84,10 @@ type Vpx struct {
 	image      C.vpx_image_t
 	codecCtx   C.vpx_codec_ctx_t
 	kfi        C.int
+	flipped    bool
 }
+
+func (vpx *Vpx) SetFlip(b bool) { vpx.flipped = b }
 
 type Options struct {
 	// Target bandwidth to use for this stream, in kilobits per second.
@@ -134,6 +137,9 @@ func NewEncoder(w, h int, opts *Options) (*Vpx, error) {
 
 func (vpx *Vpx) LoadBuf(yuv []byte) {
 	C.vpx_img_read(&vpx.image, unsafe.Pointer(&yuv[0]))
+	if vpx.flipped {
+		C.vpx_img_flip(&vpx.image)
+	}
 }
 
 // Encode encodes yuv image with the VPX8 encoder.
@@ -166,5 +172,6 @@ func (vpx *Vpx) Shutdown() error {
 	C.vpx_img_free(&vpx.image)
 	//}
 	C.vpx_codec_destroy(&vpx.codecCtx)
+	vpx.flipped = false
 	return nil
 }

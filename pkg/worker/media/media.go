@@ -189,3 +189,5 @@ func (wmp *WebrtcMediaPipe) initVideo(w, h int, conf config.Video) error {
 }
 
 func (wmp *WebrtcMediaPipe) ProcessVideo(v app.Video) []byte { return wmp.enc.Encode(&v.Frame) }
+
+func (wmp *WebrtcMediaPipe) SetVideoFlip(b bool) { wmp.enc.SetFlip(b) }
