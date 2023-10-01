@@ -6,10 +6,10 @@ import (
 	"reflect"
 	"testing"
 
+	"github.com/giongto35/cloud-game/v3/pkg/encoder"
+	"github.com/giongto35/cloud-game/v3/pkg/encoder/h264"
+	"github.com/giongto35/cloud-game/v3/pkg/encoder/vpx"
 	"github.com/giongto35/cloud-game/v3/pkg/logger"
-	"github.com/giongto35/cloud-game/v3/pkg/worker/encoder"
-	"github.com/giongto35/cloud-game/v3/pkg/worker/encoder/h264"
-	"github.com/giongto35/cloud-game/v3/pkg/worker/encoder/vpx"
 )
 
 var l = logger.New(false)
