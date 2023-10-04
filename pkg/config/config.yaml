@@ -99,12 +99,9 @@ worker:
   tag:
 
 emulator:
-  # set output viewport scale factor
-  scale: 1
-
   # set the total number of threads for the image processing
-  # (experimental)
-  threads: 4
+  # (removed)
+  threads: 0
 
   aspectRatio:
     # enable aspect ratio changing
@@ -163,6 +160,7 @@ emulator:
       #   - altRepo (bool) prioritize secondary repo as the download source
       #   - lib (string)
       #   - roms ([]string)
+      #   - scale (int) scales the output video frames by this factor.
       #   - folder (string)
       #       By default emulator selection is based on the folder named as cores
       #       in the list (i.e. nes, snes) but if you specify folder param,
@@ -244,8 +242,6 @@ encoder:
   video:
     # h264, vpx (VP8)
     codec: h264
-    # concurrent execution units (0 - disabled)
-    concurrency: 0
     # see: https://trac.ffmpeg.org/wiki/Encode/H.264
     h264:
       # Constant Rate Factor (CRF) 0-51 (default: 23)
@@ -273,12 +269,6 @@ encoder:
 # one additional FFMPEG concat demux file
 recording:
   enabled: false
-  # image compression level:
-  #   0 - default compression
-  #	 -1 - no compression
-  #	 -2 - best speed
-  #	 -3 - best compression
-  compressLevel: 0
   # name contains the name of the recording dir (or zip)
   # format:
   # %date:go_time_format% -- refer: https://go.dev/src/time/format.go

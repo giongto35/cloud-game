@@ -3,123 +3,80 @@ package yuv
 import (
 	"image"
 	"sync"
-	"unsafe"
+
+	"github.com/giongto35/cloud-game/v3/pkg/encoder/yuv/libyuv"
 )
 
-/*
-#cgo CFLAGS: -Wall
-#include "yuv.h"
-*/
-import "C"
-
-type ImgProcessor interface {
-	Process(rgba *image.RGBA) []byte
-	Put(*[]byte)
+type Conv struct {
+	w, h   int
+	sw, sh int
+	scale  float64
+	pool   sync.Pool
 }
 
-type Options struct {
-	Threads int
+type RawFrame struct {
+	Data   []byte
+	Stride int
+	W, H   int
 }
 
-type processor struct {
-	w, h int
+type PixFmt uint32
 
-	// cache
-	ww   C.int
-	pool sync.Pool
+const FourccRgbp = libyuv.FourccRgbp
+const FourccArgb = libyuv.FourccArgb
+const FourccAbgr = libyuv.FourccAbgr
+
+func NewYuvConv(w, h int, scale float64) Conv {
+	if scale < 1 {
+		scale = 1
+	}
+	sw, sh := round(w, scale), round(h, scale)
+	bufSize := int(float64(sw) * float64(sh) * 1.5)
+	return Conv{
+		w: w, h: h, sw: sw, sh: sh, scale: scale,
+		pool: sync.Pool{New: func() any { b := make([]byte, bufSize); return &b }},
+	}
 }
 
-type threadedProcessor struct {
-	*processor
-
-	// threading
-	threads int
-	chunk   int
-
-	// cache
-	chromaU C.int
-	chromaV C.int
-	wg      sync.WaitGroup
-}
-
-// NewYuvImgProcessor creates new YUV image converter from RGBA.
-func NewYuvImgProcessor(w, h int, opts *Options) ImgProcessor {
-	bufSize := int(float32(w*h) * 1.5)
-
-	processor := processor{
-		w:  w,
-		h:  h,
-		ww: C.int(w),
-		pool: sync.Pool{New: func() any {
-			b := make([]byte, bufSize)
-			return &b
-		}},
+// Process converts an image to YUV I420 format inside the internal buffer.
+func (c *Conv) Process(frame RawFrame, rot uint, pf PixFmt) []byte {
+	dx, dy := c.w, c.h // dest
+	cx, cy := c.w, c.h // crop
+	if rot == 90 || rot == 270 {
+		cx, cy = cy, cx
 	}
 
-	if opts != nil && opts.Threads > 0 {
-		// chunks the image evenly
-		chunk := h / opts.Threads
-		if chunk%2 != 0 {
-			chunk--
-		}
-
-		return &threadedProcessor{
-			chromaU:   C.int(w * h),
-			chromaV:   C.int(w*h + w*h/4),
-			chunk:     chunk,
-			processor: &processor,
-			threads:   opts.Threads,
-			wg:        sync.WaitGroup{},
-		}
+	stride := frame.Stride >> 2
+	if pf == PixFmt(libyuv.FourccRgbp) {
+		stride = frame.Stride >> 1
 	}
-	return &processor
-}
 
-// Process converts RGBA colorspace into YUV I420 format inside the internal buffer.
-// Non-threaded version.
-func (yuv *processor) Process(rgba *image.RGBA) []byte {
-	buf := *yuv.pool.Get().(*[]byte)
-	C.rgbaToYuv(unsafe.Pointer(&buf[0]), unsafe.Pointer(&rgba.Pix[0]), yuv.ww, C.int(yuv.h))
+	buf := *c.pool.Get().(*[]byte)
+	libyuv.Y420(frame.Data, buf, frame.W, frame.H, stride, dx, dy, rot, uint32(pf), cx, cy)
+
+	if c.scale > 1 {
+		dstBuf := *c.pool.Get().(*[]byte)
+		libyuv.Y420Scale(buf, dstBuf, dx, dy, c.sw, c.sh)
+		c.pool.Put(&buf)
+		return dstBuf
+	}
 	return buf
 }
 
-func (yuv *processor) Put(x *[]byte) { yuv.pool.Put(x) }
+func (c *Conv) Put(x *[]byte)        { c.pool.Put(x) }
+func (c *Conv) Version() string      { return libyuv.Version() }
+func round(x int, scale float64) int { return (int(float64(x)*scale) + 1) & ^1 }
 
-// Process converts RGBA colorspace into YUV I420 format inside the internal buffer.
-// Threaded version.
-//
-// We divide the input image into chunks by the number of available CPUs.
-// Each chunk should contain 2, 4, 6, etc. rows of the image.
-//
-//	      8x4          CPU (2)
-//	x x x x x x x x  | Coroutine 1
-//	x x x x x x x x  | Coroutine 1
-//	x x x x x x x x  | Coroutine 2
-//	x x x x x x x x  | Coroutine 2
-func (yuv *threadedProcessor) Process(rgba *image.RGBA) []byte {
-	src := unsafe.Pointer(&rgba.Pix[0])
-	buf := *yuv.pool.Get().(*[]byte)
-	dst := unsafe.Pointer(&buf[0])
-	yuv.wg.Add(yuv.threads << 1)
-	chunk := yuv.w * yuv.chunk
-	for i := 0; i < yuv.threads; i++ {
-		pos, hh := C.int(i*chunk), C.int(yuv.chunk)
-		if i == yuv.threads-1 {
-			hh = C.int(yuv.h - i*yuv.chunk)
-		}
-		go yuv.chroma_(src, dst, pos, hh)
-		go yuv.luma_(src, dst, pos, hh)
-	}
-	yuv.wg.Wait()
-	return buf
-}
+func ToYCbCr(bytes []byte, w, h int) *image.YCbCr {
+	cw, ch := (w+1)/2, (h+1)/2
 
-func (yuv *threadedProcessor) luma_(src unsafe.Pointer, dst unsafe.Pointer, pos C.int, hh C.int) {
-	C.luma(dst, src, pos, yuv.ww, hh)
-	yuv.wg.Done()
-}
+	i0 := w*h + 0*cw*ch
+	i1 := w*h + 1*cw*ch
+	i2 := w*h + 2*cw*ch
 
-func (yuv *threadedProcessor) chroma_(src unsafe.Pointer, dst unsafe.Pointer, pos C.int, hh C.int) {
-	C.chroma(dst, src, pos, yuv.chromaU, yuv.chromaV, yuv.ww, hh)
-	yuv.wg.Done()
+	yuv := image.NewYCbCr(image.Rect(0, 0, w, h), image.YCbCrSubsampleRatio420)
+	yuv.Y = bytes[:i0:i0]
+	yuv.Cb = bytes[i0:i1:i1]
+	yuv.Cr = bytes[i1:i2:i2]
+	return yuv
 }

@@ -103,11 +103,11 @@ func (s samples) stretch(size int) []int16 {
 }
 
 type WebrtcMediaPipe struct {
+	a        *opus.Encoder
+	v        *encoder.Video
 	onAudio  func([]byte)
-	opus     *opus.Encoder
 	audioBuf buffer
 	log      *logger.Logger
-	enc      *encoder.VideoEncoder
 
 	aConf config.Audio
 	vConf config.Video
@@ -115,6 +115,7 @@ type WebrtcMediaPipe struct {
 	AudioSrcHz     int
 	AudioFrame     int
 	VideoW, VideoH int
+	VideoScale     float64
 }
 
 func NewWebRtcMediaPipe(ac config.Audio, vc config.Video, log *logger.Logger) *WebrtcMediaPipe {
@@ -126,8 +127,8 @@ func (wmp *WebrtcMediaPipe) SetAudioCb(cb func([]byte, int32)) {
 	wmp.onAudio = func(bytes []byte) { cb(bytes, fr) }
 }
 func (wmp *WebrtcMediaPipe) Destroy() {
-	if wmp.enc != nil {
-		wmp.enc.Stop()
+	if wmp.v != nil {
+		wmp.v.Stop()
 	}
 }
 func (wmp *WebrtcMediaPipe) PushAudio(audio []int16) { wmp.audioBuf.write(audio, wmp.encodeAudio) }
@@ -136,7 +137,7 @@ func (wmp *WebrtcMediaPipe) Init() error {
 	if err := wmp.initAudio(wmp.AudioSrcHz, wmp.AudioFrame); err != nil {
 		return err
 	}
-	if err := wmp.initVideo(wmp.VideoW, wmp.VideoH, wmp.vConf); err != nil {
+	if err := wmp.initVideo(wmp.VideoW, wmp.VideoH, wmp.VideoScale, wmp.vConf); err != nil {
 		return err
 	}
 	return nil
@@ -148,7 +149,7 @@ func (wmp *WebrtcMediaPipe) initAudio(srcHz int, frameSize int) error {
 		return fmt.Errorf("opus fail: %w", err)
 	}
 	wmp.log.Debug().Msgf("Opus: %v", au.GetInfo())
-	wmp.opus = au
+	wmp.a = au
 	buf := newBuffer(frame(srcHz, frameSize))
 	dstHz, _ := au.SampleRate()
 	if srcHz != dstHz {
@@ -160,7 +161,7 @@ func (wmp *WebrtcMediaPipe) initAudio(srcHz int, frameSize int) error {
 }
 
 func (wmp *WebrtcMediaPipe) encodeAudio(pcm samples) {
-	data, err := wmp.opus.Encode(pcm)
+	data, err := wmp.a.Encode(pcm)
 	audioPool.Put((*[]int16)(&pcm))
 	if err != nil {
 		wmp.log.Error().Err(err).Msgf("opus encode fail")
@@ -169,25 +170,36 @@ func (wmp *WebrtcMediaPipe) encodeAudio(pcm samples) {
 	wmp.onAudio(data)
 }
 
-func (wmp *WebrtcMediaPipe) initVideo(w, h int, conf config.Video) error {
+func (wmp *WebrtcMediaPipe) initVideo(w, h int, scale float64, conf config.Video) error {
 	var enc encoder.Encoder
 	var err error
+
+	sw, sh := round(w, scale), round(h, scale)
+
+	wmp.log.Debug().Msgf("Scale: %vx%v -> %vx%v", w, h, sw, sh)
+
 	wmp.log.Info().Msgf("Video codec: %v", conf.Codec)
 	if conf.Codec == string(encoder.H264) {
 		wmp.log.Debug().Msgf("x264: build v%v", h264.LibVersion())
 		opts := h264.Options(conf.H264)
-		enc, err = h264.NewEncoder(w, h, &opts)
+		enc, err = h264.NewEncoder(sw, sh, &opts)
 	} else {
 		opts := vpx.Options(conf.Vpx)
-		enc, err = vpx.NewEncoder(w, h, &opts)
+		enc, err = vpx.NewEncoder(sw, sh, &opts)
 	}
 	if err != nil {
 		return fmt.Errorf("couldn't create a video encoder: %w", err)
 	}
-	wmp.enc = encoder.NewVideoEncoder(enc, w, h, conf.Concurrency, wmp.log)
+	wmp.v = encoder.NewVideoEncoder(enc, w, h, scale, wmp.log)
+	wmp.log.Debug().Msgf("%v", wmp.v.Info())
 	return nil
 }
 
-func (wmp *WebrtcMediaPipe) ProcessVideo(v app.Video) []byte { return wmp.enc.Encode(&v.Frame) }
+func round(x int, scale float64) int { return (int(float64(x)*scale) + 1) & ^1 }
 
-func (wmp *WebrtcMediaPipe) SetVideoFlip(b bool) { wmp.enc.SetFlip(b) }
+func (wmp *WebrtcMediaPipe) ProcessVideo(v app.Video) []byte {
+	return wmp.v.Encode(encoder.InFrame(v.Frame))
+}
+func (wmp *WebrtcMediaPipe) SetPixFmt(f uint32)  { wmp.v.SetPixFormat(f) }
+func (wmp *WebrtcMediaPipe) SetVideoFlip(b bool) { wmp.v.SetFlip(b) }
+func (wmp *WebrtcMediaPipe) SetRot(r uint)       { wmp.v.SetRot(r) }

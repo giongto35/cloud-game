@@ -7,7 +7,6 @@ import (
 )
 
 type Emulator struct {
-	Scale       int
 	Threads     int
 	AspectRatio struct {
 		Keep   bool
@@ -54,6 +53,7 @@ type LibretroCoreConfig struct {
 	Lib           string
 	Options       map[string]string
 	Roms          []string
+	Scale         float64
 	UsesLibCo     bool
 	VFR           bool
 	Width         int

@@ -19,16 +19,20 @@ import (
 	"github.com/giongto35/cloud-game/v3/pkg/com"
 	"github.com/giongto35/cloud-game/v3/pkg/config"
 	"github.com/giongto35/cloud-game/v3/pkg/encoder"
+	"github.com/giongto35/cloud-game/v3/pkg/encoder/color/bgra"
+	"github.com/giongto35/cloud-game/v3/pkg/encoder/color/rgb565"
+	"github.com/giongto35/cloud-game/v3/pkg/encoder/color/rgba"
 	"github.com/giongto35/cloud-game/v3/pkg/games"
 	"github.com/giongto35/cloud-game/v3/pkg/logger"
 	"github.com/giongto35/cloud-game/v3/pkg/worker/caged"
 	"github.com/giongto35/cloud-game/v3/pkg/worker/caged/app"
-	canvas "github.com/giongto35/cloud-game/v3/pkg/worker/caged/libretro/image"
 	"github.com/giongto35/cloud-game/v3/pkg/worker/media"
 	"github.com/giongto35/cloud-game/v3/pkg/worker/thread"
 	"golang.org/x/image/font"
 	"golang.org/x/image/font/basicfont"
 	"golang.org/x/image/math/fixed"
+
+	_ "github.com/giongto35/cloud-game/v3/test"
 )
 
 var (
@@ -58,13 +62,15 @@ func (r testRoom) Close() {
 	time.Sleep(2 * time.Second) // hack: wait room destruction (atm impossible to tell)
 }
 
-func (r testRoom) WaitFrames(n int) canvas.Frame {
-	var frame canvas.Frame
+func (r testRoom) WaitFrame(n int) app.RawFrame {
 	var wg sync.WaitGroup
-	wg.Add(n)
+	wg.Add(1)
+	target := app.RawFrame{}
 	WithEmulator(r.app).SetVideoCb(func(v app.Video) {
-		if n > 0 {
-			frame = (&canvas.Frame{RGBA: v.Frame}).Copy()
+		if n == 1 {
+			target = v.Frame
+			target.Data = make([]byte, len(v.Frame.Data))
+			copy(target.Data, v.Frame.Data)
 			wg.Done()
 		}
 		n--
@@ -73,7 +79,7 @@ func (r testRoom) WaitFrames(n int) canvas.Frame {
 		r.StartApp()
 	}
 	wg.Wait()
-	return frame
+	return target
 }
 
 type testParams struct {
@@ -81,11 +87,11 @@ type testParams struct {
 	game   games.GameMetadata
 	codecs []codec
 	frames int
+	color  int
 }
 
 // Store absolute path to test games
 var testTempDir = filepath.Join(os.TempDir(), "cloud-game-core-tests")
-var root = ""
 
 // games
 var (
@@ -93,12 +99,6 @@ var (
 	sushi = games.GameMetadata{Name: "Sushi The Cat", Type: "gba", Path: "Sushi The Cat.gba", System: "gba"}
 	fd    = games.GameMetadata{Name: "Florian Demo", Type: "n64", Path: "Sample Demo by Florian (PD).z64", System: "n64"}
 )
-
-func init() {
-	runtime.LockOSThread()
-	p, _ := filepath.Abs("../../../")
-	root = p + string(filepath.Separator)
-}
 
 func TestMain(m *testing.M) {
 	flag.BoolVar(&renderFrames, "renderFrames", false, "Render frames for eye testing purposes")
@@ -115,40 +115,51 @@ func TestRoom(t *testing.T) {
 
 	for _, test := range tests {
 		room := room(conf{codec: test.codecs[0], game: test.game})
-		room.WaitFrames(test.frames)
+		room.WaitFrame(test.frames)
 		room.Close()
 	}
 }
 
 func TestAll(t *testing.T) {
 	tests := []testParams{
-		{game: sushi, frames: 150},
-		{game: alwas, frames: 50},
-		{game: fd, frames: 50, system: "main-thread"},
+		{game: sushi, frames: 150, color: 2},
+		{game: alwas, frames: 50, color: 1},
+		{game: fd, frames: 50, system: "gl", color: 1},
 	}
 
 	crc32q := crc32.MakeTable(0xD5828281)
 
 	for _, test := range tests {
+		var frame app.RawFrame
 		room := room(conf{game: test.game, codec: encoder.VP8, autoGlContext: autoGlContext, autoAppStart: false})
-		var frame canvas.Frame
-		if test.system == "main-thread" {
-			thread.Main(func() {
-				frame = room.WaitFrames(test.frames)
-				room.Close()
-			})
-		} else {
-			frame = room.WaitFrames(test.frames)
-			room.Close()
-		}
+		flip := test.system == "gl"
+		thread.Main(func() { frame = room.WaitFrame(test.frames) })
+		room.Close()
+
 		if renderFrames {
-			tag := fmt.Sprintf("%v-%v-0x%08x", runtime.GOOS, test.game.Type, crc32.Checksum(frame.Pix, crc32q))
-			dumpCanvas(&frame, tag, fmt.Sprintf("%v [%v]", tag, test.frames), outputPath)
+			rect := image.Rect(0, 0, frame.W, frame.H)
+			var src image.Image
+			if test.color == 1 {
+				src1 := bgra.NewBGRA(rect)
+				src1.Pix = frame.Data
+				src1.Stride = frame.Stride
+				src = src1
+			} else {
+				if test.color == 2 {
+					src1 := rgb565.NewRGB565(rect)
+					src1.Pix = frame.Data
+					src1.Stride = frame.Stride
+					src = src1
+				}
+			}
+			dst := rgba.ToRGBA(src, flip)
+			tag := fmt.Sprintf("%v-%v-0x%08x", runtime.GOOS, test.game.Type, crc32.Checksum(frame.Data, crc32q))
+			dumpCanvas(dst, tag, fmt.Sprintf("%v [%v]", tag, test.frames), outputPath)
 		}
 	}
 }
 
-func dumpCanvas(frame *canvas.Frame, name string, caption string, path string) {
+func dumpCanvas(frame *image.RGBA, name string, caption string, path string) {
 	// slap 'em caption
 	if caption != "" {
 		draw.Draw(frame, image.Rect(8, 8, 8+len(caption)*7+3, 24), &image.Uniform{C: color.RGBA{}}, image.Point{}, draw.Src)
@@ -187,15 +198,16 @@ func room(cfg conf) testRoom {
 		panic(err)
 	}
 
-	conf.Worker.Library.BasePath = filepath.FromSlash(root + "/assets/games")
+	conf.Emulator.Libretro.Cores.Repo.ExtLock = expand("tests", ".cr", "cloud-game.lock")
+	conf.Emulator.LocalPath = expand("tests", conf.Emulator.LocalPath)
+	conf.Emulator.Storage = expand("tests", "storage")
 
-	fixEmulators(&conf, cfg.autoGlContext)
+	conf.Encoder.Video.Codec = string(cfg.codec)
+
 	l := logger.NewConsole(conf.Worker.Debug, "w", false)
 	if cfg.noLog {
 		logger.SetGlobalLevel(logger.Disabled)
 	}
-
-	conf.Encoder.Video.Codec = string(cfg.codec)
 
 	id := cfg.roomName
 	if id == "" {
@@ -218,6 +230,7 @@ func room(cfg conf) testRoom {
 	m.AudioSrcHz = emu.AudioSampleRate()
 	m.AudioFrame = conf.Encoder.Audio.Frame
 	m.VideoW, m.VideoH = emu.ViewportSize()
+	m.VideoScale = emu.Scale()
 	if err := m.Init(); err != nil {
 		l.Fatal().Err(err).Msgf("no init")
 	}
@@ -228,22 +241,6 @@ func room(cfg conf) testRoom {
 	}
 
 	return testRoom{Room: room, started: cfg.autoAppStart}
-}
-
-// fixEmulators makes absolute game paths in global GameList and passes GL context config.
-// hack: emulator paths should be absolute and visible to the tests.
-func fixEmulators(config *config.WorkerConfig, autoGlContext bool) {
-	config.Emulator.Libretro.Cores.Paths.Libs =
-		filepath.FromSlash(root + config.Emulator.Libretro.Cores.Paths.Libs)
-	config.Emulator.LocalPath = filepath.FromSlash(filepath.Join(root, "tests", config.Emulator.LocalPath))
-	config.Emulator.Storage = filepath.FromSlash(filepath.Join(root, "tests", "storage"))
-
-	for k, conf := range config.Emulator.Libretro.Cores.List {
-		if conf.IsGlAllowed && autoGlContext {
-			conf.AutoGlContext = true
-		}
-		config.Emulator.Libretro.Cores.List[k] = conf
-	}
 }
 
 // Measures emulation performance of various
@@ -263,7 +260,7 @@ func BenchmarkRoom(b *testing.B) {
 					b.StopTimer()
 					room := room(conf{game: bench.game, codec: cod, noLog: true})
 					b.StartTimer()
-					room.WaitFrames(bench.frames)
+					room.WaitFrame(bench.frames)
 					b.StopTimer()
 					room.Room.Close()
 				}
@@ -298,4 +295,10 @@ func TestRouter(t *testing.T) {
 	}
 	router.SetRoom(nil)
 	router.Close()
+}
+
+// expand joins a list of file path elements.
+func expand(p ...string) string {
+	ph, _ := filepath.Abs(filepath.FromSlash(filepath.Join(p...)))
+	return ph
 }

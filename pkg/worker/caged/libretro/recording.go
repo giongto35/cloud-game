@@ -1,7 +1,6 @@
 package libretro
 
 import (
-	"image"
 	"time"
 
 	"github.com/giongto35/cloud-game/v3/pkg/config"
@@ -15,23 +14,29 @@ type RecordingFrontend struct {
 	rec *recorder.Recording
 }
 
-// !to fix opaque image save
-
-type opaque struct{ image.RGBA }
-
-func (o *opaque) Opaque() bool { return true }
-
 func WithRecording(fe Emulator, rec bool, user string, game string, conf config.Recording, log *logger.Logger) *RecordingFrontend {
+
+	pix := ""
+	switch fe.PixFormat() {
+	case 0:
+		pix = "rgb1555"
+	case 1:
+		pix = "brga"
+	case 2:
+		pix = "rgb565"
+	}
+
 	rr := &RecordingFrontend{Emulator: fe, rec: recorder.NewRecording(
 		recorder.Meta{UserName: user},
 		log,
 		recorder.Options{
-			Dir:                   conf.Folder,
-			Game:                  game,
-			ImageCompressionLevel: conf.CompressLevel,
-			Name:                  conf.Name,
-			Zip:                   conf.Zip,
-			Vsync:                 true,
+			Dir:   conf.Folder,
+			Game:  game,
+			Name:  conf.Name,
+			Zip:   conf.Zip,
+			Vsync: true,
+			Flip:  fe.Flipped(),
+			Pix:   pix,
 		})}
 	rr.ToggleRecording(rec, user)
 	return rr
@@ -52,7 +57,7 @@ func (r *RecordingFrontend) SetAudioCb(fn func(app.Audio)) {
 func (r *RecordingFrontend) SetVideoCb(fn func(app.Video)) {
 	r.Emulator.SetVideoCb(func(v app.Video) {
 		if r.IsRecording() {
-			r.rec.WriteVideo(recorder.Video{Image: &opaque{v.Frame}, Duration: time.Duration(v.Duration)})
+			r.rec.WriteVideo(recorder.Video{Frame: recorder.Frame(v.Frame), Duration: time.Duration(v.Duration)})
 		}
 		fn(v)
 	})

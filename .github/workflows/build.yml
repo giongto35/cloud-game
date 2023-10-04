@@ -1,5 +1,5 @@
 # ------------------------------------------------------------
-#  Build workflow (Linux x64, macOS x64, Windows x64)
+#  Build and test workflow (Linux x64, macOS x64, Windows x64)
 # ------------------------------------------------------------
 
 name: build
@@ -20,7 +20,7 @@ jobs:
     strategy:
       matrix:
         os: [ ubuntu-latest, macos-latest, windows-latest ]
-        step: [ build, check ]
+        step: [ build, test ]
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v3
@@ -33,7 +33,7 @@ jobs:
         if: matrix.os == 'ubuntu-latest'
         run: |
           sudo apt-get -qq update
-          sudo apt-get -qq install -y make pkg-config libvpx-dev libx264-dev libopus-dev libsdl2-dev libgl1-mesa-glx
+          sudo apt-get -qq install -y make pkg-config libvpx-dev libx264-dev libopus-dev libsdl2-dev libyuv-dev libgl1-mesa-glx
 
       - name: Get MacOS dev libraries and tools
         if: matrix.os == 'macos-latest'
@@ -55,9 +55,10 @@ jobs:
             mingw-w64-x86_64-opus
             mingw-w64-x86_64-x264-git
             mingw-w64-x86_64-SDL2
+            mingw-w64-x86_64-libyuv
 
       - name: Get Windows OpenGL drivers
-        if: matrix.step == 'check' && matrix.os == 'windows-latest'
+        if: matrix.step == 'test' && matrix.os == 'windows-latest'
         shell: msys2 {0}
         run: |
           wget -q https://github.com/pal1000/mesa-dist-win/releases/download/20.2.1/mesa3d-20.2.1-release-mingw.7z
@@ -81,28 +82,28 @@ jobs:
         run: |
           make build
 
-      - name: Verify core rendering (windows-latest)
-        if: matrix.step == 'check' && matrix.os == 'windows-latest' && always()
+      - name: Test (windows-latest)
+        if: matrix.step == 'test' && matrix.os == 'windows-latest' && always()
         shell: msys2 {0}
         env:
           MESA_GL_VERSION_OVERRIDE: 3.3COMPAT
         run: |
-          GL_CTX=-autoGlContext make verify-cores
+          GL_CTX=-autoGlContext make test verify-cores
 
-      - name: Verify core rendering (ubuntu-latest)
-        if: matrix.step == 'check' && matrix.os == 'ubuntu-latest' && always()
+      - name: Test (ubuntu-latest)
+        if: matrix.step == 'test' && matrix.os == 'ubuntu-latest' && always()
         env:
           MESA_GL_VERSION_OVERRIDE: 3.3COMPAT
         run: |
-          GL_CTX=-autoGlContext xvfb-run --auto-servernum make verify-cores
+          GL_CTX=-autoGlContext xvfb-run --auto-servernum make test verify-cores
 
-      - name: Verify core rendering (macos-latest)
-        if: matrix.step == 'check' && matrix.os == 'macos-latest' && always()
+      - name: Test (macos-latest)
+        if: matrix.step == 'test' && matrix.os == 'macos-latest' && always()
         run: |
-          make verify-cores
+          make test verify-cores
 
       - uses: actions/upload-artifact@v3
-        if: matrix.step == 'check' && always()
+        if: matrix.step == 'test' && always()
         with:
           name: emulator-test-frames
           path: _rendered/*.png

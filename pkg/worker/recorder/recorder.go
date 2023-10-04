@@ -1,7 +1,6 @@
 package recorder
 
 import (
-	"image"
 	"io"
 	"math/rand"
 	"os"
@@ -60,8 +59,13 @@ type (
 		Duration time.Duration
 	}
 	Video struct {
-		Image    image.Image
+		Frame    Frame
 		Duration time.Duration
+	}
+	Frame struct {
+		Data   []byte
+		Stride int
+		W, H   int
 	}
 )
 
@@ -96,7 +100,7 @@ func (r *Recording) Start() {
 		r.log.Fatal().Err(err)
 	}
 	r.audio = audio
-	video, err := newPngStream(path, r.opts)
+	video, err := newRawStream(path)
 	if err != nil {
 		r.log.Fatal().Err(err)
 	}

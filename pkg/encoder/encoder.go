@@ -1,7 +1,7 @@
 package encoder
 
 import (
-	"image"
+	"fmt"
 	"sync"
 	"sync/atomic"
 
@@ -10,7 +10,7 @@ import (
 )
 
 type (
-	InFrame  *image.RGBA
+	InFrame  yuv.RawFrame
 	OutFrame []byte
 	Encoder  interface {
 		LoadBuf(input []byte)
@@ -21,11 +21,13 @@ type (
 	}
 )
 
-type VideoEncoder struct {
-	encoder Encoder
+type Video struct {
+	codec   Encoder
 	log     *logger.Logger
 	stopped atomic.Bool
-	y       yuv.ImgProcessor
+	y       yuv.Conv
+	pf      yuv.PixFmt
+	rot     uint
 	mu      sync.Mutex
 }
 
@@ -41,39 +43,63 @@ const (
 // converts them into YUV I420 format,
 // encodes with provided video encoder, and
 // puts the result into the output channel.
-func NewVideoEncoder(enc Encoder, w, h int, concurrency int, log *logger.Logger) *VideoEncoder {
-	y := yuv.NewYuvImgProcessor(w, h, &yuv.Options{Threads: concurrency})
-	if concurrency > 0 {
-		log.Info().Msgf("Use concurrent image processor: %v", concurrency)
-	}
-	return &VideoEncoder{encoder: enc, y: y, log: log}
+func NewVideoEncoder(codec Encoder, w, h int, scale float64, log *logger.Logger) *Video {
+	return &Video{codec: codec, y: yuv.NewYuvConv(w, h, scale), log: log}
 }
 
-func (vp *VideoEncoder) Encode(img InFrame) OutFrame {
-	vp.mu.Lock()
-	defer vp.mu.Unlock()
-	if vp.stopped.Load() {
+func (v *Video) Encode(frame InFrame) OutFrame {
+	v.mu.Lock()
+	defer v.mu.Unlock()
+	if v.stopped.Load() {
 		return nil
 	}
 
-	yCbCr := vp.y.Process(img)
-	vp.encoder.LoadBuf(yCbCr)
-	vp.y.Put(&yCbCr)
+	yCbCr := v.y.Process(yuv.RawFrame(frame), v.rot, v.pf)
+	v.codec.LoadBuf(yCbCr)
+	v.y.Put(&yCbCr)
 
-	if frame := vp.encoder.Encode(); len(frame) > 0 {
-		return frame
+	if bytes := v.codec.Encode(); len(bytes) > 0 {
+		return bytes
 	}
 	return nil
 }
 
-func (vp *VideoEncoder) SetFlip(b bool) { vp.encoder.SetFlip(b) }
+func (v *Video) Info() string { return fmt.Sprintf("libyuv: %v", v.y.Version()) }
 
-func (vp *VideoEncoder) Stop() {
-	vp.stopped.Store(true)
-	vp.mu.Lock()
-	defer vp.mu.Unlock()
+func (v *Video) SetPixFormat(f uint32) {
+	switch f {
+	case 1:
+		v.pf = yuv.PixFmt(yuv.FourccArgb)
+	case 2:
+		v.pf = yuv.PixFmt(yuv.FourccRgbp)
+	default:
+		v.pf = yuv.PixFmt(yuv.FourccAbgr)
+	}
+}
 
-	if err := vp.encoder.Shutdown(); err != nil {
-		vp.log.Error().Err(err).Msg("failed to close the encoder")
+// SetRot sets the rotation angle of the frames.
+func (v *Video) SetRot(r uint) {
+	switch r {
+	// de-rotate
+	case 90:
+		v.rot = 270
+	case 270:
+		v.rot = 90
+	default:
+		v.rot = r
+	}
+}
+
+// SetFlip tells the encoder to flip the frames vertically.
+func (v *Video) SetFlip(b bool) { v.codec.SetFlip(b) }
+
+func (v *Video) Stop() {
+	v.stopped.Store(true)
+	v.mu.Lock()
+	defer v.mu.Unlock()
+	v.rot = 0
+
+	if err := v.codec.Shutdown(); err != nil {
+		v.log.Error().Err(err).Msg("failed to close the encoder")
 	}
 }

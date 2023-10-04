@@ -6,6 +6,8 @@ CGO_CFLAGS='-g -O3 -funroll-loops'
 CGO_LDFLAGS='-g -O3'
 GO_TAGS=static
 
+.PHONY: clean test
+
 fmt:
 	@goimports -w cmd pkg tests
 	@gofmt -s -w cmd pkg tests
@@ -31,6 +33,9 @@ build.worker:
 		-o bin/ ./cmd/worker
 
 build: build.coordinator build.worker
+
+test:
+	go test -v ./pkg/...
 
 verify-cores:
 	go test -run TestAll ./pkg/worker/room -v -renderFrames $(GL_CTX) -outputPath "../../../_rendered"
