@@ -2,6 +2,7 @@ package manager
 
 import (
 	"os"
+	"path/filepath"
 
 	"github.com/giongto35/cloud-game/v3/pkg/config"
 	"github.com/giongto35/cloud-game/v3/pkg/logger"
@@ -31,6 +32,15 @@ func NewRemoteHttpManager(conf config.LibretroConfig, log *logger.Logger) Manage
 	}
 	log.Debug().Msgf("Using .lock file: %v", fileLock)
 
+	if err := os.MkdirAll(filepath.Dir(fileLock), 0770); err != nil {
+		log.Error().Err(err).Msgf("couldn't create lock")
+	} else {
+		f, err := os.Create(fileLock)
+		if err != nil {
+			log.Error().Err(err).Msgf("couldn't create lock")
+		}
+		_ = f.Close()
+	}
 	ar, err := arch.Guess()
 	if err != nil {
 		log.Error().Err(err).Msg("couldn't get Libretro core file extension")
@@ -73,8 +83,16 @@ func CheckCores(conf config.Emulator, log *logger.Logger) error {
 
 func (m *Manager) Sync() error {
 	// IPC lock if multiple worker processes on the same machine
-	m.fmu.Lock()
-	defer m.fmu.Unlock()
+	err := m.fmu.Lock()
+	if err != nil {
+		m.log.Error().Err(err).Msg("file lock fail")
+	}
+	defer func() {
+		err := m.fmu.Unlock()
+		if err != nil {
+			m.log.Error().Err(err).Msg("file unlock fail")
+		}
+	}()
 
 	installed, err := m.GetInstalled(m.arch.LibExt)
 	if err != nil {

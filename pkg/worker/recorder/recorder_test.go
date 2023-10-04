@@ -30,13 +30,12 @@ func TestName(t *testing.T) {
 		Meta{UserName: "test"},
 		logger.Default(),
 		Options{
-			Dir:                   dir,
-			Fps:                   60,
-			Frequency:             10,
-			Game:                  fmt.Sprintf("test_game_%v", rand.Int()),
-			ImageCompressionLevel: 0,
-			Name:                  "test",
-			Zip:                   false,
+			Dir:       dir,
+			Fps:       60,
+			Frequency: 10,
+			Game:      fmt.Sprintf("test_game_%v", rand.Int()),
+			Name:      "test",
+			Zip:       false,
 		})
 	recorder.Set(true, "test_user")
 
@@ -45,11 +44,11 @@ func TestName(t *testing.T) {
 	var imgWg, audioWg sync.WaitGroup
 	imgWg.Add(iterations)
 	audioWg.Add(iterations)
-	img := generateImage(100, 100)
+	frame := genFrame(100, 100)
 
 	for i := 0; i < 222; i++ {
 		go func() {
-			recorder.WriteVideo(Video{Image: img, Duration: 16 * time.Millisecond})
+			recorder.WriteVideo(Video{Frame: frame, Duration: 16 * time.Millisecond})
 			imgWg.Done()
 		}()
 		go func() {
@@ -66,17 +65,14 @@ func TestName(t *testing.T) {
 }
 
 func BenchmarkNewRecording100x100(b *testing.B) {
-	benchmarkRecorder(100, 100, 0, b)
+	benchmarkRecorder(100, 100, b)
 }
 
-func BenchmarkNewRecording320x240_compressed(b *testing.B) {
-	benchmarkRecorder(320, 240, 0, b)
-}
-func BenchmarkNewRecording320x240_nocompress(b *testing.B) {
-	benchmarkRecorder(320, 240, -1, b)
+func BenchmarkNewRecording320x240(b *testing.B) {
+	benchmarkRecorder(320, 240, b)
 }
 
-func benchmarkRecorder(w, h int, comp int, b *testing.B) {
+func benchmarkRecorder(w, h int, b *testing.B) {
 	b.StopTimer()
 
 	dir, err := os.MkdirTemp("", "rec_bench_")
@@ -89,8 +85,8 @@ func benchmarkRecorder(w, h int, comp int, b *testing.B) {
 		}
 	}()
 
-	image1 := generateImage(w, h)
-	image2 := generateImage(w, h)
+	frame1 := genFrame(w, h)
+	frame2 := genFrame(w, h)
 
 	var bytes int64 = 0
 
@@ -103,25 +99,24 @@ func benchmarkRecorder(w, h int, comp int, b *testing.B) {
 		Meta{UserName: "test"},
 		logger.Default(),
 		Options{
-			Dir:                   dir,
-			Fps:                   60,
-			Frequency:             10,
-			Game:                  fmt.Sprintf("test_game_%v", rand.Int()),
-			ImageCompressionLevel: comp,
-			Name:                  "",
-			Zip:                   false,
+			Dir:       dir,
+			Fps:       60,
+			Frequency: 10,
+			Game:      fmt.Sprintf("test_game_%v", rand.Int()),
+			Name:      "",
+			Zip:       false,
 		})
 	recorder.Set(true, "test_user")
 	samples := []int16{0, 0, 0, 0, 0, 1, 11, 11, 11, 1}
 
 	for i := 0; i < b.N; i++ {
-		im := image1
+		f := frame1
 		if i%2 == 0 {
-			im = image2
+			f = frame2
 		}
 		go func() {
-			recorder.WriteVideo(Video{Image: im, Duration: 16 * time.Millisecond})
-			atomic.AddInt64(&bytes, int64(len(im.(*image.RGBA).Pix)))
+			recorder.WriteVideo(Video{Frame: f, Duration: 16 * time.Millisecond})
+			atomic.AddInt64(&bytes, int64(len(f.Data)))
 			ticks.Done()
 		}()
 		go func() {
@@ -137,14 +132,19 @@ func benchmarkRecorder(w, h int, comp int, b *testing.B) {
 	}
 }
 
-func generateImage(w, h int) image.Image {
+func genFrame(w, h int) Frame {
 	img := image.NewRGBA(image.Rect(0, 0, w, h))
 	for x := 0; x < w; x++ {
 		for y := 0; y < h; y++ {
 			img.Set(x, y, randomColor())
 		}
 	}
-	return img
+	return Frame{
+		Data:   img.Pix,
+		Stride: img.Stride,
+		W:      img.Bounds().Dx(),
+		H:      img.Bounds().Dy(),
+	}
 }
 
 var rnd = rand.New(rand.NewSource(time.Now().Unix()))

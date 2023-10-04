@@ -50,8 +50,7 @@ func (c *Caged) Load(game games.GameMetadata, path string) error {
 		return err
 	}
 	w, h := c.ViewportCalc()
-	c.SetViewport(w, h, c.conf.Emulator.Scale)
-
+	c.SetViewport(w, h)
 	return nil
 }
 
@@ -75,8 +74,11 @@ func (c *Caged) EnableCloudStorage(uid string, storage cloud.Storage) {
 	}
 }
 
+func (c *Caged) PixFormat() uint32                 { return c.Emulator.PixFormat() }
+func (c *Caged) Rotation() uint                    { return c.Emulator.Rotation() }
 func (c *Caged) AudioSampleRate() int              { return c.Emulator.AudioSampleRate() }
 func (c *Caged) ViewportSize() (int, int)          { return c.Emulator.ViewportSize() }
+func (c *Caged) Scale() float64                    { return c.Emulator.Scale() }
 func (c *Caged) SendControl(port int, data []byte) { c.base.Input(port, data) }
 func (c *Caged) Start()                            { go c.Emulator.Start() }
 func (c *Caged) SetSaveOnClose(v bool)             { c.base.SaveOnClose = v }

@@ -46,7 +46,7 @@ func run(w, h int, cod encoder.VideoCodec, count int, a *image.RGBA, b *image.RG
 	}
 
 	logger.SetGlobalLevel(logger.Disabled)
-	ve := encoder.NewVideoEncoder(enc, w, h, 8, l)
+	ve := encoder.NewVideoEncoder(enc, w, h, 1, l)
 	defer ve.Stop()
 
 	if a == nil {
@@ -61,7 +61,12 @@ func run(w, h int, cod encoder.VideoCodec, count int, a *image.RGBA, b *image.RG
 		if i%2 == 0 {
 			im = b
 		}
-		out := ve.Encode(im)
+		out := ve.Encode(encoder.InFrame{
+			Data:   im.Pix,
+			Stride: im.Stride,
+			W:      im.Bounds().Dx(),
+			H:      im.Bounds().Dy(),
+		})
 		if out == nil {
 			backend.Fatalf("encoder closed abnormally")
 		}

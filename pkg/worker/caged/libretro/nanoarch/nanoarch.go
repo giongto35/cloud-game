@@ -12,7 +12,6 @@ import (
 	"github.com/giongto35/cloud-game/v3/pkg/logger"
 	"github.com/giongto35/cloud-game/v3/pkg/os"
 	"github.com/giongto35/cloud-game/v3/pkg/worker/caged/libretro/graphics"
-	"github.com/giongto35/cloud-game/v3/pkg/worker/caged/libretro/image"
 	"github.com/giongto35/cloud-game/v3/pkg/worker/caged/libretro/repo/arch"
 	"github.com/giongto35/cloud-game/v3/pkg/worker/thread"
 )
@@ -33,6 +32,12 @@ const KeyReleased = 0
 
 const MaxPort int = 4
 
+var (
+	RGBA5551    = PixFmt{C: 0, BPP: 2} // BIT_FORMAT_SHORT_5_5_5_1 has 5 bits R, 5 bits G, 5 bits B, 1 bit alpha
+	RGBA8888Rev = PixFmt{C: 1, BPP: 4} // BIT_FORMAT_INT_8_8_8_8_REV has 8 bits R, 8 bits G, 8 bits B, 8 bit alpha
+	RGB565      = PixFmt{C: 2, BPP: 2} // BIT_FORMAT_SHORT_5_6_5 has 5 bits R, 6 bits G, 5 bits
+)
+
 type Nanoarch struct {
 	Handlers
 	LastFrameTime int64
@@ -44,7 +49,7 @@ type Nanoarch struct {
 	}
 	options          *map[string]string
 	reserved         chan struct{} // limits concurrent use
-	Rot              image.Rotation
+	Rot              uint
 	serializeSize    C.size_t
 	stopped          atomic.Bool
 	sysAvInfo        C.struct_retro_system_av_info
@@ -58,9 +63,8 @@ type Nanoarch struct {
 			enabled bool
 			autoCtx bool
 		}
-		BPP    uint
 		hw     *C.struct_retro_hw_render_callback
-		PixFmt uint32
+		PixFmt PixFmt
 	}
 	vfr                      bool
 	sdlCtx                   *graphics.SDL
@@ -78,7 +82,7 @@ type Handlers struct {
 type FrameInfo struct {
 	W      uint
 	H      uint
-	Packed uint
+	Stride uint
 }
 
 type Metadata struct {
@@ -90,6 +94,24 @@ type Metadata struct {
 	HasVFR        bool
 	Options       map[string]string
 	Hacks         []string
+}
+
+type PixFmt struct {
+	C   uint32
+	BPP uint
+}
+
+func (p PixFmt) String() string {
+	switch p.C {
+	case 0:
+		return "RGBA5551/2"
+	case 1:
+		return "RGBA8888Rev/4"
+	case 2:
+		return "RGB565/2"
+	default:
+		return fmt.Sprintf("Unknown (%v/%v)", p.C, p.BPP)
+	}
 }
 
 // Nan0 is a global link for C callbacks to Go
@@ -118,7 +140,7 @@ func NewNano(localPath string) *Nanoarch {
 
 func (n *Nanoarch) AudioSampleRate() int { return int(n.sysAvInfo.timing.sample_rate) }
 func (n *Nanoarch) VideoFramerate() int  { return int(n.sysAvInfo.timing.fps) }
-func (n *Nanoarch) IsPortrait() bool     { return n.Rot == image.A90 || n.Rot == image.A270 }
+func (n *Nanoarch) IsPortrait() bool     { return n.Rot == 90 || n.Rot == 270 }
 func (n *Nanoarch) GeometryBase() (int, int) {
 	return int(n.sysAvInfo.geometry.base_width), int(n.sysAvInfo.geometry.base_height)
 }
@@ -252,7 +274,7 @@ func (n *Nanoarch) LoadGame(path string) error {
 
 	if n.Video.gl.enabled {
 		//setRotation(image.F180) // flip Y coordinates of OpenGL
-		bufS := uint(n.sysAvInfo.geometry.max_width*n.sysAvInfo.geometry.max_height) * n.Video.BPP
+		bufS := uint(n.sysAvInfo.geometry.max_width*n.sysAvInfo.geometry.max_height) * n.Video.PixFmt.BPP
 		graphics.SetBuffer(int(bufS))
 		n.log.Info().Msgf("Set buffer: %v", byteCountBinary(int64(bufS)))
 		if n.LibCo {
@@ -357,34 +379,33 @@ func (n *Nanoarch) IsStopped() bool { return n.stopped.Load() }
 func videoSetPixelFormat(format uint32) (C.bool, error) {
 	switch format {
 	case C.RETRO_PIXEL_FORMAT_0RGB1555:
-		Nan0.Video.PixFmt = image.BitFormatShort5551
+		Nan0.Video.PixFmt = RGBA5551
 		if err := graphics.SetPixelFormat(graphics.UnsignedShort5551); err != nil {
 			return false, fmt.Errorf("unknown pixel format %v", Nan0.Video.PixFmt)
 		}
-		Nan0.Video.BPP = 2
 		// format is not implemented
 		return false, fmt.Errorf("unsupported pixel type %v converter", format)
 	case C.RETRO_PIXEL_FORMAT_XRGB8888:
-		Nan0.Video.PixFmt = image.BitFormatInt8888Rev
+		Nan0.Video.PixFmt = RGBA8888Rev
 		if err := graphics.SetPixelFormat(graphics.UnsignedInt8888Rev); err != nil {
 			return false, fmt.Errorf("unknown pixel format %v", Nan0.Video.PixFmt)
 		}
-		Nan0.Video.BPP = 4
 	case C.RETRO_PIXEL_FORMAT_RGB565:
-		Nan0.Video.PixFmt = image.BitFormatShort565
+		Nan0.Video.PixFmt = RGB565
 		if err := graphics.SetPixelFormat(graphics.UnsignedShort565); err != nil {
 			return false, fmt.Errorf("unknown pixel format %v", Nan0.Video.PixFmt)
 		}
-		Nan0.Video.BPP = 2
 	default:
 		return false, fmt.Errorf("unknown pixel type %v", format)
 	}
+	Nan0.log.Info().Msgf("Pixel format: %v", Nan0.Video.PixFmt)
+
 	return true, nil
 }
 
-func setRotation(rotation image.Rotation) {
-	Nan0.Rot = rotation
-	Nan0.log.Debug().Msgf("Image rotated %v°", map[uint]uint{0: 0, 1: 90, 2: 180, 3: 270}[uint(rotation)])
+func setRotation(rot uint) {
+	Nan0.Rot = rot
+	Nan0.log.Debug().Msgf("Image rotated %v°", rot)
 }
 
 func printOpenGLDriverInfo() {
@@ -557,7 +578,7 @@ func coreVideoRefresh(data unsafe.Pointer, width, height uint, packed uint) {
 	// calculate real frame width in pixels from packed data (realWidth >= width)
 	// some cores or games output zero pitch, i.e. N64 Mupen
 	if packed == 0 {
-		packed = width * Nan0.Video.BPP
+		packed = width * Nan0.Video.PixFmt.BPP
 	}
 	// calculate space for the video frame
 	bytes := packed * height
@@ -575,7 +596,7 @@ func coreVideoRefresh(data unsafe.Pointer, width, height uint, packed uint) {
 	// also we have an option of xN output frame magnification
 	// so, it may be rescaled
 
-	Nan0.Handlers.OnVideo(data_, int32(dt), FrameInfo{W: width, H: height, Packed: packed})
+	Nan0.Handlers.OnVideo(data_, int32(dt), FrameInfo{W: width, H: height, Stride: packed})
 }
 
 //export coreInputPoll
@@ -665,8 +686,16 @@ func coreEnvironment(cmd C.unsigned, data unsafe.Pointer) C.bool {
 	}
 
 	switch cmd {
+	case C.RETRO_ENVIRONMENT_SET_SYSTEM_AV_INFO:
+		av := *(*C.struct_retro_system_av_info)(data)
+		Nan0.log.Info().Msgf(">>> SET SYS AV INFO: %v", av)
+		return true
+	case C.RETRO_ENVIRONMENT_SET_GEOMETRY:
+		geom := *(*C.struct_retro_game_geometry)(data)
+		Nan0.log.Info().Msgf(">>> GEOMETRY: %v", geom)
+		return true
 	case C.RETRO_ENVIRONMENT_SET_ROTATION:
-		setRotation(image.Rotation(*(*uint)(data) % 4))
+		setRotation((*(*uint)(data) % 4) * 90)
 		return true
 	case C.RETRO_ENVIRONMENT_GET_CAN_DUPE:
 		*(*C.bool)(data) = C.bool(true)

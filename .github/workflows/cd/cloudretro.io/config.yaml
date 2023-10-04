@@ -24,14 +24,16 @@ worker:
       domain: cloudretro.io
 
 emulator:
-  threads: 4
   libretro:
     logLevel: 1
     cores:
       list:
         mame:
           options:
-            "fbneo-cpu-speed-adjust": "200%"
             "fbneo-diagnostic-input": "Hold Start"
+        nes:
+          scale: 2
         pcsx:
           altRepo: true
+        snes:
+          scale: 2

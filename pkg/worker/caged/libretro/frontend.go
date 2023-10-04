@@ -14,7 +14,6 @@ import (
 	"github.com/giongto35/cloud-game/v3/pkg/logger"
 	"github.com/giongto35/cloud-game/v3/pkg/os"
 	"github.com/giongto35/cloud-game/v3/pkg/worker/caged/app"
-	"github.com/giongto35/cloud-game/v3/pkg/worker/caged/libretro/image"
 	"github.com/giongto35/cloud-game/v3/pkg/worker/caged/libretro/nanoarch"
 )
 
@@ -25,12 +24,14 @@ type Emulator interface {
 	LoadGame(path string) error
 	FPS() int
 	Flipped() bool
+	Rotation() uint
+	PixFormat() uint32
 	AudioSampleRate() int
 	IsPortrait() bool
 	// Start is called after LoadGame
 	Start()
 	// SetViewport sets viewport size
-	SetViewport(width int, height int, scale int)
+	SetViewport(width int, height int)
 	// ViewportCalc calculates the viewport size with the aspect ratio and scale
 	ViewportCalc() (nw int, nh int)
 	ViewportSize() (w, h int)
@@ -48,10 +49,11 @@ type Emulator interface {
 	ToggleMultitap()
 	// Input passes input to the emulator
 	Input(player int, data []byte)
+	// Scale returns set video scale factor
+	Scale() float64
 }
 
 type Frontend struct {
-	canvas  *image.Canvas
 	conf    config.Emulator
 	done    chan struct{}
 	input   InputState
@@ -60,6 +62,7 @@ type Frontend struct {
 	onAudio func(app.Audio)
 	onVideo func(app.Video)
 	storage Storage
+	scale   float64
 	th      int // draw threads
 	vw, vh  int // out frame size
 
@@ -151,6 +154,12 @@ func (f *Frontend) LoadCore(emu string) {
 		UsesLibCo:     conf.UsesLibCo,
 	}
 	f.mu.Lock()
+	scale := 1.0
+	if conf.Scale > 1 {
+		scale = conf.Scale
+		f.log.Debug().Msgf("Scale: x%v", scale)
+	}
+	f.scale = scale
 	f.nano.CoreLoad(meta)
 	f.mu.Unlock()
 }
@@ -169,30 +178,27 @@ func (f *Frontend) handleAudio(audio unsafe.Pointer, samples int) {
 }
 
 func (f *Frontend) handleVideo(data []byte, delta int32, fi nanoarch.FrameInfo) {
-	pixFmt := f.nano.Video.PixFmt
-	bpp := int(f.nano.Video.BPP)
-	drawn := f.canvas.Draw(pixFmt, f.nano.Rot, int(fi.W), int(fi.H), int(fi.Packed), bpp, data, f.th)
-
+	// !to merge both pools
 	fr, _ := videoPool.Get().(*app.Video)
 	if fr == nil {
 		fr = new(app.Video)
 	}
-	fr.Frame = drawn.Unwrap()
+	fr.Frame.Data = data
+	fr.Frame.W = int(fi.W)
+	fr.Frame.H = int(fi.H)
+	fr.Frame.Stride = int(fi.Stride)
 	fr.Duration = delta
 	f.onVideo(*fr)
-	f.canvas.Put(drawn)
 	videoPool.Put(fr)
 }
 
 func (f *Frontend) Shutdown() {
-	f.log.Debug().Msgf("run loop cleanup")
 	f.mu.Lock()
 	f.nano.Shutdown()
-	f.canvas.Clear()
 	f.SetAudioCb(noAudio)
 	f.SetVideoCb(noVideo)
 	f.mu.Unlock()
-	f.log.Debug().Msgf("run loop finished")
+	f.log.Debug().Msgf("frontend closed")
 }
 
 func (f *Frontend) linkNano(nano *nanoarch.Nanoarch) {
@@ -240,6 +246,8 @@ func (f *Frontend) Start() {
 	}
 }
 
+func (f *Frontend) PixFormat() uint32             { return f.nano.Video.PixFmt.C }
+func (f *Frontend) Rotation() uint                { return f.nano.Rot }
 func (f *Frontend) Flipped() bool                 { return f.nano.IsGL() }
 func (f *Frontend) FrameSize() (int, int)         { return f.nano.GeometryBase() }
 func (f *Frontend) FPS() int                      { return f.nano.VideoFramerate() }
@@ -250,21 +258,15 @@ func (f *Frontend) AudioSampleRate() int          { return f.nano.AudioSampleRat
 func (f *Frontend) Input(player int, data []byte) { f.input.setInput(player, data) }
 func (f *Frontend) LoadGame(path string) error    { return f.nano.LoadGame(path) }
 func (f *Frontend) RestoreGameState() error       { return f.Load() }
+func (f *Frontend) Scale() float64                { return f.scale }
 func (f *Frontend) IsPortrait() bool              { return f.nano.IsPortrait() }
 func (f *Frontend) SaveGameState() error          { return f.Save() }
-func (f *Frontend) Scale(factor int)              { w, h := f.ViewportSize(); f.SetViewport(w, h, factor) }
 func (f *Frontend) SetAudioCb(cb func(app.Audio)) { f.onAudio = cb }
 func (f *Frontend) SetSessionId(name string)      { f.storage.SetMainSaveName(name) }
 func (f *Frontend) SetVideoCb(ff func(app.Video)) { f.onVideo = ff }
-func (f *Frontend) SetViewport(width int, height int, scale int) {
+func (f *Frontend) SetViewport(width int, height int) {
 	f.mu.Lock()
 	f.vw, f.vh = width, height
-	mw, mh := f.nano.GeometryMax()
-	size := mw * scale * mh * scale
-	f.canvas = image.NewCanvas(width, height, size)
-	if f.DisableCanvasPool {
-		f.canvas.SetEnabled(false)
-	}
 	f.mu.Unlock()
 }
 
@@ -292,14 +294,9 @@ func (f *Frontend) ViewportCalc() (nw int, nh int) {
 		nw, nh = w, h
 	}
 
-	if f.conf.Scale > 1 {
-		nw, nh = nw*f.conf.Scale, nh*f.conf.Scale
-		f.log.Debug().Msgf("Viewport size scaled: %dx%d", nw, nh)
-	}
-
 	if f.IsPortrait() {
 		nw, nh = nh, nw
-		f.log.Debug().Msgf("Viewport was flipped")
+		f.log.Debug().Msgf("Set portrait mode")
 	}
 
 	f.log.Info().Msgf("Viewport final size: %dx%d", nw, nh)

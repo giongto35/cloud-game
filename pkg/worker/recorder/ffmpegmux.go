@@ -15,6 +15,8 @@ const demuxFile = "input.txt"
 // ffmpeg concat demuxer, see: https://ffmpeg.org/ffmpeg-formats.html#concat
 // example:
 //
+// !to change
+//
 //	ffmpeg -f concat -i input.txt \
 //		   -ac 2 -channel_layout stereo -i audio.wav \
 //		   -b:a 192K -crf 23 -vf fps=30 -pix_fmt yuv420p \
@@ -25,9 +27,17 @@ func createFfmpegMuxFile(dir string, fPattern string, frameTimes []time.Duration
 		return err
 	}
 	defer func() { er = demux.Close() }()
-	_, err = demux.WriteString(
-		fmt.Sprintf("ffconcat version 1.0\n# v: 1\n# date: %v\n# game: %v\n# fps: %v\n# freq (hz): %v\n\n",
-			time.Now().Format("20060102"), opts.Game, opts.Fps, opts.Frequency))
+
+	b := strings.Builder{}
+
+	b.WriteString("ffconcat version 1.0\n")
+	b.WriteString(meta("v", "1"))
+	b.WriteString(meta("date", time.Now().Format("20060102")))
+	b.WriteString(meta("game", opts.Game))
+	b.WriteString(meta("fps", opts.Fps))
+	b.WriteString(meta("freq", opts.Frequency))
+	b.WriteString(meta("pix", opts.Pix))
+	_, err = demux.WriteString(fmt.Sprintf("%s\n", b.String()))
 	if err != nil {
 		return err
 	}
@@ -51,7 +61,9 @@ func createFfmpegMuxFile(dir string, fPattern string, frameTimes []time.Duration
 			}
 			i++
 		}
-		inf := fmt.Sprintf("file %v\nduration %f\n", name, dur)
+		w, h, s := ExtractFileInfo(file.Name())
+		inf := fmt.Sprintf("file %v\nduration %f\n%s%s%s", name, dur,
+			metaf("width", w), metaf("height", h), metaf("stride", s))
 		if _, err := demux.WriteString(inf); err != nil {
 			er = err
 		}
@@ -60,4 +72,12 @@ func createFfmpegMuxFile(dir string, fPattern string, frameTimes []time.Duration
 		er = err
 	}
 	return er
+}
+
+// meta adds stream_meta key value line.
+func meta(key string, value any) string { return fmt.Sprintf("stream_meta %s '%v'\n", key, value) }
+
+// metaf adds file_packet_meta key value line.
+func metaf(key string, value any) string {
+	return fmt.Sprintf("file_packet_meta %s '%v'\n", key, value)
 }

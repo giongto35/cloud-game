@@ -51,6 +51,7 @@ RUN apt-get -q update && apt-get -q install --no-install-recommends -y \
     libopus-dev \
     libsdl2-dev \
     libvpx-dev \
+    libyuv-dev \
     libx264-dev \
     pkg-config \
 && rm -rf /var/lib/apt/lists/*

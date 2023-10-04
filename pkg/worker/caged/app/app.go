@@ -1,7 +1,5 @@
 package app
 
-import "image"
-
 type App interface {
 	AudioSampleRate() int
 	Init() error
@@ -20,6 +18,12 @@ type Audio struct {
 }
 
 type Video struct {
-	Frame    image.RGBA
+	Frame    RawFrame
 	Duration int32
+}
+
+type RawFrame struct {
+	Data   []byte
+	Stride int
+	W, H   int
 }

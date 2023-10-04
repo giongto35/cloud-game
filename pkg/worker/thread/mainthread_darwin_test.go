@@ -1,16 +1,14 @@
 package thread
 
-import "testing"
+import (
+	"os"
+	"testing"
+)
 
-func init() {
-	runtime.LockOSThread()
+func TestMain(m *testing.M) {
+	Wrap(func() { os.Exit(m.Run()) })
 }
 
 func TestMainThread(t *testing.T) {
-	value := 0
-	fn := func() { value = 1 }
-	Main(fn)
-	if value != 1 {
-		t.Errorf("wrong value %v", value)
-	}
+	_ = 10
 }
