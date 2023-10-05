@@ -49,8 +49,10 @@ func (c *coordinator) HandleWebrtcInit(rq api.WebrtcInitRequest[com.Uid], w *Wor
 	}
 
 	user := room.NewGameSession(rq.Id, peer) // use user uid from the coordinator
-	w.router.AddUser(user)
 	c.log.Info().Msgf("Peer connection: %s", user.Id())
+	c.log.Debug().Msgf("Users before add: %v", w.router.Users())
+	w.router.AddUser(user)
+	c.log.Debug().Msgf("Users after add: %v", w.router.Users())
 
 	return api.Out{Payload: sdp}
 }
@@ -118,11 +120,7 @@ func (c *coordinator) HandleGameStart(rq api.StartGameRequest[com.Uid], w *Worke
 
 		// make the room
 		r = room.NewRoom[*room.GameSession](uid, app, w.router.Users(), m)
-		r.HandleClose = func() {
-			w.router.Close()
-			c.CloseRoom(uid)
-			w.log.Debug().Msgf("Closed room %v", uid)
-		}
+		r.HandleClose = func() { c.CloseRoom(uid) }
 
 		w.router.SetRoom(r)
 		c.log.Info().Str("room", r.Id()).Str("game", game.Name).Msg("New room")
@@ -148,8 +146,10 @@ func (c *coordinator) HandleTerminateSession(rq api.TerminateSessionRequest[com.
 
 // HandleQuitGame handles cases when a user manually exits the game.
 func (c *coordinator) HandleQuitGame(rq api.GameQuitRequest[com.Uid], w *Worker) {
+	w.log.Debug().Msgf("Users before remove: %v", w.router.Users())
 	if user := w.router.FindUser(rq.Id); user != nil {
 		w.router.Remove(user)
+		w.log.Debug().Msgf("Users after remove: %v", w.router.Users())
 	}
 }
 

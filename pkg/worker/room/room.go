@@ -1,6 +1,10 @@
 package room
 
-import "github.com/giongto35/cloud-game/v3/pkg/worker/caged/app"
+import (
+	"sync"
+
+	"github.com/giongto35/cloud-game/v3/pkg/worker/caged/app"
+)
 
 type MediaPipe interface {
 	// Destroy frees all allocated resources.
@@ -19,10 +23,9 @@ type MediaPipe interface {
 
 type SessionManager[T Session] interface {
 	Add(T) bool
-	Find(string) (T, bool)
+	Find(string) T
 	ForEach(func(T))
-	Len() int
-	Remove(T)
+	RemoveL(T) int
 	// Reset used for proper cleanup of the resources if needed.
 	Reset()
 }
@@ -93,32 +96,36 @@ func (r *Room[T]) Close() {
 type Router[T Session] struct {
 	room  *Room[T]
 	users SessionManager[T]
+	mu    sync.Mutex
 }
 
 func (r *Router[T]) AddUser(user T) { r.users.Add(user) }
+
 func (r *Router[T]) Close() {
+	r.mu.Lock()
 	if r.room != nil {
 		r.room.Close()
 		r.room = nil
 	}
+	r.mu.Unlock()
 }
+
 func (r *Router[T]) FindRoom(id string) *Room[T] {
+	r.mu.Lock()
+	defer r.mu.Unlock()
 	if r.room != nil && r.room.Id() == id {
 		return r.room
 	}
 	return nil
 }
-func (r *Router[T]) FindUser(uid Uid) T { sess, _ := r.users.Find(uid.Id()); return sess }
+
 func (r *Router[T]) Remove(user T) {
-	r.users.Remove(user)
-	if r.users.Len() == 0 {
-		if r.room != nil {
-			r.room.Close()
-		}
-		r.users.Reset()
+	if left := r.users.RemoveL(user); left == 0 {
+		r.Close()
 	}
 }
-func (r *Router[T]) SetRoom(room *Room[T])    { r.room = room }
+func (r *Router[T]) FindUser(uid Uid) T       { return r.users.Find(uid.Id()) }
+func (r *Router[T]) SetRoom(room *Room[T])    { r.mu.Lock(); r.room = room; r.mu.Unlock() }
 func (r *Router[T]) Users() SessionManager[T] { return r.users }
 
 type AppSession struct {

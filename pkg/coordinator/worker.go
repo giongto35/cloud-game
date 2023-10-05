@@ -29,7 +29,7 @@ type RegionalClient interface {
 }
 
 type HasUserRegistry interface {
-	Find(com.Uid) (*User, bool)
+	Find(com.Uid) *User
 }
 
 func NewWorker(sock *com.Connection, handshake api.ConnectionRequest[com.Uid], log *logger.Logger) *Worker {

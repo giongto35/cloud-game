@@ -28,7 +28,11 @@ type Worker struct {
 	storage cloud.Storage
 }
 
-func (w *Worker) Reset() { w.router.Close() }
+func (w *Worker) Reset() {
+	w.log.Debug().Msgf("Users before close: %v", w.router.Users())
+	w.router.Close()
+	w.log.Debug().Msgf("Users after close: %v", w.router.Users())
+}
 
 const retry = 10 * time.Second
 

@@ -17,11 +17,11 @@ func TestMap_Base(t *testing.T) {
 	if !m.Has(k) {
 		t.Errorf("should have the key %v, %v", k, m.m)
 	}
-	v, ok := m.Find(k)
+	v, ok := m.Contains(k)
 	if v != 0 && !ok {
 		t.Errorf("should have the key %v and ok, %v %v", k, ok, m.m)
 	}
-	_, ok = m.Find(k + 1)
+	_, ok = m.Contains(k + 1)
 	if ok {
 		t.Errorf("should not find anything, %v %v", ok, m.m)
 	}
