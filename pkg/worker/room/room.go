@@ -53,8 +53,10 @@ type Room[T Session] struct {
 
 func NewRoom[T Session](id string, app app.App, um SessionManager[T], media MediaPipe) *Room[T] {
 	room := &Room[T]{id: id, app: app, users: um, media: media}
-	room.InitVideo()
-	room.InitAudio()
+	if app != nil && media != nil {
+		room.InitVideo()
+		room.InitAudio()
+	}
 	return room
 }
 
@@ -70,9 +72,12 @@ func (r *Room[T]) InitVideo() {
 	})
 }
 
-func (r *Room[T]) App() app.App { return r.app }
-func (r *Room[T]) Id() string   { return r.id }
-func (r *Room[T]) StartApp()    { r.app.Start() }
+func (r *Room[T]) App() app.App         { return r.app }
+func (r *Room[T]) BindAppMedia()        { r.InitAudio(); r.InitVideo() }
+func (r *Room[T]) Id() string           { return r.id }
+func (r *Room[T]) SetApp(app app.App)   { r.app = app }
+func (r *Room[T]) SetMedia(m MediaPipe) { r.media = m }
+func (r *Room[T]) StartApp()            { r.app.Start() }
 
 func (r *Room[T]) Close() {
 	if r.closed {
@@ -124,6 +129,7 @@ func (r *Router[T]) Remove(user T) {
 		r.Close()
 	}
 }
+func (r *Router[T]) Room() *Room[T]           { r.mu.Lock(); defer r.mu.Unlock(); return r.room }
 func (r *Router[T]) FindUser(uid Uid) T       { return r.users.Find(uid.Id()) }
 func (r *Router[T]) SetRoom(room *Room[T])    { r.mu.Lock(); r.room = room; r.mu.Unlock() }
 func (r *Router[T]) Users() SessionManager[T] { return r.users }

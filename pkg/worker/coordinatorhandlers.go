@@ -50,9 +50,7 @@ func (c *coordinator) HandleWebrtcInit(rq api.WebrtcInitRequest[com.Uid], w *Wor
 
 	user := room.NewGameSession(rq.Id, peer) // use user uid from the coordinator
 	c.log.Info().Msgf("Peer connection: %s", user.Id())
-	c.log.Debug().Msgf("Users before add: %v", w.router.Users())
 	w.router.AddUser(user)
-	c.log.Debug().Msgf("Users after add: %v", w.router.Users())
 
 	return api.Out{Payload: sdp}
 }
@@ -83,11 +81,23 @@ func (c *coordinator) HandleGameStart(rq api.StartGameRequest[com.Uid], w *Worke
 
 	r := w.router.FindRoom(rq.Rid)
 
-	if r == nil {
+	if r == nil { // new room
 		uid := rq.Room.Rid
 		if uid == "" {
 			uid = games.GenerateRoomID(rq.Game.Name)
 		}
+		game := games.GameMetadata(rq.Game)
+
+		r = room.NewRoom[*room.GameSession](uid, nil, w.router.Users(), nil)
+		r.HandleClose = func() { c.CloseRoom(uid) }
+
+		if other := w.router.Room(); other != nil {
+			c.log.Error().Msgf("concurrent room creation: %v", uid)
+			return api.EmptyPacket
+		}
+
+		w.router.SetRoom(r)
+		c.log.Info().Str("room", r.Id()).Str("game", game.Name).Msg("New room")
 
 		// start the emulator
 		app := room.WithEmulator(w.mana.Get(caged.Libretro))
@@ -97,13 +107,14 @@ func (c *coordinator) HandleGameStart(rq api.StartGameRequest[com.Uid], w *Worke
 		app.EnableCloudStorage(uid, w.storage)
 		app.EnableRecording(rq.Record, rq.RecordUser, rq.Game.Name)
 
-		w.log.Info().Msgf("Starting game: %v", rq.Game.Name)
-		game := games.GameMetadata(rq.Game)
+		w.log.Info().Msgf("Starting the game: %v", rq.Game.Name)
 		if err := app.Load(game, w.conf.Worker.Library.BasePath); err != nil {
 			c.log.Error().Err(err).Msgf("couldn't load the game %v", game)
 			app.Close()
+			w.router.SetRoom(nil)
 			return api.EmptyPacket
 		}
+		r.SetApp(app)
 
 		m := media.NewWebRtcMediaPipe(w.conf.Encoder.Audio, w.conf.Encoder.Video, w.log)
 		m.AudioSrcHz = app.AudioSampleRate()
@@ -112,19 +123,15 @@ func (c *coordinator) HandleGameStart(rq api.StartGameRequest[com.Uid], w *Worke
 		if err := m.Init(); err != nil {
 			c.log.Error().Err(err).Msgf("couldn't init the media")
 			app.Close()
+			w.router.SetRoom(nil)
 			return api.EmptyPacket
 		}
 		if app.Flipped() {
 			m.SetVideoFlip(true)
 		}
+		r.SetMedia(m)
 
-		// make the room
-		r = room.NewRoom[*room.GameSession](uid, app, w.router.Users(), m)
-		r.HandleClose = func() { c.CloseRoom(uid) }
-
-		w.router.SetRoom(r)
-		c.log.Info().Str("room", r.Id()).Str("game", game.Name).Msg("New room")
-
+		r.BindAppMedia()
 		r.StartApp()
 	}
 
@@ -146,10 +153,8 @@ func (c *coordinator) HandleTerminateSession(rq api.TerminateSessionRequest[com.
 
 // HandleQuitGame handles cases when a user manually exits the game.
 func (c *coordinator) HandleQuitGame(rq api.GameQuitRequest[com.Uid], w *Worker) {
-	w.log.Debug().Msgf("Users before remove: %v", w.router.Users())
 	if user := w.router.FindUser(rq.Id); user != nil {
 		w.router.Remove(user)
-		w.log.Debug().Msgf("Users after remove: %v", w.router.Users())
 	}
 }
 
