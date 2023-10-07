@@ -107,29 +107,34 @@ func (c *coordinator) HandleGameStart(rq api.StartGameRequest[com.Uid], w *Worke
 		app.EnableCloudStorage(uid, w.storage)
 		app.EnableRecording(rq.Record, rq.RecordUser, rq.Game.Name)
 
+		r.SetApp(app)
+
 		w.log.Info().Msgf("Starting the game: %v", rq.Game.Name)
 		if err := app.Load(game, w.conf.Worker.Library.BasePath); err != nil {
 			c.log.Error().Err(err).Msgf("couldn't load the game %v", game)
-			app.Close()
+			r.Close()
 			w.router.SetRoom(nil)
 			return api.EmptyPacket
 		}
-		r.SetApp(app)
 
 		m := media.NewWebRtcMediaPipe(w.conf.Encoder.Audio, w.conf.Encoder.Video, w.log)
 		m.AudioSrcHz = app.AudioSampleRate()
 		m.AudioFrame = w.conf.Encoder.Audio.Frame
 		m.VideoW, m.VideoH = app.ViewportSize()
+
+		r.SetMedia(m)
+
 		if err := m.Init(); err != nil {
 			c.log.Error().Err(err).Msgf("couldn't init the media")
-			app.Close()
+			r.Close()
 			w.router.SetRoom(nil)
 			return api.EmptyPacket
 		}
 		if app.Flipped() {
 			m.SetVideoFlip(true)
 		}
-		r.SetMedia(m)
+		m.SetPixFmt(app.PixFormat())
+		m.SetRot(app.Rotation())
 
 		r.BindAppMedia()
 		r.StartApp()
@@ -148,6 +153,7 @@ func (c *coordinator) HandleTerminateSession(rq api.TerminateSessionRequest[com.
 	if user := w.router.FindUser(rq.Id); user != nil {
 		w.router.Remove(user)
 		user.Disconnect()
+		w.router.SetRoom(nil)
 	}
 }
 
@@ -155,6 +161,7 @@ func (c *coordinator) HandleTerminateSession(rq api.TerminateSessionRequest[com.
 func (c *coordinator) HandleQuitGame(rq api.GameQuitRequest[com.Uid], w *Worker) {
 	if user := w.router.FindUser(rq.Id); user != nil {
 		w.router.Remove(user)
+		w.router.SetRoom(nil)
 	}
 }
 
