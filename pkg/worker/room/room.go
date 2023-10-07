@@ -80,7 +80,7 @@ func (r *Room[T]) SetMedia(m MediaPipe) { r.media = m }
 func (r *Room[T]) StartApp()            { r.app.Start() }
 
 func (r *Room[T]) Close() {
-	if r.closed {
+	if r == nil || r.closed {
 		return
 	}
 	r.closed = true
@@ -104,17 +104,6 @@ type Router[T Session] struct {
 	mu    sync.Mutex
 }
 
-func (r *Router[T]) AddUser(user T) { r.users.Add(user) }
-
-func (r *Router[T]) Close() {
-	r.mu.Lock()
-	if r.room != nil {
-		r.room.Close()
-		r.room = nil
-	}
-	r.mu.Unlock()
-}
-
 func (r *Router[T]) FindRoom(id string) *Room[T] {
 	r.mu.Lock()
 	defer r.mu.Unlock()
@@ -129,8 +118,11 @@ func (r *Router[T]) Remove(user T) {
 		r.Close()
 	}
 }
-func (r *Router[T]) Room() *Room[T]           { r.mu.Lock(); defer r.mu.Unlock(); return r.room }
+
+func (r *Router[T]) AddUser(user T)           { r.users.Add(user) }
+func (r *Router[T]) Close()                   { r.mu.Lock(); r.room.Close(); r.room = nil; r.mu.Unlock() }
 func (r *Router[T]) FindUser(uid Uid) T       { return r.users.Find(uid.Id()) }
+func (r *Router[T]) Room() *Room[T]           { r.mu.Lock(); defer r.mu.Unlock(); return r.room }
 func (r *Router[T]) SetRoom(room *Room[T])    { r.mu.Lock(); r.room = room; r.mu.Unlock() }
 func (r *Router[T]) Users() SessionManager[T] { return r.users }
 

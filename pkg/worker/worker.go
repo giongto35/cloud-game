@@ -28,12 +28,6 @@ type Worker struct {
 	storage cloud.Storage
 }
 
-func (w *Worker) Reset() {
-	w.log.Debug().Msgf("Users before close: %v", w.router.Users())
-	w.router.Close()
-	w.log.Debug().Msgf("Users after close: %v", w.router.Users())
-}
-
 const retry = 10 * time.Second
 
 func New(conf config.WorkerConfig, log *logger.Logger) (*Worker, error) {
@@ -73,6 +67,8 @@ func New(conf config.WorkerConfig, log *logger.Logger) (*Worker, error) {
 
 	return worker, nil
 }
+
+func (w *Worker) Reset() { w.router.Close() }
 
 func (w *Worker) Start(done chan struct{}) {
 	for _, s := range w.services {
