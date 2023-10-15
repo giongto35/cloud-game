@@ -1,18 +1,43 @@
-//go:build !darwin && !no_libyuv
-
+// Package libyuv contains the wrapper for: https://chromium.googlesource.com/libyuv/libyuv.
+// Libs are downloaded from: https://packages.macports.org/libyuv/.
 package libyuv
 
-// see: https://chromium.googlesource.com/libyuv/libyuv
-
 /*
-#cgo CFLAGS: -Wall
-#cgo LDFLAGS: -lyuv
+#cgo !darwin LDFLAGS: -lyuv
 
-#include <stdlib.h>
+#cgo darwin CFLAGS: -DINCLUDE_LIBYUV_VERSION_H_
+#cgo darwin LDFLAGS: -L${SRCDIR} -lstdc++
+#cgo darwin,amd64 LDFLAGS: -lyuv_darwin_x86_64 -ljpeg -lstdc++
+#cgo darwin,arm64 LDFLAGS: -lyuv_darwin_arm64 -ljpeg -lstdc++
+
+#include <stdint.h>  // for uintptr_t and C99 types
+
+#if !defined(LIBYUV_API)
+#define LIBYUV_API
+#endif  // LIBYUV_API
+
+#ifndef INCLUDE_LIBYUV_VERSION_H_
 #include "libyuv/version.h"
-#include "libyuv/video_common.h"
+#else
+#define LIBYUV_VERSION 1874 // darwin static libs version
+#endif  // INCLUDE_LIBYUV_VERSION_H_
 
-//
+#ifdef __cplusplus
+namespace libyuv {
+extern "C" {
+#endif
+
+#define FOURCC(a, b, c, d) \
+	(((uint32_t)(a)) | ((uint32_t)(b) << 8) | ((uint32_t)(c) << 16) | ((uint32_t)(d) << 24))
+
+enum FourCC {
+  FOURCC_I420 = FOURCC('I', '4', '2', '0'),
+  FOURCC_ARGB = FOURCC('A', 'R', 'G', 'B'),
+  FOURCC_ABGR = FOURCC('A', 'B', 'G', 'R'),
+  FOURCC_RGBP = FOURCC('R', 'G', 'B', 'P'),  // rgb565 LE.
+  FOURCC_ANY = -1,
+};
+
 typedef enum RotationMode {
  kRotate0 = 0,      // No rotation.
  kRotate90 = 90,    // Rotate 90 degrees clockwise.
@@ -20,7 +45,6 @@ typedef enum RotationMode {
  kRotate270 = 270,  // Rotate 270 degrees clockwise.
 } RotationModeEnum;
 
-//
 LIBYUV_API
 int ConvertToI420(const uint8_t* sample,
                  size_t sample_size,
@@ -65,6 +89,11 @@ int I420Scale(const uint8_t *src_y,
               int dst_width,
               int dst_height,
               enum FilterMode filtering);
+
+#ifdef __cplusplus
+}  // extern "C"
+}  // namespace libyuv
+#endif
 */
 import "C"
 import "fmt"
