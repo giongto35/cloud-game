@@ -38,7 +38,7 @@ jobs:
       - name: Get MacOS dev libraries and tools
         if: matrix.os == 'macos-latest'
         run: |
-          brew install pkg-config libvpx x264 opus sdl2
+          brew install pkg-config libvpx x264 opus sdl2 jpeg-turbo
 
       - name: Get Windows dev libraries and tools
         if: matrix.os == 'windows-latest'

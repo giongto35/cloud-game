@@ -115,6 +115,9 @@ func TestYuvPredefined(t *testing.T) {
 	frame := RawFrame{Data: im, Stride: 32, W: 32, H: 32}
 	a := pc.Process(frame, 0, PixFmt(libyuv.FourccAbgr))
 
+	v := libyuv.Version()
+	t.Logf("%v", v)
+
 	if len(a) != len(should) {
 		t.Fatalf("diffrent size a: %v, o: %v", len(a), len(should))
 	}

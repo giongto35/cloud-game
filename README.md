@@ -64,7 +64,7 @@ a better sense of performance.
 apt-get install -y make gcc pkg-config libvpx-dev libx264-dev libopus-dev libsdl2-dev libyuv-dev
 
 # MacOS
-brew install pkg-config libvpx x264 opus sdl2
+brew install pkg-config libvpx x264 opus sdl2 jpeg-turbo
 
 # Windows (MSYS2)
 pacman -Sy --noconfirm --needed git make mingw-w64-x86_64-{gcc,pkgconf,dlfcn,libvpx,opus,x264-git,SDL2,libyuv}
