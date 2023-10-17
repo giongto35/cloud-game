@@ -25,6 +25,7 @@ type MediaPipe interface {
 
 type SessionManager[T Session] interface {
 	Add(T) bool
+	Empty() bool
 	Find(string) T
 	ForEach(func(T))
 	RemoveL(T) int
@@ -126,6 +127,7 @@ func (r *Router[T]) Close()                   { r.mu.Lock(); r.room.Close(); r.r
 func (r *Router[T]) FindUser(uid Uid) T       { return r.users.Find(uid.Id()) }
 func (r *Router[T]) Room() *Room[T]           { r.mu.Lock(); defer r.mu.Unlock(); return r.room }
 func (r *Router[T]) SetRoom(room *Room[T])    { r.mu.Lock(); r.room = room; r.mu.Unlock() }
+func (r *Router[T]) HasRoom() bool            { r.mu.Lock(); defer r.mu.Unlock(); return r.room != nil }
 func (r *Router[T]) Users() SessionManager[T] { return r.users }
 
 type AppSession struct {
