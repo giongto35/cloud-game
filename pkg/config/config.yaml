@@ -1,5 +1,20 @@
 # The main config file
 
+# Note.
+# Be aware that when this configuration is being overwritten
+# by another configuration, any empty nested part
+# in the further configurations will reset (empty out) all the values.
+# For example:
+# the main config              second config       result
+# ...                          ...                 ...
+# list:                        list:               list:
+#   gba:                         gba:                gba:
+#     lib: mgba_libretro                               lib: ""
+#     roms: [ "gba", "gbc" ]                           roms: []
+# ...                                              ...
+#
+# So do not leave empty nested keys.
+
 # for the compatibility purposes
 version: 3
 
