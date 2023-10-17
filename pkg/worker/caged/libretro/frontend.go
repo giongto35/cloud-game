@@ -211,6 +211,8 @@ func (f *Frontend) linkNano(nano *nanoarch.Nanoarch) {
 	f.nano.OnAudio = f.handleAudio
 }
 
+func (f *Frontend) SetOnAV(fn func()) { f.nano.OnSystemAvInfo = fn }
+
 func (f *Frontend) Start() {
 	f.log.Debug().Msgf("Frontend start")
 

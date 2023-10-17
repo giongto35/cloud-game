@@ -15,6 +15,8 @@ type Caged struct {
 	conf CagedConf
 	log  *logger.Logger
 	w, h int
+
+	OnSysInfoChange func()
 }
 
 type CagedConf struct {
@@ -42,6 +44,14 @@ func (c *Caged) ReloadFrontend() {
 	}
 	c.Emulator = frontend
 	c.base = frontend
+}
+
+func (c *Caged) HandleOnSystemAvInfo(fn func()) {
+	c.base.SetOnAV(func() {
+		w, h := c.ViewportCalc()
+		c.SetViewport(w, h)
+		fn()
+	})
 }
 
 func (c *Caged) Load(game games.GameMetadata, path string) error {

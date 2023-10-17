@@ -11,6 +11,8 @@ type MediaPipe interface {
 	Destroy()
 	// Init initializes the pipe: allocates needed resources.
 	Init() error
+	// Reinit initializes video and audio pipes with the new settings.
+	Reinit() error
 	// PushAudio pushes the 16bit PCM audio frames into an encoder.
 	// Because we need to fill the buffer, the SetAudioCb should be
 	// used in order to get the result.

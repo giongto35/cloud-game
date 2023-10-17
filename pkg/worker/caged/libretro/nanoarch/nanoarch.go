@@ -73,10 +73,11 @@ type Nanoarch struct {
 }
 
 type Handlers struct {
-	OnDpad     func(port uint, axis uint) (shift int16)
-	OnKeyPress func(port uint, key int) int
-	OnAudio    func(ptr unsafe.Pointer, frames int)
-	OnVideo    func(data []byte, delta int32, fi FrameInfo)
+	OnDpad         func(port uint, axis uint) (shift int16)
+	OnKeyPress     func(port uint, key int) int
+	OnAudio        func(ptr unsafe.Pointer, frames int)
+	OnVideo        func(data []byte, delta int32, fi FrameInfo)
+	OnSystemAvInfo func()
 }
 
 type FrameInfo struct {
@@ -689,6 +690,12 @@ func coreEnvironment(cmd C.unsigned, data unsafe.Pointer) C.bool {
 	case C.RETRO_ENVIRONMENT_SET_SYSTEM_AV_INFO:
 		av := *(*C.struct_retro_system_av_info)(data)
 		Nan0.log.Info().Msgf(">>> SET SYS AV INFO: %v", av)
+		Nan0.sysAvInfo = av
+		go func() {
+			if Nan0.OnSystemAvInfo != nil {
+				Nan0.OnSystemAvInfo()
+			}
+		}()
 		return true
 	case C.RETRO_ENVIRONMENT_SET_GEOMETRY:
 		geom := *(*C.struct_retro_game_geometry)(data)
