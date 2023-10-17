@@ -60,6 +60,7 @@ type LibretroCoreConfig struct {
 }
 
 type CoreInfo struct {
+	Id      string
 	Name    string
 	AltRepo bool
 }
@@ -101,8 +102,8 @@ func (e Emulator) GetSupportedExtensions() []string {
 }
 
 func (l *LibretroConfig) GetCores() (cores []CoreInfo) {
-	for _, core := range l.Cores.List {
-		cores = append(cores, CoreInfo{Name: core.Lib, AltRepo: core.AltRepo})
+	for k, core := range l.Cores.List {
+		cores = append(cores, CoreInfo{Id: k, Name: core.Lib, AltRepo: core.AltRepo})
 	}
 	return
 }

@@ -116,14 +116,24 @@ func (m *Manager) download(cores []config.CoreInfo) (failed []string) {
 	if len(cores) == 0 || m.repo == nil {
 		return
 	}
-	var prime, second []string
+	var prime, second, fail []string
 	for _, n := range cores {
+		if n.Name == "" {
+			fail = append(fail, n.Id)
+			continue
+		}
 		if !n.AltRepo {
 			prime = append(prime, n.Name)
 		} else {
 			second = append(second, n.Name)
 		}
 	}
+
+	if len(prime) == 0 && len(second) == 0 {
+		m.log.Warn().Msgf("[core-dl] couldn't find info for %v cores, check the config", fail)
+		return
+	}
+
 	m.log.Info().Msgf("[core-dl] <<< download | main: %v | alt: %v", prime, second)
 	primeFails := m.down(prime, m.repo)
 	if len(primeFails) > 0 && m.altRepo != nil {
