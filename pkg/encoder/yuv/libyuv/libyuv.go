@@ -3,7 +3,8 @@
 package libyuv
 
 /*
-#cgo !darwin LDFLAGS: -lyuv
+#cgo !darwin,!st LDFLAGS: -lyuv
+#cgo !darwin,st LDFLAGS: -l:libyuv.a -l:libjpeg.a -lstdc++
 
 #cgo darwin CFLAGS: -DINCLUDE_LIBYUV_VERSION_H_
 #cgo darwin LDFLAGS: -L${SRCDIR} -lstdc++

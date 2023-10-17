@@ -61,13 +61,13 @@ a better sense of performance.
 
 ```
 # Ubuntu / Windows (WSL2)
-apt-get install -y make gcc pkg-config libvpx-dev libx264-dev libopus-dev libsdl2-dev libyuv-dev
+apt-get install -y make gcc pkg-config libvpx-dev libx264-dev libopus-dev libsdl2-dev libyuv-dev libjpeg-turbo8-dev
 
 # MacOS
 brew install pkg-config libvpx x264 opus sdl2 jpeg-turbo
 
 # Windows (MSYS2)
-pacman -Sy --noconfirm --needed git make mingw-w64-x86_64-{gcc,pkgconf,dlfcn,libvpx,opus,x264-git,SDL2,libyuv}
+pacman -Sy --noconfirm --needed git make mingw-w64-x86_64-{gcc,pkgconf,dlfcn,libvpx,opus,x264-git,SDL2,libyuv,libjpeg-turbo}
 ```
 
 Because the coordinator and workers need to run simultaneously. Workers connect to the coordinator.

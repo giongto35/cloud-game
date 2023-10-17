@@ -3,7 +3,7 @@ ARG VERSION=master
 
 # base build stage
 FROM ubuntu:lunar AS build0
-ARG GO=1.20.7
+ARG GO=1.20.8
 ARG GO_DIST=go${GO}.linux-amd64.tar.gz
 
 ADD https://go.dev/dl/$GO_DIST ./
@@ -47,11 +47,12 @@ WORKDIR ${BUILD_PATH}
 
 # install deps
 RUN apt-get -q update && apt-get -q install --no-install-recommends -y \
-    gcc \
+    build-essential \
     libopus-dev \
     libsdl2-dev \
     libvpx-dev \
     libyuv-dev \
+    libjpeg-turbo8-dev \
     libx264-dev \
     pkg-config \
 && rm -rf /var/lib/apt/lists/*
