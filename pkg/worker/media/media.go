@@ -116,6 +116,11 @@ type WebrtcMediaPipe struct {
 	AudioFrame     int
 	VideoW, VideoH int
 	VideoScale     float64
+
+	// keep the old settings for reinit
+	oldPf   uint32
+	oldRot  uint
+	oldFlip bool
 }
 
 func NewWebRtcMediaPipe(ac config.Audio, vc config.Video, log *logger.Logger) *WebrtcMediaPipe {
@@ -200,6 +205,19 @@ func round(x int, scale float64) int { return (int(float64(x)*scale) + 1) & ^1 }
 func (wmp *WebrtcMediaPipe) ProcessVideo(v app.Video) []byte {
 	return wmp.v.Encode(encoder.InFrame(v.Frame))
 }
-func (wmp *WebrtcMediaPipe) SetPixFmt(f uint32)  { wmp.v.SetPixFormat(f) }
-func (wmp *WebrtcMediaPipe) SetVideoFlip(b bool) { wmp.v.SetFlip(b) }
-func (wmp *WebrtcMediaPipe) SetRot(r uint)       { wmp.v.SetRot(r) }
+
+func (wmp *WebrtcMediaPipe) Reinit() error {
+	wmp.v.Stop()
+	if err := wmp.initVideo(wmp.VideoW, wmp.VideoH, wmp.VideoScale, wmp.vConf); err != nil {
+		return err
+	}
+	// restore old
+	wmp.SetPixFmt(wmp.oldPf)
+	wmp.SetRot(wmp.oldRot)
+	wmp.SetVideoFlip(wmp.oldFlip)
+	return nil
+}
+
+func (wmp *WebrtcMediaPipe) SetPixFmt(f uint32)  { wmp.oldPf = f; wmp.v.SetPixFormat(f) }
+func (wmp *WebrtcMediaPipe) SetVideoFlip(b bool) { wmp.oldFlip = b; wmp.v.SetFlip(b) }
+func (wmp *WebrtcMediaPipe) SetRot(r uint)       { wmp.oldRot = r; wmp.v.SetRot(r) }

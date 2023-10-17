@@ -137,6 +137,15 @@ func (c *coordinator) HandleGameStart(rq api.StartGameRequest[com.Uid], w *Worke
 		m.SetPixFmt(app.PixFormat())
 		m.SetRot(app.Rotation())
 
+		app.HandleOnSystemAvInfo(func() {
+			m.VideoW, m.VideoH = app.ViewportSize()
+			m.VideoScale = app.Scale()
+			err := m.Reinit()
+			if err != nil {
+				c.log.Error().Err(err).Msgf("av reinit fail")
+			}
+		})
+
 		r.BindAppMedia()
 		r.StartApp()
 	}
