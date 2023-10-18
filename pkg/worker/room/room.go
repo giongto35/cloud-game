@@ -119,6 +119,7 @@ func (r *Router[T]) FindRoom(id string) *Room[T] {
 func (r *Router[T]) Remove(user T) {
 	if left := r.users.RemoveL(user); left == 0 {
 		r.Close()
+		r.SetRoom(nil)
 	}
 }
 

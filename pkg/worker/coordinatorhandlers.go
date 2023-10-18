@@ -162,8 +162,8 @@ func (c *coordinator) HandleGameStart(rq api.StartGameRequest[com.Uid], w *Worke
 func (c *coordinator) HandleTerminateSession(rq api.TerminateSessionRequest[com.Uid], w *Worker) {
 	if user := w.router.FindUser(rq.Id); user != nil {
 		w.router.Remove(user)
+		c.log.Debug().Msgf(">>> users: %v", w.router.Users())
 		user.Disconnect()
-		w.router.SetRoom(nil)
 	}
 }
 
@@ -171,7 +171,7 @@ func (c *coordinator) HandleTerminateSession(rq api.TerminateSessionRequest[com.
 func (c *coordinator) HandleQuitGame(rq api.GameQuitRequest[com.Uid], w *Worker) {
 	if user := w.router.FindUser(rq.Id); user != nil {
 		w.router.Remove(user)
-		w.router.SetRoom(nil)
+		c.log.Debug().Msgf(">>> users: %v", w.router.Users())
 	}
 }
 
