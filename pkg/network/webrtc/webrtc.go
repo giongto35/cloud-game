@@ -185,6 +185,9 @@ func (p *Peer) handleICEState(onConnect func()) func(webrtc.ICEConnectionState) 
 }
 
 func (p *Peer) AddCandidate(candidate string, decoder Decoder) error {
+	// !to add test when the connection is closed but it is still
+	// receiving ice candidates
+
 	var iceCandidate webrtc.ICECandidateInit
 	if err := decoder(candidate, &iceCandidate); err != nil {
 		return err
@@ -204,7 +207,6 @@ func (p *Peer) Disconnect() {
 		// ignore this due to DTLS fatal: conn is closed
 		_ = p.conn.Close()
 	}
-	p.conn = nil
 	p.log.Debug().Msg("WebRTC stop")
 }
 
