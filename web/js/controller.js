@@ -51,7 +51,7 @@
     };
 
     const onGameRoomAvailable = () => {
-        message.show('Now you can share you game!');
+        // room is ready
     };
 
     const onConnectionReady = () => {
