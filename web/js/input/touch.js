@@ -278,7 +278,7 @@ const touch = (() => {
     // touch/mouse events for player slider.
     playerSlider.addEventListener('oninput', handlePlayerSlider);
     playerSlider.addEventListener('onchange', handlePlayerSlider);
-    playerSlider.addEventListener('mouseup', handlePlayerSlider);
+    playerSlider.addEventListener('click', handlePlayerSlider);
     playerSlider.addEventListener('touchend', handlePlayerSlider);
 
     // Bind events for menu

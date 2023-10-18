@@ -238,9 +238,9 @@
         state.keyRelease(data.key);
     };
 
-    const updatePlayerIndex = idx => {
+    const updatePlayerIndex = (idx, not_game = false) => {
         playerIndex.value = idx + 1;
-        api.game.setPlayerIndex(idx);
+        !not_game && api.game.setPlayerIndex(idx);
     };
 
     // noop function for the state
@@ -421,7 +421,7 @@
     event.sub(GAME_SAVED, () => message.show('Saved'));
     event.sub(GAME_LOADED, () => message.show('Loaded'));
     event.sub(GAME_PLAYER_IDX, data => {
-        updatePlayerIndex(+data.index);
+        updatePlayerIndex(+data.index, state !== app.state.game);
     });
     event.sub(GAME_PLAYER_IDX_SET, idx => {
         if (!isNaN(+idx)) message.show(+idx + 1);

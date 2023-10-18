@@ -92,7 +92,7 @@ func (u *User) HandleChangePlayer(rq api.ChangePlayerUserRequest) {
 	resp, err := u.w.ChangePlayer(u.Id(), int(rq))
 	// !to make it a little less convoluted
 	if err != nil || resp == nil || *resp == -1 {
-		u.log.Error().Err(err).Msg("player switch failed for some reason")
+		u.log.Error().Err(err).Msgf("player select fail, req: %v", rq)
 		return
 	}
 	u.Notify(api.ChangePlayer, rq)
