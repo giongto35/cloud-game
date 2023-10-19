@@ -203,6 +203,9 @@ emulator:
         gba:
           lib: mgba_libretro
           roms: [ "gba", "gbc" ]
+          options:
+            mgba_audio_low_pass_filter: enabled
+            mgba_audio_low_pass_range: 40
         pcsx:
           lib: pcsx_rearmed_libretro
           roms: [ "cue", "chd" ]
