@@ -362,10 +362,10 @@ type Sei struct {
 }
 
 type Image struct {
-	ICsp    int32             /* Colorspace */
-	IPlane  int32             /* Number of image planes */
-	IStride [4]int32          /* Strides for each plane */
-	Plane   [4]unsafe.Pointer /* Pointers to each plane */
+	ICsp    int32      /* Colorspace */
+	IPlane  int32      /* Number of image planes */
+	IStride [4]int32   /* Strides for each plane */
+	Plane   [4]uintptr /* Pointers to each plane */
 }
 
 type ImageProperties struct {
@@ -453,12 +453,6 @@ type Picture struct {
 	ExtraSei Sei
 	/* private user data. copied from input to output frames. */
 	Opaque unsafe.Pointer
-}
-
-func (p *Picture) freePlanes() {
-	for _, ptr := range p.Img.Plane {
-		C.free(ptr)
-	}
 }
 
 func (t *T) cptr() *C.x264_t { return (*C.x264_t)(unsafe.Pointer(t)) }

@@ -1,7 +1,5 @@
 package h264
 
-// #include <stdint.h>
-import "C"
 import (
 	"fmt"
 	"unsafe"
@@ -18,7 +16,6 @@ type H264 struct {
 	nals       []*Nal
 
 	in, out *Picture
-	y, u, v []byte
 }
 
 type Options struct {
@@ -86,35 +83,26 @@ func NewEncoder(w, h int, opts *Options) (encoder *H264, err error) {
 
 	encoder = &H264{
 		csp:        param.ICsp,
-		lumaSize:   int32(w * h),
-		chromaSize: int32(w*h) / 4,
+		lumaSize:   param.IWidth * param.IHeight,
+		chromaSize: param.IWidth * param.IHeight / 4,
 		nals:       make([]*Nal, 1),
-		width:      int32(w),
+		width:      param.IWidth,
 		out:        new(Picture),
+		in: &Picture{
+			Img: Image{
+				ICsp:   param.ICsp,
+				IPlane: 3,
+				IStride: [4]int32{
+					0: param.IWidth,
+					1: param.IWidth >> 1,
+					2: param.IWidth >> 1,
+				},
+			},
+		},
 	}
-
-	// pool
-	var picIn Picture
-
-	picIn.Img.ICsp = encoder.csp
-	picIn.Img.IPlane = 3
-	picIn.Img.IStride[0] = encoder.width
-	picIn.Img.IStride[1] = encoder.width >> 1
-	picIn.Img.IStride[2] = encoder.width >> 1
-
-	picIn.Img.Plane[0] = C.malloc(C.size_t(encoder.lumaSize))
-	picIn.Img.Plane[1] = C.malloc(C.size_t(encoder.chromaSize))
-	picIn.Img.Plane[2] = C.malloc(C.size_t(encoder.chromaSize))
-
-	encoder.y = unsafe.Slice((*byte)(picIn.Img.Plane[0]), encoder.lumaSize)
-	encoder.u = unsafe.Slice((*byte)(picIn.Img.Plane[1]), encoder.chromaSize)
-	encoder.v = unsafe.Slice((*byte)(picIn.Img.Plane[2]), encoder.chromaSize)
-
-	encoder.in = &picIn
 
 	if encoder.ref = EncoderOpen(&param); encoder.ref == nil {
 		err = fmt.Errorf("x264: cannot open the encoder")
-		return
 	}
 	return
 }
@@ -122,15 +110,16 @@ func NewEncoder(w, h int, opts *Options) (encoder *H264, err error) {
 func LibVersion() int { return int(Build) }
 
 func (e *H264) LoadBuf(yuv []byte) {
-	copy(e.y, yuv[:e.lumaSize])
-	copy(e.u, yuv[e.lumaSize:e.lumaSize+e.chromaSize])
-	copy(e.v, yuv[e.lumaSize+e.chromaSize:])
+	e.in.Img.Plane[0] = uintptr(unsafe.Pointer(&yuv[0]))
+	e.in.Img.Plane[1] = uintptr(unsafe.Pointer(&yuv[e.lumaSize]))
+	e.in.Img.Plane[2] = uintptr(unsafe.Pointer(&yuv[e.lumaSize+e.chromaSize]))
 }
 
 func (e *H264) Encode() []byte {
 	e.in.IPts += 1
 	if ret := EncoderEncode(e.ref, e.nals, &e.nnals, e.in, e.out); ret > 0 {
-		return C.GoBytes(e.nals[0].PPayload, C.int(ret))
+		return unsafe.Slice((*byte)(e.nals[0].PPayload), ret)
+		//return C.GoBytes(e.nals[0].PPayload, C.int(ret))
 	}
 	return []byte{}
 }
@@ -148,10 +137,6 @@ func (e *H264) SetFlip(b bool) {
 }
 
 func (e *H264) Shutdown() error {
-	e.y = nil
-	e.u = nil
-	e.v = nil
-	e.in.freePlanes()
 	EncoderClose(e.ref)
 	return nil
 }
