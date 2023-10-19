@@ -11,7 +11,6 @@ type H264 struct {
 	width      int32
 	lumaSize   int32
 	chromaSize int32
-	csp        int32
 	nnals      int32
 	nals       []*Nal
 
@@ -82,7 +81,6 @@ func NewEncoder(w, h int, opts *Options) (encoder *H264, err error) {
 	param.Rc.FRfConstant = float32(opts.Crf)
 
 	encoder = &H264{
-		csp:        param.ICsp,
 		lumaSize:   param.IWidth * param.IHeight,
 		chromaSize: param.IWidth * param.IHeight / 4,
 		nals:       make([]*Nal, 1),
