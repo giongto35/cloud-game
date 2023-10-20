@@ -79,7 +79,7 @@ func (c *coordinator) HandleGameStart(rq api.StartGameRequest[com.Uid], w *Worke
 	}
 	user.Index = rq.PlayerIndex
 
-	r := w.router.FindRoom(rq.Rid)
+	r := w.router.FindRoom(rq.Room.Rid)
 
 	if r == nil { // new room
 		uid := rq.Room.Rid
@@ -89,10 +89,13 @@ func (c *coordinator) HandleGameStart(rq api.StartGameRequest[com.Uid], w *Worke
 		game := games.GameMetadata(rq.Game)
 
 		r = room.NewRoom[*room.GameSession](uid, nil, w.router.Users(), nil)
-		r.HandleClose = func() { c.CloseRoom(uid) }
+		r.HandleClose = func() {
+			c.CloseRoom(uid)
+			c.log.Debug().Msgf("room close request %v sent")
+		}
 
 		if other := w.router.Room(); other != nil {
-			c.log.Error().Msgf("concurrent room creation: %v", uid)
+			c.log.Error().Msgf("concurrent room creation: %v / %v", uid, w.router.Room().Id())
 			return api.EmptyPacket
 		}
 
