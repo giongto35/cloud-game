@@ -66,7 +66,8 @@ type Frontend struct {
 	th      int // draw threads
 	vw, vh  int // out frame size
 
-	mu sync.Mutex
+	mu  sync.Mutex
+	mui sync.Mutex
 
 	DisableCanvasPool bool
 	SaveOnClose       bool
@@ -198,7 +199,7 @@ func (f *Frontend) Shutdown() {
 	f.SetAudioCb(noAudio)
 	f.SetVideoCb(noVideo)
 	f.mu.Unlock()
-	f.log.Debug().Msgf("frontend closed")
+	f.log.Debug().Msgf("frontend shutdown done")
 }
 
 func (f *Frontend) linkNano(nano *nanoarch.Nanoarch) {
@@ -214,11 +215,14 @@ func (f *Frontend) linkNano(nano *nanoarch.Nanoarch) {
 func (f *Frontend) SetOnAV(fn func()) { f.nano.OnSystemAvInfo = fn }
 
 func (f *Frontend) Start() {
-	f.log.Debug().Msgf("Frontend start")
+	f.log.Debug().Msgf("frontend start")
 
 	f.done = make(chan struct{})
 	f.nano.LastFrameTime = time.Now().UnixNano()
+
+	f.mui.Lock()
 	defer f.Shutdown()
+	defer f.mui.Unlock()
 
 	if f.HasSave() {
 		// advance 1 frame for Mupen save state
@@ -248,34 +252,28 @@ func (f *Frontend) Start() {
 	}
 }
 
-func (f *Frontend) PixFormat() uint32             { return f.nano.Video.PixFmt.C }
-func (f *Frontend) Rotation() uint                { return f.nano.Rot }
+func (f *Frontend) AudioSampleRate() int          { return f.nano.AudioSampleRate() }
+func (f *Frontend) FPS() int                      { return f.nano.VideoFramerate() }
 func (f *Frontend) Flipped() bool                 { return f.nano.IsGL() }
 func (f *Frontend) FrameSize() (int, int)         { return f.nano.GeometryBase() }
-func (f *Frontend) FPS() int                      { return f.nano.VideoFramerate() }
-func (f *Frontend) HashPath() string              { return f.storage.GetSavePath() }
 func (f *Frontend) HasSave() bool                 { return os.Exists(f.HashPath()) }
-func (f *Frontend) SRAMPath() string              { return f.storage.GetSRAMPath() }
-func (f *Frontend) AudioSampleRate() int          { return f.nano.AudioSampleRate() }
+func (f *Frontend) HashPath() string              { return f.storage.GetSavePath() }
 func (f *Frontend) Input(player int, data []byte) { f.input.setInput(player, data) }
-func (f *Frontend) LoadGame(path string) error    { return f.nano.LoadGame(path) }
-func (f *Frontend) RestoreGameState() error       { return f.Load() }
-func (f *Frontend) Scale() float64                { return f.scale }
 func (f *Frontend) IsPortrait() bool              { return f.nano.IsPortrait() }
+func (f *Frontend) LoadGame(path string) error    { return f.nano.LoadGame(path) }
+func (f *Frontend) PixFormat() uint32             { return f.nano.Video.PixFmt.C }
+func (f *Frontend) RestoreGameState() error       { return f.Load() }
+func (f *Frontend) Rotation() uint                { return f.nano.Rot }
+func (f *Frontend) SRAMPath() string              { return f.storage.GetSRAMPath() }
 func (f *Frontend) SaveGameState() error          { return f.Save() }
+func (f *Frontend) Scale() float64                { return f.scale }
 func (f *Frontend) SetAudioCb(cb func(app.Audio)) { f.onAudio = cb }
 func (f *Frontend) SetSessionId(name string)      { f.storage.SetMainSaveName(name) }
 func (f *Frontend) SetVideoCb(ff func(app.Video)) { f.onVideo = ff }
-func (f *Frontend) SetViewport(width int, height int) {
-	f.mu.Lock()
-	f.vw, f.vh = width, height
-	f.mu.Unlock()
-}
-
-// Tick runs one emulation frame.
-func (f *Frontend) Tick()                    { f.mu.Lock(); f.nano.Run(); f.mu.Unlock() }
-func (f *Frontend) ToggleMultitap()          { f.nano.ToggleMultitap() }
-func (f *Frontend) ViewportSize() (int, int) { return f.vw, f.vh }
+func (f *Frontend) SetViewport(w, h int)          { f.mu.Lock(); f.vw, f.vh = w, h; f.mu.Unlock() }
+func (f *Frontend) Tick()                         { f.mu.Lock(); f.nano.Run(); f.mu.Unlock() }
+func (f *Frontend) ToggleMultitap()               { f.nano.ToggleMultitap() }
+func (f *Frontend) ViewportSize() (int, int)      { return f.vw, f.vh }
 
 func (f *Frontend) ViewportCalc() (nw int, nh int) {
 	w, h := f.FrameSize()
@@ -307,8 +305,11 @@ func (f *Frontend) ViewportCalc() (nw int, nh int) {
 }
 
 func (f *Frontend) Close() {
-	f.log.Debug().Msgf("frontend close called")
+	f.log.Debug().Msgf("frontend close")
+	close(f.done)
 
+	f.mui.Lock()
+	defer f.mui.Unlock()
 	// Save game on quit if it was saved before (shared or click-saved).
 	if f.SaveOnClose && f.HasSave() {
 		f.log.Debug().Msg("Save on quit")
@@ -316,9 +317,8 @@ func (f *Frontend) Close() {
 			f.log.Error().Err(err).Msg("save on quit failed")
 		}
 	}
-
-	close(f.done)
 	f.nano.Close()
+	f.log.Debug().Msgf("frontend closed")
 }
 
 // Save writes the current state to the filesystem.

@@ -91,7 +91,7 @@ func (c *coordinator) HandleGameStart(rq api.StartGameRequest[com.Uid], w *Worke
 		r = room.NewRoom[*room.GameSession](uid, nil, w.router.Users(), nil)
 		r.HandleClose = func() {
 			c.CloseRoom(uid)
-			c.log.Debug().Msgf("room close request %v sent")
+			c.log.Debug().Msgf("room close request %v sent", uid)
 		}
 
 		if other := w.router.Room(); other != nil {

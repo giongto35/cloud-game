@@ -10,6 +10,7 @@ import (
 	"path/filepath"
 	"sync"
 	"testing"
+	"time"
 
 	"github.com/giongto35/cloud-game/v3/pkg/config"
 	"github.com/giongto35/cloud-game/v3/pkg/logger"
@@ -67,9 +68,9 @@ func EmulatorMock(room string, system string) *TestFrontend {
 	conf.Emulator.Storage = expand("tests", "storage")
 
 	l := logger.Default()
-	l2 := l.Extend(l.Level(logger.ErrorLevel).With())
+	l2 := l.Extend(l.Level(logger.WarnLevel).With())
 
-	if err := manager.CheckCores(conf.Emulator, l); err != nil {
+	if err := manager.CheckCores(conf.Emulator, l2); err != nil {
 		panic(err)
 	}
 
@@ -352,6 +353,18 @@ func TestConcurrentInput(t *testing.T) {
 		go func() { state.isKeyPressed(uint(player), 100); wg.Done() }()
 	}
 	wg.Wait()
+}
+
+func TestStartStop(t *testing.T) {
+	f1 := DefaultFrontend("sushi", sushi.system, sushi.rom)
+	go f1.Start()
+	time.Sleep(1 * time.Second)
+	f1.Close()
+
+	f2 := DefaultFrontend("sushi", sushi.system, sushi.rom)
+	go f2.Start()
+	time.Sleep(100 * time.Millisecond)
+	f2.Close()
 }
 
 // expand joins a list of file path elements.
