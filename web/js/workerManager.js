@@ -37,7 +37,7 @@ const workerManager = (() => {
             },
             'is_busy': {
                 caption: 'State',
-                renderer: (data) => data?.is_busy === true ? 'R' : ''
+                renderer: renderStateEl
             },
             'use': {
                 caption: 'Use',
@@ -110,6 +110,17 @@ const workerManager = (() => {
             el.href = "#";
             el.addEventListener('click', handleServerChange);
         })
+    }
+
+    function renderStateEl(server) {
+        const state = server?.is_busy === true ? 'R' : ''
+        if (server.room) {
+            return gui.create('a', (el) => {
+                el.innerText = state;
+                el.href = "/?id="+server.room;
+            })
+        }
+        return state
     }
 
     panel.toggle(false);

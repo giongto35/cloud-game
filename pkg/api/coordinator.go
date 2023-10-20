@@ -36,6 +36,7 @@ type Server struct {
 	PingURL  string `json:"ping_url"`
 	Port     string `json:"port,omitempty"`
 	Replicas uint32 `json:"replicas,omitempty"`
+	Room     string `json:"room,omitempty"`
 	Tag      string `json:"tag,omitempty"`
 	Zone     string `json:"zone,omitempty"`
 }

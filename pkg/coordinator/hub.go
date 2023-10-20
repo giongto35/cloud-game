@@ -144,8 +144,9 @@ func (h *Hub) handleWorkerConnection() http.HandlerFunc {
 }
 
 func (h *Hub) GetServerList() (r []api.Server) {
+	debug := h.conf.Coordinator.Debug
 	h.workers.ForEach(func(w *Worker) {
-		r = append(r, api.Server{
+		server := api.Server{
 			Addr:    w.Addr,
 			Id:      w.Id(),
 			IsBusy:  !w.HasSlot(),
@@ -154,7 +155,11 @@ func (h *Hub) GetServerList() (r []api.Server) {
 			Port:    w.Port,
 			Tag:     w.Tag,
 			Zone:    w.Zone,
-		})
+		}
+		if debug {
+			server.Room = w.RoomId
+		}
+		r = append(r, server)
 	})
 	return
 }
