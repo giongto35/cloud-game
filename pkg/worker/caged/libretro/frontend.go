@@ -217,11 +217,20 @@ func (f *Frontend) SetOnAV(fn func()) { f.nano.OnSystemAvInfo = fn }
 func (f *Frontend) Start() {
 	f.log.Debug().Msgf("frontend start")
 
+	f.mui.Lock()
 	f.done = make(chan struct{})
 	f.nano.LastFrameTime = time.Now().UnixNano()
 
-	f.mui.Lock()
-	defer f.Shutdown()
+	defer func() {
+		// Save game on quit if it was saved before (shared or click-saved).
+		if f.SaveOnClose && f.HasSave() {
+			f.log.Debug().Msg("save on quit")
+			if err := f.Save(); err != nil {
+				f.log.Error().Err(err).Msg("save on quit failed")
+			}
+		}
+		f.Shutdown()
+	}()
 	defer f.mui.Unlock()
 
 	if f.HasSave() {
@@ -306,17 +315,11 @@ func (f *Frontend) ViewportCalc() (nw int, nh int) {
 
 func (f *Frontend) Close() {
 	f.log.Debug().Msgf("frontend close")
+
 	close(f.done)
 
 	f.mui.Lock()
 	defer f.mui.Unlock()
-	// Save game on quit if it was saved before (shared or click-saved).
-	if f.SaveOnClose && f.HasSave() {
-		f.log.Debug().Msg("Save on quit")
-		if err := f.Save(); err != nil {
-			f.log.Error().Err(err).Msg("save on quit failed")
-		}
-	}
 	f.nano.Close()
 	f.log.Debug().Msgf("frontend closed")
 }
