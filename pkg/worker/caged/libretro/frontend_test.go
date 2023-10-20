@@ -29,10 +29,11 @@ type TestFrontend struct {
 }
 
 type testRun struct {
-	room           string
-	system         string
-	rom            string
-	emulationTicks int
+	name   string
+	room   string
+	system string
+	rom    string
+	frames int
 }
 
 type game struct {
@@ -138,22 +139,19 @@ func (emu *TestFrontend) Shutdown() {
 	emu.Frontend.Shutdown()
 }
 
-// dumpState returns the current emulator state and
-// the latest saved state for its session.
-// Locks the emulator.
-func (emu *TestFrontend) dumpState() (string, string) {
+// dumpState returns both current and previous emulator save state as MD5 hash string.
+func (emu *TestFrontend) dumpState() (cur string, prev string) {
 	emu.mu.Lock()
-	bytes, _ := os.ReadFile(emu.HashPath())
-	lastStateHash := hash(bytes)
+	b, _ := os.ReadFile(emu.HashPath())
+	prev = hash(b)
 	emu.mu.Unlock()
 
 	emu.mu.Lock()
-	state, _ := nanoarch.SaveState()
+	b, _ = nanoarch.SaveState()
 	emu.mu.Unlock()
-	stateHash := hash(state)
+	cur = hash(b)
 
-	fmt.Printf("mem: %v, dat: %v\n", stateHash, lastStateHash)
-	return stateHash, lastStateHash
+	return
 }
 
 func BenchmarkEmulators(b *testing.B) {
@@ -180,36 +178,33 @@ func BenchmarkEmulators(b *testing.B) {
 	}
 }
 
-// Tests a successful emulator state save.
-func TestSave(t *testing.T) {
+func TestSavePersistence(t *testing.T) {
 	tests := []testRun{
-		{room: "test_save_ok_00", system: sushi.system, rom: sushi.rom, emulationTicks: 100},
-		{room: "test_save_ok_01", system: angua.system, rom: angua.rom, emulationTicks: 10},
+		{system: sushi.system, rom: sushi.rom, frames: 100},
+		{system: angua.system, rom: angua.rom, frames: 100},
 	}
 
 	for _, test := range tests {
-		t.Logf("Testing [%v] save with [%v]\n", test.system, test.rom)
+		t.Run(fmt.Sprintf("If saves persistent on %v - %v", test.system, test.rom), func(t *testing.T) {
+			front := DefaultFrontend(test.room, test.system, test.rom)
 
-		front := DefaultFrontend(test.room, test.system, test.rom)
+			for test.frames > 0 {
+				front.Tick()
+				test.frames--
+			}
 
-		for test.emulationTicks > 0 {
-			front.Tick()
-			test.emulationTicks--
-		}
+			_, _ = front.dumpState()
+			if err := front.Save(); err != nil {
+				t.Error(err)
+			}
 
-		fmt.Printf("[%-14v] ", "before save")
-		_, _ = front.dumpState()
-		if err := front.Save(); err != nil {
-			t.Errorf("Save fail %v", err)
-		}
-		fmt.Printf("[%-14v] ", "after  save")
-		snapshot1, snapshot2 := front.dumpState()
+			hash1, hash2 := front.dumpState()
+			if hash1 != hash2 {
+				t.Errorf("It seems that the previous state is diffrent: %v != %v", hash1, hash2)
+			}
 
-		if snapshot1 != snapshot2 {
-			t.Errorf("It seems rom state save has failed: %v != %v", snapshot1, snapshot2)
-		}
-
-		front.Shutdown()
+			front.Shutdown()
+		})
 	}
 }
 
@@ -222,9 +217,9 @@ func TestSave(t *testing.T) {
 // Compare states (a) and (b), should be =.
 func TestLoad(t *testing.T) {
 	tests := []testRun{
-		{room: "test_load_00", system: alwa.system, rom: alwa.rom, emulationTicks: 100},
-		{room: "test_load_01", system: sushi.system, rom: sushi.rom, emulationTicks: 1000},
-		{room: "test_load_02", system: angua.system, rom: angua.rom, emulationTicks: 100},
+		{room: "test_load_00", system: alwa.system, rom: alwa.rom, frames: 100},
+		{room: "test_load_01", system: sushi.system, rom: sushi.rom, frames: 1000},
+		{room: "test_load_02", system: angua.system, rom: angua.rom, frames: 100},
 	}
 
 	for _, test := range tests {
@@ -235,10 +230,10 @@ func TestLoad(t *testing.T) {
 		fmt.Printf("[%-14v] ", "initial")
 		mock.dumpState()
 
-		for ticks := test.emulationTicks; ticks > 0; ticks-- {
+		for ticks := test.frames; ticks > 0; ticks-- {
 			mock.Tick()
 		}
-		fmt.Printf("[%-14v] ", fmt.Sprintf("emulated %d", test.emulationTicks))
+		fmt.Printf("[%-14v] ", fmt.Sprintf("emulated %d", test.frames))
 		mock.dumpState()
 
 		if err := mock.Save(); err != nil {
@@ -247,10 +242,10 @@ func TestLoad(t *testing.T) {
 		fmt.Printf("[%-14v] ", "saved")
 		snapshot1, _ := mock.dumpState()
 
-		for ticks := test.emulationTicks; ticks > 0; ticks-- {
+		for ticks := test.frames; ticks > 0; ticks-- {
 			mock.Tick()
 		}
-		fmt.Printf("[%-14v] ", fmt.Sprintf("emulated %d", test.emulationTicks))
+		fmt.Printf("[%-14v] ", fmt.Sprintf("emulated %d", test.frames))
 		mock.dumpState()
 
 		if err := mock.Load(); err != nil {
@@ -273,11 +268,11 @@ func TestStateConcurrency(t *testing.T) {
 		seed int
 	}{
 		{
-			run:  testRun{room: "test_concurrency_00", system: sushi.system, rom: sushi.rom, emulationTicks: 120},
+			run:  testRun{room: "test_concurrency_00", system: sushi.system, rom: sushi.rom, frames: 120},
 			seed: 42,
 		},
 		{
-			run:  testRun{room: "test_concurrency_01", system: angua.system, rom: angua.rom, emulationTicks: 300},
+			run:  testRun{room: "test_concurrency_01", system: angua.system, rom: angua.rom, frames: 300},
 			seed: 42 + 42,
 		},
 	}
@@ -304,7 +299,7 @@ func TestStateConcurrency(t *testing.T) {
 
 		_ = mock.Save()
 
-		for i := 0; i < test.run.emulationTicks; i++ {
+		for i := 0; i < test.run.frames; i++ {
 			qLock.Lock()
 			mock.Tick()
 			qLock.Unlock()
