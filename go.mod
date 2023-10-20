@@ -11,10 +11,10 @@ require (
 	github.com/gorilla/websocket v1.5.0
 	github.com/knadh/koanf/maps v0.1.1
 	github.com/knadh/koanf/v2 v2.0.1
-	github.com/pion/ice/v3 v3.0.1
-	github.com/pion/interceptor v0.1.22
+	github.com/pion/ice/v3 v3.0.2
+	github.com/pion/interceptor v0.1.24
 	github.com/pion/logging v0.2.2
-	github.com/pion/webrtc/v4 v4.0.0-beta.5
+	github.com/pion/webrtc/v4 v4.0.0-beta.6
 	github.com/rs/xid v1.5.0
 	github.com/rs/zerolog v1.31.0
 	github.com/veandco/go-sdl2 v0.4.35
@@ -27,7 +27,7 @@ require (
 	github.com/davecgh/go-spew v1.1.1 // indirect
 	github.com/google/uuid v1.3.1 // indirect
 	github.com/mattn/go-colorable v0.1.13 // indirect
-	github.com/mattn/go-isatty v0.0.19 // indirect
+	github.com/mattn/go-isatty v0.0.20 // indirect
 	github.com/mitchellh/copystructure v1.2.0 // indirect
 	github.com/mitchellh/mapstructure v1.5.0 // indirect
 	github.com/mitchellh/reflectwalk v1.0.2 // indirect
