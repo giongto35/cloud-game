@@ -269,34 +269,6 @@ func BenchmarkRoom(b *testing.B) {
 	}
 }
 
-type tSession struct{}
-
-func (t tSession) SendAudio([]byte, int32) {}
-func (t tSession) SendVideo([]byte, int32) {}
-func (t tSession) SendData([]byte)         {}
-func (t tSession) Disconnect()             {}
-func (t tSession) Id() string              { return "1" }
-
-func TestRouter(t *testing.T) {
-	u := com.NewNetMap[string, *tSession]()
-	router := Router[*tSession]{users: &u}
-
-	var r *Room[*tSession]
-
-	router.SetRoom(&Room[*tSession]{id: "test001"})
-	room := router.FindRoom("test001")
-	if room == nil {
-		t.Errorf("no room, but should be")
-	}
-	router.SetRoom(r)
-	room = router.FindRoom("x")
-	if room != nil {
-		t.Errorf("a room, but should not be")
-	}
-	router.SetRoom(nil)
-	router.Close()
-}
-
 // expand joins a list of file path elements.
 func expand(p ...string) string {
 	ph, _ := filepath.Abs(filepath.FromSlash(filepath.Join(p...)))

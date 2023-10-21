@@ -69,7 +69,7 @@ func New(conf config.WorkerConfig, log *logger.Logger) (*Worker, error) {
 	return worker, nil
 }
 
-func (w *Worker) Reset() { w.router.Close() }
+func (w *Worker) Reset() { w.router.Reset() }
 
 func (w *Worker) Start(done chan struct{}) {
 	for _, s := range w.services {
@@ -77,6 +77,9 @@ func (w *Worker) Start(done chan struct{}) {
 			s.Run()
 		}
 	}
+
+	// !to restore alive worker info when coordinator connection was lost
+
 	go func() {
 		remoteAddr := w.conf.Worker.Network.CoordinatorAddress
 		defer func() {

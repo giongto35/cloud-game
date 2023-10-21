@@ -119,7 +119,7 @@ func (r *Router[T]) FindRoom(id string) *Room[T] {
 func (r *Router[T]) Remove(user T) {
 	if left := r.users.RemoveL(user); left == 0 {
 		r.Close()
-		r.SetRoom(nil)
+		r.SetRoom(nil) // !to remove
 	}
 }
 
@@ -130,6 +130,16 @@ func (r *Router[T]) Room() *Room[T]           { r.mu.Lock(); defer r.mu.Unlock()
 func (r *Router[T]) SetRoom(room *Room[T])    { r.mu.Lock(); r.room = room; r.mu.Unlock() }
 func (r *Router[T]) HasRoom() bool            { r.mu.Lock(); defer r.mu.Unlock(); return r.room != nil }
 func (r *Router[T]) Users() SessionManager[T] { return r.users }
+func (r *Router[T]) Reset() {
+	r.mu.Lock()
+	if r.room != nil {
+		r.room.Close()
+		r.room = nil
+	}
+	r.users.ForEach(func(u T) { u.Disconnect() })
+	r.users.Reset()
+	r.mu.Unlock()
+}
 
 type AppSession struct {
 	Uid
