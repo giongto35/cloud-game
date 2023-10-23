@@ -8,12 +8,10 @@ import (
 type H264 struct {
 	ref *T
 
-	width      int32
-	lumaSize   int32
-	chromaSize int32
-	nnals      int32
-	nals       []*Nal
-
+	pnals   *Nal  // array of NALs
+	nnals   int32 // number of NALs
+	y       int32 // Y size
+	uv      int32 // U or V size
 	in, out *Picture
 }
 
@@ -32,11 +30,11 @@ type Options struct {
 	Tune string
 }
 
-func NewEncoder(w, h int, opts *Options) (encoder *H264, err error) {
+func NewEncoder(w, h int, th int, opts *Options) (encoder *H264, err error) {
 	libVersion := LibVersion()
 
-	if libVersion < 150 {
-		return nil, fmt.Errorf("x264: the library version should be newer than v150, you have got version %v", libVersion)
+	if libVersion < 156 {
+		return nil, fmt.Errorf("x264: the library version should be newer than v155, you have got version %v", libVersion)
 	}
 
 	if opts == nil {
@@ -63,39 +61,28 @@ func NewEncoder(w, h int, opts *Options) (encoder *H264, err error) {
 		}
 	}
 
-	// legacy encoder lacks of this param
-	param.IBitdepth = 8
+	ww, hh := int32(w), int32(h)
 
-	if libVersion > 155 {
-		param.ICsp = CspI420
-	} else {
-		param.ICsp = 1
-	}
-	param.IWidth = int32(w)
-	param.IHeight = int32(h)
+	param.IBitdepth = 8
+	param.ICsp = CspI420
+	param.IWidth = ww
+	param.IHeight = hh
 	param.ILogLevel = opts.LogLevel
 	param.ISyncLookahead = 0
-	param.IThreads = 1
-
+	param.IThreads = int32(th)
+	if th != 1 {
+		param.BSlicedThreads = 1
+	}
 	param.Rc.IRcMethod = RcCrf
 	param.Rc.FRfConstant = float32(opts.Crf)
 
 	encoder = &H264{
-		lumaSize:   param.IWidth * param.IHeight,
-		chromaSize: param.IWidth * param.IHeight / 4,
-		nals:       make([]*Nal, 1),
-		width:      param.IWidth,
-		out:        new(Picture),
+		y:     ww * hh,
+		uv:    ww * hh / 4,
+		pnals: new(Nal),
+		out:   new(Picture),
 		in: &Picture{
-			Img: Image{
-				ICsp:   param.ICsp,
-				IPlane: 3,
-				IStride: [4]int32{
-					0: param.IWidth,
-					1: param.IWidth >> 1,
-					2: param.IWidth >> 1,
-				},
-			},
+			Img: Image{ICsp: param.ICsp, IPlane: 3, IStride: [4]int32{0: ww, 1: ww >> 1, 2: ww >> 1}},
 		},
 	}
 
@@ -109,22 +96,26 @@ func LibVersion() int { return int(Build) }
 
 func (e *H264) LoadBuf(yuv []byte) {
 	e.in.Img.Plane[0] = uintptr(unsafe.Pointer(&yuv[0]))
-	e.in.Img.Plane[1] = uintptr(unsafe.Pointer(&yuv[e.lumaSize]))
-	e.in.Img.Plane[2] = uintptr(unsafe.Pointer(&yuv[e.lumaSize+e.chromaSize]))
+	e.in.Img.Plane[1] = uintptr(unsafe.Pointer(&yuv[e.y]))
+	e.in.Img.Plane[2] = uintptr(unsafe.Pointer(&yuv[e.y+e.uv]))
 }
 
-func (e *H264) Encode() []byte {
+func (e *H264) Encode() (b []byte) {
 	e.in.IPts += 1
-	if ret := EncoderEncode(e.ref, e.nals, &e.nnals, e.in, e.out); ret > 0 {
-		return unsafe.Slice((*byte)(e.nals[0].PPayload), ret)
-		//return C.GoBytes(e.nals[0].PPayload, C.int(ret))
+	bytes := EncoderEncode(e.ref, &e.pnals, &e.nnals, e.in, e.out)
+	if bytes > 0 {
+		// we merge multiple NALs stored in **pnals into a single byte stream
+		// ret contains the total size of NALs in bytes, i.e. each e.pnals[...].PPayload * IPayload
+		b = unsafe.Slice((*byte)(e.pnals.PPayload), bytes)
 	}
-	return []byte{}
+	return
 }
 
 func (e *H264) IntraRefresh() {
 	// !to implement
 }
+
+func (e *H264) Info() string { return fmt.Sprintf("x264: v%v", LibVersion()) }
 
 func (e *H264) SetFlip(b bool) {
 	if b {

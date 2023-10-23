@@ -163,6 +163,8 @@ func (vpx *Vpx) Encode() []byte {
 	return C.GoBytes(fb.ptr, fb.size)
 }
 
+func (vpx *Vpx) Info() string { return fmt.Sprintf("vpx: %v", C.GoString(C.vpx_codec_version_str())) }
+
 func (vpx *Vpx) IntraRefresh() {
 	// !to implement
 }

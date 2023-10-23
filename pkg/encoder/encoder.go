@@ -2,9 +2,11 @@ package encoder
 
 import (
 	"fmt"
-	"sync"
 	"sync/atomic"
 
+	"github.com/giongto35/cloud-game/v3/pkg/config"
+	"github.com/giongto35/cloud-game/v3/pkg/encoder/h264"
+	"github.com/giongto35/cloud-game/v3/pkg/encoder/vpx"
 	"github.com/giongto35/cloud-game/v3/pkg/encoder/yuv"
 	"github.com/giongto35/cloud-game/v3/pkg/logger"
 )
@@ -16,6 +18,7 @@ type (
 		LoadBuf(input []byte)
 		Encode() []byte
 		IntraRefresh()
+		Info() string
 		SetFlip(bool)
 		Shutdown() error
 	}
@@ -28,7 +31,6 @@ type Video struct {
 	y       yuv.Conv
 	pf      yuv.PixFmt
 	rot     uint
-	mu      sync.Mutex
 }
 
 type VideoCodec string
@@ -36,6 +38,7 @@ type VideoCodec string
 const (
 	H264 VideoCodec = "h264"
 	VP8  VideoCodec = "vp8"
+	VPX  VideoCodec = "vpx"
 )
 
 // NewVideoEncoder returns new video encoder.
@@ -43,13 +46,27 @@ const (
 // converts them into YUV I420 format,
 // encodes with provided video encoder, and
 // puts the result into the output channel.
-func NewVideoEncoder(codec Encoder, w, h int, scale float64, log *logger.Logger) *Video {
-	return &Video{codec: codec, y: yuv.NewYuvConv(w, h, scale), log: log}
+func NewVideoEncoder(w, h, dw, dh int, scale float64, conf config.Video, log *logger.Logger) (*Video, error) {
+	var enc Encoder
+	var err error
+	switch VideoCodec(conf.Codec) {
+	case H264:
+		opts := h264.Options(conf.H264)
+		enc, err = h264.NewEncoder(dw, dh, conf.Threads, &opts)
+	case VP8, VPX:
+		opts := vpx.Options(conf.Vpx)
+		enc, err = vpx.NewEncoder(dw, dh, &opts)
+	default:
+		err = fmt.Errorf("unsupported codec: %v", conf.Codec)
+	}
+	if err != nil {
+		return nil, err
+	}
+
+	return &Video{codec: enc, y: yuv.NewYuvConv(w, h, scale), log: log}, nil
 }
 
 func (v *Video) Encode(frame InFrame) OutFrame {
-	v.mu.Lock()
-	defer v.mu.Unlock()
 	if v.stopped.Load() {
 		return nil
 	}
@@ -64,7 +81,9 @@ func (v *Video) Encode(frame InFrame) OutFrame {
 	return nil
 }
 
-func (v *Video) Info() string { return fmt.Sprintf("libyuv: %v", v.y.Version()) }
+func (v *Video) Info() string {
+	return fmt.Sprintf("%v, libyuv: %v", v.codec.Info(), v.y.Version())
+}
 
 func (v *Video) SetPixFormat(f uint32) {
 	switch f {
@@ -77,16 +96,10 @@ func (v *Video) SetPixFormat(f uint32) {
 	}
 }
 
-// SetRot sets the rotation angle of the frames.
-func (v *Video) SetRot(r uint) {
-	switch r {
-	// de-rotate
-	case 90:
-		v.rot = 270
-	case 270:
-		v.rot = 90
-	default:
-		v.rot = r
+// SetRot sets the de-rotation angle of the frames.
+func (v *Video) SetRot(a uint) {
+	if a > 0 {
+		v.rot = (a + 180) % 360
 	}
 }
 
@@ -94,11 +107,12 @@ func (v *Video) SetRot(r uint) {
 func (v *Video) SetFlip(b bool) { v.codec.SetFlip(b) }
 
 func (v *Video) Stop() {
-	v.stopped.Store(true)
-	v.mu.Lock()
-	defer v.mu.Unlock()
+	if v.stopped.Swap(true) {
+		return
+	}
 	v.rot = 0
 
+	defer func() { v.codec = nil }()
 	if err := v.codec.Shutdown(); err != nil {
 		v.log.Error().Err(err).Msg("failed to close the encoder")
 	}
