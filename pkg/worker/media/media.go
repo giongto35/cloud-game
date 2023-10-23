@@ -8,9 +8,7 @@ import (
 
 	"github.com/giongto35/cloud-game/v3/pkg/config"
 	"github.com/giongto35/cloud-game/v3/pkg/encoder"
-	"github.com/giongto35/cloud-game/v3/pkg/encoder/h264"
 	"github.com/giongto35/cloud-game/v3/pkg/encoder/opus"
-	"github.com/giongto35/cloud-game/v3/pkg/encoder/vpx"
 	"github.com/giongto35/cloud-game/v3/pkg/logger"
 	"github.com/giongto35/cloud-game/v3/pkg/worker/caged/app"
 )
@@ -145,6 +143,7 @@ func (wmp *WebrtcMediaPipe) Init() error {
 	if err := wmp.initVideo(wmp.VideoW, wmp.VideoH, wmp.VideoScale, wmp.vConf); err != nil {
 		return err
 	}
+	wmp.log.Debug().Msgf("%v", wmp.v.Info())
 	return nil
 }
 
@@ -175,29 +174,11 @@ func (wmp *WebrtcMediaPipe) encodeAudio(pcm samples) {
 	wmp.onAudio(data)
 }
 
-func (wmp *WebrtcMediaPipe) initVideo(w, h int, scale float64, conf config.Video) error {
-	var enc encoder.Encoder
-	var err error
-
+func (wmp *WebrtcMediaPipe) initVideo(w, h int, scale float64, conf config.Video) (err error) {
 	sw, sh := round(w, scale), round(h, scale)
-
-	wmp.log.Debug().Msgf("Scale: %vx%v -> %vx%v", w, h, sw, sh)
-
-	wmp.log.Info().Msgf("Video codec: %v", conf.Codec)
-	if conf.Codec == string(encoder.H264) {
-		wmp.log.Debug().Msgf("x264: build v%v", h264.LibVersion())
-		opts := h264.Options(conf.H264)
-		enc, err = h264.NewEncoder(sw, sh, &opts)
-	} else {
-		opts := vpx.Options(conf.Vpx)
-		enc, err = vpx.NewEncoder(sw, sh, &opts)
-	}
-	if err != nil {
-		return fmt.Errorf("couldn't create a video encoder: %w", err)
-	}
-	wmp.v = encoder.NewVideoEncoder(enc, w, h, scale, wmp.log)
-	wmp.log.Debug().Msgf("%v", wmp.v.Info())
-	return nil
+	wmp.v, err = encoder.NewVideoEncoder(w, h, sw, sh, scale, conf, wmp.log)
+	wmp.log.Debug().Msgf("media scale: %vx%v -> %vx%v", w, h, sw, sh)
+	return err
 }
 
 func round(x int, scale float64) int { return (int(float64(x)*scale) + 1) & ^1 }

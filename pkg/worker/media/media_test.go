@@ -6,9 +6,8 @@ import (
 	"reflect"
 	"testing"
 
+	"github.com/giongto35/cloud-game/v3/pkg/config"
 	"github.com/giongto35/cloud-game/v3/pkg/encoder"
-	"github.com/giongto35/cloud-game/v3/pkg/encoder/h264"
-	"github.com/giongto35/cloud-game/v3/pkg/encoder/vpx"
 	"github.com/giongto35/cloud-game/v3/pkg/logger"
 )
 
@@ -38,15 +37,36 @@ func BenchmarkH264(b *testing.B) { run(1920, 1080, encoder.H264, b.N, nil, nil, 
 func BenchmarkVP8(b *testing.B)  { run(1920, 1080, encoder.VP8, b.N, nil, nil, b) }
 
 func run(w, h int, cod encoder.VideoCodec, count int, a *image.RGBA, b *image.RGBA, backend testing.TB) {
-	var enc encoder.Encoder
-	if cod == encoder.H264 {
-		enc, _ = h264.NewEncoder(w, h, nil)
-	} else {
-		enc, _ = vpx.NewEncoder(w, h, nil)
+	conf := config.Video{
+		Codec:   string(cod),
+		Threads: 0,
+		H264: struct {
+			Crf      uint8
+			LogLevel int32
+			Preset   string
+			Profile  string
+			Tune     string
+		}{
+			Crf:      30,
+			LogLevel: 0,
+			Preset:   "ultrafast",
+			Profile:  "baseline",
+			Tune:     "zerolatency",
+		},
+		Vpx: struct {
+			Bitrate          uint
+			KeyframeInterval uint
+		}{
+			Bitrate:          1000,
+			KeyframeInterval: 5,
+		},
 	}
 
 	logger.SetGlobalLevel(logger.Disabled)
-	ve := encoder.NewVideoEncoder(enc, w, h, 1, l)
+	ve, err := encoder.NewVideoEncoder(w, h, w, h, 1, conf, l)
+	if err != nil {
+		backend.Error(err)
+	}
 	defer ve.Stop()
 
 	if a == nil {

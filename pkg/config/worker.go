@@ -52,8 +52,9 @@ type Audio struct {
 }
 
 type Video struct {
-	Codec string
-	H264  struct {
+	Codec   string
+	Threads int
+	H264    struct {
 		Crf      uint8
 		LogLevel int32
 		Preset   string

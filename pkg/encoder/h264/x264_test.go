@@ -3,7 +3,7 @@ package h264
 import "testing"
 
 func TestH264Encode(t *testing.T) {
-	h264, err := NewEncoder(120, 120, nil)
+	h264, err := NewEncoder(120, 120, 0, nil)
 	if err != nil {
 		t.Error(err)
 	}
@@ -17,7 +17,7 @@ func TestH264Encode(t *testing.T) {
 
 func Benchmark(b *testing.B) {
 	w, h := 1920, 1080
-	h264, err := NewEncoder(w, h, nil)
+	h264, err := NewEncoder(w, h, 0, nil)
 	if err != nil {
 		b.Error(err)
 	}

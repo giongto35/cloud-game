@@ -8,6 +8,11 @@ package h264
 #include "stdint.h"
 #include "x264.h"
 #include <stdlib.h>
+
+static int x264_encode( x264_t *h, uintptr_t pp_nal, int *pi_nal, x264_picture_t *pic_in, x264_picture_t *pic_out ) {
+	return x264_encoder_encode(h, (x264_nal_t **)pp_nal, pi_nal, pic_in, pic_out);
+}
+
 */
 import "C"
 import "unsafe"
@@ -505,16 +510,16 @@ func EncoderOpen(param *Param) *T {
 
 // EncoderEncode - encode one picture.
 // Returns the number of bytes in the returned NALs, negative on error and zero if no NAL units returned.
-func EncoderEncode(enc *T, ppNal []*Nal, piNal *int32, picIn *Picture, picOut *Picture) int32 {
+func EncoderEncode(enc *T, ppNal **Nal, piNal *int32, picIn *Picture, picOut *Picture) int32 {
 	cenc := enc.cptr()
 
-	cppNal := (**C.x264_nal_t)(unsafe.Pointer(&ppNal[0]))
+	cppNal := C.uintptr_t(uintptr(unsafe.Pointer(ppNal)))
 	cpiNal := (*C.int)(unsafe.Pointer(piNal))
 
 	cpicIn := picIn.cptr()
 	cpicOut := picOut.cptr()
 
-	return (int32)(C.x264_encoder_encode(cenc, cppNal, cpiNal, cpicIn, cpicOut))
+	return (int32)(C.x264_encode(cenc, cppNal, cpiNal, cpicIn, cpicOut))
 }
 
 // EncoderClose closes an encoder handler.

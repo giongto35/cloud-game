@@ -260,6 +260,8 @@ encoder:
   video:
     # h264, vpx (VP8)
     codec: h264
+    # Threaded encoder if supported, 0 - auto, 1 - nope, >1 - multi-threaded
+    threads: 0
     # see: https://trac.ffmpeg.org/wiki/Encode/H.264
     h264:
       # Constant Rate Factor (CRF) 0-51 (default: 23)
