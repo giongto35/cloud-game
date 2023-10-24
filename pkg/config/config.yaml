@@ -213,6 +213,7 @@ emulator:
           folder: psx
           # see: https://github.com/libretro/pcsx_rearmed/blob/master/frontend/libretro_core_options.h
           options:
+            "pcsx_rearmed_show_bios_bootlogo": enabled
             "pcsx_rearmed_drc": enabled
             "pcsx_rearmed_display_internal_fps": disabled
         # MAME core requires additional manual setup, please read:
