@@ -128,8 +128,7 @@ func (emu *TestFrontend) loadRom(game string) {
 	if err != nil {
 		log.Fatal(err)
 	}
-	w, h := emu.FrameSize()
-	emu.SetViewport(w, h)
+	emu.ViewportRecalculate()
 }
 
 // Shutdown closes the emulator and cleans its resources.

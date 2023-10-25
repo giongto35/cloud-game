@@ -140,12 +140,13 @@ func (c *coordinator) HandleGameStart(rq api.StartGameRequest[com.Uid], w *Worke
 		m.SetPixFmt(app.PixFormat())
 		m.SetRot(app.Rotation())
 
-		app.HandleOnSystemAvInfo(func() {
+		// recreate the video encoder
+		app.VideoChangeCb(func() {
+			app.ViewportRecalculate()
 			m.VideoW, m.VideoH = app.ViewportSize()
 			m.VideoScale = app.Scale()
-			err := m.Reinit()
-			if err != nil {
-				c.log.Error().Err(err).Msgf("av reinit fail")
+			if err := m.Reinit(); err != nil {
+				c.log.Error().Err(err).Msgf("reinit fail")
 			}
 		})
 
