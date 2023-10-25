@@ -227,31 +227,26 @@ func TestLoad(t *testing.T) {
 
 		mock := DefaultFrontend(test.room, test.system, test.rom)
 
-		fmt.Printf("[%-14v] ", "initial")
 		mock.dumpState()
 
 		for ticks := test.frames; ticks > 0; ticks-- {
 			mock.Tick()
 		}
-		fmt.Printf("[%-14v] ", fmt.Sprintf("emulated %d", test.frames))
 		mock.dumpState()
 
 		if err := mock.Save(); err != nil {
 			t.Errorf("Save fail %v", err)
 		}
-		fmt.Printf("[%-14v] ", "saved")
 		snapshot1, _ := mock.dumpState()
 
 		for ticks := test.frames; ticks > 0; ticks-- {
 			mock.Tick()
 		}
-		fmt.Printf("[%-14v] ", fmt.Sprintf("emulated %d", test.frames))
 		mock.dumpState()
 
 		if err := mock.Load(); err != nil {
 			t.Errorf("Load fail %v", err)
 		}
-		fmt.Printf("[%-14v] ", "restored")
 		snapshot2, _ := mock.dumpState()
 
 		if snapshot1 != snapshot2 {

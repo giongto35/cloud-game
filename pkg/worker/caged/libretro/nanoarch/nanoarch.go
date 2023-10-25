@@ -746,7 +746,7 @@ func coreEnvironment(cmd C.unsigned, data unsafe.Pointer) C.bool {
 		//window.SetShouldClose(true)
 		return false
 	case C.RETRO_ENVIRONMENT_GET_VARIABLE:
-		if (*Nan0.options) == nil {
+		if Nan0.options == nil || *Nan0.options == nil {
 			return false
 		}
 		rv := (*C.struct_retro_variable)(data)
