@@ -139,6 +139,9 @@ emulator:
   libretro:
     # use zip compression for emulator save states
     saveCompression: true
+    # Sets a limiter function for some spammy core callbacks.
+    # 0 - disabled, otherwise -- time in milliseconds for ignoring repeated calls except the last.
+    debounceMs: 0
     # Libretro cores logging level: DEBUG = 0, INFO, WARN, ERROR, DUMMY = INT_MAX
     logLevel: 1
     cores:

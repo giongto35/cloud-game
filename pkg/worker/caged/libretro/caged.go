@@ -46,21 +46,15 @@ func (c *Caged) ReloadFrontend() {
 	c.base = frontend
 }
 
-func (c *Caged) HandleOnSystemAvInfo(fn func()) {
-	c.base.SetOnAV(func() {
-		w, h := c.ViewportCalc()
-		c.SetViewport(w, h)
-		fn()
-	})
-}
+// VideoChangeCb adds a callback when video params are changed by the app.
+func (c *Caged) VideoChangeCb(fn func()) { c.base.SetVideoChangeCb(fn) }
 
 func (c *Caged) Load(game games.GameMetadata, path string) error {
 	c.Emulator.LoadCore(game.System)
 	if err := c.Emulator.LoadGame(game.FullPath(path)); err != nil {
 		return err
 	}
-	w, h := c.ViewportCalc()
-	c.SetViewport(w, h)
+	c.ViewportRecalculate()
 	return nil
 }
 
@@ -87,7 +81,7 @@ func (c *Caged) EnableCloudStorage(uid string, storage cloud.Storage) {
 func (c *Caged) PixFormat() uint32                 { return c.Emulator.PixFormat() }
 func (c *Caged) Rotation() uint                    { return c.Emulator.Rotation() }
 func (c *Caged) AudioSampleRate() int              { return c.Emulator.AudioSampleRate() }
-func (c *Caged) ViewportSize() (int, int)          { return c.Emulator.ViewportSize() }
+func (c *Caged) ViewportSize() (int, int)          { return c.base.ViewportSize() }
 func (c *Caged) Scale() float64                    { return c.Emulator.Scale() }
 func (c *Caged) SendControl(port int, data []byte) { c.base.Input(port, data) }
 func (c *Caged) Start()                            { go c.Emulator.Start() }

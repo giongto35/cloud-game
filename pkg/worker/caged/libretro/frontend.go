@@ -30,11 +30,8 @@ type Emulator interface {
 	IsPortrait() bool
 	// Start is called after LoadGame
 	Start()
-	// SetViewport sets viewport size
-	SetViewport(width int, height int)
-	// ViewportCalc calculates the viewport size with the aspect ratio and scale
-	ViewportCalc() (nw int, nh int)
-	ViewportSize() (w, h int)
+	// ViewportRecalculate calculates output resolution with aspect and scale
+	ViewportRecalculate()
 	RestoreGameState() error
 	// SetSessionId sets distinct name for the game session (in order to save/load it later)
 	SetSessionId(name string)
@@ -112,8 +109,13 @@ func NewFrontend(conf config.Emulator, log *logger.Logger) (*Frontend, error) {
 	nano := nanoarch.NewNano(path)
 
 	log = log.Extend(log.With().Str("m", "Libretro"))
-	ll := log.Extend(log.Level(logger.Level(conf.Libretro.LogLevel)).With())
-	nano.SetLogger(ll)
+	level := logger.Level(conf.Libretro.LogLevel)
+	if level == logger.DebugLevel {
+		level = logger.TraceLevel
+		nano.SetLogger(log.Extend(log.Level(level).With()))
+	} else {
+		nano.SetLogger(log)
+	}
 
 	// Check if room is on local storage, if not, pull from GCS to local storage
 	log.Info().Msgf("Local storage path: %v", conf.Storage)
@@ -138,6 +140,12 @@ func NewFrontend(conf config.Emulator, log *logger.Logger) (*Frontend, error) {
 		th:      conf.Threads,
 	}
 	f.linkNano(nano)
+
+	if conf.Libretro.DebounceMs > 0 {
+		t := time.Duration(conf.Libretro.DebounceMs) * time.Millisecond
+		f.nano.SetVideoDebounce(t)
+		f.log.Debug().Msgf("set debounce time: %v", t)
+	}
 
 	return f, nil
 }
@@ -212,7 +220,7 @@ func (f *Frontend) linkNano(nano *nanoarch.Nanoarch) {
 	f.nano.OnAudio = f.handleAudio
 }
 
-func (f *Frontend) SetOnAV(fn func()) { f.nano.OnSystemAvInfo = fn }
+func (f *Frontend) SetVideoChangeCb(fn func()) { f.nano.OnSystemAvInfo = fn }
 
 func (f *Frontend) Start() {
 	f.log.Debug().Msgf("frontend start")
@@ -264,7 +272,7 @@ func (f *Frontend) Start() {
 func (f *Frontend) AudioSampleRate() int          { return f.nano.AudioSampleRate() }
 func (f *Frontend) FPS() int                      { return f.nano.VideoFramerate() }
 func (f *Frontend) Flipped() bool                 { return f.nano.IsGL() }
-func (f *Frontend) FrameSize() (int, int)         { return f.nano.GeometryBase() }
+func (f *Frontend) FrameSize() (int, int)         { return f.nano.BaseWidth(), f.nano.BaseHeight() }
 func (f *Frontend) HasSave() bool                 { return os.Exists(f.HashPath()) }
 func (f *Frontend) HashPath() string              { return f.storage.GetSavePath() }
 func (f *Frontend) Input(player int, data []byte) { f.input.setInput(player, data) }
@@ -279,14 +287,14 @@ func (f *Frontend) Scale() float64                { return f.scale }
 func (f *Frontend) SetAudioCb(cb func(app.Audio)) { f.onAudio = cb }
 func (f *Frontend) SetSessionId(name string)      { f.storage.SetMainSaveName(name) }
 func (f *Frontend) SetVideoCb(ff func(app.Video)) { f.onVideo = ff }
-func (f *Frontend) SetViewport(w, h int)          { f.mu.Lock(); f.vw, f.vh = w, h; f.mu.Unlock() }
 func (f *Frontend) Tick()                         { f.mu.Lock(); f.nano.Run(); f.mu.Unlock() }
 func (f *Frontend) ToggleMultitap()               { f.nano.ToggleMultitap() }
+func (f *Frontend) ViewportRecalculate()          { f.mu.Lock(); f.vw, f.vh = f.ViewportCalc(); f.mu.Unlock() }
 func (f *Frontend) ViewportSize() (int, int)      { return f.vw, f.vh }
 
 func (f *Frontend) ViewportCalc() (nw int, nh int) {
 	w, h := f.FrameSize()
-	f.log.Debug().Msgf("Viewport source size: %dx%d", w, h)
+	nw, nh = w, h
 
 	aspect, aw, ah := f.conf.AspectRatio.Keep, f.conf.AspectRatio.Width, f.conf.AspectRatio.Height
 	// calc the aspect ratio
@@ -298,29 +306,24 @@ func (f *Frontend) ViewportCalc() (nw int, nh int) {
 			nw = aw
 			nh = int(math.Round(float64(aw)/ratio/2) * 2)
 		}
-		f.log.Debug().Msgf("Viewport aspect change: %dx%d (%f) -> %dx%d", aw, ah, ratio, nw, nh)
-	} else {
-		nw, nh = w, h
 	}
 
 	if f.IsPortrait() {
 		nw, nh = nh, nw
-		f.log.Debug().Msgf("Set portrait mode")
 	}
 
-	f.log.Info().Msgf("Viewport final size: %dx%d", nw, nh)
+	f.log.Debug().Msgf("viewport: %dx%d -> %dx%d", w, h, nw, nh)
 
 	return
 }
 
 func (f *Frontend) Close() {
 	f.log.Debug().Msgf("frontend close")
-
 	close(f.done)
 
 	f.mui.Lock()
-	defer f.mui.Unlock()
 	f.nano.Close()
+	f.mui.Unlock()
 	f.log.Debug().Msgf("frontend closed")
 }
 

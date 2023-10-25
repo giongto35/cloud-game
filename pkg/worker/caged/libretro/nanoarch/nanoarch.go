@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"runtime"
 	"strings"
+	"sync"
 	"sync/atomic"
 	"time"
 	"unsafe"
@@ -47,13 +48,15 @@ type Nanoarch struct {
 		enabled   bool
 		value     C.unsigned
 	}
-	options          *map[string]string
-	reserved         chan struct{} // limits concurrent use
-	Rot              uint
-	serializeSize    C.size_t
-	stopped          atomic.Bool
-	sysAvInfo        C.struct_retro_system_av_info
-	sysInfo          C.struct_retro_system_info
+	options       *map[string]string
+	reserved      chan struct{} // limits concurrent use
+	Rot           uint
+	serializeSize C.size_t
+	stopped       atomic.Bool
+	sys           struct {
+		av C.struct_retro_system_av_info
+		i  C.struct_retro_system_info
+	}
 	tickTime         int64
 	cSaveDirectory   *C.char
 	cSystemDirectory *C.char
@@ -69,6 +72,7 @@ type Nanoarch struct {
 	vfr                      bool
 	sdlCtx                   *graphics.SDL
 	hackSkipHwContextDestroy bool
+	limiter                  func(func())
 	log                      *logger.Logger
 }
 
@@ -119,6 +123,7 @@ func (p PixFmt) String() string {
 var Nan0 = Nanoarch{
 	reserved: make(chan struct{}, 1), // this thing forbids concurrent use of the emulator
 	stopped:  atomic.Bool{},
+	limiter:  func(fn func()) { fn() },
 	Handlers: Handlers{
 		OnDpad:     func(uint, uint) int16 { return 0 },
 		OnKeyPress: func(uint, int) int { return 0 },
@@ -139,18 +144,15 @@ func NewNano(localPath string) *Nanoarch {
 	return nano
 }
 
-func (n *Nanoarch) AudioSampleRate() int { return int(n.sysAvInfo.timing.sample_rate) }
-func (n *Nanoarch) VideoFramerate() int  { return int(n.sysAvInfo.timing.fps) }
-func (n *Nanoarch) IsPortrait() bool     { return n.Rot == 90 || n.Rot == 270 }
-func (n *Nanoarch) GeometryBase() (int, int) {
-	return int(n.sysAvInfo.geometry.base_width), int(n.sysAvInfo.geometry.base_height)
-}
-func (n *Nanoarch) GeometryMax() (int, int) {
-	return int(n.sysAvInfo.geometry.max_width), int(n.sysAvInfo.geometry.max_height)
-}
-func (n *Nanoarch) WaitReady()                   { <-n.reserved }
-func (n *Nanoarch) Close()                       { n.stopped.Store(true); n.reserved <- struct{}{} }
-func (n *Nanoarch) SetLogger(log *logger.Logger) { n.log = log }
+func (n *Nanoarch) AudioSampleRate() int             { return int(n.sys.av.timing.sample_rate) }
+func (n *Nanoarch) VideoFramerate() int              { return int(n.sys.av.timing.fps) }
+func (n *Nanoarch) IsPortrait() bool                 { return 90 == n.Rot%180 }
+func (n *Nanoarch) BaseWidth() int                   { return int(n.sys.av.geometry.base_width) }
+func (n *Nanoarch) BaseHeight() int                  { return int(n.sys.av.geometry.base_height) }
+func (n *Nanoarch) WaitReady()                       { <-n.reserved }
+func (n *Nanoarch) Close()                           { n.stopped.Store(true); n.reserved <- struct{}{} }
+func (n *Nanoarch) SetLogger(log *logger.Logger)     { n.log = log }
+func (n *Nanoarch) SetVideoDebounce(t time.Duration) { n.limiter = NewLimit(t) }
 
 func (n *Nanoarch) CoreLoad(meta Metadata) {
 	var err error
@@ -219,16 +221,16 @@ func (n *Nanoarch) CoreLoad(meta Metadata) {
 		C.bridge_retro_init(retroInit)
 	}
 
-	C.bridge_retro_get_system_info(retroGetSystemInfo, &n.sysInfo)
+	C.bridge_retro_get_system_info(retroGetSystemInfo, &n.sys.i)
 	n.log.Debug().Msgf("System >>> %s (%s) [%s] nfp: %v",
-		C.GoString(n.sysInfo.library_name), C.GoString(n.sysInfo.library_version),
-		C.GoString(n.sysInfo.valid_extensions), bool(n.sysInfo.need_fullpath))
+		C.GoString(n.sys.i.library_name), C.GoString(n.sys.i.library_version),
+		C.GoString(n.sys.i.valid_extensions), bool(n.sys.i.need_fullpath))
 }
 
 func (n *Nanoarch) LoadGame(path string) error {
 	game := C.struct_retro_game_info{}
 
-	big := bool(n.sysInfo.need_fullpath) // big ROMs are loaded by cores later
+	big := bool(n.sys.i.need_fullpath) // big ROMs are loaded by cores later
 	if big {
 		size, err := os.StatSize(path)
 		if err != nil {
@@ -256,17 +258,17 @@ func (n *Nanoarch) LoadGame(path string) error {
 		return fmt.Errorf("core failed to load ROM: %v", path)
 	}
 
-	C.bridge_retro_get_system_av_info(retroGetSystemAVInfo, &n.sysAvInfo)
+	C.bridge_retro_get_system_av_info(retroGetSystemAVInfo, &n.sys.av)
 	n.log.Info().Msgf("System A/V >>> %vx%v (%vx%v), [%vfps], AR [%v], audio [%vHz]",
-		n.sysAvInfo.geometry.base_width, n.sysAvInfo.geometry.base_height,
-		n.sysAvInfo.geometry.max_width, n.sysAvInfo.geometry.max_height,
-		n.sysAvInfo.timing.fps, n.sysAvInfo.geometry.aspect_ratio, n.sysAvInfo.timing.sample_rate,
+		n.sys.av.geometry.base_width, n.sys.av.geometry.base_height,
+		n.sys.av.geometry.max_width, n.sys.av.geometry.max_height,
+		n.sys.av.timing.fps, n.sys.av.geometry.aspect_ratio, n.sys.av.timing.sample_rate,
 	)
 
 	n.serializeSize = C.bridge_retro_serialize_size(retroSerializeSize)
 	n.log.Info().Msgf("Save file size: %v", byteCountBinary(int64(n.serializeSize)))
 
-	Nan0.tickTime = int64(time.Second / time.Duration(n.sysAvInfo.timing.fps))
+	Nan0.tickTime = int64(time.Second / time.Duration(n.sys.av.timing.fps))
 	if n.vfr {
 		n.log.Info().Msgf("variable framerate (VFR) is enabled")
 	}
@@ -274,10 +276,9 @@ func (n *Nanoarch) LoadGame(path string) error {
 	n.stopped.Store(false)
 
 	if n.Video.gl.enabled {
-		//setRotation(image.F180) // flip Y coordinates of OpenGL
-		bufS := uint(n.sysAvInfo.geometry.max_width*n.sysAvInfo.geometry.max_height) * n.Video.PixFmt.BPP
+		bufS := uint(n.sys.av.geometry.max_width*n.sys.av.geometry.max_height) * n.Video.PixFmt.BPP
 		graphics.SetBuffer(int(bufS))
-		n.log.Info().Msgf("Set buffer: %v", byteCountBinary(int64(bufS)))
+		n.log.Debug().Msgf("Set buffer: %v", byteCountBinary(int64(bufS)))
 		if n.LibCo {
 			C.same_thread(C.init_video_cgo)
 		} else {
@@ -414,9 +415,6 @@ func printOpenGLDriverInfo() {
 	openGLInfo.Grow(128)
 	openGLInfo.WriteString(fmt.Sprintf("\n[OpenGL] Version: %v\n", graphics.GetGLVersionInfo()))
 	openGLInfo.WriteString(fmt.Sprintf("[OpenGL] Vendor: %v\n", graphics.GetGLVendorInfo()))
-	// This string is often the name of the GPU.
-	// In the case of Mesa3d, it would be i.e "Gallium 0.4 on NVA8".
-	// It might even say "Direct3D" if the Windows Direct3D wrapper is being used.
 	openGLInfo.WriteString(fmt.Sprintf("[OpenGL] Renderer: %v\n", graphics.GetGLRendererInfo()))
 	openGLInfo.WriteString(fmt.Sprintf("[OpenGL] GLSL Version: %v", graphics.GetGLSLInfo()))
 	Nan0.log.Debug().Msg(openGLInfo.String())
@@ -655,7 +653,7 @@ func coreLog(level C.enum_retro_log_level, msg *C.char) {
 	switch level {
 	// with debug level cores have too much logs
 	case C.RETRO_LOG_DEBUG:
-		Nan0.log.Debug().MsgFunc(func() string { return m(msg) })
+		Nan0.log.Trace().MsgFunc(func() string { return m(msg) })
 	case C.RETRO_LOG_INFO:
 		Nan0.log.Info().MsgFunc(func() string { return m(msg) })
 	case C.RETRO_LOG_WARN:
@@ -688,18 +686,27 @@ func coreEnvironment(cmd C.unsigned, data unsafe.Pointer) C.bool {
 
 	switch cmd {
 	case C.RETRO_ENVIRONMENT_SET_SYSTEM_AV_INFO:
-		av := *(*C.struct_retro_system_av_info)(data)
-		Nan0.log.Info().Msgf(">>> SET SYS AV INFO: %v", av)
-		Nan0.sysAvInfo = av
-		go func() {
-			if Nan0.OnSystemAvInfo != nil {
-				Nan0.OnSystemAvInfo()
-			}
-		}()
+		Nan0.sys.av = *(*C.struct_retro_system_av_info)(data)
+		Nan0.log.Debug().Msgf(">>> system av change: %v", Nan0.sys.av)
+		if Nan0.OnSystemAvInfo != nil {
+			go Nan0.OnSystemAvInfo()
+		}
 		return true
 	case C.RETRO_ENVIRONMENT_SET_GEOMETRY:
 		geom := *(*C.struct_retro_game_geometry)(data)
-		Nan0.log.Info().Msgf(">>> GEOMETRY: %v", geom)
+		Nan0.log.Debug().Msgf(">>> geometry change: %v", geom)
+		// some cores are eager to change resolution too many times
+		// in a small period of time, thus we have some debouncer here
+		Nan0.limiter(func() {
+			lw := Nan0.sys.av.geometry.base_width
+			lh := Nan0.sys.av.geometry.base_height
+			if lw != geom.base_width || lh != geom.base_height {
+				Nan0.sys.av.geometry = geom
+				if Nan0.OnSystemAvInfo != nil {
+					go Nan0.OnSystemAvInfo()
+				}
+			}
+		})
 		return true
 	case C.RETRO_ENVIRONMENT_SET_ROTATION:
 		setRotation((*(*uint)(data) % 4) * 90)
@@ -739,7 +746,7 @@ func coreEnvironment(cmd C.unsigned, data unsafe.Pointer) C.bool {
 		//window.SetShouldClose(true)
 		return false
 	case C.RETRO_ENVIRONMENT_GET_VARIABLE:
-		if (*Nan0.options) == nil {
+		if Nan0.options == nil || *Nan0.options == nil {
 			return false
 		}
 		rv := (*C.struct_retro_variable)(data)
@@ -818,8 +825,8 @@ func initVideo() {
 
 	sdl, err := graphics.NewSDLContext(graphics.Config{
 		Ctx:            context,
-		W:              int(Nan0.sysAvInfo.geometry.max_width),
-		H:              int(Nan0.sysAvInfo.geometry.max_height),
+		W:              int(Nan0.sys.av.geometry.max_width),
+		H:              int(Nan0.sys.av.geometry.max_height),
 		GLAutoContext:  Nan0.Video.gl.autoCtx,
 		GLVersionMajor: uint(Nan0.Video.hw.version_major),
 		GLVersionMinor: uint(Nan0.Video.hw.version_minor),
@@ -848,4 +855,24 @@ func deinitVideo() {
 	Nan0.Video.gl.enabled = false
 	Nan0.Video.gl.autoCtx = false
 	Nan0.hackSkipHwContextDestroy = false
+}
+
+type limit struct {
+	d  time.Duration
+	t  *time.Timer
+	mu sync.Mutex
+}
+
+func NewLimit(d time.Duration) func(f func()) {
+	l := &limit{d: d}
+	return func(f func()) { l.push(f) }
+}
+
+func (d *limit) push(f func()) {
+	d.mu.Lock()
+	defer d.mu.Unlock()
+	if d.t != nil {
+		d.t.Stop()
+	}
+	d.t = time.AfterFunc(d.d, f)
 }
