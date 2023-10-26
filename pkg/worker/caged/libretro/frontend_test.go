@@ -200,7 +200,7 @@ func TestSavePersistence(t *testing.T) {
 
 			hash1, hash2 := front.dumpState()
 			if hash1 != hash2 {
-				t.Errorf("It seems that the previous state is diffrent: %v != %v", hash1, hash2)
+				t.Errorf("%v != %v", hash1, hash2)
 			}
 
 			front.Shutdown()
