@@ -15,8 +15,7 @@ Discord: [Join Us](https://discord.gg/sXRQZa2zeP)
 
 ## Try it at **[cloudretro.io](https://cloudretro.io)**
 
-Direct play an existing game: *
-*[Pokemon Emerald](https://cloudretro.io/?id=1bd37d4b5dfda87c___Pokemon%20-%20Emerald%20Version%20(U))**
+Direct play an existing game: **[Pokemon Emerald](https://cloudretro.io/?id=1bd37d4b5dfda87c___Pokemon%20-%20Emerald%20Version%20(U))**
 
 ## Introduction
 
