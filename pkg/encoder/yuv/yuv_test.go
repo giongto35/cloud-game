@@ -119,7 +119,7 @@ func TestYuvPredefined(t *testing.T) {
 	t.Logf("%v", v)
 
 	if len(a) != len(should) {
-		t.Fatalf("diffrent size a: %v, o: %v", len(a), len(should))
+		t.Fatalf("different size a: %v, o: %v", len(a), len(should))
 	}
 
 	for i := 0; i < len(a); i++ {
