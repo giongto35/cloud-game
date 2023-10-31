@@ -8,11 +8,6 @@ import (
 
 type Emulator struct {
 	Threads     int
-	AspectRatio struct {
-		Keep   bool
-		Width  int
-		Height int
-	}
 	Storage     string
 	LocalPath   string
 	Libretro    LibretroConfig
@@ -44,20 +39,21 @@ type LibretroRepoConfig struct {
 }
 
 type LibretroCoreConfig struct {
-	AltRepo       bool
-	AutoGlContext bool // hack: keep it here to pass it down the emulator
-	Folder        string
-	Hacks         []string
-	HasMultitap   bool
-	Height        int
-	IsGlAllowed   bool
-	Lib           string
-	Options       map[string]string
-	Roms          []string
-	Scale         float64
-	UsesLibCo     bool
-	VFR           bool
-	Width         int
+	AltRepo         bool
+	AutoGlContext   bool // hack: keep it here to pass it down the emulator
+	CoreAspectRatio bool
+	Folder          string
+	Hacks           []string
+	HasMultitap     bool
+	Height          int
+	IsGlAllowed     bool
+	Lib             string
+	Options         map[string]string
+	Roms            []string
+	Scale           float64
+	UsesLibCo       bool
+	VFR             bool
+	Width           int
 }
 
 type CoreInfo struct {

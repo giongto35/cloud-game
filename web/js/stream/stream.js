@@ -16,6 +16,9 @@ const stream = (() => {
             state = {
                 screen: screen,
                 timerId: null,
+                w: 0,
+                h: 0,
+                aspect: 4/3
             };
 
         const mute = (mute) => screen.muted = mute
@@ -82,6 +85,25 @@ const stream = (() => {
             useCustomScreen(options.mirrorMode === 'mirror');
         }, false);
 
+        screen.addEventListener('fullscreenchange', () => {
+            const fullscreen = document.fullscreenElement
+
+
+            screen.style.padding = '0'
+            if (fullscreen) {
+                const dw = (window.innerWidth - fullscreen.clientHeight * state.aspect) / 2
+                screen.style.padding = `0 ${dw}px`
+                // chrome bug
+                setTimeout(() => {
+                    const dw = (window.innerHeight - fullscreen.clientHeight * state.aspect) / 2
+                    screen.style.padding = `0 ${dw}px`
+                }, 1)
+            }
+
+            // !to flipped
+
+        })
+
         const useCustomScreen = (use) => {
             if (use) {
                 if (screen.paused || screen.ended) return;
@@ -95,13 +117,15 @@ const stream = (() => {
                 canvas.setAttribute('width', screen.videoWidth);
                 canvas.setAttribute('height', screen.videoHeight);
                 canvas.style['image-rendering'] = 'pixelated';
+                canvas.style.width = '100%'
+                canvas.style.height = '100%'
                 canvas.classList.add('game-screen');
 
                 // stretch depending on the video orientation
                 // portrait -- vertically, landscape -- horizontally
                 const isPortrait = screen.videoWidth < screen.videoHeight;
                 canvas.style.width = isPortrait ? 'auto' : canvas.style.width;
-                canvas.style.height = isPortrait ? canvas.style.height : 'auto';
+                // canvas.style.height = isPortrait ? canvas.style.height : 'auto';
 
                 let surface = canvas.getContext('2d');
                 screen.parentNode.insertBefore(canvas, screen.nextSibling);
@@ -135,6 +159,27 @@ const stream = (() => {
             }
         });
 
+
+        const fit = 'contain'
+
+        event.sub(APP_VIDEO_CHANGED, (payload) => {
+            const {w, h, a} = payload
+
+            state.aspect = a
+
+            const a2 = w / h
+
+            const attr = a.toFixed(6) !== a2.toFixed(6) ? 'fill' : fit
+            state.screen.style['object-fit'] = attr
+
+            state.h = payload.h
+            state.w = Math.floor(payload.h * payload.a)
+            // payload.a > 0 && (state.aspect = payload.a)
+            state.screen.setAttribute('width', payload.w)
+            state.screen.setAttribute('height', payload.h)
+            state.screen.style.aspectRatio = state.aspect
+        })
+
         return {
             audio: {mute},
             video: {toggleFullscreen, el: getVideoEl},
@@ -144,4 +189,4 @@ const stream = (() => {
             init
         }
     }
-)(env, gui, log, opts, settings);
+)(env, event, gui, log, opts, settings);

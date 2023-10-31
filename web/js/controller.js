@@ -153,8 +153,8 @@
     const saveGame = utils.debounce(() => api.game.save(), 1000);
     const loadGame = utils.debounce(() => api.game.load(), 1000);
 
-    const onMessage = (message) => {
-        const {id, t, p: payload} = message;
+    const onMessage = (m) => {
+        const {id, t, p: payload} = m;
         switch (t) {
             case api.endpoint.INIT:
                 event.pub(WEBRTC_NEW_CONNECTION, payload);
@@ -166,7 +166,10 @@
                 event.pub(WEBRTC_ICE_CANDIDATE_RECEIVED, {candidate: payload});
                 break;
             case api.endpoint.GAME_START:
-                event.pub(GAME_ROOM_AVAILABLE, {roomId: payload});
+                if (payload.av) {
+                    event.pub(APP_VIDEO_CHANGED, payload.av)
+                }
+                event.pub(GAME_ROOM_AVAILABLE, {roomId: payload.roomId});
                 break;
             case api.endpoint.GAME_SAVE:
                 event.pub(GAME_SAVED);
@@ -188,6 +191,9 @@
                 break;
             case api.endpoint.GAME_ERROR_NO_FREE_SLOTS:
                 event.pub(GAME_ERROR_NO_FREE_SLOTS);
+                break;
+            case api.endpoint.APP_VIDEO_CHANGE:
+                event.pub(APP_VIDEO_CHANGED, {...payload})
                 break;
         }
     }
@@ -429,6 +435,7 @@
     event.sub(GAME_ERROR_NO_FREE_SLOTS, () => message.show("No free slots :(", 2500));
     event.sub(WEBRTC_NEW_CONNECTION, (data) => {
         workerManager.whoami(data.wid);
+        webrtc.onData = (x) => onMessage(api.decode(x.data))
         webrtc.start(data.ice);
         api.server.initWebrtc()
         gameList.set(data.games);
@@ -438,7 +445,6 @@
     event.sub(WEBRTC_SDP_OFFER, (data) => webrtc.setRemoteDescription(data.sdp, stream.video.el()));
     event.sub(WEBRTC_ICE_CANDIDATE_RECEIVED, (data) => webrtc.addCandidate(data.candidate));
     event.sub(WEBRTC_ICE_CANDIDATES_FLUSH, () => webrtc.flushCandidates());
-    // event.sub(MEDIA_STREAM_READY, () => rtcp.start());
     event.sub(WEBRTC_CONNECTION_READY, onConnectionReady);
     event.sub(WEBRTC_CONNECTION_CLOSED, () => {
         input.poll.disable();

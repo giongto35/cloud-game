@@ -81,6 +81,7 @@ func (r *Room[T]) Id() string           { return r.id }
 func (r *Room[T]) SetApp(app app.App)   { r.app = app }
 func (r *Room[T]) SetMedia(m MediaPipe) { r.media = m }
 func (r *Room[T]) StartApp()            { r.app.Start() }
+func (r *Room[T]) Send(data []byte)     { r.users.ForEach(func(u T) { u.SendData(data) }) }
 
 func (r *Room[T]) Close() {
 	if r == nil || r.closed {

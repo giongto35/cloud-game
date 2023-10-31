@@ -2,6 +2,8 @@ package app
 
 type App interface {
 	AudioSampleRate() int
+	AspectRatio() float32
+	AspectEnabled() bool
 	Init() error
 	ViewportSize() (int, int)
 	Start()
@@ -9,6 +11,7 @@ type App interface {
 
 	SetAudioCb(func(Audio))
 	SetVideoCb(func(Video))
+	SetDataCb(func([]byte))
 	SendControl(port int, data []byte)
 }
 

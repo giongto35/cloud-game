@@ -52,7 +52,7 @@ type Nanoarch struct {
 	reserved      chan struct{} // limits concurrent use
 	Rot           uint
 	serializeSize C.size_t
-	stopped       atomic.Bool
+	Stopped       atomic.Bool
 	sys           struct {
 		av C.struct_retro_system_av_info
 		i  C.struct_retro_system_info
@@ -70,6 +70,7 @@ type Nanoarch struct {
 		PixFmt PixFmt
 	}
 	vfr                      bool
+	Aspect                   bool
 	sdlCtx                   *graphics.SDL
 	hackSkipHwContextDestroy bool
 	limiter                  func(func())
@@ -91,14 +92,15 @@ type FrameInfo struct {
 }
 
 type Metadata struct {
-	LibPath       string // the full path to some emulator lib
-	IsGlAllowed   bool
-	UsesLibCo     bool
-	AutoGlContext bool
-	HasMultitap   bool
-	HasVFR        bool
-	Options       map[string]string
-	Hacks         []string
+	LibPath         string // the full path to some emulator lib
+	IsGlAllowed     bool
+	UsesLibCo       bool
+	AutoGlContext   bool
+	HasMultitap     bool
+	HasVFR          bool
+	Options         map[string]string
+	Hacks           []string
+	CoreAspectRatio bool
 }
 
 type PixFmt struct {
@@ -122,7 +124,7 @@ func (p PixFmt) String() string {
 // Nan0 is a global link for C callbacks to Go
 var Nan0 = Nanoarch{
 	reserved: make(chan struct{}, 1), // this thing forbids concurrent use of the emulator
-	stopped:  atomic.Bool{},
+	Stopped:  atomic.Bool{},
 	limiter:  func(fn func()) { fn() },
 	Handlers: Handlers{
 		OnDpad:     func(uint, uint) int16 { return 0 },
@@ -144,13 +146,14 @@ func NewNano(localPath string) *Nanoarch {
 	return nano
 }
 
+func (n *Nanoarch) AspectRatio() float32             { return float32(n.sys.av.geometry.aspect_ratio) }
 func (n *Nanoarch) AudioSampleRate() int             { return int(n.sys.av.timing.sample_rate) }
 func (n *Nanoarch) VideoFramerate() int              { return int(n.sys.av.timing.fps) }
 func (n *Nanoarch) IsPortrait() bool                 { return 90 == n.Rot%180 }
 func (n *Nanoarch) BaseWidth() int                   { return int(n.sys.av.geometry.base_width) }
 func (n *Nanoarch) BaseHeight() int                  { return int(n.sys.av.geometry.base_height) }
 func (n *Nanoarch) WaitReady()                       { <-n.reserved }
-func (n *Nanoarch) Close()                           { n.stopped.Store(true); n.reserved <- struct{}{} }
+func (n *Nanoarch) Close()                           { n.Stopped.Store(true); n.reserved <- struct{}{} }
 func (n *Nanoarch) SetLogger(log *logger.Logger)     { n.log = log }
 func (n *Nanoarch) SetVideoDebounce(t time.Duration) { n.limiter = NewLimit(t) }
 
@@ -158,6 +161,7 @@ func (n *Nanoarch) CoreLoad(meta Metadata) {
 	var err error
 	n.LibCo = meta.UsesLibCo
 	n.vfr = meta.HasVFR
+	n.Aspect = meta.CoreAspectRatio
 	n.Video.gl.autoCtx = meta.AutoGlContext
 	n.Video.gl.enabled = meta.IsGlAllowed
 
@@ -258,12 +262,17 @@ func (n *Nanoarch) LoadGame(path string) error {
 		return fmt.Errorf("core failed to load ROM: %v", path)
 	}
 
-	C.bridge_retro_get_system_av_info(retroGetSystemAVInfo, &n.sys.av)
+	var av C.struct_retro_system_av_info
+	C.bridge_retro_get_system_av_info(retroGetSystemAVInfo, &av)
 	n.log.Info().Msgf("System A/V >>> %vx%v (%vx%v), [%vfps], AR [%v], audio [%vHz]",
-		n.sys.av.geometry.base_width, n.sys.av.geometry.base_height,
-		n.sys.av.geometry.max_width, n.sys.av.geometry.max_height,
-		n.sys.av.timing.fps, n.sys.av.geometry.aspect_ratio, n.sys.av.timing.sample_rate,
+		av.geometry.base_width, av.geometry.base_height,
+		av.geometry.max_width, av.geometry.max_height,
+		av.timing.fps, av.geometry.aspect_ratio, av.timing.sample_rate,
 	)
+	if isGeometryDifferent(av.geometry) {
+		geometryChange(av.geometry)
+	}
+	n.sys.av = av
 
 	n.serializeSize = C.bridge_retro_serialize_size(retroSerializeSize)
 	n.log.Info().Msgf("Save file size: %v", byteCountBinary(int64(n.serializeSize)))
@@ -273,7 +282,7 @@ func (n *Nanoarch) LoadGame(path string) error {
 		n.log.Info().Msgf("variable framerate (VFR) is enabled")
 	}
 
-	n.stopped.Store(false)
+	n.Stopped.Store(false)
 
 	if n.Video.gl.enabled {
 		bufS := uint(n.sys.av.geometry.max_width*n.sys.av.geometry.max_height) * n.Video.PixFmt.BPP
@@ -348,6 +357,7 @@ func (n *Nanoarch) Shutdown() {
 	}
 
 	setRotation(0)
+	Nan0.sys.av = C.struct_retro_system_av_info{}
 	if err := closeLib(coreLib); err != nil {
 		n.log.Error().Err(err).Msg("lib close failed")
 	}
@@ -376,7 +386,7 @@ func (n *Nanoarch) Run() {
 }
 
 func (n *Nanoarch) IsGL() bool      { return n.Video.gl.enabled }
-func (n *Nanoarch) IsStopped() bool { return n.stopped.Load() }
+func (n *Nanoarch) IsStopped() bool { return n.Stopped.Load() }
 
 func videoSetPixelFormat(format uint32) (C.bool, error) {
 	switch format {
@@ -550,7 +560,7 @@ var (
 
 //export coreVideoRefresh
 func coreVideoRefresh(data unsafe.Pointer, width, height uint, packed uint) {
-	if Nan0.stopped.Load() {
+	if Nan0.Stopped.Load() {
 		Nan0.log.Warn().Msgf(">>> skip video")
 		return
 	}
@@ -636,7 +646,7 @@ func coreAudioSample(l, r C.int16_t) {
 
 //export coreAudioSampleBatch
 func coreAudioSampleBatch(data unsafe.Pointer, frames C.size_t) C.size_t {
-	if Nan0.stopped.Load() {
+	if Nan0.Stopped.Load() {
 		if Nan0.log.GetLevel() < logger.InfoLevel {
 			Nan0.log.Warn().Msgf(">>> skip %v audio frames", frames)
 		}
@@ -686,27 +696,18 @@ func coreEnvironment(cmd C.unsigned, data unsafe.Pointer) C.bool {
 
 	switch cmd {
 	case C.RETRO_ENVIRONMENT_SET_SYSTEM_AV_INFO:
-		Nan0.sys.av = *(*C.struct_retro_system_av_info)(data)
-		Nan0.log.Debug().Msgf(">>> system av change: %v", Nan0.sys.av)
-		if Nan0.OnSystemAvInfo != nil {
-			go Nan0.OnSystemAvInfo()
+		Nan0.log.Debug().Msgf("retro_set_system_av_info")
+		av := *(*C.struct_retro_system_av_info)(data)
+		if isGeometryDifferent(av.geometry) {
+			geometryChange(av.geometry)
 		}
 		return true
 	case C.RETRO_ENVIRONMENT_SET_GEOMETRY:
+		Nan0.log.Debug().Msgf("retro_set_geometry")
 		geom := *(*C.struct_retro_game_geometry)(data)
-		Nan0.log.Debug().Msgf(">>> geometry change: %v", geom)
-		// some cores are eager to change resolution too many times
-		// in a small period of time, thus we have some debouncer here
-		Nan0.limiter(func() {
-			lw := Nan0.sys.av.geometry.base_width
-			lh := Nan0.sys.av.geometry.base_height
-			if lw != geom.base_width || lh != geom.base_height {
-				Nan0.sys.av.geometry = geom
-				if Nan0.OnSystemAvInfo != nil {
-					go Nan0.OnSystemAvInfo()
-				}
-			}
-		})
+		if isGeometryDifferent(geom) {
+			geometryChange(geom)
+		}
 		return true
 	case C.RETRO_ENVIRONMENT_SET_ROTATION:
 		setRotation((*(*uint)(data) % 4) * 90)
@@ -875,4 +876,22 @@ func (d *limit) push(f func()) {
 		d.t.Stop()
 	}
 	d.t = time.AfterFunc(d.d, f)
+}
+
+func geometryChange(geom C.struct_retro_game_geometry) {
+	Nan0.limiter(func() {
+		old := Nan0.sys.av.geometry
+		Nan0.sys.av.geometry = geom
+		if Nan0.OnSystemAvInfo != nil {
+			Nan0.log.Debug().Msgf(">>> geometry change %v -> %v", old, geom)
+			if Nan0.Aspect {
+				go Nan0.OnSystemAvInfo()
+			}
+		}
+	})
+}
+
+func isGeometryDifferent(geom C.struct_retro_game_geometry) bool {
+	return Nan0.sys.av.geometry.base_width != geom.base_width ||
+		Nan0.sys.av.geometry.base_height != geom.base_height
 }

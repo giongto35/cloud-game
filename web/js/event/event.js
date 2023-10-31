@@ -101,3 +101,5 @@ const SETTINGS_CLOSED = 'settingsClosed';
 
 const RECORDING_TOGGLED = 'recordingToggle'
 const RECORDING_STATUS_CHANGED = 'recordingStatusChanged'
+
+const APP_VIDEO_CHANGED = 'appVideoChanged'

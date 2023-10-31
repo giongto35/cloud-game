@@ -47,26 +47,28 @@
 
     <div id="servers"></div>
 
-    <div id="guide-txt"><b>Arrows</b>(move),<b>ZXCVAS</b>(game ABXYLR),<b>1/2</b>(1st/2nd player),<b>Shift/Enter/K/L</b>(select/start/save/load),<b>F</b>(fullscreen),<b>share</b>(copy
-        sharelink to clipboard)
+    <div id="guide-txt">
+        <b>Arrows</b> (move), <b>ZXCVAS</b> (game ABXYLR), <b>1/2</b> (1st/2nd player), <b>Shift/Enter/K/L</b> (select/start/save/load), <b>F</b> (fullscreen), <b>share</b> (copy shared link to the clipboard)
     </div>
-    <div id="btn-load" class="btn big hidden" value="load"></div>
-    <div id="btn-save" class="btn big hidden" value="save"></div>
     <div id="btn-join" class="btn big" value="join"></div>
     <div id="slider-playeridx" class="slidecontainer">
         <span>player choice</span>
         <input type="range" min="1" max="4" value="1" class="slider" id="playeridx" onkeydown="event.preventDefault()">
     </div>
-
     <div id="btn-quit" class="btn big" value="quit"></div>
-    <div id="btn-select" class="btn big" value="select"></div>
-    <div id="btn-start" class="btn big" value="start"></div>
 
-    <div id="color-button-holder">
-        <div id="btn-a" class="btn" value="a"></div>
-        <div id="btn-b" class="btn" value="b"></div>
-        <div id="btn-x" class="btn" value="x"></div>
-        <div id="btn-y" class="btn" value="y"></div>
+    <div id="controls-right">
+        <div id="btn-load" class="btn big hidden" value="load"></div>
+        <div id="btn-save" class="btn big hidden" value="save"></div>
+        <div id="btn-select" class="btn big" value="select"></div>
+        <div id="btn-start" class="btn big" value="start"></div>
+
+        <div id="color-button-holder">
+            <div id="btn-a" class="btn" value="a"></div>
+            <div id="btn-b" class="btn" value="b"></div>
+            <div id="btn-x" class="btn" value="x"></div>
+            <div id="btn-y" class="btn" value="y"></div>
+        </div>
     </div>
 
     <div id="btn-settings" class="btn" value="settings"></div>
@@ -125,16 +127,16 @@
 <script src="js/env.js?v=5"></script>
 <script src="js/input/input.js?v=3"></script>
 <script src="js/gameList.js?v=3"></script>
-<script src="js/stream/stream.js?v=2"></script>
+<script src="js/stream/stream.js?v=3"></script>
 <script src="js/room.js?v=3"></script>
 <script src="js/network/ajax.js?v=3"></script>
 <script src="js/network/socket.js?v=4"></script>
-<script src="js/network/webrtc.js?v=2"></script>
+<script src="js/network/webrtc.js?v=3"></script>
 <script src="js/recording.js?v=1"></script>
-<script src="js/api/api.js?v=2"></script>
+<script src="js/api/api.js?v=3"></script>
 <script src="js/workerManager.js?v=1"></script>
 <script src="js/stats/stats.js?v=1"></script>
-<script src="js/controller.js?v=7"></script>
+<script src="js/controller.js?v=8"></script>
 <script src="js/input/keyboard.js?v=5"></script>
 <script src="js/input/touch.js?v=3"></script>
 <script src="js/input/joystick.js?v=3"></script>

@@ -3,7 +3,6 @@ package libretro
 import (
 	"errors"
 	"fmt"
-	"math"
 	"path/filepath"
 	"sync"
 	"sync/atomic"
@@ -20,6 +19,7 @@ import (
 type Emulator interface {
 	SetAudioCb(func(app.Audio))
 	SetVideoCb(func(app.Video))
+	SetDataCb(func([]byte))
 	LoadCore(name string)
 	LoadGame(path string) error
 	FPS() int
@@ -57,6 +57,7 @@ type Frontend struct {
 	log     *logger.Logger
 	nano    *nanoarch.Nanoarch
 	onAudio func(app.Audio)
+	onData  func([]byte)
 	onVideo func(app.Video)
 	storage Storage
 	scale   float64
@@ -90,6 +91,7 @@ const (
 var (
 	audioPool sync.Pool
 	noAudio   = func(app.Audio) {}
+	noData    = func([]byte) {}
 	noVideo   = func(app.Video) {}
 	videoPool sync.Pool
 )
@@ -135,6 +137,7 @@ func NewFrontend(conf config.Emulator, log *logger.Logger) (*Frontend, error) {
 		input:   NewGameSessionInput(),
 		log:     log,
 		onAudio: noAudio,
+		onData:  noData,
 		onVideo: noVideo,
 		storage: store,
 		th:      conf.Threads,
@@ -153,14 +156,15 @@ func NewFrontend(conf config.Emulator, log *logger.Logger) (*Frontend, error) {
 func (f *Frontend) LoadCore(emu string) {
 	conf := f.conf.GetLibretroCoreConfig(emu)
 	meta := nanoarch.Metadata{
-		AutoGlContext: conf.AutoGlContext,
-		Hacks:         conf.Hacks,
-		HasMultitap:   conf.HasMultitap,
-		HasVFR:        conf.VFR,
-		IsGlAllowed:   conf.IsGlAllowed,
-		LibPath:       conf.Lib,
-		Options:       conf.Options,
-		UsesLibCo:     conf.UsesLibCo,
+		AutoGlContext:   conf.AutoGlContext,
+		Hacks:           conf.Hacks,
+		HasMultitap:     conf.HasMultitap,
+		HasVFR:          conf.VFR,
+		IsGlAllowed:     conf.IsGlAllowed,
+		LibPath:         conf.Lib,
+		Options:         conf.Options,
+		UsesLibCo:       conf.UsesLibCo,
+		CoreAspectRatio: conf.CoreAspectRatio,
 	}
 	f.mu.Lock()
 	scale := 1.0
@@ -224,6 +228,13 @@ func (f *Frontend) SetVideoChangeCb(fn func()) { f.nano.OnSystemAvInfo = fn }
 
 func (f *Frontend) Start() {
 	f.log.Debug().Msgf("frontend start")
+	if f.nano.Stopped.Load() {
+		f.log.Warn().Msgf("frontend stopped during the start")
+		f.mui.Lock()
+		defer f.mui.Unlock()
+		f.Shutdown()
+		return
+	}
 
 	f.mui.Lock()
 	f.done = make(chan struct{})
@@ -269,6 +280,7 @@ func (f *Frontend) Start() {
 	}
 }
 
+func (f *Frontend) AspectRatio() float32          { return f.nano.AspectRatio() }
 func (f *Frontend) AudioSampleRate() int          { return f.nano.AudioSampleRate() }
 func (f *Frontend) FPS() int                      { return f.nano.VideoFramerate() }
 func (f *Frontend) Flipped() bool                 { return f.nano.IsGL() }
@@ -286,6 +298,7 @@ func (f *Frontend) SaveGameState() error          { return f.Save() }
 func (f *Frontend) Scale() float64                { return f.scale }
 func (f *Frontend) SetAudioCb(cb func(app.Audio)) { f.onAudio = cb }
 func (f *Frontend) SetSessionId(name string)      { f.storage.SetMainSaveName(name) }
+func (f *Frontend) SetDataCb(cb func([]byte))     { f.onData = cb }
 func (f *Frontend) SetVideoCb(ff func(app.Video)) { f.onVideo = ff }
 func (f *Frontend) Tick()                         { f.mu.Lock(); f.nano.Run(); f.mu.Unlock() }
 func (f *Frontend) ToggleMultitap()               { f.nano.ToggleMultitap() }
@@ -295,18 +308,6 @@ func (f *Frontend) ViewportSize() (int, int)      { return f.vw, f.vh }
 func (f *Frontend) ViewportCalc() (nw int, nh int) {
 	w, h := f.FrameSize()
 	nw, nh = w, h
-
-	aspect, aw, ah := f.conf.AspectRatio.Keep, f.conf.AspectRatio.Width, f.conf.AspectRatio.Height
-	// calc the aspect ratio
-	if aspect && aw > 0 && ah > 0 {
-		ratio := float64(w) / float64(ah)
-		nw = int(math.Round(float64(ah)*ratio/2) * 2)
-		nh = ah
-		if nw > aw {
-			nw = aw
-			nh = int(math.Round(float64(aw)/ratio/2) * 2)
-		}
-	}
 
 	if f.IsPortrait() {
 		nw, nh = nh, nw

@@ -11,6 +11,10 @@ type (
 		RecordUser  string `json:"record_user,omitempty"`
 		PlayerIndex int    `json:"player_index"`
 	}
+	GameStartUserResponse struct {
+		RoomId string        `json:"roomId"`
+		Av     *AppVideoInfo `json:"av"`
+	}
 	IceServer struct {
 		Urls       string `json:"urls,omitempty"`
 		Username   string `json:"username,omitempty"`

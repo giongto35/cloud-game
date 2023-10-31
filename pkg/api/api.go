@@ -62,8 +62,9 @@ func (o *Out) GetPayload() any         { return o.Payload }
 
 // Packet codes:
 //
-//	x, 1xx - user codes
-//	2xx - worker codes
+// x, 1xx - user codes
+// 15x - webrtc data exchange codes
+// 2xx - worker codes
 const (
 	CheckLatency     PT = 3
 	InitSession      PT = 4
@@ -84,6 +85,7 @@ const (
 	CloseRoom        PT = 202
 	IceCandidate        = WebrtcIce
 	TerminateSession PT = 204
+	AppVideoChange   PT = 150
 )
 
 func (p PT) String() string {
@@ -124,6 +126,8 @@ func (p PT) String() string {
 		return "CloseRoom"
 	case TerminateSession:
 		return "TerminateSession"
+	case AppVideoChange:
+		return "AppVideoChange"
 	default:
 		return "Unknown"
 	}
@@ -160,3 +164,5 @@ func UnwrapChecked[T any](bytes []byte, err error) (*T, error) {
 	}
 	return Unwrap[T](bytes), nil
 }
+
+func Wrap(t any) ([]byte, error) { return json.Marshal(t) }

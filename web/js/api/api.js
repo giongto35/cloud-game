@@ -21,6 +21,8 @@ const api = (() => {
         GAME_RECORDING: 110,
         GET_WORKER_LIST: 111,
         GAME_ERROR_NO_FREE_SLOTS: 112,
+
+        APP_VIDEO_CHANGE: 150,
     });
 
     const packet = (type, payload, id) => {
@@ -31,18 +33,21 @@ const api = (() => {
         socket.send(packet);
     };
 
+    const decodeBytes = (b) => String.fromCharCode.apply(null, new Uint8Array(b))
+
     return Object.freeze({
         endpoint: endpoints,
+        decode: (b) => JSON.parse(decodeBytes(b)),
         server:
-            Object.freeze({
+            {
                 initWebrtc: () => packet(endpoints.INIT_WEBRTC),
                 sendIceCandidate: (candidate) => packet(endpoints.ICE_CANDIDATE, btoa(JSON.stringify(candidate))),
                 sendSdp: (sdp) => packet(endpoints.ANSWER, btoa(JSON.stringify(sdp))),
                 latencyCheck: (id, list) => packet(endpoints.LATENCY_CHECK, list, id),
                 getWorkerList: () => packet(endpoints.GET_WORKER_LIST),
-            }),
+            },
         game:
-            Object.freeze({
+            {
                 load: () => packet(endpoints.GAME_LOAD),
                 save: () => packet(endpoints.GAME_SAVE),
                 setPlayerIndex: (i) => packet(endpoints.GAME_SET_PLAYER_INDEX, i),
@@ -60,6 +65,6 @@ const api = (() => {
                         user: userName,
                     }),
                 quit: (roomId) => packet(endpoints.GAME_QUIT, {room_id: roomId}),
-            })
+            }
     })
 })(socket);
