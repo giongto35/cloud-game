@@ -118,14 +118,6 @@ emulator:
   # (removed)
   threads: 0
 
-  aspectRatio:
-    # enable aspect ratio changing
-    # (experimental)
-    keep: false
-    # recalculate emulator game frame size to the given WxH
-    width: 320
-    height: 240
-
   # enable autosave for emulator states if set to a non-zero value of seconds
   autosaveSec: 0
 
@@ -189,6 +181,7 @@ emulator:
       #   - isGlAllowed (bool)
       #   - usesLibCo (bool)
       #   - hasMultitap (bool)
+      #   - coreAspectRatio (bool) -- correct the aspect ratio on the client with the info from the core.
       #   - vfr (bool)
       #    (experimental)
       #       Enable variable frame rate only for cores that can't produce a constant frame rate.
@@ -210,6 +203,7 @@ emulator:
             mgba_audio_low_pass_filter: enabled
             mgba_audio_low_pass_range: 40
         pcsx:
+          coreAspectRatio: true
           lib: pcsx_rearmed_libretro
           roms: [ "cue", "chd" ]
           # example of folder override
@@ -227,6 +221,8 @@ emulator:
         nes:
           lib: nestopia_libretro
           roms: [ "nes" ]
+          options:
+            nestopia_aspect: "uncorrected"
         snes:
           lib: snes9x_libretro
           roms: [ "smc", "sfc", "swc", "fig", "bs" ]

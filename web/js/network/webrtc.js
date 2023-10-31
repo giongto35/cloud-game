@@ -12,16 +12,16 @@
  */
 const webrtc = (() => {
     let connection;
-    let inputChannel;
+    let dataChannel;
     let mediaStream;
-    let candidates = Array();
+    let candidates = [];
     let isAnswered = false;
     let isFlushing = false;
 
     let connected = false;
     let inputReady = false;
 
-    let onMessage;
+    let onData;
 
     const start = (iceservers) => {
         log.info('[rtc] <- ICE servers', iceservers);
@@ -31,16 +31,16 @@ const webrtc = (() => {
 
         connection.ondatachannel = e => {
             log.debug('[rtc] ondatachannel', e.channel.label)
-            inputChannel = e.channel;
-            inputChannel.onopen = () => {
+            dataChannel = e.channel;
+            dataChannel.onopen = () => {
                 log.info('[rtc] the input channel has been opened');
                 inputReady = true;
                 event.pub(WEBRTC_CONNECTION_READY)
             };
-            if (onMessage) {
-                inputChannel.onmessage = onMessage;
+            if (onData) {
+                dataChannel.onmessage = onData;
             }
-            inputChannel.onclose = () => log.info('[rtc] the input channel has been closed');
+            dataChannel.onclose = () => log.info('[rtc] the input channel has been closed');
         }
         connection.oniceconnectionstatechange = ice.onIceConnectionStateChange;
         connection.onicegatheringstatechange = ice.onIceStateChange;
@@ -62,9 +62,9 @@ const webrtc = (() => {
             connection.close();
             connection = null;
         }
-        if (inputChannel) {
-            inputChannel.close();
-            inputChannel = null;
+        if (dataChannel) {
+            dataChannel.close();
+            dataChannel = null;
         }
         candidates = Array();
         log.info('[rtc] WebRTC has been closed');
@@ -173,10 +173,13 @@ const webrtc = (() => {
         //         return false
         //     }
         // },
-        input: (data) => inputChannel.send(data),
+        input: (data) => dataChannel.send(data),
         isConnected: () => connected,
         isInputReady: () => inputReady,
         getConnection: () => connection,
         stop,
+        set onData(fn) {
+            onData = fn
+        }
     }
 })(event, log);

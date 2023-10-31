@@ -112,6 +112,31 @@ func (c *coordinator) HandleGameStart(rq api.StartGameRequest[com.Uid], w *Worke
 
 		r.SetApp(app)
 
+		m := media.NewWebRtcMediaPipe(w.conf.Encoder.Audio, w.conf.Encoder.Video, w.log)
+
+		// recreate the video encoder
+		app.VideoChangeCb(func() {
+			app.ViewportRecalculate()
+			m.VideoW, m.VideoH = app.ViewportSize()
+			m.VideoScale = app.Scale()
+
+			if m.IsInitialized() {
+				if err := m.Reinit(); err != nil {
+					c.log.Error().Err(err).Msgf("reinit fail")
+				}
+			}
+
+			data, err := api.Wrap(api.Out{T: uint8(api.AppVideoChange), Payload: api.AppVideoInfo{
+				W: m.VideoW,
+				H: m.VideoH,
+				A: app.AspectRatio(),
+			}})
+			if err != nil {
+				c.log.Error().Err(err).Msgf("wrap")
+			}
+			r.Send(data)
+		})
+
 		w.log.Info().Msgf("Starting the game: %v", rq.Game.Name)
 		if err := app.Load(game, w.conf.Worker.Library.BasePath); err != nil {
 			c.log.Error().Err(err).Msgf("couldn't load the game %v", game)
@@ -120,7 +145,6 @@ func (c *coordinator) HandleGameStart(rq api.StartGameRequest[com.Uid], w *Worke
 			return api.EmptyPacket
 		}
 
-		m := media.NewWebRtcMediaPipe(w.conf.Encoder.Audio, w.conf.Encoder.Video, w.log)
 		m.AudioSrcHz = app.AudioSampleRate()
 		m.AudioFrame = w.conf.Encoder.Audio.Frame
 		m.VideoW, m.VideoH = app.ViewportSize()
@@ -140,16 +164,6 @@ func (c *coordinator) HandleGameStart(rq api.StartGameRequest[com.Uid], w *Worke
 		m.SetPixFmt(app.PixFormat())
 		m.SetRot(app.Rotation())
 
-		// recreate the video encoder
-		app.VideoChangeCb(func() {
-			app.ViewportRecalculate()
-			m.VideoW, m.VideoH = app.ViewportSize()
-			m.VideoScale = app.Scale()
-			if err := m.Reinit(); err != nil {
-				c.log.Error().Err(err).Msgf("reinit fail")
-			}
-		})
-
 		r.BindAppMedia()
 		r.StartApp()
 	}
@@ -159,7 +173,13 @@ func (c *coordinator) HandleGameStart(rq api.StartGameRequest[com.Uid], w *Worke
 
 	c.RegisterRoom(r.Id())
 
-	return api.Out{Payload: api.StartGameResponse{Room: api.Room{Rid: r.Id()}, Record: w.conf.Recording.Enabled}}
+	response := api.StartGameResponse{Room: api.Room{Rid: r.Id()}, Record: w.conf.Recording.Enabled}
+	if r.App().AspectEnabled() {
+		ww, hh := r.App().ViewportSize()
+		response.AV = &api.AppVideoInfo{W: ww, H: hh, A: r.App().AspectRatio()}
+	}
+
+	return api.Out{Payload: response}
 }
 
 // HandleTerminateSession handles cases when a user has been disconnected from the websocket of coordinator.

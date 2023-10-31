@@ -32,13 +32,13 @@ func (p *Peer) NewCall(vCodec, aCodec string, onICECandidate func(ice any)) (sdp
 	if p.conn != nil && p.conn.ConnectionState() == webrtc.PeerConnectionStateConnected {
 		return
 	}
-	p.log.Info().Msg("WebRTC start")
+	p.log.Debug().Msg("WebRTC start")
 	if p.conn, err = p.api.NewPeer(); err != nil {
-		return "", err
+		return
 	}
 	p.conn.OnICECandidate(p.handleICECandidate(onICECandidate))
 	// plug in the [video] track (out)
-	video, err := newTrack("video", "game-video", vCodec)
+	video, err := newTrack("video", "video", vCodec)
 	if err != nil {
 		return "", err
 	}
@@ -49,7 +49,7 @@ func (p *Peer) NewCall(vCodec, aCodec string, onICECandidate func(ice any)) (sdp
 	p.log.Debug().Msgf("Added [%s] track", video.Codec().MimeType)
 
 	// plug in the [audio] track (out)
-	audio, err := newTrack("audio", "game-audio", aCodec)
+	audio, err := newTrack("audio", "audio", aCodec)
 	if err != nil {
 		return "", err
 	}
@@ -59,21 +59,19 @@ func (p *Peer) NewCall(vCodec, aCodec string, onICECandidate func(ice any)) (sdp
 	p.log.Debug().Msgf("Added [%s] track", audio.Codec().MimeType)
 	p.a = audio
 
-	// plug in the [input] data channel (in)
-	if err = p.addInputChannel("game-input"); err != nil {
+	// plug in the [data] channel (in and out)
+	if err = p.addDataChannel("data"); err != nil {
 		return "", err
 	}
-	p.log.Debug().Msg("Added [input/bytes] chan")
+	p.log.Debug().Msg("Added [data] chan")
 
-	p.conn.OnICEConnectionStateChange(p.handleICEState(func() {
-		p.log.Info().Msg("Start streaming")
-	}))
+	p.conn.OnICEConnectionStateChange(p.handleICEState(func() { p.log.Info().Msg("Connected") }))
 	// Stream provider supposes to send offer
 	offer, err := p.conn.CreateOffer(nil)
 	if err != nil {
 		return "", err
 	}
-	p.log.Info().Msg("Created Offer")
+	p.log.Debug().Msg("Created Offer")
 
 	err = p.conn.SetLocalDescription(offer)
 	if err != nil {
@@ -210,15 +208,16 @@ func (p *Peer) Disconnect() {
 	p.log.Debug().Msg("WebRTC stop")
 }
 
-// addInputChannel creates a new WebRTC data channel for user input.
+// addDataChannel creates a new WebRTC data channel for user input.
 // Default params -- ordered: true, negotiated: false.
-func (p *Peer) addInputChannel(label string) error {
+func (p *Peer) addDataChannel(label string) error {
 	ch, err := p.conn.CreateDataChannel(label, nil)
 	if err != nil {
 		return err
 	}
 	ch.OnOpen(func() {
-		p.log.Debug().Str("label", ch.Label()).Uint16("id", *ch.ID()).Msg("Data channel [input] opened")
+		p.log.Debug().Str("label", ch.Label()).Uint16("id", *ch.ID()).
+			Msg("Data channel [input] opened")
 	})
 	ch.OnError(p.logx)
 	ch.OnMessage(func(m webrtc.DataChannelMessage) {

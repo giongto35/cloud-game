@@ -14,9 +14,6 @@ type Caged struct {
 	base *Frontend // maintains the root for mad embedding
 	conf CagedConf
 	log  *logger.Logger
-	w, h int
-
-	OnSysInfoChange func()
 }
 
 type CagedConf struct {
@@ -78,6 +75,8 @@ func (c *Caged) EnableCloudStorage(uid string, storage cloud.Storage) {
 	}
 }
 
+func (c *Caged) AspectEnabled() bool               { return c.base.nano.Aspect }
+func (c *Caged) AspectRatio() float32              { return c.base.AspectRatio() }
 func (c *Caged) PixFormat() uint32                 { return c.Emulator.PixFormat() }
 func (c *Caged) Rotation() uint                    { return c.Emulator.Rotation() }
 func (c *Caged) AudioSampleRate() int              { return c.Emulator.AudioSampleRate() }

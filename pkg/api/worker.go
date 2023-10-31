@@ -33,6 +33,7 @@ type (
 	}
 	StartGameResponse struct {
 		Room
+		AV     *AppVideoInfo `json:"av"`
 		Record bool
 	}
 	RecordGameRequest[T Id] struct {
@@ -59,4 +60,10 @@ type (
 		Stateful[T]
 	}
 	WebrtcInitResponse string
+
+	AppVideoInfo struct {
+		W int     `json:"w"`
+		H int     `json:"h"`
+		A float32 `json:"a"`
+	}
 )
