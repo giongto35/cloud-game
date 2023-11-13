@@ -22,8 +22,11 @@ type WorkerConfig struct {
 }
 
 type Storage struct {
-	Provider string
-	Key      string
+	Provider          string
+	S3Endpoint        string
+	S3BucketName      string
+	S3AccessKeyId     string
+	S3SecretAccessKey string
 }
 
 type Worker struct {

@@ -59,7 +59,7 @@ func New(conf config.WorkerConfig, log *logger.Logger) (*Worker, error) {
 	if conf.Worker.Monitoring.IsEnabled() {
 		worker.services[1] = monitoring.New(conf.Worker.Monitoring, h.GetHost(), log)
 	}
-	st, err := cloud.Store(conf.Storage.Provider, conf.Storage.Key)
+	st, err := cloud.Store(conf.Storage, log)
 	if err != nil {
 		log.Warn().Err(err).Msgf("cloud storage fail, using no storage")
 	}

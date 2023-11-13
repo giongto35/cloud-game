@@ -36,6 +36,7 @@ type Emulator interface {
 	// SetSessionId sets distinct name for the game session (in order to save/load it later)
 	SetSessionId(name string)
 	SaveGameState() error
+	SaveStateName() string
 	// HashPath returns the path emulator will save state to
 	HashPath() string
 	// HasSave returns true if the current ROM was saved before
@@ -295,6 +296,7 @@ func (f *Frontend) RestoreGameState() error       { return f.Load() }
 func (f *Frontend) Rotation() uint                { return f.nano.Rot }
 func (f *Frontend) SRAMPath() string              { return f.storage.GetSRAMPath() }
 func (f *Frontend) SaveGameState() error          { return f.Save() }
+func (f *Frontend) SaveStateName() string         { return filepath.Base(f.HashPath()) }
 func (f *Frontend) Scale() float64                { return f.scale }
 func (f *Frontend) SetAudioCb(cb func(app.Audio)) { f.onAudio = cb }
 func (f *Frontend) SetSessionId(name string)      { f.storage.SetMainSaveName(name) }

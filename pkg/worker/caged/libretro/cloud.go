@@ -7,32 +7,37 @@ import (
 
 type CloudFrontend struct {
 	Emulator
-	stateName      string
-	stateLocalPath string
-	storage        cloud.Storage // a cloud storage to store room state online
+	uid     string
+	storage cloud.Storage // a cloud storage to store room state online
 }
 
-func WithCloud(fe Emulator, stateName string, storage cloud.Storage) (*CloudFrontend, error) {
-	r := &CloudFrontend{Emulator: fe, stateLocalPath: fe.HashPath(), stateName: stateName, storage: storage}
+// WithCloud adds the ability to keep game states in the cloud storage like Amazon S3.
+// It supports only one file of main save state.
+func WithCloud(fe Emulator, uid string, storage cloud.Storage) (*CloudFrontend, error) {
+	r := &CloudFrontend{Emulator: fe, uid: uid, storage: storage}
 
-	// saveOnlineRoomToLocal save online room to local.
-	// !Supports only one file of main save state.
-	data, err := r.storage.Load(stateName)
-	if err != nil {
-		return nil, err
-	}
-	// save the data fetched from the cloud to a local directory
-	if data != nil {
-		if err := os.WriteFile(r.stateLocalPath, data, 0644); err != nil {
+	name := fe.SaveStateName()
+
+	if r.storage.Has(name) {
+		data, err := r.storage.Load(fe.SaveStateName())
+		if err != nil {
 			return nil, err
+		}
+		// save the data fetched from the cloud to a local directory
+		if data != nil {
+			if err := os.WriteFile(fe.HashPath(), data, 0644); err != nil {
+				return nil, err
+			}
 		}
 	}
 
 	return r, nil
 }
 
+// !to use emulator save/load calls instead of the storage
+
 func (c *CloudFrontend) HasSave() bool {
-	_, err := c.storage.Load(c.stateName)
+	_, err := c.storage.Load(c.SaveStateName())
 	if err == nil {
 		return true
 	}
@@ -43,8 +48,13 @@ func (c *CloudFrontend) SaveGameState() error {
 	if err := c.Emulator.SaveGameState(); err != nil {
 		return err
 	}
-	if err := c.storage.Save(c.stateName, c.stateLocalPath); err != nil {
+	path := c.Emulator.HashPath()
+	data, err := os.ReadFile(path)
+	if err != nil {
 		return err
 	}
-	return nil
+	return c.storage.Save(c.SaveStateName(), data, map[string]string{
+		"uid":  c.uid,
+		"type": "cloudretro-main-save",
+	})
 }
