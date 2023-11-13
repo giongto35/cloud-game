@@ -64,14 +64,14 @@ func (c *Caged) EnableRecording(nowait bool, user string, game string) {
 }
 
 func (c *Caged) EnableCloudStorage(uid string, storage cloud.Storage) {
-	if storage != nil {
-		wc, err := WithCloud(c.Emulator, uid, storage)
-		if err != nil {
-			c.log.Error().Err(err).Msgf("couldn't init %v", wc.HashPath())
-		} else {
-			c.log.Info().Msgf("cloud state %v has been initialized", wc.HashPath())
-			c.Emulator = wc
-		}
+	if storage == nil {
+		return
+	}
+	if wc, err := WithCloud(c.Emulator, uid, storage); err == nil {
+		c.Emulator = wc
+		c.log.Info().Msgf("cloud storage has been initialized")
+	} else {
+		c.log.Error().Err(err).Msgf("couldn't init cloud storage")
 	}
 }
 

@@ -302,14 +302,19 @@ recording:
   # save directory
   folder: ./recording
 
+# cloud storage options
+# it is mandatory to use a cloud storage when running
+# a distributed multi-server configuration in order to
+# share save states between nodes (resume games on a different worker)
 storage:
   # cloud storage provider:
   #   - empty (No op storage stub)
-  #   - oracle [Oracle Object Storage](https://www.oracle.com/cloud/storage/object-storage.html)
+  #   - s3 (S3 API compatible object storage)
   provider:
-  # this value contains arbitrary key attribute:
-  #   - oracle: pre-authenticated URL (see: https://docs.oracle.com/en-us/iaas/Content/Object/Tasks/usingpreauthenticatedrequests.htm)
-  key:
+  s3Endpoint:
+  s3BucketName:
+  s3AccessKeyId:
+  s3SecretAccessKey:
 
 webrtc:
   # turn off default Pion interceptors (see: https://github.com/pion/interceptor)
