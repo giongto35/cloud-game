@@ -15,7 +15,7 @@
  */
 const settings = (() => {
     // internal structure version
-    const revision = 1.1;
+    const revision = 1.2;
 
     // default settings
     // keep them for revert to defaults option
@@ -123,6 +123,7 @@ const settings = (() => {
 
         return {
             get,
+            clear: () => localStorage.removeItem(root),
             set,
             remove,
             save,
@@ -164,12 +165,15 @@ const settings = (() => {
     }
 
     const init = () => {
+        // try to load settings from the localStorage with fallback to null-object
         provider = localStorageProvider(store) || voidProvider(store);
         provider.loadSettings();
 
-        if (revision > store.settings._version) {
-            // !to handle this with migrations
-            log.warn(`Your settings are in older format (v${store.settings._version})`);
+        const lastRev = (store.settings || {_version: 0})._version
+
+        if (revision > lastRev) {
+            log.warn(`Your settings are in older format (v${lastRev}) and will be reset to (v${revision})!`);
+            _reset();
         }
     }
 

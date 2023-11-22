@@ -16,6 +16,10 @@ const keyboard = (() => {
         KeyV: KEY.Y,
         KeyA: KEY.L,
         KeyS: KEY.R,
+        Semicolon: KEY.L2,
+        Quote: KEY.R2,
+        Period: KEY.L3,
+        Slash: KEY.R3,
         Enter: KEY.START,
         ShiftLeft: KEY.SELECT,
         // non-game
