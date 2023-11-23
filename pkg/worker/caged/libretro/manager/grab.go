@@ -47,11 +47,15 @@ func (d GrabDownloader) Request(dest string, urls ...Download) (ok []string, noo
 		r := resp.Request
 		if err := resp.Err(); err != nil {
 			d.log.Error().Err(err).Msgf("download [%s] %s has failed: %v", r.Label, r.URL(), err)
-			if resp.HTTPResponse.StatusCode == 404 {
+			if resp.HTTPResponse != nil && resp.HTTPResponse.StatusCode == 404 {
 				nook = append(nook, resp.Request.Label)
 			}
 		} else {
-			d.log.Info().Msgf("Downloaded [%v] [%s] -> %s", resp.HTTPResponse.Status, r.Label, resp.Filename)
+			status := ""
+			if resp.HTTPResponse != nil {
+				status = resp.HTTPResponse.Status
+			}
+			d.log.Info().Msgf("Downloaded [%v] [%s] -> %s", status, r.Label, resp.Filename)
 			ok = append(ok, resp.Filename)
 		}
 	}

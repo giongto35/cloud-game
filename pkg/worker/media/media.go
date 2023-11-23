@@ -145,6 +145,10 @@ func (wmp *WebrtcMediaPipe) Init() error {
 	if err := wmp.initVideo(wmp.VideoW, wmp.VideoH, wmp.VideoScale, wmp.vConf); err != nil {
 		return err
 	}
+	if wmp.v == nil || wmp.a == nil {
+		return fmt.Errorf("could intit the encoders, v=%v a=%v", wmp.v != nil, wmp.a != nil)
+	}
+
 	wmp.log.Debug().Msgf("%v", wmp.v.Info())
 	wmp.initialized = true
 	return nil
@@ -179,7 +183,14 @@ func (wmp *WebrtcMediaPipe) encodeAudio(pcm samples) {
 
 func (wmp *WebrtcMediaPipe) initVideo(w, h int, scale float64, conf config.Video) (err error) {
 	sw, sh := round(w, scale), round(h, scale)
-	wmp.v, err = encoder.NewVideoEncoder(w, h, sw, sh, scale, conf, wmp.log)
+	enc, err := encoder.NewVideoEncoder(w, h, sw, sh, scale, conf, wmp.log)
+	if err != nil {
+		return err
+	}
+	if enc == nil {
+		return fmt.Errorf("broken video encoder init")
+	}
+	wmp.v = enc
 	wmp.log.Debug().Msgf("media scale: %vx%v -> %vx%v", w, h, sw, sh)
 	return err
 }

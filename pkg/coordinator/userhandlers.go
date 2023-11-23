@@ -127,14 +127,16 @@ func (u *User) handleGetWorkerList(debug bool, info HasServerInfo) {
 	if debug {
 		response.Servers = servers
 	} else {
-		// not sure if []byte to string always reversible :/
 		unique := map[string]*api.Server{}
 		for _, s := range servers {
 			mid := s.Machine
 			if _, ok := unique[mid]; !ok {
 				unique[mid] = &api.Server{Addr: s.Addr, PingURL: s.PingURL, Id: s.Id, InGroup: true}
 			}
-			unique[mid].Replicas++
+			v := unique[mid]
+			if v != nil {
+				v.Replicas++
+			}
 		}
 		for _, v := range unique {
 			response.Servers = append(response.Servers, *v)

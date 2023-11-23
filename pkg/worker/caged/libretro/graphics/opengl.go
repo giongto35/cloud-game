@@ -50,7 +50,7 @@ const (
 
 var (
 	opt = offscreenSetup{}
-	buf []byte
+	buf = make([]byte, 1024*1024)
 )
 
 func initContext(getProcAddr func(name string) unsafe.Pointer) {

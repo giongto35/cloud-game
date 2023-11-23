@@ -62,6 +62,9 @@ func NewVideoEncoder(w, h, dw, dh int, scale float64, conf config.Video, log *lo
 	if err != nil {
 		return nil, err
 	}
+	if enc == nil {
+		return nil, fmt.Errorf("no encoder")
+	}
 
 	return &Video{codec: enc, y: yuv.NewYuvConv(w, h, scale), log: log}, nil
 }
@@ -86,6 +89,10 @@ func (v *Video) Info() string {
 }
 
 func (v *Video) SetPixFormat(f uint32) {
+	if v == nil {
+		return
+	}
+
 	switch f {
 	case 1:
 		v.pf = yuv.PixFmt(yuv.FourccArgb)
@@ -98,15 +105,28 @@ func (v *Video) SetPixFormat(f uint32) {
 
 // SetRot sets the de-rotation angle of the frames.
 func (v *Video) SetRot(a uint) {
+	if v == nil {
+		return
+	}
+
 	if a > 0 {
 		v.rot = (a + 180) % 360
 	}
 }
 
 // SetFlip tells the encoder to flip the frames vertically.
-func (v *Video) SetFlip(b bool) { v.codec.SetFlip(b) }
+func (v *Video) SetFlip(b bool) {
+	if v == nil {
+		return
+	}
+	v.codec.SetFlip(b)
+}
 
 func (v *Video) Stop() {
+	if v == nil {
+		return
+	}
+
 	if v.stopped.Swap(true) {
 		return
 	}
@@ -114,6 +134,8 @@ func (v *Video) Stop() {
 
 	defer func() { v.codec = nil }()
 	if err := v.codec.Shutdown(); err != nil {
-		v.log.Error().Err(err).Msg("failed to close the encoder")
+		if v.log != nil {
+			v.log.Error().Err(err).Msg("failed to close the encoder")
+		}
 	}
 }

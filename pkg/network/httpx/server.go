@@ -120,12 +120,12 @@ func (s *Server) run() {
 	s.log.Debug().Msgf("Starting %s server on %s", protocol, s.Addr)
 
 	if s.opts.Https && s.opts.HttpsRedirect {
-		rdr, err := s.redirection()
-		if err != nil {
+		if rdr, err := s.redirection(); err == nil {
+			s.redirect = rdr
+			go s.redirect.Run()
+		} else {
 			s.log.Error().Err(err).Msg("couldn't init redirection server")
 		}
-		s.redirect = rdr
-		go s.redirect.Run()
 	}
 
 	var err error
@@ -165,6 +165,7 @@ func (s *Server) redirection() (*Server, error) {
 		address = s.opts.HttpsDomain
 	}
 	addr := buildAddress(address, s.opts.Zone, *s.listener)
+	s.log.Info().Str("addr", addr).Msg("Start HTTPS redirect server")
 
 	srv, err := NewServer(s.opts.HttpsRedirectAddress, func(serv *Server) Handler {
 		h := NewServeMux("")
@@ -186,7 +187,6 @@ func (s *Server) redirection() (*Server, error) {
 	},
 		WithLogger(s.log),
 	)
-	s.log.Info().Str("addr", addr).Msg("Start HTTPS redirect server")
 	return srv, err
 }
 

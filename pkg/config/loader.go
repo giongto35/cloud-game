@@ -88,6 +88,9 @@ func (e *Env) Read() (Kv, error) {
 	mp := make(Kv)
 	for _, k := range keys {
 		parts := strings.SplitN(k, "=", 2)
+		if parts == nil {
+			continue
+		}
 		n := strings.ToLower(strings.TrimPrefix(parts[0], string(*e)))
 		if n == "" {
 			continue
@@ -102,7 +105,9 @@ func (e *Env) Read() (Kv, error) {
 		} else {
 			key = strings.Replace(n[:x+1], "_", ".", -1) + n[x+2:]
 		}
-		mp[key] = parts[1]
+		if len(parts) > 1 {
+			mp[key] = parts[1]
+		}
 	}
 	return maps.Unflatten(mp, "."), nil
 }

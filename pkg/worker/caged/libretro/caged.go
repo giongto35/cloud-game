@@ -38,6 +38,7 @@ func (c *Caged) ReloadFrontend() {
 	frontend, err := NewFrontend(c.conf.Emulator, c.log)
 	if err != nil {
 		c.log.Fatal().Err(err).Send()
+		return
 	}
 	c.Emulator = frontend
 	c.base = frontend
@@ -47,6 +48,9 @@ func (c *Caged) ReloadFrontend() {
 func (c *Caged) VideoChangeCb(fn func()) { c.base.SetVideoChangeCb(fn) }
 
 func (c *Caged) Load(game games.GameMetadata, path string) error {
+	if c.Emulator == nil {
+		return nil
+	}
 	c.Emulator.LoadCore(game.System)
 	if err := c.Emulator.LoadGame(game.FullPath(path)); err != nil {
 		return err

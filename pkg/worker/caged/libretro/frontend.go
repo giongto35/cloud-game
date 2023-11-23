@@ -217,6 +217,9 @@ func (f *Frontend) Shutdown() {
 
 func (f *Frontend) linkNano(nano *nanoarch.Nanoarch) {
 	f.nano = nano
+	if nano == nil {
+		return
+	}
 	f.nano.WaitReady() // start only when nano is available
 
 	f.nano.OnKeyPress = f.input.isKeyPressed
@@ -225,7 +228,11 @@ func (f *Frontend) linkNano(nano *nanoarch.Nanoarch) {
 	f.nano.OnAudio = f.handleAudio
 }
 
-func (f *Frontend) SetVideoChangeCb(fn func()) { f.nano.OnSystemAvInfo = fn }
+func (f *Frontend) SetVideoChangeCb(fn func()) {
+	if f.nano != nil {
+		f.nano.OnSystemAvInfo = fn
+	}
+}
 
 func (f *Frontend) Start() {
 	f.log.Debug().Msgf("frontend start")

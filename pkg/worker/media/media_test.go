@@ -66,6 +66,7 @@ func run(w, h int, cod encoder.VideoCodec, count int, a *image.RGBA, b *image.RG
 	ve, err := encoder.NewVideoEncoder(w, h, w, h, 1, conf, l)
 	if err != nil {
 		backend.Error(err)
+		return
 	}
 	defer ve.Stop()
 

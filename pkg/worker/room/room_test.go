@@ -139,18 +139,15 @@ func TestAll(t *testing.T) {
 		if renderFrames {
 			rect := image.Rect(0, 0, frame.W, frame.H)
 			var src image.Image
-			if test.color == 1 {
-				src1 := bgra.NewBGRA(rect)
-				src1.Pix = frame.Data
-				src1.Stride = frame.Stride
-				src = src1
-			} else {
-				if test.color == 2 {
-					src1 := rgb565.NewRGB565(rect)
-					src1.Pix = frame.Data
-					src1.Stride = frame.Stride
-					src = src1
-				}
+			src1 := bgra.NewBGRA(rect)
+			src1.Pix = frame.Data
+			src1.Stride = frame.Stride
+			src = src1
+			if test.color == 2 {
+				src2 := rgb565.NewRGB565(rect)
+				src2.Pix = frame.Data
+				src2.Stride = frame.Stride
+				src = src2
 			}
 			dst := rgba.ToRGBA(src, flip)
 			tag := fmt.Sprintf("%v-%v-0x%08x", runtime.GOOS, test.game.Type, crc32.Checksum(frame.Data, crc32q))

@@ -98,11 +98,13 @@ func (r *Recording) Start() {
 	audio, err := newWavStream(path, r.opts)
 	if err != nil {
 		r.log.Fatal().Err(err)
+		return
 	}
 	r.audio = audio
 	video, err := newRawStream(path)
 	if err != nil {
 		r.log.Fatal().Err(err)
+		return
 	}
 	r.video = video
 }
@@ -111,8 +113,12 @@ func (r *Recording) Stop() (err error) {
 	r.Lock()
 	defer r.Unlock()
 	r.enabled = false
-	err = r.audio.Close()
-	err = r.video.Close()
+	if r.audio != nil {
+		err = r.audio.Close()
+	}
+	if r.video != nil {
+		err = r.video.Close()
+	}
 
 	path := filepath.Join(r.dir, r.saveDir)
 	// FFMPEG
