@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"math/rand"
+	"net"
 	"net/http"
 	"net/url"
 	"sync"
@@ -49,7 +50,13 @@ func TestWebsocket(t *testing.T) {
 }
 
 func testWebsocket(t *testing.T) {
-	addr := ":8989"
+	port, err := getFreePort()
+	if err != nil {
+		t.Logf("couldn't get any free port")
+		t.Skip()
+	}
+	addr := fmt.Sprintf(":%v", port)
+
 	server := newServer(addr, t)
 	client := newClient(t, url.URL{Scheme: "ws", Host: "localhost" + addr, Path: "/ws"})
 	clDone := client.ProcessPackets(func(in TestIn) error { return nil })
@@ -205,4 +212,16 @@ func newServer(addr string, t *testing.T) *serverHandler {
 	}()
 	wg.Wait()
 	return &handler
+}
+
+func getFreePort() (port int, err error) {
+	var a *net.TCPAddr
+	var l *net.TCPListener
+	if a, err = net.ResolveTCPAddr("tcp", ":0"); err == nil {
+		if l, err = net.ListenTCP("tcp", a); err == nil {
+			defer func() { _ = l.Close() }()
+			return l.Addr().(*net.TCPAddr).Port, nil
+		}
+	}
+	return
 }
