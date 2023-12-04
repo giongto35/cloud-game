@@ -33,8 +33,8 @@ type Options struct {
 func NewEncoder(w, h int, th int, opts *Options) (encoder *H264, err error) {
 	libVersion := LibVersion()
 
-	if libVersion < 156 {
-		return nil, fmt.Errorf("x264: the library version should be newer than v155, you have got version %v", libVersion)
+	if libVersion < 150 {
+		return nil, fmt.Errorf("x264: the library version should be newer than v150, you have got version %v", libVersion)
 	}
 
 	if opts == nil {
@@ -64,7 +64,11 @@ func NewEncoder(w, h int, th int, opts *Options) (encoder *H264, err error) {
 	ww, hh := int32(w), int32(h)
 
 	param.IBitdepth = 8
-	param.ICsp = CspI420
+	if libVersion > 155 {
+		param.ICsp = CspI420
+	} else {
+		param.ICsp = 1
+	}
 	param.IWidth = ww
 	param.IHeight = hh
 	param.ILogLevel = opts.LogLevel
