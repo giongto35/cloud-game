@@ -58,9 +58,6 @@ a better sense of performance.
   , [libopus](http://opus-codec.org/), [pkg-config](https://www.freedesktop.org/wiki/Software/pkg-config/)
   , [sdl2](https://wiki.libsdl.org/Installation)
 
-(If you need to use the app on an older version of Ubuntu that does not have libyuv, you can add a custom apt repository: 
-`add sudo add-apt-repository ppa:savoury1/graphics`)
-
 ```
 # Ubuntu / Windows (WSL2)
 apt-get install -y make gcc pkg-config libvpx-dev libx264-dev libopus-dev libsdl2-dev libyuv-dev libjpeg-turbo8-dev
@@ -71,6 +68,9 @@ brew install pkg-config libvpx x264 opus sdl2 jpeg-turbo
 # Windows (MSYS2)
 pacman -Sy --noconfirm --needed git make mingw-w64-x86_64-{gcc,pkgconf,dlfcn,libvpx,opus,x264-git,SDL2,libyuv,libjpeg-turbo}
 ```
+
+(If you need to use the app on an older version of Ubuntu that does not have libyuv (when it says: unable to locate package libyuv-dev), you can add a custom apt repository: 
+`add sudo add-apt-repository ppa:savoury1/graphics`)
 
 Because the coordinator and workers need to run simultaneously. Workers connect to the coordinator.
 
