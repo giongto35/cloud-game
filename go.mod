@@ -19,7 +19,7 @@ require (
 	github.com/rs/xid v1.5.0
 	github.com/rs/zerolog v1.31.0
 	github.com/veandco/go-sdl2 v0.4.36
-	golang.org/x/crypto v0.16.0
+	golang.org/x/crypto v0.17.0
 	golang.org/x/image v0.13.0
 	gopkg.in/yaml.v3 v3.0.1
 )
