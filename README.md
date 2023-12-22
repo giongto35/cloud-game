@@ -56,7 +56,7 @@ a better sense of performance.
 * Install [Go](https://golang.org/doc/install)
 * Install [libvpx](https://www.webmproject.org/code/), [libx264](https://www.videolan.org/developers/x264.html)
   , [libopus](http://opus-codec.org/), [pkg-config](https://www.freedesktop.org/wiki/Software/pkg-config/)
-  , [sdl2](https://wiki.libsdl.org/Installation)
+  , [sdl2](https://wiki.libsdl.org/Installation), [libyuv](https://chromium.googlesource.com/libyuv/libyuv/)+[libjpeg-turbo](https://github.com/libjpeg-turbo/libjpeg-turbo)
 
 ```
 # Ubuntu / Windows (WSL2)
@@ -68,6 +68,8 @@ brew install pkg-config libvpx x264 opus sdl2 jpeg-turbo
 # Windows (MSYS2)
 pacman -Sy --noconfirm --needed git make mingw-w64-x86_64-{gcc,pkgconf,dlfcn,libvpx,opus,x264-git,SDL2,libyuv,libjpeg-turbo}
 ```
+
+(You don't need to download libyuv on macOS)
 
 (If you need to use the app on an older version of Ubuntu that does not have libyuv (when it says: unable to locate package libyuv-dev), you can add a custom apt repository: 
 `add sudo add-apt-repository ppa:savoury1/graphics`)
