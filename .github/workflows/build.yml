@@ -81,4 +81,5 @@ jobs:
         if: always()
         with:
           name: emulator-test-frames
+          overwrite: true
           path: _rendered/*.png
