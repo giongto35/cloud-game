@@ -755,10 +755,13 @@ func coreEnvironment(cmd C.unsigned, data unsafe.Pointer) C.bool {
 		if v, ok := (*Nan0.options)[key]; ok {
 			// make Go strings null-terminated copies ;_;
 			(*Nan0.options)[key] = v + "\x00"
+			ptr := unsafe.Pointer(unsafe.StringData((*Nan0.options)[key]))
+			var p runtime.Pinner
+			p.Pin(ptr)
+			defer p.Unpin()
 			// cast to C string and set the value
-			// we hope the string won't be collected while C needs it
-			rv.value = (*C.char)(unsafe.Pointer(unsafe.StringData((*Nan0.options)[key])))
-			Nan0.log.Debug().Msgf("Set %s=%v", key, v)
+			rv.value = (*C.char)(ptr)
+			Nan0.log.Debug().Msgf("Set %v=%v", key, v)
 			return true
 		}
 		return false
