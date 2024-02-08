@@ -66,7 +66,7 @@ apt-get install -y make gcc pkg-config libvpx-dev libx264-dev libopus-dev libsdl
 brew install pkg-config libvpx x264 opus sdl2 jpeg-turbo
 
 # Windows (MSYS2)
-pacman -Sy --noconfirm --needed git make mingw-w64-x86_64-{gcc,pkgconf,dlfcn,libvpx,opus,x264-git,SDL2,libyuv,libjpeg-turbo}
+pacman -Sy --noconfirm --needed git make mingw-w64-x86_64-{gcc,pkgconf,dlfcn,libvpx,opus,libx264,SDL2,libyuv,libjpeg-turbo}
 ```
 
 (You don't need to download libyuv on macOS)
