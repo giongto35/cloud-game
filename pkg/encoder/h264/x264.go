@@ -1,18 +1,32 @@
 package h264
 
+/*
+// See: [x264](https://www.videolan.org/developers/x264.html)
+#cgo !st pkg-config: x264
+#cgo st LDFLAGS: -l:libx264.a
+
+#include "stdint.h"
+#include "x264.h"
+#include <stdlib.h>
+*/
+import "C"
+
 import (
 	"fmt"
+	"runtime"
 	"unsafe"
 )
 
 type H264 struct {
-	ref *T
+	ref *C.x264_t
 
-	pnals   *Nal  // array of NALs
-	nnals   int32 // number of NALs
-	y       int32 // Y size
-	uv      int32 // U or V size
-	in, out *Picture
+	nal     *C.x264_nal_t // array of NALs
+	cNal    *C.int        // number of NALs
+	y       int           // Y size
+	uv      int           // U or V size
+	in, out *C.x264_picture_t
+
+	p runtime.Pinner
 }
 
 type Options struct {
@@ -31,10 +45,10 @@ type Options struct {
 }
 
 func NewEncoder(w, h int, th int, opts *Options) (encoder *H264, err error) {
-	libVersion := LibVersion()
+	ver := Version()
 
-	if libVersion < 150 {
-		return nil, fmt.Errorf("x264: the library version should be newer than v150, you have got version %v", libVersion)
+	if ver < 150 {
+		return nil, fmt.Errorf("x264: the library version should be newer than v150, you have got version %v", ver)
 	}
 
 	if opts == nil {
@@ -46,90 +60,107 @@ func NewEncoder(w, h int, th int, opts *Options) (encoder *H264, err error) {
 		}
 	}
 
-	param := Param{}
+	param := C.x264_param_t{}
+
 	if opts.Preset != "" && opts.Tune != "" {
-		if ParamDefaultPreset(&param, opts.Preset, opts.Tune) < 0 {
+		preset := C.CString(opts.Preset)
+		tune := C.CString(opts.Tune)
+		defer C.free(unsafe.Pointer(preset))
+		defer C.free(unsafe.Pointer(tune))
+		if C.x264_param_default_preset(&param, preset, tune) < 0 {
 			return nil, fmt.Errorf("x264: invalid preset/tune name")
 		}
 	} else {
-		ParamDefault(&param)
+		C.x264_param_default(&param)
 	}
 
 	if opts.Profile != "" {
-		if ParamApplyProfile(&param, opts.Profile) < 0 {
+		profile := C.CString(opts.Profile)
+		defer C.free(unsafe.Pointer(profile))
+		if C.x264_param_apply_profile(&param, profile) < 0 {
 			return nil, fmt.Errorf("x264: invalid profile name")
 		}
 	}
 
-	ww, hh := int32(w), int32(h)
-
-	param.IBitdepth = 8
-	if libVersion > 155 {
-		param.ICsp = CspI420
+	param.i_bitdepth = 8
+	if ver > 155 {
+		param.i_csp = C.X264_CSP_I420
 	} else {
-		param.ICsp = 1
+		param.i_csp = 1
 	}
-	param.IWidth = ww
-	param.IHeight = hh
-	param.ILogLevel = opts.LogLevel
-	param.ISyncLookahead = 0
-	param.IThreads = int32(th)
+	param.i_width = C.int(w)
+	param.i_height = C.int(h)
+	param.i_log_level = C.int(opts.LogLevel)
+	param.i_sync_lookahead = 0
+	param.i_threads = C.int(th)
 	if th != 1 {
-		param.BSlicedThreads = 1
+		param.b_sliced_threads = 1
 	}
-	param.Rc.IRcMethod = RcCrf
-	param.Rc.FRfConstant = float32(opts.Crf)
+	param.rc.i_rc_method = C.X264_RC_CRF
+	param.rc.f_rf_constant = C.float(opts.Crf)
 
 	encoder = &H264{
-		y:     ww * hh,
-		uv:    ww * hh / 4,
-		pnals: new(Nal),
-		out:   new(Picture),
-		in: &Picture{
-			Img: Image{ICsp: param.ICsp, IPlane: 3, IStride: [4]int32{0: ww, 1: ww >> 1, 2: ww >> 1}},
+		y:    w * h,
+		uv:   w * h / 4,
+		cNal: new(C.int),
+		nal:  new(C.x264_nal_t),
+		out:  new(C.x264_picture_t),
+		in: &C.x264_picture_t{
+			img: C.x264_image_t{
+				i_csp:    param.i_csp,
+				i_plane:  3,
+				i_stride: [4]C.int{0: C.int(w), 1: C.int(w >> 1), 2: C.int(w >> 1)},
+			},
 		},
+		ref: C.x264_encoder_open(&param),
 	}
 
-	if encoder.ref = EncoderOpen(&param); encoder.ref == nil {
+	if encoder.ref == nil {
 		err = fmt.Errorf("x264: cannot open the encoder")
 	}
 	return
 }
 
-func LibVersion() int { return int(Build) }
-
 func (e *H264) LoadBuf(yuv []byte) {
-	e.in.Img.Plane[0] = uintptr(unsafe.Pointer(&yuv[0]))
-	e.in.Img.Plane[1] = uintptr(unsafe.Pointer(&yuv[e.y]))
-	e.in.Img.Plane[2] = uintptr(unsafe.Pointer(&yuv[e.y+e.uv]))
+	e.in.img.plane[0] = (*C.uchar)(unsafe.Pointer(&yuv[0]))
+	e.in.img.plane[1] = (*C.uchar)(unsafe.Pointer(&yuv[e.y]))
+	e.in.img.plane[2] = (*C.uchar)(unsafe.Pointer(&yuv[e.y+e.uv]))
 }
 
-func (e *H264) Encode() (b []byte) {
-	e.in.IPts += 1
-	bytes := EncoderEncode(e.ref, &e.pnals, &e.nnals, e.in, e.out)
-	if bytes > 0 {
-		// we merge multiple NALs stored in **pnals into a single byte stream
-		// ret contains the total size of NALs in bytes, i.e. each e.pnals[...].PPayload * IPayload
-		b = unsafe.Slice((*byte)(e.pnals.PPayload), bytes)
-	}
-	return
+func (e *H264) Encode() []byte {
+	e.in.i_pts += 1
+
+	e.p.Pin(e.in.img.plane[0])
+	e.p.Pin(e.in.img.plane[1])
+	e.p.Pin(e.in.img.plane[2])
+
+	e.p.Pin(e.nal)
+	bytes := C.x264_encoder_encode(e.ref, &e.nal, e.cNal, e.in, e.out)
+	e.p.Unpin()
+
+	// we merge multiple NALs stored in **nal into a single byte stream
+	// ret contains the total size of NALs in bytes, i.e. each e.nal[...].p_payload * i_payload
+	return unsafe.Slice((*byte)(e.nal.p_payload), bytes)
 }
 
 func (e *H264) IntraRefresh() {
 	// !to implement
 }
 
-func (e *H264) Info() string { return fmt.Sprintf("x264: v%v", LibVersion()) }
+func (e *H264) Info() string { return fmt.Sprintf("x264: v%v", Version()) }
 
 func (e *H264) SetFlip(b bool) {
 	if b {
-		e.in.Img.ICsp |= CspVflip
+		e.in.img.i_csp |= C.X264_CSP_VFLIP
 	} else {
-		e.in.Img.ICsp &= ^CspVflip
+		e.in.img.i_csp &= ^C.X264_CSP_VFLIP
 	}
 }
 
 func (e *H264) Shutdown() error {
-	EncoderClose(e.ref)
+	C.x264_encoder_close(e.ref)
+	e.p.Unpin()
 	return nil
 }
+
+func Version() int { return int(C.X264_BUILD) }
