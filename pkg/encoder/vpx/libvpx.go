@@ -135,17 +135,13 @@ func NewEncoder(w, h int, opts *Options) (*Vpx, error) {
 	return &vpx, nil
 }
 
-func (vpx *Vpx) LoadBuf(yuv []byte) {
+// Encode encodes yuv image with the VPX8 encoder.
+// see: https://chromium.googlesource.com/webm/libvpx/+/master/examples/simple_encoder.c
+func (vpx *Vpx) Encode(yuv []byte) []byte {
 	C.vpx_img_read(&vpx.image, unsafe.Pointer(&yuv[0]))
 	if vpx.flipped {
 		C.vpx_img_flip(&vpx.image)
 	}
-}
-
-// Encode encodes yuv image with the VPX8 encoder.
-// see: https://chromium.googlesource.com/webm/libvpx/+/master/examples/simple_encoder.c
-func (vpx *Vpx) Encode() []byte {
-	var iter C.vpx_codec_iter_t
 
 	var flags C.int
 	if vpx.kfi > 0 && vpx.frameCount%vpx.kfi == 0 {
@@ -156,6 +152,7 @@ func (vpx *Vpx) Encode() []byte {
 	}
 	vpx.frameCount++
 
+	var iter C.vpx_codec_iter_t
 	fb := C.get_frame_buffer(&vpx.codecCtx, &iter)
 	if fb.ptr == nil {
 		return []byte{}

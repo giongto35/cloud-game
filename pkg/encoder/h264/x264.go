@@ -122,13 +122,11 @@ func NewEncoder(w, h int, th int, opts *Options) (encoder *H264, err error) {
 	return
 }
 
-func (e *H264) LoadBuf(yuv []byte) {
+func (e *H264) Encode(yuv []byte) []byte {
 	e.in.img.plane[0] = (*C.uchar)(unsafe.Pointer(&yuv[0]))
 	e.in.img.plane[1] = (*C.uchar)(unsafe.Pointer(&yuv[e.y]))
 	e.in.img.plane[2] = (*C.uchar)(unsafe.Pointer(&yuv[e.y+e.uv]))
-}
 
-func (e *H264) Encode() []byte {
 	e.in.i_pts += 1
 
 	e.p.Pin(e.in.img.plane[0])

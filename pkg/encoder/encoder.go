@@ -15,8 +15,7 @@ type (
 	InFrame  yuv.RawFrame
 	OutFrame []byte
 	Encoder  interface {
-		LoadBuf(input []byte)
-		Encode() []byte
+		Encode([]byte) []byte
 		IntraRefresh()
 		Info() string
 		SetFlip(bool)
@@ -75,10 +74,8 @@ func (v *Video) Encode(frame InFrame) OutFrame {
 	}
 
 	yCbCr := v.y.Process(yuv.RawFrame(frame), v.rot, v.pf)
-	v.codec.LoadBuf(yCbCr)
-	v.y.Put(&yCbCr)
-
-	if bytes := v.codec.Encode(); len(bytes) > 0 {
+	defer v.y.Put(&yCbCr)
+	if bytes := v.codec.Encode(yCbCr); len(bytes) > 0 {
 		return bytes
 	}
 	return nil
