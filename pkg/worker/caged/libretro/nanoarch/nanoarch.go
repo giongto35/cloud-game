@@ -713,8 +713,9 @@ func coreEnvironment(cmd C.unsigned, data unsafe.Pointer) C.bool {
 		setRotation((*(*uint)(data) % 4) * 90)
 		return true
 	case C.RETRO_ENVIRONMENT_GET_CAN_DUPE:
-		*(*C.bool)(data) = C.bool(true)
-		return true
+		// !to implement frame dup (nil) some time later
+		*(*C.bool)(data) = C.bool(false)
+		return false
 	case C.RETRO_ENVIRONMENT_GET_USERNAME:
 		*(**C.char)(data) = Nan0.cUserName
 		return true
