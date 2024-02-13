@@ -42,9 +42,20 @@ func (p *Peer) NewCall(vCodec, aCodec string, onICECandidate func(ice any)) (sdp
 	if err != nil {
 		return "", err
 	}
-	if _, err = p.conn.AddTrack(video); err != nil {
+	vs, err := p.conn.AddTrack(video)
+	if err != nil {
 		return "", err
 	}
+	// Read incoming RTCP packets
+	go func() {
+		rtcpBuf := make([]byte, 1500)
+		for {
+			_, _, rtcpErr := vs.Read(rtcpBuf)
+			if rtcpErr != nil {
+				return
+			}
+		}
+	}()
 	p.v = video
 	p.log.Debug().Msgf("Added [%s] track", video.Codec().MimeType)
 
@@ -53,9 +64,20 @@ func (p *Peer) NewCall(vCodec, aCodec string, onICECandidate func(ice any)) (sdp
 	if err != nil {
 		return "", err
 	}
-	if _, err = p.conn.AddTrack(audio); err != nil {
+	as, err := p.conn.AddTrack(audio)
+	if err != nil {
 		return "", err
 	}
+	// Read incoming RTCP packets
+	go func() {
+		rtcpBuf := make([]byte, 1500)
+		for {
+			_, _, rtcpErr := as.Read(rtcpBuf)
+			if rtcpErr != nil {
+				return
+			}
+		}
+	}()
 	p.log.Debug().Msgf("Added [%s] track", audio.Codec().MimeType)
 	p.a = audio
 
