@@ -12,6 +12,7 @@ package vpx
 #include <string.h>
 
 #define VP8_FOURCC 0x30385056
+#define VP9_FOURCC 0x30395056
 
 typedef struct VpxInterface {
   const char *const name;
@@ -42,7 +43,10 @@ FrameBuffer get_frame_buffer(vpx_codec_ctx_t *codec, vpx_codec_iter_t *iter) {
     return fb;
 }
 
-const VpxInterface vpx_encoders[] = {{ "vp8", VP8_FOURCC, &vpx_codec_vp8_cx }};
+const VpxInterface vpx_encoders[] = {
+	{ "vp8", VP8_FOURCC, &vpx_codec_vp8_cx },
+ 	{ "vp9", VP9_FOURCC, &vpx_codec_vp9_cx },
+};
 
 int vpx_img_plane_width(const vpx_image_t *img, int plane) {
 	if (plane > 0 && img->x_chroma_shift > 0)
@@ -85,6 +89,7 @@ type Vpx struct {
 	codecCtx   C.vpx_codec_ctx_t
 	kfi        C.int
 	flipped    bool
+	v          int
 }
 
 func (vpx *Vpx) SetFlip(b bool) { vpx.flipped = b }
@@ -96,8 +101,12 @@ type Options struct {
 	KeyframeInterval uint
 }
 
-func NewEncoder(w, h int, opts *Options) (*Vpx, error) {
-	encoder := &C.vpx_encoders[0]
+func NewEncoder(w, h int, th int, version int, opts *Options) (*Vpx, error) {
+	idx := 0
+	if version == 9 {
+		idx = 1
+	}
+	encoder := &C.vpx_encoders[idx]
 	if encoder == nil {
 		return nil, fmt.Errorf("couldn't get the encoder")
 	}
@@ -112,6 +121,7 @@ func NewEncoder(w, h int, opts *Options) (*Vpx, error) {
 	vpx := Vpx{
 		frameCount: C.int(0),
 		kfi:        C.int(opts.KeyframeInterval),
+		v:          version,
 	}
 
 	if C.vpx_img_alloc(&vpx.image, C.VPX_IMG_FMT_I420, C.uint(w), C.uint(h), 1) == nil {
@@ -125,8 +135,12 @@ func NewEncoder(w, h int, opts *Options) (*Vpx, error) {
 
 	cfg.g_w = C.uint(w)
 	cfg.g_h = C.uint(h)
+	if th != 0 {
+		cfg.g_threads = C.uint(th)
+	}
+	cfg.g_lag_in_frames = 0
 	cfg.rc_target_bitrate = C.uint(opts.Bitrate)
-	cfg.g_error_resilient = 1
+	cfg.g_error_resilient = C.VPX_ERROR_RESILIENT_DEFAULT
 
 	if C.call_vpx_codec_enc_init(&vpx.codecCtx, encoder, &cfg) != 0 {
 		return nil, fmt.Errorf("failed to initialize encoder")
@@ -160,7 +174,9 @@ func (vpx *Vpx) Encode(yuv []byte) []byte {
 	return C.GoBytes(fb.ptr, fb.size)
 }
 
-func (vpx *Vpx) Info() string { return fmt.Sprintf("vpx: %v", C.GoString(C.vpx_codec_version_str())) }
+func (vpx *Vpx) Info() string {
+	return fmt.Sprintf("vpx (%v): %v", vpx.v, C.GoString(C.vpx_codec_version_str()))
+}
 
 func (vpx *Vpx) IntraRefresh() {
 	// !to implement

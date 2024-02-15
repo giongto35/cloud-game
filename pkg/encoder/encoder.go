@@ -37,6 +37,7 @@ type VideoCodec string
 const (
 	H264 VideoCodec = "h264"
 	VP8  VideoCodec = "vp8"
+	VP9  VideoCodec = "vp9"
 	VPX  VideoCodec = "vpx"
 )
 
@@ -48,13 +49,18 @@ const (
 func NewVideoEncoder(w, h, dw, dh int, scale float64, conf config.Video, log *logger.Logger) (*Video, error) {
 	var enc Encoder
 	var err error
-	switch VideoCodec(conf.Codec) {
+	codec := VideoCodec(conf.Codec)
+	switch codec {
 	case H264:
 		opts := h264.Options(conf.H264)
 		enc, err = h264.NewEncoder(dw, dh, conf.Threads, &opts)
-	case VP8, VPX:
+	case VP8, VP9, VPX:
 		opts := vpx.Options(conf.Vpx)
-		enc, err = vpx.NewEncoder(dw, dh, &opts)
+		v := 8
+		if codec == VP9 {
+			v = 9
+		}
+		enc, err = vpx.NewEncoder(dw, dh, conf.Threads, v, &opts)
 	default:
 		err = fmt.Errorf("unsupported codec: %v", conf.Codec)
 	}
