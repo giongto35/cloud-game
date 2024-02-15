@@ -258,7 +258,7 @@ encoder:
     # so we keep the frame buffer roughly half of that size or 2 RTC packets per frame
     frame: 10
   video:
-    # h264, vpx (VP8)
+    # h264, vpx (vp8) or vp9
     codec: h264
     # Threaded encoder if supported, 0 - auto, 1 - nope, >1 - multi-threaded
     threads: 0

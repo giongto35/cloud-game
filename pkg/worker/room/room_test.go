@@ -110,13 +110,15 @@ func TestMain(m *testing.M) {
 
 func TestRoom(t *testing.T) {
 	tests := []testParams{
-		{game: alwas, codecs: []codec{encoder.H264}, frames: 300},
+		{game: alwas, codecs: []codec{encoder.H264, encoder.VP8, encoder.VP9}, frames: 300},
 	}
 
 	for _, test := range tests {
-		room := room(conf{codec: test.codecs[0], game: test.game})
-		room.WaitFrame(test.frames)
-		room.Close()
+		for _, codec := range test.codecs {
+			room := room(conf{codec: codec, game: test.game})
+			room.WaitFrame(test.frames)
+			room.Close()
+		}
 	}
 }
 
@@ -245,7 +247,7 @@ func room(cfg conf) testRoom {
 func BenchmarkRoom(b *testing.B) {
 	benches := []testParams{
 		// warm up
-		{system: "gba", game: sushi, codecs: []codec{encoder.VP8}, frames: 50},
+		{system: "gba", game: sushi, codecs: []codec{encoder.VP8, encoder.VP9}, frames: 50},
 		{system: "gba", game: sushi, codecs: []codec{encoder.VP8, encoder.H264}, frames: 100},
 		{system: "nes", game: alwas, codecs: []codec{encoder.VP8, encoder.H264}, frames: 100},
 	}

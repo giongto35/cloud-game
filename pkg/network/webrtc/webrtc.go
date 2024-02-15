@@ -160,6 +160,8 @@ func newTrack(id string, label string, codec string) (*webrtc.TrackLocalStaticSa
 			mime = webrtc.MimeTypeH264
 		case "vpx", "vp8":
 			mime = webrtc.MimeTypeVP8
+		case "vp9":
+			mime = webrtc.MimeTypeVP9
 		}
 	}
 	if mime == "" {
