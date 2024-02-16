@@ -149,6 +149,7 @@ const stream = (() => {
 
         const init = () => {
             options.mirrorMode = settings.loadOr(opts.MIRROR_SCREEN, 'none');
+            options.volume = settings.loadOr(opts.VOLUME, 50) / 100;
         }
 
         event.sub(SETTINGS_CHANGED, () => {

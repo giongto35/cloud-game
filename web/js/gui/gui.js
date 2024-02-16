@@ -147,6 +147,16 @@ const gui = (() => {
         el.classList.remove('hidden');
     }
 
+    const inputN = (key = '', cb = () => ({}), current = 0) => {
+        const el = _create();
+        const input = _create('input');
+        input.type = 'number';
+        input.value = current;
+        input.onchange = event => cb(key, event.target.value);
+        el.append(input);
+        return el;
+    }
+
     const hide = (el) => {
         el.classList.add('hidden');
     }
@@ -208,6 +218,7 @@ const gui = (() => {
         create: _create,
         fragment,
         hide,
+        inputN,
         panel,
         select,
         show,

@@ -15,7 +15,7 @@
  */
 const settings = (() => {
     // internal structure version
-    const revision = 1.2;
+    const revision = 1.3;
 
     // default settings
     // keep them for revert to defaults option
@@ -347,6 +347,13 @@ settings._renderrer = (() => {
     // the main display data holder element
     const data = document.getElementById('settings-data');
 
+    let sx, sy = 0;
+
+    data.addEventListener("scroll", event => {
+        sx = data.scrollTop;
+        sy = data.scrollLeft;
+    }, {passive: true});
+
     // a fast way to clear data holder.
     const clearData = () => {
         while (data.firstChild) data.removeChild(data.firstChild)
@@ -428,7 +435,11 @@ settings._renderrer = (() => {
      * @param newValue A new value to set.
      * @param oldValue An old value to use somehow if needed.
      */
-    const onChange = (key, newValue, oldValue) => settings.set(key, newValue);
+    const onChange = (key, newValue, oldValue) => {
+        settings.set(key, newValue);
+        data.scrollTop = sx;
+        data.scrollLeft = sy;
+    }
 
     const onKeyBindingChange = (key, oldValue) => {
         clearData();
@@ -466,6 +477,12 @@ settings._renderrer = (() => {
                     _option(data).withName('Video mirroring without smooth')
                         .add(gui.select(k, onChange, {values: ['mirror']}, value))
                         .build();
+                    break;
+                case opts.VOLUME:
+                    _option(data).withName('Volume (%)')
+                        .add(gui.inputN(k, onChange, value))
+                        .restartNeeded()
+                        .build()
                     break;
                 default:
                     _option(data).withName(k).add(value).build();
