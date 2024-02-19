@@ -31,6 +31,8 @@ const webrtc = (() => {
 
         connection.ondatachannel = e => {
             log.debug('[rtc] ondatachannel', e.channel.label)
+            e.channel.binaryType = "arraybuffer";
+
             dataChannel = e.channel;
             dataChannel.onopen = () => {
                 log.info('[rtc] the input channel has been opened');
