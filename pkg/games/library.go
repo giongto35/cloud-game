@@ -235,7 +235,7 @@ func (lib *library) set(games []GameMetadata) {
 }
 
 func (lib *library) isExtAllowed(path string) bool {
-	ext := filepath.Ext(path)
+	ext := strings.ToLower(filepath.Ext(path))
 	if ext == "" {
 		return false
 	}
@@ -246,7 +246,7 @@ func (lib *library) isExtAllowed(path string) bool {
 // getMetadata returns game info from a path
 func getMetadata(path string, basePath string) GameMetadata {
 	name := filepath.Base(path)
-	ext := filepath.Ext(name)
+	ext := strings.ToLower(filepath.Ext(name))
 	relPath, _ := filepath.Rel(basePath, path)
 
 	return GameMetadata{
