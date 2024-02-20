@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"io/fs"
 	"path/filepath"
+	"sort"
 	"strings"
 	"sync"
 	"time"
@@ -259,8 +260,17 @@ func getMetadata(path string, basePath string) GameMetadata {
 // dumpLibrary printouts the current library snapshot of games
 func (lib *library) dumpLibrary() {
 	var gameList strings.Builder
-	for _, game := range lib.games {
-		gameList.WriteString(fmt.Sprintf("    %5s   %s (%s)\n", game.System, game.Name, game.Path))
+
+	// oof
+	keys := make([]string, 0, len(lib.games))
+	for k := range lib.games {
+		keys = append(keys, k)
+	}
+	sort.Strings(keys)
+
+	for _, k := range keys {
+		game := lib.games[k]
+		gameList.WriteString(fmt.Sprintf("    %7s   %s (%s)\n", game.System, game.Name, game.Path))
 	}
 
 	lib.log.Debug().Msgf("Lib dump\n"+
