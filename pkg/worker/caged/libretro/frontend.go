@@ -261,10 +261,9 @@ func (f *Frontend) Start() {
 	defer f.mui.Unlock()
 
 	if f.HasSave() {
-		// advance 1 frame for Mupen save state
-		if f.nano.LibCo {
-			f.Tick()
-		}
+		// advance 1 frame for Mupen, DOSBox save states
+		// loading will work if autostart is selected for DOSBox apps
+		f.Tick()
 		if err := f.RestoreGameState(); err != nil {
 			f.log.Error().Err(err).Msg("couldn't load a save file")
 		}
