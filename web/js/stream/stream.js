@@ -18,7 +18,7 @@ const stream = (() => {
                 timerId: null,
                 w: 0,
                 h: 0,
-                aspect: 4/3
+                aspect: 4 / 3
             };
 
         const mute = (mute) => screen.muted = mute
@@ -88,21 +88,32 @@ const stream = (() => {
         screen.addEventListener('fullscreenchange', () => {
             const fullscreen = document.fullscreenElement
 
+            const w = window.screen.width ?? window.innerWidth;
+            const h = window.screen.height ?? window.innerHeight;
+
+            const ww = document.documentElement.innerWidth;
+            const hh = document.documentElement.innerHeight;
 
             screen.style.padding = '0'
             if (fullscreen) {
-                const dw = (window.innerWidth - fullscreen.clientHeight * state.aspect) / 2
+                const dw = (w - ww * state.aspect) / 2
                 screen.style.padding = `0 ${dw}px`
                 // chrome bug
                 setTimeout(() => {
-                    const dw = (window.innerHeight - fullscreen.clientHeight * state.aspect) / 2
+                    const dw = (h - hh * state.aspect) / 2
                     screen.style.padding = `0 ${dw}px`
                 }, 1)
+                makeFullscreen(true);
+            } else {
+                makeFullscreen(false);
             }
 
             // !to flipped
-
         })
+
+        const makeFullscreen = (make = false) => {
+            screen.classList.toggle('no-media-controls', make)
+        }
 
         const useCustomScreen = (use) => {
             if (use) {
@@ -170,9 +181,7 @@ const stream = (() => {
 
             const a2 = w / h
 
-            const attr = a.toFixed(6) !== a2.toFixed(6) ? 'fill' : fit
-            state.screen.style['object-fit'] = attr
-
+            state.screen.style['object-fit'] = a.toFixed(6) !== a2.toFixed(6) ? 'fill' : fit
             state.h = payload.h
             state.w = Math.floor(payload.h * payload.a)
             // payload.a > 0 && (state.aspect = payload.a)

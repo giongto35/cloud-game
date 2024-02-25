@@ -3,6 +3,12 @@
     src: url('/fonts/6809-Chargen.woff2');
 }
 
+
+.no-media-controls::-webkit-media-controls {
+    display: none !important;
+}
+
+
 html {
     /* force full size for Firefox */
     width: 100%;
