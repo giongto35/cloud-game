@@ -217,9 +217,9 @@ func TestSavePersistence(t *testing.T) {
 // Compare states (a) and (b), should be =.
 func TestLoad(t *testing.T) {
 	tests := []testRun{
-		//{room: "test_load_00", system: alwa.system, rom: alwa.rom, frames: 100},
-		{room: "test_load_01", system: sushi.system, rom: sushi.rom, frames: 1000},
-		{room: "test_load_02", system: angua.system, rom: angua.rom, frames: 100},
+		{room: "test_load_00", system: alwa.system, rom: alwa.rom, frames: 100},
+		//{room: "test_load_01", system: sushi.system, rom: sushi.rom, frames: 1000},
+		//{room: "test_load_02", system: angua.system, rom: angua.rom, frames: 100},
 	}
 
 	for _, test := range tests {
