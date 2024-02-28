@@ -263,11 +263,11 @@ func TestStateConcurrency(t *testing.T) {
 		seed int
 	}{
 		{
-			run:  testRun{room: "test_concurrency_00", system: sushi.system, rom: sushi.rom, frames: 120},
+			run:  testRun{room: "test_concurrency_00", system: alwa.system, rom: alwa.rom, frames: 120},
 			seed: 42,
 		},
 		{
-			run:  testRun{room: "test_concurrency_01", system: angua.system, rom: angua.rom, frames: 300},
+			run:  testRun{room: "test_concurrency_01", system: alwa.system, rom: alwa.rom, frames: 300},
 			seed: 42 + 42,
 		},
 	}
@@ -312,15 +312,6 @@ func TestStateConcurrency(t *testing.T) {
 					_, snapshot1 := mock.dumpState()
 					_ = mock.Load()
 					snapshot2, _ := mock.dumpState()
-
-					// Bug or feature?
-					// When you load a state from the file
-					// without immediate preceding save,
-					// it won't be in the loaded state
-					// even without calling retro_run.
-					// But if you pause the threads with a debugger
-					// and run the code step by step, then it will work as expected.
-					// Possible background emulation?
 
 					if snapshot1 != snapshot2 {
 						t.Errorf("States are inconsistent %v != %v on tick %v\n", snapshot1, snapshot2, i+1)
