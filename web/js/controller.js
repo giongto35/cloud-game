@@ -126,12 +126,6 @@
 
         stream.play()
 
-        // TODO get current game from the URL and not from the list?
-        // if we are opening a share link it will send the default game name to the server
-        // currently it's a game with the index 1
-        // on the server this game is ignored and the actual game will be extracted from the share link
-        // so there's no point in doing this and this' really confusing
-
         api.game.start(
             gameList.selected,
             room.getId(),
@@ -276,7 +270,7 @@
 
     const handleRecordingStatus = (data) => {
         if (data === 'ok') {
-            message.show(`Recording ${recording.isActive() ? 'on' : 'off'}`, true)
+            message.show(`Recording ${recording.isActive() ? 'on' : 'off'}`)
             if (recording.isActive()) {
                 recording.setIndicator(true)
             }
@@ -284,7 +278,7 @@
             message.show(`Recording failed ):`)
             recording.setIndicator(false)
         }
-        console.log("recording is ", recording.isActive())
+        log.debug("recording is ", recording.isActive())
     }
 
     const _default = {
