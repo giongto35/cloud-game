@@ -175,19 +175,22 @@ const stream = (() => {
         const fit = 'contain'
 
         event.sub(APP_VIDEO_CHANGED, (payload) => {
-            const {w, h, a} = payload
+            const {w, h, a, s} = payload
+
+            const scale = !s ? 1 : s;
+            const ww = w * scale;
+            const hh = h * scale;
 
             state.aspect = a
 
-            const a2 = w / h
+            const a2 = ww / hh
 
             state.screen.style['object-fit'] = a.toFixed(6) !== a2.toFixed(6) ? 'fill' : fit
-            state.h = payload.h
-            state.w = Math.floor(payload.h * payload.a)
-            // payload.a > 0 && (state.aspect = payload.a)
-            state.screen.setAttribute('width', payload.w)
-            state.screen.setAttribute('height', payload.h)
-            state.screen.style.aspectRatio = state.aspect
+            state.h = hh
+            state.w = Math.floor(hh * a)
+            state.screen.setAttribute('width', '' + ww)
+            state.screen.setAttribute('height', '' + hh)
+            state.screen.style.aspectRatio = '' + state.aspect
         })
 
         return {

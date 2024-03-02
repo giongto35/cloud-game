@@ -6,6 +6,7 @@ type App interface {
 	AspectEnabled() bool
 	Init() error
 	ViewportSize() (int, int)
+	Scale() float64
 	Start()
 	Close()
 

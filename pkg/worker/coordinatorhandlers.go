@@ -130,6 +130,7 @@ func (c *coordinator) HandleGameStart(rq api.StartGameRequest[com.Uid], w *Worke
 				W: m.VideoW,
 				H: m.VideoH,
 				A: app.AspectRatio(),
+				S: int(app.Scale()),
 			}})
 			if err != nil {
 				c.log.Error().Err(err).Msgf("wrap")
@@ -176,7 +177,7 @@ func (c *coordinator) HandleGameStart(rq api.StartGameRequest[com.Uid], w *Worke
 	response := api.StartGameResponse{Room: api.Room{Rid: r.Id()}, Record: w.conf.Recording.Enabled}
 	if r.App().AspectEnabled() {
 		ww, hh := r.App().ViewportSize()
-		response.AV = &api.AppVideoInfo{W: ww, H: hh, A: r.App().AspectRatio()}
+		response.AV = &api.AppVideoInfo{W: ww, H: hh, A: r.App().AspectRatio(), S: int(r.App().Scale())}
 	}
 
 	return api.Out{Payload: response}
