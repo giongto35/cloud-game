@@ -15,6 +15,7 @@ const stream = (() => {
             },
             state = {
                 screen: screen,
+                fullscreen: false,
                 timerId: null,
                 w: 0,
                 h: 0,
@@ -27,11 +28,7 @@ const stream = (() => {
             screen.play()
                 .then(() => log.info('Media can autoplay'))
                 .catch(error => {
-                    // Usually error happens when we autoplay unmuted video, browser requires manual play.
-                    // We already muted video and use separate audio encoding so it's fine now
-                    log.error('Media Failed to autoplay');
-                    log.error(error)
-                    // TODO: Consider workaround
+                    log.error('Media failed to play', error);
                 });
         }
 
@@ -86,7 +83,7 @@ const stream = (() => {
         }, false);
 
         screen.addEventListener('fullscreenchange', () => {
-            const fullscreen = document.fullscreenElement
+            state.fullscreen = !!document.fullscreenElement;
 
             const w = window.screen.width ?? window.innerWidth;
             const h = window.screen.height ?? window.innerHeight;
@@ -95,7 +92,7 @@ const stream = (() => {
             const hh = document.documentElement.innerHeight;
 
             screen.style.padding = '0'
-            if (fullscreen) {
+            if (state.fullscreen) {
                 const dw = (w - ww * state.aspect) / 2
                 screen.style.padding = `0 ${dw}px`
                 // chrome bug
