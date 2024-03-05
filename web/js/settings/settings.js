@@ -15,7 +15,7 @@
  */
 const settings = (() => {
     // internal structure version
-    const revision = 1.3;
+    const revision = 1.4;
 
     // default settings
     // keep them for revert to defaults option

@@ -125,12 +125,6 @@ func (c *coordinator) HandleRequests(w *Worker) chan struct{} {
 			} else {
 				out = c.HandleChangePlayer(*dat, w)
 			}
-		case api.ToggleMultitap:
-			if dat := api.Unwrap[api.ToggleMultitapRequest[com.Uid]](x.Payload); dat == nil {
-				err, out = api.ErrMalformed, api.EmptyPacket
-			} else {
-				c.HandleToggleMultitap(*dat, w)
-			}
 		case api.RecordGame:
 			if dat := api.Unwrap[api.RecordGameRequest[com.Uid]](x.Payload); dat == nil {
 				err, out = api.ErrMalformed, api.EmptyPacket

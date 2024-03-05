@@ -84,8 +84,6 @@ func (u *User) HandleRequests(info HasServerInfo, launcher games.Launcher, conf 
 				return api.ErrMalformed
 			}
 			u.HandleChangePlayer(*rq)
-		case api.ToggleMultitap:
-			u.HandleToggleMultitap()
 		case api.RecordGame:
 			if !conf.Recording.Enabled {
 				return api.ErrForbidden

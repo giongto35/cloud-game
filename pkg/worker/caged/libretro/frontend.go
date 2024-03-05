@@ -43,8 +43,6 @@ type Emulator interface {
 	HasSave() bool
 	// Close will be called when the game is done
 	Close()
-	// ToggleMultitap toggles multitap controller.
-	ToggleMultitap()
 	// Input passes input to the emulator
 	Input(player int, data []byte)
 	// Scale returns set video scale factor
@@ -159,8 +157,8 @@ func (f *Frontend) LoadCore(emu string) {
 	meta := nanoarch.Metadata{
 		AutoGlContext:   conf.AutoGlContext,
 		Hacks:           conf.Hacks,
-		HasMultitap:     conf.HasMultitap,
 		HasVFR:          conf.VFR,
+		Hid:             conf.Hid,
 		IsGlAllowed:     conf.IsGlAllowed,
 		LibPath:         conf.Lib,
 		Options:         conf.Options,
@@ -309,7 +307,6 @@ func (f *Frontend) SetSessionId(name string)      { f.storage.SetMainSaveName(na
 func (f *Frontend) SetDataCb(cb func([]byte))     { f.onData = cb }
 func (f *Frontend) SetVideoCb(ff func(app.Video)) { f.onVideo = ff }
 func (f *Frontend) Tick()                         { f.mu.Lock(); f.nano.Run(); f.mu.Unlock() }
-func (f *Frontend) ToggleMultitap()               { f.nano.ToggleMultitap() }
 func (f *Frontend) ViewportRecalculate()          { f.mu.Lock(); f.vw, f.vh = f.ViewportCalc(); f.mu.Unlock() }
 func (f *Frontend) ViewportSize() (int, int)      { return f.vw, f.vh }
 

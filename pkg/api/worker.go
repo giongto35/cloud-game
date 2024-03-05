@@ -45,9 +45,6 @@ type (
 	TerminateSessionRequest[T Id] struct {
 		Stateful[T]
 	}
-	ToggleMultitapRequest[T Id] struct {
-		StatefulRoom[T]
-	}
 	WebrtcAnswerRequest[T Id] struct {
 		Stateful[T]
 		Sdp string `json:"sdp"`

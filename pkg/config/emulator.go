@@ -44,8 +44,8 @@ type LibretroCoreConfig struct {
 	CoreAspectRatio bool
 	Folder          string
 	Hacks           []string
-	HasMultitap     bool
 	Height          int
+	Hid             map[int][]int
 	IsGlAllowed     bool
 	Lib             string
 	Options         map[string]string

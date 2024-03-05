@@ -35,7 +35,6 @@ const keyboard = (() => {
         KeyH: KEY.HELP,
         Backslash: KEY.STATS,
         Digit9: KEY.SETTINGS,
-        KeyM: KEY.MULTITAP,
         KeyT: KEY.DTOGGLE
     });
 

@@ -393,9 +393,6 @@
                         case KEY.PAD4:
                             updatePlayerIndex(3);
                             break;
-                        case KEY.MULTITAP:
-                            api.game.toggleMultitap();
-                            break;
                         case KEY.QUIT:
                             input.poll.disable();
                             api.game.quit(room.getId());

@@ -98,8 +98,6 @@ func (u *User) HandleChangePlayer(rq api.ChangePlayerUserRequest) {
 	u.Notify(api.ChangePlayer, rq)
 }
 
-func (u *User) HandleToggleMultitap() { u.w.ToggleMultitap(u.Id()) }
-
 func (u *User) HandleRecordGame(rq api.RecordGameRequest[com.Uid]) {
 	if u.w == nil {
 		return

@@ -43,11 +43,7 @@ type Nanoarch struct {
 	Handlers
 	LastFrameTime int64
 	LibCo         bool
-	multitap      struct {
-		supported bool
-		enabled   bool
-		value     C.unsigned
-	}
+	meta          Metadata
 	options       *map[string]string
 	reserved      chan struct{} // limits concurrent use
 	Rot           uint
@@ -96,10 +92,10 @@ type Metadata struct {
 	IsGlAllowed     bool
 	UsesLibCo       bool
 	AutoGlContext   bool
-	HasMultitap     bool
 	HasVFR          bool
 	Options         map[string]string
 	Hacks           []string
+	Hid             map[int][]int
 	CoreAspectRatio bool
 }
 
@@ -159,6 +155,7 @@ func (n *Nanoarch) SetVideoDebounce(t time.Duration) { n.limiter = NewLimit(t) }
 
 func (n *Nanoarch) CoreLoad(meta Metadata) {
 	var err error
+	n.meta = meta
 	n.LibCo = meta.UsesLibCo
 	n.vfr = meta.HasVFR
 	n.Aspect = meta.CoreAspectRatio
@@ -169,10 +166,6 @@ func (n *Nanoarch) CoreLoad(meta Metadata) {
 	Nan0.hackSkipHwContextDestroy = meta.HasHack("skip_hw_context_destroy")
 
 	n.options = &meta.Options
-
-	n.multitap.supported = meta.HasMultitap
-	n.multitap.enabled = false
-	n.multitap.value = 0
 
 	filePath := meta.LibPath
 	if ar, err := arch.Guess(); err == nil {
@@ -298,32 +291,22 @@ func (n *Nanoarch) LoadGame(path string) error {
 	}
 
 	// set default controller types on all ports
+	// needed for nestopia
 	for i := 0; i < MaxPort; i++ {
 		C.bridge_retro_set_controller_port_device(retroSetControllerPortDevice, C.uint(i), C.RETRO_DEVICE_JOYPAD)
+	}
+
+	// map custom devices to ports
+	for k, v := range n.meta.Hid {
+		for _, device := range v {
+			C.bridge_retro_set_controller_port_device(retroSetControllerPortDevice, C.uint(k), C.unsigned(device))
+			n.log.Debug().Msgf("set custom port-device: %v:%v", k, device)
+		}
 	}
 
 	n.LastFrameTime = time.Now().UnixNano()
 
 	return nil
-}
-
-// ToggleMultitap toggles multitap controller for cores.
-//
-// Official SNES games only support a single multitap device
-// Most require it to be plugged in player 2 port and Snes9X requires it
-// to be "plugged" after the game is loaded.
-// Control this from the browser since player 2 will stop working in some games
-// if multitap is "plugged" in.
-func (n *Nanoarch) ToggleMultitap() {
-	if !n.multitap.supported || n.multitap.value == 0 {
-		return
-	}
-	mt := n.multitap.value
-	if n.multitap.enabled {
-		mt = C.RETRO_DEVICE_JOYPAD
-	}
-	C.bridge_retro_set_controller_port_device(retroSetControllerPortDevice, 1, mt)
-	n.multitap.enabled = !n.multitap.enabled
 }
 
 func (n *Nanoarch) Shutdown() {
@@ -775,23 +758,30 @@ func coreEnvironment(cmd C.unsigned, data unsafe.Pointer) C.bool {
 		}
 		return false
 	case C.RETRO_ENVIRONMENT_SET_CONTROLLER_INFO:
-		// !to rewrite
-		if !Nan0.multitap.supported {
+		if Nan0.log.GetLevel() > logger.DebugLevel {
 			return false
 		}
-		info := (*[100]C.struct_retro_controller_info)(data)
-		var i C.unsigned
-		for i = 0; unsafe.Pointer(info[i].types) != nil; i++ {
-			var j C.unsigned
-			types := (*[100]C.struct_retro_controller_description)(unsafe.Pointer(info[i].types))
-			for j = 0; j < info[i].num_types; j++ {
-				if C.GoString(types[j].desc) == "Multitap" {
-					Nan0.multitap.value = types[j].id
-					return true
-				}
+
+		info := (*[64]C.struct_retro_controller_info)(data)
+		for c, controller := range info {
+			tp := unsafe.Pointer(controller.types)
+			if tp == nil {
+				break
 			}
+			cInfo := strings.Builder{}
+			cInfo.WriteString(fmt.Sprintf("Controller [%v] ", c))
+			cd := (*[32]C.struct_retro_controller_description)(tp)
+			delim := ", "
+			n := int(controller.num_types)
+			for i := 0; i < n; i++ {
+				if i == n-1 {
+					delim = ""
+				}
+				cInfo.WriteString(fmt.Sprintf("%v: %v%s", cd[i].id, C.GoString(cd[i].desc), delim))
+			}
+			Nan0.log.Debug().Msgf("%v", cInfo.String())
 		}
-		return false
+		return true
 	case C.RETRO_ENVIRONMENT_GET_CLEAR_ALL_THREAD_WAITS_CB:
 		C.bridge_clear_all_thread_waits_cb(data)
 		return true

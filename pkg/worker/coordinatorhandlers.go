@@ -234,15 +234,6 @@ func (c *coordinator) HandleChangePlayer(rq api.ChangePlayerRequest[com.Uid], w 
 	return api.Out{Payload: rq.Index}
 }
 
-func (c *coordinator) HandleToggleMultitap(rq api.ToggleMultitapRequest[com.Uid], w *Worker) api.Out {
-	r := w.router.FindRoom(rq.Rid)
-	if r == nil {
-		return api.ErrPacket
-	}
-	room.WithEmulator(r.App()).ToggleMultitap()
-	return api.OkPacket
-}
-
 func (c *coordinator) HandleRecordGame(rq api.RecordGameRequest[com.Uid], w *Worker) api.Out {
 	if !w.conf.Recording.Enabled {
 		return api.ErrPacket

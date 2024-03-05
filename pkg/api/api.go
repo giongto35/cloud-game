@@ -77,7 +77,6 @@ const (
 	SaveGame         PT = 106
 	LoadGame         PT = 107
 	ChangePlayer     PT = 108
-	ToggleMultitap   PT = 109
 	RecordGame       PT = 110
 	GetWorkerList    PT = 111
 	ErrNoFreeSlots   PT = 112
@@ -112,8 +111,6 @@ func (p PT) String() string {
 		return "SaveGame"
 	case LoadGame:
 		return "LoadGame"
-	case ToggleMultitap:
-		return "ToggleMultitap"
 	case RecordGame:
 		return "RecordGame"
 	case GetWorkerList:

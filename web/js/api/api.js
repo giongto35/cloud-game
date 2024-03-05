@@ -17,7 +17,6 @@ const api = (() => {
         GAME_SAVE: 106,
         GAME_LOAD: 107,
         GAME_SET_PLAYER_INDEX: 108,
-        GAME_TOGGLE_MULTITAP: 109,
         GAME_RECORDING: 110,
         GET_WORKER_LIST: 111,
         GAME_ERROR_NO_FREE_SLOTS: 112,
@@ -58,7 +57,6 @@ const api = (() => {
                     record: record,
                     record_user: recordUser,
                 }),
-                toggleMultitap: () => packet(endpoints.GAME_TOGGLE_MULTITAP),
                 toggleRecording: (active = false, userName = '') =>
                     packet(endpoints.GAME_RECORDING, {
                         active: active,

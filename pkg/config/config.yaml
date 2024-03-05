@@ -180,8 +180,12 @@ emulator:
       #   - ratio (float)
       #   - isGlAllowed (bool)
       #   - usesLibCo (bool)
-      #   - hasMultitap (bool)
+      #   - hasMultitap (bool) -- (removed)
       #   - coreAspectRatio (bool) -- correct the aspect ratio on the client with the info from the core.
+      #   - hid (map[int][]int)
+      #       A list of device IDs to bind to the input ports.
+      #       Some cores allow binding multiple devices to a single port (DosBox), but typically,
+      #       you should bind just one device to one port.
       #   - vfr (bool)
       #    (experimental)
       #       Enable variable frame rate only for cores that can't produce a constant frame rate.
@@ -226,7 +230,11 @@ emulator:
         snes:
           lib: snes9x_libretro
           roms: [ "smc", "sfc", "swc", "fig", "bs" ]
-          hasMultitap: true
+          hid:
+            # set the 2nd port to RETRO_DEVICE_JOYPAD_MULTITAP ((1<<8) | 1) as SNES9x requires it
+            # in order to support up to 5-player games
+            # see: https://nintendo.fandom.com/wiki/Super_Multitap
+            1: 257
         n64:
           lib: mupen64plus_next_libretro
           roms: [ "n64", "v64", "z64" ]

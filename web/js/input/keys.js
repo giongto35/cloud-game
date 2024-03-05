@@ -29,7 +29,6 @@ const KEY = (() => {
         R2: 'r2',
         L3: 'l3',
         R3: 'r3',
-        MULTITAP: 'multitap',
         REC: 'rec',
     }
 })();
