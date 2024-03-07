@@ -180,9 +180,9 @@ const stream = (() => {
 
             state.aspect = a
 
-            const a2 = ww / hh
+            const a2 = (ww / hh).toFixed(6)
 
-            state.screen.style['object-fit'] = a.toFixed(6) !== a2.toFixed(6) ? 'fill' : fit
+            state.screen.style['object-fit'] = a > 1 && a.toFixed(6) !== a2 ? 'fill' : fit
             state.h = hh
             state.w = Math.floor(hh * a)
             state.screen.setAttribute('width', '' + ww)
