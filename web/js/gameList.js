@@ -30,7 +30,7 @@ const gameList = (() => {
                     i > list.length ? i = list.length - 1 :
                         (i % list.length + list.length) % list.length
             },
-            set: (data = []) => list = data.sort((a, b) => a.title > b.title ? 1 : -1),
+            set: (data = []) => list = data.sort((a, b) => a.title.toLowerCase() > b.title.toLowerCase() ? 1 : -1),
             empty: () => list.length === 0
         }
     })()
