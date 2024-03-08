@@ -97,6 +97,8 @@ func (v *Video) SetPixFormat(f uint32) {
 	}
 
 	switch f {
+	case 0:
+		v.pf = yuv.PixFmt(yuv.FourccRgb0)
 	case 1:
 		v.pf = yuv.PixFmt(yuv.FourccArgb)
 	case 2:

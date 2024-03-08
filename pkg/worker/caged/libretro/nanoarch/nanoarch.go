@@ -378,8 +378,6 @@ func videoSetPixelFormat(format uint32) (C.bool, error) {
 		if err := graphics.SetPixelFormat(graphics.UnsignedShort5551); err != nil {
 			return false, fmt.Errorf("unknown pixel format %v", Nan0.Video.PixFmt)
 		}
-		// format is not implemented
-		return false, fmt.Errorf("unsupported pixel type %v converter", format)
 	case C.RETRO_PIXEL_FORMAT_XRGB8888:
 		Nan0.Video.PixFmt = RGBA8888Rev
 		if err := graphics.SetPixelFormat(graphics.UnsignedInt8888Rev); err != nil {

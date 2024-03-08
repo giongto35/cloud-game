@@ -25,6 +25,7 @@ type PixFmt uint32
 const FourccRgbp = libyuv.FourccRgbp
 const FourccArgb = libyuv.FourccArgb
 const FourccAbgr = libyuv.FourccAbgr
+const FourccRgb0 = libyuv.FourccRgb0
 
 func NewYuvConv(w, h int, scale float64) Conv {
 	if scale < 1 {
@@ -47,7 +48,7 @@ func (c *Conv) Process(frame RawFrame, rot uint, pf PixFmt) []byte {
 	}
 
 	stride := frame.Stride >> 2
-	if pf == PixFmt(libyuv.FourccRgbp) {
+	if pf == PixFmt(libyuv.FourccRgbp) || pf == PixFmt(libyuv.FourccRgb0) {
 		stride = frame.Stride >> 1
 	}
 

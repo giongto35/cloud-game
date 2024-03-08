@@ -35,6 +35,7 @@ enum FourCC {
   FOURCC_I420 = FOURCC('I', '4', '2', '0'),
   FOURCC_ARGB = FOURCC('A', 'R', 'G', 'B'),
   FOURCC_ABGR = FOURCC('A', 'B', 'G', 'R'),
+  FOURCC_RGBO = FOURCC('R', 'G', 'B', 'O'),
   FOURCC_RGBP = FOURCC('R', 'G', 'B', 'P'),  // rgb565 LE.
   FOURCC_ANY = -1,
 };
@@ -102,6 +103,7 @@ import "fmt"
 const FourccRgbp uint32 = C.FOURCC_RGBP
 const FourccArgb uint32 = C.FOURCC_ARGB
 const FourccAbgr uint32 = C.FOURCC_ABGR
+const FourccRgb0 uint32 = C.FOURCC_RGBO
 
 func Y420(src []byte, dst []byte, _, h, stride int, dw, dh int, rot uint, pix uint32, cx, cy int) {
 	cw := (dw + 1) / 2
