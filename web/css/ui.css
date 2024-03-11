@@ -3,67 +3,6 @@
     display: none !important;
 }
 
-.modal-window {
-    position: fixed;
-
-    top: 0;
-    right: 0;
-    bottom: 0;
-    left: 0;
-
-    background-color: rgba(0, 0, 0, 0.7);
-
-    z-index: 9999;
-    visibility: hidden;
-    opacity: 0;
-    pointer-events: none;
-
-    -webkit-transition: all 0.2s;
-    transition: all 0.2s;
-}
-
-.modal-visible {
-    visibility: visible;
-    opacity: 1;
-    pointer-events: auto;
-}
-
-
-.modal-window > div {
-    width: 42vw;
-    position: absolute;
-    top: 50%;
-    left: 50%;
-    -webkit-transform: translate(-50%, -50%);
-    transform: translate(-50%, -50%);
-    padding: 2em;
-    background: #ffffff;
-}
-
-.modal-window header {
-    font-weight: bold;
-}
-
-.modal-window h1 {
-    font-size: 150%;
-    margin: 0 0 15px;
-}
-
-.semi-button {
-    cursor: pointer;
-}
-
-
-#app-settings {
-    font-family: monospace;
-}
-
-#settings-data {
-    overflow-y: auto;
-    height: 50vh;
-    padding: 1em 0;
-}
-
 .container {
     display: grid;
     -webkit-box-pack: center;
@@ -71,10 +10,6 @@
     -webkit-box-align: center;
     align-items: center;
     height: 100vh;
-}
-
-.modal-window div:not(:last-of-type) {
-    margin-bottom: 15px;
 }
 
 .btn2 {
@@ -86,6 +21,10 @@
     color: #2c3234;
 
     height: 1rem;
+}
+
+.settings {
+    padding: 0 1em 1em 1em;
 }
 
 .settings__controls {
@@ -104,9 +43,23 @@
     grid-template-rows: auto;
 }
 
-.settings__option-name {
+.settings__option-title {
     background-color: beige;
-    padding: 1em;
+    margin-top: .5em;
+    padding: .5em;
+}
+
+.settings__option-name {
+}
+
+.settings__option-desc {
+    font-size: 61%;
+    color: #444;
+    font-family: monospace;
+}
+
+.settings__option-value {
+    padding: .5em;
 }
 
 .restart-needed-asterisk:after {
@@ -114,13 +67,29 @@
     color: red;
 }
 
-.settings__option-value {
+.restart-needed-asterisk-b:before {
+    content: '*';
+    color: red;
+}
 
+.settings__option-value select, .settings__option-value input {
+    font-family: '6809', monospace;
+    width: 6em;
+    font-size: 90%;
+}
+
+.settings__option-value option {
+    font-size: 150%;
+}
+
+.settings__info {
+    font-size: 80%;
 }
 
 .keyboard-bindings .settings__option-value {
     display: grid;
     grid-template-columns: 25% 25% auto auto;
+    row-gap: 5px;
 }
 
 .binding-element {
@@ -129,18 +98,16 @@
     align-items: center;
 }
 
-/* Server list styling */
-#servers {
-    background-color: white;
-    font-size: 12px;
-
+.binding-element button {
     font-family: '6809', monospace;
-
-    z-index: 1;
-    position: relative;
-
-    cursor: default;
+    min-width: 6em;
 }
+
+.binding-element div {
+    font-size: 80%;
+}
+
+/* Server list styling */
 
 .server-list div {
     display: grid;
@@ -169,6 +136,16 @@
     display: flex;
     flex-grow: 1;
     flex-direction: column;
+
+    background-color: white;
+    font-size: 12px;
+
+    font-family: '6809', monospace;
+
+    z-index: 1;
+    position: relative;
+
+    cursor: default;
 }
 
 .panel__header {
@@ -209,7 +186,7 @@
     background-color: #ededed;
 
     padding: 2px 4px;
-    width: 0.7rem;
+    min-width: 0.7rem;
     text-align: center;
 }
 
@@ -222,6 +199,10 @@
 
 .panel__button.bold {
     font-weight: bold;
+}
+
+.panel__button_separator {
+    width: .5em;
 }
 
 
