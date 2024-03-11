@@ -15,7 +15,7 @@
  */
 const settings = (() => {
     // internal structure version
-    const revision = 1.4;
+    const revision = 1.5;
 
     // default settings
     // keep them for revert to defaults option
@@ -46,17 +46,7 @@ const settings = (() => {
 
     const exportFileName = `cloud-game.settings.v${revision}.txt`;
 
-    // ui references
-    const ui = document.getElementById('app-settings'),
-        closeEl = document.getElementById('settings__controls__close'),
-        loadEl = document.getElementById('settings__controls__load'),
-        saveEl = document.getElementById('settings__controls__save'),
-        resetEl = document.getElementById('settings__controls__reset');
-
-    this._renderrer = this._renderrer || {
-        render: () => {
-        }
-    };
+    let _renderer = {render: () => ({})};
 
     const getStore = () => store.settings;
 
@@ -64,8 +54,7 @@ const settings = (() => {
      * The NullObject provider if everything else fails.
      */
     const voidProvider = (store_ = {settings: {}}) => {
-        const nil = () => {
-        }
+        const nil = () => ({})
 
         return {
             get: key => store_.settings[key],
@@ -107,7 +96,7 @@ const settings = (() => {
 
         const get = key => JSON.parse(localStorage.getItem(key));
 
-        const set = (key, value) => save();
+        const set = () => save();
 
         const remove = () => save();
 
@@ -161,7 +150,6 @@ const settings = (() => {
         document.body.appendChild(el);
         el.click();
         document.body.removeChild(el);
-        el = undefined;
     }
 
     const init = () => {
@@ -256,13 +244,40 @@ const settings = (() => {
         provider.remove(key, subKey);
     }
 
-    const _render = () => settings._renderrer.render()
+    const panel = gui.panel(document.getElementById('settings'), '> OPTIONS', 'settings', null, [
+            {caption: 'Export', handler: () => _export(), title: 'Save',},
+            {caption: 'Import', handler: () => _fileReader.read(onFileLoad), title: 'Load',},
+            {
+                caption: 'Reset',
+                handler: () => {
+                    if (window.confirm("Are you sure want to reset your settings?")) {
+                        _reset();
+                        event.pub(SETTINGS_CHANGED);
+                    }
+                },
+                title: 'Reset',
+            },
+            {}
+        ],
+        (state) => {
+            if (state) return;
 
-    /**
-     * Settings modal window toggle handler.
-     * @returns {boolean} True in case if it's opened.
-     */
-    const toggle = () => ui.classList.toggle('modal-visible') && !_render();
+            event.pub(SETTINGS_CLOSED);
+            // to make sure it's disabled, but it's a tad verbose
+            event.pub(KEYBOARD_TOGGLE_FILTER_MODE, {mode: true});
+        })
+
+    panel.toggle(false);
+
+    const _render = () => {
+        _renderer.data = panel.contentEl;
+        _renderer.render()
+    }
+
+    const toggle = () => {
+        panel.toggle(true);
+        _render()
+    }
 
     function _getType(value) {
         if (value === undefined) return option.undefined
@@ -273,15 +288,8 @@ const settings = (() => {
         else return option.undefined;
     }
 
-    /**
-     * File reader submodule (FileReader API).
-     *
-     * @type {{read: read}} Tries to read a file.
-     * @private
-     */
     const _fileReader = (() => {
-        let callback_ = () => {
-        }
+        let callback_ = () => ({})
 
         const el = document.createElement('input');
         const reader = new FileReader();
@@ -309,21 +317,6 @@ const settings = (() => {
 
     event.sub(SETTINGS_CHANGED, _render);
 
-    // internal init section
-    closeEl.addEventListener('click', () => {
-        event.pub(SETTINGS_CLOSED);
-        // to make sure it's disabled, but it's a tad verbose
-        event.pub(KEYBOARD_TOGGLE_FILTER_MODE, {mode: true});
-    });
-    saveEl.addEventListener('click', () => _export());
-    loadEl.addEventListener('click', () => _fileReader.read(onFileLoad));
-    resetEl.addEventListener('click', () => {
-        if (window.confirm("Are you sure want to reset your settings?")) {
-            _reset();
-            event.pub(SETTINGS_CHANGED);
-        }
-    });
-
     return {
         init,
         loadOr,
@@ -335,24 +328,31 @@ const settings = (() => {
         export: _export,
         ui: {
             toggle,
+        },
+        set renderer(fn) {
+            _renderer = fn;
         }
     }
 })(document, event, JSON, localStorage, log, window);
 
 // hardcoded ui stuff
-settings._renderrer = (() => {
-    // options to ignore (i.e. ignored = {'_version': 1})
-    const ignored = {};
+settings.renderer = (() => {
+    // don't show these options (i.e. ignored = {'_version': 1})
+    const ignored = {'_version': 1};
 
     // the main display data holder element
-    const data = document.getElementById('settings-data');
+    let data = null;
 
-    let sx, sy = 0;
-
-    data.addEventListener("scroll", event => {
-        sx = data.scrollTop;
-        sy = data.scrollLeft;
-    }, {passive: true});
+    const scrollState = ((sx = 0, sy = 0, el) => ({
+        track(_el) {
+            el = _el
+            el.addEventListener("scroll", () => ({scrollTop: sx, scrollLeft: sy} = el), {passive: true})
+        },
+        restore() {
+            el.scrollTop = sx
+            el.scrollLeft = sy
+        }
+    }))()
 
     // a fast way to clear data holder.
     const clearData = () => {
@@ -363,9 +363,11 @@ settings._renderrer = (() => {
         const wrapperEl = document.createElement('div');
         wrapperEl.classList.add('settings__option');
 
+        const titleEl = document.createElement('div');
+        titleEl.classList.add('settings__option-title');
+        wrapperEl.append(titleEl);
+
         const nameEl = document.createElement('div');
-        nameEl.classList.add('settings__option-name');
-        wrapperEl.append(nameEl);
 
         const valueEl = document.createElement('div');
         valueEl.classList.add('settings__option-value');
@@ -373,15 +375,23 @@ settings._renderrer = (() => {
 
         return {
             withName: function (name = '') {
+                if (name === '') return this;
+                nameEl.classList.add('settings__option-name');
                 nameEl.textContent = name;
+                titleEl.append(nameEl);
                 return this;
             },
             withClass: function (name = '') {
                 wrapperEl.classList.add(name);
                 return this;
             },
-            readOnly: function () {
-                // reserved
+            withDescription(text = '') {
+                if (text === '') return this;
+                const descEl = document.createElement('div');
+                descEl.classList.add('settings__option-desc');
+                descEl.textContent = text;
+                titleEl.append(descEl);
+                return this;
             },
             restartNeeded: function () {
                 nameEl.classList.add('restart-needed-asterisk');
@@ -408,11 +418,7 @@ settings._renderrer = (() => {
             }
         }
 
-        // !to check leaks
-        if (handler) {
-            handler.unsub();
-            handler = undefined;
-        }
+        handler?.unsub();
 
         event.pub(KEYBOARD_TOGGLE_FILTER_MODE);
         event.pub(SETTINGS_CHANGED);
@@ -433,12 +439,10 @@ settings._renderrer = (() => {
      *
      * @param key The name (id) of an option.
      * @param newValue A new value to set.
-     * @param oldValue An old value to use somehow if needed.
      */
-    const onChange = (key, newValue, oldValue) => {
+    const onChange = (key, newValue) => {
         settings.set(key, newValue);
-        data.scrollTop = sx;
-        data.scrollLeft = sy;
+        scrollState.restore(data);
     }
 
     const onKeyBindingChange = (key, oldValue) => {
@@ -457,7 +461,7 @@ settings._renderrer = (() => {
             const value = _settings[k];
             switch (k) {
                 case opts._VERSION:
-                    _option(data).withName('Format version').add(value).build();
+                    _option(data).withName('Options format version').add(value).build();
                     break;
                 case opts.LOG_LEVEL:
                     _option(data).withName('Log level')
@@ -474,8 +478,9 @@ settings._renderrer = (() => {
                         .build();
                     break;
                 case opts.MIRROR_SCREEN:
-                    _option(data).withName('Video mirroring without smooth')
-                        .add(gui.select(k, onChange, {values: ['mirror']}, value))
+                    _option(data).withName('Video mirroring')
+                        .add(gui.select(k, onChange, {values: ['mirror'], labels: []}, value))
+                        .withDescription('Disables video image smoothing by rendering the video on a canvas (much more demanding on the CPU/GPU)')
                         .build();
                     break;
                 case opts.VOLUME:
@@ -488,9 +493,25 @@ settings._renderrer = (() => {
                     _option(data).withName(k).add(value).build();
             }
         }
+
+        data.append(
+            gui.create('br'),
+            gui.create('div', (el) => {
+                el.classList.add('settings__info', 'restart-needed-asterisk-b');
+                el.innerText = ' -- applied after page reload'
+            }),
+            gui.create('div', (el) => {
+                el.classList.add('settings__info');
+                el.innerText = `Options format version: ${_settings?._version}`;
+            })
+        );
     }
 
     return {
         render,
+        set data(el) {
+            data = el;
+            scrollState.track(el)
+        }
     }
-})(document, log, opts, settings);
+})(document, gui, log, opts, settings);

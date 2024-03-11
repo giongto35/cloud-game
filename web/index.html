@@ -15,8 +15,8 @@
 
     <link rel="icon" href="data:,">
 
-    <link href="css/main.css?5" rel="stylesheet">
-    <link href="css/ui.css?v=1" rel="stylesheet">
+    <link href="css/main.css?v=6" rel="stylesheet">
+    <link href="css/ui.css?v=2" rel="stylesheet">
     <title>Cloud Retro</title>
 </head>
 <body>
@@ -46,6 +46,7 @@
     </div>
 
     <div id="servers"></div>
+    <div id="settings"></div>
 
     <div id="guide-txt">
         <b>Arrows</b> (move), <b>ZXCVAS;'./</b> (game ABXYL1-L3R1-R3), <b>1/2</b> (1st/2nd player), <b>Shift/Enter/K/L</b> (select/start/save/load), <b>F</b> (fullscreen), <b>share</b> (copy the link to the clipboard)
@@ -94,21 +95,6 @@
     <div id="btn-rec" class="btn" value="rec"></div>
     {{end}}
 </div>
-<div id="app-settings" class="modal-window">
-    <div>
-        <div class="settings__controls">
-            <span title="Save" id="settings__controls__save" class="semi-button">↑</span>
-            <span title="Load" id="settings__controls__load" class="semi-button">↓</span>
-            <span title="Reset" id="settings__controls__reset" class="semi-button">⟲</span>
-            <span title="Close" id="settings__controls__close" class="semi-button">X</span>
-        </div>
-        <h1>Options</h1>
-        <div id="settings-data"></div>
-        <div>
-            * -- applied after application restart
-        </div>
-    </div>
-</div>
 <div class="source">
     <span id="v">69ff8ae</span>
     <a rel="noopener noreferrer" target="_blank" href="https://github.com/giongto35/cloud-game">
@@ -116,7 +102,7 @@
     </a>
 </div>
 
-<script src="js/gui/gui.js?v=1"></script>
+<script src="js/gui/gui.js?v=2"></script>
 <script src="js/utils.js?v1"></script>
 <script src="js/gui/message.js?v=2"></script>
 <script src="js/log.js?v=5"></script>

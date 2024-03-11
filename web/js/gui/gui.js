@@ -26,8 +26,7 @@ const gui = (() => {
         return el;
     }
 
-    const select = (key = '', callback = function () {
-    }, values = {values: [], labels: []}, current = '') => {
+    const select = (key = '', callback = () => ({}), values = {values: [], labels: []}, current = '') => {
         const el = _create();
         const select = _create('select');
         select.onchange = event => {
@@ -45,6 +44,7 @@ const gui = (() => {
 
     const panel = (root, title = '', cc = '', content, buttons = [], onToggle) => {
         const state = {
+            br: null,
             shown: false,
             loading: false,
             title: title,
@@ -70,6 +70,10 @@ const gui = (() => {
             el.classList.add('panel__header__controls');
 
             buttons.forEach((b => el.append(_create('span', (el) => {
+                if (Object.keys(b).length === 0) {
+                    el.classList.add('panel__button_separator');
+                    return
+                }
                 el.classList.add('panel__button');
                 if (b.cl) b.cl.forEach(class_ => el.classList.add(class_));
                 if (b.title) el.title = b.title;
@@ -99,17 +103,19 @@ const gui = (() => {
 
         function toggle(show) {
             state.shown = show;
-            if (onToggle) {
-                onToggle(state.shown, _root)
-            }
-            if (state.shown) {
-                gui.show(_root);
-            } else {
-                gui.hide(_root);
-            }
+
+            // hack not transparent jpeg corners :_;
+            show ? _root.parentElement.style.borderRadius = '0px' :
+                state.br ? _root.parentElement.style.borderRadius = state.br :
+                    state.br = window.getComputedStyle(_root.parentElement).borderRadius
+
+            onToggle && onToggle(state.shown, _root)
+
+            state.shown ? gui.show(_root) : gui.hide(_root)
         }
 
         return {
+            contentEl: _content,
             isHidden: () => !state.shown,
             setContent,
             setLoad,
