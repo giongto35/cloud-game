@@ -11,5 +11,6 @@ const opts = Object.freeze({
     LOG_LEVEL: 'log.level',
     INPUT_KEYBOARD_MAP: 'input.keyboard.map',
     MIRROR_SCREEN: 'mirror.screen',
-    VOLUME: 'volume'
+    VOLUME: 'volume',
+    FORCE_FULLSCREEN: 'force.fullscreen'
 });

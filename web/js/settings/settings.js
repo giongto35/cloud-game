@@ -15,7 +15,7 @@
  */
 const settings = (() => {
     // internal structure version
-    const revision = 1.5;
+    const revision = 1.51;
 
     // default settings
     // keep them for revert to defaults option
@@ -480,13 +480,21 @@ settings.renderer = (() => {
                 case opts.MIRROR_SCREEN:
                     _option(data).withName('Video mirroring')
                         .add(gui.select(k, onChange, {values: ['mirror'], labels: []}, value))
-                        .withDescription('Disables video image smoothing by rendering the video on a canvas (much more demanding on the CPU/GPU)')
+                        .withDescription('Disables video image smoothing by rendering the video on a canvas (much more demanding for browser)')
                         .build();
                     break;
                 case opts.VOLUME:
                     _option(data).withName('Volume (%)')
                         .add(gui.inputN(k, onChange, value))
                         .restartNeeded()
+                        .build()
+                    break;
+                case opts.FORCE_FULLSCREEN:
+                    _option(data).withName('Force fullscreen')
+                        .withDescription(
+                            'Whether games should open in full-screen mode after starting up (excluding mobile devices)'
+                        )
+                        .add(gui.checkbox(k, onChange, value, 'Enbabled', 'settings__option-checkbox'))
                         .build()
                     break;
                 default:
