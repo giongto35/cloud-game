@@ -88,7 +88,7 @@ const gameList = (() => {
 
         let onTransitionEnd = () => ({})
 
-        rootEl.addEventListener('transitionend', () => onTransitionEnd())
+        //rootEl.addEventListener('transitionend', () => onTransitionEnd())
 
         let items = []
 
