@@ -74,8 +74,11 @@
 
 .settings__option-value select, .settings__option-value input {
     font-family: '6809', monospace;
-    width: 6em;
     font-size: 90%;
+}
+
+.settings__option-value input:not([type='checkbox']) {
+    width: 6em;
 }
 
 .settings__option-value option {
@@ -88,8 +91,13 @@
 
 .keyboard-bindings .settings__option-value {
     display: grid;
-    grid-template-columns: 25% 25% auto auto;
+    grid-template-columns: 20% 20% 20% 20% auto;
     row-gap: 5px;
+}
+
+.settings__option-checkbox label {
+    display: inline-flex;
+    align-items: center;
 }
 
 .binding-element {

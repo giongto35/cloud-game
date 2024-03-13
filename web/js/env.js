@@ -108,8 +108,7 @@ const env = (() => {
     return {
         getOs: getOS,
         getBrowser: getBrowser,
-        // Check mobile type because different mobile can accept different video encoder.
-        isMobileDevice: () => (typeof window.orientation !== 'undefined') || (navigator.userAgent.indexOf('IEMobile') !== -1),
+        isMobileDevice: () => /Mobi|Android|iPhone/i.test(navigator.userAgent),
         display: () => ({
             isPortrait: isPortrait,
             toggleFullscreen: toggleFullscreen,

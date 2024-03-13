@@ -138,6 +138,7 @@
         input.poll.disable();
         gui.hide(menuScreen);
         stream.toggle(true);
+        stream.forceFullscreenMaybe();
         gui.show(keyButtons[KEY.SAVE]);
         gui.show(keyButtons[KEY.LOAD]);
         // end clear

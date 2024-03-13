@@ -42,6 +42,36 @@ const gui = (() => {
         return el;
     }
 
+    const checkbox = (id, cb = () => ({}), checked = false, label = '', cc = '') => {
+        const el = _create();
+        cc !== '' && el.classList.add(cc);
+
+        let parent = el;
+
+        if (label) {
+            const _label = _create('label', (el) => {
+                el.setAttribute('htmlFor', id);
+            })
+            _label.innerText = label;
+            el.append(_label)
+            parent = _label;
+        }
+
+        const input = _create('input', (el) => {
+            el.setAttribute('id', id);
+            el.setAttribute('name', id);
+            el.setAttribute('type', 'checkbox');
+            el.onclick = ((e) => {
+                checked = e.target.checked
+                cb(id, checked)
+            })
+            checked && el.setAttribute('checked', '');
+        });
+        parent.prepend(input);
+
+        return el;
+    }
+
     const panel = (root, title = '', cc = '', content, buttons = [], onToggle) => {
         const state = {
             br: null,
@@ -221,6 +251,7 @@ const gui = (() => {
             fadeInOut,
         },
         binding,
+        checkbox,
         create: _create,
         fragment,
         hide,

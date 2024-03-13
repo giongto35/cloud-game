@@ -12,6 +12,7 @@ const stream = (() => {
                 poster: '/img/screen_loading.gif',
                 mirrorMode: null,
                 mirrorUpdateRate: 1 / 60,
+                forceFullscreen: true,
             },
             state = {
                 screen: screen,
@@ -112,6 +113,12 @@ const stream = (() => {
             screen.classList.toggle('no-media-controls', make)
         }
 
+        const forceFullscreenMaybe = () => {
+            const touchMode = env.isMobileDevice();
+            log.debug('touch check', touchMode)
+            !touchMode && options.forceFullscreen && toggleFullscreen();
+        }
+
         const useCustomScreen = (use) => {
             if (use) {
                 if (screen.paused || screen.ended) return;
@@ -158,13 +165,19 @@ const stream = (() => {
         const init = () => {
             options.mirrorMode = settings.loadOr(opts.MIRROR_SCREEN, 'none');
             options.volume = settings.loadOr(opts.VOLUME, 50) / 100;
+            options.forceFullscreen = settings.loadOr(opts.FORCE_FULLSCREEN, false);
         }
 
         event.sub(SETTINGS_CHANGED, () => {
-            const newValue = settings.get()[opts.MIRROR_SCREEN];
+            const s = settings.get();
+            const newValue = s[opts.MIRROR_SCREEN];
             if (newValue !== options.mirrorMode) {
                 useCustomScreen(newValue === 'mirror');
                 options.mirrorMode = newValue;
+            }
+            const newValue2 = s[opts.FORCE_FULLSCREEN];
+            if (newValue2 !== options.forceFullscreen) {
+                options.forceFullscreen = newValue2;
             }
         });
 
@@ -196,6 +209,7 @@ const stream = (() => {
             play: stream,
             toggle,
             useCustomScreen,
+            forceFullscreenMaybe,
             init
         }
     }
