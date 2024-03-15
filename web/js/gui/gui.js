@@ -131,7 +131,7 @@ const gui = (() => {
             _title.innerText = state.loading ? `${state.title}...` : state.title;
         }
 
-        function toggle(show) {
+        function toggle(show = true) {
             state.shown = show;
 
             // hack not transparent jpeg corners :_;
@@ -142,6 +142,7 @@ const gui = (() => {
             onToggle && onToggle(state.shown, _root)
 
             state.shown ? gui.show(_root) : gui.hide(_root)
+            return state.shown;
         }
 
         return {

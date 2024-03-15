@@ -244,6 +244,13 @@ const settings = (() => {
         provider.remove(key, subKey);
     }
 
+
+    const _render = () => {
+        _renderer.data = panel.contentEl;
+        _renderer.render()
+    }
+
+
     const panel = gui.panel(document.getElementById('settings'), '> OPTIONS', 'settings', null, [
             {caption: 'Export', handler: () => _export(), title: 'Save',},
             {caption: 'Import', handler: () => _fileReader.read(onFileLoad), title: 'Load',},
@@ -259,25 +266,25 @@ const settings = (() => {
             },
             {}
         ],
-        (state) => {
-            if (state) return;
+        (show) => {
+            if (show) {
+                _render();
+                return;
+            }
 
-            event.pub(SETTINGS_CLOSED);
             // to make sure it's disabled, but it's a tad verbose
             event.pub(KEYBOARD_TOGGLE_FILTER_MODE, {mode: true});
         })
 
     panel.toggle(false);
 
-    const _render = () => {
-        _renderer.data = panel.contentEl;
-        _renderer.render()
-    }
-
-    const toggle = () => {
-        panel.toggle(true);
-        _render()
-    }
+    const toggle = (() => {
+        let x = false;
+        return () => {
+            x = !x;
+            panel.toggle(x);
+        }
+    })();
 
     function _getType(value) {
         if (value === undefined) return option.undefined

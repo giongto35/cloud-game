@@ -97,7 +97,6 @@ const STATS_TOGGLE = 'statsToggle';
 const HELP_OVERLAY_TOGGLED = 'helpOverlayToggled';
 
 const SETTINGS_CHANGED = 'settingsChanged';
-const SETTINGS_CLOSED = 'settingsClosed';
 
 const RECORDING_TOGGLED = 'recordingToggle'
 const RECORDING_STATUS_CHANGED = 'recordingStatusChanged'

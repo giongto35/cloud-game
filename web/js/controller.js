@@ -303,8 +303,7 @@
                 name: 'settings',
                 keyRelease: key => {
                     if (key === KEY.SETTINGS) {
-                        const isSettingsOpened = settings.ui.toggle();
-                        if (!isSettingsOpened) setState(lastState);
+                        !settings.ui.toggle() && setState(lastState)
                     }
                 },
                 menuReady: showMenuScreen
@@ -452,9 +451,6 @@
     event.sub(KEY_PRESSED, onKeyPress);
     event.sub(KEY_RELEASED, onKeyRelease);
     event.sub(SETTINGS_CHANGED, () => message.show('Settings have been updated'));
-    event.sub(SETTINGS_CLOSED, () => {
-        state.keyRelease(KEY.SETTINGS);
-    });
     event.sub(AXIS_CHANGED, onAxisChanged);
     event.sub(CONTROLLER_UPDATED, data => webrtc.input(data));
     // recording
