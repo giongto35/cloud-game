@@ -74,14 +74,18 @@ const gui = (() => {
 
     const panel = (root, title = '', cc = '', content, buttons = [], onToggle) => {
         const state = {
-            br: null,
             shown: false,
             loading: false,
             title: title,
         }
 
+        const tHandlers = [];
+        onToggle && tHandlers.push(onToggle);
+
         const _root = root || _create('div');
         _root.classList.add('panel');
+        gui.hide(_root);
+
         const header = _create('div', (el) => el.classList.add('panel__header'));
         const _content = _create('div', (el) => {
             if (cc) {
@@ -131,23 +135,21 @@ const gui = (() => {
             _title.innerText = state.loading ? `${state.title}...` : state.title;
         }
 
-        function toggle(show = true) {
-            state.shown = show;
-
-            // hack not transparent jpeg corners :_;
-            show ? _root.parentElement.style.borderRadius = '0px' :
-                state.br ? _root.parentElement.style.borderRadius = state.br :
-                    state.br = window.getComputedStyle(_root.parentElement).borderRadius
-
-            onToggle && onToggle(state.shown, _root)
-
-            state.shown ? gui.show(_root) : gui.hide(_root)
-            return state.shown;
-        }
+        const toggle = (() => {
+            let br = window.getComputedStyle(_root.parentElement).borderRadius;
+            return (force) => {
+                state.shown = force !== undefined ? force : !state.shown;
+                // hack for not transparent jpeg corners :_;
+                _root.parentElement.style.borderRadius = state.shown ? '0px' : br;
+                tHandlers.forEach(h => h?.(state.shown, _root));
+                state.shown ? gui.show(_root) : gui.hide(_root)
+            }
+        })()
 
         return {
             contentEl: _content,
             isHidden: () => !state.shown,
+            onToggle: (fn) => tHandlers.push(fn),
             setContent,
             setLoad,
             toggle,

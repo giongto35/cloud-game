@@ -301,11 +301,10 @@
                 ..._default,
                 _uber: true,
                 name: 'settings',
-                keyRelease: key => {
-                    if (key === KEY.SETTINGS) {
-                        !settings.ui.toggle() && setState(lastState)
-                    }
-                },
+                keyRelease: (() => {
+                    settings.ui.onToggle = (o) => !o && setState(lastState);
+                    return (key) => key === KEY.SETTINGS && settings.ui.toggle()
+                })(),
                 menuReady: showMenuScreen
             },
 

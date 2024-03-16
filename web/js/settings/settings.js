@@ -276,16 +276,6 @@ const settings = (() => {
             event.pub(KEYBOARD_TOGGLE_FILTER_MODE, {mode: true});
         })
 
-    panel.toggle(false);
-
-    const toggle = (() => {
-        let x = false;
-        return () => {
-            x = !x;
-            panel.toggle(x);
-        }
-    })();
-
     function _getType(value) {
         if (value === undefined) return option.undefined
         else if (Array.isArray(value)) return option.list
@@ -334,7 +324,10 @@ const settings = (() => {
         import: _import,
         export: _export,
         ui: {
-            toggle,
+            set onToggle(fn) {
+                panel.onToggle(fn);
+            },
+            toggle: () => panel.toggle(),
         },
         set renderer(fn) {
             _renderer = fn;
@@ -501,7 +494,7 @@ settings.renderer = (() => {
                         .withDescription(
                             'Whether games should open in full-screen mode after starting up (excluding mobile devices)'
                         )
-                        .add(gui.checkbox(k, onChange, value, 'Enbabled', 'settings__option-checkbox'))
+                        .add(gui.checkbox(k, onChange, value, 'Enabled', 'settings__option-checkbox'))
                         .build()
                     break;
                 default:
