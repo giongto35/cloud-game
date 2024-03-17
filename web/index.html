@@ -15,7 +15,7 @@
 
     <link rel="icon" href="data:,">
 
-    <link href="css/main.css?v=6" rel="stylesheet">
+    <link href="css/main.css?v=3" rel="stylesheet">
     <link href="css/ui.css?v=3" rel="stylesheet">
     <title>Cloud Retro</title>
 </head>
@@ -49,7 +49,9 @@
     <div id="settings"></div>
 
     <div id="guide-txt">
-        <b>Arrows</b> (move), <b>ZXCVAS;'./</b> (game ABXYL1-L3R1-R3), <b>1/2</b> (1st/2nd player), <b>Shift/Enter/K/L</b> (select/start/save/load), <b>F</b> (fullscreen), <b>share</b> (copy the link to the clipboard)
+        <b>Arrows</b> (move), <b>ZXCVAS;'./</b> (game ABXYL1-L3R1-R3), <b>1/2</b> (1st/2nd player),
+        <b>Shift/Enter/K/L</b> (select/start/save/load), <b>F</b> (fullscreen), <b>share</b> (copy the link to the
+        clipboard)
     </div>
     <div id="btn-join" class="btn big" value="join"></div>
     <div id="slider-playeridx" class="slidecontainer">
@@ -102,32 +104,23 @@
     </a>
 </div>
 
-<script src="js/gui/gui.js?v=3"></script>
-<script src="js/utils.js?v1"></script>
-<script src="js/gui/message.js?v=4"></script>
-<script src="js/log.js?v=5"></script>
-<script src="js/event/event.js?v=6"></script>
-<script src="js/input/keys.js?v=3"></script>
-<script src="js/settings/opts.js?v=3"></script>
-<script src="js/settings/settings.js?v=8"></script>
-<script src="js/env.js?v=6"></script>
-<script src="js/input/input.js?v=3"></script>
-<script src="js/gameList.js?v=5"></script>
-<script src="js/stream/stream.js?v=8"></script>
-<script src="js/room.js?v=3"></script>
-<script src="js/network/ajax.js?v=3"></script>
-<script src="js/network/socket.js?v=4"></script>
-<script src="js/network/webrtc.js?v=4"></script>
-<script src="js/recording.js?v=1"></script>
-<script src="js/api/api.js?v=3"></script>
-<script src="js/workerManager.js?v=1"></script>
-<script src="js/stats/stats.js?v=1"></script>
-<script src="js/controller.js?v=13"></script>
-<script src="js/input/keyboard.js?v=6"></script>
-<script src="js/input/touch.js?v=3"></script>
-<script src="js/input/joystick.js?v=3"></script>
+<script type="importmap">
+    {
+      "imports": {
+        "api": "./js/api.js?v=3",
+        "env": "./js/env.js?v=3",
+        "event": "./js/event.js?v=3",
+        "gui": "./js/gui.js?v=3",
+        "input": "./js/input/input.js?v=3",
+        "log": "./js/log.js?v=3",
+        "network": "./js/network/network.js?v=3",
+        "settings": "./js/settings.js?v=3",
+        "utils": "./js/utils.js?v=3"
+      }
+    }
+</script>
 
-<script src="js/init.js?v=5"></script>
+<script type="module" src="js/app.js?v=3"></script>
 
 {{if .Analytics.Inject}}
 <script async src="https://www.googletagmanager.com/gtag/js?id={{.Analytics.Gtag}}"></script>
