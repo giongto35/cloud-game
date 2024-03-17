@@ -92,6 +92,9 @@ func index(conf config.CoordinatorConfig, log *logger.Logger) httpx.Handler {
 	if conf.Coordinator.Debug {
 		log.Info().Msgf("Using auto-reloading index.html")
 		return httpx.HandlerFunc(func(w httpx.ResponseWriter, r *httpx.Request) {
+			if conf.Coordinator.Server.CacheControl != "" {
+				w.Header().Add("Cache-Control", conf.Coordinator.Server.CacheControl)
+			}
 			if r.URL.Path == "/" || strings.HasSuffix(r.URL.Path, "/index.html") {
 				tpl := template.Must(template.ParseFiles(indexHTML))
 				handler(tpl, w, r)
@@ -102,6 +105,9 @@ func index(conf config.CoordinatorConfig, log *logger.Logger) httpx.Handler {
 	}
 
 	return httpx.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if conf.Coordinator.Server.CacheControl != "" {
+			w.Header().Add("Cache-Control", conf.Coordinator.Server.CacheControl)
+		}
 		if r.URL.Path == "/" || strings.HasSuffix(r.URL.Path, "/index.html") {
 			handler(indexTpl, w, r)
 			return
