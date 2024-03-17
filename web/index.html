@@ -24,10 +24,10 @@
     <div class="app-button" id="w" title="Workers">W</div>
 
     <div id="circle-pad-holder">
-        <div id="btn-up" class="dpad" value="up"></div>
-        <div id="btn-down" class="dpad" value="down"></div>
-        <div id="btn-left" class="dpad" value="left"></div>
-        <div id="btn-right" class="dpad" value="right"></div>
+        <div id="btn-up" class="dpad" data-key="up"></div>
+        <div id="btn-down" class="dpad" data-key="down"></div>
+        <div id="btn-left" class="dpad" data-key="left"></div>
+        <div id="btn-right" class="dpad" data-key="right"></div>
         <div id="circle-pad"></div>
     </div>
 
@@ -53,31 +53,30 @@
         <b>Shift/Enter/K/L</b> (select/start/save/load), <b>F</b> (fullscreen), <b>share</b> (copy the link to the
         clipboard)
     </div>
-    <div id="btn-join" class="btn big" value="join"></div>
+    <div id="btn-join" class="btn big" data-key="join"></div>
     <div id="slider-playeridx" class="slidecontainer">
         <span>player choice</span>
-        <input type="range" min="1" max="4" value="1" class="slider" id="playeridx" onkeydown="event.preventDefault()">
+        <input type="range" aria-label="" min="1" max="4" value="1" class="slider" id="playeridx">
     </div>
-    <div id="btn-quit" class="btn big" value="quit"></div>
+    <div id="btn-quit" class="btn big" data-key="quit"></div>
 
     <div id="controls-right">
-        <div id="btn-load" class="btn big hidden" value="load"></div>
-        <div id="btn-save" class="btn big hidden" value="save"></div>
-        <div id="btn-select" class="btn big" value="select"></div>
-        <div id="btn-start" class="btn big" value="start"></div>
+        <div id="btn-load" class="btn big hidden" data-key="load"></div>
+        <div id="btn-save" class="btn big hidden" data-key="save"></div>
+        <div id="btn-select" class="btn big" data-key="select"></div>
+        <div id="btn-start" class="btn big" data-key="start"></div>
 
         <div id="color-button-holder">
-            <div id="btn-a" class="btn" value="a"></div>
-            <div id="btn-b" class="btn" value="b"></div>
-            <div id="btn-x" class="btn" value="x"></div>
-            <div id="btn-y" class="btn" value="y"></div>
+            <div id="btn-a" class="btn" data-key="a"></div>
+            <div id="btn-b" class="btn" data-key="b"></div>
+            <div id="btn-x" class="btn" data-key="x"></div>
+            <div id="btn-y" class="btn" data-key="y"></div>
         </div>
     </div>
 
-    <div id="btn-settings" class="btn" value="settings"></div>
+    <div id="btn-settings" class="btn" data-key="settings"></div>
 
-    <!-- TODO: remove -->
-    <input id="room-txt" type="text" placeholder="room id..." disabled>
+    <input id="room-txt" type="text" aria-label="" placeholder="room id..." disabled>
 
     <label class="dpad-toggle-label" title="D-pad toggle">
         <input type="checkbox" id="dpad-toggle" checked>
@@ -90,11 +89,11 @@
         <div id="help-overlay-background"></div>
         <div id="help-overlay-detail"></div>
     </div>
-    <div id="btn-help" class="btn" value="help"></div>
+    <div id="btn-help" class="btn" data-key="help"></div>
     {{if .Recording.Enabled}}
     <input id="user-name" type="text" data-lpignore="true" spellcheck="false" placeholder="user"
-           class="record-user">
-    <div id="btn-rec" class="btn" value="rec"></div>
+           class="record-user" aria-label="">
+    <div id="btn-rec" class="btn" data-key="rec"></div>
     {{end}}
 </div>
 <div class="source">

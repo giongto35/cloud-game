@@ -34,6 +34,8 @@ dpadToggle.addEventListener('change', (e) => {
     pub(DPAD_TOGGLE, {checked: e.target.checked});
 });
 
+const getKey = (el) => el.dataset.key
+
 let dpadMode = true;
 const deadZone = 0.1;
 
@@ -157,17 +159,17 @@ function handleVpadJoystickMove(event) {
 const _handleButton = (key, state) => checkVpadState(key, state)
 
 function handleButtonDown() {
-    _handleButton(this.getAttribute('value'), true);
+    _handleButton(getKey(this), true);
 }
 
 function handleButtonUp() {
-    _handleButton(this.getAttribute('value'), false);
+    _handleButton(getKey(this), false);
 }
 
 function handleButtonClick() {
-    _handleButton(this.getAttribute('value'), true);
+    _handleButton(getKey(this), true);
     setTimeout(() => {
-        _handleButton(this.getAttribute('value'), false);
+        _handleButton(getKey(this), false);
     }, 30);
 }
 
@@ -286,6 +288,9 @@ playerSlider.addEventListener('oninput', handlePlayerSlider);
 playerSlider.addEventListener('onchange', handlePlayerSlider);
 playerSlider.addEventListener('click', handlePlayerSlider);
 playerSlider.addEventListener('touchend', handlePlayerSlider);
+playerSlider.onkeydown = (e) => {
+    e.preventDefault();
+}
 
 // Bind events for menu
 // TODO change this flow
@@ -308,7 +313,7 @@ export const touch = {
     init: () => {
         // add buttons into the state 🤦
         Array.from(document.querySelectorAll('.btn,.btn-big')).forEach((el) => {
-            vpadState[el.getAttribute('value')] = false;
+            vpadState[getKey(el)] = false;
         });
 
         window.addEventListener('mousemove', handleWindowMove);
