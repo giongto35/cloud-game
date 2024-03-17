@@ -30,9 +30,10 @@ type Monitoring struct {
 func (c *Monitoring) IsEnabled() bool { return c.MetricEnabled || c.ProfilingEnabled }
 
 type Server struct {
-	Address string
-	Https   bool
-	Tls     struct {
+	Address      string
+	CacheControl string
+	Https        bool
+	Tls          struct {
 		Address   string
 		Domain    string
 		HttpsKey  string

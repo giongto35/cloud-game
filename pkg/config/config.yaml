@@ -59,6 +59,7 @@ coordinator:
   # HTTP(S) server config
   server:
     address: :8000
+    cacheControl: "max-age=259200, must-revalidate"
     https: false
     # Letsencrypt or self cert config
     tls:
