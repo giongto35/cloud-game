@@ -1,12 +1,14 @@
 import {
     pub,
     sub,
-    KEYBOARD_TOGGLE_FILTER_MODE,
     AXIS_CHANGED,
     DPAD_TOGGLE,
     KEY_PRESSED,
     KEY_RELEASED,
-    KEYBOARD_KEY_PRESSED
+    KEYBOARD_KEY_PRESSED,
+    KEYBOARD_KEY_DOWN,
+    KEYBOARD_KEY_UP,
+    KEYBOARD_TOGGLE_FILTER_MODE,
 } from 'event';
 import {KEY} from 'input';
 import {log} from 'log'
@@ -47,11 +49,16 @@ const defaultMap = Object.freeze({
 });
 
 let keyMap = {};
+// special mode for changing button bindings in the options
 let isKeysFilteredMode = true;
+// if the browser supports Keyboard Lock API (Firefox does not)
+let hasKeyboardLock = ('keyboard' in navigator) && ('lock' in navigator.keyboard)
+
+let locked = false
 
 const remap = (map = {}) => {
     settings.set(opts.INPUT_KEYBOARD_MAP, map);
-    log.info('Keyboard keys have been remapped')
+    log.debug('Keyboard keys have been remapped')
 }
 
 sub(KEYBOARD_TOGGLE_FILTER_MODE, data => {
@@ -88,9 +95,16 @@ function onDpadToggle(checked) {
     }
 }
 
+const lock = async (lock) => {
+    locked = lock
+    if (hasKeyboardLock) {
+        lock ? await navigator.keyboard.lock() : navigator.keyboard.unlock()
+    }
+    // if the browser doesn't support keyboard lock, it will be emulated
+}
+
 const onKey = (code, evt, state) => {
     const key = keyMap[code]
-    if (key === undefined) return
 
     if (dpadState[key] !== undefined) {
         dpadState[key] = state
@@ -103,7 +117,7 @@ const onKey = (code, evt, state) => {
             return
         }
     }
-    pub(evt, {key: key})
+    pub(evt, {key: key, code: code})
 }
 
 sub(DPAD_TOGGLE, (data) => onDpadToggle(data.checked));
@@ -115,28 +129,35 @@ export const keyboard = {
     init: () => {
         keyMap = settings.loadOr(opts.INPUT_KEYBOARD_MAP, defaultMap);
         const body = document.body;
-        // !to use prevent default as everyone
+
         body.addEventListener('keyup', e => {
-            e.stopPropagation();
-            if (isKeysFilteredMode) {
-                onKey(e.code, KEY_RELEASED, false)
-            } else {
-                pub(KEYBOARD_KEY_PRESSED, {key: e.code});
+            e.stopPropagation()
+            !hasKeyboardLock && locked && e.preventDefault()
+
+            let lock = locked
+            // hack with Esc up when outside of lock
+            if (e.code === 'Escape') {
+                lock = true
             }
-        }, false);
+
+            isKeysFilteredMode ?
+                (lock ? pub(KEYBOARD_KEY_UP, e) : onKey(e.code, KEY_RELEASED, false))
+                : pub(KEYBOARD_KEY_PRESSED, {key: e.code})
+        }, false)
 
         body.addEventListener('keydown', e => {
-            e.stopPropagation();
-            if (isKeysFilteredMode) {
-                onKey(e.code, KEY_PRESSED, true)
-            } else {
-                pub(KEYBOARD_KEY_PRESSED, {key: e.code});
-            }
-        });
+            e.stopPropagation()
+            !hasKeyboardLock && locked && e.preventDefault()
 
-        log.info('[input] keyboard has been initialized');
+            isKeysFilteredMode ?
+                (locked ? pub(KEYBOARD_KEY_DOWN, e) : onKey(e.code, KEY_PRESSED, true)) :
+                pub(KEYBOARD_KEY_PRESSED, {key: e.code})
+        })
+
+        log.info('[input] keyboard has been initialized')
     },
     settings: {
         remap
-    }
+    },
+    lock,
 }

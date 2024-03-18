@@ -32,11 +32,18 @@
     </div>
 
     <div id="screen">
-        <div id="stats-overlay"></div>
         <video id="stream" class="game-screen" hidden muted preload="none"></video>
+        <canvas id="mirror-stream" class="game-screen" hidden></canvas>
         <div id="menu-screen">
             <div id="menu-container"></div>
             <div id="menu-item-choice" class="hidden"></div>
+        </div>
+        <div class="screen__footer hover hidden">
+            <div>cloudretro</div>
+            <div class="app-button fs kbm-button-fs hidden" id="kbm2"
+                 title="Switch from keyboard/mouse to retropad">🎮+⌨️+🖱️
+            </div>
+            <div id="stats-overlay"></div>
         </div>
     </div>
 
@@ -44,9 +51,8 @@
     <div id="settings"></div>
 
     <div id="guide-txt">
-        <b>Arrows</b> (move), <b>ZXCVAS;'./</b> (game ABXYL1-L3R1-R3), <b>1/2</b> (1st/2nd player),
-        <b>Shift/Enter/K/L</b> (select/start/save/load), <b>F</b> (fullscreen), <b>share</b> (copy the link to the
-        clipboard)
+        <b>Arrows</b> (move), <b>ZXCVAS;'./</b> (game ABXYL1-L3R1-R3),
+        <b>Shift/Enter/K/L</b> (select/start/save/load), <b>F</b> (fullscreen), <b>share</b> (copy the link)
     </div>
     <div id="btn-join" class="btn big" data-key="join"></div>
     <div id="slider-playeridx" class="slidecontainer">
@@ -54,6 +60,9 @@
         <input type="range" aria-label="" min="1" max="4" value="1" class="slider" id="playeridx">
     </div>
     <div id="btn-quit" class="btn big" data-key="quit"></div>
+
+    <div class="app-button kbm-button hidden" id="kbm" title="Switch from keyboard/mouse to retropad">
+        C🎮+K⌨️+M🖱️</div>
 
     <div id="controls-right">
         <div id="btn-load" class="btn big hidden" data-key="load"></div>
@@ -91,10 +100,9 @@
     <div id="btn-rec" class="btn" data-key="rec"></div>
     {{end}}
 </div>
-<div class="source">
-    <span id="v">69ff8ae</span>
+<div class="source"><span>Cloudretro (ɔ) 2024</span>
     <a rel="noopener noreferrer" target="_blank" href="https://github.com/giongto35/cloud-game">
-        Source code on GitHub
+        <span id="v">69ff8ae</span>
     </a>
 </div>
 

@@ -28,13 +28,6 @@ import (
 */
 import "C"
 
-const lastKey = int(C.RETRO_DEVICE_ID_JOYPAD_R3)
-
-const KeyPressed = 1
-const KeyReleased = 0
-
-const MaxPort int = 4
-
 var (
 	RGBA5551    = PixFmt{C: 0, BPP: 2} // BIT_FORMAT_SHORT_5_5_5_1 has 5 bits R, 5 bits G, 5 bits B, 1 bit alpha
 	RGBA8888Rev = PixFmt{C: 1, BPP: 4} // BIT_FORMAT_INT_8_8_8_8_REV has 8 bits R, 8 bits G, 8 bits B, 8 bit alpha
@@ -43,6 +36,12 @@ var (
 
 type Nanoarch struct {
 	Handlers
+
+	keyboard KeyboardState
+	mouse    MouseState
+	retropad InputState
+
+	keyboardCb    *C.struct_retro_keyboard_callback
 	LastFrameTime int64
 	LibCo         bool
 	meta          Metadata
@@ -77,8 +76,6 @@ type Nanoarch struct {
 }
 
 type Handlers struct {
-	OnDpad         func(port uint, axis uint) (shift int16)
-	OnKeyPress     func(port uint, key int) int
 	OnAudio        func(ptr unsafe.Pointer, frames int)
 	OnVideo        func(data []byte, delta int32, fi FrameInfo)
 	OnDup          func()
@@ -103,6 +100,7 @@ type Metadata struct {
 	Hacks           []string
 	Hid             map[int][]int
 	CoreAspectRatio bool
+	KbMouseSupport  bool
 }
 
 type PixFmt struct {
@@ -129,11 +127,9 @@ var Nan0 = Nanoarch{
 	Stopped:  atomic.Bool{},
 	limiter:  func(fn func()) { fn() },
 	Handlers: Handlers{
-		OnDpad:     func(uint, uint) int16 { return 0 },
-		OnKeyPress: func(uint, int) int { return 0 },
-		OnAudio:    func(unsafe.Pointer, int) {},
-		OnVideo:    func([]byte, int32, FrameInfo) {},
-		OnDup:      func() {},
+		OnAudio: func(unsafe.Pointer, int) {},
+		OnVideo: func([]byte, int32, FrameInfo) {},
+		OnDup:   func() {},
 	},
 }
 
@@ -153,6 +149,7 @@ func (n *Nanoarch) AspectRatio() float32             { return float32(n.sys.av.g
 func (n *Nanoarch) AudioSampleRate() int             { return int(n.sys.av.timing.sample_rate) }
 func (n *Nanoarch) VideoFramerate() int              { return int(n.sys.av.timing.fps) }
 func (n *Nanoarch) IsPortrait() bool                 { return 90 == n.Rot%180 }
+func (n *Nanoarch) KbMouseSupport() bool             { return n.meta.KbMouseSupport }
 func (n *Nanoarch) BaseWidth() int                   { return int(n.sys.av.geometry.base_width) }
 func (n *Nanoarch) BaseHeight() int                  { return int(n.sys.av.geometry.base_height) }
 func (n *Nanoarch) WaitReady()                       { <-n.reserved }
@@ -173,6 +170,12 @@ func (n *Nanoarch) CoreLoad(meta Metadata) {
 
 	// hacks
 	Nan0.hackSkipHwContextDestroy = meta.HasHack("skip_hw_context_destroy")
+
+	// reset controllers
+	n.retropad = InputState{}
+	n.keyboardCb = nil
+	n.keyboard = KeyboardState{}
+	n.mouse = MouseState{}
 
 	n.options = maps.Clone(meta.Options)
 	n.options4rom = meta.Options4rom
@@ -312,7 +315,7 @@ func (n *Nanoarch) LoadGame(path string) error {
 
 	// set default controller types on all ports
 	// needed for nestopia
-	for i := range MaxPort {
+	for i := range maxPort {
 		C.bridge_retro_set_controller_port_device(retroSetControllerPortDevice, C.uint(i), C.RETRO_DEVICE_JOYPAD)
 	}
 
@@ -389,8 +392,34 @@ func (n *Nanoarch) Run() {
 	}
 }
 
-func (n *Nanoarch) IsGL() bool      { return n.Video.gl.enabled }
-func (n *Nanoarch) IsStopped() bool { return n.Stopped.Load() }
+func (n *Nanoarch) IsGL() bool                          { return n.Video.gl.enabled }
+func (n *Nanoarch) IsStopped() bool                     { return n.Stopped.Load() }
+func (n *Nanoarch) InputRetropad(port int, data []byte) { n.retropad.Input(port, data) }
+func (n *Nanoarch) InputKeyboard(_ int, data []byte) {
+	if n.keyboardCb == nil {
+		return
+	}
+
+	// we should preserve the state of pressed buttons for the input poll function (each retro_run)
+	// and explicitly call the retro_keyboard_callback function when a keyboard event happens
+	pressed, key, mod := n.keyboard.SetKey(data)
+	C.bridge_retro_keyboard_callback(unsafe.Pointer(n.keyboardCb), C.bool(pressed),
+		C.unsigned(key), C.uint32_t(0), C.uint16_t(mod))
+}
+func (n *Nanoarch) InputMouse(_ int, data []byte) {
+	if len(data) == 0 {
+		return
+	}
+
+	t := data[0]
+	state := data[1:]
+	switch t {
+	case MouseMove:
+		n.mouse.ShiftPos(state)
+	case MouseButton:
+		n.mouse.SetButtons(state[0])
+	}
+}
 
 func videoSetPixelFormat(format uint32) (C.bool, error) {
 	switch format {
@@ -615,29 +644,55 @@ func coreInputPoll() {}
 
 //export coreInputState
 func coreInputState(port C.unsigned, device C.unsigned, index C.unsigned, id C.unsigned) C.int16_t {
-	if uint(port) >= uint(MaxPort) {
-		return KeyReleased
+	//Nan0.log.Debug().Msgf("%v %v %v %v", port, device, index, id)
+
+	// something like PCSX-ReArmed has 8 ports
+	if port >= maxPort {
+		return Released
 	}
 
-	if device == C.RETRO_DEVICE_ANALOG {
-		if index > C.RETRO_DEVICE_INDEX_ANALOG_RIGHT || id > C.RETRO_DEVICE_ID_ANALOG_Y {
-			return 0
+	switch device {
+	case C.RETRO_DEVICE_JOYPAD:
+		return Nan0.retropad.IsKeyPressed(uint(port), int(id))
+	case C.RETRO_DEVICE_ANALOG:
+		switch index {
+		case C.RETRO_DEVICE_INDEX_ANALOG_LEFT:
+			return Nan0.retropad.IsDpadTouched(uint(port), uint(index*2+id))
+		case C.RETRO_DEVICE_INDEX_ANALOG_RIGHT:
+		case C.RETRO_DEVICE_INDEX_ANALOG_BUTTON:
 		}
-		axis := index*2 + id
-		value := Nan0.Handlers.OnDpad(uint(port), uint(axis))
-		if value != 0 {
-			return (C.int16_t)(value)
+	case C.RETRO_DEVICE_KEYBOARD:
+		return Nan0.keyboard.Pressed(uint(id))
+	case C.RETRO_DEVICE_MOUSE:
+		switch id {
+		case C.RETRO_DEVICE_ID_MOUSE_X:
+			x := Nan0.mouse.PopX()
+			return x
+		case C.RETRO_DEVICE_ID_MOUSE_Y:
+			y := Nan0.mouse.PopY()
+			return y
+		case C.RETRO_DEVICE_ID_MOUSE_LEFT:
+			if l, _, _ := Nan0.mouse.Buttons(); l {
+				return Pressed
+			}
+		case C.RETRO_DEVICE_ID_MOUSE_RIGHT:
+			if _, r, _ := Nan0.mouse.Buttons(); r {
+				return Pressed
+			}
+		case C.RETRO_DEVICE_ID_MOUSE_WHEELUP:
+		case C.RETRO_DEVICE_ID_MOUSE_WHEELDOWN:
+		case C.RETRO_DEVICE_ID_MOUSE_MIDDLE:
+			if _, _, m := Nan0.mouse.Buttons(); m {
+				return Pressed
+			}
+		case C.RETRO_DEVICE_ID_MOUSE_HORIZ_WHEELUP:
+		case C.RETRO_DEVICE_ID_MOUSE_HORIZ_WHEELDOWN:
+		case C.RETRO_DEVICE_ID_MOUSE_BUTTON_4:
+		case C.RETRO_DEVICE_ID_MOUSE_BUTTON_5:
 		}
 	}
 
-	key := int(id)
-	if key > lastKey || index > 0 || device != C.RETRO_DEVICE_JOYPAD {
-		return KeyReleased
-	}
-	if Nan0.Handlers.OnKeyPress(uint(port), key) == KeyPressed {
-		return KeyPressed
-	}
-	return KeyReleased
+	return Released
 }
 
 //export coreAudioSample
@@ -798,9 +853,20 @@ func coreEnvironment(cmd C.unsigned, data unsafe.Pointer) C.bool {
 				}
 				cInfo.WriteString(fmt.Sprintf("%v: %v%s", cd[i].id, C.GoString(cd[i].desc), delim))
 			}
-			Nan0.log.Debug().Msgf("%v", cInfo.String())
+			//Nan0.log.Debug().Msgf("%v", cInfo.String())
 		}
 		return true
+	case C.RETRO_ENVIRONMENT_GET_INPUT_MAX_USERS:
+		*(*C.unsigned)(data) = C.unsigned(4)
+		Nan0.log.Debug().Msgf("Set max users: %v", 4)
+		return true
+	case C.RETRO_ENVIRONMENT_SET_KEYBOARD_CALLBACK:
+		Nan0.log.Debug().Msgf("Keyboard event callback was set")
+		Nan0.keyboardCb = (*C.struct_retro_keyboard_callback)(data)
+		return true
+	case C.RETRO_ENVIRONMENT_GET_INPUT_BITMASKS:
+		Nan0.log.Debug().Msgf("Set input bitmasks: false")
+		return false
 	case C.RETRO_ENVIRONMENT_GET_CLEAR_ALL_THREAD_WAITS_CB:
 		C.bridge_clear_all_thread_waits_cb(data)
 		return true
@@ -906,9 +972,7 @@ func geometryChange(geom C.struct_retro_game_geometry) {
 
 		if Nan0.OnSystemAvInfo != nil {
 			Nan0.log.Debug().Msgf(">>> geometry change %v -> %v", old, geom)
-			if Nan0.Aspect {
-				go Nan0.OnSystemAvInfo()
-			}
+			go Nan0.OnSystemAvInfo()
 		}
 	})
 }

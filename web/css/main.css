@@ -17,10 +17,6 @@ html {
 body {
     background-image: url('/img/background.jpg');
     background-repeat: repeat;
-
-    align-items: center;
-    display: flex;
-    justify-content: center;
 }
 
 #gamebody {
@@ -96,7 +92,7 @@ body {
     color: #979797;
     font-size: 8px;
     top: 269px;
-    left: 30px;
+    left: 101px;
     position: absolute;
 
     user-select: none;
@@ -404,7 +400,7 @@ body {
     object-fit: contain;
     width: inherit;
     height: inherit;
-    background-color: #222222;
+    background-color: #101010;
 }
 
 #menu-screen {
@@ -487,67 +483,10 @@ body {
 
 .menu-item__info {
     color: white;
+    opacity: .55;
     font-size: 30%;
-    position: absolute;
-    left: 15px;
-}
-
-.text-move {
-    animation: horizontally 4s linear infinite alternate;
-}
-
-@-moz-keyframes horizontally {
-    0% {
-        transform: translateX(0%);
-    }
-    25% {
-        transform: translateX(-20%);
-    }
-    50% {
-        transform: translateX(0%);
-    }
-    75% {
-        transform: translateX(20%);
-    }
-    100% {
-        transform: translateX(0%);
-    }
-}
-
-@-webkit-keyframes horizontally {
-    0% {
-        transform: translateX(0%);
-    }
-    25% {
-        transform: translateX(-20%);
-    }
-    50% {
-        transform: translateX(0%);
-    }
-    75% {
-        transform: translateX(20%);
-    }
-    100% {
-        transform: translateX(0%);
-    }
-}
-
-@keyframes horizontally {
-    0% {
-        transform: translateX(0%);
-    }
-    25% {
-        transform: translateX(-20%);
-    }
-    50% {
-        transform: translateX(0%);
-    }
-    75% {
-        transform: translateX(20%);
-    }
-    100% {
-        transform: translateX(0%);
-    }
+    text-align: center;
+    padding-top: 3px;
 }
 
 #noti-box {
@@ -635,50 +574,6 @@ body {
     touch-action: manipulation;
 }
 
-#stats-overlay {
-    position: absolute;
-    z-index: 200;
-    backface-visibility: hidden;
-    cursor: default;
-
-    display: flex;
-    flex-direction: column;
-    justify-content: space-around;
-
-    top: 1.1em;
-    right: 1.1em;
-    color: #fff;
-    background: #000;
-    opacity: .465;
-
-    font-size: 1.45vh;
-    font-family: monospace;
-    min-width: 3em;
-
-    padding-right: .2em;
-
-    visibility: hidden;
-}
-
-#stats-overlay > div {
-    display: flex;
-    flex-flow: wrap;
-    justify-content: space-between;
-    align-items: center;
-}
-
-#stats-overlay > div > div {
-    display: inline-block;
-    font-weight: 500;
-}
-
-#stats-overlay .graph {
-    width: 100%;
-    /* artifacts with pixelated option */
-    /*image-rendering: pixelated;*/
-    image-rendering: optimizeSpeed;
-}
-
 .dpad-toggle-label {
     position: absolute;
     display: inline-block;
@@ -733,10 +628,6 @@ input:checked + .dpad-toggle-slider:before {
     right: 5px;
     color: #dddddd;
     text-shadow: -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000;
-}
-
-.source #v {
-    cursor: default;
 }
 
 .source a {

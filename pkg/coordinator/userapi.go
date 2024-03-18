@@ -37,6 +37,6 @@ func (u *User) SendWebrtcOffer(sdp string) { u.Notify(api.WebrtcOffer, sdp) }
 func (u *User) SendWebrtcIceCandidate(candidate string) { u.Notify(api.WebrtcIce, candidate) }
 
 // StartGame signals the user that everything is ready to start a game.
-func (u *User) StartGame(av *api.AppVideoInfo) {
-	u.Notify(api.StartGame, api.GameStartUserResponse{RoomId: u.w.RoomId, Av: av})
+func (u *User) StartGame(av *api.AppVideoInfo, kbMouse bool) {
+	u.Notify(api.StartGame, api.GameStartUserResponse{RoomId: u.w.RoomId, Av: av, KbMouse: kbMouse})
 }

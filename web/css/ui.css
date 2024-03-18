@@ -228,11 +228,25 @@
     color: #7e7e7e;
 }
 
+.app-button.fs {
+    position: relative;
+    top: 0;
+    left: 0;
+}
+
+#mirror-stream {
+    image-rendering: pixelated;
+    width: 100%;
+    height: 100%;
+}
 
 #screen {
     display: flex;
-    align-items: center;
+    /*align-items: center;*/
     justify-content: center;
+
+    min-width: 0 !important;
+    min-height: 0 !important;
 
     position: absolute;
     /* popups under the screen fix */
@@ -243,8 +257,104 @@
     top: 23px;
     left: 150px;
     overflow: hidden;
-    background-color: #333;
+    background-color: #000000;
 
     border-radius: 5px 5px 5px 5px;
     box-shadow: 0 0 2px 2px rgba(25, 25, 25, 1);
+}
+
+.screen__footer {
+    position: absolute;
+    bottom: 0;
+    display: flex;
+    flex-direction: row;
+    border-top: 1px solid #1b1b1b;
+    width: calc(100% - .6rem);
+    justify-content: space-between;
+
+    background-color: #00000022;
+
+    height: 13px;
+    font-size: .6rem;
+    color: #ffffff;
+
+    opacity: .3;
+
+    padding: 0 .2em;
+
+    cursor: default;
+}
+
+.hover:hover {
+    opacity: .567;
+}
+
+.with-footer {
+    height: calc(100% - 14px);
+}
+
+.kbm-button {
+    top: 265px;
+    left: 542px;
+
+    text-align: center;
+    font-size: 70%;
+
+    opacity: .5;
+    filter: contrast(.3);
+}
+
+.kbm-button-fs {
+    width: 1em;
+    text-align: center;
+    font-size: 110%;
+    /*color: #ffffff;*/
+    /*opacity: .5;*/
+    filter: contrast(.3);
+}
+
+.no-pointer {
+    cursor: none;
+}
+
+#stats-overlay {
+    cursor: default;
+
+    display: flex;
+    flex-direction: row;
+    justify-content: end;
+
+    color: #fff;
+    background: #000;
+    /*opacity: .3;*/
+
+    font-size: 10px;
+    font-family: monospace;
+    min-width: 18em;
+
+    gap: 5px;
+    visibility: hidden;
+}
+
+#stats-overlay > div {
+    display: flex;
+    flex-flow: wrap;
+    justify-content: space-between;
+    align-items: center;
+}
+
+#stats-overlay > div > div {
+    display: inline-block;
+    font-weight: 500;
+}
+
+#stats-overlay .graph {
+    width: 100%;
+    /* artifacts with pixelated option */
+    /*image-rendering: pixelated;*/
+    image-rendering: optimizeSpeed;
+}
+
+.stats-bitrate {
+    min-width: 3.3rem;
 }

@@ -86,7 +86,6 @@ func EmulatorMock(room string, system string) *TestFrontend {
 				Path:     os.TempDir(),
 				MainSave: room,
 			},
-			input:       NewGameSessionInput(),
 			done:        make(chan struct{}),
 			th:          conf.Emulator.Threads,
 			log:         l2,
@@ -338,20 +337,6 @@ func TestStateConcurrency(t *testing.T) {
 		ops.Wait()
 		mock.Shutdown()
 	}
-}
-
-func TestConcurrentInput(t *testing.T) {
-	var wg sync.WaitGroup
-	state := NewGameSessionInput()
-	events := 1000
-	wg.Add(2 * events)
-
-	for range events {
-		player := rand.IntN(maxPort)
-		go func() { state.setInput(player, []byte{0, 1}); wg.Done() }()
-		go func() { state.isKeyPressed(uint(player), 100); wg.Done() }()
-	}
-	wg.Wait()
 }
 
 func TestStartStop(t *testing.T) {

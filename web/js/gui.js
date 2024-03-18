@@ -175,8 +175,8 @@ const binding = (key = '', value = '', cb = () => ({})) => {
     return el;
 }
 
-const show = (el) => {
-    el.classList.remove('hidden');
+const show = (...els) => {
+    els.forEach(el => el.classList.remove('hidden'))
 }
 
 const inputN = (key = '', cb = () => ({}), current = 0) => {
@@ -199,6 +199,23 @@ const toggle = (el, what) => {
         return
     }
     what ? show(el) : hide(el)
+}
+
+const multiToggle = (elements = [], options = {list: []}) => {
+    if (!options.list.length || !elements.length) return
+
+    let i = 0
+
+    const setText = () => elements.forEach(el => el.innerText = options.list[i].caption)
+
+    const handleClick = () => {
+        options.list[i].cb()
+        i = (i + 1) % options.list.length
+        setText()
+    }
+
+    setText()
+    elements.forEach(el => el.addEventListener('click', handleClick))
 }
 
 const fadeIn = async (el, speed = .1) => {
@@ -252,6 +269,7 @@ export const gui = {
     fragment,
     hide,
     inputN,
+    multiToggle,
     panel,
     select,
     show,

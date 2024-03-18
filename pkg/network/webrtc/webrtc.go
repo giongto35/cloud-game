@@ -81,11 +81,15 @@ func (p *Peer) NewCall(vCodec, aCodec string, onICECandidate func(ice any)) (sdp
 	p.log.Debug().Msgf("Added [%s] track", audio.Codec().MimeType)
 	p.a = audio
 
-	// plug in the [data] channel (in and out)
-	if err = p.addDataChannel("data"); err != nil {
+	err = p.AddChannel("data", func(data []byte) {
+		if len(data) == 0 || p.OnMessage == nil {
+			return
+		}
+		p.OnMessage(data)
+	})
+	if err != nil {
 		return "", err
 	}
-	p.log.Debug().Msg("Added [data] chan")
 
 	p.conn.OnICEConnectionStateChange(p.handleICEState(func() { p.log.Info().Msg("Connected") }))
 	// Stream provider supposes to send offer
@@ -221,6 +225,19 @@ func (p *Peer) AddCandidate(candidate string, decoder Decoder) error {
 	return nil
 }
 
+func (p *Peer) AddChannel(label string, onMessage func([]byte)) error {
+	ch, err := p.addDataChannel(label)
+	if err != nil {
+		return err
+	}
+	if label == "data" {
+		p.d = ch
+	}
+	ch.OnMessage(func(m webrtc.DataChannelMessage) { onMessage(m.Data) })
+	p.log.Debug().Msgf("Added [%v] chan", label)
+	return nil
+}
+
 func (p *Peer) Disconnect() {
 	if p.conn == nil {
 		return
@@ -232,29 +249,19 @@ func (p *Peer) Disconnect() {
 	p.log.Debug().Msg("WebRTC stop")
 }
 
-// addDataChannel creates a new WebRTC data channel for user input.
+// addDataChannel creates new WebRTC data channel.
 // Default params -- ordered: true, negotiated: false.
-func (p *Peer) addDataChannel(label string) error {
+func (p *Peer) addDataChannel(label string) (*webrtc.DataChannel, error) {
 	ch, err := p.conn.CreateDataChannel(label, nil)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	ch.OnOpen(func() {
-		p.log.Debug().Str("label", ch.Label()).Uint16("id", *ch.ID()).
-			Msg("Data channel [input] opened")
+		p.log.Debug().Uint16("id", *ch.ID()).Msgf("Data channel [%v] opened", ch.Label())
 	})
 	ch.OnError(p.logx)
-	ch.OnMessage(func(m webrtc.DataChannelMessage) {
-		if len(m.Data) == 0 {
-			return
-		}
-		if p.OnMessage != nil {
-			p.OnMessage(m.Data)
-		}
-	})
-	p.d = ch
-	ch.OnClose(func() { p.log.Debug().Msg("Data channel [input] has been closed") })
-	return nil
+	ch.OnClose(func() { p.log.Debug().Msgf("Data channel [%v] has been closed", ch.Label()) })
+	return ch, nil
 }
 
 func (p *Peer) logx(err error) { p.log.Error().Err(err) }

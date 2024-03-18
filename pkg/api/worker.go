@@ -33,8 +33,9 @@ type (
 	}
 	StartGameResponse struct {
 		Room
-		AV     *AppVideoInfo `json:"av"`
-		Record bool
+		AV      *AppVideoInfo `json:"av"`
+		Record  bool          `json:"record"`
+		KbMouse bool          `json:"kb_mouse"`
 	}
 	RecordGameRequest[T Id] struct {
 		StatefulRoom[T]

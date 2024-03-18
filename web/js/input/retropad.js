@@ -94,7 +94,8 @@ const _getState = () => {
 const _poll = poll(pollingIntervalMs, sendControllerState)
 
 export const retropad = {
-    poll: _poll,
+    enable: () => _poll.enable(),
+    disable: () => _poll.disable(),
     setKeyState,
     setAxisChanged,
 }

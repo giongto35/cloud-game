@@ -23,6 +23,7 @@ void bridge_retro_set_input_poll(void *f, void *callback);
 void bridge_retro_set_input_state(void *f, void *callback);
 void bridge_retro_set_video_refresh(void *f, void *callback);
 void bridge_clear_all_thread_waits_cb(void *f);
+void bridge_retro_keyboard_callback(void *f, bool down, unsigned keycode, uint32_t character, uint16_t keyModifiers);
 
 bool core_environment_cgo(unsigned cmd, void *data);
 int16_t core_input_state_cgo(unsigned port, unsigned device, unsigned index, unsigned id);
