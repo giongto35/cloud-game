@@ -31,7 +31,7 @@ const select = (key = '', callback = () => ({}), values = {values: [], labels: [
     };
     el.append(select);
 
-    select.append(_option('none', current === ''));
+    select.append(_option(0, current === '', 'none'));
     values.values.forEach((value, index) => {
         select.append(_option(value, current === value, values.labels?.[index]));
     });

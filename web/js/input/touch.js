@@ -292,14 +292,6 @@ playerSlider.onkeydown = (e) => {
     e.preventDefault();
 }
 
-// Bind events for menu
-// TODO change this flow
-pub(MENU_HANDLER_ATTACHED, {event: 'mousedown', handler: handleMenuDown});
-pub(MENU_HANDLER_ATTACHED, {event: 'touchstart', handler: handleMenuDown});
-pub(MENU_HANDLER_ATTACHED, {event: 'touchend', handler: handleMenuUp});
-
-sub(DPAD_TOGGLE, (data) => onDpadToggle(data.checked));
-
 /**
  * Touch controls.
  *
@@ -311,6 +303,14 @@ sub(DPAD_TOGGLE, (data) => onDpadToggle(data.checked));
  */
 export const touch = {
     init: () => {
+        // Bind events for menu
+        // TODO change this flow
+        pub(MENU_HANDLER_ATTACHED, {event: 'mousedown', handler: handleMenuDown});
+        pub(MENU_HANDLER_ATTACHED, {event: 'touchstart', handler: handleMenuDown});
+        pub(MENU_HANDLER_ATTACHED, {event: 'touchend', handler: handleMenuUp});
+
+        sub(DPAD_TOGGLE, (data) => onDpadToggle(data.checked));
+
         // add buttons into the state 🤦
         Array.from(document.querySelectorAll('.btn,.btn-big')).forEach((el) => {
             vpadState[getKey(el)] = false;

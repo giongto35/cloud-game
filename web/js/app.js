@@ -1,3 +1,9 @@
+import {log} from 'log';
+import {opts, settings} from 'settings';
+
+settings.init();
+log.level = settings.loadOr(opts.LOG_LEVEL, log.DEFAULT);
+
 import {api} from 'api';
 import {
     pub,
@@ -36,8 +42,6 @@ import {
 } from 'event';
 import {gui} from 'gui';
 import {keyboard, KEY, joystick, retropad, touch} from 'input';
-import {log} from 'log';
-import {opts, settings} from 'settings';
 import {socket, webrtc} from 'network';
 import {debounce} from 'utils';
 
@@ -511,22 +515,6 @@ sub(SETTINGS_CHANGED, () => {
 
 // initial app state
 setState(app.state.eden);
-
-settings.init();
-
-(() => {
-    let lvl = settings.loadOr(opts.LOG_LEVEL, log.DEFAULT);
-    // migrate old log level options
-    // !to remove at some point
-    if (isNaN(lvl)) {
-        console.warn(
-            `The log value [${lvl}] is not supported! ` +
-            `The default value [debug] will be used instead.`);
-        settings.set(opts.LOG_LEVEL, `${log.DEFAULT}`)
-        lvl = log.DEFAULT
-    }
-    log.level = lvl
-})();
 
 keyboard.init();
 joystick.init();

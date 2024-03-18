@@ -20,7 +20,7 @@ const init = (roomId, wid, zone) => {
     let objParams = {room_id: roomId, zone: zone};
     if (wid) objParams.wid = wid;
     const url = buildUrl(objParams)
-    console.info(`[ws] connecting to ${url}`);
+    log.info(`[ws] connecting to ${url}`);
     conn = new WebSocket(url.toString());
     conn.onopen = () => {
         log.info('[ws] <- open connection');
