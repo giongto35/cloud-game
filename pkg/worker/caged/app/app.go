@@ -13,7 +13,8 @@ type App interface {
 	SetAudioCb(func(Audio))
 	SetVideoCb(func(Video))
 	SetDataCb(func([]byte))
-	SendControl(port int, data []byte)
+	Input(port int, device byte, data []byte)
+	KbMouseSupport() bool
 }
 
 type Audio struct {

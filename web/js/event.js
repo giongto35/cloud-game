@@ -85,8 +85,17 @@ export const KEY_PRESSED = 'keyPressed';
 export const KEY_RELEASED = 'keyReleased';
 export const KEYBOARD_TOGGLE_FILTER_MODE = 'keyboardToggleFilterMode';
 export const KEYBOARD_KEY_PRESSED = 'keyboardKeyPressed';
+export const KEYBOARD_KEY_DOWN = 'keyboardKeyDown';
+export const KEYBOARD_KEY_UP = 'keyboardKeyUp';
+
 export const AXIS_CHANGED = 'axisChanged';
 export const CONTROLLER_UPDATED = 'controllerUpdated';
+
+export const MOUSE_MOVED = 'mouseMoved';
+export const MOUSE_PRESSED = 'mousePressed';
+
+export const FULLSCREEN_CHANGE = 'fsc';
+export const POINTER_LOCK_CHANGE = 'plc';
 
 export const DPAD_TOGGLE = 'dpadToggle';
 export const STATS_TOGGLE = 'statsToggle';
@@ -98,3 +107,4 @@ export const RECORDING_TOGGLED = 'recordingToggle'
 export const RECORDING_STATUS_CHANGED = 'recordingStatusChanged'
 
 export const APP_VIDEO_CHANGED = 'appVideoChanged'
+export const KB_MOUSE_FLAG = 'kbMouseFlag'

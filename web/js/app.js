@@ -12,6 +12,7 @@ import {
     AXIS_CHANGED,
     CONTROLLER_UPDATED,
     DPAD_TOGGLE,
+    FULLSCREEN_CHANGE,
     GAME_ERROR_NO_FREE_SLOTS,
     GAME_LOADED,
     GAME_PLAYER_IDX,
@@ -21,11 +22,17 @@ import {
     GAMEPAD_CONNECTED,
     GAMEPAD_DISCONNECTED,
     HELP_OVERLAY_TOGGLED,
+    KB_MOUSE_FLAG,
     KEY_PRESSED,
     KEY_RELEASED,
+    KEYBOARD_KEY_DOWN,
+    KEYBOARD_KEY_UP,
     LATENCY_CHECK_REQUESTED,
     MENU_HANDLER_ATTACHED,
     MESSAGE,
+    MOUSE_MOVED,
+    MOUSE_PRESSED,
+    POINTER_LOCK_CHANGE,
     RECORDING_STATUS_CHANGED,
     RECORDING_TOGGLED,
     SETTINGS_CHANGED,
@@ -101,7 +108,7 @@ const setState = (newState = app.state.eden) => {
 };
 
 const onGameRoomAvailable = () => {
-    // room is ready
+    stream.forceFullscreenMaybe();
 };
 
 const onConnectionReady = () => {
@@ -188,7 +195,6 @@ const startGame = () => {
     retropad.poll.disable();
     gui.hide(menuScreen);
     stream.toggle(true);
-    stream.forceFullscreenMaybe();
     gui.show(keyButtons[KEY.SAVE]);
     gui.show(keyButtons[KEY.LOAD]);
     // end clear
@@ -211,9 +217,8 @@ const onMessage = (m) => {
             pub(WEBRTC_ICE_CANDIDATE_RECEIVED, {candidate: payload});
             break;
         case api.endpoint.GAME_START:
-            if (payload.av) {
-                pub(APP_VIDEO_CHANGED, payload.av)
-            }
+            payload.av && pub(APP_VIDEO_CHANGED, payload.av)
+            payload.kb_mouse && pub(KB_MOUSE_FLAG);
             pub(GAME_ROOM_AVAILABLE, {roomId: payload.roomId});
             break;
         case api.endpoint.GAME_SAVE:
@@ -259,7 +264,7 @@ const onKeyPress = (data) => {
         if (KEY.HELP === data.key) helpScreen.show(true, event);
     }
 
-    state.keyPress(data.key);
+    state.keyPress(data.key, data.code);
 };
 
 // pre-state key release handler
@@ -286,7 +291,7 @@ const onKeyRelease = data => {
     // change app state if settings
     if (KEY.SETTINGS === data.key) setState(app.state.settings);
 
-    state.keyRelease(data.key);
+    state.keyRelease(data.key, data.code);
 };
 
 const updatePlayerIndex = (idx, not_game = false) => {
@@ -410,7 +415,12 @@ const app = {
             ..._default,
             name: 'game',
             axisChanged: (id, value) => retropad.setAxisChanged(id, value),
-            keyPress: key => retropad.setKeyState(key, true),
+            keyboardInput: (pressed, e) => api.game.input.keyboard.press(pressed, e),
+            mouseMove: (e) => api.game.input.mouse.move(e.dx, e.dy),
+            mousePress: (e) => api.game.input.mouse.press(e.b, e.p),
+            keyPress: (key) => {
+                retropad.setKeyState(key, true);
+            },
             keyRelease: function (key) {
                 retropad.setKeyState(key, false);
 
@@ -460,6 +470,15 @@ const app = {
     }
 };
 
+// Browser lock API
+document.onpointerlockchange = () => {
+    pub(POINTER_LOCK_CHANGE, document.pointerLockElement);
+}
+
+document.onfullscreenchange = async () => {
+    pub(FULLSCREEN_CHANGE, document.fullscreenElement);
+}
+
 // subscriptions
 sub(MESSAGE, onMessage);
 
@@ -497,8 +516,19 @@ sub(GAMEPAD_DISCONNECTED, () => message.show('Gamepad disconnected'));
 sub(MENU_HANDLER_ATTACHED, (data) => {
     menuScreen.addEventListener(data.event, data.handler, {passive: true});
 });
+
+// keyboard handler in the Screen Lock mode
+sub(KEYBOARD_KEY_DOWN, (v) => state.keyboardInput?.(true, v));
+sub(KEYBOARD_KEY_UP, (v) => state.keyboardInput?.(false, v));
+
+// mouse handler in the Screen Lock mode
+sub(MOUSE_MOVED, (e) => state.mouseMove?.(e))
+sub(MOUSE_PRESSED, (e) => state.mousePress?.(e))
+
+// general keyboard handler
 sub(KEY_PRESSED, onKeyPress);
 sub(KEY_RELEASED, onKeyRelease);
+
 sub(SETTINGS_CHANGED, () => message.show('Settings have been updated'));
 sub(AXIS_CHANGED, onAxisChanged);
 sub(CONTROLLER_UPDATED, data => webrtc.input(data));
@@ -526,4 +556,8 @@ let [roomId, zone] = room.loadMaybe();
 const wid = new URLSearchParams(document.location.search).get('wid');
 // if from URL -> start game immediately!
 socket.init(roomId, wid, zone);
-api.transport = socket;
+api.transport = {
+    send: socket.send,
+    keyboard: webrtc.keyboard,
+    mouse: webrtc.mouse,
+};

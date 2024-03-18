@@ -126,12 +126,14 @@ func (c *coordinator) HandleGameStart(rq api.StartGameRequest[com.Uid], w *Worke
 				}
 			}
 
-			data, err := api.Wrap(api.Out{T: uint8(api.AppVideoChange), Payload: api.AppVideoInfo{
-				W: m.VideoW,
-				H: m.VideoH,
-				A: app.AspectRatio(),
-				S: int(app.Scale()),
-			}})
+			data, err := api.Wrap(api.Out{
+				T: uint8(api.AppVideoChange),
+				Payload: api.AppVideoInfo{
+					W: m.VideoW,
+					H: m.VideoH,
+					A: app.AspectRatio(),
+					S: int(app.Scale()),
+				}})
 			if err != nil {
 				c.log.Error().Err(err).Msgf("wrap")
 			}
@@ -159,6 +161,7 @@ func (c *coordinator) HandleGameStart(rq api.StartGameRequest[com.Uid], w *Worke
 			w.router.SetRoom(nil)
 			return api.EmptyPacket
 		}
+
 		if app.Flipped() {
 			m.SetVideoFlip(true)
 		}
@@ -170,11 +173,23 @@ func (c *coordinator) HandleGameStart(rq api.StartGameRequest[com.Uid], w *Worke
 	}
 
 	c.log.Debug().Msg("Start session input poll")
-	room.WithWebRTC(user.Session).OnMessage = func(data []byte) { r.App().SendControl(user.Index, data) }
+
+	needsKbMouse := r.App().KbMouseSupport()
+
+	s := room.WithWebRTC(user.Session)
+	s.OnMessage = func(data []byte) { r.App().Input(user.Index, byte(caged.RetroPad), data) }
+	if needsKbMouse {
+		_ = s.AddChannel("keyboard", func(data []byte) { r.App().Input(user.Index, byte(caged.Keyboard), data) })
+		_ = s.AddChannel("mouse", func(data []byte) { r.App().Input(user.Index, byte(caged.Mouse), data) })
+	}
 
 	c.RegisterRoom(r.Id())
 
-	response := api.StartGameResponse{Room: api.Room{Rid: r.Id()}, Record: w.conf.Recording.Enabled}
+	response := api.StartGameResponse{
+		Room:    api.Room{Rid: r.Id()},
+		Record:  w.conf.Recording.Enabled,
+		KbMouse: needsKbMouse,
+	}
 	if r.App().AspectEnabled() {
 		ww, hh := r.App().ViewportSize()
 		response.AV = &api.AppVideoInfo{W: ww, H: hh, A: r.App().AspectRatio(), S: int(r.App().Scale())}
