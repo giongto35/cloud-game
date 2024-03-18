@@ -185,11 +185,13 @@ emulator:
       #   - isGlAllowed (bool)
       #   - usesLibCo (bool)
       #   - hasMultitap (bool) -- (removed)
-      #   - coreAspectRatio (bool) -- correct the aspect ratio on the client with the info from the core.
+      #   - coreAspectRatio (bool) -- (deprecated) correct the aspect ratio on the client with the info from the core.
       #   - hid (map[int][]int)
       #       A list of device IDs to bind to the input ports.
+      #       Can be seen in human readable form in the console when worker.debug is enabled.
       #       Some cores allow binding multiple devices to a single port (DosBox), but typically,
       #       you should bind just one device to one port.
+      #   - kbMouseSupport (bool) -- (temp) a flag if the core needs the keyboard and mouse on the client
       #   - vfr (bool)
       #    (experimental)
       #       Enable variable frame rate only for cores that can't produce a constant frame rate.
@@ -213,7 +215,6 @@ emulator:
             mgba_audio_low_pass_filter: enabled
             mgba_audio_low_pass_range: 40
         pcsx:
-          coreAspectRatio: true
           lib: pcsx_rearmed_libretro
           roms: [ "cue", "chd" ]
           # example of folder override
@@ -227,7 +228,6 @@ emulator:
         # https://docs.libretro.com/library/fbneo/
         mame:
           lib: fbneo_libretro
-          coreAspectRatio: true
           roms: [ "zip" ]
         nes:
           lib: nestopia_libretro
@@ -280,7 +280,7 @@ encoder:
     # see: https://trac.ffmpeg.org/wiki/Encode/H.264
     h264:
       # Constant Rate Factor (CRF) 0-51 (default: 23)
-      crf: 26
+      crf: 23
       # ultrafast, superfast, veryfast, faster, fast, medium, slow, slower, veryslow, placebo
       preset: superfast
       # baseline, main, high, high10, high422, high444

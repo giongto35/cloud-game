@@ -39,6 +39,8 @@ const getKey = (el) => el.dataset.key
 let dpadMode = true;
 const deadZone = 0.1;
 
+let enabled = false
+
 function onDpadToggle(checked) {
     if (dpadMode === checked) {
         return //error?
@@ -237,6 +239,8 @@ function handleMenuUp(evt) {
 
 // Common events
 function handleWindowMove(event) {
+    if (!enabled) return
+
     event.preventDefault();
     handleVpadJoystickMove(event);
     handleMenuMove(event);
@@ -303,6 +307,7 @@ playerSlider.onkeydown = (e) => {
  */
 export const touch = {
     init: () => {
+        enabled = true
         // Bind events for menu
         // TODO change this flow
         pub(MENU_HANDLER_ATTACHED, {event: 'mousedown', handler: handleMenuDown});
@@ -316,10 +321,11 @@ export const touch = {
             vpadState[getKey(el)] = false;
         });
 
-        window.addEventListener('mousemove', handleWindowMove);
+        window.addEventListener('pointermove', handleWindowMove);
         window.addEventListener('touchmove', handleWindowMove, {passive: false});
         window.addEventListener('mouseup', handleWindowUp);
 
         log.info('[input] touch input has been initialized');
-    }
+    },
+    toggle: (v) => v === undefined ? (enabled = !enabled) : (enabled = v)
 }
