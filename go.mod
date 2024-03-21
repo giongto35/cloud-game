@@ -11,7 +11,7 @@ require (
 	github.com/gorilla/websocket v1.5.1
 	github.com/knadh/koanf/maps v0.1.1
 	github.com/knadh/koanf/v2 v2.1.0
-	github.com/minio/minio-go/v7 v7.0.68
+	github.com/minio/minio-go/v7 v7.0.69
 	github.com/pion/ice/v3 v3.0.3
 	github.com/pion/interceptor v0.1.25
 	github.com/pion/logging v0.2.2
@@ -45,8 +45,8 @@ require (
 	github.com/pion/mdns v0.0.12 // indirect
 	github.com/pion/randutil v0.1.0 // indirect
 	github.com/pion/rtcp v1.2.14 // indirect
-	github.com/pion/rtp v1.8.3 // indirect
-	github.com/pion/sctp v1.8.12 // indirect
+	github.com/pion/rtp v1.8.4 // indirect
+	github.com/pion/sctp v1.8.13 // indirect
 	github.com/pion/sdp/v3 v3.0.8 // indirect
 	github.com/pion/srtp/v3 v3.0.1 // indirect
 	github.com/pion/stun/v2 v2.0.0 // indirect
