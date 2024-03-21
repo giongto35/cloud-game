@@ -1,7 +1,13 @@
 import {env} from 'env';
 import {
+    pub,
     sub,
     APP_VIDEO_CHANGED,
+    FULLSCREEN_CHANGE,
+    KB_MOUSE_FLAG,
+    MOUSE_MOVED,
+    MOUSE_PRESSED,
+    POINTER_LOCK_CHANGE,
     SETTINGS_CHANGED
 } from 'event' ;
 import {gui} from 'gui';
@@ -20,6 +26,7 @@ let options = {
     state = {
         screen: screen,
         fullscreen: false,
+        kbmLock: false,
         timerId: null,
         w: 0,
         h: 0,
@@ -49,6 +56,23 @@ const toggleFullscreen = () => {
 }
 
 const getVideoEl = () => screen
+
+const getActualVideoSize = () => {
+    if (state.fullscreen) {
+        // we can't get real <video> size without black bars, so we're trying to
+        // derive its dimensions from the known width or height
+        // and by calculating unknown dimension from the aspect ratio
+        const horizontal = screen.videoWidth > screen.videoHeight;
+        return {
+            w: horizontal ? screen.offsetHeight * state.aspect : screen.offsetWidth,
+            h: horizontal ? screen.offsetHeight : screen.offsetWidth * state.aspect
+        }
+    }
+
+    const size = screen.getBoundingClientRect()
+
+    return {w: size.width, h: size.height}
+}
 
 screen.onerror = (e) => {
     // video playback failed - show a message saying why
@@ -86,29 +110,12 @@ screen.addEventListener('canplay', () => {
     useCustomScreen(options.mirrorMode === 'mirror');
 }, false);
 
-const screenToAspect = (el) => {
-    const w = window.screen.width ?? window.innerWidth;
-    const hh = el.innerHeight || el.clientHeight || 0;
-    const dw = (w - hh * state.aspect) / 2
-    screen.style.padding = `0 ${dw}px`
-}
-
-screen.addEventListener('fullscreenchange', () => {
-    state.fullscreen = !!document.fullscreenElement;
-
-    if (!state.fullscreen) {
-        screen.style.padding = '0'
-    } else {
-        screenToAspect(document.fullscreenElement);
-        // chrome bug
-        setTimeout(() => {
-            screenToAspect(document.fullscreenElement)
-        }, 1)
-    }
-    makeFullscreen(state.fullscreen);
-
-    // !to flipped
+screen.addEventListener('focus', () => {
+    screen.blur();
 })
+
+const handlePointerDown = (e) => pub(MOUSE_PRESSED, {b: e.button, p: true});
+const handlePointerUp = (e) => pub(MOUSE_PRESSED, {b: e.button, p: false});
 
 const makeFullscreen = (make = false) => {
     screen.classList.toggle('no-media-controls', make)
@@ -182,6 +189,72 @@ sub(SETTINGS_CHANGED, () => {
     }
 });
 
+let pointerLocked = false;
+
+const screenToAspect = (el) => {
+    const w = window.screen.width ?? window.innerWidth;
+    const {w: ww} = getActualVideoSize();
+    const dw = (w - ww) / 2;
+    screen.style.padding = `0 ${dw}px`
+}
+
+sub(FULLSCREEN_CHANGE, async (fullscreenEl) => {
+    state.fullscreen = !!fullscreenEl;
+
+    if (!state.fullscreen) {
+        screen.style.padding = '0'
+    } else {
+        screenToAspect(fullscreenEl);
+        // chrome bug
+        setTimeout(() => {
+            screenToAspect(fullscreenEl);
+        }, 1)
+    }
+    makeFullscreen(state.fullscreen);
+
+    screen.blur();
+
+    if (!state.kbmLock) return;
+
+    if (state.fullscreen && !pointerLocked) {
+        // event.pub(POINTER_LOCK_CHANGE, screen);
+        await screen.requestPointerLock(
+            // { unadjustedMovement: true,}
+        );
+    }
+
+    screen.onpointerdown = state.fullscreen ? handlePointerDown : null;
+    screen.onpointerup = state.fullscreen ? handlePointerUp : null;
+
+    // !to flipped
+})
+
+let ex = 0, ey = 0;
+const scaleCursorPos = (x, y) => {
+    const {w, h} = getActualVideoSize();
+
+    const sw = w / screen.videoWidth;
+    const sh = h / screen.videoHeight;
+
+    const rez = {
+        dx: x / sw + ex,
+        dy: y / sh + ey
+    }
+
+    ex = rez.dx % 1;
+    ey = rez.dy % 1;
+
+    rez.dx -= ex;
+    rez.dy -= ey;
+
+    return rez;
+}
+
+const handlePointerMove = (e) => {
+    // !to fix ff https://github.com/w3c/pointerlock/issues/42
+    pub(MOUSE_MOVED, scaleCursorPos(e.movementX, e.movementY));
+}
+
 const fit = 'contain'
 
 sub(APP_VIDEO_CHANGED, (payload) => {
@@ -201,6 +274,16 @@ sub(APP_VIDEO_CHANGED, (payload) => {
     state.screen.setAttribute('width', '' + ww)
     state.screen.setAttribute('height', '' + hh)
     state.screen.style.aspectRatio = '' + state.aspect
+})
+
+sub(KB_MOUSE_FLAG, () => {
+    log.info('Keyboard and mouse will be locked in fullscreen');
+    state.kbmLock = true;
+    sub(POINTER_LOCK_CHANGE, (lockedEl) => {
+        pointerLocked = lockedEl === screen;
+        screen.onpointermove = pointerLocked ? handlePointerMove : null;
+        log.debug(`Pointer lock: ${pointerLocked}`);
+    });
 })
 
 /**

@@ -487,6 +487,8 @@ const render = function () {
             case opts.INPUT_KEYBOARD_MAP:
                 _option(data).withName('Keyboard bindings')
                     .withClass('keyboard-bindings')
+                    .withDescription(
+                        'Bindings for RetroPad. There is an alternate ESC key [Shift+`] (tilde) for cores with keyboard+mouse controls (DosBox)')
                     .add(Object.keys(value).map(k => gui.binding(value[k], k, onKeyBindingChange)))
                     .build();
                 break;

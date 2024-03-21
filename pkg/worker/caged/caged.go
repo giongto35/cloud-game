@@ -15,6 +15,12 @@ type Manager struct {
 	log  *logger.Logger
 }
 
+const (
+	RetroPad = libretro.RetroPad
+	Keyboard = libretro.Keyboard
+	Mouse    = libretro.Mouse
+)
+
 type ModName string
 
 const Libretro ModName = "libretro"

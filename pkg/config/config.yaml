@@ -189,6 +189,7 @@ emulator:
       #       A list of device IDs to bind to the input ports.
       #       Some cores allow binding multiple devices to a single port (DosBox), but typically,
       #       you should bind just one device to one port.
+      #   - kbMouseSupport (bool) -- (temp) a flag if the core needs the keyboard and mouse on the client
       #   - vfr (bool)
       #    (experimental)
       #       Enable variable frame rate only for cores that can't produce a constant frame rate.
@@ -205,6 +206,7 @@ emulator:
       list:
         gba:
           lib: mgba_libretro
+          coreAspectRatio: true
           roms: [ "gba", "gbc" ]
           options:
             mgba_audio_low_pass_filter: enabled

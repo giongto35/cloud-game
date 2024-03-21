@@ -127,6 +127,10 @@ void bridge_clear_all_thread_waits_cb(void *data) {
     *(retro_environment_t *)data = clear_all_thread_waits_cb;
 }
 
+void bridge_retro_keyboard_callback(void *cb, bool down, unsigned keycode, uint32_t character, uint16_t keyModifiers) {
+    (*(retro_keyboard_event_t *) cb)(down, keycode, character, keyModifiers);
+}
+
 bool core_environment_cgo(unsigned cmd, void *data) {
     bool coreEnvironment(unsigned, void *);
     return coreEnvironment(cmd, data);
