@@ -86,28 +86,26 @@ screen.addEventListener('canplay', () => {
     useCustomScreen(options.mirrorMode === 'mirror');
 }, false);
 
+const screenToAspect = (el) => {
+    const w = window.screen.width ?? window.innerWidth;
+    const hh = el.innerHeight || el.clientHeight || 0;
+    const dw = (w - hh * state.aspect) / 2
+    screen.style.padding = `0 ${dw}px`
+}
+
 screen.addEventListener('fullscreenchange', () => {
     state.fullscreen = !!document.fullscreenElement;
 
-    const w = window.screen.width ?? window.innerWidth;
-    const h = window.screen.height ?? window.innerHeight;
-
-    const ww = document.documentElement.innerWidth;
-    const hh = document.documentElement.innerHeight;
-
-    screen.style.padding = '0'
-    if (state.fullscreen) {
-        const dw = (w - ww * state.aspect) / 2
-        screen.style.padding = `0 ${dw}px`
+    if (!state.fullscreen) {
+        screen.style.padding = '0'
+    } else {
+        screenToAspect(document.fullscreenElement);
         // chrome bug
         setTimeout(() => {
-            const dw = (h - hh * state.aspect) / 2
-            screen.style.padding = `0 ${dw}px`
+            screenToAspect(document.fullscreenElement)
         }, 1)
-        makeFullscreen(true);
-    } else {
-        makeFullscreen(false);
     }
+    makeFullscreen(state.fullscreen);
 
     // !to flipped
 })
