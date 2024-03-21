@@ -28,6 +28,7 @@ type LibretroConfig struct {
 		List map[string]LibretroCoreConfig
 	}
 	DebounceMs      int
+	Dup             bool
 	SaveCompression bool
 	LogLevel        int
 }

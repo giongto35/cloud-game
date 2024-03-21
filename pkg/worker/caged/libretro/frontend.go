@@ -93,6 +93,7 @@ var (
 	noData    = func([]byte) {}
 	noVideo   = func(app.Video) {}
 	videoPool sync.Pool
+	lastFrame *app.Video
 )
 
 // NewFrontend implements Emulator interface for a Libretro frontend.
@@ -156,6 +157,7 @@ func (f *Frontend) LoadCore(emu string) {
 	conf := f.conf.GetLibretroCoreConfig(emu)
 	meta := nanoarch.Metadata{
 		AutoGlContext:   conf.AutoGlContext,
+		FrameDup:        f.conf.Libretro.Dup,
 		Hacks:           conf.Hacks,
 		HasVFR:          conf.VFR,
 		Hid:             conf.Hid,
@@ -190,7 +192,6 @@ func (f *Frontend) handleAudio(audio unsafe.Pointer, samples int) {
 }
 
 func (f *Frontend) handleVideo(data []byte, delta int32, fi nanoarch.FrameInfo) {
-	// !to merge both pools
 	fr, _ := videoPool.Get().(*app.Video)
 	if fr == nil {
 		fr = new(app.Video)
@@ -200,8 +201,15 @@ func (f *Frontend) handleVideo(data []byte, delta int32, fi nanoarch.FrameInfo) 
 	fr.Frame.H = int(fi.H)
 	fr.Frame.Stride = int(fi.Stride)
 	fr.Duration = delta
+
+	lastFrame = fr
 	f.onVideo(*fr)
+
 	videoPool.Put(fr)
+}
+
+func (f *Frontend) handleDup() {
+	f.onVideo(*lastFrame)
 }
 
 func (f *Frontend) Shutdown() {
@@ -224,6 +232,7 @@ func (f *Frontend) linkNano(nano *nanoarch.Nanoarch) {
 	f.nano.OnDpad = f.input.isDpadTouched
 	f.nano.OnVideo = f.handleVideo
 	f.nano.OnAudio = f.handleAudio
+	f.nano.OnDup = f.handleDup
 }
 
 func (f *Frontend) SetVideoChangeCb(fn func()) {

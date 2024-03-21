@@ -78,6 +78,7 @@ type Handlers struct {
 	OnKeyPress     func(port uint, key int) int
 	OnAudio        func(ptr unsafe.Pointer, frames int)
 	OnVideo        func(data []byte, delta int32, fi FrameInfo)
+	OnDup          func()
 	OnSystemAvInfo func()
 }
 
@@ -88,6 +89,7 @@ type FrameInfo struct {
 }
 
 type Metadata struct {
+	FrameDup        bool
 	LibPath         string // the full path to some emulator lib
 	IsGlAllowed     bool
 	UsesLibCo       bool
@@ -127,6 +129,7 @@ var Nan0 = Nanoarch{
 		OnKeyPress: func(uint, int) int { return 0 },
 		OnAudio:    func(unsafe.Pointer, int) {},
 		OnVideo:    func([]byte, int32, FrameInfo) {},
+		OnDup:      func() {},
 	},
 }
 
@@ -559,9 +562,9 @@ func coreVideoRefresh(data unsafe.Pointer, width, height uint, packed uint) {
 	}
 	Nan0.LastFrameTime = t
 
-	// some cores can return nothing
-	// !to add duplicate if can dup
+	// when the core returns a duplicate frame
 	if data == nil {
+		Nan0.Handlers.OnDup()
 		return
 	}
 
@@ -694,9 +697,9 @@ func coreEnvironment(cmd C.unsigned, data unsafe.Pointer) C.bool {
 		setRotation((*(*uint)(data) % 4) * 90)
 		return true
 	case C.RETRO_ENVIRONMENT_GET_CAN_DUPE:
-		// !to implement frame dup (nil) some time later
-		*(*C.bool)(data) = C.bool(false)
-		return false
+		dup := C.bool(Nan0.meta.FrameDup)
+		*(*C.bool)(data) = dup
+		return dup
 	case C.RETRO_ENVIRONMENT_GET_USERNAME:
 		*(**C.char)(data) = Nan0.cUserName
 		return true
