@@ -209,7 +209,9 @@ func (f *Frontend) handleVideo(data []byte, delta int32, fi nanoarch.FrameInfo) 
 }
 
 func (f *Frontend) handleDup() {
-	f.onVideo(*lastFrame)
+	if lastFrame != nil {
+		f.onVideo(*lastFrame)
+	}
 }
 
 func (f *Frontend) Shutdown() {
@@ -217,6 +219,7 @@ func (f *Frontend) Shutdown() {
 	f.nano.Shutdown()
 	f.SetAudioCb(noAudio)
 	f.SetVideoCb(noVideo)
+	lastFrame = nil
 	f.mu.Unlock()
 	f.log.Debug().Msgf("frontend shutdown done")
 }
