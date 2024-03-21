@@ -224,6 +224,7 @@ emulator:
         # https://docs.libretro.com/library/fbneo/
         mame:
           lib: fbneo_libretro
+          coreAspectRatio: true
           roms: [ "zip" ]
         nes:
           lib: nestopia_libretro
