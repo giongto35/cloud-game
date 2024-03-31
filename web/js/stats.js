@@ -3,9 +3,7 @@ import {
     pub,
     sub,
     STATS_TOGGLE,
-    HELP_OVERLAY_TOGGLED,
-    PING_REQUEST,
-    PING_RESPONSE
+    HELP_OVERLAY_TOGGLED
 } from 'event';
 import {log} from 'log';
 import {webrtc} from 'network';
@@ -19,6 +17,10 @@ let time = 0;
 let active = false;
 
 // !to add connection drop notice
+
+// internal events
+const WEBRTC_STATS_FRAME = 'STATS_WEBRTC_FRAME_STATS';
+const WEBRTC_STATS_RTT = 'STATS_WEBRTC_ICE_RTT';
 
 const statsOverlayEl = document.getElementById('stats-overlay');
 
@@ -150,73 +152,6 @@ const moduleUi = (label = '', withGraph = false, postfix = () => 'ms') => {
 }
 
 /**
- * Latency stats submodule.
- *
- * Accumulates the simple rolling mean value
- * between the next server request and following server response values.
- *
- *      window
- *   _____________
- *  |            |
- * [1, 1, 3, 4, 1, 4, 3, 1, 2, 1, 1, 1, 2, ... n]
- *              |
- *    stats_snapshot_period
- *    mean = round(next - mean / length % window)
- *
- * Events:
- * <- PING_RESPONSE
- * <- PING_REQUEST
- *
- * ?Interface:
- *  HTMLElement get()
- *  void enable()
- *  void disable()
- *  void render()
- *
- * @version 1
- */
-const latency = (() => {
-    let listeners = [];
-
-    let mean = 0;
-    let length = 0;
-    let previous = 0;
-    const window = 5;
-
-    const ui = moduleUi('Ping(c)', true);
-
-    const onPingRequest = (data) => previous = data.time;
-
-    const onPingResponse = () => {
-        length++;
-        const delta = Date.now() - previous;
-        mean += Math.round((delta - mean) / length);
-
-        if (length % window === 0) {
-            length = 1;
-            mean = delta;
-        }
-    }
-
-    const enable = () => {
-        listeners.push(
-            sub(PING_RESPONSE, onPingResponse),
-            sub(PING_REQUEST, onPingRequest)
-        );
-    }
-
-    const disable = () => {
-        while (listeners.length) listeners.shift().unsub();
-    }
-
-    const render = () => ui.update(mean);
-
-    const get = () => ui.el;
-
-    return {get, enable, disable, render}
-})(event, moduleUi);
-
-/**
  * User agent memory stats.
  *
  * ?Interface:
@@ -264,25 +199,25 @@ const clientMemory = (() => {
     return {get, enable, disable, render}
 })(moduleUi, performance, window);
 
-
 const webRTCStats_ = (() => {
     let interval = null
 
     function getStats() {
         if (!webrtc.isConnected()) return;
-        webrtc.getConnection().getStats(null).then(stats => {
+
+        webrtc.getConnection().getStats().then(stats => {
             let frameStatValue = '?';
             stats.forEach(report => {
                 if (report["framesReceived"] !== undefined && report["framesDecoded"] !== undefined && report["framesDropped"] !== undefined) {
                     frameStatValue = report["framesReceived"] - report["framesDecoded"] - report["framesDropped"];
-                    pub('STATS_WEBRTC_FRAME_STATS', frameStatValue)
+                    pub(WEBRTC_STATS_FRAME, frameStatValue)
                 } else if (report["framerateMean"] !== undefined) {
                     frameStatValue = Math.round(report["framerateMean"] * 100) / 100;
-                    pub('STATS_WEBRTC_FRAME_STATS', frameStatValue)
+                    pub(WEBRTC_STATS_FRAME, frameStatValue)
                 }
 
                 if (report["nominated"] && report["currentRoundTripTime"] !== undefined) {
-                    pub('STATS_WEBRTC_ICE_RTT', report["currentRoundTripTime"] * 1000);
+                    pub(WEBRTC_STATS_RTT, report["currentRoundTripTime"] * 1000);
                 }
             });
         });
@@ -339,12 +274,12 @@ const webRTCRttStats = (() => {
     let value = 0;
     let listener;
 
-    const ui = moduleUi('RTT', true, () => 'ms');
+    const ui = moduleUi('Ping', true, () => 'ms');
 
     const get = () => ui.el;
 
     const enable = () => {
-        listener = sub('STATS_WEBRTC_ICE_RTT', onStats);
+        listener = sub(WEBRTC_STATS_RTT, onStats);
     }
 
     const disable = () => {
@@ -421,7 +356,6 @@ const render = () => modules(m => m.render(), false);
 // add submodules
 _modules.push(
     webRTCRttStats,
-    // latency,
     clientMemory,
     webRTCStats_,
     webRTCFrameStats

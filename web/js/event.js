@@ -51,8 +51,6 @@ export const pub = (topic, data) => {
 
 // events
 export const LATENCY_CHECK_REQUESTED = 'latencyCheckRequested';
-export const PING_REQUEST = 'pingRequest';
-export const PING_RESPONSE = 'pingResponse';
 
 export const WORKER_LIST_FETCHED = 'workerListFetched';
 
