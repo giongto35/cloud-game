@@ -74,6 +74,7 @@ func NewApiFactory(conf config.Webrtc, log *logger.Logger, mod ModApiFun) (api *
 	}
 
 	s.SetICEMulticastDNSMode(ice.MulticastDNSModeDisabled)
+	s.EnableSCTPZeroChecksum(true)
 
 	if mod != nil {
 		mod(m, i, &s)
