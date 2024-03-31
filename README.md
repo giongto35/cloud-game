@@ -125,7 +125,7 @@ application [installed](https://docs.docker.com/compose/install/).
 
 By clicking these deep link, you can join the game directly and play it together with other people.
 
-- [Play Pokemon Emerald](https://cloudretro.io/?id=652e45d78d2b91cd%7CPokemon%20-%20Emerald%20Version%20%28U%29)
+- [Play Pokemon Emerald](https://cloudretro.io/?id=652e45d78d2b91cd___Pokemon%20-%20Emerald%20Version%20(U))
 - [Fire Emblem](https://cloudretro.io/?id=314ea4d7f9c94d25___Fire%20Emblem%20%28U%29%20%5B%21%5D)
 - [Samurai Showdown 4](https://cloudretro.io/?id=733c73064c368832___samsho4)
 - [Metal Slug X](https://cloudretro.io/?id=2a9c4b3f1c872d28___mslugx)
