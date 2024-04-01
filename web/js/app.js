@@ -29,7 +29,6 @@ import {
     RECORDING_STATUS_CHANGED,
     RECORDING_TOGGLED,
     SETTINGS_CHANGED,
-    STATS_TOGGLE,
     WEBRTC_CONNECTION_CLOSED,
     WEBRTC_CONNECTION_READY,
     WEBRTC_ICE_CANDIDATE_FOUND,
@@ -38,7 +37,7 @@ import {
     WEBRTC_NEW_CONNECTION,
     WEBRTC_SDP_ANSWER,
     WEBRTC_SDP_OFFER,
-    WORKER_LIST_FETCHED
+    WORKER_LIST_FETCHED,
 } from 'event';
 import {gui} from 'gui';
 import {keyboard, KEY, joystick, retropad, touch} from 'input';
@@ -395,7 +394,7 @@ const app = {
                         message.show('Saving the game.');
                         break;
                     case KEY.STATS:
-                        pub(STATS_TOGGLE);
+                        stats.toggle();
                         break;
                     case KEY.SETTINGS:
                         break;
@@ -449,7 +448,7 @@ const app = {
                         window.location = window.location.pathname;
                         break;
                     case KEY.STATS:
-                        pub(STATS_TOGGLE);
+                        stats.toggle();
                         break;
                     case KEY.DTOGGLE:
                         handleToggle();
@@ -527,3 +526,44 @@ const wid = new URLSearchParams(document.location.search).get('wid');
 // if from URL -> start game immediately!
 socket.init(roomId, wid, zone);
 api.transport = socket;
+
+// stats
+let WEBRTC_STATS_FRAME_DELAY;
+let WEBRTC_STATS_RTT;
+
+stats.modules = [
+    {
+        mui: stats.mui('Ping', true),
+        init() {
+            WEBRTC_STATS_RTT = (v) => (this.val = v)
+        },
+    },
+    {
+        mui: stats.mui('FrameDelay', false, () => ''),
+        init() {
+            WEBRTC_STATS_FRAME_DELAY = (v) => (this.val = v)
+        }
+    },
+    {
+        async stats() {
+            const stats = await webrtc.stats();
+            if (!stats) return;
+
+            stats.forEach(report => {
+                const {framesReceived, framesDecoded, framesDropped} = report;
+                if (framesReceived !== undefined && framesDecoded !== undefined && framesDropped !== undefined) {
+                    WEBRTC_STATS_FRAME_DELAY(framesReceived - framesDecoded - framesDropped)
+                }
+                const {nominated, currentRoundTripTime} = report;
+                if (nominated && currentRoundTripTime !== undefined) {
+                    WEBRTC_STATS_RTT(currentRoundTripTime * 1000);
+                }
+            });
+        },
+        enable() {
+            this.interval = window.setInterval(this.stats, 999);
+        },
+        disable() {
+            window.clearInterval(this.interval);
+        },
+    }]

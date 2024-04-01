@@ -87,7 +87,6 @@ export const AXIS_CHANGED = 'axisChanged';
 export const CONTROLLER_UPDATED = 'controllerUpdated';
 
 export const DPAD_TOGGLE = 'dpadToggle';
-export const STATS_TOGGLE = 'statsToggle';
 export const HELP_OVERLAY_TOGGLED = 'helpOverlayToggled';
 
 export const SETTINGS_CHANGED = 'settingsChanged';

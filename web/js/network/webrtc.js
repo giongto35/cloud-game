@@ -168,7 +168,10 @@ export const webrtc = {
     input: (data) => dataChannel.send(data),
     isConnected: () => connected,
     isInputReady: () => inputReady,
-    getConnection: () => connection,
+    stats: async () => {
+        if (!connected) return Promise.resolve();
+        return await connection.getStats()
+    },
     stop,
     set onData(fn) {
         onData = fn
