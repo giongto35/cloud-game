@@ -1,12 +1,7 @@
-import {env} from 'env';
 import {
-    pub,
     sub,
-    STATS_TOGGLE,
     HELP_OVERLAY_TOGGLED
 } from 'event';
-import {log} from 'log';
-import {webrtc} from 'network';
 
 const _modules = [];
 let tempHide = false;
@@ -17,10 +12,6 @@ let time = 0;
 let active = false;
 
 // !to add connection drop notice
-
-// internal events
-const WEBRTC_STATS_FRAME = 'STATS_WEBRTC_FRAME_STATS';
-const WEBRTC_STATS_RTT = 'STATS_WEBRTC_ICE_RTT';
 
 const statsOverlayEl = document.getElementById('stats-overlay');
 
@@ -73,18 +64,16 @@ const graph = (parent, opts = {
 
     /**
      *  Draws a bar graph on the canvas.
+     *
+     * @example
+     *  +-------+   +-------+   +---------+
+     *  |       |   |+---+  |   |+---+    |
+     *  |       |   ||||||  |   ||||||+---+
+     *  |       |   ||||||  |   |||||||||||
+     *  +-------+   +----+--+   +---------+
+     *  []          [3]         [3, 2]
      */
     const render = () => {
-        // 0,0   w,0   0,0   w,0   0,0     w,0
-        // +-------+   +-------+   +---------+
-        // |       |   |+---+  |   |+---+    |
-        // |       |   ||||||  |   ||||||+---+
-        // |       |   ||||||  |   |||||||||||
-        // +-------+   +----+--+   +---------+
-        // 0,h   w,h   0,h   w,h   0,h     w,h
-        // []          [3]         [3, 2]
-        //
-
         _context.clearRect(0, 0, _canvas.width, _canvas.height);
 
         maxN = data[0] || 1;
@@ -109,7 +98,12 @@ const graph = (parent, opts = {
         _context.fillRect(x, y, w, h);
     }
 
-    return {add, get, max, render}
+    const clear = () => {
+        data = [];
+        render();
+    }
+
+    return {add, get, max, render, clear}
 }
 
 /**
@@ -148,155 +142,34 @@ const moduleUi = (label = '', withGraph = false, postfix = () => 'ms') => {
         _value.textContent = `${value < 1 ? '<1' : value} ${_graph ? `(${_graph.max()}) ` : ''}${postfix_(value)}`;
     }
 
-    return {el: ui, update, withPostfix}
+    const clear = () => {
+        _graph && _graph.clear();
+    }
+
+    return {el: ui, update, withPostfix, clear}
 }
 
-/**
- * User agent memory stats.
- *
- * ?Interface:
- *  HTMLElement get()
- *  void enable()
- *  void disable()
- *  void render()
- *
- * @version 1
- */
-const clientMemory = (() => {
-    let active = false;
+const modules = (fn, force = true) => _modules.forEach(m => (force || m.get) && fn(m))
 
-    const measures = ['B', 'KB', 'MB', 'GB'];
-    const precision = 1;
-    let mLog = 0;
-
-    const ui = moduleUi('Memory', false, (x) => (x > 0) ? measures[mLog] : '');
-
-    const get = () => ui.el;
-
-    const enable = () => {
-        active = true;
-        render();
+const module = (mod) => {
+    mod = {
+        val: 0,
+        enable: () => ({}),
+        ...mod,
+        _disable: function () {
+            mod.val = 0;
+            mod.disable && mod.disable();
+            mod.mui && mod.mui.clear();
+        },
+        ...(mod.mui && {
+            get: () => mod.mui.el,
+            render: () => mod.mui.update(mod.val)
+        })
     }
-
-    const disable = () => active = false;
-
-    const render = () => {
-        if (!active) return;
-
-        const m = performance.memory.usedJSHeapSize;
-        let newValue = 'N/A';
-
-        if (m > 0) {
-            mLog = Math.floor(Math.log(m) / Math.log(1000));
-            newValue = Math.round(m * precision / Math.pow(1000, mLog)) / precision;
-        }
-
-        ui.update(newValue);
-    }
-
-    if (window.performance && !performance.memory) performance.memory = {usedJSHeapSize: 0, totalJSHeapSize: 0};
-
-    return {get, enable, disable, render}
-})(moduleUi, performance, window);
-
-const webRTCStats_ = (() => {
-    let interval = null
-
-    function getStats() {
-        if (!webrtc.isConnected()) return;
-
-        webrtc.getConnection().getStats().then(stats => {
-            let frameStatValue = '?';
-            stats.forEach(report => {
-                if (report["framesReceived"] !== undefined && report["framesDecoded"] !== undefined && report["framesDropped"] !== undefined) {
-                    frameStatValue = report["framesReceived"] - report["framesDecoded"] - report["framesDropped"];
-                    pub(WEBRTC_STATS_FRAME, frameStatValue)
-                } else if (report["framerateMean"] !== undefined) {
-                    frameStatValue = Math.round(report["framerateMean"] * 100) / 100;
-                    pub(WEBRTC_STATS_FRAME, frameStatValue)
-                }
-
-                if (report["nominated"] && report["currentRoundTripTime"] !== undefined) {
-                    pub(WEBRTC_STATS_RTT, report["currentRoundTripTime"] * 1000);
-                }
-            });
-        });
-    }
-
-    const enable = () => {
-        interval = window.setInterval(getStats, 1000);
-    }
-
-    const disable = () => window.clearInterval(interval);
-
-    return {enable, disable, internal: true}
-})(event, webrtc, window);
-
-/**
- * User agent frame stats.
- *
- * ?Interface:
- *  HTMLElement get()
- *  void enable()
- *  void disable()
- *  void render()
- *
- * @version 1
- */
-const webRTCFrameStats = (() => {
-    let value = 0;
-    let listener;
-
-    const label = env.getBrowser() === 'firefox' ? 'FramerateMean' : 'FrameDelay';
-    const ui = moduleUi(label, false, () => '');
-
-    const get = () => ui.el;
-
-    const enable = () => {
-        listener = sub('STATS_WEBRTC_FRAME_STATS', onStats);
-    }
-
-    const disable = () => {
-        value = 0;
-        if (listener) listener.unsub();
-    }
-
-    const render = () => ui.update(value);
-
-    function onStats(val) {
-        value = val;
-    }
-
-    return {get, enable, disable, render}
-})(env, event, moduleUi);
-
-const webRTCRttStats = (() => {
-    let value = 0;
-    let listener;
-
-    const ui = moduleUi('Ping', true, () => 'ms');
-
-    const get = () => ui.el;
-
-    const enable = () => {
-        listener = sub(WEBRTC_STATS_RTT, onStats);
-    }
-
-    const disable = () => {
-        value = 0;
-        if (listener) listener.unsub();
-    }
-
-    const render = () => ui.update(value);
-
-    function onStats(val) {
-        value = val;
-    }
-
-    return {get, enable, disable, render}
-})(event, moduleUi);
-
-const modules = (fn, force = true) => _modules.forEach(m => (force || !m.internal) && fn(m))
+    mod.init?.();
+    _modules.push(mod);
+    modules(m => m.get && statsOverlayEl.append(m.get()), false);
+}
 
 const enable = () => {
     active = true;
@@ -321,14 +194,12 @@ function draw(timestamp) {
 
 const disable = () => {
     active = false;
-    modules(m => m.disable());
+    modules(m => m._disable());
     _hide();
 }
 
 const _show = () => statsOverlayEl.style.visibility = 'visible';
 const _hide = () => statsOverlayEl.style.visibility = 'hidden';
-
-const onToggle = () => active ? disable() : enable();
 
 /**
  * Handles help overlay toggle event.
@@ -354,21 +225,15 @@ const onHelpOverlayToggle = (overlay) => {
 const render = () => modules(m => m.render(), false);
 
 // add submodules
-_modules.push(
-    webRTCRttStats,
-    clientMemory,
-    webRTCStats_,
-    webRTCFrameStats
-);
-modules(m => statsOverlayEl.append(m.get()), false);
-
-sub(STATS_TOGGLE, onToggle);
 sub(HELP_OVERLAY_TOGGLED, onHelpOverlayToggle)
 
 /**
  * App statistics module.
  */
 export const stats = {
-    enable,
-    disable
+    toggle: () => active ? disable() : enable(),
+    set modules(m) {
+        m && m.forEach(mod => module(mod))
+    },
+    mui: moduleUi,
 }
