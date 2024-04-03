@@ -8,7 +8,7 @@ import {
     KEY_PRESSED,
     KEY_RELEASED
 } from 'event';
-import {env} from 'env';
+import {env, browser as br, platform} from 'env';
 import {KEY} from 'input';
 import {log} from 'log';
 
@@ -98,10 +98,10 @@ const onGamepadConnected = (e) => {
 
     // Ref: https://github.com/giongto35/cloud-game/issues/14
     // get mapping first (default KeyMap2)
-    let os = env.getOs();
-    let browser = env.getBrowser();
+    const os = env.getOs();
+    const browser = env.getBrowser();
 
-    if (os === 'android') {
+    if (os === platform.android) {
         // default of android is KeyMap1
         joystickMap = {
             2: KEY.A,
@@ -135,7 +135,7 @@ const onGamepadConnected = (e) => {
         };
     }
 
-    if (os === 'android' && (browser === 'firefox' || browser === 'uc')) { //KeyMap2
+    if (os === platform.android && browser === br.firefox) { //KeyMap2
         joystickMap = {
             0: KEY.A,
             1: KEY.B,
@@ -152,7 +152,7 @@ const onGamepadConnected = (e) => {
         };
     }
 
-    if (os === 'win' && browser === 'firefox') { //KeyMap3
+    if (os === platform.windows && browser === br.firefox) { //KeyMap3
         joystickMap = {
             1: KEY.A,
             2: KEY.B,
@@ -165,7 +165,7 @@ const onGamepadConnected = (e) => {
         };
     }
 
-    if (os === 'mac' && browser === 'safari') { //KeyMap4
+    if (os === platform.macos && browser === br.safari) { //KeyMap4
         joystickMap = {
             1: KEY.A,
             2: KEY.B,
@@ -182,7 +182,7 @@ const onGamepadConnected = (e) => {
         };
     }
 
-    if (os === 'mac' && browser === 'firefox') { //KeyMap5
+    if (os === platform.macos && browser === br.firefox) { //KeyMap5
         joystickMap = {
             1: KEY.A,
             2: KEY.B,
@@ -201,7 +201,7 @@ const onGamepadConnected = (e) => {
 
     // https://bugs.chromium.org/p/chromium/issues/detail?id=1076272
     if (gamepad.id.includes('PLAYSTATION(R)3')) {
-        if (browser === 'chrome') {
+        if (browser === br.chrome) {
             joystickMap = {
                 1: KEY.A,
                 0: KEY.B,

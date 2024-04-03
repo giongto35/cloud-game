@@ -3,6 +3,9 @@ const page = document.getElementsByTagName('html')[0];
 const gameBoy = document.getElementById('gamebody');
 const sourceLink = document.getElementsByClassName('source')[0];
 
+export const browser = {unknown: 0, firefox: 1, chrome: 2, edge: 3, safari: 4}
+export const platform = {unknown: 0, windows: 1, linux: 2, macos: 3, android: 4,}
+
 let isLayoutSwitched = false;
 
 // Window rerender / rotate screen if needed
@@ -44,53 +47,35 @@ const rescaleGameBoy = (targetWidth, targetHeight) => {
     gameBoy.style['transform'] = transformations.join(' ');
 }
 
-const getOS = () => {
-    // linux? ios?
-    let OSName = 'unknown';
-    if (navigator.appVersion.indexOf('Win') !== -1) OSName = 'win';
-    else if (navigator.appVersion.indexOf('Mac') !== -1) OSName = 'mac';
-    else if (navigator.userAgent.indexOf('Linux') !== -1) OSName = 'linux';
-    else if (navigator.userAgent.indexOf('Android') !== -1) OSName = 'android';
-    return OSName;
-};
+const os = () => {
+    const ua = window.navigator.userAgent;
+    // noinspection JSUnresolvedReference,JSDeprecatedSymbols
+    const plt = window.navigator?.userAgentData?.platform || window.navigator.platform;
+    const macs = ["Macintosh", "MacIntel"];
+    const wins = ["Win32", "Win64", "Windows"];
+    if (wins.indexOf(plt) !== -1) return platform.windows;
+    if (macs.indexOf(plt) !== -1) return platform.macos;
+    if (/Linux/.test(plt)) return platform.linux;
+    if (/Android/.test(ua)) return platform.android;
+    return platform.unknown
+}
 
-const getBrowser = () => {
-    let browserName = 'unknown';
-    if (navigator.userAgent.indexOf('Firefox') !== -1) browserName = 'firefox';
-    if (navigator.userAgent.indexOf('Chrome') !== -1) browserName = 'chrome';
-    if (navigator.userAgent.indexOf('Edge') !== -1) browserName = 'edge';
-    if (navigator.userAgent.indexOf('Version/') !== -1) browserName = 'safari';
-    if (navigator.userAgent.indexOf('UCBrowser') !== -1) browserName = 'uc';
-    return browserName;
-};
+const _browser = () => {
+    if (navigator.userAgent.indexOf('Firefox') !== -1) return browser.firefox;
+    if (navigator.userAgent.indexOf('Chrome') !== -1) return browser.chrome;
+    if (navigator.userAgent.indexOf('Edge') !== -1) return browser.edge;
+    if (navigator.userAgent.indexOf('Version/') !== -1) return browser.safari;
+    return browser.unknown;
+}
+
+const isMobile = () => /Mobi|Android|iPhone/i.test(navigator.userAgent);
 
 const isPortrait = () => getWidth(page) < getHeight(page);
 
 const toggleFullscreen = (enable, element) => {
     const el = enable ? element : document;
-
-    if (enable) {
-        if (el.requestFullscreen) {
-            el.requestFullscreen();
-        } else if (el.mozRequestFullScreen) { /* Firefox */
-            el.mozRequestFullScreen();
-        } else if (el.webkitRequestFullscreen) { /* Chrome, Safari and Opera */
-            el.webkitRequestFullscreen();
-        } else if (el.msRequestFullscreen) { /* IE/Edge */
-            el.msRequestFullscreen();
-        }
-    } else {
-        if (el.exitFullscreen) {
-            el.exitFullscreen();
-        } else if (el.mozCancelFullScreen) { /* Firefox */
-            el.mozCancelFullScreen();
-        } else if (el.webkitExitFullscreen) { /* Chrome, Safari and Opera */
-            el.webkitExitFullscreen();
-        } else if (el.msExitFullscreen) { /* IE/Edge */
-            el.msExitFullscreen();
-        }
-    }
-};
+    enable ? el.requestFullscreen?.() : el.exitFullscreen?.();
+}
 
 function getHeight(el) {
     return parseFloat(getComputedStyle(el, null).height.replace("px", ""));
@@ -105,9 +90,9 @@ window.addEventListener('orientationchange', fixScreenLayout);
 document.addEventListener('DOMContentLoaded', () => fixScreenLayout(), false);
 
 export const env = {
-    getOs: getOS,
-    getBrowser: getBrowser,
-    isMobileDevice: () => /Mobi|Android|iPhone/i.test(navigator.userAgent),
+    getOs: os(),
+    getBrowser: _browser(),
+    isMobileDevice: isMobile(),
     display: () => ({
         isPortrait: isPortrait,
         toggleFullscreen: toggleFullscreen,

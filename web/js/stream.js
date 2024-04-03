@@ -26,7 +26,7 @@ let options = {
         aspect: 4 / 3
     };
 
-const mute = (mute) => screen.muted = mute
+const mute = (mute) => (screen.muted = mute)
 
 const _stream = () => {
     screen.play()
@@ -96,14 +96,14 @@ const screenToAspect = (el) => {
 screen.addEventListener('fullscreenchange', () => {
     state.fullscreen = !!document.fullscreenElement;
 
-    if (!state.fullscreen) {
-        screen.style.padding = '0'
-    } else {
+    if (state.fullscreen) {
         screenToAspect(document.fullscreenElement);
         // chrome bug
         setTimeout(() => {
             screenToAspect(document.fullscreenElement)
         }, 1)
+    } else {
+        screen.style.padding = '0'
     }
     makeFullscreen(state.fullscreen);
 
@@ -115,7 +115,7 @@ const makeFullscreen = (make = false) => {
 }
 
 const forceFullscreenMaybe = () => {
-    const touchMode = env.isMobileDevice();
+    const touchMode = env.isMobileDevice;
     log.debug('touch check', touchMode)
     !touchMode && options.forceFullscreen && toggleFullscreen();
 }
