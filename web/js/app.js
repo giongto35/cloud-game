@@ -24,7 +24,6 @@ import {
     KEY_PRESSED,
     KEY_RELEASED,
     LATENCY_CHECK_REQUESTED,
-    MENU_HANDLER_ATTACHED,
     MESSAGE,
     RECORDING_STATUS_CHANGED,
     RECORDING_TOGGLED,
@@ -45,9 +44,11 @@ import {socket, webrtc} from 'network';
 import {debounce} from 'utils';
 
 import {gameList} from './gameList.js?v=3';
+import {menu} from './menu.js?v=3';
 import {message} from './message.js?v=3';
 import {recording} from './recording.js?v=3';
 import {room} from './room.js?v=3';
+import {screen} from './screen.js?v=3';
 import {stats} from './stats.js?v=3';
 import {stream} from './stream.js?v=3';
 import {workerManager} from "./workerManager.js?v=3";
@@ -59,9 +60,11 @@ let lastState;
 // first user interaction
 let interacted = false;
 
-const menuScreen = document.getElementById('menu-screen');
 const helpOverlay = document.getElementById('help-overlay');
 const playerIndex = document.getElementById('playeridx');
+
+// screen init
+screen.add(menu, stream);
 
 // keymap
 const keyButtons = {};
@@ -121,18 +124,12 @@ const onLatencyCheck = async (data) => {
 };
 
 const helpScreen = {
-    // don't call $ if holding the button
     shown: false,
-    // use function () if you need "this"
     show: function (show, event) {
         if (this.shown === show) return;
 
         const isGameScreen = state === app.state.game
-        if (isGameScreen) {
-            stream.toggle(!show);
-        } else {
-            gui.toggle(menuScreen, !show);
-        }
+        screen.toggle(undefined, !show);
 
         gui.toggle(keyButtons[KEY.SAVE], show || isGameScreen);
         gui.toggle(keyButtons[KEY.LOAD], show || isGameScreen);
@@ -148,12 +145,11 @@ const helpScreen = {
 const showMenuScreen = () => {
     log.debug('[control] loading menu screen');
 
-    stream.toggle(false);
     gui.hide(keyButtons[KEY.SAVE]);
     gui.hide(keyButtons[KEY.LOAD]);
 
     gameList.show();
-    gui.show(menuScreen);
+    screen.toggle(menu);
 
     setState(app.state.menu);
 };
@@ -185,9 +181,7 @@ const startGame = () => {
 
     // clear menu screen
     retropad.poll.disable();
-    gui.hide(menuScreen);
-    stream.toggle(true);
-    stream.forceFullscreenMaybe();
+    screen.toggle(stream);
     gui.show(keyButtons[KEY.SAVE]);
     gui.show(keyButtons[KEY.LOAD]);
     // end clear
@@ -427,7 +421,7 @@ const app = {
                         loadGame();
                         break;
                     case KEY.FULL:
-                        stream.video.toggleFullscreen();
+                        screen.fullscreen();
                         break;
                     case KEY.PAD1:
                         updatePlayerIndex(0);
@@ -481,7 +475,7 @@ sub(WEBRTC_NEW_CONNECTION, (data) => {
 });
 sub(WEBRTC_ICE_CANDIDATE_FOUND, (data) => api.server.sendIceCandidate(data.candidate));
 sub(WEBRTC_SDP_ANSWER, (data) => api.server.sendSdp(data.sdp));
-sub(WEBRTC_SDP_OFFER, (data) => webrtc.setRemoteDescription(data.sdp, stream.video.el()));
+sub(WEBRTC_SDP_OFFER, (data) => webrtc.setRemoteDescription(data.sdp, stream.video.el));
 sub(WEBRTC_ICE_CANDIDATE_RECEIVED, (data) => webrtc.addCandidate(data.candidate));
 sub(WEBRTC_ICE_CANDIDATES_FLUSH, () => webrtc.flushCandidates());
 sub(WEBRTC_CONNECTION_READY, onConnectionReady);
@@ -492,23 +486,20 @@ sub(WEBRTC_CONNECTION_CLOSED, () => {
 sub(LATENCY_CHECK_REQUESTED, onLatencyCheck);
 sub(GAMEPAD_CONNECTED, () => message.show('Gamepad connected'));
 sub(GAMEPAD_DISCONNECTED, () => message.show('Gamepad disconnected'));
-// touch stuff
-sub(MENU_HANDLER_ATTACHED, (data) => {
-    menuScreen.addEventListener(data.event, data.handler, {passive: true});
-});
 sub(KEY_PRESSED, onKeyPress);
 sub(KEY_RELEASED, onKeyRelease);
 sub(SETTINGS_CHANGED, () => message.show('Settings have been updated'));
 sub(AXIS_CHANGED, onAxisChanged);
 sub(CONTROLLER_UPDATED, data => webrtc.input(data));
-// recording
 sub(RECORDING_TOGGLED, handleRecording);
 sub(RECORDING_STATUS_CHANGED, handleRecordingStatus);
 
 sub(SETTINGS_CHANGED, () => {
-    const newValue = settings.get()[opts.LOG_LEVEL];
-    if (newValue !== log.level) {
-        log.level = newValue;
+    const s = settings.get();
+    log.level = s[opts.LOG_LEVEL];
+    if (state.showPing !== s[opts.SHOW_PING]) {
+        state.showPing = s[opts.SHOW_PING];
+        stats.toggle();
     }
 });
 
@@ -519,6 +510,7 @@ keyboard.init();
 joystick.init();
 touch.init();
 stream.init();
+screen.init();
 
 let [roomId, zone] = room.loadMaybe();
 // find worker id if present
@@ -528,21 +520,14 @@ socket.init(roomId, wid, zone);
 api.transport = socket;
 
 // stats
-let WEBRTC_STATS_FRAME_DELAY;
 let WEBRTC_STATS_RTT;
 
 stats.modules = [
     {
-        mui: stats.mui('Ping', true),
+        mui: stats.mui(),
         init() {
             WEBRTC_STATS_RTT = (v) => (this.val = v)
         },
-    },
-    {
-        mui: stats.mui('FrameDelay', false, () => ''),
-        init() {
-            WEBRTC_STATS_FRAME_DELAY = (v) => (this.val = v)
-        }
     },
     {
         async stats() {
@@ -550,10 +535,6 @@ stats.modules = [
             if (!stats) return;
 
             stats.forEach(report => {
-                const {framesReceived, framesDecoded, framesDropped} = report;
-                if (framesReceived !== undefined && framesDecoded !== undefined && framesDropped !== undefined) {
-                    WEBRTC_STATS_FRAME_DELAY(framesReceived - framesDecoded - framesDropped)
-                }
                 const {nominated, currentRoundTripTime} = report;
                 if (nominated && currentRoundTripTime !== undefined) {
                     WEBRTC_STATS_RTT(currentRoundTripTime * 1000);
@@ -567,3 +548,6 @@ stats.modules = [
             window.clearInterval(this.interval);
         },
     }]
+
+state.showPing = settings.loadOr(opts.SHOW_PING, true);
+state.showPing && stats.toggle();

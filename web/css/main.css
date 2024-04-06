@@ -3,11 +3,10 @@
     src: url('/fonts/6809-Chargen.woff2');
 }
 
-
+/*noinspection CssInvalidPseudoSelector*/
 .no-media-controls::-webkit-media-controls {
     display: none !important;
 }
-
 
 html {
     /* force full size for Firefox */
@@ -168,25 +167,6 @@ body {
     border-left: 0;
     border-radius: 3px;
     transform: translateY(-50%);
-}
-
-
-#bottom-screen {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-
-    width: 320px;
-    height: 240px;
-    position: absolute;
-    top: 23px;
-    left: 150px;
-    overflow: hidden;
-    background-color: #333;
-
-    border-radius: 5px 5px 5px 5px;
-
-    box-shadow: 0 0 2px 2px rgba(25, 25, 25, 1);
 }
 
 #color-button-holder {
@@ -419,14 +399,8 @@ body {
     opacity: 0.75;
 }
 
-#bottom-screen {
-    position: absolute;
-    /* popups under the screen fix */
-    z-index: -1;
-}
-
 .game-screen {
-    position: absolute;
+    position: relative;
     object-fit: contain;
     width: inherit;
     height: inherit;
@@ -665,6 +639,7 @@ body {
     position: absolute;
     z-index: 200;
     backface-visibility: hidden;
+    cursor: default;
 
     display: flex;
     flex-direction: column;
@@ -674,13 +649,13 @@ body {
     right: 1.1em;
     color: #fff;
     background: #000;
-    opacity: .765;
-    padding: .5em 1em .1em 1em;
+    opacity: .465;
 
+    font-size: 2vh;
     font-family: monospace;
-    font-size: 40%;
+    min-width: 3.5em;
 
-    width: 70px;
+    padding-right: .2em;
 
     visibility: hidden;
 }
@@ -689,8 +664,7 @@ body {
     display: flex;
     flex-flow: wrap;
     justify-content: space-between;
-
-    margin-bottom: .7em;
+    align-items: center;
 }
 
 #stats-overlay > div > div {

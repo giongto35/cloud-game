@@ -22,12 +22,13 @@ export const opts = {
     INPUT_KEYBOARD_MAP: 'input.keyboard.map',
     MIRROR_SCREEN: 'mirror.screen',
     VOLUME: 'volume',
-    FORCE_FULLSCREEN: 'force.fullscreen'
+    FORCE_FULLSCREEN: 'force.fullscreen',
+    SHOW_PING: 'show.ping',
 }
 
 
 // internal structure version
-const revision = 1.51;
+const revision = 1.6;
 
 // default settings
 // keep them for revert to defaults option
@@ -507,6 +508,12 @@ const render = function () {
                     .withDescription(
                         'Whether games should open in full-screen mode after starting up (excluding mobile devices)'
                     )
+                    .add(gui.checkbox(k, onChange, value, 'Enabled', 'settings__option-checkbox'))
+                    .build()
+                break;
+            case opts.SHOW_PING:
+                _option(data).withName('Show ping')
+                    .withDescription('Always display ping info on the screen')
                     .add(gui.checkbox(k, onChange, value, 'Enabled', 'settings__option-checkbox'))
                     .build()
                 break;

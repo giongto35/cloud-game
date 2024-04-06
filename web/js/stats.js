@@ -134,7 +134,7 @@ const moduleUi = (label = '', withGraph = false, postfix = () => 'ms') => {
 
     _label.innerHTML = label;
 
-    const withPostfix = (value) => postfix_ = value;
+    const withPostfix = (value) => (postfix_ = value);
 
     const update = (value) => {
         if (_graph) _graph.add(value);
@@ -198,8 +198,8 @@ const disable = () => {
     _hide();
 }
 
-const _show = () => statsOverlayEl.style.visibility = 'visible';
-const _hide = () => statsOverlayEl.style.visibility = 'hidden';
+const _show = () => (statsOverlayEl.style.visibility = 'visible');
+const _hide = () => (statsOverlayEl.style.visibility = 'hidden');
 
 /**
  * Handles help overlay toggle event.
@@ -224,7 +224,6 @@ const onHelpOverlayToggle = (overlay) => {
 
 const render = () => modules(m => m.render(), false);
 
-// add submodules
 sub(HELP_OVERLAY_TOGGLED, onHelpOverlayToggle)
 
 /**
