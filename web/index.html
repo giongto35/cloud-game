@@ -8,7 +8,6 @@
     <meta property="og:type" content="cloud-game"/>
     <meta property="og:title" content="Web-based Cloud Gaming for Retro Games"/>
     <meta property="og:description" content="Play and share cloud gaming experience with your friends"/>
-    <meta property="og:image" content="http://cloud.webgame2d.com/static/img/ogimage.jpg"/>
     <meta property="og:url" content=""/>
     <meta property="og:site_name" content="Cloud Retro"/>
     <meta property="og:author" content="giongto35 trichimtrich"/>
@@ -31,14 +30,9 @@
         <div id="circle-pad"></div>
     </div>
 
-    <div id="bottom-screen">
+    <div id="screen">
         <div id="stats-overlay"></div>
-        <!--NOTE: New browser doesn't allow unmuted video player. So we muted here.
-            There is still audio because current audio flow is not from media but it is manually encoded (technical webRTC challenge). Later, when we can integrate audio to media, we can face the issue with mute again .
-            https://developers.google.com/web/updates/2017/09/autoplay-policy-changes
-        -->
         <video id="stream" class="game-screen" hidden muted preload="none"></video>
-
         <div id="menu-screen">
             <div id="menu-container"></div>
             <div id="menu-item-choice" class="hidden"></div>

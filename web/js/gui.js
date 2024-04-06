@@ -194,11 +194,11 @@ const hide = (el) => {
 }
 
 const toggle = (el, what) => {
-    if (what) {
-        show(el)
-    } else {
-        hide(el)
+    if (what === undefined) {
+        el.classList.toggle('hidden')
+        return
     }
+    what ? show(el) : hide(el)
 }
 
 const fadeIn = async (el, speed = .1) => {

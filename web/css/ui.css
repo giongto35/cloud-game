@@ -227,3 +227,24 @@
 .app-button:hover {
     color: #7e7e7e;
 }
+
+
+#screen {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    position: absolute;
+    /* popups under the screen fix */
+    z-index: -1;
+
+    width: 320px;
+    height: 240px;
+    top: 23px;
+    left: 150px;
+    overflow: hidden;
+    background-color: #333;
+
+    border-radius: 5px 5px 5px 5px;
+    box-shadow: 0 0 2px 2px rgba(25, 25, 25, 1);
+}

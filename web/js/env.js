@@ -74,7 +74,11 @@ const isPortrait = () => getWidth(page) < getHeight(page);
 
 const toggleFullscreen = (enable, element) => {
     const el = enable ? element : document;
-    enable ? el.requestFullscreen?.() : el.exitFullscreen?.();
+    if (enable) {
+        el.requestFullscreen?.().then().catch();
+        return
+    }
+    el.exitFullscreen?.().then().catch();
 }
 
 function getHeight(el) {
@@ -94,9 +98,9 @@ export const env = {
     getBrowser: _browser(),
     isMobileDevice: isMobile(),
     display: () => ({
-        isPortrait: isPortrait,
-        toggleFullscreen: toggleFullscreen,
-        fixScreenLayout: fixScreenLayout,
+        isPortrait,
+        toggleFullscreen,
+        fixScreenLayout,
         isLayoutSwitched: isLayoutSwitched
     })
 }
