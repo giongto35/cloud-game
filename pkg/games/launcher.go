@@ -2,7 +2,7 @@ package games
 
 import (
 	"fmt"
-	"math/rand"
+	"math/rand/v2"
 	"strconv"
 	"strings"
 )
@@ -59,5 +59,5 @@ func ExtractGame(roomID string) string {
 // RoomID contains random number + gameName
 // Next time when we only get roomID, we can launch game based on gameName
 func GenerateRoomID(title string) string {
-	return strconv.FormatInt(rand.Int63(), 16) + separator + title
+	return strconv.FormatInt(rand.Int64(), 16) + separator + title
 }

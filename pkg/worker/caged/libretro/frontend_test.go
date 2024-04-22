@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"io"
 	"log"
-	"math/rand"
+	"math/rand/v2"
 	"os"
 	"path/filepath"
 	"sync"
@@ -333,7 +333,7 @@ func TestConcurrentInput(t *testing.T) {
 	wg.Add(2 * events)
 
 	for i := 0; i < events; i++ {
-		player := rand.Intn(maxPort)
+		player := rand.IntN(maxPort)
 		go func() { state.setInput(player, []byte{0, 1}); wg.Done() }()
 		go func() { state.isKeyPressed(uint(player), 100); wg.Done() }()
 	}
@@ -362,4 +362,4 @@ func expand(p ...string) string {
 func hash(bytes []byte) string { return fmt.Sprintf("%x", md5.Sum(bytes)) }
 
 // lucky returns random boolean.
-func lucky() bool { return rand.Intn(2) == 1 }
+func lucky() bool { return rand.IntN(2) == 1 }

@@ -8,7 +8,7 @@ import (
 	"image/png"
 	"io"
 	"math"
-	"math/rand"
+	"math/rand/v2"
 	"os"
 	"path/filepath"
 	"testing"
@@ -169,7 +169,7 @@ func BenchmarkYuv(b *testing.B) {
 		{w: 1920, h: 1080},
 		{w: 320, h: 240},
 	}
-	r1 := rand.New(rand.NewSource(int64(1))).Float32()
+	r1 := rand.Float32()
 
 	for _, test := range tests {
 		w, h := test.w, test.h
