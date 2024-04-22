@@ -3,7 +3,7 @@ package com
 import (
 	"encoding/json"
 	"fmt"
-	"math/rand"
+	"math/rand/v2"
 	"net"
 	"net/http"
 	"net/url"
@@ -90,12 +90,11 @@ func testWebsocket(t *testing.T) {
 	for _, call := range calls {
 		call := call
 		if call.concurrent {
-			rand.New(rand.NewSource(time.Now().UnixNano()))
 			for i := 0; i < n; i++ {
 				packet := call.packet
 				go func() {
 					defer wait.Done()
-					time.Sleep(time.Duration(rand.Intn(200-100)+100) * time.Millisecond)
+					time.Sleep(time.Duration(rand.IntN(200-100)+100) * time.Millisecond)
 					vv, err := client.rpc.Call(client.sock.conn, &packet)
 					err = checkCall(vv, err, call.value)
 					if err != nil {

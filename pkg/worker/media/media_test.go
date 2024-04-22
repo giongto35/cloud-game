@@ -2,7 +2,7 @@ package media
 
 import (
 	"image"
-	"math/rand"
+	"math/rand/v2"
 	"reflect"
 	"testing"
 
@@ -25,8 +25,8 @@ func TestEncoders(t *testing.T) {
 	}
 
 	for _, test := range tests {
-		a := genTestImage(test.w, test.h, rand.New(rand.NewSource(int64(1))).Float32())
-		b := genTestImage(test.w, test.h, rand.New(rand.NewSource(int64(2))).Float32())
+		a := genTestImage(test.w, test.h, rand.Float32())
+		b := genTestImage(test.w, test.h, rand.Float32())
 		for i := 0; i < test.n; i++ {
 			run(test.w, test.h, test.codec, test.frames, a, b, t)
 		}
@@ -71,10 +71,10 @@ func run(w, h int, cod encoder.VideoCodec, count int, a *image.RGBA, b *image.RG
 	defer ve.Stop()
 
 	if a == nil {
-		a = genTestImage(w, h, rand.New(rand.NewSource(int64(1))).Float32())
+		a = genTestImage(w, h, rand.Float32())
 	}
 	if b == nil {
-		b = genTestImage(w, h, rand.New(rand.NewSource(int64(2))).Float32())
+		b = genTestImage(w, h, rand.Float32())
 	}
 
 	for i := 0; i < count; i++ {
@@ -146,7 +146,7 @@ func BenchmarkResampler(b *testing.B) {
 func gen(l int) []int16 {
 	nums := make([]int16, l)
 	for i := range nums {
-		nums[i] = int16(rand.Intn(10))
+		nums[i] = int16(rand.IntN(10))
 	}
 	return nums
 }

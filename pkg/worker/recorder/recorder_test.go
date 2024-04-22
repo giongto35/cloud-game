@@ -5,7 +5,7 @@ import (
 	"image"
 	"image/color"
 	"log"
-	"math/rand"
+	"math/rand/v2"
 	"os"
 	"sync"
 	"sync/atomic"
@@ -147,13 +147,11 @@ func genFrame(w, h int) Frame {
 	}
 }
 
-var rnd = rand.New(rand.NewSource(time.Now().Unix()))
-
 func randomColor() color.RGBA {
 	return color.RGBA{
-		R: uint8(rnd.Intn(256)),
-		G: uint8(rnd.Intn(256)),
-		B: uint8(rnd.Intn(256)),
+		R: uint8(rand.IntN(256)),
+		G: uint8(rand.IntN(256)),
+		B: uint8(rand.IntN(256)),
 		A: 255,
 	}
 }
