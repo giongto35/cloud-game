@@ -10,7 +10,7 @@ func TestLimit(t *testing.T) {
 	c := atomic.Int32{}
 	lim := NewLimit(50 * time.Millisecond)
 
-	for i := 0; i < 10; i++ {
+	for range 10 {
 		lim(func() {
 			c.Add(1)
 		})

@@ -170,7 +170,7 @@ func BenchmarkEmulators(b *testing.B) {
 	for _, bench := range benchmarks {
 		b.Run(bench.name, func(b *testing.B) {
 			s := DefaultFrontend("bench_"+bench.system+"_performance", bench.system, bench.rom)
-			for i := 0; i < b.N; i++ {
+			for range b.N {
 				s.nano.Run()
 			}
 			s.Shutdown()
@@ -294,12 +294,11 @@ func TestStateConcurrency(t *testing.T) {
 
 		_ = mock.Save()
 
-		for i := 0; i < test.run.frames; i++ {
+		for i := range test.run.frames {
 			qLock.Lock()
 			mock.Tick()
 			qLock.Unlock()
 
-			i := i
 			if lucky() && !lucky() {
 				ops.Add(1)
 				go func() {
@@ -332,7 +331,7 @@ func TestConcurrentInput(t *testing.T) {
 	events := 1000
 	wg.Add(2 * events)
 
-	for i := 0; i < events; i++ {
+	for range events {
 		player := rand.IntN(maxPort)
 		go func() { state.setInput(player, []byte{0, 1}); wg.Done() }()
 		go func() { state.isKeyPressed(uint(player), 100); wg.Done() }()

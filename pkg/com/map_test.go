@@ -53,8 +53,7 @@ func TestMap_Base(t *testing.T) {
 
 func TestMap_Concurrency(t *testing.T) {
 	m := Map[int, int]{m: make(map[int]int)}
-	for i := 0; i < 100; i++ {
-		i := i
+	for i := range 100 {
 		go m.Put(i, i)
 		go m.Has(i)
 		go m.Pop(i)
