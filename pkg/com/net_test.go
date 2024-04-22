@@ -88,9 +88,8 @@ func testWebsocket(t *testing.T) {
 
 	// test
 	for _, call := range calls {
-		call := call
 		if call.concurrent {
-			for i := 0; i < n; i++ {
+			for range n {
 				packet := call.packet
 				go func() {
 					defer wait.Done()
@@ -104,7 +103,7 @@ func testWebsocket(t *testing.T) {
 				}()
 			}
 		} else {
-			for i := 0; i < n; i++ {
+			for range n {
 				packet := call.packet
 				vv, err := client.rpc.Call(client.sock.conn, &packet)
 				err = checkCall(vv, err, call.value)
