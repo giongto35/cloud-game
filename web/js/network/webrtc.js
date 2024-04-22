@@ -98,27 +98,24 @@ const ice = (() => {
         onIceConnectionStateChange: () => {
             log.info('[rtc] <- iceConnectionState', connection.iceConnectionState);
             switch (connection.iceConnectionState) {
-                case 'connected': {
+                case 'connected':
                     log.info('[rtc] connected...');
                     connected = true;
                     break;
-                }
-                case 'disconnected': {
+                case 'disconnected':
                     log.info(`[rtc] disconnected... ` +
                         `connection: ${connection.connectionState}, ice: ${connection.iceConnectionState}, ` +
                         `gathering: ${connection.iceGatheringState}, signalling: ${connection.signalingState}`)
                     connected = false;
                     pub(WEBRTC_CONNECTION_CLOSED);
                     break;
-                }
-                case 'failed': {
+                case 'failed':
                     log.error('[rtc] failed establish connection, retry...');
                     connected = false;
                     connection.createOffer({iceRestart: true})
                         .then(description => connection.setLocalDescription(description).catch(log.error))
                         .catch(log.error);
                     break;
-                }
             }
         }
     }
