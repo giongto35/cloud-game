@@ -5,7 +5,7 @@ import {
 import {KEY} from 'input'
 import {log} from 'log';
 
-const pollingIntervalMs = 4;
+const pollingIntervalMs = 5;
 let controllerChangedIndex = -1;
 
 // Libretro config
@@ -91,8 +91,10 @@ const _getState = () => {
     return controllerEncoded.slice(0, controllerChangedIndex + 1);
 }
 
+const _poll = poll(pollingIntervalMs, sendControllerState)
+
 export const retropad = {
-    poll: poll(pollingIntervalMs, sendControllerState),
+    poll: _poll,
     setKeyState,
     setAxisChanged,
 }
