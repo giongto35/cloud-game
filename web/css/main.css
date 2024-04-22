@@ -651,9 +651,9 @@ body {
     background: #000;
     opacity: .465;
 
-    font-size: 2vh;
+    font-size: 1.45vh;
     font-family: monospace;
-    min-width: 3.5em;
+    min-width: 3em;
 
     padding-right: .2em;
 

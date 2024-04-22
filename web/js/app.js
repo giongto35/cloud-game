@@ -458,7 +458,6 @@ sub(MESSAGE, onMessage);
 
 sub(GAME_ROOM_AVAILABLE, onGameRoomAvailable, 2);
 sub(GAME_SAVED, () => message.show('Saved'));
-sub(GAME_LOADED, () => message.show('Loaded'));
 sub(GAME_PLAYER_IDX, data => {
     updatePlayerIndex(+data.index, state !== app.state.game);
 });
