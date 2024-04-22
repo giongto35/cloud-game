@@ -67,7 +67,7 @@ videoEl.addEventListener('loadstart', () => {
     videoEl.volume = options.volume;
     videoEl.poster = options.poster;
 }, false);
-videoEl.addEventListener('canplay', () => {
+videoEl.addEventListener('play', () => {
     videoEl.poster = '';
     useCustomScreen(options.mirrorMode === 'mirror');
 }, false);
