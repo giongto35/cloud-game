@@ -164,6 +164,7 @@ func (f *Frontend) LoadCore(emu string) {
 		IsGlAllowed:     conf.IsGlAllowed,
 		LibPath:         conf.Lib,
 		Options:         conf.Options,
+		Options4rom:     conf.Options4rom,
 		UsesLibCo:       conf.UsesLibCo,
 		CoreAspectRatio: conf.CoreAspectRatio,
 	}

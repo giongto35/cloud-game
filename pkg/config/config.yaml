@@ -198,6 +198,8 @@ emulator:
       #       noticeable video stutter (with the current frame rendering time calculations).
       #   - options ([]string) a list of Libretro core options for tweaking.
       #       All keys of the options should be in the double quotes in order to preserve upper-case symbols.
+      #   - options4rom (rom[[]string])
+      #       A list of core options to override for a specific core depending on the current ROM name.
       #   - hacks ([]string) a list of hacks.
       #       Available:
       #       - skip_hw_context_destroy -- don't destroy OpenGL context during Libretro core deinit.

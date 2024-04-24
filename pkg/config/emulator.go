@@ -50,6 +50,7 @@ type LibretroCoreConfig struct {
 	IsGlAllowed     bool
 	Lib             string
 	Options         map[string]string
+	Options4rom     map[string]map[string]string // <(^_^)>
 	Roms            []string
 	Scale           float64
 	UsesLibCo       bool
