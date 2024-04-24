@@ -228,6 +228,7 @@ emulator:
         # https://docs.libretro.com/library/fbneo/
         mame:
           lib: fbneo_libretro
+          folder: mame
           roms: [ "zip" ]
         nes:
           lib: nestopia_libretro
@@ -265,6 +266,19 @@ emulator:
             "mupen64plus-rdp-plugin": gliden64
             "mupen64plus-rsp-plugin": hle
             "mupen64plus-astick-sensitivity": 100
+        dos:
+          lib: dosbox_pure_libretro
+          roms: [ "zip", "cue" ]
+          folder: dos
+          kbMouseSupport: true
+          hid:
+            0: [ 257, 513 ]
+            1: [ 257, 513 ]
+            2: [ 257, 513 ]
+            3: [ 257, 513 ]
+          options:
+            "dosbox_pure_conf": "outside"
+            "dosbox_pure_force60fps": "true"
 
 encoder:
   audio:

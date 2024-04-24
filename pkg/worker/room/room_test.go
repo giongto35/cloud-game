@@ -98,6 +98,7 @@ var (
 	alwas = games.GameMetadata{Name: "Alwa's Awakening (Demo)", Type: "nes", Path: "nes/Alwa's Awakening (Demo).nes", System: "nes"}
 	sushi = games.GameMetadata{Name: "Sushi The Cat", Type: "gba", Path: "gba/Sushi The Cat.gba", System: "gba"}
 	fd    = games.GameMetadata{Name: "Florian Demo", Type: "n64", Path: "n64/Sample Demo by Florian (PD).z64", System: "n64"}
+	rogue = games.GameMetadata{Name: "Rogue", Type: "dos", Path: "dos/rogue.zip", System: "dos"}
 )
 
 func TestMain(m *testing.M) {
@@ -127,6 +128,7 @@ func TestAll(t *testing.T) {
 		{game: sushi, frames: 150, color: 2},
 		{game: alwas, frames: 50, color: 1},
 		{game: fd, frames: 50, system: "gl", color: 1},
+		{game: rogue, frames: 33, color: 1},
 	}
 
 	crc32q := crc32.MakeTable(0xD5828281)
