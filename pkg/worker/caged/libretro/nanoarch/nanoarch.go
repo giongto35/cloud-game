@@ -3,6 +3,8 @@ package nanoarch
 import (
 	"errors"
 	"fmt"
+	"maps"
+	"path/filepath"
 	"runtime"
 	"strings"
 	"sync"
@@ -44,7 +46,8 @@ type Nanoarch struct {
 	LastFrameTime int64
 	LibCo         bool
 	meta          Metadata
-	options       *map[string]string
+	options       map[string]string
+	options4rom   map[string]map[string]string
 	reserved      chan struct{} // limits concurrent use
 	Rot           uint
 	serializeSize C.size_t
@@ -96,6 +99,7 @@ type Metadata struct {
 	AutoGlContext   bool
 	HasVFR          bool
 	Options         map[string]string
+	Options4rom     map[string]map[string]string
 	Hacks           []string
 	Hid             map[int][]int
 	CoreAspectRatio bool
@@ -168,7 +172,10 @@ func (n *Nanoarch) CoreLoad(meta Metadata) {
 	// hacks
 	Nan0.hackSkipHwContextDestroy = meta.HasHack("skip_hw_context_destroy")
 
-	n.options = &meta.Options
+	n.log.Debug().Msgf(">>> opts1: %v, meta: %p (%p)", n.options, meta.Options, &meta.Options)
+	n.options = maps.Clone(meta.Options)
+	n.options4rom = meta.Options4rom
+	n.log.Debug().Msgf(">>> opts2: %v, 4rom: %v", n.options, n.options4rom)
 
 	filePath := meta.LibPath
 	if ar, err := arch.Guess(); err == nil {
@@ -222,7 +229,7 @@ func (n *Nanoarch) CoreLoad(meta Metadata) {
 	}
 
 	C.bridge_retro_get_system_info(retroGetSystemInfo, &n.sys.i)
-	n.log.Debug().Msgf("System >>> %s (%s) [%s] nfp: %v",
+	n.log.Debug().Msgf("System >>> %v (%v) [%v] nfp: %v",
 		C.GoString(n.sys.i.library_name), C.GoString(n.sys.i.library_version),
 		C.GoString(n.sys.i.valid_extensions), bool(n.sys.i.need_fullpath))
 }
@@ -253,6 +260,17 @@ func (n *Nanoarch) LoadGame(path string) error {
 	game.path = fp
 
 	n.log.Debug().Msgf("ROM - big: %v, size: %v", big, byteCountBinary(int64(game.size)))
+
+	// maybe some custom options
+	if n.options4rom != nil {
+		romName := strings.TrimSuffix(filepath.Base(path), filepath.Ext(path))
+		if _, ok := n.options4rom[romName]; ok {
+			for k, v := range n.options4rom[romName] {
+				n.options[k] = v
+				n.log.Debug().Msgf("Replace: %v=%v", k, v)
+			}
+		}
+	}
 
 	if ok := C.bridge_retro_load_game(retroLoadGame, &game); !ok {
 		return fmt.Errorf("core failed to load ROM: %v", path)
@@ -348,6 +366,7 @@ func (n *Nanoarch) Shutdown() {
 		n.log.Error().Err(err).Msg("lib close failed")
 	}
 	n.options = nil
+	n.options4rom = nil
 	C.free(unsafe.Pointer(n.cUserName))
 	C.free(unsafe.Pointer(n.cSaveDirectory))
 	C.free(unsafe.Pointer(n.cSystemDirectory))
@@ -732,15 +751,15 @@ func coreEnvironment(cmd C.unsigned, data unsafe.Pointer) C.bool {
 		//window.SetShouldClose(true)
 		return false
 	case C.RETRO_ENVIRONMENT_GET_VARIABLE:
-		if Nan0.options == nil || *Nan0.options == nil {
+		if Nan0.options == nil {
 			return false
 		}
 		rv := (*C.struct_retro_variable)(data)
 		key := C.GoString(rv.key)
-		if v, ok := (*Nan0.options)[key]; ok {
+		if v, ok := Nan0.options[key]; ok {
 			// make Go strings null-terminated copies ;_;
-			(*Nan0.options)[key] = v + "\x00"
-			ptr := unsafe.Pointer(unsafe.StringData((*Nan0.options)[key]))
+			Nan0.options[key] = v + "\x00"
+			ptr := unsafe.Pointer(unsafe.StringData(Nan0.options[key]))
 			var p runtime.Pinner
 			p.Pin(ptr)
 			defer p.Unpin()
