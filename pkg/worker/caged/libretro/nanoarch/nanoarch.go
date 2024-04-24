@@ -172,10 +172,8 @@ func (n *Nanoarch) CoreLoad(meta Metadata) {
 	// hacks
 	Nan0.hackSkipHwContextDestroy = meta.HasHack("skip_hw_context_destroy")
 
-	n.log.Debug().Msgf(">>> opts1: %v, meta: %p (%p)", n.options, meta.Options, &meta.Options)
 	n.options = maps.Clone(meta.Options)
 	n.options4rom = meta.Options4rom
-	n.log.Debug().Msgf(">>> opts2: %v, 4rom: %v", n.options, n.options4rom)
 
 	filePath := meta.LibPath
 	if ar, err := arch.Guess(); err == nil {
