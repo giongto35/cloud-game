@@ -8,3 +8,5 @@ func Wrap(f func()) { Run(f) }
 
 // Main calls a function on the main thread.
 func Main(f func()) { Call(f) }
+
+func SwitchGraphics(s bool) { Switch(s) }

@@ -13,6 +13,8 @@ type fun struct {
 var dPool = sync.Pool{New: func() any { return make(chan struct{}) }}
 var fq = make(chan fun, runtime.GOMAXPROCS(0))
 
+var isGraphics = false
+
 func init() {
 	runtime.LockOSThread()
 }
@@ -38,8 +40,17 @@ func Run(run func()) {
 
 // Call queues function f on the main thread and blocks until the function f finishes.
 func Call(f func()) {
+	if !isGraphics {
+		f()
+		return
+	}
+
 	done := dPool.Get().(chan struct{})
 	defer dPool.Put(done)
 	fq <- fun{fn: f, done: done}
 	<-done
+}
+
+func Switch(s bool) {
+	isGraphics = s
 }
