@@ -21,7 +21,7 @@ worker:
     https: true
     tls:
       address: :444
-      domain: cloudretro.io
+#      domain: cloudretro.io
 
 emulator:
   libretro:

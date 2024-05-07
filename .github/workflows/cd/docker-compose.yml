@@ -1,7 +1,4 @@
-version: "3.9"
-
-x-params:
-  &default-params
+x-params: &default-params
   image: ghcr.io/giongto35/cloud-game/cloud-game:${IMAGE_TAG:-master}
   network_mode: "host"
   privileged: true
@@ -10,6 +7,33 @@ x-params:
     - seccomp:unconfined
   logging:
     driver: "journald"
+x-worker: &worker
+  depends_on:
+    - coordinator
+#  deploy:
+#    mode: replicated
+#    replicas: 4
+  environment:
+    - DISPLAY=:99
+    - MESA_GL_VERSION_OVERRIDE=4.5
+    - CLOUD_GAME_WORKER_LIBRARY_BASEPATH=/usr/local/share/cloud-game/assets/games
+    - CLOUD_GAME_EMULATOR_LIBRETRO_CORES_PATHS_LIBS=/usr/local/share/cloud-game/assets/cores
+    - CLOUD_GAME_WORKER_SERVER_TLS_DOMAIN=cloudretro.io
+  command: ./worker
+  volumes:
+    - ${APP_DIR:-/cloud-game}/cache:/usr/local/share/cloud-game/assets/cache
+    - ${APP_DIR:-/cloud-game}/cores:/usr/local/share/cloud-game/assets/cores
+    - ${APP_DIR:-/cloud-game}/games:/usr/local/share/cloud-game/assets/games
+    - ${APP_DIR:-/cloud-game}/libretro:/usr/local/share/cloud-game/libretro
+    - ${APP_DIR:-/cloud-game}/home:/root/.cr
+    - x11:/tmp/.X11-unix
+  healthcheck:
+    test: curl -f https://cloudretro.io/echo || exit 1
+    interval: 2m
+    timeout: 10s
+    retries: 3
+    start_period: 40s
+    start_interval: 5s
 
 services:
 
@@ -23,32 +47,36 @@ services:
       - ${APP_DIR:-/cloud-game}/games:/usr/local/share/cloud-game/assets/games
       - ${APP_DIR:-/cloud-game}/home:/root/.cr
 
-  worker:
-    <<: *default-params
-    depends_on:
-      - coordinator
-    deploy:
-      mode: replicated
-      replicas: 4
+  worker01:
+    <<: [ *default-params, *worker ]
     environment:
-      - DISPLAY=:99
-      - MESA_GL_VERSION_OVERRIDE=4.5
-      - CLOUD_GAME_WORKER_LIBRARY_BASEPATH=/usr/local/share/cloud-game/assets/games
-      - CLOUD_GAME_EMULATOR_LIBRETRO_CORES_PATHS_LIBS=/usr/local/share/cloud-game/assets/cores
-    command: ./worker
-    volumes:
-      - ${APP_DIR:-/cloud-game}/cache:/usr/local/share/cloud-game/assets/cache
-      - ${APP_DIR:-/cloud-game}/cores:/usr/local/share/cloud-game/assets/cores
-      - ${APP_DIR:-/cloud-game}/games:/usr/local/share/cloud-game/assets/games
-      - ${APP_DIR:-/cloud-game}/libretro:/usr/local/share/cloud-game/libretro
-      - ${APP_DIR:-/cloud-game}/home:/root/.cr
-      - x11:/tmp/.X11-unix
+      - CLOUD_GAME_WORKER_SERVER_TLS_ADDRESS=:444
+    healthcheck:
+      test: curl -f https://cloudretro.io:444/echo || exit 1
+  worker02:
+    <<: [ *default-params, *worker ]
+    environment:
+      - CLOUD_GAME_WORKER_SERVER_TLS_ADDRESS=:445
+    healthcheck:
+      test: curl -f https://cloudretro.io:445/echo || exit 1
+  worker03:
+    <<: [ *default-params, *worker ]
+    environment:
+      - CLOUD_GAME_WORKER_SERVER_TLS_ADDRESS=:446
+    healthcheck:
+      test: curl -f https://cloudretro.io:446/echo || exit 1
+  worker04:
+    <<: [ *default-params, *worker ]
+    environment:
+      - CLOUD_GAME_WORKER_SERVER_TLS_ADDRESS=:447
+    healthcheck:
+      test: curl -f https://cloudretro.io:447/echo || exit 1
 
   xvfb:
     image: kcollins/xvfb:latest
     volumes:
       - x11:/tmp/.X11-unix
-    command: [":99", "-screen", "0", "320x240x16" ]
+    command: [ ":99", "-screen", "0", "320x240x16" ]
 
 volumes:
   x11:
