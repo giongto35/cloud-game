@@ -2,7 +2,7 @@ PROJECT = cloud-game
 REPO_ROOT = github.com/giongto35
 ROOT = ${REPO_ROOT}/${PROJECT}
 
-CGO_CFLAGS='-g -O3 -funroll-loops'
+CGO_CFLAGS='-g -O3'
 CGO_LDFLAGS='-g -O3'
 GO_TAGS=static
 
