@@ -76,6 +76,7 @@ COPY --from=build_coordinator /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/
 FROM ubuntu:lunar AS worker
 
 RUN apt-get -q update && apt-get -q install --no-install-recommends -y \
+    curl \
     libx11-6 \
     libxext6 \
  && apt-get autoremove \
