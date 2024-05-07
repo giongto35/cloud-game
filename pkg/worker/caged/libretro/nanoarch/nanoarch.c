@@ -231,6 +231,7 @@ void *run_loop(void *unused) {
     mutex_destroy(&done_mutex);
     pthread_detach(thread);
     core_log_cgo(RETRO_LOG_DEBUG, "UnLibCo run loop stop\n");
+    pthread_exit(NULL);
 }
 
 void same_thread_stop() {

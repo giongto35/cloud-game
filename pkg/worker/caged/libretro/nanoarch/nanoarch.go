@@ -666,7 +666,7 @@ func coreLog(level C.enum_retro_log_level, msg *C.char) {
 	switch level {
 	// with debug level cores have too much logs
 	case C.RETRO_LOG_DEBUG:
-		Nan0.log.Trace().MsgFunc(func() string { return m(msg) })
+		Nan0.log.Debug().MsgFunc(func() string { return m(msg) })
 	case C.RETRO_LOG_INFO:
 		Nan0.log.Info().MsgFunc(func() string { return m(msg) })
 	case C.RETRO_LOG_WARN:

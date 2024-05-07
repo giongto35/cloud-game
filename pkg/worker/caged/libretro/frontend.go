@@ -112,12 +112,7 @@ func NewFrontend(conf config.Emulator, log *logger.Logger) (*Frontend, error) {
 
 	log = log.Extend(log.With().Str("m", "Libretro"))
 	level := logger.Level(conf.Libretro.LogLevel)
-	if level == logger.DebugLevel {
-		level = logger.TraceLevel
-		nano.SetLogger(log.Extend(log.Level(level).With()))
-	} else {
-		nano.SetLogger(log)
-	}
+	nano.SetLogger(log.Extend(log.Level(level).With()))
 
 	// Check if room is on local storage, if not, pull from GCS to local storage
 	log.Info().Msgf("Local storage path: %v", conf.Storage)
