@@ -60,6 +60,7 @@ coordinator:
   server:
     address: :8000
     cacheControl: "max-age=259200, must-revalidate"
+    frameOptions: ""
     https: false
     # Letsencrypt or self cert config
     tls:

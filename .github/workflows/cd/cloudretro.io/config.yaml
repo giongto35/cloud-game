@@ -4,6 +4,7 @@ coordinator:
   debug: true
   server:
     address:
+    frameOptions: SAMEORIGIN
     https: true
     tls:
       domain: cloudretro.io

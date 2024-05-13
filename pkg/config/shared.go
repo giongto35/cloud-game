@@ -32,6 +32,7 @@ func (c *Monitoring) IsEnabled() bool { return c.MetricEnabled || c.ProfilingEna
 type Server struct {
 	Address      string
 	CacheControl string
+	FrameOptions string
 	Https        bool
 	Tls          struct {
 		Address   string
