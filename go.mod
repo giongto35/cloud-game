@@ -18,9 +18,9 @@ require (
 	github.com/pion/webrtc/v4 v4.0.0-beta.19
 	github.com/rs/xid v1.5.0
 	github.com/rs/zerolog v1.32.0
-	github.com/veandco/go-sdl2 v0.4.38
+	github.com/veandco/go-sdl2 v0.4.39
 	golang.org/x/crypto v0.23.0
-	golang.org/x/image v0.15.0
+	golang.org/x/image v0.16.0
 	gopkg.in/yaml.v3 v3.0.1
 )
 
