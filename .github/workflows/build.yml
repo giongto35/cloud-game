@@ -44,7 +44,7 @@ jobs:
       - name: macOS
         if: matrix.os == 'macos-12'
         run: |
-          brew install pkg-config libvpx x264 opus sdl2 jpeg-turbo
+          brew install libvpx x264 sdl2
           make build test verify-cores
 
       - uses: msys2/setup-msys2@v2
@@ -67,12 +67,12 @@ jobs:
       - name: Windows
         if: matrix.os == 'windows-latest'
         env:
-          MESA_VERSION: mesa3d-24.0.7-release-msvc
+          MESA_VERSION: '24.0.7'
           MESA_GL_VERSION_OVERRIDE: 3.3COMPAT
         shell: msys2 {0}
         run: |
-          wget -q https://github.com/pal1000/mesa-dist-win/releases/download/24.0.7/$MESA_VERSION.7z
-          "/c/Program Files/7-Zip/7z.exe" x $MESA_VERSION.7z -omesa
+          wget -q https://github.com/pal1000/mesa-dist-win/releases/download/$MESA_VERSION/mesa3d-$MESA_VERSION-release-msvc.7z
+          "/c/Program Files/7-Zip/7z.exe" x mesa3d-$MESA_VERSION-release-msvc.7z -omesa
           echo -e " 1\r\n 9\r\n " >> commands
           ./mesa/systemwidedeploy.cmd < ./commands
           
