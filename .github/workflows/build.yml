@@ -67,12 +67,13 @@ jobs:
       - name: Windows
         if: matrix.os == 'windows-latest'
         env:
+          MESA_VERSION: mesa3d-24.0.7-release-msvc
           MESA_GL_VERSION_OVERRIDE: 3.3COMPAT
         shell: msys2 {0}
         run: |
-          wget -q https://github.com/pal1000/mesa-dist-win/releases/download/20.2.1/mesa3d-20.2.1-release-mingw.7z
-          "/c/Program Files/7-Zip/7z.exe" x mesa3d-20.2.1-release-mingw.7z -omesa
-          echo -e " 2\r\n 8\r\n " >> commands
+          wget -q https://github.com/pal1000/mesa-dist-win/releases/download/24.0.7/$MESA_VERSION.7z
+          "/c/Program Files/7-Zip/7z.exe" x $MESA_VERSION.7z -omesa
+          echo -e " 1\r\n 9\r\n " >> commands
           ./mesa/systemwidedeploy.cmd < ./commands
           
           make build test verify-cores
