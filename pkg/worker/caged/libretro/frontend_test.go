@@ -27,6 +27,7 @@ type TestFrontend struct {
 
 	corePath string
 	gamePath string
+	system   string
 }
 
 type testRun struct {
@@ -93,6 +94,7 @@ func EmulatorMock(room string, system string) *TestFrontend {
 		},
 		corePath: expand(conf.Emulator.GetLibretroCoreConfig(system).Lib),
 		gamePath: expand(conf.Worker.Library.BasePath),
+		system:   system,
 	}
 	emu.linkNano(nano)
 
@@ -113,17 +115,30 @@ func DefaultFrontend(room string, system string, rom string) *TestFrontend {
 // loadRom loads a ROM into the emulator.
 // The rom will be loaded from emulators' games path.
 func (emu *TestFrontend) loadRom(game string) {
-	emu.nano.CoreLoad(nanoarch.Metadata{LibPath: emu.corePath})
-
-	gamePath := expand(emu.gamePath, game)
-
-	conf := emu.conf.GetLibretroCoreConfig(gamePath)
+	conf := emu.conf.GetLibretroCoreConfig(emu.system)
 	scale := 1.0
 	if conf.Scale > 1 {
 		scale = conf.Scale
 	}
 	emu.scale = scale
 
+	meta := nanoarch.Metadata{
+		AutoGlContext: conf.AutoGlContext,
+		//FrameDup:        f.conf.Libretro.Dup,
+		Hacks:           conf.Hacks,
+		HasVFR:          conf.VFR,
+		Hid:             conf.Hid,
+		IsGlAllowed:     conf.IsGlAllowed,
+		LibPath:         emu.corePath,
+		Options:         conf.Options,
+		Options4rom:     conf.Options4rom,
+		UsesLibCo:       conf.UsesLibCo,
+		CoreAspectRatio: conf.CoreAspectRatio,
+	}
+
+	emu.nano.CoreLoad(meta)
+
+	gamePath := expand(emu.gamePath, game)
 	err := emu.nano.LoadGame(gamePath)
 	if err != nil {
 		log.Fatal(err)
