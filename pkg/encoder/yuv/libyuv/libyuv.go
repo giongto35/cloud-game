@@ -24,7 +24,39 @@ package libyuv
 #define LIBYUV_VERSION 1874 // darwin static libs version
 #endif  // INCLUDE_LIBYUV_VERSION_H_
 
-#include "libyuv/convert.h"
+// Supported rotation.
+typedef enum RotationMode {
+  kRotate0 = 0,      // No rotation.
+  kRotate90 = 90,    // Rotate 90 degrees clockwise.
+  kRotate180 = 180,  // Rotate 180 degrees.
+  kRotate270 = 270,  // Rotate 270 degrees clockwise.
+} RotationModeEnum;
+
+// RGB16 (RGBP fourcc) little endian to I420.
+LIBYUV_API
+int RGB565ToI420(const uint8_t* src_rgb565, int src_stride_rgb565, uint8_t* dst_y, int dst_stride_y,
+                 uint8_t* dst_u, int dst_stride_u, uint8_t* dst_v, int dst_stride_v, int width, int height);
+
+// Rotate I420 frame.
+LIBYUV_API
+int I420Rotate(const uint8_t* src_y, int src_stride_y, const uint8_t* src_u, int src_stride_u,
+               const uint8_t* src_v, int src_stride_v, uint8_t* dst_y, int dst_stride_y, uint8_t* dst_u,
+               int dst_stride_u, uint8_t* dst_v, int dst_stride_v, int width, int height, enum RotationMode mode);
+
+// RGB15 (RGBO fourcc) little endian to I420.
+LIBYUV_API
+int ARGB1555ToI420(const uint8_t* src_argb1555, int src_stride_argb1555, uint8_t* dst_y, int dst_stride_y,
+                   uint8_t* dst_u, int dst_stride_u, uint8_t* dst_v, int dst_stride_v, int width, int height);
+
+// ABGR little endian (rgba in memory) to I420.
+LIBYUV_API
+int ABGRToI420(const uint8_t* src_abgr, int src_stride_abgr, uint8_t* dst_y, int dst_stride_y, uint8_t* dst_u,
+               int dst_stride_u, uint8_t* dst_v, int dst_stride_v, int width, int height);
+
+// ARGB little endian (bgra in memory) to I420.
+LIBYUV_API
+int ARGBToI420(const uint8_t* src_argb, int src_stride_argb, uint8_t* dst_y, int dst_stride_y, uint8_t* dst_u,
+               int dst_stride_u, uint8_t* dst_v, int dst_stride_v, int width, int height);
 
 #ifdef __cplusplus
 namespace libyuv {
@@ -43,7 +75,7 @@ enum FourCC {
   FOURCC_ANY = -1,
 };
 
-void ConvertToI420Custom(const uint8_t* sample,
+inline void ConvertToI420Custom(const uint8_t* sample,
                   uint8_t* dst_y,
                   int dst_stride_y,
                   uint8_t* dst_u,
@@ -120,31 +152,18 @@ void rotateI420(const uint8_t* sample,
 }
 
 // Supported filtering.
-//typedef enum FilterMode {
-//    kFilterNone = 0,      // Point sample; Fastest.
-//    kFilterLinear = 1,    // Filter horizontally only.
-//    kFilterBilinear = 2,  // Faster than box, but lower quality scaling down.
-//    kFilterBox = 3        // Highest quality.
-//} FilterModeEnum;
+typedef enum FilterMode {
+   kFilterNone = 0,      // Point sample; Fastest.
+   kFilterLinear = 1,    // Filter horizontally only.
+   kFilterBilinear = 2,  // Faster than box, but lower quality scaling down.
+   kFilterBox = 3        // Highest quality.
+} FilterModeEnum;
 
 LIBYUV_API
-int I420Scale(const uint8_t *src_y,
-              int src_stride_y,
-              const uint8_t *src_u,
-              int src_stride_u,
-              const uint8_t *src_v,
-              int src_stride_v,
-              int src_width,
-              int src_height,
-              uint8_t *dst_y,
-              int dst_stride_y,
-              uint8_t *dst_u,
-              int dst_stride_u,
-              uint8_t *dst_v,
-              int dst_stride_v,
-              int dst_width,
-              int dst_height,
-              enum FilterMode filtering);
+int I420Scale(const uint8_t *src_y, int src_stride_y, const uint8_t *src_u, int src_stride_u,
+              const uint8_t *src_v, int src_stride_v, int src_width, int src_height, uint8_t *dst_y,
+              int dst_stride_y, uint8_t *dst_u, int dst_stride_u, uint8_t *dst_v, int dst_stride_v,
+              int dst_width, int dst_height, enum FilterMode filtering);
 
 #ifdef __cplusplus
 }  // extern "C"
