@@ -11,7 +11,7 @@ require (
 	github.com/gorilla/websocket v1.5.2
 	github.com/knadh/koanf/maps v0.1.1
 	github.com/knadh/koanf/v2 v2.1.1
-	github.com/minio/minio-go/v7 v7.0.70
+	github.com/minio/minio-go/v7 v7.0.71
 	github.com/pion/ice/v3 v3.0.7
 	github.com/pion/interceptor v0.1.29
 	github.com/pion/logging v0.2.2
@@ -29,7 +29,7 @@ require (
 	github.com/go-viper/mapstructure/v2 v2.0.0 // indirect
 	github.com/google/uuid v1.6.0 // indirect
 	github.com/klauspost/compress v1.17.8 // indirect
-	github.com/klauspost/cpuid/v2 v2.2.7 // indirect
+	github.com/klauspost/cpuid/v2 v2.2.8 // indirect
 	github.com/mattn/go-colorable v0.1.13 // indirect
 	github.com/mattn/go-isatty v0.0.20 // indirect
 	github.com/minio/md5-simd v1.1.2 // indirect
