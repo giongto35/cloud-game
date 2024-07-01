@@ -93,7 +93,6 @@ export const MOUSE_PRESSED = 'mousePressed'
 
 export const FULLSCREEN_CHANGE = 'fsc'
 export const POINTER_LOCK_CHANGE = 'plc'
-export const KBM_SKIP = 'kbmSkip'
 export const TRANSFORM_CHANGE = 'tc'
 
 export const DPAD_TOGGLE = 'dpadToggle';
@@ -106,3 +105,5 @@ export const RECORDING_STATUS_CHANGED = 'recordingStatusChanged'
 
 export const APP_VIDEO_CHANGED = 'appVideoChanged'
 export const KB_MOUSE_FLAG = 'kbMouseFlag'
+
+export const REFRESH_INPUT = 'refreshInput'

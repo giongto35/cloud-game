@@ -228,6 +228,12 @@
     color: #7e7e7e;
 }
 
+.app-button.fs {
+    position: relative;
+    top: 0;
+    left: 0;
+}
+
 #mirror-stream {
     image-rendering: pixelated;
     width: 100%;
@@ -236,7 +242,7 @@
 
 #screen {
     display: flex;
-    align-items: center;
+    /*align-items: center;*/
     justify-content: center;
 
     min-width: 0 !important;
@@ -257,10 +263,46 @@
     box-shadow: 0 0 2px 2px rgba(25, 25, 25, 1);
 }
 
+.screen__footer {
+    position: absolute;
+    bottom: 0;
+    display: flex;
+    flex-direction: row;
+    border-top: 1px solid #1b1b1b;
+    width: calc(100% - .6rem);
+    justify-content: space-between;
+
+    background-color: #00000022;
+
+    height: 13px;
+    font-size: .6rem;
+    color: #ffffff;
+
+    opacity: .234;
+
+    padding: 0 .2em;
+
+    cursor: default;
+}
+
+.hover:hover {
+    opacity: .567;
+}
+
+.with-footer {
+    height: calc(100% - 14px);
+}
+
 .kbm-button {
     top: 42px;
     left: 126px;
 
+    width: 1em;
+    text-align: center;
+    font-size: 70%;
+}
+
+.kbm-button-fs {
     width: 1em;
     text-align: center;
     font-size: 70%;
@@ -282,4 +324,46 @@
 
 .no-pointer {
     cursor: none;
+}
+
+#stats-overlay {
+    cursor: default;
+
+    display: flex;
+    flex-direction: row;
+    justify-content: end;
+
+    color: #fff;
+    background: #000;
+    /*opacity: .3;*/
+
+    font-size: 10px;
+    font-family: monospace;
+    min-width: 12em;
+
+    gap: 5px;
+    visibility: hidden;
+}
+
+#stats-overlay > div {
+    display: flex;
+    flex-flow: wrap;
+    justify-content: space-between;
+    align-items: center;
+}
+
+#stats-overlay > div > div {
+    display: inline-block;
+    font-weight: 500;
+}
+
+#stats-overlay .graph {
+    width: 100%;
+    /* artifacts with pixelated option */
+    /*image-rendering: pixelated;*/
+    image-rendering: optimizeSpeed;
+}
+
+.stats-bitrate {
+    min-width: 3.1rem;
 }

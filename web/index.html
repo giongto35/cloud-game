@@ -32,12 +32,19 @@
     </div>
 
     <div id="screen">
-        <div id="stats-overlay"></div>
         <video id="stream" class="game-screen" hidden muted preload="none"></video>
         <canvas id="mirror-stream" class="game-screen" hidden></canvas>
         <div id="menu-screen">
             <div id="menu-container"></div>
             <div id="menu-item-choice" class="hidden"></div>
+        </div>
+        <div class="screen__footer hover hidden">
+            <div>cloudretro :></div>
+            <div class="app-button fs kbm-button-fs hidden" id="kbm2"
+                 title="Switch from keyboard/mouse to retropad">KB
+                M
+            </div>
+            <div id="stats-overlay"></div>
         </div>
     </div>
 
@@ -94,7 +101,7 @@
     <div id="btn-rec" class="btn" data-key="rec"></div>
     {{end}}
 </div>
-<div class="source">
+<div class="source"><span>Cloudretro (ɔ) 2024</span>
     <a rel="noopener noreferrer" target="_blank" href="https://github.com/giongto35/cloud-game">
         <span id="v">69ff8ae</span>
     </a>

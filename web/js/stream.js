@@ -68,9 +68,11 @@ const onFullscreen = (fullscreen) => {
             const hh = el.innerHeight || el.clientHeight || 0
             const dw = (w - hh * state.aspect) / 2
             state.screen.style.padding = `0 ${dw}px`
+            state.screen.classList.toggle('with-footer')
         }, 1)
     } else {
         state.screen.style.padding = '0'
+        state.screen.classList.toggle('with-footer')
     }
 
     if (el === videoEl) {

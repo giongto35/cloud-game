@@ -116,13 +116,16 @@ const graph = (parent, opts = {
  * @param nan A value to show when zero.
  * @param withGraph True if to draw a graph.
  * @param postfix Supposed to be the name of the stat passed as a function.
+ * @param cl Class of the UI div element.
  * @returns {{el: HTMLDivElement, update: function}}
  */
-const moduleUi = (label = '', nan = '', withGraph = false, postfix = () => 'ms') => {
+const moduleUi = (label = '', nan = '', withGraph = false, postfix = () => 'ms', cl = '') => {
     const ui = document.createElement('div'),
         _label = document.createElement('div'),
         _value = document.createElement('span');
     ui.append(_label, _value);
+
+    cl && ui.classList.add(cl)
 
     let postfix_ = postfix;
 

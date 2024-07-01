@@ -400,7 +400,7 @@ body {
     object-fit: contain;
     width: inherit;
     height: inherit;
-    background-color: #222222;
+    background-color: #101010;
 }
 
 #menu-screen {
@@ -572,50 +572,6 @@ body {
 
 * {
     touch-action: manipulation;
-}
-
-#stats-overlay {
-    position: absolute;
-    z-index: 200;
-    backface-visibility: hidden;
-    cursor: default;
-
-    display: flex;
-    flex-direction: column;
-    justify-content: space-around;
-
-    top: 1.1em;
-    right: 1.1em;
-    color: #fff;
-    background: #000;
-    opacity: .465;
-
-    font-size: 1.1vmin;
-    font-family: monospace;
-    min-width: 3em;
-
-    padding-right: .2em;
-
-    visibility: hidden;
-}
-
-#stats-overlay > div {
-    display: flex;
-    flex-flow: wrap;
-    justify-content: space-between;
-    align-items: center;
-}
-
-#stats-overlay > div > div {
-    display: inline-block;
-    font-weight: 500;
-}
-
-#stats-overlay .graph {
-    width: 100%;
-    /* artifacts with pixelated option */
-    /*image-rendering: pixelated;*/
-    image-rendering: optimizeSpeed;
 }
 
 .dpad-toggle-label {

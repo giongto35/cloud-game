@@ -23,7 +23,6 @@ export const opts = {
     MIRROR_SCREEN: 'mirror.screen',
     VOLUME: 'volume',
     FORCE_FULLSCREEN: 'force.fullscreen',
-    SHOW_PING: 'show.ping',
 }
 
 
@@ -518,12 +517,6 @@ const render = function () {
                     .withDescription(
                         'Whether games should open in full-screen mode after starting up (excluding mobile devices)'
                     )
-                    .add(gui.checkbox(k, onChange, value, 'Enabled', 'settings__option-checkbox'))
-                    .build()
-                break;
-            case opts.SHOW_PING:
-                _option(data).withName('Show server stats')
-                    .withDescription('Always display server stats on the screen')
                     .add(gui.checkbox(k, onChange, value, 'Enabled', 'settings__option-checkbox'))
                     .build()
                 break;

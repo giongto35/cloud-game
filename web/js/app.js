@@ -1,13 +1,7 @@
 import {log} from 'log';
 import {opts, settings} from 'settings';
-
-settings.init();
-log.level = settings.loadOr(opts.LOG_LEVEL, log.DEFAULT);
-
 import {api} from 'api';
 import {
-    pub,
-    sub,
     APP_VIDEO_CHANGED,
     AXIS_CHANGED,
     CONTROLLER_UPDATED,
@@ -31,9 +25,12 @@ import {
     MOUSE_MOVED,
     MOUSE_PRESSED,
     POINTER_LOCK_CHANGE,
+    pub,
     RECORDING_STATUS_CHANGED,
     RECORDING_TOGGLED,
+    REFRESH_INPUT,
     SETTINGS_CHANGED,
+    sub,
     WEBRTC_CONNECTION_CLOSED,
     WEBRTC_CONNECTION_READY,
     WEBRTC_ICE_CANDIDATE_FOUND,
@@ -43,10 +40,9 @@ import {
     WEBRTC_SDP_ANSWER,
     WEBRTC_SDP_OFFER,
     WORKER_LIST_FETCHED,
-    KBM_SKIP,
 } from 'event';
 import {gui} from 'gui';
-import {keyboard, KEY, joystick, retropad, touch} from 'input';
+import {input, KEY} from 'input';
 import {socket, webrtc} from 'network';
 import {debounce} from 'utils';
 
@@ -60,13 +56,12 @@ import {stats} from './stats.js?v=3';
 import {stream} from './stream.js?v=3';
 import {workerManager} from "./workerManager.js?v=3";
 
+settings.init();
+log.level = settings.loadOr(opts.LOG_LEVEL, log.DEFAULT);
+
 // application display state
 let state;
 let lastState;
-
-const state_ = {
-    showPing: false
-}
 
 // first user interaction
 let interacted = false;
@@ -180,10 +175,10 @@ const startGame = () => {
     )
 
     gameList.disable()
-    retropad.poll.disable();
+    input.retropad.disable()
     gui.show(keyButtons[KEY.SAVE]);
     gui.show(keyButtons[KEY.LOAD]);
-    retropad.poll.enable();
+    input.retropad.enable()
 };
 
 const saveGame = debounce(() => api.game.save(), 1000);
@@ -398,13 +393,13 @@ const app = {
         game: {
             ..._default,
             name: 'game',
-            axisChanged: (id, value) => retropad.setAxisChanged(id, value),
+            axisChanged: (id, value) => input.retropad.setAxisChanged(id, value),
             keyboardInput: (pressed, e) => api.game.input.keyboard.press(pressed, e),
             mouseMove: (e) => api.game.input.mouse.move(e.dx, e.dy),
             mousePress: (e) => api.game.input.mouse.press(e.b, e.p),
-            keyPress: (key) => retropad.setKeyState(key, true),
+            keyPress: (key) => input.retropad.setKeyState(key, true),
             keyRelease: function (key) {
-                retropad.setKeyState(key, false);
+                input.retropad.setKeyState(key, false);
 
                 switch (key) {
                     case KEY.JOIN: // or SHARE
@@ -435,7 +430,7 @@ const app = {
                         updatePlayerIndex(3);
                         break;
                     case KEY.QUIT:
-                        retropad.poll.disable();
+                        input.retropad.disable()
                         api.game.quit(room.id)
                         room.reset();
                         window.location = window.location.pathname;
@@ -454,12 +449,25 @@ const app = {
 
 // switch keyboard+mouse / retropad
 const kbmEl = document.getElementById('kbm')
-if (kbmEl) {
-    let kbmSkip = false
-    kbmEl.addEventListener('click', () => {
+const kbmEl2 = document.getElementById('kbm2')
+let kbmSkip = false
+if (kbmEl2) {
+    kbmEl2.addEventListener('click', () => {
+        input.kbm = kbmSkip
         kbmSkip = !kbmSkip
+        kbmEl2.classList.toggle('strikethrough', kbmSkip)
         kbmEl.classList.toggle('strikethrough', kbmSkip)
-        pub(KBM_SKIP, kbmSkip)
+        pub(REFRESH_INPUT)
+    })
+    sub(KB_MOUSE_FLAG, () => gui.show(kbmEl2))
+}
+if (kbmEl) {
+    kbmEl.addEventListener('click', () => {
+        input.kbm = kbmSkip
+        kbmSkip = !kbmSkip
+        kbmEl2.classList.toggle('strikethrough', kbmSkip)
+        kbmEl.classList.toggle('strikethrough', kbmSkip)
+        pub(REFRESH_INPUT)
     })
     sub(KB_MOUSE_FLAG, () => gui.show(kbmEl))
 }
@@ -472,7 +480,6 @@ document.onfullscreenchange = () => pub(FULLSCREEN_CHANGE, document.fullscreenEl
 sub(MESSAGE, onMessage);
 
 sub(GAME_ROOM_AVAILABLE, async () => {
-    //await screen.toggleControls(true)
     stream.play()
 }, 2)
 sub(GAME_SAVED, () => message.show('Saved'));
@@ -497,7 +504,7 @@ sub(WEBRTC_ICE_CANDIDATE_RECEIVED, (data) => webrtc.addCandidate(data.candidate)
 sub(WEBRTC_ICE_CANDIDATES_FLUSH, () => webrtc.flushCandidates());
 sub(WEBRTC_CONNECTION_READY, onConnectionReady);
 sub(WEBRTC_CONNECTION_CLOSED, () => {
-    retropad.poll.disable();
+    input.retropad.disable()
     webrtc.stop();
 });
 sub(LATENCY_CHECK_REQUESTED, onLatencyCheck);
@@ -525,18 +532,13 @@ sub(RECORDING_STATUS_CHANGED, handleRecordingStatus);
 sub(SETTINGS_CHANGED, () => {
     const s = settings.get();
     log.level = s[opts.LOG_LEVEL];
-    if (state_.showPing !== s[opts.SHOW_PING]) {
-        state_.showPing = s[opts.SHOW_PING]
-        stats.toggle();
-    }
 });
 
 // initial app state
 setState(app.state.eden);
 
-keyboard.init();
-joystick.init();
-touch.init();
+input.init()
+
 stream.init();
 screen.init();
 
@@ -553,6 +555,21 @@ api.transport = {
 
 // stats
 let WEBRTC_STATS_RTT;
+let VIDEO_BITRATE;
+let GET_V_CODEC, SET_CODEC;
+
+const bitrate = (() => {
+    let bytesPrev, timestampPrev
+    const w = [0, 0, 0, 0, 0, 0]
+    const n = w.length
+    let i = 0
+    return (now, bytes) => {
+        w[i++ % n] = timestampPrev ? Math.floor(8 * (bytes - bytesPrev) / (now - timestampPrev)) : 0
+        bytesPrev = bytes
+        timestampPrev = now
+        return Math.floor(w.reduce((a, b) => a + b) / n)
+    }
+})()
 
 stats.modules = [
     {
@@ -564,8 +581,20 @@ stats.modules = [
     {
         mui: stats.mui('', '', false, () => ''),
         init() {
+            GET_V_CODEC = (v) => (this.val = v + ' @ ')
+        }
+    },
+    {
+        mui: stats.mui('', '', false, () => ''),
+        init() {
             sub(APP_VIDEO_CHANGED, (payload) => (this.val = `${payload.w}x${payload.h}`))
         },
+    },
+    {
+        mui: stats.mui('', '', false, () => ' kb/s', 'stats-bitrate'),
+        init() {
+            VIDEO_BITRATE = (v) => (this.val = v)
+        }
     },
     {
         async stats() {
@@ -573,9 +602,16 @@ stats.modules = [
             if (!stats) return;
 
             stats.forEach(report => {
-                const {nominated, currentRoundTripTime} = report;
+                if (!SET_CODEC && report.mimeType?.startsWith('video/')) {
+                    GET_V_CODEC(report.mimeType.replace('video/', '').toLowerCase())
+                    SET_CODEC = 1
+                }
+                const {nominated, currentRoundTripTime, type, kind} = report;
                 if (nominated && currentRoundTripTime !== undefined) {
                     WEBRTC_STATS_RTT(currentRoundTripTime * 1000);
+                }
+                if (type === 'inbound-rtp' && kind === 'video') {
+                    VIDEO_BITRATE(bitrate(report.timestamp, report.bytesReceived))
                 }
             });
         },
@@ -587,5 +623,4 @@ stats.modules = [
         },
     }]
 
-state_.showPing = settings.loadOr(opts.SHOW_PING, true)
-state_.showPing && stats.toggle()
+stats.toggle()
