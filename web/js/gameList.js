@@ -1,8 +1,4 @@
-import {
-    sub,
-    MENU_PRESSED,
-    MENU_RELEASED
-} from 'event';
+import {MENU_PRESSED, MENU_RELEASED, sub} from 'event';
 import {gui} from 'gui';
 
 const TOP_POSITION = 102
@@ -21,13 +17,6 @@ const games = (() => {
             return list[index].title // selected by the game title, oof
         },
         set index(i) {
-            //-2 |
-            //-1 | |
-            // 0 < | <
-            // 1   | |
-            // 2 < < |
-            //+1 |   |
-            //+2 |
             index = i < -1 ? i = 0 :
                 i > list.length ? i = list.length - 1 :
                     (i % list.length + list.length) % list.length
@@ -90,9 +79,40 @@ const ui = (() => {
 
     let onTransitionEnd = () => ({})
 
-    //rootEl.addEventListener('transitionend', () => onTransitionEnd())
-
     let items = []
+
+    const marque = (() => {
+        const speed = 1
+        const sep = ' '.repeat(10)
+
+        let el = null
+        let raf = 0
+        let txt = null
+        let w = 0
+
+        const move = () => {
+            const shift = parseFloat(getComputedStyle(el).left) - speed
+            el.style.left = w + shift < 1 ? `0px` : `${shift}px`
+            raf = requestAnimationFrame(move)
+        }
+
+        return {
+            reset() {
+                cancelAnimationFrame(raf)
+                el && (el.style.left = `0px`)
+            },
+            enable(cap) {
+                txt && (el.textContent = txt) // restore the text
+                el = cap
+                txt = el.textContent
+                el.textContent += sep
+                w = el.scrollWidth // keep the text width
+                el.textContent += txt
+                cancelAnimationFrame(raf)
+                raf = requestAnimationFrame(move)
+            }
+        }
+    })()
 
     const item = (parent) => {
         const title = parent.firstChild.firstChild
@@ -106,16 +126,20 @@ const ui = (() => {
             },
         }
 
+        const isOverflown = () => title.scrollWidth > title.clientWidth
+
         const _title = {
-            animate: () => title.classList.add('text-move'),
-            pick: () => title.classList.add('pick'),
-            reset: () => title.classList.remove('pick', 'text-move'),
+            pick: () => {
+                title.classList.add('pick')
+                isOverflown() && marque.enable(title)
+            },
+            reset: () => {
+                title.classList.remove('pick')
+                isOverflown() && marque.reset()
+            }
         }
 
-        const clear = () => {
-            _title.reset()
-            // _desc.hide()
-        }
+        const clear = () => _title.reset()
 
         return {
             get description() {
@@ -132,7 +156,7 @@ const ui = (() => {
         rootEl.innerHTML = games.list.map(game =>
             `<div class="menu-item">` +
             `<div><span>${game.title}</span></div>` +
-            //`<div class="menu-item__info">${game.system}</div>` +
+            `<div class="menu-item__info">${game.system}</div>` +
             `</div>`)
             .join('')
         items = [...rootEl.querySelectorAll('.menu-item')].map(x => item(x))
@@ -191,21 +215,14 @@ const select = (index) => {
 
 scroll.onShift = (delta) => select(games.index + delta)
 
-let hasTransition = true // needed for cases when MENU_RELEASE called instead MENU_PRESSED
-
 scroll.onStop = () => {
     const item = ui.selected
-    if (item) {
-        item.title.pick()
-        item.title.animate()
-        // hasTransition ? (ui.onTransitionEnd = item.description.show) : item.description.show()
-    }
+    item && item.title.pick()
 }
 
 sub(MENU_PRESSED, (position) => {
     if (games.empty()) return
     ui.onTransitionEnd = ui.NO_TRANSITION
-    hasTransition = false
     scroll.scroll(scroll.state.DRAG)
     ui.selected && ui.selected.clear()
     ui.drag.startPos(position)
@@ -215,15 +232,14 @@ sub(MENU_RELEASED, (position) => {
     if (games.empty()) return
     ui.drag.stopPos(position)
     select(ui.roundIndex)
-    hasTransition = !hasTransition
     scroll.scroll(scroll.state.IDLE)
-    hasTransition = true
 })
 
 /**
  * Game list module.
  */
 export const gameList = {
+    disable: () => ui.selected?.clear(),
     scroll: (x) => {
         if (games.empty()) return
         scroll.scroll(x)

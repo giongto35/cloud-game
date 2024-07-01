@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"path/filepath"
 	"sync"
-	"sync/atomic"
 	"time"
 	"unsafe"
 
@@ -44,7 +43,7 @@ type Emulator interface {
 	// Close will be called when the game is done
 	Close()
 	// Input passes input to the emulator
-	Input(player int, data []byte)
+	Input(player int, device byte, data []byte)
 	// Scale returns set video scale factor
 	Scale() float64
 }
@@ -52,7 +51,6 @@ type Emulator interface {
 type Frontend struct {
 	conf    config.Emulator
 	done    chan struct{}
-	input   InputState
 	log     *logger.Logger
 	nano    *nanoarch.Nanoarch
 	onAudio func(app.Audio)
@@ -70,21 +68,12 @@ type Frontend struct {
 	SaveOnClose       bool
 }
 
-// InputState stores full controller state.
-// It consists of:
-//   - uint16 button values
-//   - int16 analog stick values
-type (
-	InputState [maxPort]State
-	State      struct {
-		keys uint32
-		axes [dpadAxes]int32
-	}
-)
+type Device byte
 
 const (
-	maxPort  = 4
-	dpadAxes = 4
+	RetroPad = Device(nanoarch.RetroPad)
+	Keyboard = Device(nanoarch.Keyboard)
+	Mouse    = Device(nanoarch.Mouse)
 )
 
 var (
@@ -129,7 +118,6 @@ func NewFrontend(conf config.Emulator, log *logger.Logger) (*Frontend, error) {
 	f := &Frontend{
 		conf:    conf,
 		done:    make(chan struct{}),
-		input:   NewGameSessionInput(),
 		log:     log,
 		onAudio: noAudio,
 		onData:  noData,
@@ -162,6 +150,7 @@ func (f *Frontend) LoadCore(emu string) {
 		Options4rom:     conf.Options4rom,
 		UsesLibCo:       conf.UsesLibCo,
 		CoreAspectRatio: conf.CoreAspectRatio,
+		KbMouseSupport:  conf.KbMouseSupport,
 	}
 	f.mu.Lock()
 	scale := 1.0
@@ -227,8 +216,6 @@ func (f *Frontend) linkNano(nano *nanoarch.Nanoarch) {
 	}
 	f.nano.WaitReady() // start only when nano is available
 
-	f.nano.OnKeyPress = f.input.isKeyPressed
-	f.nano.OnDpad = f.input.isDpadTouched
 	f.nano.OnVideo = f.handleVideo
 	f.nano.OnAudio = f.handleAudio
 	f.nano.OnDup = f.handleDup
@@ -300,8 +287,8 @@ func (f *Frontend) Flipped() bool                 { return f.nano.IsGL() }
 func (f *Frontend) FrameSize() (int, int)         { return f.nano.BaseWidth(), f.nano.BaseHeight() }
 func (f *Frontend) HasSave() bool                 { return os.Exists(f.HashPath()) }
 func (f *Frontend) HashPath() string              { return f.storage.GetSavePath() }
-func (f *Frontend) Input(player int, data []byte) { f.input.setInput(player, data) }
 func (f *Frontend) IsPortrait() bool              { return f.nano.IsPortrait() }
+func (f *Frontend) KbMouseSupport() bool          { return f.nano.KbMouseSupport() }
 func (f *Frontend) LoadGame(path string) error    { return f.nano.LoadGame(path) }
 func (f *Frontend) PixFormat() uint32             { return f.nano.Video.PixFmt.C }
 func (f *Frontend) RestoreGameState() error       { return f.Load() }
@@ -317,6 +304,17 @@ func (f *Frontend) SetVideoCb(ff func(app.Video)) { f.onVideo = ff }
 func (f *Frontend) Tick()                         { f.mu.Lock(); f.nano.Run(); f.mu.Unlock() }
 func (f *Frontend) ViewportRecalculate()          { f.mu.Lock(); f.vw, f.vh = f.ViewportCalc(); f.mu.Unlock() }
 func (f *Frontend) ViewportSize() (int, int)      { return f.vw, f.vh }
+
+func (f *Frontend) Input(port int, device byte, data []byte) {
+	switch Device(device) {
+	case RetroPad:
+		f.nano.InputRetropad(port, data)
+	case Keyboard:
+		f.nano.InputKeyboard(port, data)
+	case Mouse:
+		f.nano.InputMouse(port, data)
+	}
+}
 
 func (f *Frontend) ViewportCalc() (nw int, nh int) {
 	w, h := f.FrameSize()
@@ -407,25 +405,4 @@ func (f *Frontend) autosave(periodSec int) {
 			return
 		}
 	}
-}
-
-func NewGameSessionInput() InputState { return [maxPort]State{} }
-
-// setInput sets input state for some player in a game session.
-func (s *InputState) setInput(player int, data []byte) {
-	atomic.StoreUint32(&s[player].keys, uint32(uint16(data[1])<<8+uint16(data[0])))
-	for i, axes := 0, len(data); i < dpadAxes && i<<1+3 < axes; i++ {
-		axis := i<<1 + 2
-		atomic.StoreInt32(&s[player].axes[i], int32(data[axis+1])<<8+int32(data[axis]))
-	}
-}
-
-// isKeyPressed checks if some button is pressed by any player.
-func (s *InputState) isKeyPressed(port uint, key int) int {
-	return int((atomic.LoadUint32(&s[port].keys) >> uint(key)) & 1)
-}
-
-// isDpadTouched checks if D-pad is used by any player.
-func (s *InputState) isDpadTouched(port uint, axis uint) (shift int16) {
-	return int16(atomic.LoadInt32(&s[port].axes[axis]))
 }

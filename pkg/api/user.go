@@ -12,8 +12,9 @@ type (
 		PlayerIndex int    `json:"player_index"`
 	}
 	GameStartUserResponse struct {
-		RoomId string        `json:"roomId"`
-		Av     *AppVideoInfo `json:"av"`
+		RoomId  string        `json:"roomId"`
+		Av      *AppVideoInfo `json:"av"`
+		KbMouse bool          `json:"kb_mouse"`
 	}
 	IceServer struct {
 		Urls       string `json:"urls,omitempty"`

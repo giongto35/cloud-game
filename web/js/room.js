@@ -30,7 +30,7 @@ const parseURLForRoom = () => {
 };
 
 sub(GAME_ROOM_AVAILABLE, data => {
-    room.setId(data.roomId);
+    room.id = data.roomId
     room.save(data.roomId);
 }, 1);
 
@@ -38,8 +38,10 @@ sub(GAME_ROOM_AVAILABLE, data => {
  * Game room module.
  */
 export const room = {
-    getId: () => id,
-    setId: (id_) => {
+    get id() {
+        return id
+    },
+    set id(id_) {
         id = id_;
         roomLabel.value = id;
     },
@@ -51,7 +53,7 @@ export const room = {
         localStorage.setItem('roomID', roomIndex);
     },
     load: () => localStorage.getItem('roomID'),
-    getLink: () => window.location.href.split('?')[0] + `?id=${encodeURIComponent(room.getId())}`,
+    getLink: () => window.location.href.split('?')[0] + `?id=${encodeURIComponent(room.id)}`,
     loadMaybe: () => {
         // localStorage first
         //roomID = loadRoomID();

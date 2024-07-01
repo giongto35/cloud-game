@@ -9,7 +9,9 @@ import {
 import {log} from 'log';
 
 let connection;
-let dataChannel;
+let dataChannel
+let keyboardChannel
+let mouseChannel
 let mediaStream;
 let candidates = [];
 let isAnswered = false;
@@ -30,6 +32,16 @@ const start = (iceservers) => {
         log.debug('[rtc] ondatachannel', e.channel.label)
         e.channel.binaryType = "arraybuffer";
 
+        if (e.channel.label === 'keyboard') {
+            keyboardChannel = e.channel
+            return
+        }
+
+        if (e.channel.label === 'mouse') {
+            mouseChannel = e.channel
+            return
+        }
+
         dataChannel = e.channel;
         dataChannel.onopen = () => {
             log.info('[rtc] the input channel has been opened');
@@ -39,7 +51,10 @@ const start = (iceservers) => {
         if (onData) {
             dataChannel.onmessage = onData;
         }
-        dataChannel.onclose = () => log.info('[rtc] the input channel has been closed');
+        dataChannel.onclose = () => {
+            inputReady = false
+            log.info('[rtc] the input channel has been closed')
+        }
     }
     connection.oniceconnectionstatechange = ice.onIceConnectionStateChange;
     connection.onicegatheringstatechange = ice.onIceStateChange;
@@ -62,8 +77,16 @@ const stop = () => {
         connection = null;
     }
     if (dataChannel) {
-        dataChannel.close();
-        dataChannel = null;
+        dataChannel.close()
+        dataChannel = null
+    }
+    if (keyboardChannel) {
+        keyboardChannel?.close()
+        keyboardChannel = null
+    }
+    if (mouseChannel) {
+        mouseChannel?.close()
+        mouseChannel = null
     }
     candidates = [];
     log.info('[rtc] WebRTC has been closed');
@@ -162,7 +185,9 @@ export const webrtc = {
         });
         isFlushing = false;
     },
-    input: (data) => dataChannel.send(data),
+    keyboard: (data) => keyboardChannel?.send(data),
+    mouse: (data) => mouseChannel?.send(data),
+    input: (data) => inputReady && dataChannel.send(data),
     isConnected: () => connected,
     isInputReady: () => inputReady,
     stats: async () => {

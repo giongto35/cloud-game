@@ -1,3 +1,8 @@
+import {
+    pub,
+    TRANSFORM_CHANGE
+} from 'event';
+
 // UI
 const page = document.getElementsByTagName('html')[0];
 const gameBoy = document.getElementById('gamebody');
@@ -46,6 +51,8 @@ const rescaleGameBoy = (targetWidth, targetHeight) => {
 
     gameBoy.style['transform'] = transformations.join(' ');
 }
+
+new MutationObserver(() => pub(TRANSFORM_CHANGE)).observe(gameBoy, {attributeFilter: ['style']})
 
 const os = () => {
     const ua = window.navigator.userAgent;
