@@ -304,9 +304,11 @@ func (n *Nanoarch) LoadGame(path string) error {
 		n.log.Debug().Msgf("Set buffer: %v", byteCountBinary(int64(bufS)))
 		if n.LibCo {
 			C.same_thread(C.init_video_cgo)
+			C.same_thread(unsafe.Pointer(Nan0.Video.hw.context_reset))
 		} else {
 			runtime.LockOSThread()
 			initVideo()
+			C.bridge_context_reset(Nan0.Video.hw.context_reset)
 			runtime.UnlockOSThread()
 		}
 	}
@@ -853,7 +855,6 @@ func initVideo() {
 	}
 	Nan0.sdlCtx = sdl
 
-	C.bridge_context_reset(Nan0.Video.hw.context_reset)
 	if Nan0.log.GetLevel() < logger.InfoLevel {
 		printOpenGLDriverInfo()
 	}
