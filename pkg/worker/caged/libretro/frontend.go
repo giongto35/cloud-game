@@ -262,9 +262,9 @@ func (f *Frontend) Start() {
 				f.log.Error().Err(err).Msg("save on quit failed")
 			}
 		}
+		f.mui.Unlock()
 		f.Shutdown()
 	}()
-	defer f.mui.Unlock()
 
 	if f.HasSave() {
 		// advance 1 frame for Mupen, DOSBox save states
