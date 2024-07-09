@@ -263,8 +263,8 @@ func (f *Frontend) Start() {
 			}
 		}
 		f.Shutdown()
+		f.mui.Unlock()
 	}()
-	defer f.mui.Unlock()
 
 	if f.HasSave() {
 		// advance 1 frame for Mupen, DOSBox save states
