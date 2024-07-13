@@ -299,9 +299,6 @@ func (n *Nanoarch) LoadGame(path string) error {
 	n.Stopped.Store(false)
 
 	if n.Video.gl.enabled {
-		bufS := uint(n.sys.av.geometry.max_width*n.sys.av.geometry.max_height) * n.Video.PixFmt.BPP
-		graphics.SetBuffer(int(bufS))
-		n.log.Debug().Msgf("Set buffer: %v", byteCountBinary(int64(bufS)))
 		if n.LibCo {
 			C.same_thread(C.init_video_cgo)
 			C.same_thread(unsafe.Pointer(Nan0.Video.hw.context_reset))
@@ -898,6 +895,13 @@ func geometryChange(geom C.struct_retro_game_geometry) {
 	Nan0.limiter(func() {
 		old := Nan0.sys.av.geometry
 		Nan0.sys.av.geometry = geom
+
+		if Nan0.Video.gl.enabled {
+			bufS := uint(geom.max_width*geom.max_height) * Nan0.Video.PixFmt.BPP
+			graphics.SetBuffer(int(bufS))
+			Nan0.log.Debug().Msgf("OpenGL frame buffer: %v", byteCountBinary(int64(bufS)))
+		}
+
 		if Nan0.OnSystemAvInfo != nil {
 			Nan0.log.Debug().Msgf(">>> geometry change %v -> %v", old, geom)
 			if Nan0.Aspect {
