@@ -3,7 +3,7 @@ module github.com/giongto35/cloud-game/v3
 go 1.22
 
 require (
-	github.com/VictoriaMetrics/metrics v1.34.0
+	github.com/VictoriaMetrics/metrics v1.34.1
 	github.com/cavaliergopher/grab/v3 v3.0.1
 	github.com/fsnotify/fsnotify v1.7.0
 	github.com/goccy/go-json v0.10.3
@@ -41,7 +41,7 @@ require (
 	github.com/pion/mdns/v2 v2.0.7 // indirect
 	github.com/pion/randutil v0.1.0 // indirect
 	github.com/pion/rtcp v1.2.14 // indirect
-	github.com/pion/rtp v1.8.6 // indirect
+	github.com/pion/rtp v1.8.7 // indirect
 	github.com/pion/sctp v1.8.19 // indirect
 	github.com/pion/sdp/v3 v3.0.9 // indirect
 	github.com/pion/srtp/v3 v3.0.2 // indirect
