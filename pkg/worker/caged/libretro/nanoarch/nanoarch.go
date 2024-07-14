@@ -896,7 +896,7 @@ func geometryChange(geom C.struct_retro_game_geometry) {
 		old := Nan0.sys.av.geometry
 		Nan0.sys.av.geometry = geom
 
-		if Nan0.Video.gl.enabled {
+		if Nan0.Video.gl.enabled && (old.max_width != geom.max_width || old.max_height != geom.max_height) {
 			bufS := uint(geom.max_width*geom.max_height) * Nan0.Video.PixFmt.BPP
 			graphics.SetBuffer(int(bufS))
 			Nan0.log.Debug().Msgf("OpenGL frame buffer: %v", byteCountBinary(int64(bufS)))
