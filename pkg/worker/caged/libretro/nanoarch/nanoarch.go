@@ -897,9 +897,11 @@ func geometryChange(geom C.struct_retro_game_geometry) {
 		Nan0.sys.av.geometry = geom
 
 		if Nan0.Video.gl.enabled && (old.max_width != geom.max_width || old.max_height != geom.max_height) {
-			bufS := uint(geom.max_width*geom.max_height) * Nan0.Video.PixFmt.BPP
+			// (for LRPS2) makes the max height bigger increasing SDL2 and OpenGL buffers slightly
+			Nan0.sys.av.geometry.max_height = C.unsigned(float32(Nan0.sys.av.geometry.max_height) * 1.5)
+			bufS := uint(geom.max_width*Nan0.sys.av.geometry.max_height) * Nan0.Video.PixFmt.BPP
 			graphics.SetBuffer(int(bufS))
-			Nan0.log.Debug().Msgf("OpenGL frame buffer: %v", byteCountBinary(int64(bufS)))
+			Nan0.log.Debug().Msgf("OpenGL frame buffer: %v", bufS)
 		}
 
 		if Nan0.OnSystemAvInfo != nil {
