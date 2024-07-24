@@ -95,9 +95,9 @@ var testTempDir = filepath.Join(os.TempDir(), "cloud-game-core-tests")
 
 // games
 var (
-	alwas = games.GameMetadata{Name: "Alwa's Awakening (Demo)", Type: "nes", Path: "Alwa's Awakening (Demo).nes", System: "nes"}
-	sushi = games.GameMetadata{Name: "Sushi The Cat", Type: "gba", Path: "Sushi The Cat.gba", System: "gba"}
-	fd    = games.GameMetadata{Name: "Florian Demo", Type: "n64", Path: "Sample Demo by Florian (PD).z64", System: "n64"}
+	alwas = games.GameMetadata{Name: "Alwa's Awakening (Demo)", Type: "nes", Path: "nes/Alwa's Awakening (Demo).nes", System: "nes"}
+	sushi = games.GameMetadata{Name: "Sushi The Cat", Type: "gba", Path: "gba/Sushi The Cat.gba", System: "gba"}
+	fd    = games.GameMetadata{Name: "Florian Demo", Type: "n64", Path: "n64/Sample Demo by Florian (PD).z64", System: "n64"}
 )
 
 func TestMain(m *testing.M) {

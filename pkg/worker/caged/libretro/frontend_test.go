@@ -44,9 +44,9 @@ type game struct {
 }
 
 var (
-	alwa  = game{system: "nes", rom: "Alwa's Awakening (Demo).nes"}
-	sushi = game{system: "gba", rom: "Sushi The Cat.gba"}
-	angua = game{system: "gba", rom: "anguna.gba"}
+	alwa  = game{system: "nes", rom: "nes/Alwa's Awakening (Demo).nes"}
+	sushi = game{system: "gba", rom: "gba/Sushi The Cat.gba"}
+	angua = game{system: "gba", rom: "gba/anguna.gba"}
 )
 
 // TestMain runs all tests in the main thread in macOS.
