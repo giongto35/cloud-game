@@ -3,19 +3,19 @@ module github.com/giongto35/cloud-game/v3
 go 1.22
 
 require (
-	github.com/VictoriaMetrics/metrics v1.34.1
+	github.com/VictoriaMetrics/metrics v1.35.1
 	github.com/cavaliergopher/grab/v3 v3.0.1
 	github.com/fsnotify/fsnotify v1.7.0
 	github.com/goccy/go-json v0.10.3
-	github.com/gofrs/flock v0.12.0
+	github.com/gofrs/flock v0.12.1
 	github.com/gorilla/websocket v1.5.3
 	github.com/knadh/koanf/maps v0.1.1
 	github.com/knadh/koanf/v2 v2.1.1
-	github.com/minio/minio-go/v7 v7.0.73
-	github.com/pion/ice/v3 v3.0.9
+	github.com/minio/minio-go/v7 v7.0.74
+	github.com/pion/ice/v3 v3.0.13
 	github.com/pion/interceptor v0.1.29
 	github.com/pion/logging v0.2.2
-	github.com/pion/webrtc/v4 v4.0.0-beta.21
+	github.com/pion/webrtc/v4 v4.0.0-beta.26
 	github.com/rs/xid v1.5.0
 	github.com/rs/zerolog v1.33.0
 	github.com/veandco/go-sdl2 v0.4.40
@@ -37,21 +37,23 @@ require (
 	github.com/mitchellh/copystructure v1.2.0 // indirect
 	github.com/mitchellh/reflectwalk v1.0.2 // indirect
 	github.com/pion/datachannel v1.5.8 // indirect
-	github.com/pion/dtls/v2 v2.2.11 // indirect
+	github.com/pion/dtls/v2 v2.2.12 // indirect
+	github.com/pion/dtls/v3 v3.0.0 // indirect
 	github.com/pion/mdns/v2 v2.0.7 // indirect
 	github.com/pion/randutil v0.1.0 // indirect
 	github.com/pion/rtcp v1.2.14 // indirect
 	github.com/pion/rtp v1.8.7 // indirect
 	github.com/pion/sctp v1.8.19 // indirect
 	github.com/pion/sdp/v3 v3.0.9 // indirect
-	github.com/pion/srtp/v3 v3.0.2 // indirect
+	github.com/pion/srtp/v3 v3.0.3 // indirect
 	github.com/pion/stun/v2 v2.0.0 // indirect
-	github.com/pion/transport/v2 v2.2.5 // indirect
-	github.com/pion/transport/v3 v3.0.2 // indirect
+	github.com/pion/transport/v2 v2.2.9 // indirect
+	github.com/pion/transport/v3 v3.0.6 // indirect
 	github.com/pion/turn/v3 v3.0.3 // indirect
 	github.com/rogpeppe/go-internal v1.12.0 // indirect
 	github.com/valyala/fastrand v1.1.0 // indirect
 	github.com/valyala/histogram v1.2.0 // indirect
+	github.com/wlynxg/anet v0.0.3 // indirect
 	golang.org/x/net v0.27.0 // indirect
 	golang.org/x/sys v0.22.0 // indirect
 	golang.org/x/text v0.16.0 // indirect
