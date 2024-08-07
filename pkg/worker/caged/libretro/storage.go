@@ -13,6 +13,7 @@ type (
 		GetSavePath() string
 		GetSRAMPath() string
 		SetMainSaveName(name string)
+		SetNonBlocking(v bool)
 		Load(path string) ([]byte, error)
 		Save(path string, data []byte) error
 	}
@@ -24,17 +25,26 @@ type (
 		// needed for Google Cloud save/restore which
 		// doesn't support multiple files
 		MainSave string
+		NonBlock bool
 	}
 	ZipStorage struct {
 		Storage
 	}
 )
 
-func (s *StateStorage) SetMainSaveName(name string)        { s.MainSave = name }
-func (s *StateStorage) GetSavePath() string                { return filepath.Join(s.Path, s.MainSave+".dat") }
-func (s *StateStorage) GetSRAMPath() string                { return filepath.Join(s.Path, s.MainSave+".srm") }
-func (s *StateStorage) Load(path string) ([]byte, error)   { return os.ReadFile(path) }
-func (s *StateStorage) Save(path string, dat []byte) error { return os.WriteFile(path, dat, 0644) }
+func (s *StateStorage) SetMainSaveName(name string)      { s.MainSave = name }
+func (s *StateStorage) SetNonBlocking(v bool)            { s.NonBlock = v }
+func (s *StateStorage) GetSavePath() string              { return filepath.Join(s.Path, s.MainSave+".dat") }
+func (s *StateStorage) GetSRAMPath() string              { return filepath.Join(s.Path, s.MainSave+".srm") }
+func (s *StateStorage) Load(path string) ([]byte, error) { return os.ReadFile(path) }
+func (s *StateStorage) Save(path string, dat []byte) error {
+	if s.NonBlock {
+		go func() { _ = os.WriteFile(path, dat, 0644) }()
+		return nil
+	}
+
+	return os.WriteFile(path, dat, 0644)
+}
 
 func (z *ZipStorage) GetSavePath() string { return z.Storage.GetSavePath() + zip.Ext }
 func (z *ZipStorage) GetSRAMPath() string { return z.Storage.GetSRAMPath() + zip.Ext }

@@ -158,6 +158,7 @@ func (f *Frontend) LoadCore(emu string) {
 		scale = conf.Scale
 		f.log.Debug().Msgf("Scale: x%v", scale)
 	}
+	f.storage.SetNonBlocking(conf.NonBlockingSave)
 	f.scale = scale
 	f.nano.CoreLoad(meta)
 	f.mu.Unlock()

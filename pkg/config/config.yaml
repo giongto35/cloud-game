@@ -192,6 +192,7 @@ emulator:
       #       Some cores allow binding multiple devices to a single port (DosBox), but typically,
       #       you should bind just one device to one port.
       #   - kbMouseSupport (bool) -- (temp) a flag if the core needs the keyboard and mouse on the client
+      #   - nonBlockingSave (bool) -- write save file in a non-blocking way, needed for huge save files
       #   - vfr (bool)
       #    (experimental)
       #       Enable variable frame rate only for cores that can't produce a constant frame rate.
@@ -271,6 +272,7 @@ emulator:
           roms: [ "zip", "cue" ]
           folder: dos
           kbMouseSupport: true
+          nonBlockingSave: true
           hid:
             0: [ 257, 513 ]
             1: [ 257, 513 ]
