@@ -50,6 +50,7 @@ type LibretroCoreConfig struct {
 	IsGlAllowed     bool
 	KbMouseSupport  bool
 	Lib             string
+	NonBlockingSave bool
 	Options         map[string]string
 	Options4rom     map[string]map[string]string // <(^_^)>
 	Roms            []string
