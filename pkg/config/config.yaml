@@ -208,6 +208,7 @@ emulator:
       #       Available:
       #       - skip_hw_context_destroy -- don't destroy OpenGL context during Libretro core deinit.
       #                                    May help with crashes, for example, with PPSSPP.
+      #       - skip_same_thread_save -- skip thread lock save (used with PPSSPP).
       list:
         gba:
           lib: mgba_libretro

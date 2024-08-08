@@ -71,6 +71,7 @@ type Nanoarch struct {
 	Aspect                   bool
 	sdlCtx                   *graphics.SDL
 	hackSkipHwContextDestroy bool
+	hackSkipSameThreadSave   bool
 	limiter                  func(func())
 	log                      *logger.Logger
 }
@@ -170,6 +171,7 @@ func (n *Nanoarch) CoreLoad(meta Metadata) {
 
 	// hacks
 	Nan0.hackSkipHwContextDestroy = meta.HasHack("skip_hw_context_destroy")
+	Nan0.hackSkipSameThreadSave = meta.HasHack("skip_same_thread_save")
 
 	// reset controllers
 	n.retropad = InputState{}
@@ -478,7 +480,7 @@ const (
 func SaveState() (State, error) {
 	data := make([]byte, uint(Nan0.serializeSize))
 	rez := false
-	if Nan0.LibCo {
+	if Nan0.LibCo && !Nan0.hackSkipSameThreadSave {
 		rez = *(*bool)(C.same_thread_with_args2(retroSerialize, C.int(CallSerialize), unsafe.Pointer(&data[0]), unsafe.Pointer(&Nan0.serializeSize)))
 	} else {
 		rez = bool(C.bridge_retro_serialize(retroSerialize, unsafe.Pointer(&data[0]), Nan0.serializeSize))
@@ -934,6 +936,7 @@ func deinitVideo() {
 	Nan0.Video.gl.enabled = false
 	Nan0.Video.gl.autoCtx = false
 	Nan0.hackSkipHwContextDestroy = false
+	Nan0.hackSkipSameThreadSave = false
 	thread.SwitchGraphics(false)
 }
 
