@@ -168,7 +168,7 @@ func (wmp *WebrtcMediaPipe) initAudio(srcHz int, frameSize int) error {
 		return fmt.Errorf("opus fail: %w", err)
 	}
 	wmp.log.Debug().Msgf("Opus: %v", au.GetInfo())
-	wmp.a = au
+	wmp.SetAudio(au)
 	buf := newBuffer(frame(srcHz, frameSize))
 	dstHz, _ := au.SampleRate()
 	if srcHz != dstHz {
@@ -198,7 +198,7 @@ func (wmp *WebrtcMediaPipe) initVideo(w, h int, scale float64, conf config.Video
 	if enc == nil {
 		return fmt.Errorf("broken video encoder init")
 	}
-	wmp.v = enc
+	wmp.SetVideo(enc)
 	wmp.log.Debug().Msgf("media scale: %vx%v -> %vx%v", w, h, sw, sh)
 	return err
 }
