@@ -4,21 +4,12 @@ x-params: &default-params
   privileged: true
   restart: always
   security_opt:
-    - seccomp:unconfined
+    - seccomp=unconfined
   logging:
     driver: "journald"
 x-worker: &worker
   depends_on:
     - coordinator
-#  deploy:
-#    mode: replicated
-#    replicas: 4
-  environment:
-    - DISPLAY=:99
-    - MESA_GL_VERSION_OVERRIDE=4.5
-    - CLOUD_GAME_WORKER_LIBRARY_BASEPATH=/usr/local/share/cloud-game/assets/games
-    - CLOUD_GAME_EMULATOR_LIBRETRO_CORES_PATHS_LIBS=/usr/local/share/cloud-game/assets/cores
-    - CLOUD_GAME_WORKER_SERVER_TLS_DOMAIN=cloudretro.io
   command: ./worker
   volumes:
     - ${APP_DIR:-/cloud-game}/cache:/usr/local/share/cloud-game/assets/cache
@@ -29,7 +20,7 @@ x-worker: &worker
     - x11:/tmp/.X11-unix
   healthcheck:
     test: curl -f https://cloudretro.io/echo || exit 1
-    interval: 2m
+    interval: 1m
     timeout: 10s
     retries: 3
     start_period: 40s
@@ -50,6 +41,11 @@ services:
   worker01:
     <<: [ *default-params, *worker ]
     environment:
+      - DISPLAY=:99
+      - MESA_GL_VERSION_OVERRIDE=4.5
+      - CLOUD_GAME_WORKER_LIBRARY_BASEPATH=/usr/local/share/cloud-game/assets/games
+      - CLOUD_GAME_EMULATOR_LIBRETRO_CORES_PATHS_LIBS=/usr/local/share/cloud-game/assets/cores
+      - CLOUD_GAME_WORKER_SERVER_TLS_DOMAIN=cloudretro.io
       - CLOUD_GAME_WORKER_SERVER_TLS_ADDRESS=:444
     healthcheck:
       test: curl -f https://cloudretro.io:444/echo || exit 1
@@ -57,17 +53,32 @@ services:
     <<: [ *default-params, *worker ]
     environment:
       - CLOUD_GAME_WORKER_SERVER_TLS_ADDRESS=:445
+      - DISPLAY=:99
+      - MESA_GL_VERSION_OVERRIDE=4.5
+      - CLOUD_GAME_WORKER_LIBRARY_BASEPATH=/usr/local/share/cloud-game/assets/games
+      - CLOUD_GAME_EMULATOR_LIBRETRO_CORES_PATHS_LIBS=/usr/local/share/cloud-game/assets/cores
+      - CLOUD_GAME_WORKER_SERVER_TLS_DOMAIN=cloudretro.io
     healthcheck:
       test: curl -f https://cloudretro.io:445/echo || exit 1
   worker03:
     <<: [ *default-params, *worker ]
     environment:
+      - DISPLAY=:99
+      - MESA_GL_VERSION_OVERRIDE=4.5
+      - CLOUD_GAME_WORKER_LIBRARY_BASEPATH=/usr/local/share/cloud-game/assets/games
+      - CLOUD_GAME_EMULATOR_LIBRETRO_CORES_PATHS_LIBS=/usr/local/share/cloud-game/assets/cores
+      - CLOUD_GAME_WORKER_SERVER_TLS_DOMAIN=cloudretro.io
       - CLOUD_GAME_WORKER_SERVER_TLS_ADDRESS=:446
     healthcheck:
       test: curl -f https://cloudretro.io:446/echo || exit 1
   worker04:
     <<: [ *default-params, *worker ]
     environment:
+      - DISPLAY=:99
+      - MESA_GL_VERSION_OVERRIDE=4.5
+      - CLOUD_GAME_WORKER_LIBRARY_BASEPATH=/usr/local/share/cloud-game/assets/games
+      - CLOUD_GAME_EMULATOR_LIBRETRO_CORES_PATHS_LIBS=/usr/local/share/cloud-game/assets/cores
+      - CLOUD_GAME_WORKER_SERVER_TLS_DOMAIN=cloudretro.io
       - CLOUD_GAME_WORKER_SERVER_TLS_ADDRESS=:447
     healthcheck:
       test: curl -f https://cloudretro.io:447/echo || exit 1
