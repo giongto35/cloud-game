@@ -33,7 +33,7 @@ func TestEncoders(t *testing.T) {
 	}
 }
 
-func BenchmarkH264(b *testing.B) { run(1920, 1080, encoder.H264, b.N, nil, nil, b) }
+func BenchmarkH264(b *testing.B) { run(640, 480, encoder.H264, b.N, nil, nil, b) }
 func BenchmarkVP8(b *testing.B)  { run(1920, 1080, encoder.VP8, b.N, nil, nil, b) }
 
 func run(w, h int, cod encoder.VideoCodec, count int, a *image.RGBA, b *image.RGBA, backend testing.TB) {
