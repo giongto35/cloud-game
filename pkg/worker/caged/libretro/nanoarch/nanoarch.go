@@ -59,6 +59,7 @@ type Nanoarch struct {
 	cSaveDirectory   *C.char
 	cSystemDirectory *C.char
 	cUserName        *C.char
+	cVfsInterface    *C.struct_retro_vfs_interface
 	Video            struct {
 		gl struct {
 			enabled bool
@@ -374,6 +375,11 @@ func (n *Nanoarch) Shutdown() {
 	C.free(unsafe.Pointer(n.cUserName))
 	C.free(unsafe.Pointer(n.cSaveDirectory))
 	C.free(unsafe.Pointer(n.cSystemDirectory))
+	if n.cVfsInterface != nil {
+		n.log.Info().Msgf(">>>>>>>>> freeeing vfs interface heappp")
+		C.free(unsafe.Pointer(n.cVfsInterface))
+		n.cVfsInterface = nil
+	}
 }
 
 func (n *Nanoarch) Run() {
@@ -794,6 +800,16 @@ func coreEnvironment(cmd C.unsigned, data unsafe.Pointer) C.bool {
 	case C.RETRO_ENVIRONMENT_GET_SAVE_DIRECTORY:
 		*(**C.char)(data) = Nan0.cSaveDirectory
 		return true
+	case C.RETRO_ENVIRONMENT_GET_VFS_INTERFACE:
+		vfs := (*C.struct_retro_vfs_interface_info)(data)
+		minVer := vfs.required_interface_version
+		Nan0.log.Info().Msgf("[vfs] required version: %v", minVer)
+		if Nan0.cVfsInterface != nil {
+			Nan0.log.Info().Msgf("[vfs] freeing old interface >>> %+v", *Nan0.cVfsInterface)
+			C.free(unsafe.Pointer(Nan0.cVfsInterface))
+		}
+		Nan0.cVfsInterface = C.vfs_interface_cgo()
+		return true
 	case C.RETRO_ENVIRONMENT_SET_MESSAGE:
 		// only with the Libretro debug mode
 		if Nan0.log.GetLevel() < logger.InfoLevel {
@@ -938,6 +954,17 @@ func deinitVideo() {
 	Nan0.hackSkipHwContextDestroy = false
 	Nan0.hackSkipSameThreadSave = false
 	thread.SwitchGraphics(false)
+}
+
+//export vfsGetPath
+func vfsGetPath(stream *C.struct_retro_vfs_file_handle) *C.char {
+	return nil
+}
+
+//export vfsOpenDir
+func vfsOpenDir(dir *C.char, includeHidden C.bool) unsafe.Pointer {
+	Nan0.log.Info().Msgf(">>>>> Read: %v", C.GoString(dir))
+	return nil
 }
 
 type limit struct {

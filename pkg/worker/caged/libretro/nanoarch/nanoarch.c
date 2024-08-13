@@ -3,6 +3,7 @@
 #include <stdbool.h>
 #include <stdarg.h>
 #include <stdio.h>
+#include <stdlib.h>
 
 int initialized = 0;
 
@@ -183,6 +184,31 @@ void init_video_cgo() {
 void deinit_video_cgo() {
     void deinitVideo();
     deinitVideo();
+}
+
+static const char* vfsGetPath_cgo(struct retro_vfs_file_handle *stream) {
+    const char* vfsGetPath(struct retro_vfs_file_handle *stream);
+    return vfsGetPath(stream);
+}
+
+static struct retro_vfs_dir_handle* vfsOpenDir_cgo(const char *dir, bool include_hidden) {
+    struct retro_vfs_dir_handle* vfsOpenDir(const char *dir, bool include_hidden);
+    return vfsOpenDir(dir, include_hidden);
+}
+
+char test[] = "TEST!";
+
+struct retro_vfs_interface* vfs_interface_cgo() {
+    struct retro_vfs_interface *vfs_i = malloc(sizeof (struct retro_vfs_interface));
+    if (vfs_i == NULL)
+        return NULL;
+
+    vfs_i->get_path = &vfsGetPath_cgo;
+    vfs_i->opendir = &vfsOpenDir_cgo;
+
+    vfs_i->opendir((const char*)(&test), false);
+
+    return vfs_i;
 }
 
 typedef struct {
