@@ -7,7 +7,7 @@ import (
 	"github.com/giongto35/cloud-game/v3/pkg/config"
 	"github.com/giongto35/cloud-game/v3/pkg/logger"
 	"github.com/giongto35/cloud-game/v3/pkg/network/socket"
-	"github.com/pion/ice/v3"
+	"github.com/pion/ice/v4"
 	"github.com/pion/interceptor"
 	"github.com/pion/interceptor/pkg/report"
 	"github.com/pion/webrtc/v4"
