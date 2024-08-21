@@ -66,6 +66,7 @@ type Frontend struct {
 
 	DisableCanvasPool bool
 	SaveOnClose       bool
+	UniqueSaveDir     bool
 }
 
 type Device byte
@@ -153,6 +154,11 @@ func (f *Frontend) LoadCore(emu string) {
 		KbMouseSupport:  conf.KbMouseSupport,
 	}
 	f.mu.Lock()
+	if conf.UniqueSaveDir {
+		f.UniqueSaveDir = true
+		f.nano.SetSaveDirSuffix(f.storage.MainPath())
+		f.log.Debug().Msgf("Using unique dir for saves: %v", f.storage.MainPath())
+	}
 	scale := 1.0
 	if conf.Scale > 1 {
 		scale = conf.Scale
@@ -336,6 +342,13 @@ func (f *Frontend) Close() {
 
 	f.mui.Lock()
 	f.nano.Close()
+
+	if f.UniqueSaveDir && !f.HasSave() {
+		if err := f.nano.DeleteSaveDir(); err != nil {
+			f.log.Error().Msgf("couldn't delete save dir: %v", err)
+		}
+	}
+
 	f.mui.Unlock()
 	f.log.Debug().Msgf("frontend closed")
 }

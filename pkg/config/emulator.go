@@ -55,6 +55,7 @@ type LibretroCoreConfig struct {
 	Options4rom     map[string]map[string]string // <(^_^)>
 	Roms            []string
 	Scale           float64
+	UniqueSaveDir   bool
 	UsesLibCo       bool
 	VFR             bool
 	Width           int

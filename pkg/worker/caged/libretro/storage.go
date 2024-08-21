@@ -10,6 +10,7 @@ import (
 
 type (
 	Storage interface {
+		MainPath() string
 		GetSavePath() string
 		GetSRAMPath() string
 		SetMainSaveName(name string)
@@ -32,6 +33,7 @@ type (
 	}
 )
 
+func (s *StateStorage) MainPath() string                 { return s.MainSave }
 func (s *StateStorage) SetMainSaveName(name string)      { s.MainSave = name }
 func (s *StateStorage) SetNonBlocking(v bool)            { s.NonBlock = v }
 func (s *StateStorage) GetSavePath() string              { return filepath.Join(s.Path, s.MainSave+".dat") }
