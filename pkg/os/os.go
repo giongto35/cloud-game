@@ -84,3 +84,7 @@ func StatSize(path string) (int64, error) {
 	}
 	return fi.Size(), nil
 }
+
+func RemoveAll(path string) error {
+	return os.RemoveAll(path)
+}
