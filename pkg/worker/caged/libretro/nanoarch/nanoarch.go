@@ -158,11 +158,14 @@ func (n *Nanoarch) Close()                           { n.Stopped.Store(true); n.
 func (n *Nanoarch) SetLogger(log *logger.Logger)     { n.log = log }
 func (n *Nanoarch) SetVideoDebounce(t time.Duration) { n.limiter = NewLimit(t) }
 func (n *Nanoarch) SetSaveDirSuffix(sx string) {
+	dir := C.GoString(n.cSaveDirectory) + "/" + sx
+	err := os.CheckCreateDir(dir)
+	if err != nil {
+		n.log.Error().Msgf("couldn't create %v, %v", dir, err)
+	}
 	if n.cSaveDirectory != nil {
 		C.free(unsafe.Pointer(n.cSaveDirectory))
 	}
-	dir := C.GoString(n.cSaveDirectory) + "/" + sx
-	_ = os.CheckCreateDir(dir)
 	n.cSaveDirectory = C.CString(dir)
 }
 func (n *Nanoarch) DeleteSaveDir() error {
