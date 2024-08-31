@@ -27,6 +27,7 @@ type (
 		Wid   string      `json:"wid"`
 	}
 	AppMeta struct {
+		Alias  string `json:"alias,omitempty"`
 		Title  string `json:"title"`
 		System string `json:"system"`
 	}

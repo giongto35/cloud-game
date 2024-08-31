@@ -75,7 +75,7 @@ func (h *Hub) handleUserConnection() http.HandlerFunc {
 		apps := h.launcher.GetAppNames()
 		list := make([]api.AppMeta, len(apps))
 		for i := range apps {
-			list[i] = api.AppMeta{Title: apps[i].Name, System: apps[i].System}
+			list[i] = api.AppMeta{Alias: apps[i].Alias, Title: apps[i].Name, System: apps[i].System}
 		}
 		user.InitSession(worker.Id().String(), h.conf.Webrtc.IceServers, list)
 		log.Info().Str(logger.DirectionField, logger.MarkPlus).Msgf("user %s", user.Id())
