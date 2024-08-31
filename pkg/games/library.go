@@ -1,8 +1,11 @@
 package games
 
 import (
+	"bufio"
+	"errors"
 	"fmt"
 	"io/fs"
+	"os"
 	"path/filepath"
 	"sort"
 	"strings"
@@ -57,6 +60,7 @@ type WithEmulatorInfo interface {
 }
 
 type GameMetadata struct {
+	Alias  string
 	Base   string
 	Name   string // the display name of the game
 	Path   string // the game path relative to the library base path
@@ -123,6 +127,37 @@ func (lib *library) FindGameByName(name string) GameMetadata {
 	return game
 }
 
+func (lib *library) AliasFileMaybe() map[string]string {
+	dir := lib.config.path
+	path := dir + "/alias.txt"
+
+	if _, err := os.Stat(path); errors.Is(err, os.ErrNotExist) {
+		return nil
+	}
+
+	// read
+	f, err := os.Open(path)
+	if err != nil {
+		lib.log.Error().Msgf("couldn't open alias file, %v", err)
+		return nil
+	}
+	defer func() { _ = f.Close() }()
+
+	m := make(map[string]string)
+	s := bufio.NewScanner(f)
+	for s.Scan() {
+		id, alias, ok := strings.Cut(s.Text(), "=")
+		if ok {
+			m[id] = alias
+		}
+	}
+	if err = s.Err(); err != nil {
+		lib.log.Error().Msgf("alias file read error, %v", err)
+	}
+
+	return m
+}
+
 func (lib *library) Scan() {
 	if !lib.hasSource {
 		lib.log.Info().Msg("Lib scan... skipped (no source)")
@@ -142,6 +177,14 @@ func (lib *library) Scan() {
 
 	lib.log.Debug().Msg("Lib scan... started")
 
+	// game name aliases
+	aliases := lib.AliasFileMaybe()
+
+	if aliases != nil {
+		lib.log.Debug().Msgf("Lib game alises found")
+		lib.log.Debug().Msgf(">>> %v", aliases)
+	}
+
 	start := time.Now()
 	var games []GameMetadata
 	dir := lib.config.path
@@ -154,6 +197,13 @@ func (lib *library) Scan() {
 			meta := getMetadata(path, dir)
 
 			meta.System = lib.emuConf.GetEmulator(meta.Type, meta.Path)
+
+			if aliases != nil {
+				k, ok := aliases[meta.Name]
+				if ok {
+					meta.Alias = k
+				}
+			}
 
 			if _, ok := lib.config.ignored[meta.Name]; !ok {
 				games = append(games, meta)
@@ -247,12 +297,12 @@ func (lib *library) isExtAllowed(path string) bool {
 // getMetadata returns game info from a path
 func getMetadata(path string, basePath string) GameMetadata {
 	name := filepath.Base(path)
-	ext := strings.ToLower(filepath.Ext(name))
+	ext := filepath.Ext(name)
 	relPath, _ := filepath.Rel(basePath, path)
 
 	return GameMetadata{
 		Name: strings.TrimSuffix(name, ext),
-		Type: ext[1:],
+		Type: strings.ToLower(ext[1:]),
 		Path: relPath,
 	}
 }
@@ -270,7 +320,11 @@ func (lib *library) dumpLibrary() {
 
 	for _, k := range keys {
 		game := lib.games[k]
-		gameList.WriteString(fmt.Sprintf("    %7s   %s (%s)\n", game.System, game.Name, game.Path))
+		alias := game.Alias
+		if alias != "" {
+			alias = fmt.Sprintf("[%s] ", game.Alias)
+		}
+		gameList.WriteString(fmt.Sprintf("    %7s   %s %s(%s)\n", game.System, game.Name, alias, game.Path))
 	}
 
 	lib.log.Debug().Msgf("Lib dump\n"+

@@ -155,7 +155,7 @@ const ui = (() => {
     const render = () => {
         rootEl.innerHTML = games.list.map(game =>
             `<div class="menu-item">` +
-            `<div><span>${game.title}</span></div>` +
+            `<div><span>${game.alias ? game.alias : game.title}</span></div>` +
             `<div class="menu-item__info">${game.system}</div>` +
             `</div>`)
             .join('')
