@@ -2,7 +2,6 @@ package games
 
 import (
 	"bufio"
-	"errors"
 	"fmt"
 	"io/fs"
 	"os"
@@ -19,6 +18,7 @@ import (
 
 // libConf is an optimized internal library configuration
 type libConf struct {
+	aliasFile string
 	path      string
 	supported map[string]struct{}
 	ignored   map[string]struct{}
@@ -89,6 +89,7 @@ func NewLib(conf config.Library, emu WithEmulatorInfo, log *logger.Logger) GameL
 
 	library := &library{
 		config: libConf{
+			aliasFile: conf.AliasFile,
 			path:      dir,
 			supported: toMap(conf.Supported),
 			ignored:   toMap(conf.Ignored),
@@ -128,34 +129,36 @@ func (lib *library) FindGameByName(name string) GameMetadata {
 }
 
 func (lib *library) AliasFileMaybe() map[string]string {
-	dir := lib.config.path
-	path := dir + "/alias.txt"
-
-	if _, err := os.Stat(path); errors.Is(err, os.ErrNotExist) {
+	if lib.config.aliasFile == "" {
 		return nil
 	}
 
-	// read
-	f, err := os.Open(path)
+	path := filepath.Join(lib.config.path, lib.config.aliasFile)
+
+	if _, err := os.Stat(path); os.IsNotExist(err) {
+		return nil
+	}
+
+	file, err := os.Open(path)
 	if err != nil {
 		lib.log.Error().Msgf("couldn't open alias file, %v", err)
 		return nil
 	}
-	defer func() { _ = f.Close() }()
+	defer func() { _ = file.Close() }()
 
-	m := make(map[string]string)
-	s := bufio.NewScanner(f)
-	for s.Scan() {
-		id, alias, ok := strings.Cut(s.Text(), "=")
-		if ok {
-			m[id] = alias
+	aliases := make(map[string]string)
+	scanner := bufio.NewScanner(file)
+	for scanner.Scan() {
+		if id, alias, found := strings.Cut(scanner.Text(), "="); found {
+			aliases[id] = alias
 		}
 	}
-	if err = s.Err(); err != nil {
+
+	if err := scanner.Err(); err != nil {
 		lib.log.Error().Msgf("alias file read error, %v", err)
 	}
 
-	return m
+	return aliases
 }
 
 func (lib *library) Scan() {

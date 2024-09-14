@@ -29,6 +29,8 @@ coordinator:
   selector:
   # games library
   library:
+    # optional alias file for overriding game names from the basePath path
+    aliasFile: alias.txt
     # root folder for the library (where games are stored)
     basePath: assets/games
     # an explicit list of supported file extensions

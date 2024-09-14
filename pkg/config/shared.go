@@ -5,6 +5,8 @@ import "flag"
 type Version int
 
 type Library struct {
+	// filename of the alias' file
+	AliasFile string
 	// some directory which is going to be
 	// the root folder for the library
 	BasePath string
