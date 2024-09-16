@@ -98,8 +98,8 @@ const onGamepadConnected = (e) => {
 
     // Ref: https://github.com/giongto35/cloud-game/issues/14
     // get mapping first (default KeyMap2)
-    const os = env.getOs();
-    const browser = env.getBrowser();
+    const os = env.getOs;
+    const browser = env.getBrowser;
 
     if (os === platform.android) {
         // default of android is KeyMap1
