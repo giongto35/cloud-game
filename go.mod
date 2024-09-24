@@ -11,11 +11,11 @@ require (
 	github.com/gorilla/websocket v1.5.3
 	github.com/knadh/koanf/maps v0.1.1
 	github.com/knadh/koanf/v2 v2.1.1
-	github.com/minio/minio-go/v7 v7.0.76
+	github.com/minio/minio-go/v7 v7.0.77
 	github.com/pion/ice/v4 v4.0.1
 	github.com/pion/interceptor v0.1.30
 	github.com/pion/logging v0.2.2
-	github.com/pion/webrtc/v4 v4.0.0-beta.29
+	github.com/pion/webrtc/v4 v4.0.0-beta.30
 	github.com/rs/xid v1.6.0
 	github.com/rs/zerolog v1.33.0
 	github.com/veandco/go-sdl2 v0.4.40
@@ -27,9 +27,9 @@ require (
 require (
 	github.com/dustin/go-humanize v1.0.1 // indirect
 	github.com/go-ini/ini v1.67.0 // indirect
-	github.com/go-viper/mapstructure/v2 v2.1.0 // indirect
+	github.com/go-viper/mapstructure/v2 v2.2.1 // indirect
 	github.com/google/uuid v1.6.0 // indirect
-	github.com/klauspost/compress v1.17.9 // indirect
+	github.com/klauspost/compress v1.17.10 // indirect
 	github.com/klauspost/cpuid/v2 v2.2.8 // indirect
 	github.com/mattn/go-colorable v0.1.13 // indirect
 	github.com/mattn/go-isatty v0.0.20 // indirect
