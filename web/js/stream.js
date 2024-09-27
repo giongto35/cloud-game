@@ -23,6 +23,7 @@ const state = {
     w: 0,
     h: 0,
     aspect: 4 / 3,
+    fit: 'contain',
     ready: false
 }
 
@@ -33,6 +34,7 @@ const play = () => {
         .then(() => {
             state.ready = true
             videoEl.poster = ''
+            resize(state.w, state.h, state.aspect, state.fit)
             useCustomScreen(options.mirrorMode === 'mirror')
         })
         .catch(error => log.error('Can\'t autoplay', error))
@@ -40,13 +42,20 @@ const play = () => {
 
 const toggle = (show) => state.screen.toggleAttribute('hidden', show === undefined ? show : !show)
 
+const resize = (w, h, aspect, fit) => {
+    if (!state.ready) return;
+
+    state.screen.setAttribute('width', '' + w)
+    state.screen.setAttribute('height', '' + h)
+    aspect !== undefined && (state.screen.style.aspectRatio = '' + aspect)
+    fit !== undefined && (state.screen.style['object-fit'] = fit)
+}
+
 // Track resize even when the underlying media stream changes its video size
 videoEl.addEventListener('resize', () => {
     recalculateSize()
     if (state.screen === videoEl) return
-
-    state.screen.setAttribute('width', videoEl.videoWidth)
-    state.screen.setAttribute('height', videoEl.videoHeight)
+    resize(videoEl.videoWidth, videoEl.videoHeight)
 })
 
 videoEl.addEventListener('loadstart', () => {
@@ -110,8 +119,7 @@ const useCustomScreen = (use) => {
 
         toggle(false)
         state.screen = mirrorEl
-        state.screen.setAttribute('width', videoEl.videoWidth)
-        state.screen.setAttribute('height', videoEl.videoHeight)
+        resize(videoEl.videoWidth, videoEl.videoHeight)
 
         // stretch depending on the video orientation
         const isPortrait = videoEl.videoWidth < videoEl.videoHeight
@@ -155,12 +163,9 @@ sub(APP_VIDEO_CHANGED, (payload) => {
 
     const a2 = (ww / hh).toFixed(6)
 
-    state.screen.style['object-fit'] = a > 1 && a.toFixed(6) !== a2 ? 'fill' : 'contain'
     state.h = hh
     state.w = Math.floor(hh * a)
-    state.screen.setAttribute('width', '' + ww)
-    state.screen.setAttribute('height', '' + hh)
-    state.screen.style.aspectRatio = '' + state.aspect
+    resize(ww, hh, state.aspect, a > 1 && a.toFixed(6) !== a2 ? 'fill' : 'contain')
     recalculateSize()
 })
 
