@@ -2,7 +2,7 @@ ARG BUILD_PATH=/tmp/cloud-game
 ARG VERSION=master
 
 # base build stage
-FROM ubuntu:lunar AS build0
+FROM ubuntu:noble AS build0
 ARG GO=1.23.0
 ARG GO_DIST=go${GO}.linux-amd64.tar.gz
 
@@ -73,7 +73,7 @@ COPY --from=build_coordinator /usr/local/share/cloud-game /cloud-game
 # autocertbot (SSL) requires these on the first run
 COPY --from=build_coordinator /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/
 
-FROM ubuntu:lunar AS worker
+FROM ubuntu:noble AS worker
 
 RUN apt-get -q update && apt-get -q install --no-install-recommends -y \
     curl \
