@@ -2,8 +2,8 @@ ARG BUILD_PATH=/tmp/cloud-game
 ARG VERSION=master
 
 # base build stage
-FROM ubuntu:noble AS build0
-ARG GO=1.23.0
+FROM ubuntu:oracular AS build0
+ARG GO=1.23.1
 ARG GO_DIST=go${GO}.linux-amd64.tar.gz
 
 ADD https://go.dev/dl/$GO_DIST ./
@@ -73,7 +73,7 @@ COPY --from=build_coordinator /usr/local/share/cloud-game /cloud-game
 # autocertbot (SSL) requires these on the first run
 COPY --from=build_coordinator /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/
 
-FROM ubuntu:noble AS worker
+FROM ubuntu:oracular AS worker
 
 RUN apt-get -q update && apt-get -q install --no-install-recommends -y \
     curl \
