@@ -58,7 +58,10 @@ type Video struct {
 	Codec   string
 	Threads int
 	H264    struct {
+		Mode     string
 		Crf      uint8
+		MaxRate  int
+		BufSize  int
 		LogLevel int32
 		Preset   string
 		Profile  string

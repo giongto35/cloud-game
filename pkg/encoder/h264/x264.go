@@ -69,6 +69,7 @@ import "C"
 
 import (
 	"fmt"
+	"strings"
 	"unsafe"
 )
 
@@ -77,11 +78,16 @@ type H264 struct {
 }
 
 type Options struct {
+	Mode string
 	// Constant Rate Factor (CRF)
 	// This method allows the encoder to attempt to achieve a certain output quality for the whole file
 	// when output file size is of less importance.
 	// The range of the CRF scale is 0–51, where 0 is lossless, 23 is the default, and 51 is the worst quality possible.
-	Crf      uint8
+	Crf uint8
+	// vbv-maxrate
+	MaxRate int
+	// vbv-bufsize
+	BufSize  int
 	LogLevel int32
 	// ultrafast, superfast, veryfast, faster, fast, medium, slow, slower, veryslow, placebo.
 	Preset string
@@ -100,6 +106,7 @@ func NewEncoder(w, h int, th int, opts *Options) (encoder *H264, err error) {
 
 	if opts == nil {
 		opts = &Options{
+			Mode:    "crf",
 			Crf:     23,
 			Tune:    "zerolatency",
 			Preset:  "superfast",
@@ -144,8 +151,22 @@ func NewEncoder(w, h int, th int, opts *Options) (encoder *H264, err error) {
 	if th != 1 {
 		param.b_sliced_threads = 1
 	}
+
 	param.rc.i_rc_method = C.X264_RC_CRF
 	param.rc.f_rf_constant = C.float(opts.Crf)
+
+	if strings.ToLower(opts.Mode) == "cbr" {
+		param.rc.i_rc_method = C.X264_RC_ABR
+		param.i_nal_hrd = C.X264_NAL_HRD_CBR
+	}
+
+	if opts.MaxRate > 0 {
+		param.rc.i_bitrate = C.int(opts.MaxRate)
+		param.rc.i_vbv_max_bitrate = C.int(opts.MaxRate)
+	}
+	if opts.BufSize > 0 {
+		param.rc.i_vbv_buffer_size = C.int(opts.BufSize)
+	}
 
 	h264 := C.h264_new(&param)
 	if h264 == nil {
