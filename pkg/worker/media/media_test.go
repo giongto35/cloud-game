@@ -41,7 +41,10 @@ func run(w, h int, cod encoder.VideoCodec, count int, a *image.RGBA, b *image.RG
 		Codec:   string(cod),
 		Threads: 0,
 		H264: struct {
+			Mode     string
 			Crf      uint8
+			MaxRate  int
+			BufSize  int
 			LogLevel int32
 			Preset   string
 			Profile  string
