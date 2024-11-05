@@ -28,6 +28,10 @@ func CheckCreateDir(path string) error {
 	return nil
 }
 
+func MakeDirAll(path string) error {
+	return os.MkdirAll(path, os.ModeDir|os.ModePerm)
+}
+
 func ExpectTermination() chan struct{} {
 	signals := make(chan os.Signal, 1)
 	signal.Notify(signals, os.Interrupt, syscall.SIGTERM)
