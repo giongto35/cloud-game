@@ -1,14 +1,11 @@
 package manager
 
 import (
-	"os"
-	"path/filepath"
-
 	"github.com/giongto35/cloud-game/v3/pkg/config"
 	"github.com/giongto35/cloud-game/v3/pkg/logger"
+	"github.com/giongto35/cloud-game/v3/pkg/os"
 	"github.com/giongto35/cloud-game/v3/pkg/worker/caged/libretro/repo"
 	"github.com/giongto35/cloud-game/v3/pkg/worker/caged/libretro/repo/arch"
-	"github.com/gofrs/flock"
 )
 
 type Manager struct {
@@ -18,29 +15,20 @@ type Manager struct {
 	repo    repo.Repository
 	altRepo repo.Repository
 	client  Downloader
-	fmu     *flock.Flock
+	fmu     *os.Flock
 	log     *logger.Logger
 }
 
 func NewRemoteHttpManager(conf config.LibretroConfig, log *logger.Logger) Manager {
 	repoConf := conf.Cores.Repo.Main
 	altRepoConf := conf.Cores.Repo.Secondary
-	// used for synchronization of multiple process
-	fileLock := conf.Cores.Repo.ExtLock
-	if fileLock == "" {
-		fileLock = os.TempDir() + string(os.PathSeparator) + "cloud_game.lock"
-	}
-	log.Debug().Msgf("Using .lock file: %v", fileLock)
 
-	if err := os.MkdirAll(filepath.Dir(fileLock), 0770); err != nil {
-		log.Error().Err(err).Msgf("couldn't create lock")
-	} else {
-		f, err := os.Create(fileLock)
-		if err != nil {
-			log.Error().Err(err).Msgf("couldn't create lock")
-		}
-		_ = f.Close()
+	// used for synchronization of multiple process
+	flock, err := os.NewFileLock(conf.Cores.Repo.ExtLock)
+	if err != nil {
+		log.Error().Err(err).Msgf("couldn't make file lock")
 	}
+
 	ar, err := arch.Guess()
 	if err != nil {
 		log.Error().Err(err).Msg("couldn't get Libretro core file extension")
@@ -50,7 +38,7 @@ func NewRemoteHttpManager(conf config.LibretroConfig, log *logger.Logger) Manage
 		BasicManager: BasicManager{Conf: conf},
 		arch:         ar,
 		client:       NewDefaultDownloader(log),
-		fmu:          flock.New(fileLock),
+		fmu:          flock,
 		log:          log,
 	}
 
@@ -71,8 +59,7 @@ func CheckCores(conf config.Emulator, log *logger.Logger) error {
 	log.Info().Msg("Starting Libretro cores sync...")
 	coreManager := NewRemoteHttpManager(conf.Libretro, log)
 	// make a dir for cores
-	dir := coreManager.Conf.GetCoresStorePath()
-	if err := os.MkdirAll(dir, os.ModeDir|os.ModePerm); err != nil {
+	if err := os.MakeDirAll(coreManager.Conf.GetCoresStorePath()); err != nil {
 		return err
 	}
 	if err := coreManager.Sync(); err != nil {
