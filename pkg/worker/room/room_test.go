@@ -223,7 +223,7 @@ func room(cfg conf) testRoom {
 	emu := WithEmulator(manager.Get(caged.Libretro))
 	emu.ReloadFrontend()
 	emu.SetSessionId(id)
-	if err := emu.Load(cfg.game, conf.Worker.Library.BasePath); err != nil {
+	if err := emu.Load(cfg.game, conf.Library.BasePath); err != nil {
 		l.Fatal().Err(err).Msgf("couldn't load the game %v", cfg.game)
 	}
 

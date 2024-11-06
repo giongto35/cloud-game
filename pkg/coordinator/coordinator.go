@@ -24,7 +24,7 @@ type Coordinator struct {
 
 func New(conf config.CoordinatorConfig, log *logger.Logger) (*Coordinator, error) {
 	coordinator := &Coordinator{}
-	lib := games.NewLib(conf.Coordinator.Library, conf.Emulator, log)
+	lib := games.NewLib(conf.Library, conf.Emulator, log)
 	lib.Scan()
 	coordinator.hub = NewHub(conf, lib, log)
 	h, err := NewHTTPServer(conf, log, func(mux *httpx.Mux) *httpx.Mux {

@@ -92,7 +92,7 @@ func EmulatorMock(room string, system string) *TestFrontend {
 			SaveOnClose: false,
 		},
 		corePath: expand(conf.Emulator.GetLibretroCoreConfig(system).Lib),
-		gamePath: expand(conf.Worker.Library.BasePath),
+		gamePath: expand(conf.Library.BasePath),
 		system:   system,
 	}
 	emu.linkNano(nano)

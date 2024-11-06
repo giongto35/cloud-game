@@ -5,6 +5,7 @@ import "flag"
 type CoordinatorConfig struct {
 	Coordinator Coordinator
 	Emulator    Emulator
+	Library     Library
 	Recording   Recording
 	Version     Version
 	Webrtc      Webrtc

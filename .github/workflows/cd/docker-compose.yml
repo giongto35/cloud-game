@@ -32,7 +32,7 @@ services:
     <<: *default-params
     command: ./coordinator
     environment:
-      - CLOUD_GAME_COORDINATOR_LIBRARY_BASEPATH=/usr/local/share/cloud-game/assets/games
+      - CLOUD_GAME_LIBRARY_BASEPATH=/usr/local/share/cloud-game/assets/games
     volumes:
       - ${APP_DIR:-/cloud-game}/cache:/usr/local/share/cloud-game/assets/cache
       - ${APP_DIR:-/cloud-game}/games:/usr/local/share/cloud-game/assets/games
@@ -43,7 +43,7 @@ services:
     environment:
       - DISPLAY=:99
       - MESA_GL_VERSION_OVERRIDE=4.5
-      - CLOUD_GAME_WORKER_LIBRARY_BASEPATH=/usr/local/share/cloud-game/assets/games
+      - CLOUD_GAME_LIBRARY_BASEPATH=/usr/local/share/cloud-game/assets/games
       - CLOUD_GAME_EMULATOR_LIBRETRO_CORES_PATHS_LIBS=/usr/local/share/cloud-game/assets/cores
       - CLOUD_GAME_WORKER_SERVER_TLS_DOMAIN=cloudretro.io
       - CLOUD_GAME_WORKER_SERVER_TLS_ADDRESS=:444
@@ -55,7 +55,7 @@ services:
       - CLOUD_GAME_WORKER_SERVER_TLS_ADDRESS=:445
       - DISPLAY=:99
       - MESA_GL_VERSION_OVERRIDE=4.5
-      - CLOUD_GAME_WORKER_LIBRARY_BASEPATH=/usr/local/share/cloud-game/assets/games
+      - CLOUD_GAME_LIBRARY_BASEPATH=/usr/local/share/cloud-game/assets/games
       - CLOUD_GAME_EMULATOR_LIBRETRO_CORES_PATHS_LIBS=/usr/local/share/cloud-game/assets/cores
       - CLOUD_GAME_WORKER_SERVER_TLS_DOMAIN=cloudretro.io
     healthcheck:
@@ -65,7 +65,7 @@ services:
     environment:
       - DISPLAY=:99
       - MESA_GL_VERSION_OVERRIDE=4.5
-      - CLOUD_GAME_WORKER_LIBRARY_BASEPATH=/usr/local/share/cloud-game/assets/games
+      - CLOUD_GAME_LIBRARY_BASEPATH=/usr/local/share/cloud-game/assets/games
       - CLOUD_GAME_EMULATOR_LIBRETRO_CORES_PATHS_LIBS=/usr/local/share/cloud-game/assets/cores
       - CLOUD_GAME_WORKER_SERVER_TLS_DOMAIN=cloudretro.io
       - CLOUD_GAME_WORKER_SERVER_TLS_ADDRESS=:446
@@ -76,7 +76,7 @@ services:
     environment:
       - DISPLAY=:99
       - MESA_GL_VERSION_OVERRIDE=4.5
-      - CLOUD_GAME_WORKER_LIBRARY_BASEPATH=/usr/local/share/cloud-game/assets/games
+      - CLOUD_GAME_LIBRARY_BASEPATH=/usr/local/share/cloud-game/assets/games
       - CLOUD_GAME_EMULATOR_LIBRETRO_CORES_PATHS_LIBS=/usr/local/share/cloud-game/assets/cores
       - CLOUD_GAME_WORKER_SERVER_TLS_DOMAIN=cloudretro.io
       - CLOUD_GAME_WORKER_SERVER_TLS_ADDRESS=:447
