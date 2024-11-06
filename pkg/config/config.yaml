@@ -18,6 +18,25 @@
 # for the compatibility purposes
 version: 3
 
+# new decentralized library of games
+library:
+  # optional alias file for overriding game names from the basePath path
+  aliasFile: alias.txt
+  # root folder for the library (where games are stored)
+  basePath: assets/games
+  # a list of ignored words in the ROM filenames
+  ignored:
+    - neogeo
+    - pgm
+  # an explicit list of supported file extensions
+  # which overrides Libretro emulator ROMs configs
+  supported:
+  # print some additional info
+  verbose: true
+  # enable library directory live reload
+  # (experimental)
+  watchMode: false
+
 coordinator:
   # debugging switch
   #   - shows debug logs
@@ -27,24 +46,6 @@ coordinator:
   #   - empty value (default, any free)
   #   - ping (with the lowest ping)
   selector:
-  # games library
-  library:
-    # optional alias file for overriding game names from the basePath path
-    aliasFile: alias.txt
-    # root folder for the library (where games are stored)
-    basePath: assets/games
-    # an explicit list of supported file extensions
-    # which overrides Libretro emulator ROMs configs
-    supported:
-    # a list of ignored words in the ROM filenames
-    ignored:
-      - neogeo
-      - pgm
-    # print some additional info
-    verbose: true
-    # enable library directory live reload
-    # (experimental)
-    watchMode: false
   monitoring:
     port: 6601
     # enable Go profiler HTTP server

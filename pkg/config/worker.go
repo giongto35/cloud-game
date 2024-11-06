@@ -14,6 +14,7 @@ import (
 type WorkerConfig struct {
 	Encoder   Encoder
 	Emulator  Emulator
+	Library   Library
 	Recording Recording
 	Storage   Storage
 	Worker    Worker
@@ -31,7 +32,6 @@ type Storage struct {
 
 type Worker struct {
 	Debug      bool
-	Library    Library
 	Monitoring Monitoring
 	Network    struct {
 		CoordinatorAddress string

@@ -141,7 +141,7 @@ func (c *coordinator) HandleGameStart(rq api.StartGameRequest[com.Uid], w *Worke
 		})
 
 		w.log.Info().Msgf("Starting the game: %v", rq.Game.Name)
-		if err := app.Load(game, w.conf.Worker.Library.BasePath); err != nil {
+		if err := app.Load(game, w.conf.Library.BasePath); err != nil {
 			c.log.Error().Err(err).Msgf("couldn't load the game %v", game)
 			r.Close()
 			w.router.SetRoom(nil)
