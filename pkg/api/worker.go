@@ -66,4 +66,9 @@ type (
 		S int     `json:"s"`
 		A float32 `json:"a"`
 	}
+
+	LibGameListInfo struct {
+		T    int
+		List []GameInfo
+	}
 )

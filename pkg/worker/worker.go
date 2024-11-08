@@ -6,8 +6,10 @@ import (
 	"time"
 
 	"github.com/giongto35/cloud-game/v3/pkg/config"
+	"github.com/giongto35/cloud-game/v3/pkg/games"
 	"github.com/giongto35/cloud-game/v3/pkg/logger"
 	"github.com/giongto35/cloud-game/v3/pkg/monitoring"
+	"github.com/giongto35/cloud-game/v3/pkg/network"
 	"github.com/giongto35/cloud-game/v3/pkg/network/httpx"
 	"github.com/giongto35/cloud-game/v3/pkg/worker/caged"
 	"github.com/giongto35/cloud-game/v3/pkg/worker/cloud"
@@ -18,6 +20,7 @@ type Worker struct {
 	address  string
 	conf     config.WorkerConfig
 	cord     *coordinator
+	lib      games.GameLibrary
 	log      *logger.Logger
 	mana     *caged.Manager
 	router   *room.GameRouter
@@ -28,14 +31,22 @@ type Worker struct {
 	storage cloud.Storage
 }
 
-const retry = 10 * time.Second
-
 func New(conf config.WorkerConfig, log *logger.Logger) (*Worker, error) {
 	manager := caged.NewManager(log)
 	if err := manager.Load(caged.Libretro, conf); err != nil {
 		return nil, fmt.Errorf("couldn't cage libretro: %v", err)
 	}
-	worker := &Worker{conf: conf, log: log, mana: manager, router: room.NewGameRouter()}
+
+	library := games.NewLib(conf.Library, conf.Emulator, log)
+	library.Scan()
+
+	worker := &Worker{
+		conf:   conf,
+		lib:    library,
+		log:    log,
+		mana:   manager,
+		router: room.NewGameRouter(),
+	}
 
 	h, err := httpx.NewServer(
 		conf.Worker.GetAddr(),
@@ -79,6 +90,12 @@ func (w *Worker) Start(done chan struct{}) {
 	}
 
 	// !to restore alive worker info when coordinator connection was lost
+	retry := network.NewRetry()
+
+	onRetryFail := func(err error) {
+		w.log.Warn().Err(err).Msgf("socket fail. Retrying in %v", retry.Time())
+		retry.Fail().Multiply(2)
+	}
 
 	go func() {
 		remoteAddr := w.conf.Worker.Network.CoordinatorAddress
@@ -96,14 +113,17 @@ func (w *Worker) Start(done chan struct{}) {
 			default:
 				cord, err := newCoordinatorConnection(remoteAddr, w.conf.Worker, w.address, w.log)
 				if err != nil {
-					w.log.Warn().Err(err).Msgf("no connection: %v. Retrying in %v", remoteAddr, retry)
-					time.Sleep(retry)
+					w.log.Warn().Err(err).Msgf("no connection: %v. Retrying in %v", remoteAddr, retry.Time())
+					retry.Fail()
 					continue
 				}
+				cord.SetErrorHandler(onRetryFail)
 				w.cord = cord
 				w.cord.log.Info().Msgf("Connected to the coordinator %v", remoteAddr)
-				<-w.cord.HandleRequests(w)
-				w.Reset()
+				wait := w.cord.HandleRequests(w)
+				w.cord.SendLibrary(w)
+				<-wait
+				retry.SuccessCheck()
 			}
 		}
 	}()

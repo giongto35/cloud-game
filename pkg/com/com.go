@@ -55,6 +55,10 @@ func (c *SocketClient[T, P, _, _]) ProcessPackets(fn func(in P) error) chan stru
 	return c.sock.conn.Listen()
 }
 
+func (c *SocketClient[T, P, X, P2]) SetErrorHandler(h func(error)) { c.sock.conn.SetErrorHandler(h) }
+
+func (c *SocketClient[T, P, X, P2]) SetMaxMessageSize(s int64) { c.sock.conn.SetMaxMessageSize(s) }
+
 func (c *SocketClient[_, _, _, _]) handleMessage(message []byte, err error) {
 	if err != nil {
 		c.log.Error().Err(err).Send()

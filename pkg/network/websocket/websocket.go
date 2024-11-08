@@ -27,13 +27,15 @@ type Server struct {
 }
 
 type Connection struct {
-	alive    bool
-	callback MessageHandler
-	conn     deadlineConn
-	done     chan struct{}
-	once     sync.Once
-	pingPong bool
-	send     chan []byte
+	alive        bool
+	callback     MessageHandler
+	conn         deadlineConn
+	done         chan struct{}
+	errorHandler ErrorHandler
+	once         sync.Once
+	pingPong     bool
+	send         chan []byte
+	messSize     int64
 }
 
 type deadlineConn struct {
@@ -43,6 +45,7 @@ type deadlineConn struct {
 }
 
 type MessageHandler func([]byte, error)
+type ErrorHandler func(err error)
 
 type Upgrader struct {
 	websocket.Upgrader
@@ -125,7 +128,12 @@ func (c *Connection) reader() {
 		c.close()
 	}()
 
-	c.conn.SetReadLimit(maxMessageSize)
+	var s int64 = maxMessageSize
+	if c.messSize > 0 {
+		s = c.messSize
+	}
+	c.conn.SetReadLimit(s)
+
 	_ = c.conn.SetReadDeadline(time.Now().Add(pongTime))
 	if c.pingPong {
 		c.conn.SetPongHandler(func(string) error { _ = c.conn.SetReadDeadline(time.Now().Add(pongTime)); return nil })
@@ -145,6 +153,8 @@ func (c *Connection) reader() {
 		_, message, err := c.conn.ReadMessage()
 		if err != nil {
 			if websocket.IsUnexpectedCloseError(err, websocket.CloseNormalClosure, websocket.CloseGoingAway) {
+				c.errorHandler(err)
+			} else {
 				c.callback(message, err)
 			}
 			break
@@ -218,6 +228,10 @@ func newSocket(conn *websocket.Conn, pingPong bool) *Connection {
 func (c *Connection) IsServer() bool { return c.pingPong }
 
 func (c *Connection) SetMessageHandler(fn MessageHandler) { c.callback = fn }
+
+func (c *Connection) SetErrorHandler(fn ErrorHandler) { c.errorHandler = fn }
+
+func (c *Connection) SetMaxMessageSize(s int64) { c.messSize = s }
 
 func (c *Connection) Listen() chan struct{} {
 	if c.alive {

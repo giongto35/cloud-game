@@ -15,6 +15,7 @@ type Coordinator struct {
 	Analytics  Analytics
 	Debug      bool
 	Library    Library
+	MaxWsSize  int64
 	Monitoring Monitoring
 	Origin     struct {
 		UserWs   string
