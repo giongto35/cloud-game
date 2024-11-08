@@ -14,6 +14,7 @@ type Connection interface {
 	Disconnect()
 	Id() com.Uid
 	ProcessPackets(func(api.In[com.Uid]) error) chan struct{}
+	SetErrorHandler(func(error))
 
 	Send(api.PT, any) ([]byte, error)
 	Notify(api.PT, any)
@@ -147,4 +148,15 @@ func (c *coordinator) RegisterRoom(id string) { c.Notify(api.RegisterRoom, id) }
 func (c *coordinator) CloseRoom(id string) { c.Notify(api.CloseRoom, id) }
 func (c *coordinator) IceCandidate(candidate string, sessionId com.Uid) {
 	c.Notify(api.WebrtcIce, api.WebrtcIceCandidateRequest[com.Uid]{Stateful: api.Stateful[com.Uid]{Id: sessionId}, Candidate: candidate})
+}
+
+func (c *coordinator) SendLibrary(w *Worker) {
+	games := w.lib.GetAll()
+
+	var gg = make([]api.GameInfo, len(games))
+	for i, g := range games {
+		gg[i] = api.GameInfo(g)
+	}
+
+	c.Notify(api.LibNewGameList, api.LibGameListInfo{T: 1, List: gg})
 }

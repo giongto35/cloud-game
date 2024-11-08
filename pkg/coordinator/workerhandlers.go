@@ -21,3 +21,8 @@ func (w *Worker) HandleIceCandidate(rq api.WebrtcIceCandidateRequest[com.Uid], u
 	}
 	return nil
 }
+
+func (w *Worker) HandleLibGameList(inf api.LibGameListInfo) error {
+	w.log.Info().Msgf("Oh, lib: %v", inf)
+	return nil
+}

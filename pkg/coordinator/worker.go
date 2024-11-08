@@ -75,6 +75,15 @@ func (w *Worker) HandleRequests(users HasUserRegistry) chan struct{} {
 				w.log.Error().Err(err).Send()
 				return api.ErrMalformed
 			}
+		case api.LibNewGameList:
+			inf := api.Unwrap[api.LibGameListInfo](payload)
+			if inf == nil {
+				return api.ErrMalformed
+			}
+			if err := w.HandleLibGameList(*inf); err != nil {
+				w.log.Error().Err(err).Send()
+				return api.ErrMalformed
+			}
 		default:
 			w.log.Warn().Msgf("Unknown packet: %+v", p)
 		}

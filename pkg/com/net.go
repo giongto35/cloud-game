@@ -72,7 +72,7 @@ type request struct {
 	response []byte
 }
 
-const DefaultCallTimeout = 7 * time.Second
+const DefaultCallTimeout = 10 * time.Second
 
 var errCanceled = errors.New("canceled")
 var errTimeout = errors.New("timeout")
@@ -97,7 +97,9 @@ func (s *Server) Connect(w http.ResponseWriter, r *http.Request) (*Connection, e
 	return connect(s.Server.Connect(w, r, nil))
 }
 
-func (c Connection) IsServer() bool { return c.conn.IsServer() }
+func (c *Connection) IsServer() bool { return c.conn.IsServer() }
+
+func (c *Connection) SetMaxReadSize(s int64) { c.conn.SetMaxMessageSize(s) }
 
 func connect(conn *websocket.Connection, err error) (*Connection, error) {
 	if err != nil {

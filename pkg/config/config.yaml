@@ -59,6 +59,8 @@ coordinator:
   origin:
     userWs:
     workerWs:
+  # max websocket message size in bytes
+  maxWsSize: 32000000
   # HTTP(S) server config
   server:
     address: :8000

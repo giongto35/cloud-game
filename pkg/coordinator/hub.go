@@ -104,6 +104,8 @@ func (h *Hub) handleWorkerConnection() http.HandlerFunc {
 		Str(logger.DirectionField, logger.MarkIn),
 	)
 
+	h.log.Debug().Msgf("WS max message size: %vb", h.conf.Coordinator.MaxWsSize)
+
 	return func(w http.ResponseWriter, r *http.Request) {
 		h.log.Debug().Msgf("Handshake %v", r.Host)
 
@@ -131,6 +133,7 @@ func (h *Hub) handleWorkerConnection() http.HandlerFunc {
 			log.Error().Err(err).Msg("worker connection fail")
 			return
 		}
+		conn.SetMaxReadSize(h.conf.Coordinator.MaxWsSize)
 
 		worker := NewWorker(conn, *handshake, log)
 		defer h.workers.RemoveDisconnect(worker)

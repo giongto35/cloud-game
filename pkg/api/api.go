@@ -85,6 +85,7 @@ const (
 	IceCandidate        = WebrtcIce
 	TerminateSession PT = 204
 	AppVideoChange   PT = 150
+	LibNewGameList   PT = 205
 )
 
 func (p PT) String() string {
@@ -125,6 +126,8 @@ func (p PT) String() string {
 		return "TerminateSession"
 	case AppVideoChange:
 		return "AppVideoChange"
+	case LibNewGameList:
+		return "LibNewGameList"
 	default:
 		return "Unknown"
 	}
