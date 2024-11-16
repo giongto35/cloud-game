@@ -19,6 +19,7 @@ package api
 import (
 	"encoding/json"
 	"fmt"
+	"strings"
 )
 
 type (
@@ -86,6 +87,7 @@ const (
 	TerminateSession PT = 204
 	AppVideoChange   PT = 150
 	LibNewGameList   PT = 205
+	PrevSessions     PT = 206
 )
 
 func (p PT) String() string {
@@ -128,6 +130,8 @@ func (p PT) String() string {
 		return "AppVideoChange"
 	case LibNewGameList:
 		return "LibNewGameList"
+	case PrevSessions:
+		return "PrevSessions"
 	default:
 		return "Unknown"
 	}
@@ -166,3 +170,15 @@ func UnwrapChecked[T any](bytes []byte, err error) (*T, error) {
 }
 
 func Wrap(t any) ([]byte, error) { return json.Marshal(t) }
+
+const separator = "___"
+
+func ExplodeDeepLink(link string) (string, string) {
+	p := strings.SplitN(link, separator, 2)
+
+	if len(p) == 1 {
+		return p[0], ""
+	}
+
+	return p[0], p[1]
+}

@@ -21,6 +21,7 @@ type Worker struct {
 	conf     config.WorkerConfig
 	cord     *coordinator
 	lib      games.GameLibrary
+	launcher games.Launcher
 	log      *logger.Logger
 	mana     *caged.Manager
 	router   *room.GameRouter
@@ -41,11 +42,12 @@ func New(conf config.WorkerConfig, log *logger.Logger) (*Worker, error) {
 	library.Scan()
 
 	worker := &Worker{
-		conf:   conf,
-		lib:    library,
-		log:    log,
-		mana:   manager,
-		router: room.NewGameRouter(),
+		conf:     conf,
+		lib:      library,
+		launcher: games.NewGameLauncher(library),
+		log:      log,
+		mana:     manager,
+		router:   room.NewGameRouter(),
 	}
 
 	h, err := httpx.NewServer(
@@ -122,6 +124,7 @@ func (w *Worker) Start(done chan struct{}) {
 				w.cord.log.Info().Msgf("Connected to the coordinator %v", remoteAddr)
 				wait := w.cord.HandleRequests(w)
 				w.cord.SendLibrary(w)
+				w.cord.SendPrevSessions(w)
 				<-wait
 				retry.SuccessCheck()
 			}

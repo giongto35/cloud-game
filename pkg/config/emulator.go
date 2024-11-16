@@ -103,6 +103,10 @@ func (e Emulator) GetSupportedExtensions() []string {
 	return extensions
 }
 
+func (e Emulator) SessionStoragePath() string {
+	return e.Storage
+}
+
 func (l *LibretroConfig) GetCores() (cores []CoreInfo) {
 	for k, core := range l.Cores.List {
 		cores = append(cores, CoreInfo{Id: k, Name: core.Lib, AltRepo: core.AltRepo})

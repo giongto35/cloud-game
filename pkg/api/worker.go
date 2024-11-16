@@ -21,8 +21,8 @@ type (
 		StatefulRoom[T]
 		Record      bool
 		RecordUser  string
-		Game        GameInfo `json:"game"`
-		PlayerIndex int      `json:"player_index"`
+		Game        string `json:"game"`
+		PlayerIndex int    `json:"player_index"`
 	}
 	GameInfo struct {
 		Alias  string `json:"alias"`
@@ -70,5 +70,9 @@ type (
 	LibGameListInfo struct {
 		T    int
 		List []GameInfo
+	}
+
+	PrevSessionInfo struct {
+		List []string
 	}
 )

@@ -18,12 +18,13 @@ import (
 
 // libConf is an optimized internal library configuration
 type libConf struct {
-	aliasFile string
-	path      string
-	supported map[string]struct{}
-	ignored   map[string]struct{}
-	verbose   bool
-	watchMode bool
+	aliasFile   string
+	path        string
+	supported   map[string]struct{}
+	ignored     map[string]struct{}
+	verbose     bool
+	watchMode   bool
+	sessionPath string
 }
 
 type library struct {
@@ -39,6 +40,9 @@ type library struct {
 	games map[string]GameMetadata
 	log   *logger.Logger
 
+	// ids of saved games to find closed sessions
+	sessions []string
+
 	emuConf WithEmulatorInfo
 
 	// to restrict parallel execution or throttling
@@ -51,12 +55,14 @@ type library struct {
 type GameLibrary interface {
 	GetAll() []GameMetadata
 	FindGameByName(name string) GameMetadata
+	Sessions() []string
 	Scan()
 }
 
 type WithEmulatorInfo interface {
 	GetSupportedExtensions() []string
 	GetEmulator(rom string, path string) string
+	SessionStoragePath() string
 }
 
 type GameMetadata struct {
@@ -89,12 +95,13 @@ func NewLib(conf config.Library, emu WithEmulatorInfo, log *logger.Logger) GameL
 
 	library := &library{
 		config: libConf{
-			aliasFile: conf.AliasFile,
-			path:      dir,
-			supported: toMap(conf.Supported),
-			ignored:   toMap(conf.Ignored),
-			verbose:   conf.Verbose,
-			watchMode: conf.WatchMode,
+			aliasFile:   conf.AliasFile,
+			path:        dir,
+			supported:   toMap(conf.Supported),
+			ignored:     toMap(conf.Ignored),
+			verbose:     conf.Verbose,
+			watchMode:   conf.WatchMode,
+			sessionPath: emu.SessionStoragePath(),
 		},
 		mu:        sync.Mutex{},
 		games:     map[string]GameMetadata{},
@@ -108,6 +115,10 @@ func NewLib(conf config.Library, emu WithEmulatorInfo, log *logger.Logger) GameL
 	}
 
 	return library
+}
+
+func (lib *library) Sessions() []string {
+	return lib.sessions
 }
 
 func (lib *library) GetAll() []GameMetadata {
@@ -224,6 +235,20 @@ func (lib *library) Scan() {
 		lib.set(games)
 	}
 
+	var sessions []string
+	dir = lib.config.sessionPath
+	err = filepath.WalkDir(dir, func(path string, info fs.DirEntry, err error) error {
+		if err != nil {
+			return err
+		}
+
+		if info != nil && !info.IsDir() {
+			sessions = append(sessions, info.Name())
+		}
+		return nil
+	})
+	lib.sessions = sessions
+
 	lib.lastScanDuration = time.Since(start)
 	if lib.config.verbose {
 		lib.dumpLibrary()
@@ -336,9 +361,9 @@ func (lib *library) dumpLibrary() {
 		"--------------------------------------------\n"+
 		"%v"+
 		"--------------------------------------------\n"+
-		"--- ROMs: %03d %26s ---\n"+
+		"--- ROMs: %03d --- Saves: %04d %10s ---\n"+
 		"--------------------------------------------",
-		gameList.String(), len(lib.games), lib.lastScanDuration)
+		gameList.String(), len(lib.games), len(lib.sessions), lib.lastScanDuration)
 }
 
 func toMap(list []string) map[string]struct{} {

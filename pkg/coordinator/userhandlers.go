@@ -6,7 +6,6 @@ import (
 	"github.com/giongto35/cloud-game/v3/pkg/api"
 	"github.com/giongto35/cloud-game/v3/pkg/com"
 	"github.com/giongto35/cloud-game/v3/pkg/config"
-	"github.com/giongto35/cloud-game/v3/pkg/games"
 )
 
 func (u *User) HandleWebrtcInit() {
@@ -26,27 +25,8 @@ func (u *User) HandleWebrtcIceCandidate(rq api.WebrtcUserIceCandidate) {
 	u.w.WebrtcIceCandidate(u.Id(), string(rq))
 }
 
-func (u *User) HandleStartGame(rq api.GameStartUserRequest, launcher games.Launcher, conf config.CoordinatorConfig) {
-	// +injects game data into the original game request
-	// the name of the game either in the `room id` field or
-	// it's in the initial request
-	game := rq.GameName
-	if rq.RoomId != "" {
-		name := launcher.ExtractAppNameFromUrl(rq.RoomId)
-		if name == "" {
-			u.log.Warn().Msg("couldn't decode game name from the room id")
-			return
-		}
-		game = name
-	}
-
-	gameInfo, err := launcher.FindAppByName(game)
-	if err != nil {
-		u.log.Error().Err(err).Send()
-		return
-	}
-
-	startGameResp, err := u.w.StartGame(u.Id(), gameInfo, rq)
+func (u *User) HandleStartGame(rq api.GameStartUserRequest, conf config.CoordinatorConfig) {
+	startGameResp, err := u.w.StartGame(u.Id(), rq)
 	if err != nil || startGameResp == nil {
 		u.log.Error().Err(err).Msg("malformed game start response")
 		return
@@ -75,6 +55,13 @@ func (u *User) HandleSaveGame() error {
 	if err != nil {
 		return err
 	}
+
+	if *resp == api.OK {
+		if id, _ := api.ExplodeDeepLink(u.w.RoomId); id != "" {
+			u.w.AddSession(id)
+		}
+	}
+
 	u.Notify(api.SaveGame, resp)
 	return nil
 }

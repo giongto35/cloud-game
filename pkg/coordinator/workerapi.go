@@ -3,7 +3,6 @@ package coordinator
 import (
 	"github.com/giongto35/cloud-game/v3/pkg/api"
 	"github.com/giongto35/cloud-game/v3/pkg/com"
-	"github.com/giongto35/cloud-game/v3/pkg/games"
 )
 
 func (w *Worker) WebrtcInit(id com.Uid) (*api.WebrtcInitResponse, error) {
@@ -19,11 +18,11 @@ func (w *Worker) WebrtcIceCandidate(id com.Uid, can string) {
 	w.Notify(api.WebrtcIce, api.WebrtcIceCandidateRequest[com.Uid]{Stateful: api.Stateful[com.Uid]{Id: id}, Candidate: can})
 }
 
-func (w *Worker) StartGame(id com.Uid, app games.AppMeta, req api.GameStartUserRequest) (*api.StartGameResponse, error) {
+func (w *Worker) StartGame(id com.Uid, req api.GameStartUserRequest) (*api.StartGameResponse, error) {
 	return api.UnwrapChecked[api.StartGameResponse](
 		w.Send(api.StartGame, api.StartGameRequest[com.Uid]{
 			StatefulRoom: StateRoom(id, req.RoomId),
-			Game:         api.GameInfo(app),
+			Game:         req.GameName,
 			PlayerIndex:  req.PlayerIndex,
 			Record:       req.Record,
 			RecordUser:   req.RecordUser,
