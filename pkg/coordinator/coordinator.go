@@ -8,7 +8,6 @@ import (
 	"strings"
 
 	"github.com/giongto35/cloud-game/v3/pkg/config"
-	"github.com/giongto35/cloud-game/v3/pkg/games"
 	"github.com/giongto35/cloud-game/v3/pkg/logger"
 	"github.com/giongto35/cloud-game/v3/pkg/monitoring"
 	"github.com/giongto35/cloud-game/v3/pkg/network/httpx"
@@ -23,10 +22,7 @@ type Coordinator struct {
 }
 
 func New(conf config.CoordinatorConfig, log *logger.Logger) (*Coordinator, error) {
-	coordinator := &Coordinator{}
-	lib := games.NewLib(conf.Library, conf.Emulator, log)
-	lib.Scan()
-	coordinator.hub = NewHub(conf, lib, log)
+	coordinator := &Coordinator{hub: NewHub(conf, log)}
 	h, err := NewHTTPServer(conf, log, func(mux *httpx.Mux) *httpx.Mux {
 		mux.HandleFunc("/ws", coordinator.hub.handleUserConnection())
 		mux.HandleFunc("/wso", coordinator.hub.handleWorkerConnection())

@@ -10,8 +10,10 @@ import (
 )
 
 type Worker struct {
+	AppLibrary
 	Connection
 	RegionalClient
+	Session
 	slotted
 
 	Addr       string
@@ -20,6 +22,9 @@ type Worker struct {
 	RoomId     string // room reference
 	Tag        string
 	Zone       string
+
+	Lib      []api.GameInfo
+	Sessions map[string]struct{}
 
 	log *logger.Logger
 }
@@ -30,6 +35,27 @@ type RegionalClient interface {
 
 type HasUserRegistry interface {
 	Find(com.Uid) *User
+}
+
+type AppLibrary interface {
+	SetLib([]api.GameInfo)
+	AppNames() []api.GameInfo
+}
+
+type Session interface {
+	AddSession(id string)
+	// HadSession is true when an old session is found
+	HadSession(id string) bool
+	SetSessions(map[string]struct{})
+}
+
+type AppMeta struct {
+	Alias  string
+	Base   string
+	Name   string
+	Path   string
+	System string
+	Type   string
 }
 
 func NewWorker(sock *com.Connection, handshake api.ConnectionRequest[com.Uid], log *logger.Logger) *Worker {
@@ -84,11 +110,41 @@ func (w *Worker) HandleRequests(users HasUserRegistry) chan struct{} {
 				w.log.Error().Err(err).Send()
 				return api.ErrMalformed
 			}
+		case api.PrevSessions:
+			sess := api.Unwrap[api.PrevSessionInfo](payload)
+			if sess == nil {
+				return api.ErrMalformed
+			}
+			if err := w.HandlePrevSessionList(*sess); err != nil {
+				w.log.Error().Err(err).Send()
+				return api.ErrMalformed
+			}
 		default:
 			w.log.Warn().Msgf("Unknown packet: %+v", p)
 		}
 		return nil
 	})
+}
+
+func (w *Worker) SetLib(list []api.GameInfo) {
+	w.Lib = list
+}
+
+func (w *Worker) AppNames() []api.GameInfo {
+	return w.Lib
+}
+
+func (w *Worker) AddSession(id string) {
+	w.Sessions[id] = struct{}{}
+}
+
+func (w *Worker) HadSession(id string) bool {
+	_, ok := w.Sessions[id]
+	return ok
+}
+
+func (w *Worker) SetSessions(sessions map[string]struct{}) {
+	w.Sessions = sessions
 }
 
 // In say whether some worker from this region (zone).

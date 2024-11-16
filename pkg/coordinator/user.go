@@ -4,7 +4,6 @@ import (
 	"github.com/giongto35/cloud-game/v3/pkg/api"
 	"github.com/giongto35/cloud-game/v3/pkg/com"
 	"github.com/giongto35/cloud-game/v3/pkg/config"
-	"github.com/giongto35/cloud-game/v3/pkg/games"
 	"github.com/giongto35/cloud-game/v3/pkg/logger"
 )
 
@@ -42,7 +41,7 @@ func (u *User) Disconnect() {
 	}
 }
 
-func (u *User) HandleRequests(info HasServerInfo, launcher games.Launcher, conf config.CoordinatorConfig) chan struct{} {
+func (u *User) HandleRequests(info HasServerInfo, conf config.CoordinatorConfig) chan struct{} {
 	return u.ProcessPackets(func(x api.In[com.Uid]) error {
 		payload := x.GetPayload()
 		switch x.GetType() {
@@ -67,7 +66,7 @@ func (u *User) HandleRequests(info HasServerInfo, launcher games.Launcher, conf 
 			if rq == nil {
 				return api.ErrMalformed
 			}
-			u.HandleStartGame(*rq, launcher, conf)
+			u.HandleStartGame(*rq, conf)
 		case api.QuitGame:
 			rq := api.Unwrap[api.GameQuitRequest[com.Uid]](payload)
 			if rq == nil {

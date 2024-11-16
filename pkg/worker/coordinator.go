@@ -151,12 +151,26 @@ func (c *coordinator) IceCandidate(candidate string, sessionId com.Uid) {
 }
 
 func (c *coordinator) SendLibrary(w *Worker) {
-	games := w.lib.GetAll()
+	g := w.lib.GetAll()
 
-	var gg = make([]api.GameInfo, len(games))
-	for i, g := range games {
+	var gg = make([]api.GameInfo, len(g))
+	for i, g := range g {
 		gg[i] = api.GameInfo(g)
 	}
 
 	c.Notify(api.LibNewGameList, api.LibGameListInfo{T: 1, List: gg})
+}
+
+func (c *coordinator) SendPrevSessions(w *Worker) {
+	sessions := w.lib.Sessions()
+
+	// extract ids from save states, i.e. sessions
+	var ids []string
+
+	for _, id := range sessions {
+		x, _ := api.ExplodeDeepLink(id)
+		ids = append(ids, x)
+	}
+
+	c.Notify(api.PrevSessions, api.PrevSessionInfo{List: ids})
 }

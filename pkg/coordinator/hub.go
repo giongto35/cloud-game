@@ -10,7 +10,6 @@ import (
 	"github.com/giongto35/cloud-game/v3/pkg/api"
 	"github.com/giongto35/cloud-game/v3/pkg/com"
 	"github.com/giongto35/cloud-game/v3/pkg/config"
-	"github.com/giongto35/cloud-game/v3/pkg/games"
 	"github.com/giongto35/cloud-game/v3/pkg/logger"
 )
 
@@ -24,20 +23,18 @@ type Connection interface {
 }
 
 type Hub struct {
-	conf     config.CoordinatorConfig
-	launcher games.Launcher
-	log      *logger.Logger
-	users    com.NetMap[com.Uid, *User]
-	workers  com.NetMap[com.Uid, *Worker]
+	conf    config.CoordinatorConfig
+	log     *logger.Logger
+	users   com.NetMap[com.Uid, *User]
+	workers com.NetMap[com.Uid, *Worker]
 }
 
-func NewHub(conf config.CoordinatorConfig, lib games.GameLibrary, log *logger.Logger) *Hub {
+func NewHub(conf config.CoordinatorConfig, log *logger.Logger) *Hub {
 	return &Hub{
-		conf:     conf,
-		users:    com.NewNetMap[com.Uid, *User](),
-		workers:  com.NewNetMap[com.Uid, *Worker](),
-		launcher: games.NewGameLauncher(lib),
-		log:      log,
+		conf:    conf,
+		users:   com.NewNetMap[com.Uid, *User](),
+		workers: com.NewNetMap[com.Uid, *Worker](),
+		log:     log,
 	}
 }
 
@@ -62,8 +59,9 @@ func (h *Hub) handleUserConnection() http.HandlerFunc {
 
 		user := NewUser(conn, log)
 		defer h.users.RemoveDisconnect(user)
-		done := user.HandleRequests(h, h.launcher, h.conf)
+		done := user.HandleRequests(h, h.conf)
 		params := r.URL.Query()
+
 		worker := h.findWorkerFor(user, params, h.log.Extend(h.log.With().Str("cid", user.Id().Short())))
 		if worker == nil {
 			user.Notify(api.ErrNoFreeSlots, "")
@@ -72,11 +70,13 @@ func (h *Hub) handleUserConnection() http.HandlerFunc {
 		}
 		user.Bind(worker)
 		h.users.Add(user)
-		apps := h.launcher.GetAppNames()
+
+		apps := worker.AppNames()
 		list := make([]api.AppMeta, len(apps))
 		for i := range apps {
 			list[i] = api.AppMeta{Alias: apps[i].Alias, Title: apps[i].Name, System: apps[i].System}
 		}
+
 		user.InitSession(worker.Id().String(), h.conf.Webrtc.IceServers, list)
 		log.Info().Str(logger.DirectionField, logger.MarkPlus).Msgf("user %s", user.Id())
 		<-done
@@ -175,9 +175,13 @@ func (h *Hub) findWorkerFor(usr *User, q url.Values, log *logger.Logger) *Worker
 	zone := q.Get(api.ZoneQueryParam)
 	wid := q.Get(api.WorkerIdParam)
 
+	sessionId, _ := api.ExplodeDeepLink(roomId)
+
 	var worker *Worker
 	if worker = h.findWorkerByRoom(roomId, zone); worker != nil {
 		log.Debug().Str("room", roomId).Msg("An existing worker has been found")
+	} else if worker = h.findWorkerByPreviousRoom(sessionId); worker != nil {
+		log.Debug().Msgf("Worker %v with the previous room: %v is found", wid, roomId)
 	} else if worker = h.findWorkerById(wid, h.conf.Coordinator.Debug); worker != nil {
 		log.Debug().Msgf("Worker with id: %v has been found", wid)
 	} else {
@@ -196,6 +200,17 @@ func (h *Hub) findWorkerFor(usr *User, q url.Values, log *logger.Logger) *Worker
 		}
 	}
 	return worker
+}
+
+func (h *Hub) findWorkerByPreviousRoom(id string) *Worker {
+	if id == "" {
+		return nil
+	}
+	w, _ := h.workers.FindBy(func(w *Worker) bool {
+		// session and room id are the same
+		return w.HadSession(id) && w.HasSlot()
+	})
+	return w
 }
 
 func (h *Hub) findWorkerByRoom(id string, region string) *Worker {

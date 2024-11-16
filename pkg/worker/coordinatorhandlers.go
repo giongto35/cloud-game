@@ -81,12 +81,31 @@ func (c *coordinator) HandleGameStart(rq api.StartGameRequest[com.Uid], w *Worke
 
 	r := w.router.FindRoom(rq.Room.Rid)
 
+	// +injects game data into the original game request
+	// the name of the game either in the `room id` field or
+	// it's in the initial request
+	gameName := rq.Game
+	if rq.Room.Rid != "" {
+		name := w.launcher.ExtractAppNameFromUrl(rq.Room.Rid)
+		if name == "" {
+			c.log.Warn().Msg("couldn't decode game name from the room id")
+			return api.EmptyPacket
+		}
+		gameName = name
+	}
+
+	gameInfo, err := w.launcher.FindAppByName(gameName)
+	if err != nil {
+		c.log.Error().Err(err).Send()
+		return api.EmptyPacket
+	}
+
 	if r == nil { // new room
 		uid := rq.Room.Rid
 		if uid == "" {
-			uid = games.GenerateRoomID(rq.Game.Name)
+			uid = games.GenerateRoomID(gameName)
 		}
-		game := games.GameMetadata(rq.Game)
+		game := games.GameMetadata(gameInfo)
 
 		r = room.NewRoom[*room.GameSession](uid, nil, w.router.Users(), nil)
 		r.HandleClose = func() {
@@ -108,7 +127,7 @@ func (c *coordinator) HandleGameStart(rq api.StartGameRequest[com.Uid], w *Worke
 		app.SetSessionId(uid)
 		app.SetSaveOnClose(true)
 		app.EnableCloudStorage(uid, w.storage)
-		app.EnableRecording(rq.Record, rq.RecordUser, rq.Game.Name)
+		app.EnableRecording(rq.Record, rq.RecordUser, gameName)
 
 		r.SetApp(app)
 
@@ -140,7 +159,7 @@ func (c *coordinator) HandleGameStart(rq api.StartGameRequest[com.Uid], w *Worke
 			r.Send(data)
 		})
 
-		w.log.Info().Msgf("Starting the game: %v", rq.Game.Name)
+		w.log.Info().Msgf("Starting the game: %v", gameName)
 		if err := app.Load(game, w.conf.Library.BasePath); err != nil {
 			c.log.Error().Err(err).Msgf("couldn't load the game %v", game)
 			r.Close()

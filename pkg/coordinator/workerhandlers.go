@@ -23,6 +23,19 @@ func (w *Worker) HandleIceCandidate(rq api.WebrtcIceCandidateRequest[com.Uid], u
 }
 
 func (w *Worker) HandleLibGameList(inf api.LibGameListInfo) error {
-	w.log.Info().Msgf("Oh, lib: %v", inf)
+	w.SetLib(inf.List)
+	return nil
+}
+
+func (w *Worker) HandlePrevSessionList(sess api.PrevSessionInfo) error {
+	if len(sess.List) == 0 {
+		return nil
+	}
+
+	m := make(map[string]struct{})
+	for _, v := range sess.List {
+		m[v] = struct{}{}
+	}
+	w.SetSessions(m)
 	return nil
 }
