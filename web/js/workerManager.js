@@ -28,7 +28,7 @@ const id = 'servers',
         },
         'id': {
             caption: 'ID',
-            renderer: (data) => data?.in_group ? `${data.id} x ${data.replicas}` : data.id
+            renderer: (data) => data.tag ? data.tag : (data?.in_group ? `${data.id} x ${data.replicas}` : data.id)
         },
         'addr': {
             caption: 'Address',
