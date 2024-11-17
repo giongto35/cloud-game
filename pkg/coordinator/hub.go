@@ -1,7 +1,6 @@
 package coordinator
 
 import (
-	"bytes"
 	"encoding/base64"
 	"fmt"
 	"net/http"
@@ -299,16 +298,20 @@ func (h *Hub) findWorkerById(id string, useAllWorkers bool) *Worker {
 		if w.Id() == com.NilUid {
 			continue
 		}
-		if useAllWorkers {
-			if uid == w.Id() {
-				return w
-			}
-		} else {
-			// select any worker on the same machine when workers are grouped on the client
-			if bytes.Equal(uid.Machine(), w.Id().Machine()) {
-				return w
-			}
+
+		if uid == w.Id() && w.HasSlot() {
+			return w
 		}
+		//if useAllWorkers {
+		//	if uid == w.Id() {
+		//		return w
+		//	}
+		//} else {
+		//	// select any worker on the same machine when workers are grouped on the client
+		//	if bytes.Equal(uid.Machine(), w.Id().Machine()) {
+		//		return w
+		//	}
+		//}
 	}
 
 	return nil
