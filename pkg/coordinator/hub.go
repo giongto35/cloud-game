@@ -1,6 +1,7 @@
 package coordinator
 
 import (
+	"bytes"
 	"encoding/base64"
 	"fmt"
 	"net/http"
@@ -177,12 +178,19 @@ func (h *Hub) findWorkerFor(usr *User, q url.Values, log *logger.Logger) *Worker
 	sessionId, _ := api.ExplodeDeepLink(roomId)
 
 	var worker *Worker
+
+	if wid != "" {
+		if worker = h.findWorkerById(wid, h.conf.Coordinator.Debug); worker != nil {
+			log.Debug().Msgf("Worker with id: %v has been found", wid)
+		} else {
+			return nil
+		}
+	}
+
 	if worker = h.findWorkerByRoom(roomId, zone); worker != nil {
 		log.Debug().Str("room", roomId).Msg("An existing worker has been found")
 	} else if worker = h.findWorkerByPreviousRoom(sessionId); worker != nil {
 		log.Debug().Msgf("Worker %v with the previous room: %v is found", wid, roomId)
-	} else if worker = h.findWorkerById(wid, h.conf.Coordinator.Debug); worker != nil {
-		log.Debug().Msgf("Worker with id: %v has been found", wid)
 	} else {
 		switch h.conf.Coordinator.Selector {
 		case config.SelectByPing:
@@ -298,20 +306,16 @@ func (h *Hub) findWorkerById(id string, useAllWorkers bool) *Worker {
 		if w.Id() == com.NilUid {
 			continue
 		}
-
-		if uid == w.Id() && w.HasSlot() {
-			return w
+		if useAllWorkers {
+			if uid == w.Id() {
+				return w
+			}
+		} else {
+			// select any worker on the same machine when workers are grouped on the client
+			if bytes.Equal(uid.Machine(), w.Id().Machine()) {
+				return w
+			}
 		}
-		//if useAllWorkers {
-		//	if uid == w.Id() {
-		//		return w
-		//	}
-		//} else {
-		//	// select any worker on the same machine when workers are grouped on the client
-		//	if bytes.Equal(uid.Machine(), w.Id().Machine()) {
-		//		return w
-		//	}
-		//}
 	}
 
 	return nil
