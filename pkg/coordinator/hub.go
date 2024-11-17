@@ -182,6 +182,7 @@ func (h *Hub) findWorkerFor(usr *User, q url.Values, log *logger.Logger) *Worker
 	if wid != "" {
 		if worker = h.findWorkerById(wid, h.conf.Coordinator.Debug); worker != nil {
 			log.Debug().Msgf("Worker with id: %v has been found", wid)
+			return worker
 		} else {
 			return nil
 		}
