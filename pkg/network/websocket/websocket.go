@@ -153,7 +153,9 @@ func (c *Connection) reader() {
 		_, message, err := c.conn.ReadMessage()
 		if err != nil {
 			if websocket.IsUnexpectedCloseError(err, websocket.CloseNormalClosure, websocket.CloseGoingAway) {
-				c.errorHandler(err)
+				if c.errorHandler != nil {
+					c.errorHandler(err)
+				}
 			} else {
 				c.callback(message, err)
 			}
