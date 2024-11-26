@@ -28,6 +28,8 @@ library:
   ignored:
     - neogeo
     - pgm
+    # DOSBox filesystem state
+    - .pure
   # an explicit list of supported file extensions
   # which overrides Libretro emulator ROMs configs
   supported:
@@ -216,6 +218,8 @@ emulator:
       #       - skip_same_thread_save -- skip thread lock save (used with PPSSPP).
       #   - uniqueSaveDir (bool) -- needed only for cores (like DosBox) that persist their state into one shared file.
       #       This will allow for concurrent reading and saving of current states.
+      #   - saveStateFs (string) -- the name of the file that will be initially copied into the save folder.
+      #       All * symbols will be replaced to the name of the ROM.
       list:
         gba:
           lib: mgba_libretro
@@ -281,6 +285,7 @@ emulator:
           folder: dos
           kbMouseSupport: true
           nonBlockingSave: true
+          saveStateFs: "*.pure.zip"
           hid:
             0: [ 257, 513 ]
             1: [ 257, 513 ]

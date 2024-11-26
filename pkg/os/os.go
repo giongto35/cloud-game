@@ -51,6 +51,18 @@ func GetUserHome() (string, error) {
 	return me.HomeDir, nil
 }
 
+func CopyFile(from string, to string) error {
+	bytesRead, err := os.ReadFile(from)
+	if err != nil {
+		return err
+	}
+	err = os.WriteFile(to, bytesRead, 0755)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
 func WriteFile(name string, data []byte, perm os.FileMode) error {
 	return os.WriteFile(name, data, perm)
 }

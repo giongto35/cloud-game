@@ -21,7 +21,7 @@ type libConf struct {
 	aliasFile   string
 	path        string
 	supported   map[string]struct{}
-	ignored     map[string]struct{}
+	ignored     []string
 	verbose     bool
 	watchMode   bool
 	sessionPath string
@@ -98,7 +98,7 @@ func NewLib(conf config.Library, emu WithEmulatorInfo, log *logger.Logger) GameL
 			aliasFile:   conf.AliasFile,
 			path:        dir,
 			supported:   toMap(conf.Supported),
-			ignored:     toMap(conf.Ignored),
+			ignored:     conf.Ignored,
 			verbose:     conf.Verbose,
 			watchMode:   conf.WatchMode,
 			sessionPath: emu.SessionStoragePath(),
@@ -207,22 +207,36 @@ func (lib *library) Scan() {
 			return err
 		}
 
-		if info != nil && !info.IsDir() && lib.isExtAllowed(path) {
-			meta := getMetadata(path, dir)
+		if info == nil || info.IsDir() || !lib.isExtAllowed(path) {
+			return nil
+		}
 
-			meta.System = lib.emuConf.GetEmulator(meta.Type, meta.Path)
+		meta := metadata(path, dir)
+		meta.System = lib.emuConf.GetEmulator(meta.Type, meta.Path)
 
-			if aliases != nil {
-				k, ok := aliases[meta.Name]
-				if ok {
-					meta.Alias = k
-				}
-			}
-
-			if _, ok := lib.config.ignored[meta.Name]; !ok {
-				games = append(games, meta)
+		if aliases != nil {
+			if k, ok := aliases[meta.Name]; ok {
+				meta.Alias = k
 			}
 		}
+
+		ignored := false
+		for _, k := range lib.config.ignored {
+			if meta.Name == k {
+				ignored = true
+				break
+			}
+
+			if len(k) > 0 && k[0] == '.' && strings.Contains(meta.Name, k) {
+				ignored = true
+				break
+			}
+		}
+
+		if !ignored {
+			games = append(games, meta)
+		}
+
 		return nil
 	})
 
@@ -322,8 +336,8 @@ func (lib *library) isExtAllowed(path string) bool {
 	return ok
 }
 
-// getMetadata returns game info from a path
-func getMetadata(path string, basePath string) GameMetadata {
+// metadata returns game info from a path
+func metadata(path string, basePath string) GameMetadata {
 	name := filepath.Base(path)
 	ext := filepath.Ext(name)
 	relPath, _ := filepath.Rel(basePath, path)

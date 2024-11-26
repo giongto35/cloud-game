@@ -157,6 +157,7 @@ func (n *Nanoarch) WaitReady()                       { <-n.reserved }
 func (n *Nanoarch) Close()                           { n.Stopped.Store(true); n.reserved <- struct{}{} }
 func (n *Nanoarch) SetLogger(log *logger.Logger)     { n.log = log }
 func (n *Nanoarch) SetVideoDebounce(t time.Duration) { n.limiter = NewLimit(t) }
+func (n *Nanoarch) SaveDir() string                  { return C.GoString(n.cSaveDirectory) }
 func (n *Nanoarch) SetSaveDirSuffix(sx string) {
 	dir := C.GoString(n.cSaveDirectory) + "/" + sx
 	err := os.CheckCreateDir(dir)

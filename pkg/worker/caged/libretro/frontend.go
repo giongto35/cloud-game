@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"path/filepath"
+	"strings"
 	"sync"
 	"time"
 	"unsafe"
@@ -67,6 +68,7 @@ type Frontend struct {
 	DisableCanvasPool bool
 	SaveOnClose       bool
 	UniqueSaveDir     bool
+	SaveStateFs       string
 }
 
 type Device byte
@@ -154,6 +156,7 @@ func (f *Frontend) LoadCore(emu string) {
 		KbMouseSupport:  conf.KbMouseSupport,
 	}
 	f.mu.Lock()
+	f.SaveStateFs = conf.SaveStateFs
 	if conf.UniqueSaveDir {
 		f.UniqueSaveDir = true
 		f.nano.SetSaveDirSuffix(f.storage.MainPath())
@@ -287,6 +290,13 @@ func (f *Frontend) Start() {
 	}
 }
 
+func (f *Frontend) LoadGame(path string) error {
+	if f.UniqueSaveDir {
+		f.copyFsMaybe(path)
+	}
+	return f.nano.LoadGame(path)
+}
+
 func (f *Frontend) AspectRatio() float32          { return f.nano.AspectRatio() }
 func (f *Frontend) AudioSampleRate() int          { return f.nano.AudioSampleRate() }
 func (f *Frontend) FPS() int                      { return f.nano.VideoFramerate() }
@@ -296,7 +306,6 @@ func (f *Frontend) HasSave() bool                 { return os.Exists(f.HashPath(
 func (f *Frontend) HashPath() string              { return f.storage.GetSavePath() }
 func (f *Frontend) IsPortrait() bool              { return f.nano.IsPortrait() }
 func (f *Frontend) KbMouseSupport() bool          { return f.nano.KbMouseSupport() }
-func (f *Frontend) LoadGame(path string) error    { return f.nano.LoadGame(path) }
 func (f *Frontend) PixFormat() uint32             { return f.nano.Video.PixFmt.C }
 func (f *Frontend) RestoreGameState() error       { return f.Load() }
 func (f *Frontend) Rotation() uint                { return f.nano.Rot }
@@ -348,6 +357,9 @@ func (f *Frontend) Close() {
 			f.log.Error().Msgf("couldn't delete save dir: %v", err)
 		}
 	}
+
+	f.UniqueSaveDir = false
+	f.SaveStateFs = ""
 
 	f.mui.Unlock()
 	f.log.Debug().Msgf("frontend closed")
@@ -417,6 +429,35 @@ func (f *Frontend) autosave(periodSec int) {
 			}
 		case <-f.done:
 			return
+		}
+	}
+}
+
+func (f *Frontend) copyFsMaybe(path string) {
+	if f.SaveStateFs == "" {
+		return
+	}
+
+	fileName := f.SaveStateFs
+	hasPlaceholder := strings.HasPrefix(f.SaveStateFs, "*")
+	if hasPlaceholder {
+		game := strings.TrimSuffix(filepath.Base(path), filepath.Ext(path))
+		fileName = strings.Replace(f.SaveStateFs, "*", game, 1)
+	}
+
+	fullPath := filepath.Join(f.nano.SaveDir(), fileName)
+
+	if os.Exists(fullPath) {
+		return
+	}
+
+	storePath := filepath.Dir(path)
+	fsPath := filepath.Join(storePath, fileName)
+	if os.Exists(fsPath) {
+		if err := os.CopyFile(fsPath, fullPath); err != nil {
+			f.log.Error().Err(err).Msgf("fs copy fail")
+		} else {
+			f.log.Debug().Msgf("copied fs %v to %v", fsPath, fullPath)
 		}
 	}
 }
