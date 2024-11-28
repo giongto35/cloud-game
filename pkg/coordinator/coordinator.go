@@ -79,7 +79,7 @@ func index(conf config.CoordinatorConfig, log *logger.Logger) httpx.Handler {
 
 	handler := func(tpl *template.Template, w httpx.ResponseWriter, r *httpx.Request) {
 		if err := tpl.Execute(w, tplData); err != nil {
-			log.Fatal().Err(err).Msg("error with the analytics template file")
+			log.Error().Err(err).Msg("error with the analytics template file")
 		}
 	}
 
