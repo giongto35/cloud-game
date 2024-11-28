@@ -51,12 +51,31 @@ func GetUserHome() (string, error) {
 	return me.HomeDir, nil
 }
 
-func CopyFile(from string, to string) error {
-	bytesRead, err := os.ReadFile(from)
+func CopyFile(from string, to string) (err error) {
+	f, err := os.Open(from)
 	if err != nil {
 		return err
 	}
-	err = os.WriteFile(to, bytesRead, 0755)
+	defer func() {
+		if err2 := f.Close(); err2 != nil {
+			err = errors.Join(err, err2)
+		}
+	}()
+
+	destFile, err := os.Create(to)
+	if err != nil {
+		return err
+	}
+	defer func() {
+		if err2 := destFile.Close(); err != nil {
+			err = errors.Join(err, err2)
+		}
+	}()
+
+	n, err := f.WriteTo(destFile)
+	if n == 0 {
+		return errors.New("nothing was written")
+	}
 	if err != nil {
 		return err
 	}
