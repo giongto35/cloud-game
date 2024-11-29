@@ -9,6 +9,7 @@ import {opts, settings} from 'settings';
 
 const videoEl = document.getElementById('stream')
 const mirrorEl = document.getElementById('mirror-stream')
+const playEl = document.getElementById('play-stream')
 
 const options = {
     volume: 0.5,
@@ -24,20 +25,36 @@ const state = {
     h: 0,
     aspect: 4 / 3,
     fit: 'contain',
-    ready: false
+    ready: false,
+    autoplayWait: false
 }
 
 const mute = (mute) => (videoEl.muted = mute)
 
+const onPlay = () => {
+    state.ready = true
+    videoEl.poster = ''
+    resize(state.w, state.h, state.aspect, state.fit)
+    useCustomScreen(options.mirrorMode === 'mirror')
+}
+
 const play = () => {
-    videoEl.play()
-        .then(() => {
-            state.ready = true
-            videoEl.poster = ''
-            resize(state.w, state.h, state.aspect, state.fit)
-            useCustomScreen(options.mirrorMode === 'mirror')
+    const promise = videoEl.play()
+
+    if (promise === undefined) {
+        log.error('oh no, the video is not a promise!')
+        return
+    }
+
+    promise
+        .then(onPlay)
+        .catch(error => {
+            if (error.name === 'NotAllowedError') {
+                showPlayButton()
+            } else {
+                log.error('Playback fail', error)
+            }
         })
-        .catch(error => log.error('Can\'t autoplay', error))
 }
 
 const toggle = (show) => state.screen.toggleAttribute('hidden', show === undefined ? show : !show)
@@ -50,6 +67,19 @@ const resize = (w, h, aspect, fit) => {
     aspect !== undefined && (state.screen.style.aspectRatio = '' + aspect)
     fit !== undefined && (state.screen.style['object-fit'] = fit)
 }
+
+const showPlayButton = () => {
+        state.autoplayWait = true
+        toggle()
+        playEl.removeAttribute('hidden')
+}
+
+playEl.addEventListener('click', () => {
+    playEl.setAttribute('hidden', "")
+    state.autoplayWait = false
+    play()
+    toggle()
+})
 
 // Track resize even when the underlying media stream changes its video size
 videoEl.addEventListener('resize', () => {
@@ -189,6 +219,7 @@ export const stream = {
         },
     },
     play,
+    showPlayButton,
     toggle,
     hasDisplay: true,
     init,
