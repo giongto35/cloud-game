@@ -358,3 +358,9 @@
 .stats-bitrate {
     min-width: 3.3rem;
 }
+
+#play-stream {
+    color: brown;
+    align-content: center;
+    font-size: 200%;
+}
