@@ -115,8 +115,7 @@ func (w *Worker) Start(done chan struct{}) {
 			default:
 				cord, err := newCoordinatorConnection(remoteAddr, w.conf.Worker, w.address, w.log)
 				if err != nil {
-					w.log.Warn().Err(err).Msgf("no connection: %v. Retrying in %v", remoteAddr, retry.Time())
-					retry.Fail()
+					onRetryFail(err)
 					continue
 				}
 				cord.SetErrorHandler(onRetryFail)
