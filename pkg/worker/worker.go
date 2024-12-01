@@ -126,7 +126,7 @@ func (w *Worker) Start(done chan struct{}) {
 				w.cord.SendLibrary(w)
 				w.cord.SendPrevSessions(w)
 				<-wait
-				retry.SuccessCheck()
+				retry.Success()
 			}
 		}
 	}()
