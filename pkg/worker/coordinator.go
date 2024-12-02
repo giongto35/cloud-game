@@ -126,6 +126,12 @@ func (c *coordinator) HandleRequests(w *Worker) chan struct{} {
 			} else {
 				out = c.HandleChangePlayer(*dat, w)
 			}
+		case api.ResetGame:
+			dat := api.Unwrap[api.ResetGameRequest[com.Uid]](x.Payload)
+			if dat == nil {
+				return api.ErrMalformed
+			}
+			c.HandleResetGame(*dat, w)
 		case api.RecordGame:
 			if dat := api.Unwrap[api.RecordGameRequest[com.Uid]](x.Payload); dat == nil {
 				err, out = api.ErrMalformed, api.EmptyPacket

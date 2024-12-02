@@ -29,4 +29,5 @@ export const KEY = {
     L3: 'l3',
     R3: 'r3',
     REC: 'rec',
+    RESET: 'reset',
 }

@@ -50,6 +50,13 @@ func (u *User) HandleQuitGame(rq api.GameQuitRequest[com.Uid]) {
 	}
 }
 
+func (u *User) HandleResetGame(rq api.ResetGameRequest[com.Uid]) {
+	if rq.Room.Rid != u.w.RoomId {
+		return
+	}
+	u.w.ResetGame(u.Id())
+}
+
 func (u *User) HandleSaveGame() error {
 	resp, err := u.w.SaveGame(u.Id())
 	if err != nil {

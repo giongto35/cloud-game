@@ -12,7 +12,11 @@ type (
 	LoadGameRequest[T Id] struct {
 		StatefulRoom[T]
 	}
-	LoadGameResponse      string
+	LoadGameResponse       string
+	ResetGameRequest[T Id] struct {
+		StatefulRoom[T]
+	}
+	ResetGameResponse     string
 	SaveGameRequest[T Id] struct {
 		StatefulRoom[T]
 	}

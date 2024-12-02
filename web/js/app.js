@@ -437,6 +437,9 @@ const app = {
                         room.reset();
                         window.location = window.location.pathname;
                         break;
+                    case KEY.RESET:
+                        api.game.reset(room.id)
+                        break;
                     case KEY.STATS:
                         stats.toggle();
                         break;

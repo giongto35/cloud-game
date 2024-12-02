@@ -81,6 +81,7 @@ const (
 	RecordGame       PT = 110
 	GetWorkerList    PT = 111
 	ErrNoFreeSlots   PT = 112
+	ResetGame        PT = 113
 	RegisterRoom     PT = 201
 	CloseRoom        PT = 202
 	IceCandidate        = WebrtcIce
@@ -120,6 +121,8 @@ func (p PT) String() string {
 		return "GetWorkerList"
 	case ErrNoFreeSlots:
 		return "NoFreeSlots"
+	case ResetGame:
+		return "ResetGame"
 	case RegisterRoom:
 		return "RegisterRoom"
 	case CloseRoom:

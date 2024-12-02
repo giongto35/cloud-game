@@ -83,6 +83,12 @@ func (u *User) HandleRequests(info HasServerInfo, conf config.CoordinatorConfig)
 				return api.ErrMalformed
 			}
 			u.HandleChangePlayer(*rq)
+		case api.ResetGame:
+			rq := api.Unwrap[api.ResetGameRequest[com.Uid]](payload)
+			if rq == nil {
+				return api.ErrMalformed
+			}
+			u.HandleResetGame(*rq)
 		case api.RecordGame:
 			if !conf.Recording.Enabled {
 				return api.ErrForbidden

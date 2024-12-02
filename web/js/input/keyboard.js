@@ -45,7 +45,8 @@ const defaultMap = Object.freeze({
     KeyH: KEY.HELP,
     Backslash: KEY.STATS,
     Digit9: KEY.SETTINGS,
-    KeyT: KEY.DTOGGLE
+    KeyT: KEY.DTOGGLE,
+    Digit0: KEY.RESET,
 });
 
 let keyMap = {};

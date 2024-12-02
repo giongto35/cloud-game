@@ -47,6 +47,7 @@ type Emulator interface {
 	Input(player int, device byte, data []byte)
 	// Scale returns set video scale factor
 	Scale() float64
+	Reset()
 }
 
 type Frontend struct {
@@ -307,6 +308,7 @@ func (f *Frontend) HashPath() string              { return f.storage.GetSavePath
 func (f *Frontend) IsPortrait() bool              { return f.nano.IsPortrait() }
 func (f *Frontend) KbMouseSupport() bool          { return f.nano.KbMouseSupport() }
 func (f *Frontend) PixFormat() uint32             { return f.nano.Video.PixFmt.C }
+func (f *Frontend) Reset()                        { f.mu.Lock(); defer f.mu.Unlock(); f.nano.Reset() }
 func (f *Frontend) RestoreGameState() error       { return f.Load() }
 func (f *Frontend) Rotation() uint                { return f.nano.Rot }
 func (f *Frontend) SRAMPath() string              { return f.storage.GetSRAMPath() }

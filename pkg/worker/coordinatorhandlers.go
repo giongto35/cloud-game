@@ -234,6 +234,14 @@ func (c *coordinator) HandleQuitGame(rq api.GameQuitRequest[com.Uid], w *Worker)
 	}
 }
 
+func (c *coordinator) HandleResetGame(rq api.ResetGameRequest[com.Uid], w *Worker) api.Out {
+	if r := w.router.FindRoom(rq.Rid); r != nil {
+		room.WithEmulator(r.App()).Reset()
+		return api.OkPacket
+	}
+	return api.ErrPacket
+}
+
 func (c *coordinator) HandleSaveGame(rq api.SaveGameRequest[com.Uid], w *Worker) api.Out {
 	r := w.router.FindRoom(rq.Rid)
 	if r == nil {

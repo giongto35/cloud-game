@@ -230,6 +230,7 @@ func (n *Nanoarch) CoreLoad(meta Metadata) {
 	retroSetInputState = loadFunction(coreLib, "retro_set_input_state")
 	retroSetAudioSample = loadFunction(coreLib, "retro_set_audio_sample")
 	retroSetAudioSampleBatch = loadFunction(coreLib, "retro_set_audio_sample_batch")
+	retroReset = loadFunction(coreLib, "retro_reset")
 	retroRun = loadFunction(coreLib, "retro_run")
 	retroLoadGame = loadFunction(coreLib, "retro_load_game")
 	retroUnloadGame = loadFunction(coreLib, "retro_unload_game")
@@ -394,6 +395,10 @@ func (n *Nanoarch) Shutdown() {
 	C.free(unsafe.Pointer(n.cUserName))
 	C.free(unsafe.Pointer(n.cSaveDirectory))
 	C.free(unsafe.Pointer(n.cSystemDirectory))
+}
+
+func (n *Nanoarch) Reset() {
+	C.bridge_retro_reset(retroReset)
 }
 
 func (n *Nanoarch) Run() {
@@ -595,6 +600,7 @@ var (
 	coreLib                      unsafe.Pointer
 	retroInit                    unsafe.Pointer
 	retroLoadGame                unsafe.Pointer
+	retroReset                   unsafe.Pointer
 	retroRun                     unsafe.Pointer
 	retroSetAudioSample          unsafe.Pointer
 	retroSetAudioSampleBatch     unsafe.Pointer

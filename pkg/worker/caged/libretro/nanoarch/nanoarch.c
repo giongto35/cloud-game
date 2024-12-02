@@ -90,6 +90,10 @@ void bridge_retro_unload_game(void *f) {
     ((void (*)(void)) f)();
 }
 
+void bridge_retro_reset(void *f) {
+    ((void (*)(void)) f)();
+}
+
 void bridge_retro_run(void *f) {
     ((void (*)(void)) f)();
 }

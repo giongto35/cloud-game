@@ -15,6 +15,7 @@ const endpoints = {
     GAME_RECORDING: 110,
     GET_WORKER_LIST: 111,
     GAME_ERROR_NO_FREE_SLOTS: 112,
+    GAME_RESET: 113,
 
     APP_VIDEO_CHANGE: 150,
 }
@@ -319,6 +320,7 @@ export const api = {
             }
         },
         load: () => packet(endpoints.GAME_LOAD),
+        reset: (roomId) => packet(endpoints.GAME_RESET, {room_id: roomId}),
         save: () => packet(endpoints.GAME_SAVE),
         setPlayerIndex: (i) => packet(endpoints.GAME_SET_PLAYER_INDEX, i),
         start: (game, roomId, record, recordUser, player) => packet(endpoints.GAME_START, {

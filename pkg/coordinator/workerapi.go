@@ -48,6 +48,10 @@ func (w *Worker) ChangePlayer(id com.Uid, index int) (*api.ChangePlayerResponse,
 		w.Send(api.ChangePlayer, api.ChangePlayerRequest[com.Uid]{StatefulRoom: StateRoom(id, w.RoomId), Index: index}))
 }
 
+func (w *Worker) ResetGame(id com.Uid) {
+	w.Notify(api.ResetGame, api.ResetGameRequest[com.Uid]{StatefulRoom: StateRoom(id, w.RoomId)})
+}
+
 func (w *Worker) RecordGame(id com.Uid, rec bool, recUser string) (*api.RecordGameResponse, error) {
 	return api.UnwrapChecked[api.RecordGameResponse](
 		w.Send(api.RecordGame, api.RecordGameRequest[com.Uid]{StatefulRoom: StateRoom(id, w.RoomId), Active: rec, User: recUser}))

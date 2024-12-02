@@ -15,6 +15,7 @@ void bridge_retro_deinit(void *f);
 void bridge_retro_get_system_av_info(void *f, struct retro_system_av_info *si);
 void bridge_retro_get_system_info(void *f, struct retro_system_info *si);
 void bridge_retro_init(void *f);
+void bridge_retro_reset(void *f);
 void bridge_retro_run(void *f);
 void bridge_retro_set_audio_sample(void *f, void *callback);
 void bridge_retro_set_audio_sample_batch(void *f, void *callback);
