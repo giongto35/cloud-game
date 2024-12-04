@@ -8,10 +8,12 @@ import (
 )
 
 type Conv struct {
-	w, h   int
-	sw, sh int
-	scale  float64
-	pool   sync.Pool
+	w, h    int
+	sw, sh  int
+	scale   float64
+	pool    sync.Pool
+	frame   []byte
+	frameSc []byte
 }
 
 type RawFrame struct {
@@ -35,7 +37,9 @@ func NewYuvConv(w, h int, scale float64) Conv {
 	bufSize := int(float64(sw) * float64(sh) * 1.5)
 	return Conv{
 		w: w, h: h, sw: sw, sh: sh, scale: scale,
-		pool: sync.Pool{New: func() any { b := make([]byte, bufSize); return &b }},
+		pool:    sync.Pool{New: func() any { b := make([]byte, bufSize); return &b }},
+		frame:   make([]byte, bufSize),
+		frameSc: make([]byte, bufSize),
 	}
 }
 
@@ -52,13 +56,13 @@ func (c *Conv) Process(frame RawFrame, rot uint, pf PixFmt) []byte {
 		stride = frame.Stride >> 1
 	}
 
-	buf := *c.pool.Get().(*[]byte)
+	buf := c.frame //*c.pool.Get().(*[]byte)
 	libyuv.Y420(frame.Data, buf, frame.W, frame.H, stride, dx, dy, rot, uint32(pf), cx, cy)
 
 	if c.scale > 1 {
-		dstBuf := *c.pool.Get().(*[]byte)
+		dstBuf := c.frameSc //*c.pool.Get().(*[]byte)
 		libyuv.Y420Scale(buf, dstBuf, dx, dy, c.sw, c.sh)
-		c.pool.Put(&buf)
+		//c.pool.Put(&buf)
 		return dstBuf
 	}
 	return buf

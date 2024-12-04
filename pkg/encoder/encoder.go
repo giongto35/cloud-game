@@ -80,7 +80,7 @@ func (v *Video) Encode(frame InFrame) OutFrame {
 	}
 
 	yCbCr := v.y.Process(yuv.RawFrame(frame), v.rot, v.pf)
-	defer v.y.Put(&yCbCr)
+	//defer v.y.Put(&yCbCr)
 	if bytes := v.codec.Encode(yCbCr); len(bytes) > 0 {
 		return bytes
 	}
