@@ -113,6 +113,7 @@ func (w *Worker) Start(done chan struct{}) {
 			case <-done:
 				return
 			default:
+				w.Reset()
 				cord, err := newCoordinatorConnection(remoteAddr, w.conf.Worker, w.address, w.log)
 				if err != nil {
 					onRetryFail(err)
