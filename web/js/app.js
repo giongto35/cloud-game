@@ -588,7 +588,7 @@ stats.modules = [
     {
         mui: stats.mui('', '', false, () => ''),
         init() {
-            sub(APP_VIDEO_CHANGED, (payload) => (this.val = `${payload.w}x${payload.h}`))
+            sub(APP_VIDEO_CHANGED, ({s = 1, w, h}) => (this.val = `${w * s}x${h * s}`))
         },
     },
     {
