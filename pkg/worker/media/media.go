@@ -32,7 +32,7 @@ type (
 var (
 	encoderOnce = sync.Once{}
 	opusCoder   *opus.Encoder
-	audioPool   = sync.Pool{New: func() any { b := make([]int16, sampleBufLen); return &b }}
+	buf         = make([]int16, sampleBufLen)
 )
 
 func newBuffer(srcLen int) buffer { return buffer{s: make(samples, srcLen)} }
@@ -86,7 +86,7 @@ func frame(hz int, frame int) int { return hz * frame / 1000 * 2 }
 // stretch does a simple stretching of audio samples.
 // something like: [1,2,3,4,5,6] -> [1,2,x,x,3,4,x,x,5,6,x,x] -> [1,2,1,2,3,4,3,4,5,6,5,6]
 func (s samples) stretch(size int) []int16 {
-	out := (*audioPool.Get().(*[]int16))[:size]
+	out := buf[:size]
 	n := len(s)
 	ratio := float32(size) / float32(n)
 	sPtr := unsafe.Pointer(&s[0])
@@ -181,7 +181,6 @@ func (wmp *WebrtcMediaPipe) initAudio(srcHz int, frameSize int) error {
 
 func (wmp *WebrtcMediaPipe) encodeAudio(pcm samples) {
 	data, err := wmp.Audio().Encode(pcm)
-	audioPool.Put((*[]int16)(&pcm))
 	if err != nil {
 		wmp.log.Error().Err(err).Msgf("opus encode fail")
 		return
