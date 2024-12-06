@@ -192,7 +192,7 @@ func TestBufferWrite(t *testing.T) {
 			buf.write(samplesOf(w.sample, w.len), func(s samples) { lastResult = s })
 		}
 		if !reflect.DeepEqual(test.expect, lastResult) {
-			t.Errorf("not expted buffer, %v != %v", lastResult, test.expect)
+			t.Errorf("not expted buffer, %v != %v, %v", lastResult, test.expect, buf.s)
 		}
 	}
 }
@@ -217,17 +217,20 @@ func samplesOf(v int16, len int) (s samples) {
 	return
 }
 
-func Test_frame(t *testing.T) {
+func TestFrame(t *testing.T) {
 	type args struct {
 		hz    int
-		frame int
+		frame float32
 	}
 	tests := []struct {
 		name string
 		args args
 		want int
 	}{
-		{name: "mGBA", args: args{hz: 32768, frame: 10}, want: 654},
+		{name: "mGBA", args: args{hz: 32768, frame: 10}, want: 656},
+		{name: "mGBA", args: args{hz: 32768, frame: 5}, want: 328},
+		{name: "mGBA", args: args{hz: 32768, frame: 2.5}, want: 164},
+		{name: "nes", args: args{hz: 48000, frame: 2.5}, want: 240},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {

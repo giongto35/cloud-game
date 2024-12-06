@@ -82,8 +82,9 @@ func DefaultOpus() (*opus.Encoder, error) {
 }
 
 // frame calculates an audio stereo frame size, i.e. 48k*frame/1000*2
+// with round(x / 2) * 2 for the closest even number
 func frame(hz int, frame float32) int {
-	return int(math.Round(float64(hz) * float64(frame) / 1000 * 2))
+	return int(math.Round(float64(hz)*float64(frame)/1000/2) * 2 * 2)
 }
 
 // stretch does a simple stretching of audio samples.
