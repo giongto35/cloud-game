@@ -2,6 +2,7 @@ package media
 
 import (
 	"fmt"
+	"math"
 	"sync"
 	"time"
 	"unsafe"
@@ -81,7 +82,9 @@ func DefaultOpus() (*opus.Encoder, error) {
 }
 
 // frame calculates an audio stereo frame size, i.e. 48k*frame/1000*2
-func frame(hz int, frame int) int { return hz * frame / 1000 * 2 }
+func frame(hz int, frame float32) int {
+	return int(math.Round(float64(hz) * float64(frame) / 1000 * 2))
+}
 
 // stretch does a simple stretching of audio samples.
 // something like: [1,2,3,4,5,6] -> [1,2,x,x,3,4,x,x,5,6,x,x] -> [1,2,1,2,3,4,3,4,5,6,5,6]
@@ -114,7 +117,7 @@ type WebrtcMediaPipe struct {
 	vConf config.Video
 
 	AudioSrcHz     int
-	AudioFrame     int
+	AudioFrame     float32
 	VideoW, VideoH int
 	VideoScale     float64
 
@@ -162,7 +165,7 @@ func (wmp *WebrtcMediaPipe) Init() error {
 	return nil
 }
 
-func (wmp *WebrtcMediaPipe) initAudio(srcHz int, frameSize int) error {
+func (wmp *WebrtcMediaPipe) initAudio(srcHz int, frameSize float32) error {
 	au, err := DefaultOpus()
 	if err != nil {
 		return fmt.Errorf("opus fail: %w", err)
