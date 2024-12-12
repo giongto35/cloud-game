@@ -300,7 +300,12 @@ encoder:
     # audio frame duration needed for WebRTC (Opus)
     # most of the emulators have ~1400 samples per a video frame,
     # so we keep the frame buffer roughly half of that size or 2 RTC packets per frame
+    # (deprecated) due to frames
     frame: 10
+    # dynamic frames for Opus encoder
+    frames:
+      - 10
+      - 5
   video:
     # h264, vpx (vp8) or vp9
     codec: h264

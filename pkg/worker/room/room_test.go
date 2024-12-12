@@ -229,7 +229,7 @@ func room(cfg conf) testRoom {
 
 	m := media.NewWebRtcMediaPipe(conf.Encoder.Audio, conf.Encoder.Video, l)
 	m.AudioSrcHz = emu.AudioSampleRate()
-	m.AudioFrame = conf.Encoder.Audio.Frame
+	m.AudioFrames = conf.Encoder.Audio.Frames
 	m.VideoW, m.VideoH = emu.ViewportSize()
 	m.VideoScale = emu.Scale()
 	if err := m.Init(); err != nil {
