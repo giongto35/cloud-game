@@ -168,7 +168,7 @@ func (c *coordinator) HandleGameStart(rq api.StartGameRequest[com.Uid], w *Worke
 		}
 
 		m.AudioSrcHz = app.AudioSampleRate()
-		m.AudioFrame = w.conf.Encoder.Audio.Frame
+		m.AudioFrames = w.conf.Encoder.Audio.Frames
 		m.VideoW, m.VideoH = app.ViewportSize()
 		m.VideoScale = app.Scale()
 

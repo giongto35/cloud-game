@@ -51,7 +51,7 @@ type Encoder struct {
 }
 
 type Audio struct {
-	Frame float32
+	Frames []float32
 }
 
 type Video struct {
