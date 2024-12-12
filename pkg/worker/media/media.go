@@ -107,8 +107,8 @@ func (s samples) stretch(size int) []int16 {
 type WebrtcMediaPipe struct {
 	a        *opus.Encoder
 	v        *encoder.Video
-	onAudio  func([]byte)
-	audioBuf buffer
+	onAudio  func([]byte, int)
+	audioBuf buffer2
 	log      *logger.Logger
 
 	mua sync.RWMutex
@@ -135,8 +135,12 @@ func NewWebRtcMediaPipe(ac config.Audio, vc config.Video, log *logger.Logger) *W
 }
 
 func (wmp *WebrtcMediaPipe) SetAudioCb(cb func([]byte, int32)) {
-	fr := int32(time.Duration(wmp.AudioFrame) * time.Millisecond)
-	wmp.onAudio = func(bytes []byte) { cb(bytes, fr) }
+	//fr := int32(time.Duration(wmp.AudioFrame) * time.Millisecond)
+	wmp.onAudio = func(bytes []byte, l int) {
+		fr := int32(time.Duration(l) * time.Millisecond)
+		//wmp.log.Info().Msgf(">>> %v", fr)
+		cb(bytes, fr)
+	}
 }
 func (wmp *WebrtcMediaPipe) Destroy() {
 	v := wmp.Video()
@@ -144,7 +148,9 @@ func (wmp *WebrtcMediaPipe) Destroy() {
 		v.Stop()
 	}
 }
-func (wmp *WebrtcMediaPipe) PushAudio(audio []int16) { wmp.audioBuf.write(audio, wmp.encodeAudio) }
+func (wmp *WebrtcMediaPipe) PushAudio(audio []int16) {
+	wmp.audioBuf.write(audio, wmp.encodeAudio)
+}
 
 func (wmp *WebrtcMediaPipe) Init() error {
 	if err := wmp.initAudio(wmp.AudioSrcHz, wmp.AudioFrame); err != nil {
@@ -173,9 +179,10 @@ func (wmp *WebrtcMediaPipe) initAudio(srcHz int, frameSize float32) error {
 	}
 	wmp.log.Debug().Msgf("Opus: %v", au.GetInfo())
 	wmp.SetAudio(au)
-	buf := newBuffer(frame(srcHz, frameSize))
+	buf := newOpusBuffer(srcHz) //newBuffer(frame(srcHz, frameSize))
 	dstHz, _ := au.SampleRate()
 	if srcHz != dstHz {
+		buf.dstHz(dstHz)
 		buf.enableStretch(frame(dstHz, frameSize))
 		wmp.log.Debug().Msgf("Resample %vHz -> %vHz", srcHz, dstHz)
 	}
@@ -183,13 +190,13 @@ func (wmp *WebrtcMediaPipe) initAudio(srcHz int, frameSize float32) error {
 	return nil
 }
 
-func (wmp *WebrtcMediaPipe) encodeAudio(pcm samples) {
+func (wmp *WebrtcMediaPipe) encodeAudio(pcm samples, l int) {
 	data, err := wmp.Audio().Encode(pcm)
 	if err != nil {
 		wmp.log.Error().Err(err).Msgf("opus encode fail")
 		return
 	}
-	wmp.onAudio(data)
+	wmp.onAudio(data, l)
 }
 
 func (wmp *WebrtcMediaPipe) initVideo(w, h int, scale float64, conf config.Video) (err error) {
