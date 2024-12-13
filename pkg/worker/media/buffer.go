@@ -12,14 +12,14 @@ type buffer struct {
 	frameHz []int
 
 	raw     samples
-	buckets []Bucket
-	cur     *Bucket
+	buckets []bucket
+	cur     *bucket
 }
 
-type Bucket struct {
+type bucket struct {
 	mem samples
 	ms  float32
-	lv  int
+	p   int
 	dst int
 }
 
@@ -37,10 +37,14 @@ func newBuffer(frames []float32, hz int) (*buffer, error) {
 	}
 	buf.raw = make(samples, s)
 
+	if len(buf.raw) == 0 {
+		return nil, errors.New("seems those params are bad and the buffer is 0")
+	}
+
 	next := 0
 	for _, f := range frames {
 		s := frame(hz, f)
-		buf.buckets = append(buf.buckets, Bucket{
+		buf.buckets = append(buf.buckets, bucket{
 			mem: buf.raw[next : next+s],
 			ms:  f,
 		})
@@ -62,7 +66,7 @@ func (b *buffer) choose(l int) {
 func (b *buffer) resample(hz int) {
 	b.stretch = true
 	for i := range b.buckets {
-		b.buckets[i].dst = frame(hz, float32(b.buckets[i].ms))
+		b.buckets[i].dst = frame(hz, b.buckets[i].ms)
 	}
 }
 
@@ -76,20 +80,21 @@ func (b *buffer) resample(hz int) {
 // by the length of the written data.
 // In the first case, we won't call the callback, but it will be called every time
 // when the internal buffer overflows until all samples are read.
+// It will choose between multiple internal buffers to fit remaining samples.
 func (b *buffer) write(s samples, onFull func(samples, float32)) (r int) {
 	for r < len(s) {
 		buf := b.cur
-		w := copy(buf.mem[buf.lv:], s[r:])
+		w := copy(buf.mem[buf.p:], s[r:])
 		r += w
-		buf.lv += w
-		if buf.lv == len(buf.mem) {
+		buf.p += w
+		if buf.p == len(buf.mem) {
 			if b.stretch {
 				onFull(buf.mem.stretch(buf.dst), buf.ms)
 			} else {
 				onFull(buf.mem, buf.ms)
 			}
 			b.choose(len(s) - r)
-			b.cur.lv = 0
+			b.cur.p = 0
 		}
 	}
 	return
