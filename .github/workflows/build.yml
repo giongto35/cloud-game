@@ -36,7 +36,7 @@ jobs:
           sudo apt-get -qq install -y \
             make pkg-config \
             libvpx-dev libx264-dev libopus-dev libyuv-dev libjpeg-turbo8-dev \
-            libsdl2-dev libgl1-mesa-glx
+            libsdl2-dev libgl1 libglx-mesa0
           
           make build
           xvfb-run --auto-servernum make test verify-cores
