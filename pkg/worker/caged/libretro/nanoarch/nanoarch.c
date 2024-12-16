@@ -4,6 +4,8 @@
 #include <stdarg.h>
 #include <stdio.h>
 
+#define RETRO_ENVIRONMENT_GET_CLEAR_ALL_THREAD_WAITS_CB (3 | 0x800000)
+
 int initialized = 0;
 
 typedef struct {
@@ -127,16 +129,41 @@ static bool clear_all_thread_waits_cb(unsigned v, void *data) {
     return true;
 }
 
-void bridge_clear_all_thread_waits_cb(void *data) {
-    *(retro_environment_t *)data = clear_all_thread_waits_cb;
-}
-
 void bridge_retro_keyboard_callback(void *cb, bool down, unsigned keycode, uint32_t character, uint16_t keyModifiers) {
     (*(retro_keyboard_event_t *) cb)(down, keycode, character, keyModifiers);
 }
 
 bool core_environment_cgo(unsigned cmd, void *data) {
     bool coreEnvironment(unsigned, void *);
+
+    switch (cmd)
+    {
+        case RETRO_ENVIRONMENT_GET_VARIABLE_UPDATE:
+          return false;
+          break;
+        case RETRO_ENVIRONMENT_GET_AUDIO_VIDEO_ENABLE:
+          return false;
+          break;
+        case RETRO_ENVIRONMENT_GET_CLEAR_ALL_THREAD_WAITS_CB:
+          *(retro_environment_t *)data = clear_all_thread_waits_cb;
+          return true;
+          break;
+        case RETRO_ENVIRONMENT_GET_INPUT_MAX_USERS:
+          *(unsigned *)data = 4;
+          core_log_cgo(RETRO_LOG_DEBUG, "Set max users: %d\n", 4);
+          return true;
+          break;
+        case RETRO_ENVIRONMENT_GET_INPUT_BITMASKS:
+          return false;
+        case RETRO_ENVIRONMENT_SHUTDOWN:
+          return false;
+          break;
+        case RETRO_ENVIRONMENT_GET_SAVESTATE_CONTEXT:
+          if (data != NULL) *(int *)data = RETRO_SAVESTATE_CONTEXT_NORMAL;
+          return true;
+          break;
+    }
+
     return coreEnvironment(cmd, data);
 }
 

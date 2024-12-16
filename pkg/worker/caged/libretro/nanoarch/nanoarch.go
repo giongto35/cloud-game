@@ -23,8 +23,6 @@ import (
 #include "libretro.h"
 #include "nanoarch.h"
 #include <stdlib.h>
-
-#define RETRO_ENVIRONMENT_GET_CLEAR_ALL_THREAD_WAITS_CB (3 | 0x800000)
 */
 import "C"
 
@@ -771,13 +769,8 @@ func coreGetProcAddress(sym *C.char) C.retro_proc_address_t {
 
 //export coreEnvironment
 func coreEnvironment(cmd C.unsigned, data unsafe.Pointer) C.bool {
-	// spammy
-	switch cmd {
-	case C.RETRO_ENVIRONMENT_GET_VARIABLE_UPDATE:
-		return false
-	case C.RETRO_ENVIRONMENT_GET_AUDIO_VIDEO_ENABLE:
-		return false
-	}
+
+	// see core_environment_cgo
 
 	switch cmd {
 	case C.RETRO_ENVIRONMENT_SET_SYSTEM_AV_INFO:
@@ -828,9 +821,6 @@ func coreEnvironment(cmd C.unsigned, data unsafe.Pointer) C.bool {
 			Nan0.log.Debug().Msgf("message: %v", msg)
 			return true
 		}
-		return false
-	case C.RETRO_ENVIRONMENT_SHUTDOWN:
-		//window.SetShouldClose(true)
 		return false
 	case C.RETRO_ENVIRONMENT_GET_VARIABLE:
 		if Nan0.options == nil {
@@ -884,24 +874,9 @@ func coreEnvironment(cmd C.unsigned, data unsafe.Pointer) C.bool {
 			//Nan0.log.Debug().Msgf("%v", cInfo.String())
 		}
 		return true
-	case C.RETRO_ENVIRONMENT_GET_INPUT_MAX_USERS:
-		*(*C.unsigned)(data) = C.unsigned(4)
-		Nan0.log.Debug().Msgf("Set max users: %v", 4)
-		return true
 	case C.RETRO_ENVIRONMENT_SET_KEYBOARD_CALLBACK:
 		Nan0.log.Debug().Msgf("Keyboard event callback was set")
 		Nan0.keyboardCb = (*C.struct_retro_keyboard_callback)(data)
-		return true
-	case C.RETRO_ENVIRONMENT_GET_INPUT_BITMASKS:
-		Nan0.log.Debug().Msgf("Set input bitmasks: false")
-		return false
-	case C.RETRO_ENVIRONMENT_GET_CLEAR_ALL_THREAD_WAITS_CB:
-		C.bridge_clear_all_thread_waits_cb(data)
-		return true
-	case C.RETRO_ENVIRONMENT_GET_SAVESTATE_CONTEXT:
-		if ctx := (*C.int)(data); ctx != nil {
-			*ctx = C.RETRO_SAVESTATE_CONTEXT_NORMAL
-		}
 		return true
 	}
 	return false
