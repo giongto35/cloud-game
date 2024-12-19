@@ -160,6 +160,32 @@ emulator:
         sync: true
         # external cross-process mutex lock
         extLock: "{user}/.cr/cloud-game.lock"
+        map:
+          darwin:
+            amd64:
+              arch: x86_64
+              ext: .dylib
+              os: osx
+              vendor: apple
+            arm64:
+              arch: arm64
+              ext: .dylib
+              os: osx
+              vendor: apple
+          linux:
+            amd64:
+              arch: x86_64
+              ext: .so
+              os: linux
+            arm:
+              arch: armv7-neon-hf
+              ext: .so
+              os: linux
+          windows:
+            amd64:
+              arch: x86_64
+              ext: .dll
+              os: windows
         main:
           type: buildbot
           url: https://buildbot.libretro.com/nightly

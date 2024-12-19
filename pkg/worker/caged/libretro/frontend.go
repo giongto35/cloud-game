@@ -142,6 +142,14 @@ func NewFrontend(conf config.Emulator, log *logger.Logger) (*Frontend, error) {
 
 func (f *Frontend) LoadCore(emu string) {
 	conf := f.conf.GetLibretroCoreConfig(emu)
+
+	libExt := ""
+	if ar, err := f.conf.Libretro.Cores.Repo.Guess(); err == nil {
+		libExt = ar.Ext
+	} else {
+		f.log.Warn().Err(err).Msg("system arch guesser failed")
+	}
+
 	meta := nanoarch.Metadata{
 		AutoGlContext:   conf.AutoGlContext,
 		FrameDup:        f.conf.Libretro.Dup,
@@ -155,6 +163,7 @@ func (f *Frontend) LoadCore(emu string) {
 		UsesLibCo:       conf.UsesLibCo,
 		CoreAspectRatio: conf.CoreAspectRatio,
 		KbMouseSupport:  conf.KbMouseSupport,
+		LibExt:          libExt,
 	}
 	f.mu.Lock()
 	f.SaveStateFs = conf.SaveStateFs

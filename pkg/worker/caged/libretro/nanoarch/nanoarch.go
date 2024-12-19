@@ -15,7 +15,6 @@ import (
 	"github.com/giongto35/cloud-game/v3/pkg/logger"
 	"github.com/giongto35/cloud-game/v3/pkg/os"
 	"github.com/giongto35/cloud-game/v3/pkg/worker/caged/libretro/graphics"
-	"github.com/giongto35/cloud-game/v3/pkg/worker/caged/libretro/repo/arch"
 	"github.com/giongto35/cloud-game/v3/pkg/worker/thread"
 )
 
@@ -100,6 +99,7 @@ type Metadata struct {
 	Hid             map[int][]int
 	CoreAspectRatio bool
 	KbMouseSupport  bool
+	LibExt          string
 }
 
 type PixFmt struct {
@@ -200,20 +200,14 @@ func (n *Nanoarch) CoreLoad(meta Metadata) {
 	n.options = maps.Clone(meta.Options)
 	n.options4rom = meta.Options4rom
 
-	filePath := meta.LibPath
-	if ar, err := arch.Guess(); err == nil {
-		filePath = filePath + ar.LibExt
-	} else {
-		n.log.Warn().Err(err).Msg("system arch guesser failed")
-	}
-
-	coreLib, err = loadLib(filePath)
+	corePath := meta.LibPath + meta.LibExt
+	coreLib, err = loadLib(corePath)
 	// fallback to sequential lib loader (first successfully loaded)
 	if err != nil {
-		n.log.Error().Err(err).Msgf("load fail: %v", filePath)
-		coreLib, err = loadLibRollingRollingRolling(filePath)
+		n.log.Error().Err(err).Msgf("load fail: %v", corePath)
+		coreLib, err = loadLibRollingRollingRolling(corePath)
 		if err != nil {
-			n.log.Fatal().Err(err).Msgf("core load: %s", filePath)
+			n.log.Fatal().Err(err).Msgf("core load: %s", corePath)
 		}
 	}
 

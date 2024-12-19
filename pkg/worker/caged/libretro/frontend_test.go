@@ -26,6 +26,7 @@ type TestFrontend struct {
 	*Frontend
 
 	corePath string
+	coreExt  string
 	gamePath string
 	system   string
 }
@@ -78,6 +79,11 @@ func EmulatorMock(room string, system string) *TestFrontend {
 	nano := nanoarch.NewNano(conf.Emulator.LocalPath)
 	nano.SetLogger(l2)
 
+	arch, err := conf.Emulator.Libretro.Cores.Repo.Guess()
+	if err != nil {
+		panic(err)
+	}
+
 	// an emu
 	emu := &TestFrontend{
 		Frontend: &Frontend{
@@ -92,6 +98,7 @@ func EmulatorMock(room string, system string) *TestFrontend {
 			SaveOnClose: false,
 		},
 		corePath: expand(conf.Emulator.GetLibretroCoreConfig(system).Lib),
+		coreExt:  arch.Ext,
 		gamePath: expand(conf.Library.BasePath),
 		system:   system,
 	}
@@ -133,6 +140,7 @@ func (emu *TestFrontend) loadRom(game string) {
 		Options4rom:     conf.Options4rom,
 		UsesLibCo:       conf.UsesLibCo,
 		CoreAspectRatio: conf.CoreAspectRatio,
+		LibExt:          emu.coreExt,
 	}
 
 	emu.nano.CoreLoad(meta)

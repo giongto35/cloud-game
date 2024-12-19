@@ -4,16 +4,14 @@ import (
 	"github.com/giongto35/cloud-game/v3/pkg/config"
 	"github.com/giongto35/cloud-game/v3/pkg/logger"
 	"github.com/giongto35/cloud-game/v3/pkg/os"
-	"github.com/giongto35/cloud-game/v3/pkg/worker/caged/libretro/repo"
-	"github.com/giongto35/cloud-game/v3/pkg/worker/caged/libretro/repo/arch"
 )
 
 type Manager struct {
 	BasicManager
 
-	arch    arch.Info
-	repo    repo.Repository
-	altRepo repo.Repository
+	arch    ArchInfo
+	repo    Repository
+	altRepo Repository
 	client  Downloader
 	fmu     *os.Flock
 	log     *logger.Logger
@@ -29,24 +27,24 @@ func NewRemoteHttpManager(conf config.LibretroConfig, log *logger.Logger) Manage
 		log.Error().Err(err).Msgf("couldn't make file lock")
 	}
 
-	ar, err := arch.Guess()
+	arch, err := conf.Cores.Repo.Guess()
 	if err != nil {
 		log.Error().Err(err).Msg("couldn't get Libretro core file extension")
 	}
 
 	m := Manager{
 		BasicManager: BasicManager{Conf: conf},
-		arch:         ar,
+		arch:         ArchInfo(arch),
 		client:       NewDefaultDownloader(log),
 		fmu:          flock,
 		log:          log,
 	}
 
 	if repoConf.Type != "" {
-		m.repo = repo.New(repoConf.Type, repoConf.Url, repoConf.Compression, "buildbot")
+		m.repo = NewRepo(repoConf.Type, repoConf.Url, repoConf.Compression, "buildbot")
 	}
 	if altRepoConf.Type != "" {
-		m.altRepo = repo.New(altRepoConf.Type, altRepoConf.Url, altRepoConf.Compression, "")
+		m.altRepo = NewRepo(altRepoConf.Type, altRepoConf.Url, altRepoConf.Compression, "")
 	}
 
 	return m
@@ -81,7 +79,7 @@ func (m *Manager) Sync() error {
 		}
 	}()
 
-	installed, err := m.GetInstalled(m.arch.LibExt)
+	installed, err := m.GetInstalled(m.arch.Ext)
 	if err != nil {
 		return err
 	}
@@ -92,9 +90,9 @@ func (m *Manager) Sync() error {
 	return nil
 }
 
-func (m *Manager) getCoreUrls(names []string, repo repo.Repository) (urls []Download) {
+func (m *Manager) getCoreUrls(names []string, repo Repository) (urls []Download) {
 	for _, c := range names {
-		urls = append(urls, Download{Key: c, Address: repo.GetCoreUrl(c, m.arch)})
+		urls = append(urls, Download{Key: c, Address: repo.CoreUrl(c, m.arch)})
 	}
 	return
 }
@@ -137,7 +135,7 @@ func (m *Manager) download(cores []config.CoreInfo) (failed []string) {
 	return
 }
 
-func (m *Manager) down(cores []string, repo repo.Repository) (failed []string) {
+func (m *Manager) down(cores []string, repo Repository) (failed []string) {
 	if len(cores) == 0 || repo == nil {
 		return
 	}

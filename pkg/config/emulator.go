@@ -1,8 +1,10 @@
 package config
 
 import (
+	"errors"
 	"path"
 	"path/filepath"
+	"runtime"
 	"strings"
 )
 
@@ -19,12 +21,7 @@ type LibretroConfig struct {
 		Paths struct {
 			Libs string
 		}
-		Repo struct {
-			Sync      bool
-			ExtLock   string
-			Main      LibretroRepoConfig
-			Secondary LibretroRepoConfig
-		}
+		Repo LibretroRemoteRepo
 		List map[string]LibretroCoreConfig
 	}
 	DebounceMs      int
@@ -33,10 +30,40 @@ type LibretroConfig struct {
 	LogLevel        int
 }
 
+type LibretroRemoteRepo struct {
+	Sync      bool
+	ExtLock   string
+	Map       map[string]map[string]LibretroRepoMapInfo
+	Main      LibretroRepoConfig
+	Secondary LibretroRepoConfig
+}
+
+// LibretroRepoMapInfo contains Libretro core lib platform info.
+// And the cores are just C-compiled libraries.
+// See: https://buildbot.libretro.com/nightly.
+type LibretroRepoMapInfo struct {
+	Arch   string // bottom: x86_64, x86, ...
+	Ext    string // platform dependent library file extension (dot-prefixed)
+	Os     string // middle: windows, ios, ...
+	Vendor string // top level: apple, nintendo, ...
+}
+
 type LibretroRepoConfig struct {
 	Type        string
 	Url         string
 	Compression string
+}
+
+// Guess tries to map OS + CPU architecture to the corresponding remote URL path.
+// See: https://gist.github.com/asukakenji/f15ba7e588ac42795f421b48b8aede63.
+func (lrp LibretroRemoteRepo) Guess() (LibretroRepoMapInfo, error) {
+	if os, ok := lrp.Map[runtime.GOOS]; ok {
+		if arch, ok2 := os[runtime.GOARCH]; ok2 {
+			return arch, nil
+		}
+	}
+	return LibretroRepoMapInfo{},
+		errors.New("core mapping not found for " + runtime.GOOS + ":" + runtime.GOARCH)
 }
 
 type LibretroCoreConfig struct {
