@@ -19,7 +19,11 @@ import "C"
 func loadFunction(handle unsafe.Pointer, name string) unsafe.Pointer {
 	cs := C.CString(name)
 	defer C.free(unsafe.Pointer(cs))
-	return C.dlsym(handle, cs)
+	ptr := C.dlsym(handle, cs)
+	if ptr == nil {
+		panic("lib function not found: " + name)
+	}
+	return ptr
 }
 
 func loadLib(filepath string) (handle unsafe.Pointer, err error) {
