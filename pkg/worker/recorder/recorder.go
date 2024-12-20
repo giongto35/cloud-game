@@ -165,6 +165,18 @@ func (r *Recording) Set(enable bool, user string) {
 
 func (r *Recording) SetFramerate(fps float64) { r.opts.Fps = fps }
 func (r *Recording) SetAudioFrequency(fq int) { r.opts.Frequency = fq }
+func (r *Recording) SetPixFormat(fmt uint32) {
+	pix := ""
+	switch fmt {
+	case 0:
+		pix = "rgb1555"
+	case 1:
+		pix = "brga"
+	case 2:
+		pix = "rgb565le"
+	}
+	r.opts.Pix = pix
+}
 
 func (r *Recording) Enabled() bool {
 	r.Lock()

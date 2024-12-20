@@ -17,6 +17,21 @@ const demuxFile = "input.txt"
 //
 // !to change
 //
+// - can't read pix_fmt from ffconcat
+// - maybe change raw output to yuv420?
+// - frame durations and size can change dynamically
+// - or maybe merge encoded streams
+//
+// new:
+//
+//	ffmpeg -f image2 -framerate 59 -video_size 384x224 -pixel_format rgb565le \
+//	      -i "./f%07d__384x224__768.raw" \
+//	      -ac 2 -channel_layout stereo -i audio.wav -b:a 192K \
+//	      -c:v libx264 -pix_fmt yuv420p -crf 20 \
+//	      output.mp4
+//
+// old:
+//
 //	ffmpeg -f concat -i input.txt \
 //		   -ac 2 -channel_layout stereo -i audio.wav \
 //		   -b:a 192K -crf 23 -vf fps=30 -pix_fmt yuv420p \
