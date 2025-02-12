@@ -1,6 +1,6 @@
 module github.com/giongto35/cloud-game/v3
 
-go 1.22
+go 1.24
 
 require (
 	github.com/VictoriaMetrics/metrics v1.35.2
