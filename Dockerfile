@@ -3,7 +3,7 @@ ARG VERSION=master
 
 # base build stage
 FROM ubuntu:oracular AS build0
-ARG GO=1.24.0
+ARG GO=1.24.1
 ARG GO_DIST=go${GO}.linux-amd64.tar.gz
 
 ADD https://go.dev/dl/$GO_DIST ./
