@@ -50,19 +50,19 @@ jobs:
       - uses: msys2/setup-msys2@v2
         if: matrix.os == 'windows-latest'
         with:
-          msystem: MINGW64
+          msystem: ucrt64
           path-type: inherit
           release: false
           install: >
-            mingw-w64-x86_64-gcc
-            mingw-w64-x86_64-pkgconf
-            mingw-w64-x86_64-dlfcn
-            mingw-w64-x86_64-libvpx
-            mingw-w64-x86_64-opus
-            mingw-w64-x86_64-libx264
-            mingw-w64-x86_64-SDL2
-            mingw-w64-x86_64-libyuv
-            mingw-w64-x86_64-libjpeg-turbo
+            mingw-w64-ucrt-x86_64-gcc
+            mingw-w64-ucrt-x86_64-pkgconf
+            mingw-w64-ucrt-x86_64-dlfcn
+            mingw-w64-ucrt-x86_64-libvpx
+            mingw-w64-ucrt-x86_64-opus
+            mingw-w64-ucrt-x86_64-libx264
+            mingw-w64-ucrt-x86_64-SDL2
+            mingw-w64-ucrt-x86_64-libyuv
+            mingw-w64-ucrt-x86_64-libjpeg-turbo
 
       - name: Windows
         if: matrix.os == 'windows-latest'
@@ -71,6 +71,8 @@ jobs:
           MESA_GL_VERSION_OVERRIDE: 3.3COMPAT
         shell: msys2 {0}
         run: |
+          set MSYSTEM=UCRT64
+          
           wget -q https://github.com/pal1000/mesa-dist-win/releases/download/$MESA_VERSION/mesa3d-$MESA_VERSION-release-msvc.7z
           "/c/Program Files/7-Zip/7z.exe" x mesa3d-$MESA_VERSION-release-msvc.7z -omesa
           echo -e " 1\r\n 9\r\n " >> commands
