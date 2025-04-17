@@ -4,7 +4,7 @@ ROOT = ${REPO_ROOT}/${PROJECT}
 
 CGO_CFLAGS='-g -O3'
 CGO_LDFLAGS='-g -O3'
-GO_TAGS=static
+GO_TAGS=
 
 .PHONY: clean test
 
