@@ -58,6 +58,20 @@ LIBYUV_API
 int ARGBToI420(const uint8_t* src_argb, int src_stride_argb, uint8_t* dst_y, int dst_stride_y, uint8_t* dst_u,
                int dst_stride_u, uint8_t* dst_v, int dst_stride_v, int width, int height);
 
+
+void ConvertToI420Custom(const uint8_t* sample,
+                  uint8_t* dst_y,
+                  int dst_stride_y,
+                  uint8_t* dst_u,
+                  int dst_stride_u,
+                  uint8_t* dst_v,
+                  int dst_stride_v,
+                  int src_width,
+                  int src_height,
+                  int crop_width,
+                  int crop_height,
+                  uint32_t fourcc);
+
 #ifdef __cplusplus
 namespace libyuv {
 extern "C" {
