@@ -135,6 +135,11 @@ func (w *Worker) AppNames() []api.GameInfo {
 }
 
 func (w *Worker) AddSession(id string) {
+	// sessions can be uninitialized until the coordinator pushes them to the worker
+	if w.Sessions == nil {
+		return
+	}
+
 	w.Sessions[id] = struct{}{}
 }
 
@@ -159,13 +164,40 @@ type slotted int32
 // there are no players in the room (worker).
 func (s *slotted) HasSlot() bool { return atomic.LoadInt32((*int32)(s)) == 0 }
 
-// Reserve increments user counter of the worker.
-func (s *slotted) Reserve() { atomic.AddInt32((*int32)(s), 1) }
+// TryReserve reserves the slot only when it's free.
+func (s *slotted) TryReserve() bool {
+	for {
+		current := atomic.LoadInt32((*int32)(s))
+		if current != 0 {
+			return false
+		}
+		if atomic.CompareAndSwapInt32((*int32)(s), 0, 1) {
+			return true
+		}
+	}
+}
 
 // UnReserve decrements user counter of the worker.
 func (s *slotted) UnReserve() {
-	if atomic.AddInt32((*int32)(s), -1) < 0 {
-		atomic.StoreInt32((*int32)(s), 0)
+	for {
+		current := atomic.LoadInt32((*int32)(s))
+		if current <= 0 {
+			// reset to zero
+			if current < 0 {
+				if atomic.CompareAndSwapInt32((*int32)(s), current, 0) {
+					return
+				}
+				continue
+			}
+
+			return
+		}
+
+		// Regular decrement for positive values
+		newVal := current - 1
+		if atomic.CompareAndSwapInt32((*int32)(s), current, newVal) {
+			return
+		}
 	}
 }
 

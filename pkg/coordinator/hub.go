@@ -68,7 +68,14 @@ func (h *Hub) handleUserConnection() http.HandlerFunc {
 			h.log.Info().Msg("no free workers")
 			return
 		}
-		user.Bind(worker)
+
+		bound := user.Bind(worker)
+		if !bound {
+			user.Notify(api.ErrNoFreeSlots, "")
+			h.log.Info().Msg("no free slots")
+			return
+		}
+
 		h.users.Add(user)
 
 		apps := worker.AppNames()

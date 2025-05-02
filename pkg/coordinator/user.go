@@ -28,9 +28,10 @@ func NewUser(sock *com.Connection, log *logger.Logger) *User {
 	}
 }
 
-func (u *User) Bind(w *Worker) {
+func (u *User) Bind(w *Worker) bool {
 	u.w = w
-	u.w.Reserve()
+
+	return u.w.TryReserve()
 }
 
 func (u *User) Disconnect() {
