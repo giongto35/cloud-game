@@ -495,32 +495,42 @@ const (
 
 // SaveState returns emulator internal state.
 func SaveState() (State, error) {
-	data := make([]byte, uint(Nan0.serializeSize))
+	size := C.bridge_retro_serialize_size(retroSerializeSize)
+	data := make([]byte, uint(size))
 	rez := false
+
 	if Nan0.LibCo && !Nan0.hackSkipSameThreadSave {
-		rez = *(*bool)(C.same_thread_with_args2(retroSerialize, C.int(CallSerialize), unsafe.Pointer(&data[0]), unsafe.Pointer(&Nan0.serializeSize)))
+		rez = *(*bool)(C.same_thread_with_args2(retroSerialize, C.int(CallSerialize), unsafe.Pointer(&data[0]), unsafe.Pointer(&size)))
 	} else {
-		rez = bool(C.bridge_retro_serialize(retroSerialize, unsafe.Pointer(&data[0]), Nan0.serializeSize))
+		rez = bool(C.bridge_retro_serialize(retroSerialize, unsafe.Pointer(&data[0]), size))
 	}
+
 	if !rez {
 		return nil, errors.New("retro_serialize failed")
 	}
+
 	return data, nil
 }
 
 // RestoreSaveState restores emulator internal state.
 func RestoreSaveState(st State) error {
-	if len(st) > 0 {
-		rez := false
-		if Nan0.LibCo {
-			rez = *(*bool)(C.same_thread_with_args2(retroUnserialize, C.int(CallUnserialize), unsafe.Pointer(&st[0]), unsafe.Pointer(&Nan0.serializeSize)))
-		} else {
-			rez = bool(C.bridge_retro_unserialize(retroUnserialize, unsafe.Pointer(&st[0]), Nan0.serializeSize))
-		}
-		if !rez {
-			return errors.New("retro_unserialize failed")
-		}
+	if len(st) <= 0 {
+		return errors.New("empty load state")
 	}
+
+	size := C.bridge_retro_serialize_size(retroSerializeSize)
+	rez := false
+
+	if Nan0.LibCo {
+		rez = *(*bool)(C.same_thread_with_args2(retroUnserialize, C.int(CallUnserialize), unsafe.Pointer(&st[0]), unsafe.Pointer(&size)))
+	} else {
+		rez = bool(C.bridge_retro_unserialize(retroUnserialize, unsafe.Pointer(&st[0]), size))
+	}
+
+	if !rez {
+		return errors.New("retro_unserialize failed")
+	}
+
 	return nil
 }
 

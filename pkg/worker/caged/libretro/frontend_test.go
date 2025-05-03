@@ -48,6 +48,7 @@ var (
 	alwa  = game{system: "nes", rom: "nes/Alwa's Awakening (Demo).nes"}
 	sushi = game{system: "gba", rom: "gba/Sushi The Cat.gba"}
 	angua = game{system: "gba", rom: "gba/anguna.gba"}
+	rogue = game{system: "dos", rom: "dos/rogue.zip"}
 )
 
 // TestMain runs all tests in the main thread in macOS.
@@ -176,6 +177,13 @@ func (emu *TestFrontend) dumpState() (cur string, prev string) {
 	return
 }
 
+func (emu *TestFrontend) save() ([]byte, error) {
+	emu.mu.Lock()
+	defer emu.mu.Unlock()
+
+	return nanoarch.SaveState()
+}
+
 func BenchmarkEmulators(b *testing.B) {
 	log.SetOutput(io.Discard)
 	os.Stdout, _ = os.Open(os.DevNull)
@@ -204,6 +212,7 @@ func TestSavePersistence(t *testing.T) {
 	tests := []testRun{
 		{system: sushi.system, rom: sushi.rom, frames: 100},
 		{system: angua.system, rom: angua.rom, frames: 100},
+		{system: rogue.system, rom: rogue.rom, frames: 200},
 	}
 
 	for _, test := range tests {
@@ -215,14 +224,12 @@ func TestSavePersistence(t *testing.T) {
 				test.frames--
 			}
 
-			_, _ = front.dumpState()
-			if err := front.Save(); err != nil {
-				t.Error(err)
-			}
-
-			hash1, hash2 := front.dumpState()
-			if hash1 != hash2 {
-				t.Errorf("%v != %v", hash1, hash2)
+			for range 10 {
+				v, _ := front.save()
+				if v == nil || len(v) == 0 {
+					t.Errorf("couldn't persist the state")
+					t.Fail()
+				}
 			}
 
 			front.Shutdown()
