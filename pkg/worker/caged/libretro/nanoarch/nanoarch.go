@@ -518,7 +518,7 @@ func RestoreSaveState(st State) error {
 		return errors.New("empty load state")
 	}
 
-	size := C.bridge_retro_serialize_size(retroSerializeSize)
+	size := C.size_t(len(st))
 	rez := false
 
 	if Nan0.LibCo {
