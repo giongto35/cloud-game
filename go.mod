@@ -3,7 +3,7 @@ module github.com/giongto35/cloud-game/v3
 go 1.24
 
 require (
-	github.com/VictoriaMetrics/metrics v1.35.2
+	github.com/VictoriaMetrics/metrics v1.35.4
 	github.com/cavaliergopher/grab/v3 v3.0.1
 	github.com/fsnotify/fsnotify v1.9.0
 	github.com/goccy/go-json v0.10.5
@@ -11,11 +11,11 @@ require (
 	github.com/gorilla/websocket v1.5.3
 	github.com/knadh/koanf/maps v0.1.2
 	github.com/knadh/koanf/v2 v2.2.0
-	github.com/minio/minio-go/v7 v7.0.90
+	github.com/minio/minio-go/v7 v7.0.91
 	github.com/pion/ice/v4 v4.0.10
 	github.com/pion/interceptor v0.1.37
 	github.com/pion/logging v0.2.3
-	github.com/pion/webrtc/v4 v4.0.15
+	github.com/pion/webrtc/v4 v4.1.0
 	github.com/rs/xid v1.6.0
 	github.com/rs/zerolog v1.34.0
 	github.com/veandco/go-sdl2 v0.4.40
@@ -42,13 +42,13 @@ require (
 	github.com/pion/mdns/v2 v2.0.7 // indirect
 	github.com/pion/randutil v0.1.0 // indirect
 	github.com/pion/rtcp v1.2.15 // indirect
-	github.com/pion/rtp v1.8.13 // indirect
-	github.com/pion/sctp v1.8.38 // indirect
+	github.com/pion/rtp v1.8.15 // indirect
+	github.com/pion/sctp v1.8.39 // indirect
 	github.com/pion/sdp/v3 v3.0.11 // indirect
 	github.com/pion/srtp/v3 v3.0.4 // indirect
 	github.com/pion/stun/v3 v3.0.0 // indirect
 	github.com/pion/transport/v3 v3.0.7 // indirect
-	github.com/pion/turn/v4 v4.0.0 // indirect
+	github.com/pion/turn/v4 v4.0.1 // indirect
 	github.com/rogpeppe/go-internal v1.12.0 // indirect
 	github.com/valyala/fastrand v1.1.0 // indirect
 	github.com/valyala/histogram v1.2.0 // indirect
