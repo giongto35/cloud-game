@@ -37,6 +37,8 @@ void core_video_refresh_cgo(void *data, unsigned width, unsigned height, size_t 
 void init_video_cgo();
 void deinit_video_cgo();
 
+struct retro_vfs_interface* vfs_interface_cgo();
+
 void same_thread(void *f);
 void *same_thread_with_args2(void *f, int type, void *arg1, void *arg2);
 void same_thread_stop();
