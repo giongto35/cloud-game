@@ -49,8 +49,9 @@ type Nanoarch struct {
 	serializeSize C.size_t
 	Stopped       atomic.Bool
 	sys           struct {
-		av C.struct_retro_system_av_info
-		i  C.struct_retro_system_info
+		av  C.struct_retro_system_av_info
+		i   C.struct_retro_system_info
+		api C.unsigned
 	}
 	tickTime         int64
 	cSaveDirectory   *C.char
@@ -213,7 +214,7 @@ func (n *Nanoarch) CoreLoad(meta Metadata) {
 
 	retroInit = loadFunction(coreLib, "retro_init")
 	retroDeinit = loadFunction(coreLib, "retro_deinit")
-	//retroAPIVersion = loadFunction(coreLib, "retro_api_version")
+	retroAPIVersion = loadFunction(coreLib, "retro_api_version")
 	retroGetSystemInfo = loadFunction(coreLib, "retro_get_system_info")
 	retroGetSystemAVInfo = loadFunction(coreLib, "retro_get_system_av_info")
 	retroSetEnvironment = loadFunction(coreLib, "retro_set_environment")
@@ -234,22 +235,24 @@ func (n *Nanoarch) CoreLoad(meta Metadata) {
 	retroGetMemoryData = loadFunction(coreLib, "retro_get_memory_data")
 
 	C.bridge_retro_set_environment(retroSetEnvironment, C.core_environment_cgo)
-	C.bridge_retro_set_video_refresh(retroSetVideoRefresh, C.core_video_refresh_cgo)
-	C.bridge_retro_set_input_poll(retroSetInputPoll, C.core_input_poll_cgo)
 	C.bridge_retro_set_input_state(retroSetInputState, C.core_input_state_cgo)
-	C.bridge_retro_set_audio_sample(retroSetAudioSample, C.core_audio_sample_cgo)
-	C.bridge_retro_set_audio_sample_batch(retroSetAudioSampleBatch, C.core_audio_sample_batch_cgo)
+	C.bridge_set_callback(retroSetVideoRefresh, C.core_video_refresh_cgo)
+	C.bridge_set_callback(retroSetInputPoll, C.core_input_poll_cgo)
+	C.bridge_set_callback(retroSetAudioSample, C.core_audio_sample_cgo)
+	C.bridge_set_callback(retroSetAudioSampleBatch, C.core_audio_sample_batch_cgo)
 
 	if n.LibCo {
 		C.same_thread(retroInit)
 	} else {
-		C.bridge_retro_init(retroInit)
+		C.bridge_call(retroInit)
 	}
 
+	n.sys.api = C.bridge_retro_api_version(retroAPIVersion)
 	C.bridge_retro_get_system_info(retroGetSystemInfo, &n.sys.i)
-	n.log.Debug().Msgf("System >>> %v (%v) [%v] nfp: %v",
+	n.log.Info().Msgf("System >>> %v (%v) [%v] nfp: %v, api: %v",
 		C.GoString(n.sys.i.library_name), C.GoString(n.sys.i.library_version),
-		C.GoString(n.sys.i.valid_extensions), bool(n.sys.i.need_fullpath))
+		C.GoString(n.sys.i.valid_extensions), bool(n.sys.i.need_fullpath),
+		uint(n.sys.api))
 }
 
 func (n *Nanoarch) LoadGame(path string) error {
@@ -367,8 +370,8 @@ func (n *Nanoarch) Shutdown() {
 				}
 			})
 		}
-		C.bridge_retro_unload_game(retroUnloadGame)
-		C.bridge_retro_deinit(retroDeinit)
+		C.bridge_call(retroUnloadGame)
+		C.bridge_call(retroDeinit)
 		if n.Video.gl.enabled {
 			thread.Main(func() {
 				deinitVideo()
@@ -390,7 +393,7 @@ func (n *Nanoarch) Shutdown() {
 }
 
 func (n *Nanoarch) Reset() {
-	C.bridge_retro_reset(retroReset)
+	C.bridge_call(retroReset)
 }
 
 func (n *Nanoarch) Run() {
@@ -404,7 +407,7 @@ func (n *Nanoarch) Run() {
 				n.log.Error().Err(err).Msg("ctx bind fail")
 			}
 		}
-		C.bridge_retro_run(retroRun)
+		C.bridge_call(retroRun)
 		if n.Video.gl.enabled {
 			runtime.UnlockOSThread()
 		}
@@ -553,19 +556,19 @@ func RestoreSaveRAM(st State) {
 	}
 }
 
-// getMemorySize returns memory region size.
-func getMemorySize(id C.uint) uint {
+// memorySize returns memory region size.
+func memorySize(id C.uint) uint {
 	return uint(C.bridge_retro_get_memory_size(retroGetMemorySize, id))
 }
 
-// getMemoryData returns a pointer to memory data.
-func getMemoryData(id C.uint) unsafe.Pointer {
+// memoryData returns a pointer to memory data.
+func memoryData(id C.uint) unsafe.Pointer {
 	return C.bridge_retro_get_memory_data(retroGetMemoryData, id)
 }
 
 // ptSaveRam return SRAM memory pointer if core supports it or nil.
 func ptSaveRAM() *mem {
-	ptr, size := getMemoryData(C.RETRO_MEMORY_SAVE_RAM), getMemorySize(C.RETRO_MEMORY_SAVE_RAM)
+	ptr, size := memoryData(C.RETRO_MEMORY_SAVE_RAM), memorySize(C.RETRO_MEMORY_SAVE_RAM)
 	if ptr == nil || size == 0 {
 		return nil
 	}
@@ -595,7 +598,7 @@ func (m Metadata) HasHack(h string) bool {
 }
 
 var (
-	//retroAPIVersion              unsafe.Pointer
+	retroAPIVersion              unsafe.Pointer
 	retroDeinit                  unsafe.Pointer
 	retroGetSystemAVInfo         unsafe.Pointer
 	retroGetSystemInfo           unsafe.Pointer
@@ -669,9 +672,6 @@ func coreVideoRefresh(data unsafe.Pointer, width, height uint, packed uint) {
 	Nan0.Handlers.OnVideo(data_, int32(dt), FrameInfo{W: width, H: height, Stride: packed})
 }
 
-//export coreInputPoll
-func coreInputPoll() {}
-
 //export coreInputState
 func coreInputState(port C.unsigned, device C.unsigned, index C.unsigned, id C.unsigned) C.int16_t {
 	//Nan0.log.Debug().Msgf("%v %v %v %v", port, device, index, id)
@@ -723,12 +723,6 @@ func coreInputState(port C.unsigned, device C.unsigned, index C.unsigned, id C.u
 	}
 
 	return Released
-}
-
-//export coreAudioSample
-func coreAudioSample(l, r C.int16_t) {
-	frame := []C.int16_t{l, r}
-	coreAudioSampleBatch(unsafe.Pointer(&frame), 1)
 }
 
 //export coreAudioSampleBatch
