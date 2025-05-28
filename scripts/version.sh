@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/usr/bin/env sh
 
 file="$1"
 version="$2"
