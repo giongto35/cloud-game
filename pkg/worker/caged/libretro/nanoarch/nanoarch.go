@@ -13,6 +13,7 @@ import (
 	"unsafe"
 
 	"github.com/giongto35/cloud-game/v3/pkg/logger"
+	"github.com/giongto35/cloud-game/v3/pkg/mcp"
 	"github.com/giongto35/cloud-game/v3/pkg/os"
 	"github.com/giongto35/cloud-game/v3/pkg/worker/caged/libretro/graphics"
 	"github.com/giongto35/cloud-game/v3/pkg/worker/thread"
@@ -440,6 +441,17 @@ func (n *Nanoarch) InputMouse(_ int, data []byte) {
 		n.mouse.ShiftPos(state)
 	case MouseButton:
 		n.mouse.SetButtons(state[0])
+	}
+}
+
+func (n *Nanoarch) InputMCP(port int, data []byte) {
+	msg, err := mcp.Parse(data)
+	if err != nil {
+		Nan0.log.Error().Err(err).Msg("mcp parse")
+		return
+	}
+	for _, b := range mcp.ToBytes(msg) {
+		n.InputKeyboard(port, b)
 	}
 }
 

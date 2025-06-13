@@ -47,6 +47,7 @@ const (
 	RetroPad Device = iota
 	Keyboard
 	Mouse
+	MCP
 )
 
 const (

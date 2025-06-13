@@ -19,6 +19,7 @@ const (
 	RetroPad = libretro.RetroPad
 	Keyboard = libretro.Keyboard
 	Mouse    = libretro.Mouse
+	MCP      = libretro.MCP
 )
 
 type ModName string

@@ -200,6 +200,7 @@ func (c *coordinator) HandleGameStart(rq api.StartGameRequest[com.Uid], w *Worke
 	if needsKbMouse {
 		_ = s.AddChannel("keyboard", func(data []byte) { r.App().Input(user.Index, byte(caged.Keyboard), data) })
 		_ = s.AddChannel("mouse", func(data []byte) { r.App().Input(user.Index, byte(caged.Mouse), data) })
+		_ = s.AddChannel("mcp", func(data []byte) { r.App().Input(user.Index, byte(caged.MCP), data) })
 	}
 
 	c.RegisterRoom(r.Id())
