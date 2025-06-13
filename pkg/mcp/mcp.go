@@ -2,22 +2,15 @@ package mcp
 
 import (
 	"encoding/binary"
-	"encoding/json"
+	mcpg "github.com/mark3labs/mcp-go"
 )
 
-type Action struct {
-	Key   string `json:"key"`
-	Press bool   `json:"press"`
-}
+type Action = mcpg.Action
 
-type Message struct {
-	Actions []Action `json:"actions"`
-}
+type Message = mcpg.Message
 
 func Parse(data []byte) (Message, error) {
-	var m Message
-	err := json.Unmarshal(data, &m)
-	return m, err
+	return mcpg.Parse(data)
 }
 
 func actionBytes(a Action) []byte {
@@ -26,7 +19,6 @@ func actionBytes(a Action) []byte {
 	if a.Press {
 		buf[4] = 1
 	}
-	// last two bytes are modifier flags, not used
 	return buf
 }
 

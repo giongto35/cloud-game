@@ -17,10 +17,11 @@ require (
 	github.com/pion/logging v0.2.3
 	github.com/pion/webrtc/v4 v4.1.0
 	github.com/rs/xid v1.6.0
-	github.com/rs/zerolog v1.34.0
-	github.com/veandco/go-sdl2 v0.4.40
-	golang.org/x/crypto v0.37.0
-	golang.org/x/image v0.25.0
+        github.com/rs/zerolog v1.34.0
+        github.com/veandco/go-sdl2 v0.4.40
+        github.com/mark3labs/mcp-go v0.1.0
+        golang.org/x/crypto v0.37.0
+        golang.org/x/image v0.25.0
 	gopkg.in/yaml.v3 v3.0.1
 )
 

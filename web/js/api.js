@@ -29,6 +29,9 @@ let transport = {
     },
     mouse: (packet) => {
         log.warn('Default transport is used! Change it with the api.transport variable.', packet)
+    },
+    mcp: (packet) => {
+        log.warn('Default transport is used! Change it with the api.transport variable.', packet)
     }
 }
 
@@ -115,6 +118,10 @@ const mousePress = (() => {
         transport.mouse(buffer)
     }
 })()
+
+const mcpSend = (cmd = '') => {
+    transport.mcp(cmd)
+}
 
 
 const libretro = function () {// RETRO_KEYBOARD
@@ -317,7 +324,8 @@ export const api = {
             mouse: {
                 move: mouseMove,
                 press: mousePress,
-            }
+            },
+            mcp: mcpSend
         },
         load: () => packet(endpoints.GAME_LOAD),
         reset: (roomId) => packet(endpoints.GAME_RESET, {room_id: roomId}),

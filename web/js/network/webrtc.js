@@ -12,6 +12,7 @@ let connection;
 let dataChannel
 let keyboardChannel
 let mouseChannel
+let mcpChannel
 let mediaStream;
 let candidates = [];
 let isAnswered = false;
@@ -39,6 +40,11 @@ const start = (iceservers) => {
 
         if (e.channel.label === 'mouse') {
             mouseChannel = e.channel
+            return
+        }
+
+        if (e.channel.label === 'mcp') {
+            mcpChannel = e.channel
             return
         }
 
@@ -87,6 +93,10 @@ const stop = () => {
     if (mouseChannel) {
         mouseChannel?.close()
         mouseChannel = null
+    }
+    if (mcpChannel) {
+        mcpChannel?.close()
+        mcpChannel = null
     }
     candidates = [];
     log.info('[rtc] WebRTC has been closed');
@@ -187,6 +197,7 @@ export const webrtc = {
     },
     keyboard: (data) => keyboardChannel?.send(data),
     mouse: (data) => mouseChannel?.send(data),
+    mcp: (data) => mcpChannel?.send(data),
     input: (data) => inputReady && dataChannel.send(data),
     isConnected: () => connected,
     isInputReady: () => inputReady,

@@ -55,6 +55,7 @@ import {screen} from './screen.js?v=3';
 import {stats} from './stats.js?v=3';
 import {stream} from './stream.js?v=3';
 import {workerManager} from "./workerManager.js?v=3";
+import {mcp} from './mcp.js?v=3';
 
 settings.init();
 log.level = settings.loadOr(opts.LOG_LEVEL, log.DEFAULT);
@@ -539,6 +540,7 @@ sub(SETTINGS_CHANGED, () => {
 setState(app.state.eden);
 
 input.init()
+mcp.init()
 
 stream.init();
 screen.init();
@@ -552,6 +554,7 @@ api.transport = {
     send: socket.send,
     keyboard: webrtc.keyboard,
     mouse: webrtc.mouse,
+    mcp: webrtc.mcp,
 }
 
 // stats
