@@ -78,6 +78,7 @@ const (
 	RetroPad = Device(nanoarch.RetroPad)
 	Keyboard = Device(nanoarch.Keyboard)
 	Mouse    = Device(nanoarch.Mouse)
+	MCP      = Device(nanoarch.MCP)
 )
 
 var (
@@ -340,6 +341,8 @@ func (f *Frontend) Input(port int, device byte, data []byte) {
 		f.nano.InputKeyboard(port, data)
 	case Mouse:
 		f.nano.InputMouse(port, data)
+	case MCP:
+		f.nano.InputMCP(port, data)
 	}
 }
 
