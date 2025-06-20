@@ -137,6 +137,9 @@ emulator:
   # path for storing emulator generated files
   localPath: "./libretro"
 
+  # checks if the system supports running an emulator at startup
+  failFast: true
+
   libretro:
     # use zip compression for emulator save states
     saveCompression: true

@@ -76,6 +76,15 @@ func NewSDLContext(cfg Config, log *logger.Logger) (*SDL, error) {
 	return &display, nil
 }
 
+// TryInit check weather SDL context can be created on the system.
+func TryInit() error {
+	if err := sdl.Init(sdl.INIT_VIDEO); err != nil {
+		return fmt.Errorf("SDL init fail: %w", err)
+	}
+	sdl.Quit()
+	return nil
+}
+
 // Deinit destroys SDL/OpenGL context.
 // Uses main thread lock (see thread/mainthread).
 func (s *SDL) Deinit() error {

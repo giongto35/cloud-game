@@ -31,6 +31,13 @@ func (c *Caged) Init() error {
 	if err := manager.CheckCores(c.conf.Emulator, c.log); err != nil {
 		c.log.Warn().Err(err).Msgf("a Libretro cores sync fail")
 	}
+
+	if c.conf.Emulator.FailFast {
+		if err := c.IsSupported(); err != nil {
+			return err
+		}
+	}
+
 	return nil
 }
 
@@ -92,3 +99,4 @@ func (c *Caged) Start()                           { go c.Emulator.Start() }
 func (c *Caged) SetSaveOnClose(v bool)            { c.base.SaveOnClose = v }
 func (c *Caged) SetSessionId(name string)         { c.base.SetSessionId(name) }
 func (c *Caged) Close()                           { c.Emulator.Close() }
+func (c *Caged) IsSupported() error               { return c.base.IsSupported() }

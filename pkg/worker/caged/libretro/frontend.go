@@ -13,6 +13,7 @@ import (
 	"github.com/giongto35/cloud-game/v3/pkg/logger"
 	"github.com/giongto35/cloud-game/v3/pkg/os"
 	"github.com/giongto35/cloud-game/v3/pkg/worker/caged/app"
+	"github.com/giongto35/cloud-game/v3/pkg/worker/caged/libretro/graphics"
 	"github.com/giongto35/cloud-game/v3/pkg/worker/caged/libretro/nanoarch"
 )
 
@@ -420,6 +421,10 @@ func (f *Frontend) Load() error {
 		nanoarch.RestoreSaveRAM(sram)
 	}
 	return nil
+}
+
+func (f *Frontend) IsSupported() error {
+	return graphics.TryInit()
 }
 
 func (f *Frontend) autosave(periodSec int) {

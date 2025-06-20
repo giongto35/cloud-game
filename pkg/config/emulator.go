@@ -9,6 +9,7 @@ import (
 )
 
 type Emulator struct {
+	FailFast    bool
 	Threads     int
 	Storage     string
 	LocalPath   string
