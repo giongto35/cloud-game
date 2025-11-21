@@ -2,7 +2,7 @@ ARG BUILD_PATH=/tmp/cloud-game
 ARG VERSION=master
 
 # base build stage
-FROM ubuntu:oracular AS build0
+FROM ubuntu:plucky AS build0
 ARG GO=1.25.0
 ARG GO_DIST=go${GO}.linux-amd64.tar.gz
 
@@ -21,7 +21,7 @@ RUN apt-get -q update && apt-get -q install --no-install-recommends -y \
 FROM build0 AS build_coordinator
 ARG BUILD_PATH
 ARG VERSION
-ENV GIT_VERSION ${VERSION}
+ENV GIT_VERSION=${VERSION}
 
 WORKDIR ${BUILD_PATH}
 
@@ -41,7 +41,7 @@ RUN ${BUILD_PATH}/scripts/version.sh ./web/index.html ${VERSION} && \
 FROM build0 AS build_worker
 ARG BUILD_PATH
 ARG VERSION
-ENV GIT_VERSION ${VERSION}
+ENV GIT_VERSION=${VERSION}
 
 WORKDIR ${BUILD_PATH}
 
@@ -73,7 +73,7 @@ COPY --from=build_coordinator /usr/local/share/cloud-game /cloud-game
 # autocertbot (SSL) requires these on the first run
 COPY --from=build_coordinator /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/
 
-FROM ubuntu:oracular AS worker
+FROM ubuntu:plucky AS worker
 
 RUN apt-get -q update && apt-get -q install --no-install-recommends -y \
     curl \
