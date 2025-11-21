@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"sync"
 	"time"
@@ -63,6 +64,11 @@ type Frontend struct {
 	scale   float64
 	th      int // draw threads
 	vw, vh  int // out frame size
+
+	// directives
+
+	// skipVideo used when new frame was too late
+	skipVideo bool
 
 	mu  sync.Mutex
 	mui sync.Mutex
@@ -198,6 +204,10 @@ func (f *Frontend) handleAudio(audio unsafe.Pointer, samples int) {
 }
 
 func (f *Frontend) handleVideo(data []byte, delta int32, fi nanoarch.FrameInfo) {
+	if f.skipVideo {
+		return
+	}
+
 	fr, _ := videoPool.Get().(*app.Video)
 	if fr == nil {
 		fr = new(app.Video)
@@ -258,6 +268,10 @@ func (f *Frontend) Start() {
 		return
 	}
 
+	// don't jump between threads
+	runtime.LockOSThread()
+	defer runtime.UnlockOSThread()
+
 	f.mui.Lock()
 	f.done = make(chan struct{})
 	f.nano.LastFrameTime = time.Now().UnixNano()
@@ -297,7 +311,7 @@ func (f *Frontend) Start() {
 	const spinThreshold = 1 * time.Millisecond
 
 	// how many frames will be considered not normal
-	const lateFramesThreshold = 4
+	const lateFramesThreshold = 3
 
 	lastFrameStart := time.Now()
 
@@ -326,9 +340,11 @@ func (f *Frontend) Start() {
 				for time.Since(lastFrameStart) < targetFrameTime {
 					// CPU burn!
 				}
+				f.skipVideo = false
 			} else {
 				// lagging behind the target framerate so we don't sleep
 				f.log.Debug().Msgf("[] Frame drop: %v", elapsed)
+				f.skipVideo = true
 			}
 
 			// timer reset
