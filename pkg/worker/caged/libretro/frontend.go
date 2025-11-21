@@ -283,20 +283,67 @@ func (f *Frontend) Start() {
 		}
 	}
 
-	ticker := time.NewTicker(time.Second / time.Duration(f.nano.VideoFramerate()))
-	defer ticker.Stop()
-
 	if f.conf.AutosaveSec > 0 {
 		// !to sync both for loops, can crash if the emulator starts later
 		go f.autosave(f.conf.AutosaveSec)
 	}
 
+	// The main loop of Libretro
+
+	// calculate the exact duration required for a frame (e.g., 16.666ms = 60 FPS)
+	targetFrameTime := time.Second / time.Duration(f.nano.VideoFramerate())
+
+	// stop sleeping and start spinning in the remaining 1ms
+	const spinThreshold = 1 * time.Millisecond
+
+	// how many frames will be considered not normal
+	const lateFramesThreshold = 4
+
+	lastFrameStart := time.Now()
+
 	for {
 		select {
-		case <-ticker.C:
-			f.Tick()
 		case <-f.done:
 			return
+		default:
+			// run one tick of the emulation
+			f.Tick()
+
+			elapsed := time.Since(lastFrameStart)
+			sleepTime := targetFrameTime - elapsed
+
+			if sleepTime > 0 {
+				// SLEEP
+				// if we have plenty of time, sleep to save CPU and
+				// wake up slightly before the target time
+				if sleepTime > spinThreshold {
+					time.Sleep(sleepTime - spinThreshold)
+				}
+
+				// SPIN
+				// if we are close to the target,
+				// burn CPU and check the clock with ns resolution
+				for time.Since(lastFrameStart) < targetFrameTime {
+					// CPU burn!
+				}
+			} else {
+				// lagging behind the target framerate so we don't sleep
+				f.log.Debug().Msgf("[] Frame drop: %v", elapsed)
+			}
+
+			// timer reset
+			//
+			// adding targetFrameTime to the previous start
+			// prevents drift, if one frame was late,
+			// we try to catch up in the next frame
+			lastFrameStart = lastFrameStart.Add(targetFrameTime)
+
+			// if execution was paused or heavily delayed,
+			// reset lastFrameStart so we don't try to run
+			// a bunch of frames instantly to catch up
+			if time.Since(lastFrameStart) > targetFrameTime*lateFramesThreshold {
+				lastFrameStart = time.Now()
+			}
 		}
 	}
 }
