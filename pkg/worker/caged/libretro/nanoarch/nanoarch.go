@@ -626,7 +626,6 @@ var (
 //export coreVideoRefresh
 func coreVideoRefresh(data unsafe.Pointer, width, height uint, packed uint) {
 	if Nan0.Stopped.Load() {
-		Nan0.log.Warn().Msgf(">>> skip video")
 		return
 	}
 
@@ -635,13 +634,12 @@ func coreVideoRefresh(data unsafe.Pointer, width, height uint, packed uint) {
 	// (and proper frame display time, for example: 1->1/60=16.6ms, 2->10ms, 3->23ms, 4->16.6ms)
 	// this is useful only for cores with variable framerate, for the fixed framerate cores this adds stutter
 	// !to find docs on Libretro refresh sync and frame times
-	t := time.Now().UnixNano()
 	dt := Nan0.tickTime
-	// override frame rendering with dynamic frame times
 	if Nan0.vfr {
+		t := time.Now().UnixNano()
 		dt = t - Nan0.LastFrameTime
+		Nan0.LastFrameTime = t
 	}
-	Nan0.LastFrameTime = t
 
 	// when the core returns a duplicate frame
 	if data == nil {
@@ -651,8 +649,9 @@ func coreVideoRefresh(data unsafe.Pointer, width, height uint, packed uint) {
 
 	// calculate real frame width in pixels from packed data (realWidth >= width)
 	// some cores or games output zero pitch, i.e. N64 Mupen
+	bpp := Nan0.Video.PixFmt.BPP
 	if packed == 0 {
-		packed = width * Nan0.Video.PixFmt.BPP
+		packed = width * bpp
 	}
 	// calculate space for the video frame
 	bytes := packed * height
@@ -729,9 +728,6 @@ func coreInputState(port C.unsigned, device C.unsigned, index C.unsigned, id C.u
 //export coreAudioSampleBatch
 func coreAudioSampleBatch(data unsafe.Pointer, frames C.size_t) C.size_t {
 	if Nan0.Stopped.Load() {
-		if Nan0.log.GetLevel() < logger.InfoLevel {
-			Nan0.log.Warn().Msgf(">>> skip %v audio frames", frames)
-		}
 		return frames
 	}
 	Nan0.Handlers.OnAudio(data, int(frames)<<1)
