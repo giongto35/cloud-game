@@ -170,10 +170,10 @@ func (t *RPC[_, _]) callTimeout() time.Duration {
 
 func (t *RPC[_, _]) Cleanup() {
 	// drain cancels all what's left in the task queue.
-	t.calls.ForEach(func(task *request) {
+	for task := range t.calls.Values() {
 		if task.err == nil {
 			task.err = errCanceled
 		}
 		close(task.done)
-	})
+	}
 }

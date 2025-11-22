@@ -155,7 +155,7 @@ func (h *Hub) handleWorkerConnection() http.HandlerFunc {
 
 func (h *Hub) GetServerList() (r []api.Server) {
 	debug := h.conf.Coordinator.Debug
-	h.workers.ForEach(func(w *Worker) {
+	for w := range h.workers.Values() {
 		server := api.Server{
 			Addr:    w.Addr,
 			Id:      w.Id(),
@@ -170,7 +170,7 @@ func (h *Hub) GetServerList() (r []api.Server) {
 			server.Room = w.RoomId
 		}
 		r = append(r, server)
-	})
+	}
 	return
 }
 
@@ -240,11 +240,11 @@ func (h *Hub) findWorkerByRoom(id string, region string) *Worker {
 
 func (h *Hub) getAvailableWorkers(region string) []*Worker {
 	var workers []*Worker
-	h.workers.ForEach(func(w *Worker) {
+	for w := range h.workers.Values() {
 		if w.HasSlot() && w.In(region) {
 			workers = append(workers, w)
 		}
-	})
+	}
 	return workers
 }
 

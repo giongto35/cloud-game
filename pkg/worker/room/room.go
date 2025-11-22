@@ -1,6 +1,7 @@
 package room
 
 import (
+	"iter"
 	"sync"
 
 	"github.com/giongto35/cloud-game/v3/pkg/worker/caged/app"
@@ -27,10 +28,10 @@ type SessionManager[T Session] interface {
 	Add(T) bool
 	Empty() bool
 	Find(string) T
-	ForEach(func(T))
 	RemoveL(T) int
 	// Reset used for proper cleanup of the resources if needed.
 	Reset()
+	Values() iter.Seq[T]
 }
 
 type Session interface {
@@ -65,13 +66,19 @@ func NewRoom[T Session](id string, app app.App, um SessionManager[T], media Medi
 
 func (r *Room[T]) InitAudio() {
 	r.app.SetAudioCb(func(a app.Audio) { r.media.PushAudio(a.Data) })
-	r.media.SetAudioCb(func(d []byte, l int32) { r.users.ForEach(func(u T) { u.SendAudio(d, l) }) })
+	r.media.SetAudioCb(func(d []byte, l int32) {
+		for u := range r.users.Values() {
+			u.SendAudio(d, l)
+		}
+	})
 }
 
 func (r *Room[T]) InitVideo() {
 	r.app.SetVideoCb(func(v app.Video) {
 		data := r.media.ProcessVideo(v)
-		r.users.ForEach(func(u T) { u.SendVideo(data, v.Duration) })
+		for u := range r.users.Values() {
+			u.SendVideo(data, v.Duration)
+		}
 	})
 }
 
@@ -81,7 +88,11 @@ func (r *Room[T]) Id() string           { return r.id }
 func (r *Room[T]) SetApp(app app.App)   { r.app = app }
 func (r *Room[T]) SetMedia(m MediaPipe) { r.media = m }
 func (r *Room[T]) StartApp()            { r.app.Start() }
-func (r *Room[T]) Send(data []byte)     { r.users.ForEach(func(u T) { u.SendData(data) }) }
+func (r *Room[T]) Send(data []byte) {
+	for u := range r.users.Values() {
+		u.SendData(data)
+	}
+}
 
 func (r *Room[T]) Close() {
 	if r == nil || r.closed {
@@ -137,7 +148,9 @@ func (r *Router[T]) Reset() {
 		r.room.Close()
 		r.room = nil
 	}
-	r.users.ForEach(func(u T) { u.Disconnect() })
+	for u := range r.users.Values() {
+		u.Disconnect()
+	}
 	r.users.Reset()
 	r.mu.Unlock()
 }

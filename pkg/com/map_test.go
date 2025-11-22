@@ -17,11 +17,11 @@ func TestMap_Base(t *testing.T) {
 	if !m.Has(k) {
 		t.Errorf("should have the key %v, %v", k, m.m)
 	}
-	v, ok := m.Contains(k)
+	v, ok := m.Get(k)
 	if v != 0 && !ok {
 		t.Errorf("should have the key %v and ok, %v %v", k, ok, m.m)
 	}
-	_, ok = m.Contains(k + 1)
+	_, ok = m.Get(k + 1)
 	if ok {
 		t.Errorf("should not find anything, %v %v", ok, m.m)
 	}
@@ -31,7 +31,9 @@ func TestMap_Base(t *testing.T) {
 		t.Errorf("should have the key %v and ok, %v %v", 1, ok, m.m)
 	}
 	sum := 0
-	m.ForEach(func(v int) { sum += v })
+	for v := range m.Values() {
+		sum += v
+	}
 	if sum != 1 {
 		t.Errorf("shoud have exact sum of 1, but have %v", sum)
 	}
