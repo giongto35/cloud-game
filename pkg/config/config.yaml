@@ -140,6 +140,9 @@ emulator:
   # checks if the system supports running an emulator at startup
   failFast: true
 
+  # do not send late video frames
+  skipLateFrames: false
+
   libretro:
     # use zip compression for emulator save states
     saveCompression: true

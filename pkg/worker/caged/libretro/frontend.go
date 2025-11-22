@@ -204,7 +204,7 @@ func (f *Frontend) handleAudio(audio unsafe.Pointer, samples int) {
 }
 
 func (f *Frontend) handleVideo(data []byte, delta int32, fi nanoarch.FrameInfo) {
-	if f.skipVideo {
+	if f.conf.SkipLateFrames && f.skipVideo {
 		return
 	}
 
