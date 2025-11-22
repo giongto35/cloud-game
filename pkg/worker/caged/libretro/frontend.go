@@ -70,6 +70,8 @@ type Frontend struct {
 	// skipVideo used when new frame was too late
 	skipVideo bool
 
+	inputs [maxPort]inputCache
+
 	mu  sync.Mutex
 	mui sync.Mutex
 
@@ -80,6 +82,16 @@ type Frontend struct {
 }
 
 type Device byte
+
+type inputCache struct {
+	mu    sync.Mutex
+	pad   []byte
+	key   []byte
+	mouse []byte
+	dirty uint8 // bitmask: 1=Pad, 2=Key, 4=Mouse
+}
+
+const maxPort = 8
 
 const (
 	RetroPad = Device(nanoarch.RetroPad)
@@ -395,18 +407,58 @@ func (f *Frontend) SetAudioCb(cb func(app.Audio)) { f.onAudio = cb }
 func (f *Frontend) SetSessionId(name string)      { f.storage.SetMainSaveName(name) }
 func (f *Frontend) SetDataCb(cb func([]byte))     { f.onData = cb }
 func (f *Frontend) SetVideoCb(ff func(app.Video)) { f.onVideo = ff }
-func (f *Frontend) Tick()                         { f.mu.Lock(); f.nano.Run(); f.mu.Unlock() }
+func (f *Frontend) Tick()                         { f.syncInputs(); f.mu.Lock(); f.nano.Run(); f.mu.Unlock() }
 func (f *Frontend) ViewportRecalculate()          { f.mu.Lock(); f.vw, f.vh = f.ViewportCalc(); f.mu.Unlock() }
 func (f *Frontend) ViewportSize() (int, int)      { return f.vw, f.vh }
 
 func (f *Frontend) Input(port int, device byte, data []byte) {
+	if port >= maxPort {
+		return
+	}
+
+	c := &f.inputs[port]
+
+	c.mu.Lock()
+
 	switch Device(device) {
 	case RetroPad:
-		f.nano.InputRetropad(port, data)
+		c.pad = append(c.pad[:0], data...)
+		c.dirty |= 1
 	case Keyboard:
-		f.nano.InputKeyboard(port, data)
+		c.key = append(c.key[:0], data...)
+		c.dirty |= 2
 	case Mouse:
-		f.nano.InputMouse(port, data)
+		c.mouse = append(c.mouse[:0], data...)
+		c.dirty |= 4
+	}
+
+	c.mu.Unlock()
+}
+
+func (f *Frontend) syncInputs() {
+	for i := 0; i < maxPort; i++ {
+		c := &f.inputs[i]
+
+		c.mu.Lock()
+		if c.dirty == 0 {
+			c.mu.Unlock()
+			continue
+		}
+
+		d := c.dirty
+		c.dirty = 0
+
+		if d&1 != 0 {
+			f.nano.InputRetropad(i, c.pad)
+		}
+		if d&2 != 0 {
+			f.nano.InputKeyboard(i, c.key)
+		}
+		if d&4 != 0 {
+			f.nano.InputMouse(i, c.mouse)
+		}
+
+		c.mu.Unlock()
 	}
 }
 
