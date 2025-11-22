@@ -343,7 +343,10 @@ func (f *Frontend) Start() {
 				f.skipVideo = false
 			} else {
 				// lagging behind the target framerate so we don't sleep
-				f.log.Debug().Msgf("[] Frame drop: %v", elapsed)
+				if f.conf.LogDroppedFrames {
+					// !to make some stats counter instead
+					f.log.Debug().Msgf("[] Frame drop: %v", elapsed)
+				}
 				f.skipVideo = true
 			}
 

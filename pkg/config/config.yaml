@@ -143,6 +143,9 @@ emulator:
   # do not send late video frames
   skipLateFrames: false
 
+  # log dropped frames (temp)
+  logDroppedFrames: false
+
   libretro:
     # use zip compression for emulator save states
     saveCompression: true

@@ -9,13 +9,14 @@ import (
 )
 
 type Emulator struct {
-	FailFast       bool
-	Threads        int
-	Storage        string
-	LocalPath      string
-	Libretro       LibretroConfig
-	AutosaveSec    int
-	SkipLateFrames bool
+	FailFast         bool
+	Threads          int
+	Storage          string
+	LocalPath        string
+	Libretro         LibretroConfig
+	AutosaveSec      int
+	SkipLateFrames   bool
+	LogDroppedFrames bool
 }
 
 type LibretroConfig struct {
