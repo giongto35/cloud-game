@@ -25,7 +25,9 @@ type lookMap struct {
 
 func (l *lookMap) Reset() {
 	l.prev = com.NewNetMap[string, *tSession]()
-	l.Map.ForEach(func(s *tSession) { l.prev.Add(s) })
+	for s := range l.Map.Values() {
+		l.prev.Add(s)
+	}
 	l.NetMap.Reset()
 }
 
@@ -59,7 +61,9 @@ func TestRouterReset(t *testing.T) {
 	router.Reset()
 
 	disconnected := true
-	u.prev.ForEach(func(u *tSession) { disconnected = disconnected && !u.connected })
+	for u := range u.prev.Values() {
+		disconnected = disconnected && !u.connected
+	}
 	if !disconnected {
 		t.Errorf("not all users were disconnected, but should")
 	}
