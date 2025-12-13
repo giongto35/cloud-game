@@ -23,7 +23,11 @@ func TestBufferWrite(t *testing.T) {
 				{sample: 2, len: 20},
 				{sample: 3, len: 30},
 			},
-			expect: samples{3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3},
+			expect: samples{
+				2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 3, 3, 3,
+				3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3,
+				3, 3, 3, 3, 3, 3, 3, 3, 3, 3,
+			},
 		},
 		{
 			bufLen: 2000,
@@ -32,7 +36,7 @@ func TestBufferWrite(t *testing.T) {
 				{sample: 2, len: 18},
 				{sample: 3, len: 2},
 			},
-			expect: samples{2, 3, 3, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2},
+			expect: samples{1, 1, 1, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2},
 		},
 	}
 
@@ -48,7 +52,7 @@ func TestBufferWrite(t *testing.T) {
 			)
 		}
 		if !reflect.DeepEqual(test.expect, lastResult) {
-			t.Errorf("not expted buffer, %v != %v, %v", lastResult, test.expect, len(buf.cur.mem))
+			t.Errorf("not expted buffer, %v != %v, %v", lastResult, test.expect, len(buf.buckets))
 		}
 	}
 }

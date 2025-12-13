@@ -12,17 +12,13 @@ import (
 	"github.com/giongto35/cloud-game/v3/pkg/worker/caged/app"
 )
 
-const (
-	audioHz      = 48000
-	sampleBufLen = 1024 * 4
-)
+const audioHz = 48000
 
 type samples []int16
 
 var (
 	encoderOnce = sync.Once{}
 	opusCoder   *opus.Encoder
-	buf         = make([]int16, sampleBufLen)
 )
 
 func DefaultOpus() (*opus.Encoder, error) {
@@ -116,7 +112,7 @@ func (wmp *WebrtcMediaPipe) initAudio(srcHz int, frameSizes []float32) error {
 	wmp.log.Debug().Msgf("Opus frames (ms): %v", frameSizes)
 	dstHz, _ := au.SampleRate()
 	if srcHz != dstHz {
-		buf.resample(dstHz)
+		buf.resample(dstHz, ResampleAlgo(wmp.aConf.Resampler))
 		wmp.log.Debug().Msgf("Resample %vHz -> %vHz", srcHz, dstHz)
 	}
 	wmp.audioBuf = buf

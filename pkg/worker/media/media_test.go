@@ -126,7 +126,7 @@ func TestResampleStretch(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			rez2 := tt.args.pcm.stretch(tt.args.size)
+			rez2 := stretchNearest(tt.args.pcm, tt.args.size)
 			if rez2[0] != tt.args.pcm[0] || rez2[1] != tt.args.pcm[1] ||
 				rez2[len(rez2)-1] != tt.args.pcm[len(tt.args.pcm)-1] ||
 				rez2[len(rez2)-2] != tt.args.pcm[len(tt.args.pcm)-2] {
@@ -141,7 +141,7 @@ func BenchmarkResampler(b *testing.B) {
 	pcm := samples(gen(1764))
 	size := 1920
 	for i := 0; i < b.N; i++ {
-		pcm.stretch(size)
+		stretchLinear(pcm, size)
 	}
 }
 
@@ -170,7 +170,7 @@ func TestFrame(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if got := frame(tt.args.hz, tt.args.frame); got != tt.want {
+			if got := frameStereoSamples(tt.args.hz, tt.args.frame); got != tt.want {
 				t.Errorf("frame() = %v, want %v", got, tt.want)
 			}
 		})

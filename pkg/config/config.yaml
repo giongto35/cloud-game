@@ -341,6 +341,9 @@ encoder:
     frames:
       - 10
       - 5
+    # linear (1) or nearest neighbour (0) audio resampler
+    # linear should sound slightly better
+    resampler: 1
   video:
     # h264, vpx (vp8) or vp9
     codec: h264
