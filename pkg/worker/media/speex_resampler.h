@@ -36,10 +36,41 @@ SpeexResamplerState *speex_resampler_init(spx_uint32_t nb_channels,
                                           spx_uint32_t out_rate,
                                           int quality,
                                           int *err);
+/** Create a new resampler with fractional input/output rates. The sampling
+ * rate ratio is an arbitrary rational number with both the numerator and
+ * denominator being 32-bit integers.
+ * @param nb_channels Number of channels to be processed
+ * @param ratio_num Numerator of the sampling rate ratio
+ * @param ratio_den Denominator of the sampling rate ratio
+ * @param in_rate Input sampling rate rounded to the nearest integer (in Hz).
+ * @param out_rate Output sampling rate rounded to the nearest integer (in Hz).
+ * @param quality Resampling quality between 0 and 10, where 0 has poor quality
+ * and 10 has very high quality.
+ * @return Newly created resampler state
+ * @retval NULL Error: not enough memory
+ */
+SpeexResamplerState *speex_resampler_init_frac(spx_uint32_t nb_channels,
+                                               spx_uint32_t ratio_num,
+                                               spx_uint32_t ratio_den,
+                                               spx_uint32_t in_rate,
+                                               spx_uint32_t out_rate,
+                                               int quality,
+                                               int *err);
 /** Destroy a resampler state.
  * @param st Resampler state
  */
 void speex_resampler_destroy(SpeexResamplerState *st);
+
+
+/** Make sure that the first samples to go out of the resamplers don't have
+ * leading zeros. This is only useful before starting to use a newly created
+ * resampler. It is recommended to use that when resampling an audio file, as
+ * it will generate a file with the same length. For real-time processing,
+ * it is probably easier not to use this call (so that the output duration
+ * is the same for the first frame).
+ * @param st Resampler state
+ */
+int speex_resampler_skip_zeros(SpeexResamplerState *st);
 
 /** Resample an interleaved int array. The input and output buffers must *not* overlap.
  * @param st Resampler state
