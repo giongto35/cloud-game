@@ -125,8 +125,9 @@ func TestResampleStretch(t *testing.T) {
 		{name: "", args: args{pcm: gen(1764), size: 1920}, want: nil},
 	}
 	for _, tt := range tests {
+		buf, _ := newBuffer([]float32{20}, 2000)
 		t.Run(tt.name, func(t *testing.T) {
-			rez2 := nearest(tt.args.pcm, make(samples, tt.args.size))
+			rez2 := buf.nearest(tt.args.pcm, tt.args.size)
 			if rez2[0] != tt.args.pcm[0] || rez2[1] != tt.args.pcm[1] ||
 				rez2[len(rez2)-1] != tt.args.pcm[len(tt.args.pcm)-1] ||
 				rez2[len(rez2)-2] != tt.args.pcm[len(tt.args.pcm)-2] {
@@ -140,8 +141,9 @@ func TestResampleStretch(t *testing.T) {
 func BenchmarkResampler(b *testing.B) {
 	pcm := samples(gen(1764))
 	size := 1920
+	buf, _ := newBuffer([]float32{20}, 1000)
 	for i := 0; i < b.N; i++ {
-		linear(pcm, make(samples, size))
+		buf.linear(pcm, size)
 	}
 }
 

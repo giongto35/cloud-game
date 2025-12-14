@@ -1,9 +1,6 @@
 package media
 
-import (
-	"errors"
-	"slices"
-)
+import "errors"
 
 type ResampleAlgo uint8
 
@@ -14,14 +11,21 @@ const (
 )
 
 type buffer struct {
-	in, out   samples
-	frames    []float32
+	raw       samples
+	scratch   samples
+	buckets   []bucket
 	resampler *Resampler
 	srcHz     int
 	dstHz     int
-	fi        int
-	p         int
+	bi        int
 	algo      ResampleAlgo
+}
+
+type bucket struct {
+	mem samples
+	ms  float32
+	p   int
+	dst int
 }
 
 func newBuffer(frames []float32, hz int) (*buffer, error) {
@@ -29,123 +33,141 @@ func newBuffer(frames []float32, hz int) (*buffer, error) {
 		return nil, errors.New("invalid params")
 	}
 
-	// frames should be sorted ascending, largest last
-	frames = slices.Clone(frames)
-	slices.Sort(frames)
+	var totalSize int
+	for _, f := range frames {
+		totalSize += stereoSamples(hz, f)
+	}
+	if totalSize == 0 {
+		return nil, errors.New("zero buffer size")
+	}
 
-	maxSize := stereoSamples(hz, frames[len(frames)-1])
+	buf := &buffer{
+		raw:     make(samples, totalSize),
+		scratch: make(samples, 5760),
+		srcHz:   hz,
+		dstHz:   hz,
+	}
 
-	return &buffer{
-		in:     make(samples, maxSize),
-		out:    make(samples, maxSize),
-		frames: frames,
-		srcHz:  hz,
-		dstHz:  hz,
-		fi:     len(frames) - 1, // start with largest
-	}, nil
+	offset := 0
+	for _, f := range frames {
+		size := stereoSamples(hz, f)
+		buf.buckets = append(buf.buckets, bucket{mem: buf.raw[offset : offset+size], ms: f, dst: size})
+		offset += size
+	}
+	buf.bi = len(buf.buckets) - 1
+
+	return buf, nil
 }
 
 func (b *buffer) close() {
 	if b.resampler != nil {
 		b.resampler.Destroy()
+		b.resampler = nil
 	}
 }
 
 func (b *buffer) resample(targetHz int, algo ResampleAlgo) error {
-	b.algo, b.dstHz = algo, targetHz
-	b.out = make(samples, stereoSamples(targetHz, b.frames[len(b.frames)-1]))
+	b.algo = algo
+	b.dstHz = targetHz
+
+	for i := range b.buckets {
+		b.buckets[i].dst = stereoSamples(targetHz, b.buckets[i].ms)
+	}
 
 	if algo == ResampleSpeex {
 		var err error
-		b.resampler, err = NewResampler(2, b.srcHz, targetHz, QualityMax)
-		return err
+		if b.resampler, err = ResamplerInit(2, b.srcHz, targetHz, QualityMax); err != nil {
+			return err
+		}
 	}
 	return nil
 }
 
-func (b *buffer) write(s samples, onFull func(samples, float32)) {
-	for len(s) > 0 {
-		srcSize := stereoSamples(b.srcHz, b.frames[b.fi])
+func (b *buffer) write(s samples, onFull func(samples, float32)) int {
+	read := 0
+	for read < len(s) {
+		cur := &b.buckets[b.bi]
+		n := copy(cur.mem[cur.p:], s[read:])
+		read += n
+		cur.p += n
 
-		n := copy(b.in[b.p:srcSize], s)
-		if n == 0 {
-			// oof
-			break
-		}
-
-		s = s[n:]
-		b.p += n
-
-		if b.p >= srcSize {
-			onFull(b.stretch(srcSize), b.frames[b.fi])
-			b.p = 0
-			b.choose(len(s))
+		if cur.p == len(cur.mem) {
+			onFull(b.stretch(cur.mem, cur.dst), cur.ms)
+			b.choose(len(s) - read)
+			b.buckets[b.bi].p = 0
 		}
 	}
-	// Remaining samples stay in buffer, will be completed on next write
+	return read
 }
 
 func (b *buffer) choose(remaining int) {
-	// Find the largest bucket that fits in remaining samples
-	for i := len(b.frames) - 1; i >= 0; i-- {
-		if remaining >= stereoSamples(b.srcHz, b.frames[i]) {
-			b.fi = i
+	for i := len(b.buckets) - 1; i >= 0; i-- {
+		if remaining >= len(b.buckets[i].mem) {
+			b.bi = i
 			return
 		}
 	}
-	// Nothing fits - use smallest and wait for more data
-	b.fi = 0
+	b.bi = 0
 }
 
-func (b *buffer) stretch(srcSize int) samples {
-	dstSize := stereoSamples(b.dstHz, b.frames[b.fi])
-	src, out := b.in[:srcSize], b.out[:dstSize]
-
-	if srcSize == dstSize {
-		return src
-	}
-
+func (b *buffer) stretch(src samples, dstSize int) samples {
 	switch b.algo {
 	case ResampleSpeex:
-		if n, _ := b.resampler.Process(src, out); n == dstSize {
-			return out
+		if b.resampler != nil {
+			if _, out, err := b.resampler.ProcessIntInterleaved(src); err == nil {
+				if len(out) == dstSize {
+					return out
+				}
+				src = out // use speex output for linear correction
+			}
 		}
 		fallthrough
 	case ResampleLinear:
-		return linear(src, out)
+		return b.linear(src, dstSize)
 	case ResampleNearest:
-		return nearest(src, out)
+		return b.nearest(src, dstSize)
+	default:
+		return b.linear(src, dstSize)
 	}
-	return src
 }
 
-func linear(src, out samples) samples {
-	sn, dn := len(src)/2, len(out)/2
-	if sn < 2 || dn < 2 {
-		return out
+func (b *buffer) linear(src samples, dstSize int) samples {
+	srcLen := len(src)
+	if srcLen < 2 || dstSize < 2 {
+		return b.scratch[:dstSize]
 	}
-	ratio := ((sn - 1) << 16) / (dn - 1)
-	for i := 0; i < dn; i++ {
+
+	out := b.scratch[:dstSize]
+	srcPairs, dstPairs := srcLen/2, dstSize/2
+	ratio := ((srcPairs - 1) << 16) / (dstPairs - 1)
+
+	for i := 0; i < dstPairs; i++ {
 		pos := i * ratio
-		si, frac := (pos>>16)*2, pos&0xFFFF
+		idx, frac := (pos>>16)*2, pos&0xFFFF
 		di := i * 2
-		if si >= len(src)-2 {
-			out[di], out[di+1] = src[len(src)-2], src[len(src)-1]
+
+		if idx >= srcLen-2 {
+			out[di], out[di+1] = src[srcLen-2], src[srcLen-1]
 		} else {
-			out[di] = int16(int32(src[si]) + ((int32(src[si+2])-int32(src[si]))*int32(frac))>>16)
-			out[di+1] = int16(int32(src[si+1]) + ((int32(src[si+3])-int32(src[si+1]))*int32(frac))>>16)
+			out[di] = int16(int32(src[idx]) + ((int32(src[idx+2])-int32(src[idx]))*int32(frac))>>16)
+			out[di+1] = int16(int32(src[idx+1]) + ((int32(src[idx+3])-int32(src[idx+1]))*int32(frac))>>16)
 		}
 	}
 	return out
 }
 
-func nearest(src, out samples) samples {
-	sn, dn := len(src)/2, len(out)/2
-	if sn < 2 || dn < 2 {
-		return out
+func (b *buffer) nearest(src samples, dstSize int) samples {
+	srcLen := len(src)
+	if srcLen < 2 || dstSize < 2 {
+		return b.scratch[:dstSize]
 	}
-	for i := 0; i < dn; i++ {
-		si, di := (i*sn/dn)*2, i*2
+
+	out := b.scratch[:dstSize]
+	srcPairs, dstPairs := srcLen/2, dstSize/2
+
+	for i := 0; i < dstPairs; i++ {
+		si := (i * srcPairs / dstPairs) * 2
+		di := i * 2
 		out[di], out[di+1] = src[si], src[si+1]
 	}
 	return out
