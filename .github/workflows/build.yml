@@ -36,7 +36,7 @@ jobs:
           sudo apt-get -qq install -y \
             make pkg-config \
             libvpx-dev libx264-dev libopus-dev libyuv-dev libjpeg-turbo8-dev \
-            libsdl2-dev libgl1 libglx-mesa0
+            libsdl2-dev libgl1 libglx-mesa0 libspeexdsp-dev
           
           make build
           xvfb-run --auto-servernum make test verify-cores
@@ -44,7 +44,7 @@ jobs:
       - name: macOS
         if: matrix.os == 'macos-12'
         run: |
-          brew install libvpx x264 sdl2
+          brew install libvpx x264 sdl2 speexdsp
           make build test verify-cores
 
       - uses: msys2/setup-msys2@v2
@@ -63,6 +63,7 @@ jobs:
             mingw-w64-ucrt-x86_64-SDL2
             mingw-w64-ucrt-x86_64-libyuv
             mingw-w64-ucrt-x86_64-libjpeg-turbo
+            mingw-w64-ucrt-x86_64-speexdsp
 
       - name: Windows
         if: matrix.os == 'windows-latest'
