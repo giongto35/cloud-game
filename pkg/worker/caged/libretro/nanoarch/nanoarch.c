@@ -3,17 +3,18 @@
 #include <stdbool.h>
 #include <stdarg.h>
 #include <stdio.h>
+#include <string.h>
 
 #define RETRO_ENVIRONMENT_GET_CLEAR_ALL_THREAD_WAITS_CB (3 | 0x800000)
 
 int initialized = 0;
 
 typedef struct {
-	int   type;
-	void* fn;
-	void* arg1;
-	void* arg2;
-	void* result;
+    int   type;
+    void* fn;
+    void* arg1;
+    void* arg2;
+    void* result;
 } call_def_t;
 
 call_def_t call;
@@ -25,6 +26,57 @@ enum call_type {
 };
 
 void *same_thread_with_args(void *f, int type, ...);
+
+// Input State Cache
+
+#define INPUT_MAX_PORTS 4
+#define INPUT_MAX_KEYS 512
+
+typedef struct {
+    // Retropad: store raw button bitmask and analog axes per port
+    uint32_t buttons[INPUT_MAX_PORTS];
+    int16_t analog[INPUT_MAX_PORTS][4];  // 4 axes per port
+
+    // Keyboard
+    uint8_t keyboard[INPUT_MAX_KEYS];
+
+    // Mouse
+    int16_t mouse_x;
+    int16_t mouse_y;
+    uint8_t mouse_buttons;  // bit 0=left, bit 1=right, bit 2=middle
+} input_cache_t;
+
+static input_cache_t input_cache = {0};
+
+// Update entire port state at once
+void input_cache_set_port(unsigned port, uint32_t buttons,
+                          int16_t axis0, int16_t axis1, int16_t axis2, int16_t axis3) {
+    if (port < INPUT_MAX_PORTS) {
+        input_cache.buttons[port] = buttons;
+        input_cache.analog[port][0] = axis0;
+        input_cache.analog[port][1] = axis1;
+        input_cache.analog[port][2] = axis2;
+        input_cache.analog[port][3] = axis3;
+    }
+}
+
+// Keyboard update
+void input_cache_set_keyboard_key(unsigned id, uint8_t pressed) {
+    if (id < INPUT_MAX_KEYS) {
+        input_cache.keyboard[id] = pressed;
+    }
+}
+
+// Mouse update
+void input_cache_set_mouse(int16_t dx, int16_t dy, uint8_t buttons) {
+    input_cache.mouse_x = dx;
+    input_cache.mouse_y = dy;
+    input_cache.mouse_buttons = buttons;
+}
+
+void input_cache_clear(void) {
+    memset(&input_cache, 0, sizeof(input_cache));
+}
 
 void core_log_cgo(enum retro_log_level level, const char *fmt, ...) {
     char msg[2048] = {0};
@@ -144,8 +196,61 @@ void core_input_poll_cgo() {
 }
 
 int16_t core_input_state_cgo(unsigned port, unsigned device, unsigned index, unsigned id) {
-    int16_t coreInputState(unsigned, unsigned, unsigned, unsigned);
-    return coreInputState(port, device, index, id);
+    if (port >= INPUT_MAX_PORTS) {
+        return 0;
+    }
+
+    switch (device) {
+        case RETRO_DEVICE_JOYPAD:
+            // Extract button bit from cached bitmask
+            return (int16_t)((input_cache.buttons[port] >> id) & 1);
+
+        case RETRO_DEVICE_ANALOG:
+            switch (index) {
+                case RETRO_DEVICE_INDEX_ANALOG_LEFT:
+                    // id: 0=X, 1=Y
+                    if (id < 2) {
+                        return input_cache.analog[port][id];
+                    }
+                    break;
+                case RETRO_DEVICE_INDEX_ANALOG_RIGHT:
+                    // id: 0=X, 1=Y -> stored in axes[2], axes[3]
+                    if (id < 2) {
+                        return input_cache.analog[port][2 + id];
+                    }
+                    break;
+            }
+            break;
+
+        case RETRO_DEVICE_KEYBOARD:
+            if (id < INPUT_MAX_KEYS) {
+                return input_cache.keyboard[id] ? 1 : 0;
+            }
+            break;
+
+        case RETRO_DEVICE_MOUSE:
+            switch (id) {
+                case RETRO_DEVICE_ID_MOUSE_X: {
+                    int16_t x = input_cache.mouse_x;
+                    input_cache.mouse_x = 0;  // Consume delta
+                    return x;
+                }
+                case RETRO_DEVICE_ID_MOUSE_Y: {
+                    int16_t y = input_cache.mouse_y;
+                    input_cache.mouse_y = 0;  // Consume delta
+                    return y;
+                }
+                case RETRO_DEVICE_ID_MOUSE_LEFT:
+                    return (input_cache.mouse_buttons & 0x01) ? 1 : 0;
+                case RETRO_DEVICE_ID_MOUSE_RIGHT:
+                    return (input_cache.mouse_buttons & 0x02) ? 1 : 0;
+                case RETRO_DEVICE_ID_MOUSE_MIDDLE:
+                    return (input_cache.mouse_buttons & 0x04) ? 1 : 0;
+            }
+            break;
+    }
+
+    return 0;
 }
 
 size_t core_audio_sample_batch_cgo(const int16_t *data, size_t frames) {

@@ -396,12 +396,21 @@ func (n *Nanoarch) Reset() {
 	C.bridge_call(retroReset)
 }
 
+func (n *Nanoarch) syncInputToCache() {
+	n.retropad.SyncToCache()
+	if n.keyboardCb != nil {
+		n.keyboard.SyncToCache()
+	}
+	n.mouse.SyncToCache()
+}
+
 func (n *Nanoarch) Run() {
+	n.syncInputToCache()
+
 	if n.LibCo {
 		C.same_thread(retroRun)
 	} else {
 		if n.Video.gl.enabled {
-			// running inside a go routine, lock the thread to make sure the OpenGL context stays current
 			runtime.LockOSThread()
 			if err := n.sdlCtx.BindContext(); err != nil {
 				n.log.Error().Err(err).Msg("ctx bind fail")
@@ -670,59 +679,6 @@ func coreVideoRefresh(data unsafe.Pointer, width, height uint, packed uint) {
 	// so, it may be rescaled
 
 	Nan0.Handlers.OnVideo(data_, int32(dt), FrameInfo{W: width, H: height, Stride: packed})
-}
-
-//export coreInputState
-func coreInputState(port C.unsigned, device C.unsigned, index C.unsigned, id C.unsigned) C.int16_t {
-	//Nan0.log.Debug().Msgf("%v %v %v %v", port, device, index, id)
-
-	// something like PCSX-ReArmed has 8 ports
-	if port >= maxPort {
-		return Released
-	}
-
-	switch device {
-	case C.RETRO_DEVICE_JOYPAD:
-		return Nan0.retropad.IsKeyPressed(uint(port), int(id))
-	case C.RETRO_DEVICE_ANALOG:
-		switch index {
-		case C.RETRO_DEVICE_INDEX_ANALOG_LEFT:
-			return Nan0.retropad.IsDpadTouched(uint(port), uint(index*2+id))
-		case C.RETRO_DEVICE_INDEX_ANALOG_RIGHT:
-		case C.RETRO_DEVICE_INDEX_ANALOG_BUTTON:
-		}
-	case C.RETRO_DEVICE_KEYBOARD:
-		return Nan0.keyboard.Pressed(uint(id))
-	case C.RETRO_DEVICE_MOUSE:
-		switch id {
-		case C.RETRO_DEVICE_ID_MOUSE_X:
-			x := Nan0.mouse.PopX()
-			return x
-		case C.RETRO_DEVICE_ID_MOUSE_Y:
-			y := Nan0.mouse.PopY()
-			return y
-		case C.RETRO_DEVICE_ID_MOUSE_LEFT:
-			if l, _, _ := Nan0.mouse.Buttons(); l {
-				return Pressed
-			}
-		case C.RETRO_DEVICE_ID_MOUSE_RIGHT:
-			if _, r, _ := Nan0.mouse.Buttons(); r {
-				return Pressed
-			}
-		case C.RETRO_DEVICE_ID_MOUSE_WHEELUP:
-		case C.RETRO_DEVICE_ID_MOUSE_WHEELDOWN:
-		case C.RETRO_DEVICE_ID_MOUSE_MIDDLE:
-			if _, _, m := Nan0.mouse.Buttons(); m {
-				return Pressed
-			}
-		case C.RETRO_DEVICE_ID_MOUSE_HORIZ_WHEELUP:
-		case C.RETRO_DEVICE_ID_MOUSE_HORIZ_WHEELDOWN:
-		case C.RETRO_DEVICE_ID_MOUSE_BUTTON_4:
-		case C.RETRO_DEVICE_ID_MOUSE_BUTTON_5:
-		}
-	}
-
-	return Released
 }
 
 //export coreAudioSampleBatch

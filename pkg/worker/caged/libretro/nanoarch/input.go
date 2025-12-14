@@ -6,8 +6,16 @@ import (
 	"sync/atomic"
 )
 
-//#include <stdint.h>
-//#include "libretro.h"
+/*
+#include <stdint.h>
+#include "libretro.h"
+
+void input_cache_set_port(unsigned port, uint32_t buttons,
+                          int16_t axis0, int16_t axis1, int16_t axis2, int16_t axis3);
+void input_cache_set_keyboard_key(unsigned id, uint8_t pressed);
+void input_cache_set_mouse(int16_t dx, int16_t dy, uint8_t buttons);
+void input_cache_clear(void);
+*/
 import "C"
 
 const (
@@ -84,6 +92,19 @@ func (s *InputState) IsDpadTouched(port uint, axis uint) (shift C.int16_t) {
 	return C.int16_t(atomic.LoadInt32(&s[port].axes[axis]))
 }
 
+// SyncToCache syncs the entire input state to the C-side cache.
+// Call this once before each Run() instead of having C call back into Go.
+func (s *InputState) SyncToCache() {
+	for port := uint(0); port < maxPort; port++ {
+		buttons := atomic.LoadUint32(&s[port].keys)
+		axis0 := C.int16_t(atomic.LoadInt32(&s[port].axes[0]))
+		axis1 := C.int16_t(atomic.LoadInt32(&s[port].axes[1]))
+		axis2 := C.int16_t(atomic.LoadInt32(&s[port].axes[2]))
+		axis3 := C.int16_t(atomic.LoadInt32(&s[port].axes[3]))
+		C.input_cache_set_port(C.uint(port), C.uint32_t(buttons), axis0, axis1, axis2, axis3)
+	}
+}
+
 // SetKey sets keyboard state.
 //
 //	0 1 2 3 4 5 6
@@ -120,6 +141,15 @@ func (ks *KeyboardState) Pressed(key uint) C.int16_t {
 	return Released
 }
 
+// SyncToCache syncs keyboard state to the C-side cache.
+func (ks *KeyboardState) SyncToCache() {
+	ks.mu.Lock()
+	defer ks.mu.Unlock()
+	for id, pressed := range ks.keys {
+		C.input_cache_set_keyboard_key(C.uint(id), C.uint8_t(pressed))
+	}
+}
+
 // ShiftPos sets mouse relative position state.
 //
 //	0  1 2  3
@@ -147,4 +177,13 @@ func (ms *MouseState) Buttons() (l, r, m bool) {
 	r = mbs&MouseRight != 0
 	m = mbs&MouseMiddle != 0
 	return
+}
+
+// SyncToCache syncs mouse state to the C-side cache.
+// This consumes the delta values (swaps to 0).
+func (ms *MouseState) SyncToCache() {
+	dx := C.int16_t(ms.dx.Swap(0))
+	dy := C.int16_t(ms.dy.Swap(0))
+	buttons := C.uint8_t(ms.buttons.Load())
+	C.input_cache_set_mouse(dx, dy, buttons)
 }
