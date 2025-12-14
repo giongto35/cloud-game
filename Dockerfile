@@ -54,6 +54,7 @@ RUN apt-get -q update && apt-get -q install --no-install-recommends -y \
     libyuv-dev \
     libjpeg-turbo8-dev \
     libx264-dev \
+    libspeexdsp-dev \
     pkg-config \
 && rm -rf /var/lib/apt/lists/*
 

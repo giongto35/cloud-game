@@ -60,13 +60,13 @@ a better sense of performance.
 
 ```
 # Ubuntu / Windows (WSL2)
-apt-get install -y make gcc pkg-config libvpx-dev libx264-dev libopus-dev libsdl2-dev libyuv-dev libjpeg-turbo8-dev
+apt-get install -y make gcc pkg-config libvpx-dev libx264-dev libopus-dev libsdl2-dev libyuv-dev libjpeg-turbo8-dev libspeexdsp-dev
 
 # MacOS
-brew install pkg-config libvpx x264 opus sdl2 jpeg-turbo
+brew install pkg-config libvpx x264 opus sdl2 jpeg-turbo speexdsp
 
 # Windows (MSYS2)
-pacman -Sy --noconfirm --needed git make mingw-w64-ucrt-x86_64-{gcc,pkgconf,dlfcn,libvpx,opus,libx264,SDL2,libyuv,libjpeg-turbo}
+pacman -Sy --noconfirm --needed git make mingw-w64-ucrt-x86_64-{gcc,pkgconf,dlfcn,libvpx,opus,libx264,SDL2,libyuv,libjpeg-turbo,speexdsp}
 ```
 
 (You don't need to download libyuv on macOS)
