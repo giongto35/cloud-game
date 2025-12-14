@@ -504,8 +504,9 @@ func SaveState() (State, error) {
 	rez := false
 
 	if Nan0.LibCo && !Nan0.hackSkipSameThreadSave {
-		rez = *(*bool)(C.same_thread_with_args2(retroSerialize, C.int(CallSerialize),
-			unsafe.Pointer(&data[0]), unsafe.Pointer(&size)))
+		rez = *(*bool)(C.same_thread_with_args2(retroSerialize, C.int(CallSerialize), unsafe.Pointer(&data[0]), unsafe.Pointer(&size)))
+	} else {
+		rez = bool(C.bridge_retro_serialize(retroSerialize, unsafe.Pointer(&data[0]), size))
 	}
 
 	if !rez {
@@ -525,8 +526,9 @@ func RestoreSaveState(st State) error {
 	rez := false
 
 	if Nan0.LibCo {
-		rez = *(*bool)(C.same_thread_with_args2(retroUnserialize, C.int(CallUnserialize),
-			unsafe.Pointer(&st[0]), unsafe.Pointer(&size)))
+		rez = *(*bool)(C.same_thread_with_args2(retroUnserialize, C.int(CallUnserialize), unsafe.Pointer(&st[0]), unsafe.Pointer(&size)))
+	} else {
+		rez = bool(C.bridge_retro_unserialize(retroUnserialize, unsafe.Pointer(&st[0]), size))
 	}
 
 	if !rez {
