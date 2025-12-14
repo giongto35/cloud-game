@@ -1,10 +1,6 @@
 package media
 
-import (
-	"errors"
-
-	"github.com/aam335/speexdsp"
-)
+import "errors"
 
 type ResampleAlgo uint8
 
@@ -18,7 +14,7 @@ type buffer struct {
 	raw       samples
 	scratch   samples
 	buckets   []bucket
-	resampler *speexdsp.Resampler
+	resampler *Resampler
 	srcHz     int
 	dstHz     int
 	bi        int
@@ -80,7 +76,7 @@ func (b *buffer) resample(targetHz int, algo ResampleAlgo) error {
 
 	if algo == ResampleSpeex {
 		var err error
-		if b.resampler, err = speexdsp.ResamplerInit(2, b.srcHz, targetHz, speexdsp.QualityDesktop); err != nil {
+		if b.resampler, err = ResamplerInit(2, b.srcHz, targetHz, QualityDesktop); err != nil {
 			return err
 		}
 	}

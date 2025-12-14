@@ -4,7 +4,6 @@ go 1.25
 
 require (
 	github.com/VictoriaMetrics/metrics v1.40.2
-	github.com/aam335/speexdsp v0.0.0-20190116080032-198c2d2ba225
 	github.com/cavaliergopher/grab/v3 v3.0.1
 	github.com/fsnotify/fsnotify v1.9.0
 	github.com/goccy/go-json v0.10.5
