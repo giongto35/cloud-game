@@ -30,14 +30,15 @@ func NewUser(sock *com.Connection, log *logger.Logger) *User {
 
 func (u *User) Bind(w *Worker) bool {
 	u.w = w
-
-	return u.w.TryReserve()
+	// Binding only links the worker; slot reservation is handled lazily on
+	// game start to avoid blocking deep-link joins or parallel connections
+	// that haven't started a game yet.
+	return true
 }
 
 func (u *User) Disconnect() {
 	u.Connection.Disconnect()
 	if u.w != nil {
-		u.w.UnReserve()
 		u.w.TerminateSession(u.Id())
 	}
 }

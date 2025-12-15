@@ -69,12 +69,10 @@ func (h *Hub) handleUserConnection() http.HandlerFunc {
 			return
 		}
 
-		bound := user.Bind(worker)
-		if !bound {
-			user.Notify(api.ErrNoFreeSlots, "")
-			h.log.Info().Msg("no free slots")
-			return
-		}
+		// Link the user to the selected worker. Slot reservation is handled later
+		// on game start; this keeps connections lightweight and lets deep-link
+		// joins share a worker without consuming its single game slot.
+		user.w = worker
 
 		h.users.Add(user)
 
@@ -178,11 +176,14 @@ func (h *Hub) GetServerList() (r []api.Server) {
 // various conditions.
 func (h *Hub) findWorkerFor(usr *User, q url.Values, log *logger.Logger) *Worker {
 	log.Debug().Msg("Search available workers")
-	roomId := q.Get(api.RoomIdQueryParam)
+	roomIdRaw := q.Get(api.RoomIdQueryParam)
+	sessionId, deepRoomId := api.ExplodeDeepLink(roomIdRaw)
+	roomId := roomIdRaw
+	if deepRoomId != "" {
+		roomId = deepRoomId
+	}
 	zone := q.Get(api.ZoneQueryParam)
 	wid := q.Get(api.WorkerIdParam)
-
-	sessionId, _ := api.ExplodeDeepLink(roomId)
 
 	var worker *Worker
 
@@ -195,7 +196,7 @@ func (h *Hub) findWorkerFor(usr *User, q url.Values, log *logger.Logger) *Worker
 		}
 	}
 
-	if worker = h.findWorkerByRoom(roomId, zone); worker != nil {
+	if worker = h.findWorkerByRoom(roomIdRaw, roomId, zone); worker != nil {
 		log.Debug().Str("room", roomId).Msg("An existing worker has been found")
 	} else if worker = h.findWorkerByPreviousRoom(sessionId); worker != nil {
 		log.Debug().Msgf("Worker %v with the previous room: %v is found", wid, roomId)
@@ -228,13 +229,19 @@ func (h *Hub) findWorkerByPreviousRoom(id string) *Worker {
 	return w
 }
 
-func (h *Hub) findWorkerByRoom(id string, region string) *Worker {
-	if id == "" {
+func (h *Hub) findWorkerByRoom(id string, deepId string, region string) *Worker {
+	if id == "" && deepId == "" {
 		return nil
 	}
 	// if there is zone param, we need to ensure the worker in that zone,
 	// if not we consider the room is missing
-	w, _ := h.workers.FindBy(func(w *Worker) bool { return w.RoomId == id && w.In(region) })
+	w, _ := h.workers.FindBy(func(w *Worker) bool {
+		matchId := w.RoomId == id
+		if !matchId && deepId != "" {
+			matchId = w.RoomId == deepId
+		}
+		return matchId && w.In(region)
+	})
 	return w
 }
 

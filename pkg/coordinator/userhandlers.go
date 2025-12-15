@@ -2,6 +2,7 @@ package coordinator
 
 import (
 	"sort"
+	"time"
 
 	"github.com/giongto35/cloud-game/v3/pkg/api"
 	"github.com/giongto35/cloud-game/v3/pkg/com"
@@ -26,6 +27,55 @@ func (u *User) HandleWebrtcIceCandidate(rq api.WebrtcUserIceCandidate) {
 }
 
 func (u *User) HandleStartGame(rq api.GameStartUserRequest, conf config.CoordinatorConfig) {
+	// Worker slot / room gating:
+	// - If the worker is BUSY (no free slot), we must not create another room.
+	//   * If the worker has already reported a room id, only allow requests
+	//     for that same room (deep-link joins / reloads).
+	//   * If the worker hasn't reported a room yet, deny any new StartGame to
+	//     avoid racing concurrent room creation on the worker.
+	//   * When the user is starting a NEW game (empty room id), we give the
+	//     worker a short grace period to close the previous room and free the
+	//     slot before rejecting with "no slots".
+	// - If the worker is FREE, reserve the slot lazily before starting the
+	//   game; the room id (if any) comes from the request / worker.
+
+	// Grace period: when there's no room id in the request (new game) but the
+	// worker still appears busy, wait a bit for the previous room to close.
+	if rq.RoomId == "" && !u.w.HasSlot() {
+		const waitTotal = 3 * time.Second
+		const step = 100 * time.Millisecond
+		waited := time.Duration(0)
+		for waited < waitTotal {
+			if u.w.HasSlot() {
+				break
+			}
+			time.Sleep(step)
+			waited += step
+		}
+	}
+
+	busy := !u.w.HasSlot()
+	if busy {
+		if u.w.RoomId == "" {
+			u.Notify(api.ErrNoFreeSlots, "")
+			return
+		}
+		if rq.RoomId == "" {
+			// No room id but worker is busy -> assume user wants to continue
+			// the existing room instead of starting a parallel game.
+			rq.RoomId = u.w.RoomId
+		} else if rq.RoomId != u.w.RoomId {
+			u.Notify(api.ErrNoFreeSlots, "")
+			return
+		}
+	} else {
+		// Worker is free: try to reserve the single slot for this new room.
+		if !u.w.TryReserve() {
+			u.Notify(api.ErrNoFreeSlots, "")
+			return
+		}
+	}
+
 	startGameResp, err := u.w.StartGame(u.Id(), rq)
 	if err != nil || startGameResp == nil {
 		u.log.Error().Err(err).Msg("malformed game start response")

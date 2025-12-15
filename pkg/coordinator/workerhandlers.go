@@ -10,6 +10,7 @@ func (w *Worker) HandleRegisterRoom(rq api.RegisterRoomRequest) { w.RoomId = str
 func (w *Worker) HandleCloseRoom(rq api.CloseRoomRequest) {
 	if string(rq) == w.RoomId {
 		w.RoomId = ""
+		w.FreeSlots()
 	}
 }
 
