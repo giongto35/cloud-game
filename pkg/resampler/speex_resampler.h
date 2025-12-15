@@ -41,6 +41,17 @@ SpeexResamplerState *speex_resampler_init(spx_uint32_t nb_channels,
  */
 void speex_resampler_destroy(SpeexResamplerState *st);
 
+
+/** Make sure that the first samples to go out of the resamplers don't have
+ * leading zeros. This is only useful before starting to use a newly created
+ * resampler. It is recommended to use that when resampling an audio file, as
+ * it will generate a file with the same length. For real-time processing,
+ * it is probably easier not to use this call (so that the output duration
+ * is the same for the first frame).
+ * @param st Resampler state
+ */
+int speex_resampler_skip_zeros(SpeexResamplerState *st);
+
 /** Resample an interleaved int array. The input and output buffers must *not* overlap.
  * @param st Resampler state
  * @param in Input buffer

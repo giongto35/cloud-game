@@ -1,6 +1,10 @@
 package media
 
-import "errors"
+import (
+	"errors"
+
+	"github.com/giongto35/cloud-game/v3/pkg/resampler"
+)
 
 type ResampleAlgo uint8
 
@@ -11,14 +15,15 @@ const (
 )
 
 type buffer struct {
-	raw       samples
-	scratch   samples
-	buckets   []bucket
-	resampler *Resampler
-	srcHz     int
-	dstHz     int
-	bi        int
-	algo      ResampleAlgo
+	raw     samples
+	scratch samples
+	buckets []bucket
+	srcHz   int
+	dstHz   int
+	bi      int
+	algo    ResampleAlgo
+
+	resampler *resampler.Resampler
 }
 
 type bucket struct {
@@ -33,30 +38,31 @@ func newBuffer(frames []float32, hz int) (*buffer, error) {
 		return nil, errors.New("invalid params")
 	}
 
-	var totalSize int
-	for _, f := range frames {
-		totalSize += stereoSamples(hz, f)
+	buckets := make([]bucket, len(frames))
+	var total int
+	for i, ms := range frames {
+		n := stereoSamples(hz, ms)
+		buckets[i] = bucket{ms: ms, dst: n}
+		total += n
 	}
-	if totalSize == 0 {
+	if total == 0 {
 		return nil, errors.New("zero buffer size")
 	}
 
-	buf := &buffer{
-		raw:     make(samples, totalSize),
+	raw := make(samples, total)
+	for i, off := 0, 0; i < len(buckets); i++ {
+		buckets[i].mem = raw[off : off+buckets[i].dst]
+		off += buckets[i].dst
+	}
+
+	return &buffer{
+		raw:     raw,
 		scratch: make(samples, 5760),
+		buckets: buckets,
 		srcHz:   hz,
 		dstHz:   hz,
-	}
-
-	offset := 0
-	for _, f := range frames {
-		size := stereoSamples(hz, f)
-		buf.buckets = append(buf.buckets, bucket{mem: buf.raw[offset : offset+size], ms: f, dst: size})
-		offset += size
-	}
-	buf.bi = len(buf.buckets) - 1
-
-	return buf, nil
+		bi:      len(buckets) - 1,
+	}, nil
 }
 
 func (b *buffer) close() {
@@ -66,43 +72,38 @@ func (b *buffer) close() {
 	}
 }
 
-func (b *buffer) resample(targetHz int, algo ResampleAlgo) error {
-	b.algo = algo
-	b.dstHz = targetHz
-
+func (b *buffer) resample(hz int, algo ResampleAlgo) error {
+	b.algo, b.dstHz = algo, hz
 	for i := range b.buckets {
-		b.buckets[i].dst = stereoSamples(targetHz, b.buckets[i].ms)
+		b.buckets[i].dst = stereoSamples(hz, b.buckets[i].ms)
 	}
-
 	if algo == ResampleSpeex {
 		var err error
-		if b.resampler, err = ResamplerInit(2, b.srcHz, targetHz, QualityMax); err != nil {
-			return err
-		}
+		b.resampler, err = resampler.Init(2, b.srcHz, hz, resampler.QualityMax)
+		return err
 	}
 	return nil
 }
 
 func (b *buffer) write(s samples, onFull func(samples, float32)) int {
-	read := 0
-	for read < len(s) {
+	n := len(s)
+	for i := 0; i < n; {
 		cur := &b.buckets[b.bi]
-		n := copy(cur.mem[cur.p:], s[read:])
-		read += n
-		cur.p += n
-
+		c := copy(cur.mem[cur.p:], s[i:])
+		i += c
+		cur.p += c
 		if cur.p == len(cur.mem) {
 			onFull(b.stretch(cur.mem, cur.dst), cur.ms)
-			b.choose(len(s) - read)
+			b.choose(n - i)
 			b.buckets[b.bi].p = 0
 		}
 	}
-	return read
+	return n
 }
 
-func (b *buffer) choose(remaining int) {
+func (b *buffer) choose(rem int) {
 	for i := len(b.buckets) - 1; i >= 0; i-- {
-		if remaining >= len(b.buckets[i].mem) {
+		if rem >= len(b.buckets[i].mem) {
 			b.bi = i
 			return
 		}
@@ -110,65 +111,29 @@ func (b *buffer) choose(remaining int) {
 	b.bi = 0
 }
 
-func (b *buffer) stretch(src samples, dstSize int) samples {
-	switch b.algo {
-	case ResampleSpeex:
-		if b.resampler != nil {
-			if _, out, err := b.resampler.ProcessIntInterleaved(src); err == nil {
-				if len(out) == dstSize {
-					return out
-				}
-				src = out // use speex output for linear correction
+func (b *buffer) stretch(src samples, size int) samples {
+	if len(src) == size {
+		return src
+	}
+
+	if cap(b.scratch) < size {
+		b.scratch = make(samples, size)
+	}
+	out := b.scratch[:size]
+
+	if b.algo == ResampleSpeex && b.resampler != nil {
+		if n, _ := b.resampler.Process(out, src); n > 0 {
+			for i := n; i < size; i += 2 {
+				out[i], out[i+1] = out[n-2], out[n-1]
 			}
-		}
-		fallthrough
-	case ResampleLinear:
-		return b.linear(src, dstSize)
-	case ResampleNearest:
-		return b.nearest(src, dstSize)
-	default:
-		return b.linear(src, dstSize)
-	}
-}
-
-func (b *buffer) linear(src samples, dstSize int) samples {
-	srcLen := len(src)
-	if srcLen < 2 || dstSize < 2 {
-		return b.scratch[:dstSize]
-	}
-
-	out := b.scratch[:dstSize]
-	srcPairs, dstPairs := srcLen/2, dstSize/2
-	ratio := ((srcPairs - 1) << 16) / (dstPairs - 1)
-
-	for i := 0; i < dstPairs; i++ {
-		pos := i * ratio
-		idx, frac := (pos>>16)*2, pos&0xFFFF
-		di := i * 2
-
-		if idx >= srcLen-2 {
-			out[di], out[di+1] = src[srcLen-2], src[srcLen-1]
-		} else {
-			out[di] = int16(int32(src[idx]) + ((int32(src[idx+2])-int32(src[idx]))*int32(frac))>>16)
-			out[di+1] = int16(int32(src[idx+1]) + ((int32(src[idx+3])-int32(src[idx+1]))*int32(frac))>>16)
+			return out
 		}
 	}
-	return out
-}
 
-func (b *buffer) nearest(src samples, dstSize int) samples {
-	srcLen := len(src)
-	if srcLen < 2 || dstSize < 2 {
-		return b.scratch[:dstSize]
-	}
-
-	out := b.scratch[:dstSize]
-	srcPairs, dstPairs := srcLen/2, dstSize/2
-
-	for i := 0; i < dstPairs; i++ {
-		si := (i * srcPairs / dstPairs) * 2
-		di := i * 2
-		out[di], out[di+1] = src[si], src[si+1]
+	if b.algo == ResampleNearest {
+		resampler.Nearest(out, src)
+	} else {
+		resampler.Linear(out, src)
 	}
 	return out
 }
