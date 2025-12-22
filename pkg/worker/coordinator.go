@@ -67,84 +67,41 @@ func (c *coordinator) HandleRequests(w *Worker) chan struct{} {
 	if err != nil {
 		c.log.Panic().Err(err).Msg("WebRTC API creation has been failed")
 	}
-	skipped := api.Out{}
 
 	return c.ProcessPackets(func(x api.In[com.Uid]) (err error) {
 		var out api.Out
+
 		switch x.T {
 		case api.WebrtcInit:
-			if dat := api.Unwrap[api.WebrtcInitRequest[com.Uid]](x.Payload); dat == nil {
-				err, out = api.ErrMalformed, api.EmptyPacket
-			} else {
-				out = c.HandleWebrtcInit(*dat, w, ap)
-			}
-		case api.WebrtcAnswer:
-			dat := api.Unwrap[api.WebrtcAnswerRequest[com.Uid]](x.Payload)
-			if dat == nil {
-				return api.ErrMalformed
-			}
-			c.HandleWebrtcAnswer(*dat, w)
-		case api.WebrtcIce:
-			dat := api.Unwrap[api.WebrtcIceCandidateRequest[com.Uid]](x.Payload)
-			if dat == nil {
-				return api.ErrMalformed
-			}
-			c.HandleWebrtcIceCandidate(*dat, w)
+			err = api.Do(x, func(d api.WebrtcInitRequest[com.Uid]) { out = c.HandleWebrtcInit(d, w, ap) })
 		case api.StartGame:
-			if dat := api.Unwrap[api.StartGameRequest[com.Uid]](x.Payload); dat == nil {
-				err, out = api.ErrMalformed, api.EmptyPacket
-			} else {
-				out = c.HandleGameStart(*dat, w)
-			}
-		case api.TerminateSession:
-			dat := api.Unwrap[api.TerminateSessionRequest[com.Uid]](x.Payload)
-			if dat == nil {
-				return api.ErrMalformed
-			}
-			c.HandleTerminateSession(*dat, w)
-		case api.QuitGame:
-			dat := api.Unwrap[api.GameQuitRequest[com.Uid]](x.Payload)
-			if dat == nil {
-				return api.ErrMalformed
-			}
-			c.HandleQuitGame(*dat, w)
+			err = api.Do(x, func(d api.StartGameRequest[com.Uid]) { out = c.HandleGameStart(d, w) })
 		case api.SaveGame:
-			if dat := api.Unwrap[api.SaveGameRequest[com.Uid]](x.Payload); dat == nil {
-				err, out = api.ErrMalformed, api.EmptyPacket
-			} else {
-				out = c.HandleSaveGame(*dat, w)
-			}
+			err = api.Do(x, func(d api.SaveGameRequest[com.Uid]) { out = c.HandleSaveGame(d, w) })
 		case api.LoadGame:
-			if dat := api.Unwrap[api.LoadGameRequest[com.Uid]](x.Payload); dat == nil {
-				err, out = api.ErrMalformed, api.EmptyPacket
-			} else {
-				out = c.HandleLoadGame(*dat, w)
-			}
+			err = api.Do(x, func(d api.LoadGameRequest[com.Uid]) { out = c.HandleLoadGame(d, w) })
 		case api.ChangePlayer:
-			if dat := api.Unwrap[api.ChangePlayerRequest[com.Uid]](x.Payload); dat == nil {
-				err, out = api.ErrMalformed, api.EmptyPacket
-			} else {
-				out = c.HandleChangePlayer(*dat, w)
-			}
-		case api.ResetGame:
-			dat := api.Unwrap[api.ResetGameRequest[com.Uid]](x.Payload)
-			if dat == nil {
-				return api.ErrMalformed
-			}
-			c.HandleResetGame(*dat, w)
+			err = api.Do(x, func(d api.ChangePlayerRequest[com.Uid]) { out = c.HandleChangePlayer(d, w) })
 		case api.RecordGame:
-			if dat := api.Unwrap[api.RecordGameRequest[com.Uid]](x.Payload); dat == nil {
-				err, out = api.ErrMalformed, api.EmptyPacket
-			} else {
-				out = c.HandleRecordGame(*dat, w)
-			}
+			err = api.Do(x, func(d api.RecordGameRequest[com.Uid]) { out = c.HandleRecordGame(d, w) })
+		case api.WebrtcAnswer:
+			err = api.Do(x, func(d api.WebrtcAnswerRequest[com.Uid]) { c.HandleWebrtcAnswer(d, w) })
+		case api.WebrtcIce:
+			err = api.Do(x, func(d api.WebrtcIceCandidateRequest[com.Uid]) { c.HandleWebrtcIceCandidate(d, w) })
+		case api.TerminateSession:
+			err = api.Do(x, func(d api.TerminateSessionRequest[com.Uid]) { c.HandleTerminateSession(d, w) })
+		case api.QuitGame:
+			err = api.Do(x, func(d api.GameQuitRequest[com.Uid]) { c.HandleQuitGame(d, w) })
+		case api.ResetGame:
+			err = api.Do(x, func(d api.ResetGameRequest[com.Uid]) { c.HandleResetGame(d, w) })
 		default:
 			c.log.Warn().Msgf("unhandled packet type %v", x.T)
 		}
-		if out != skipped {
+
+		if out != (api.Out{}) {
 			w.cord.Route(x, &out)
 		}
-		return err
+		return
 	})
 }
 

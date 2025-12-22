@@ -39,6 +39,14 @@ type (
 	PT uint8
 )
 
+func State[T Id](id T) Stateful[T] {
+	return Stateful[T]{Id: id}
+}
+
+func StateRoom[T Id](id T, rid string) StatefulRoom[T] {
+	return StatefulRoom[T]{Stateful: State(id), Room: Room{Rid: rid}}
+}
+
 type In[I Id] struct {
 	Id      I               `json:"id,omitempty"`
 	T       PT              `json:"t"`
@@ -156,6 +164,21 @@ var (
 	ErrPacket   = Out{Payload: "err"}
 	OkPacket    = Out{Payload: "ok"}
 )
+
+func Do[I Id, T any](in In[I], fn func(T)) error {
+	if dat := Unwrap[T](in.Payload); dat != nil {
+		fn(*dat)
+		return nil
+	}
+	return ErrMalformed
+}
+
+func DoE[I Id, T any](in In[I], fn func(T) error) error {
+	if dat := Unwrap[T](in.Payload); dat != nil {
+		return fn(*dat)
+	}
+	return ErrMalformed
+}
 
 func Unwrap[T any](data []byte) *T {
 	out := new(T)

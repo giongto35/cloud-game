@@ -44,67 +44,38 @@ func (u *User) Disconnect() {
 }
 
 func (u *User) HandleRequests(info HasServerInfo, conf config.CoordinatorConfig) chan struct{} {
-	return u.ProcessPackets(func(x api.In[com.Uid]) error {
-		payload := x.GetPayload()
-		switch x.GetType() {
+	return u.ProcessPackets(func(x api.In[com.Uid]) (err error) {
+		switch x.T {
 		case api.WebrtcInit:
 			if u.w != nil {
 				u.HandleWebrtcInit()
 			}
 		case api.WebrtcAnswer:
-			rq := api.Unwrap[api.WebrtcAnswerUserRequest](payload)
-			if rq == nil {
-				return api.ErrMalformed
-			}
-			u.HandleWebrtcAnswer(*rq)
+			err = api.Do(x, u.HandleWebrtcAnswer)
 		case api.WebrtcIce:
-			rq := api.Unwrap[api.WebrtcUserIceCandidate](payload)
-			if rq == nil {
-				return api.ErrMalformed
-			}
-			u.HandleWebrtcIceCandidate(*rq)
+			err = api.Do(x, u.HandleWebrtcIceCandidate)
 		case api.StartGame:
-			rq := api.Unwrap[api.GameStartUserRequest](payload)
-			if rq == nil {
-				return api.ErrMalformed
-			}
-			u.HandleStartGame(*rq, conf)
+			err = api.Do(x, func(d api.GameStartUserRequest) { u.HandleStartGame(d, conf) })
 		case api.QuitGame:
-			rq := api.Unwrap[api.GameQuitRequest[com.Uid]](payload)
-			if rq == nil {
-				return api.ErrMalformed
-			}
-			u.HandleQuitGame(*rq)
+			err = api.Do(x, u.HandleQuitGame)
 		case api.SaveGame:
-			return u.HandleSaveGame()
+			err = u.HandleSaveGame()
 		case api.LoadGame:
-			return u.HandleLoadGame()
+			err = u.HandleLoadGame()
 		case api.ChangePlayer:
-			rq := api.Unwrap[api.ChangePlayerUserRequest](payload)
-			if rq == nil {
-				return api.ErrMalformed
-			}
-			u.HandleChangePlayer(*rq)
+			err = api.Do(x, u.HandleChangePlayer)
 		case api.ResetGame:
-			rq := api.Unwrap[api.ResetGameRequest[com.Uid]](payload)
-			if rq == nil {
-				return api.ErrMalformed
-			}
-			u.HandleResetGame(*rq)
+			err = api.Do(x, u.HandleResetGame)
 		case api.RecordGame:
 			if !conf.Recording.Enabled {
 				return api.ErrForbidden
 			}
-			rq := api.Unwrap[api.RecordGameRequest[com.Uid]](payload)
-			if rq == nil {
-				return api.ErrMalformed
-			}
-			u.HandleRecordGame(*rq)
+			err = api.Do(x, u.HandleRecordGame)
 		case api.GetWorkerList:
 			u.handleGetWorkerList(conf.Coordinator.Debug, info)
 		default:
 			u.log.Warn().Msgf("Unknown packet: %+v", x)
 		}
-		return nil
+		return
 	})
 }

@@ -1,6 +1,7 @@
 package coordinator
 
 import (
+	"errors"
 	"fmt"
 	"sync/atomic"
 
@@ -75,60 +76,35 @@ func NewWorker(sock *com.Connection, handshake api.ConnectionRequest[com.Uid], l
 }
 
 func (w *Worker) HandleRequests(users HasUserRegistry) chan struct{} {
-	return w.ProcessPackets(func(p api.In[com.Uid]) error {
-		payload := p.GetPayload()
-		switch p.GetType() {
+	return w.ProcessPackets(func(p api.In[com.Uid]) (err error) {
+		switch p.T {
 		case api.RegisterRoom:
-			rq := api.Unwrap[api.RegisterRoomRequest](payload)
-			if rq == nil {
-				return api.ErrMalformed
-			}
-			w.log.Info().Msgf("set room [%v] = %v", w.Id(), *rq)
-			w.HandleRegisterRoom(*rq)
+			err = api.Do(p, func(d api.RegisterRoomRequest) {
+				w.log.Info().Msgf("set room [%v] = %v", w.Id(), d)
+				w.HandleRegisterRoom(d)
+			})
 		case api.CloseRoom:
-			rq := api.Unwrap[api.CloseRoomRequest](payload)
-			if rq == nil {
-				return api.ErrMalformed
-			}
-			w.HandleCloseRoom(*rq)
+			err = api.Do(p, w.HandleCloseRoom)
 		case api.IceCandidate:
-			rq := api.Unwrap[api.WebrtcIceCandidateRequest[com.Uid]](payload)
-			if rq == nil {
-				return api.ErrMalformed
-			}
-			err := w.HandleIceCandidate(*rq, users)
-			if err != nil {
-				w.log.Error().Err(err).Send()
-				return api.ErrMalformed
-			}
+			err = api.DoE(p, func(d api.WebrtcIceCandidateRequest[com.Uid]) error {
+				return w.HandleIceCandidate(d, users)
+			})
 		case api.LibNewGameList:
-			inf := api.Unwrap[api.LibGameListInfo](payload)
-			if inf == nil {
-				return api.ErrMalformed
-			}
-			if err := w.HandleLibGameList(*inf); err != nil {
-				w.log.Error().Err(err).Send()
-				return api.ErrMalformed
-			}
+			err = api.DoE(p, w.HandleLibGameList)
 		case api.PrevSessions:
-			sess := api.Unwrap[api.PrevSessionInfo](payload)
-			if sess == nil {
-				return api.ErrMalformed
-			}
-			if err := w.HandlePrevSessionList(*sess); err != nil {
-				w.log.Error().Err(err).Send()
-				return api.ErrMalformed
-			}
+			err = api.DoE(p, w.HandlePrevSessionList)
 		default:
 			w.log.Warn().Msgf("Unknown packet: %+v", p)
 		}
-		return nil
+		if err != nil && !errors.Is(err, api.ErrMalformed) {
+			w.log.Error().Err(err).Send()
+			err = api.ErrMalformed
+		}
+		return
 	})
 }
 
-func (w *Worker) SetLib(list []api.GameInfo) {
-	w.Lib = list
-}
+func (w *Worker) SetLib(list []api.GameInfo) { w.Lib = list }
 
 func (w *Worker) AppNames() []api.GameInfo {
 	return w.Lib
