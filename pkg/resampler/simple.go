@@ -10,7 +10,7 @@ func Linear(dst, src []int16) {
 
 	// replicate single pair input or output
 	if srcPairs == 1 || dstPairs == 1 {
-		for i := 0; i < dstPairs; i++ {
+		for i := range dstPairs {
 			dst[i*2], dst[i*2+1] = src[0], src[1]
 		}
 		return
@@ -46,7 +46,7 @@ func Nearest(dst, src []int16) {
 	srcPairs, dstPairs := nSrc>>1, nDst>>1
 
 	if srcPairs == 1 || dstPairs == 1 {
-		for i := 0; i < dstPairs; i++ {
+		for i := range dstPairs {
 			dst[i*2], dst[i*2+1] = src[0], src[1]
 		}
 		return

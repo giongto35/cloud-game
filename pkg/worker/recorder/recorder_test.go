@@ -46,7 +46,7 @@ func TestName(t *testing.T) {
 	audioWg.Add(iterations)
 	frame := genFrame(100, 100)
 
-	for i := 0; i < 222; i++ {
+	for range 222 {
 		go func() {
 			recorder.WriteVideo(Video{Frame: frame, Duration: 16 * time.Millisecond})
 			imgWg.Done()
@@ -134,8 +134,8 @@ func benchmarkRecorder(w, h int, b *testing.B) {
 
 func genFrame(w, h int) Frame {
 	img := image.NewRGBA(image.Rect(0, 0, w, h))
-	for x := 0; x < w; x++ {
-		for y := 0; y < h; y++ {
+	for x := range w {
+		for y := range h {
 			img.Set(x, y, randomColor())
 		}
 	}

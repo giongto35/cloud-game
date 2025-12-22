@@ -329,8 +329,7 @@ func TestStateConcurrency(t *testing.T) {
 			qLock.Unlock()
 
 			if lucky() && !lucky() {
-				ops.Add(1)
-				go func() {
+				ops.Go(func() {
 					qLock.Lock()
 					defer qLock.Unlock()
 
@@ -344,8 +343,7 @@ func TestStateConcurrency(t *testing.T) {
 					if snapshot1 != snapshot2 {
 						t.Errorf("States are inconsistent %v != %v on tick %v\n", snapshot1, snapshot2, i+1)
 					}
-					ops.Done()
-				}()
+				})
 			}
 		}
 

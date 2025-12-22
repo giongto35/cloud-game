@@ -123,7 +123,7 @@ func TestYuvPredefined(t *testing.T) {
 		t.Fatalf("different size a: %v, o: %v", len(a), len(should))
 	}
 
-	for i := 0; i < len(a); i++ {
+	for i := range a {
 		if a[i] != should[i] {
 			t.Fatalf("diff in %vth, %v != %v \n%v\n%v", i, a[i], should[i], im, should)
 		}
@@ -188,8 +188,8 @@ func BenchmarkYuv(b *testing.B) {
 
 func genFrame(w, h int, seed float32) RawFrame {
 	img := image.NewRGBA(image.Rectangle{Max: image.Point{X: w, Y: h}})
-	for x := 0; x < w; x++ {
-		for y := 0; y < h; y++ {
+	for x := range w {
+		for y := range h {
 			col := color.RGBA{R: uint8(seed * 255), G: uint8(seed * 255), B: uint8(seed * 255), A: 0xff}
 			img.Set(x, y, col)
 		}
@@ -217,9 +217,9 @@ func TestGen24bitFull(t *testing.T) {
 	//	radius = centerY
 	//}
 
-	for y := 0; y < wh; y++ {
+	for y := range wh {
 		dy := float64(y - centerY)
-		for x := 0; x < wh; x++ {
+		for x := range wh {
 			dx := float64(x - centerX)
 			dist := math.Sqrt(dx*dx + dy*dy)
 			if dist <= float64(radius) {

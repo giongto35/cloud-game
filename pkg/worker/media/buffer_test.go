@@ -26,7 +26,7 @@ func samplesOf(v int16, n int) samples {
 
 func ramp(pairs int) samples {
 	s := make(samples, pairs*2)
-	for i := 0; i < pairs; i++ {
+	for i := range pairs {
 		s[i*2], s[i*2+1] = int16(i), int16(i)
 	}
 	return s

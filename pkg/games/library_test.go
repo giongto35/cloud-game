@@ -117,7 +117,7 @@ func Benchmark(b *testing.B) {
 		Supported: []string{"gba", "zip", "nes"},
 	}, config.Emulator{}, log)
 
-	for range b.N {
+	for b.Loop() {
 		library.Scan()
 		_ = library.GetAll()
 	}

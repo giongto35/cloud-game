@@ -82,7 +82,7 @@ func testUnReserveConcurrent(t *testing.T) {
 	atomic.StoreInt32((*int32)(&s), int32(workers))
 	wg.Add(workers)
 
-	for i := 0; i < workers; i++ {
+	for range workers {
 		go func() {
 			defer wg.Done()
 			s.UnReserve()
@@ -126,7 +126,7 @@ func testTryReserveConcurrent(t *testing.T) {
 	var wg sync.WaitGroup
 
 	wg.Add(workers)
-	for i := 0; i < workers; i++ {
+	for range workers {
 		go func() {
 			defer wg.Done()
 			if s.TryReserve() {

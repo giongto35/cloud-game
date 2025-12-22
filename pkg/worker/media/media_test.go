@@ -79,7 +79,7 @@ func run(w, h int, cod encoder.VideoCodec, count int, a *image.RGBA, b *image.RG
 		b = genTestImage(w, h, rand.Float32())
 	}
 
-	for i := 0; i < count; i++ {
+	for i := range count {
 		im := a
 		if i%2 == 0 {
 			im = b
@@ -98,8 +98,8 @@ func run(w, h int, cod encoder.VideoCodec, count int, a *image.RGBA, b *image.RG
 
 func genTestImage(w, h int, seed float32) *image.RGBA {
 	img := image.NewRGBA(image.Rectangle{Max: image.Point{X: w, Y: h}})
-	for x := 0; x < w; x++ {
-		for y := 0; y < h; y++ {
+	for x := range w {
+		for y := range h {
 			i := img.PixOffset(x, y)
 			s := img.Pix[i : i+4 : i+4]
 			s[0] = uint8(seed * 255)

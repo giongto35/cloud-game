@@ -23,7 +23,7 @@ func Benchmark(b *testing.B) {
 		return
 	}
 	data := make([]byte, int(float64(w)*float64(h)*1.5))
-	for i := 0; i < b.N; i++ {
+	for b.Loop() {
 		h264.Encode(data)
 	}
 }
