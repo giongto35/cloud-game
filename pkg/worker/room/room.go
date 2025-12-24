@@ -41,9 +41,10 @@ type Session interface {
 	SendData([]byte)
 }
 
-type Uid interface {
-	Id() string
-}
+type SessionKey string
+
+func (s SessionKey) String() string { return string(s) }
+func (s SessionKey) Id() string     { return s.String() }
 
 type Room[T Session] struct {
 	app   app.App
@@ -137,7 +138,7 @@ func (r *Router[T]) Remove(user T) {
 
 func (r *Router[T]) AddUser(user T)           { r.users.Add(user) }
 func (r *Router[T]) Close()                   { r.mu.Lock(); r.room.Close(); r.room = nil; r.mu.Unlock() }
-func (r *Router[T]) FindUser(uid Uid) T       { return r.users.Find(uid.Id()) }
+func (r *Router[T]) FindUser(uid string) T    { return r.users.Find(uid) }
 func (r *Router[T]) Room() *Room[T]           { r.mu.Lock(); defer r.mu.Unlock(); return r.room }
 func (r *Router[T]) SetRoom(room *Room[T])    { r.mu.Lock(); r.room = room; r.mu.Unlock() }
 func (r *Router[T]) HasRoom() bool            { r.mu.Lock(); defer r.mu.Unlock(); return r.room != nil }
@@ -156,18 +157,17 @@ func (r *Router[T]) Reset() {
 }
 
 type AppSession struct {
-	Uid
 	Session
-	uid string
+	uid SessionKey
 }
 
-func (p AppSession) Id() string { return p.uid }
+func (p AppSession) Id() SessionKey { return p.uid }
 
 type GameSession struct {
 	AppSession
 	Index int // track user Index (i.e. player 1,2,3,4 select)
 }
 
-func NewGameSession(id Uid, s Session) *GameSession {
-	return &GameSession{AppSession: AppSession{uid: id.Id(), Session: s}}
+func NewGameSession(id string, s Session) *GameSession {
+	return &GameSession{AppSession: AppSession{uid: SessionKey(id), Session: s}}
 }

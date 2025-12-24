@@ -236,7 +236,7 @@ func room(cfg conf) testRoom {
 		l.Fatal().Err(err).Msgf("no init")
 	}
 
-	room := NewRoom[*GameSession](id, emu, &com.NetMap[string, *GameSession]{}, m)
+	room := NewRoom[*GameSession](id, emu, &com.NetMap[SessionKey, *GameSession]{}, m)
 	if cfg.autoAppStart {
 		room.StartApp()
 	}

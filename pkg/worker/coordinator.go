@@ -73,27 +73,27 @@ func (c *coordinator) HandleRequests(w *Worker) chan struct{} {
 
 		switch x.T {
 		case api.WebrtcInit:
-			err = api.Do(x, func(d api.WebrtcInitRequest[com.Uid]) { out = c.HandleWebrtcInit(d, w, ap) })
+			err = api.Do(x, func(d api.WebrtcInitRequest) { out = c.HandleWebrtcInit(d, w, ap) })
 		case api.StartGame:
-			err = api.Do(x, func(d api.StartGameRequest[com.Uid]) { out = c.HandleGameStart(d, w) })
+			err = api.Do(x, func(d api.StartGameRequest) { out = c.HandleGameStart(d, w) })
 		case api.SaveGame:
-			err = api.Do(x, func(d api.SaveGameRequest[com.Uid]) { out = c.HandleSaveGame(d, w) })
+			err = api.Do(x, func(d api.SaveGameRequest) { out = c.HandleSaveGame(d, w) })
 		case api.LoadGame:
-			err = api.Do(x, func(d api.LoadGameRequest[com.Uid]) { out = c.HandleLoadGame(d, w) })
+			err = api.Do(x, func(d api.LoadGameRequest) { out = c.HandleLoadGame(d, w) })
 		case api.ChangePlayer:
-			err = api.Do(x, func(d api.ChangePlayerRequest[com.Uid]) { out = c.HandleChangePlayer(d, w) })
+			err = api.Do(x, func(d api.ChangePlayerRequest) { out = c.HandleChangePlayer(d, w) })
 		case api.RecordGame:
-			err = api.Do(x, func(d api.RecordGameRequest[com.Uid]) { out = c.HandleRecordGame(d, w) })
+			err = api.Do(x, func(d api.RecordGameRequest) { out = c.HandleRecordGame(d, w) })
 		case api.WebrtcAnswer:
-			err = api.Do(x, func(d api.WebrtcAnswerRequest[com.Uid]) { c.HandleWebrtcAnswer(d, w) })
+			err = api.Do(x, func(d api.WebrtcAnswerRequest) { c.HandleWebrtcAnswer(d, w) })
 		case api.WebrtcIce:
-			err = api.Do(x, func(d api.WebrtcIceCandidateRequest[com.Uid]) { c.HandleWebrtcIceCandidate(d, w) })
+			err = api.Do(x, func(d api.WebrtcIceCandidateRequest) { c.HandleWebrtcIceCandidate(d, w) })
 		case api.TerminateSession:
-			err = api.Do(x, func(d api.TerminateSessionRequest[com.Uid]) { c.HandleTerminateSession(d, w) })
+			err = api.Do(x, func(d api.TerminateSessionRequest) { c.HandleTerminateSession(d, w) })
 		case api.QuitGame:
-			err = api.Do(x, func(d api.GameQuitRequest[com.Uid]) { c.HandleQuitGame(d, w) })
+			err = api.Do(x, func(d api.GameQuitRequest) { c.HandleQuitGame(d, w) })
 		case api.ResetGame:
-			err = api.Do(x, func(d api.ResetGameRequest[com.Uid]) { c.HandleResetGame(d, w) })
+			err = api.Do(x, func(d api.ResetGameRequest) { c.HandleResetGame(d, w) })
 		default:
 			c.log.Warn().Msgf("unhandled packet type %v", x.T)
 		}
@@ -109,8 +109,11 @@ func (c *coordinator) RegisterRoom(id string) { c.Notify(api.RegisterRoom, id) }
 
 // CloseRoom sends a signal to coordinator which will remove that room from its list.
 func (c *coordinator) CloseRoom(id string) { c.Notify(api.CloseRoom, id) }
-func (c *coordinator) IceCandidate(candidate string, sessionId com.Uid) {
-	c.Notify(api.WebrtcIce, api.WebrtcIceCandidateRequest[com.Uid]{Stateful: api.Stateful[com.Uid]{Id: sessionId}, Candidate: candidate})
+func (c *coordinator) IceCandidate(candidate string, sessionId string) {
+	c.Notify(api.WebrtcIce, api.WebrtcIceCandidateRequest{
+		Stateful:  api.Stateful{Id: sessionId},
+		Candidate: candidate,
+	})
 }
 
 func (c *coordinator) SendLibrary(w *Worker) {

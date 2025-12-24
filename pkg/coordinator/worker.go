@@ -35,7 +35,7 @@ type RegionalClient interface {
 }
 
 type HasUserRegistry interface {
-	Find(com.Uid) *User
+	Find(id string) *User
 }
 
 type AppLibrary interface {
@@ -86,7 +86,7 @@ func (w *Worker) HandleRequests(users HasUserRegistry) chan struct{} {
 		case api.CloseRoom:
 			err = api.Do(p, w.HandleCloseRoom)
 		case api.IceCandidate:
-			err = api.DoE(p, func(d api.WebrtcIceCandidateRequest[com.Uid]) error {
+			err = api.DoE(p, func(d api.WebrtcIceCandidateRequest) error {
 				return w.HandleIceCandidate(d, users)
 			})
 		case api.LibNewGameList:

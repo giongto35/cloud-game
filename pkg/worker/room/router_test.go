@@ -6,8 +6,12 @@ import (
 	"github.com/giongto35/cloud-game/v3/pkg/com"
 )
 
+type sKey string
+
+func (s sKey) String() string { return string(s) }
+
 type tSession struct {
-	id        string
+	id        sKey
 	connected bool
 }
 
@@ -16,15 +20,15 @@ func (t *tSession) SendVideo([]byte, int32) {}
 func (t *tSession) SendData([]byte)         {}
 func (t *tSession) Connect()                { t.connected = true }
 func (t *tSession) Disconnect()             { t.connected = false }
-func (t *tSession) Id() string              { return t.id }
+func (t *tSession) Id() sKey                { return t.id }
 
 type lookMap struct {
-	com.NetMap[string, *tSession]
-	prev com.NetMap[string, *tSession] // we could use pointers in the original :3
+	com.NetMap[sKey, *tSession]
+	prev com.NetMap[sKey, *tSession] // we could use pointers in the original :3
 }
 
 func (l *lookMap) Reset() {
-	l.prev = com.NewNetMap[string, *tSession]()
+	l.prev = com.NewNetMap[sKey, *tSession]()
 	for s := range l.Map.Values() {
 		l.prev.Add(s)
 	}
@@ -51,7 +55,7 @@ func TestRouter(t *testing.T) {
 }
 
 func TestRouterReset(t *testing.T) {
-	u := lookMap{NetMap: com.NewNetMap[string, *tSession]()}
+	u := lookMap{NetMap: com.NewNetMap[sKey, *tSession]()}
 	router := Router[*tSession]{users: &u}
 
 	router.AddUser(&tSession{id: "1", connected: true})
@@ -73,6 +77,6 @@ func TestRouterReset(t *testing.T) {
 }
 
 func newTestRouter() *Router[*tSession] {
-	u := com.NewNetMap[string, *tSession]()
+	u := com.NewNetMap[sKey, *tSession]()
 	return &Router[*tSession]{users: &u}
 }

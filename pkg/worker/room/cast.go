@@ -11,7 +11,7 @@ type GameRouter struct {
 }
 
 func NewGameRouter() *GameRouter {
-	u := com.NewNetMap[string, *GameSession]()
+	u := com.NewNetMap[SessionKey, *GameSession]()
 	return &GameRouter{Router: Router[*GameSession]{users: &u}}
 }
 

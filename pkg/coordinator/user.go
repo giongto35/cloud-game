@@ -39,7 +39,7 @@ func (u *User) Bind(w *Worker) bool {
 func (u *User) Disconnect() {
 	u.Connection.Disconnect()
 	if u.w != nil {
-		u.w.TerminateSession(u.Id())
+		u.w.TerminateSession(u.Id().String())
 	}
 }
 

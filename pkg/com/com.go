@@ -2,14 +2,19 @@ package com
 
 import "github.com/giongto35/cloud-game/v3/pkg/logger"
 
-type NetClient[K comparable] interface {
+type stringer interface {
+	comparable
+	String() string
+}
+
+type NetClient[K stringer] interface {
 	Disconnect()
 	Id() K
 }
 
-type NetMap[K comparable, T NetClient[K]] struct{ Map[K, T] }
+type NetMap[K stringer, T NetClient[K]] struct{ Map[K, T] }
 
-func NewNetMap[K comparable, T NetClient[K]]() NetMap[K, T] {
+func NewNetMap[K stringer, T NetClient[K]]() NetMap[K, T] {
 	return NetMap[K, T]{Map: Map[K, T]{m: make(map[K]T, 10)}}
 }
 
@@ -19,6 +24,12 @@ func (m *NetMap[K, T]) Remove(client T)           { m.Map.Remove(client.Id()) }
 func (m *NetMap[K, T]) RemoveL(client T) int      { return m.Map.RemoveL(client.Id()) }
 func (m *NetMap[K, T]) Reset()                    { m.Map = Map[K, T]{m: make(map[K]T, 10)} }
 func (m *NetMap[K, T]) RemoveDisconnect(client T) { client.Disconnect(); m.Remove(client) }
+func (m *NetMap[K, T]) Find(id string) T {
+	v, _ := m.Map.FindBy(func(v T) bool {
+		return v.Id().String() == id
+	})
+	return v
+}
 
 type SocketClient[T ~uint8, P Packet[T], X any, P2 Packet2[X]] struct {
 	id   Uid

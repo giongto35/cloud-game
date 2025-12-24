@@ -26,26 +26,18 @@ type (
 	Id interface {
 		String() string
 	}
-	Stateful[T Id] struct {
-		Id T `json:"id"`
+	Stateful struct {
+		Id string `json:"id"`
 	}
 	Room struct {
-		Rid string `json:"room_id"` // room id
+		Rid string `json:"room_id"`
 	}
-	StatefulRoom[T Id] struct {
-		Stateful[T]
-		Room
+	StatefulRoom struct {
+		Id  string `json:"id"`
+		Rid string `json:"room_id"`
 	}
 	PT uint8
 )
-
-func State[T Id](id T) Stateful[T] {
-	return Stateful[T]{Id: id}
-}
-
-func StateRoom[T Id](id T, rid string) StatefulRoom[T] {
-	return StatefulRoom[T]{Stateful: State(id), Room: Room{Rid: rid}}
-}
 
 type In[I Id] struct {
 	Id      I               `json:"id,omitempty"`

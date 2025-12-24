@@ -5,12 +5,12 @@ import (
 	"time"
 
 	"github.com/giongto35/cloud-game/v3/pkg/api"
-	"github.com/giongto35/cloud-game/v3/pkg/com"
 	"github.com/giongto35/cloud-game/v3/pkg/config"
 )
 
 func (u *User) HandleWebrtcInit() {
-	resp, err := u.w.WebrtcInit(u.Id())
+	uid := u.Id().String()
+	resp, err := u.w.WebrtcInit(uid)
 	if err != nil || resp == nil || *resp == api.EMPTY {
 		u.log.Error().Err(err).Msg("malformed WebRTC init response")
 		return
@@ -19,11 +19,11 @@ func (u *User) HandleWebrtcInit() {
 }
 
 func (u *User) HandleWebrtcAnswer(rq api.WebrtcAnswerUserRequest) {
-	u.w.WebrtcAnswer(u.Id(), string(rq))
+	u.w.WebrtcAnswer(u.Id().String(), string(rq))
 }
 
 func (u *User) HandleWebrtcIceCandidate(rq api.WebrtcUserIceCandidate) {
-	u.w.WebrtcIceCandidate(u.Id(), string(rq))
+	u.w.WebrtcIceCandidate(u.Id().String(), string(rq))
 }
 
 func (u *User) HandleStartGame(rq api.GameStartUserRequest, conf config.CoordinatorConfig) {
@@ -76,7 +76,7 @@ func (u *User) HandleStartGame(rq api.GameStartUserRequest, conf config.Coordina
 		}
 	}
 
-	startGameResp, err := u.w.StartGame(u.Id(), rq)
+	startGameResp, err := u.w.StartGame(u.Id().String(), rq)
 	if err != nil || startGameResp == nil {
 		u.log.Error().Err(err).Msg("malformed game start response")
 		return
@@ -94,21 +94,21 @@ func (u *User) HandleStartGame(rq api.GameStartUserRequest, conf config.Coordina
 	}
 }
 
-func (u *User) HandleQuitGame(rq api.GameQuitRequest[com.Uid]) {
-	if rq.Room.Rid == u.w.RoomId {
-		u.w.QuitGame(u.Id())
+func (u *User) HandleQuitGame(rq api.GameQuitRequest) {
+	if rq.Rid == u.w.RoomId {
+		u.w.QuitGame(u.Id().String())
 	}
 }
 
-func (u *User) HandleResetGame(rq api.ResetGameRequest[com.Uid]) {
-	if rq.Room.Rid != u.w.RoomId {
+func (u *User) HandleResetGame(rq api.ResetGameRequest) {
+	if rq.Rid != u.w.RoomId {
 		return
 	}
-	u.w.ResetGame(u.Id())
+	u.w.ResetGame(u.Id().String())
 }
 
 func (u *User) HandleSaveGame() error {
-	resp, err := u.w.SaveGame(u.Id())
+	resp, err := u.w.SaveGame(u.Id().String())
 	if err != nil {
 		return err
 	}
@@ -124,7 +124,7 @@ func (u *User) HandleSaveGame() error {
 }
 
 func (u *User) HandleLoadGame() error {
-	resp, err := u.w.LoadGame(u.Id())
+	resp, err := u.w.LoadGame(u.Id().String())
 	if err != nil {
 		return err
 	}
@@ -133,7 +133,7 @@ func (u *User) HandleLoadGame() error {
 }
 
 func (u *User) HandleChangePlayer(rq api.ChangePlayerUserRequest) {
-	resp, err := u.w.ChangePlayer(u.Id(), int(rq))
+	resp, err := u.w.ChangePlayer(u.Id().String(), int(rq))
 	// !to make it a little less convoluted
 	if err != nil || resp == nil || *resp == -1 {
 		u.log.Error().Err(err).Msgf("player select fail, req: %v", rq)
@@ -142,7 +142,7 @@ func (u *User) HandleChangePlayer(rq api.ChangePlayerUserRequest) {
 	u.Notify(api.ChangePlayer, rq)
 }
 
-func (u *User) HandleRecordGame(rq api.RecordGameRequest[com.Uid]) {
+func (u *User) HandleRecordGame(rq api.RecordGameRequest) {
 	if u.w == nil {
 		return
 	}
@@ -154,7 +154,7 @@ func (u *User) HandleRecordGame(rq api.RecordGameRequest[com.Uid]) {
 		return
 	}
 
-	resp, err := u.w.RecordGame(u.Id(), rq.Active, rq.User)
+	resp, err := u.w.RecordGame(u.Id().String(), rq.Active, rq.User)
 	if err != nil {
 		u.log.Error().Err(err).Msg("malformed game record request")
 		return

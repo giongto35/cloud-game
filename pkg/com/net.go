@@ -29,7 +29,6 @@ func UidFromString(id string) (Uid, error) {
 }
 
 func (u Uid) Short() string { return u.String()[:3] + "." + u.String()[len(u.String())-3:] }
-func (u Uid) Id() string    { return u.String() }
 
 type HasCallId interface {
 	SetGetId(fmt.Stringer)
