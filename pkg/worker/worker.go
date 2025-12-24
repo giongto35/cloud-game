@@ -3,7 +3,6 @@ package worker
 import (
 	"errors"
 	"fmt"
-	"time"
 
 	"github.com/giongto35/cloud-game/v3/pkg/config"
 	"github.com/giongto35/cloud-game/v3/pkg/games"
@@ -25,7 +24,7 @@ type Worker struct {
 	log      *logger.Logger
 	mana     *caged.Manager
 	router   *room.GameRouter
-	services [3]interface {
+	services [2]interface {
 		Run()
 		Stop() error
 	}
@@ -77,7 +76,6 @@ func New(conf config.WorkerConfig, log *logger.Logger) (*Worker, error) {
 		log.Warn().Err(err).Msgf("cloud storage fail, using no storage")
 	}
 	worker.storage = st
-	worker.services[2] = NewWatcher(30*time.Minute, worker.router, log)
 
 	return worker, nil
 }
