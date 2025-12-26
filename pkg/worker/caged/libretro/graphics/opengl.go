@@ -110,10 +110,10 @@ func destroyFramebuffer() {
 }
 
 func ReadFramebuffer(bytes, w, h uint) []byte {
-	data := buf[:bytes]
+	data := buf[:bytes:bytes]
+	gl.PixelStorei(gl.PackAlignment, 1)
 	gl.BindFramebuffer(gl.FRAMEBUFFER, opt.fbo)
 	gl.ReadPixels(0, 0, int32(w), int32(h), opt.pixType, opt.pixFormat, unsafe.Pointer(&data[0]))
-	gl.BindFramebuffer(gl.FRAMEBUFFER, 0)
 	return data
 }
 

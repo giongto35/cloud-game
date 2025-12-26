@@ -78,6 +78,7 @@ typedef void (APIENTRYP GPREADPIXELS)(GLint x, GLint y, GLsizei width, GLsizei h
 typedef void (APIENTRYP GPRENDERBUFFERSTORAGE)(GLenum target, GLenum internalformat, GLsizei width, GLsizei height);
 typedef void (APIENTRYP GPTEXIMAGE2D)(GLenum target, GLint level, GLint internalformat, GLsizei width, GLsizei height, GLint border, GLenum format, GLenum type, const void *pixels);
 typedef void (APIENTRYP GPTEXPARAMETERI)(GLenum target, GLenum pname, GLint param);
+typedef void (APIENTRYP GPPIXELSTOREI)(GLenum pname, GLint param);
 
 static const GLubyte *getString(GPGETSTRING ptr, GLenum name) { return (*ptr)(name); }
 static GLenum getError(GPGETERROR ptr) { return (*ptr)(); }
@@ -113,6 +114,7 @@ static void deleteTextures(GPDELETETEXTURES ptr, GLsizei n, const GLuint *textur
 static void readPixels(GPREADPIXELS ptr, GLint x, GLint y, GLsizei width, GLsizei height, GLenum format, GLenum type, void *pixels) {
   (*ptr)(x, y, width, height, format, type, pixels);
 }
+static void pixelStorei(GPPIXELSTOREI ptr, GLenum pname, GLint param) { (*ptr)(pname, param); }
 */
 import "C"
 import (
@@ -144,6 +146,8 @@ const (
 	UnsignedShort5551  = 0x8034
 	UnsignedShort565   = 0x8363
 	UnsignedInt8888Rev = 0x8367
+
+	PackAlignment = 0x0D05
 )
 
 var (
@@ -165,6 +169,7 @@ var (
 	gpDeleteFramebuffers      C.GPDELETEFRAMEBUFFERS
 	gpDeleteTextures          C.GPDELETETEXTURES
 	gpReadPixels              C.GPREADPIXELS
+	gpPixelStorei             C.GPPIXELSTOREI
 )
 
 func InitWithProcAddrFunc(getProcAddr func(name string) unsafe.Pointer) error {
@@ -204,6 +209,9 @@ func InitWithProcAddrFunc(getProcAddr func(name string) unsafe.Pointer) error {
 	gpReadPixels = (C.GPREADPIXELS)(getProcAddr("glReadPixels"))
 	if gpReadPixels == nil {
 		return errors.New("glReadPixels")
+	}
+	if gpPixelStorei = (C.GPPIXELSTOREI)(getProcAddr("glPixelStorei")); gpPixelStorei == nil {
+		return errors.New("glPixelStorei")
 	}
 	return nil
 }
@@ -256,6 +264,9 @@ func DeleteTextures(n int32, textures *uint32) {
 }
 func ReadPixels(x int32, y int32, width int32, height int32, format uint32, xtype uint32, pixels unsafe.Pointer) {
 	C.readPixels(gpReadPixels, (C.GLint)(x), (C.GLint)(y), (C.GLsizei)(width), (C.GLsizei)(height), (C.GLenum)(format), (C.GLenum)(xtype), pixels)
+}
+func PixelStorei(pname uint32, param int32) {
+	C.pixelStorei(gpPixelStorei, (C.GLenum)(pname), (C.GLint)(param))
 }
 
 func GetError() uint32 { return (uint32)(C.getError(gpGetError)) }
