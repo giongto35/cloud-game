@@ -9,24 +9,6 @@ import (
 	"github.com/giongto35/cloud-game/v3/pkg/worker/caged/libretro/graphics/gl"
 )
 
-type (
-	offscreenSetup struct {
-		tex uint32
-		fbo uint32
-		rbo uint32
-
-		width  int32
-		height int32
-
-		pixType   uint32
-		pixFormat uint32
-
-		hasDepth   bool
-		hasStencil bool
-	}
-	PixelFormat int
-)
-
 type Context int
 
 const (
@@ -37,10 +19,11 @@ const (
 	CtxOpenGlEs3
 	CtxOpenGlEsVersion
 	CtxVulkan
-
 	CtxUnknown = math.MaxInt32 - 1
 	CtxDummy   = math.MaxInt32
 )
+
+type PixelFormat int
 
 const (
 	UnsignedShort5551 PixelFormat = iota
@@ -49,99 +32,91 @@ const (
 )
 
 var (
-	opt = offscreenSetup{}
-	buf = make([]byte, 1024*1024)
+	fbo, tex, rbo      uint32
+	hasDepth           bool
+	pixType, pixFormat uint32
+	buf                []byte
+	bufPtr             unsafe.Pointer
 )
 
 func initContext(getProcAddr func(name string) unsafe.Pointer) {
 	if err := gl.InitWithProcAddrFunc(getProcAddr); err != nil {
 		panic(err)
 	}
+	gl.PixelStorei(gl.PackAlignment, 1)
 }
 
-func initFramebuffer(w int, h int, hasDepth bool, hasStencil bool) error {
-	opt.width = int32(w)
-	opt.height = int32(h)
-	opt.hasDepth = hasDepth
-	opt.hasStencil = hasStencil
+func initFramebuffer(width, height int, depth, stencil bool) error {
+	w, h := int32(width), int32(height)
+	hasDepth = depth
 
-	// texture init
-	gl.GenTextures(1, &opt.tex)
-	gl.BindTexture(gl.Texture2d, opt.tex)
-
+	gl.GenTextures(1, &tex)
+	gl.BindTexture(gl.Texture2d, tex)
 	gl.TexParameteri(gl.Texture2d, gl.TextureMinFilter, gl.NEAREST)
 	gl.TexParameteri(gl.Texture2d, gl.TextureMagFilter, gl.NEAREST)
-
-	gl.TexImage2D(gl.Texture2d, 0, gl.RGBA8, opt.width, opt.height, 0, opt.pixType, opt.pixFormat, nil)
+	gl.TexImage2D(gl.Texture2d, 0, gl.RGBA8, w, h, 0, pixType, pixFormat, nil)
 	gl.BindTexture(gl.Texture2d, 0)
 
-	// framebuffer init
-	gl.GenFramebuffers(1, &opt.fbo)
-	gl.BindFramebuffer(gl.FRAMEBUFFER, opt.fbo)
+	gl.GenFramebuffers(1, &fbo)
+	gl.BindFramebuffer(gl.FRAMEBUFFER, fbo)
+	gl.FramebufferTexture2D(gl.FRAMEBUFFER, gl.ColorAttachment0, gl.Texture2d, tex, 0)
 
-	gl.FramebufferTexture2D(gl.FRAMEBUFFER, gl.ColorAttachment0, gl.Texture2d, opt.tex, 0)
-
-	// more buffers init
-	if opt.hasDepth {
-		gl.GenRenderbuffers(1, &opt.rbo)
-		gl.BindRenderbuffer(gl.RENDERBUFFER, opt.rbo)
-		if opt.hasStencil {
-			gl.RenderbufferStorage(gl.RENDERBUFFER, gl.Depth24Stencil8, opt.width, opt.height)
-			gl.FramebufferRenderbuffer(gl.FRAMEBUFFER, gl.DepthStencilAttachment, gl.RENDERBUFFER, opt.rbo)
-		} else {
-			gl.RenderbufferStorage(gl.RENDERBUFFER, gl.DepthComponent24, opt.width, opt.height)
-			gl.FramebufferRenderbuffer(gl.FRAMEBUFFER, gl.DepthAttachment, gl.RENDERBUFFER, opt.rbo)
+	if depth {
+		gl.GenRenderbuffers(1, &rbo)
+		gl.BindRenderbuffer(gl.RENDERBUFFER, rbo)
+		format, attachment := uint32(gl.DepthComponent24), uint32(gl.DepthAttachment)
+		if stencil {
+			format, attachment = gl.Depth24Stencil8, gl.DepthStencilAttachment
 		}
+		gl.RenderbufferStorage(gl.RENDERBUFFER, format, w, h)
+		gl.FramebufferRenderbuffer(gl.FRAMEBUFFER, attachment, gl.RENDERBUFFER, rbo)
 		gl.BindRenderbuffer(gl.RENDERBUFFER, 0)
 	}
 
 	if status := gl.CheckFramebufferStatus(gl.FRAMEBUFFER); status != gl.FramebufferComplete {
-		return fmt.Errorf("invalid framebuffer (0x%X)", status)
+		return fmt.Errorf("framebuffer incomplete: 0x%X", status)
 	}
 	return nil
 }
 
 func destroyFramebuffer() {
-	if opt.hasDepth {
-		gl.DeleteRenderbuffers(1, &opt.rbo)
+	if hasDepth {
+		gl.DeleteRenderbuffers(1, &rbo)
 	}
-	gl.DeleteFramebuffers(1, &opt.fbo)
-	gl.DeleteTextures(1, &opt.tex)
+	gl.DeleteFramebuffers(1, &fbo)
+	gl.DeleteTextures(1, &tex)
 }
 
-func ReadFramebuffer(bytes, w, h uint) []byte {
-	data := buf[:bytes:bytes]
-	gl.PixelStorei(gl.PackAlignment, 1)
-	gl.BindFramebuffer(gl.FRAMEBUFFER, opt.fbo)
-	gl.ReadPixels(0, 0, int32(w), int32(h), opt.pixType, opt.pixFormat, unsafe.Pointer(&data[0]))
-	return data
+func ReadFramebuffer(size, w, h uint) []byte {
+	gl.BindFramebuffer(gl.FRAMEBUFFER, fbo)
+	gl.ReadPixels(0, 0, int32(w), int32(h), pixType, pixFormat, bufPtr)
+	return buf[:size]
 }
 
-func getFbo() uint32 { return opt.fbo }
-
-func SetBuffer(size int) { buf = make([]byte, size) }
+func SetBuffer(size int) {
+	buf = make([]byte, size)
+	bufPtr = unsafe.Pointer(&buf[0])
+}
 
 func SetPixelFormat(format PixelFormat) error {
 	switch format {
 	case UnsignedShort5551:
-		opt.pixFormat = gl.UnsignedShort5551
-		opt.pixType = gl.BGRA
+		pixFormat, pixType = gl.UnsignedShort5551, gl.BGRA
 	case UnsignedShort565:
-		opt.pixFormat = gl.UnsignedShort565
-		opt.pixType = gl.RGB
+		pixFormat, pixType = gl.UnsignedShort565, gl.RGB
 	case UnsignedInt8888Rev:
-		opt.pixFormat = gl.UnsignedInt8888Rev
-		opt.pixType = gl.BGRA
+		pixFormat, pixType = gl.UnsignedInt8888Rev, gl.BGRA
 	default:
 		return errors.New("unknown pixel format")
 	}
 	return nil
 }
 
-func GetGLVersionInfo() string  { return get(gl.VERSION) }
-func GetGLVendorInfo() string   { return get(gl.VENDOR) }
-func GetGLRendererInfo() string { return get(gl.RENDERER) }
-func GetGLSLInfo() string       { return get(gl.ShadingLanguageVersion) }
-func GetGLError() uint32        { return gl.GetError() }
+func GLInfo() (version, vendor, renderer, glsl string) {
+	return gl.GoStr(gl.GetString(gl.VERSION)),
+		gl.GoStr(gl.GetString(gl.VENDOR)),
+		gl.GoStr(gl.GetString(gl.RENDERER)),
+		gl.GoStr(gl.GetString(gl.ShadingLanguageVersion))
+}
 
-func get(name uint32) string { return gl.GoStr(gl.GetString(name)) }
+func GlFbo() uint32 { return fbo }

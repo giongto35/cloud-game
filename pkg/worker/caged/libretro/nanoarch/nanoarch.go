@@ -486,10 +486,11 @@ func setRotation(rot uint) {
 func printOpenGLDriverInfo() {
 	var openGLInfo strings.Builder
 	openGLInfo.Grow(128)
-	openGLInfo.WriteString(fmt.Sprintf("\n[OpenGL] Version: %v\n", graphics.GetGLVersionInfo()))
-	openGLInfo.WriteString(fmt.Sprintf("[OpenGL] Vendor: %v\n", graphics.GetGLVendorInfo()))
-	openGLInfo.WriteString(fmt.Sprintf("[OpenGL] Renderer: %v\n", graphics.GetGLRendererInfo()))
-	openGLInfo.WriteString(fmt.Sprintf("[OpenGL] GLSL Version: %v", graphics.GetGLSLInfo()))
+	version, vendor, renderrer, glsl := graphics.GLInfo()
+	openGLInfo.WriteString(fmt.Sprintf("\n[OpenGL] Version: %v\n", version))
+	openGLInfo.WriteString(fmt.Sprintf("[OpenGL] Vendor: %v\n", vendor))
+	openGLInfo.WriteString(fmt.Sprintf("[OpenGL] Renderer: %v\n", renderrer))
+	openGLInfo.WriteString(fmt.Sprintf("[OpenGL] GLSL Version: %v", glsl))
 	Nan0.log.Debug().Msg(openGLInfo.String())
 }
 
@@ -711,11 +712,11 @@ func coreLog(level C.enum_retro_log_level, msg *C.char) {
 }
 
 //export coreGetCurrentFramebuffer
-func coreGetCurrentFramebuffer() C.uintptr_t { return (C.uintptr_t)(graphics.GetGlFbo()) }
+func coreGetCurrentFramebuffer() C.uintptr_t { return (C.uintptr_t)(graphics.GlFbo()) }
 
 //export coreGetProcAddress
 func coreGetProcAddress(sym *C.char) C.retro_proc_address_t {
-	return (C.retro_proc_address_t)(graphics.GetGlProcAddress(C.GoString(sym)))
+	return (C.retro_proc_address_t)(graphics.GlProcAddress(C.GoString(sym)))
 }
 
 //export coreEnvironment
@@ -857,20 +858,22 @@ func initVideo() {
 		context = graphics.CtxUnknown
 	}
 
-	sdl, err := graphics.NewSDLContext(graphics.Config{
-		Ctx:            context,
-		W:              int(Nan0.sys.av.geometry.max_width),
-		H:              int(Nan0.sys.av.geometry.max_height),
-		GLAutoContext:  Nan0.Video.gl.autoCtx,
-		GLVersionMajor: uint(Nan0.Video.hw.version_major),
-		GLVersionMinor: uint(Nan0.Video.hw.version_minor),
-		GLHasDepth:     bool(Nan0.Video.hw.depth),
-		GLHasStencil:   bool(Nan0.Video.hw.stencil),
-	}, Nan0.log)
-	if err != nil {
-		panic(err)
-	}
-	Nan0.sdlCtx = sdl
+	thread.Main(func() {
+		var err error
+		Nan0.sdlCtx, err = graphics.NewSDLContext(graphics.Config{
+			Ctx:            context,
+			W:              int(Nan0.sys.av.geometry.max_width),
+			H:              int(Nan0.sys.av.geometry.max_height),
+			GLAutoContext:  Nan0.Video.gl.autoCtx,
+			GLVersionMajor: uint(Nan0.Video.hw.version_major),
+			GLVersionMinor: uint(Nan0.Video.hw.version_minor),
+			GLHasDepth:     bool(Nan0.Video.hw.depth),
+			GLHasStencil:   bool(Nan0.Video.hw.stencil),
+		})
+		if err != nil {
+			panic(err)
+		}
+	})
 
 	if Nan0.log.GetLevel() < logger.InfoLevel {
 		printOpenGLDriverInfo()
@@ -882,9 +885,11 @@ func deinitVideo() {
 	if !Nan0.hackSkipHwContextDestroy {
 		C.bridge_context_reset(Nan0.Video.hw.context_destroy)
 	}
-	if err := Nan0.sdlCtx.Deinit(); err != nil {
-		Nan0.log.Error().Err(err).Msg("deinit fail")
-	}
+	thread.Main(func() {
+		if err := Nan0.sdlCtx.Deinit(); err != nil {
+			Nan0.log.Error().Err(err).Msg("deinit fail")
+		}
+	})
 	Nan0.Video.gl.enabled = false
 	Nan0.Video.gl.autoCtx = false
 	Nan0.hackSkipHwContextDestroy = false
