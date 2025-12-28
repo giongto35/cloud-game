@@ -426,7 +426,7 @@ func (n *Nanoarch) Run() {
 func (n *Nanoarch) IsSupported() error                  { return graphics.TryInit() }
 func (n *Nanoarch) IsGL() bool                          { return n.Video.gl.enabled }
 func (n *Nanoarch) IsStopped() bool                     { return n.Stopped.Load() }
-func (n *Nanoarch) InputRetropad(port int, data []byte) { n.retropad.Input(port, data) }
+func (n *Nanoarch) InputRetropad(port int, data []byte) { n.retropad.SetInput(port, data) }
 func (n *Nanoarch) InputKeyboard(_ int, data []byte) {
 	if n.keyboardCb == nil {
 		return
