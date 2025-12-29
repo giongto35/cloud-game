@@ -9,11 +9,12 @@ import (
 
 func TestInputState_SetInput(t *testing.T) {
 	tests := []struct {
-		name string
-		port int
-		data []byte
-		keys uint32
-		axes [4]int32
+		name     string
+		port     int
+		data     []byte
+		keys     uint32
+		axes     [4]int16
+		triggers [2]int16
 	}{
 		{
 			name: "buttons only",
@@ -26,20 +27,60 @@ func TestInputState_SetInput(t *testing.T) {
 			port: 1,
 			data: []byte{0x03, 0x00, 0x10, 0x27, 0xF0, 0xD8, 0x00, 0x80, 0xFF, 0x7F},
 			keys: 0x0003,
-			axes: [4]int32{10000, -10000, -32768, 32767},
+			axes: [4]int16{10000, -10000, -32768, 32767},
 		},
 		{
 			name: "partial axes",
 			port: 2,
 			data: []byte{0x01, 0x00, 0x64, 0x00},
 			keys: 0x0001,
-			axes: [4]int32{100, 0, 0, 0},
+			axes: [4]int16{100, 0, 0, 0},
 		},
 		{
 			name: "max port",
 			port: 3,
 			data: []byte{0xFF, 0xFF},
 			keys: 0xFFFF,
+		},
+		{
+			name: "full input with triggers",
+			port: 0,
+			data: []byte{
+				0x03, 0x00, // buttons
+				0x10, 0x27, // LX: 10000
+				0xF0, 0xD8, // LY: -10000
+				0x00, 0x80, // RX: -32768
+				0xFF, 0x7F, // RY: 32767
+				0xFF, 0x3F, // L2: 16383
+				0xFF, 0x7F, // R2: 32767
+			},
+			keys:     0x0003,
+			axes:     [4]int16{10000, -10000, -32768, 32767},
+			triggers: [2]int16{16383, 32767},
+		},
+		{
+			name: "axes without triggers",
+			port: 1,
+			data: []byte{
+				0x01, 0x00,
+				0x64, 0x00, // LX: 100
+				0xC8, 0x00, // LY: 200
+				0x2C, 0x01, // RX: 300
+				0x90, 0x01, // RY: 400
+			},
+			keys: 0x0001,
+			axes: [4]int16{100, 200, 300, 400},
+		},
+		{
+			name: "zero triggers",
+			port: 2,
+			data: []byte{
+				0x00, 0x00,
+				0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+				0x00, 0x00, // L2: 0
+				0x00, 0x00, // R2: 0
+			},
+			keys: 0x0000,
 		},
 	}
 
@@ -51,12 +92,79 @@ func TestInputState_SetInput(t *testing.T) {
 			if state[test.port].keys != test.keys {
 				t.Errorf("keys: got %v, want %v", state[test.port].keys, test.keys)
 			}
+
+			// Check axes from packed int64
+			axes := state[test.port].axes
 			for i, want := range test.axes {
-				if state[test.port].axes[i] != want {
-					t.Errorf("axes[%d]: got %v, want %v", i, state[test.port].axes[i], want)
+				got := int16(axes >> (i * 16))
+				if got != want {
+					t.Errorf("axes[%d]: got %v, want %v", i, got, want)
 				}
 			}
+
+			// Check triggers from packed int32
+			triggers := state[test.port].triggers
+			l2 := int16(triggers)
+			r2 := int16(triggers >> 16)
+			if l2 != test.triggers[0] {
+				t.Errorf("L2: got %v, want %v", l2, test.triggers[0])
+			}
+			if r2 != test.triggers[1] {
+				t.Errorf("R2: got %v, want %v", r2, test.triggers[1])
+			}
 		})
+	}
+}
+
+func TestInputState_AxisExtraction(t *testing.T) {
+	state := InputState{}
+	data := []byte{
+		0x00, 0x00, // buttons
+		0x01, 0x00, // LX: 1
+		0x02, 0x00, // LY: 2
+		0x03, 0x00, // RX: 3
+		0x04, 0x00, // RY: 4
+		0x05, 0x00, // L2: 5
+		0x06, 0x00, // R2: 6
+	}
+	state.SetInput(0, data)
+
+	axes := state[0].axes
+	expected := []int16{1, 2, 3, 4}
+	for i, want := range expected {
+		got := int16(axes >> (i * 16))
+		if got != want {
+			t.Errorf("axis[%d]: got %v, want %v", i, got, want)
+		}
+	}
+
+	triggers := state[0].triggers
+	if got := int16(triggers); got != 5 {
+		t.Errorf("L2: got %v, want 5", got)
+	}
+	if got := int16(triggers >> 16); got != 6 {
+		t.Errorf("R2: got %v, want 6", got)
+	}
+}
+
+func TestInputState_NegativeAxes(t *testing.T) {
+	state := InputState{}
+	data := []byte{
+		0x00, 0x00, // buttons
+		0x00, 0x80, // LX: -32768
+		0xFF, 0xFF, // LY: -1
+		0x01, 0x80, // RX: -32767
+		0xFE, 0xFF, // RY: -2
+	}
+	state.SetInput(0, data)
+
+	axes := state[0].axes
+	expected := []int16{-32768, -1, -32767, -2}
+	for i, want := range expected {
+		got := int16(axes >> (i * 16))
+		if got != want {
+			t.Errorf("axis[%d]: got %v, want %v", i, got, want)
+		}
 	}
 }
 
@@ -69,7 +177,8 @@ func TestInputState_Concurrent(t *testing.T) {
 	for range events {
 		player := rand.Intn(maxPort)
 		go func() {
-			state.SetInput(player, []byte{0, 1, 0, 0, 0, 0, 0, 0, 0, 0})
+			// Full 14-byte input
+			state.SetInput(player, []byte{0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0})
 			wg.Done()
 		}()
 	}

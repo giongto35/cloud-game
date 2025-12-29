@@ -33,30 +33,30 @@ void *same_thread_with_args(void *f, int type, ...);
 #define INPUT_MAX_KEYS 512
 
 typedef struct {
-    // Retropad: store raw button bitmask and analog axes per port
     uint32_t buttons[INPUT_MAX_PORTS];
-    int16_t analog[INPUT_MAX_PORTS][4];  // 4 axes per port
+    int16_t analog[INPUT_MAX_PORTS][4];     // LX, LY, RX, RY
+    int16_t triggers[INPUT_MAX_PORTS][2];   // L2, R2
 
-    // Keyboard
     uint8_t keyboard[INPUT_MAX_KEYS];
-
-    // Mouse
     int16_t mouse_x;
     int16_t mouse_y;
-    uint8_t mouse_buttons;  // bit 0=left, bit 1=right, bit 2=middle
+    uint8_t mouse_buttons;
 } input_cache_t;
 
 static input_cache_t input_cache = {0};
 
 // Update entire port state at once
 void input_cache_set_port(unsigned port, uint32_t buttons,
-                          int16_t axis0, int16_t axis1, int16_t axis2, int16_t axis3) {
+                          int16_t lx, int16_t ly, int16_t rx, int16_t ry,
+                          int16_t l2, int16_t r2) {
     if (port < INPUT_MAX_PORTS) {
         input_cache.buttons[port] = buttons;
-        input_cache.analog[port][0] = axis0;
-        input_cache.analog[port][1] = axis1;
-        input_cache.analog[port][2] = axis2;
-        input_cache.analog[port][3] = axis3;
+        input_cache.analog[port][0] = lx;
+        input_cache.analog[port][1] = ly;
+        input_cache.analog[port][2] = rx;
+        input_cache.analog[port][3] = ry;
+        input_cache.triggers[port][0] = l2;
+        input_cache.triggers[port][1] = r2;
     }
 }
 
@@ -202,21 +202,34 @@ int16_t core_input_state_cgo(unsigned port, unsigned device, unsigned index, uns
 
     switch (device) {
         case RETRO_DEVICE_JOYPAD:
-            // Extract button bit from cached bitmask
             return (int16_t)((input_cache.buttons[port] >> id) & 1);
 
         case RETRO_DEVICE_ANALOG:
             switch (index) {
                 case RETRO_DEVICE_INDEX_ANALOG_LEFT:
-                    // id: 0=X, 1=Y
-                    if (id < 2) {
+                    // id: RETRO_DEVICE_ID_ANALOG_X=0, RETRO_DEVICE_ID_ANALOG_Y=1
+                    if (id <= RETRO_DEVICE_ID_ANALOG_Y) {
                         return input_cache.analog[port][id];
                     }
                     break;
                 case RETRO_DEVICE_INDEX_ANALOG_RIGHT:
-                    // id: 0=X, 1=Y -> stored in axes[2], axes[3]
-                    if (id < 2) {
+                    // id: RETRO_DEVICE_ID_ANALOG_X=0, RETRO_DEVICE_ID_ANALOG_Y=1
+                    if (id <= RETRO_DEVICE_ID_ANALOG_Y) {
                         return input_cache.analog[port][2 + id];
+                    }
+                    break;
+                case RETRO_DEVICE_INDEX_ANALOG_BUTTON:
+                    // Any button can be queried as analog
+                    // id = RETRO_DEVICE_ID_JOYPAD_* (0-15)
+                    // For now, only L2/R2 have analog values
+                    switch (id) {
+                        case RETRO_DEVICE_ID_JOYPAD_L2:
+                            return input_cache.triggers[port][0];
+                        case RETRO_DEVICE_ID_JOYPAD_R2:
+                            return input_cache.triggers[port][1];
+                        default:
+                            // Other buttons: return digital as 0 or 0x7fff
+                            return ((input_cache.buttons[port] >> id) & 1) ? 0x7FFF : 0;
                     }
                     break;
             }
@@ -232,12 +245,12 @@ int16_t core_input_state_cgo(unsigned port, unsigned device, unsigned index, uns
             switch (id) {
                 case RETRO_DEVICE_ID_MOUSE_X: {
                     int16_t x = input_cache.mouse_x;
-                    input_cache.mouse_x = 0;  // Consume delta
+                    input_cache.mouse_x = 0;
                     return x;
                 }
                 case RETRO_DEVICE_ID_MOUSE_Y: {
                     int16_t y = input_cache.mouse_y;
-                    input_cache.mouse_y = 0;  // Consume delta
+                    input_cache.mouse_y = 0;
                     return y;
                 }
                 case RETRO_DEVICE_ID_MOUSE_LEFT:

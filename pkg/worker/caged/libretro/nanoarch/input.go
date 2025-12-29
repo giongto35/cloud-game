@@ -10,7 +10,8 @@ import (
 #include "libretro.h"
 
 void input_cache_set_port(unsigned port, uint32_t buttons,
-                          int16_t axis0, int16_t axis1, int16_t axis2, int16_t axis3);
+                          int16_t lx, int16_t ly, int16_t rx, int16_t ry,
+                          int16_t l2, int16_t r2);
 void input_cache_set_keyboard_key(unsigned id, uint8_t pressed);
 void input_cache_set_mouse(int16_t dx, int16_t dy, uint8_t buttons);
 void input_cache_clear(void);
@@ -46,34 +47,55 @@ const (
 
 // InputState stores controller state for all ports.
 //   - uint16 button bitmask
-//   - int16 analog axes x4
+//   - int16 analog axes x4 (left stick, right stick)
+//   - int16 analog triggers x2 (L2, R2)
 type InputState [maxPort]struct {
-	keys uint32
-	axes [numAxes]int32
+	keys     uint32 // lower 16 bits used
+	axes     int64  // packed: [LX:16][LY:16][RX:16][RY:16]
+	triggers int32  // packed: [L2:16][R2:16]
 }
 
 // SetInput sets input state for a player.
 //
-//	[BTN:2][AX0:2][AX1:2][AX2:2][AX3:2]
+//	[BTN:2][LX:2][LY:2][RX:2][RY:2][L2:2][R2:2]
 func (s *InputState) SetInput(port int, data []byte) {
-	atomic.StoreUint32(&s[port].keys, uint32(binary.LittleEndian.Uint16(data)))
-	for i := 0; i < numAxes && i*2+3 < len(data); i++ {
-		atomic.StoreInt32(&s[port].axes[i], int32(int16(binary.LittleEndian.Uint16(data[i*2+2:]))))
+	if len(data) < 2 {
+		return
 	}
-}
 
-// Button check
-func (s *InputState) Button(port, key uint) C.int16_t {
-	return C.int16_t((atomic.LoadUint32(&s[port].keys) >> key) & 1)
+	// Buttons
+	atomic.StoreUint32(&s[port].keys, uint32(binary.LittleEndian.Uint16(data)))
+
+	// Axes - pack into int64
+	var packedAxes int64
+	for i := 0; i < numAxes && i*2+3 < len(data); i++ {
+		axis := int64(int16(binary.LittleEndian.Uint16(data[i*2+2:])))
+		packedAxes |= (axis & 0xFFFF) << (i * 16)
+	}
+	atomic.StoreInt64(&s[port].axes, packedAxes)
+
+	// Analog triggers L2, R2 - pack into int32
+	if len(data) >= 14 {
+		l2 := int32(int16(binary.LittleEndian.Uint16(data[10:])))
+		r2 := int32(int16(binary.LittleEndian.Uint16(data[12:])))
+		atomic.StoreInt32(&s[port].triggers, (l2&0xFFFF)|((r2&0xFFFF)<<16))
+	}
 }
 
 // SyncToCache syncs input state to C-side cache before Run().
 func (s *InputState) SyncToCache() {
 	for p := uint(0); p < maxPort; p++ {
-		a := &s[p].axes
-		C.input_cache_set_port(C.uint(p), C.uint32_t(atomic.LoadUint32(&s[p].keys)),
-			C.int16_t(atomic.LoadInt32(&a[0])), C.int16_t(atomic.LoadInt32(&a[1])),
-			C.int16_t(atomic.LoadInt32(&a[2])), C.int16_t(atomic.LoadInt32(&a[3])))
+		keys := atomic.LoadUint32(&s[p].keys)
+		axes := atomic.LoadInt64(&s[p].axes)
+		triggers := atomic.LoadInt32(&s[p].triggers)
+
+		C.input_cache_set_port(C.uint(p), C.uint32_t(keys),
+			C.int16_t(axes),
+			C.int16_t(axes>>16),
+			C.int16_t(axes>>32),
+			C.int16_t(axes>>48),
+			C.int16_t(triggers),
+			C.int16_t(triggers>>16))
 	}
 }
 
