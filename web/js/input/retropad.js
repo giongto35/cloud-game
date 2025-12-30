@@ -1,101 +1,64 @@
-import {
-    pub,
-    CONTROLLER_UPDATED
-} from 'event';
-import {KEY} from 'input'
-import {log} from 'log';
+import {pub, CONTROLLER_UPDATED} from 'event';
+import {JOYPAD_KEYS} from 'input';
 
-const pollingIntervalMs = 5;
-let controllerChangedIndex = -1;
-
-// Libretro config
-let controllerState = {
-    [KEY.B]: false,
-    [KEY.Y]: false,
-    [KEY.SELECT]: false,
-    [KEY.START]: false,
-    [KEY.UP]: false,
-    [KEY.DOWN]: false,
-    [KEY.LEFT]: false,
-    [KEY.RIGHT]: false,
-    [KEY.A]: false,
-    [KEY.X]: false,
-    // extra
-    [KEY.L]: false,
-    [KEY.R]: false,
-    [KEY.L2]: false,
-    [KEY.R2]: false,
-    [KEY.L3]: false,
-    [KEY.R3]: false
-};
-
-const poll = (intervalMs, callback) => {
-    let _ticker = 0;
-    return {
-        enable: () => {
-            if (_ticker > 0) return;
-            log.debug(`[input] poll set to ${intervalMs}ms`);
-            _ticker = setInterval(callback, intervalMs)
-        },
-        disable: () => {
-            if (_ticker < 1) return;
-            log.debug('[input] poll has been disabled');
-            clearInterval(_ticker);
-            _ticker = 0;
-        }
-    }
-};
-
-const controllerEncoded = [0, 0, 0, 0, 0];
-const keys = Object.keys(controllerState);
-
-const sendControllerState = () => {
-    if (controllerChangedIndex >= 0) {
-        const state = _getState();
-        pub(CONTROLLER_UPDATED, _encodeState(state));
-        controllerChangedIndex = -1;
-    }
-};
-
-const setKeyState = (name, state) => {
-    if (controllerState[name] !== undefined) {
-        controllerState[name] = state;
-        controllerChangedIndex = Math.max(controllerChangedIndex, 0);
-    }
-};
-
-const setAxisChanged = (index, value) => {
-    if (controllerEncoded[index + 1] !== undefined) {
-        controllerEncoded[index + 1] = Math.floor(32767 * value);
-        controllerChangedIndex = Math.max(controllerChangedIndex, index + 1);
-    }
-};
-
-/**
- * Converts key state into a bitmap and prepends it to the axes state.
+/*
+ * [BUTTONS, LEFT_X, LEFT_Y, RIGHT_X, RIGHT_Y]
  *
- * @returns {Uint16Array} The controller state.
- * First uint16 is the controller state bitmap.
- * The other uint16 are the axes values.
- * Truncated to the last value changed.
- *
- * @private
+ * Buttons are packed into a 16-bit bitmask where each bit is one button.
+ * Axes are signed 16-bit values ranging from -32768 to 32767.
+ * The whole thing is 10 bytes when sent over the wire.
  */
-const _encodeState = (state) => new Uint16Array(state)
+const state = new Int16Array(5);
+let buttons = 0;
+let dirty = false;
+let rafId = 0;
 
-const _getState = () => {
-    controllerEncoded[0] = 0;
-    for (let i = 0, len = keys.length; i < len; i++) {
-        controllerEncoded[0] += controllerState[keys[i]] ? 1 << i : 0;
+/*
+ * Polls controller state using requestAnimationFrame which gives us
+ * ~60Hz update rate that syncs with the display. As a bonus,
+ * it automatically pauses when the tab goes to background.
+ * We only send data when something actually changed.
+ */
+const poll = () => {
+    if (dirty) {
+        state[0] = buttons;
+        pub(CONTROLLER_UPDATED, new Uint16Array(state.buffer));
+        dirty = false;
     }
-    return controllerEncoded.slice(0, controllerChangedIndex + 1);
-}
+    rafId = requestAnimationFrame(poll);
+};
 
-const _poll = poll(pollingIntervalMs, sendControllerState)
+/*
+ * Toggles a button on or off in the bitmask. The button's position
+ * in JOYPAD_KEYS determines which bit gets flipped. For example,
+ * if A is at index 8, pressing it sets bit 8.
+ */
+const setKeyState = (key, pressed) => {
+    const idx = JOYPAD_KEYS.indexOf(key);
+    if (idx < 0) return;
 
-export const retropad = {
-    enable: () => _poll.enable(),
-    disable: () => _poll.disable(),
-    setKeyState,
-    setAxisChanged,
-}
+    const prev = buttons;
+    buttons = pressed ? buttons | (1 << idx) : buttons & ~(1 << idx);
+    dirty ||= buttons !== prev;
+};
+
+/*
+ * Updates an analog stick axis. Axes 0-1 are the left stick (X and Y),
+ * axes 2-3 are the right stick. Input should be a float from -1 to 1
+ * which gets converted to a signed 16-bit integer for transmission.
+ */
+const setAxisChanged = (axis, value) => {
+    if (axis < 0 || axis > 3) return;
+
+    const v = Math.trunc(Math.max(-1, Math.min(1, value)) * 32767);
+    dirty ||= state[++axis] !== v;
+    state[axis] = v;
+};
+
+// Starts or stops the polling loop
+const toggle = (on) => {
+    if (on === !!rafId) return;
+    rafId = on ? requestAnimationFrame(poll) : (cancelAnimationFrame(rafId), 0);
+};
+
+export const retropad = {toggle, setKeyState, setAxisChanged};

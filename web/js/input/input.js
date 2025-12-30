@@ -5,7 +5,7 @@ import {
     sub
 } from 'event';
 
-export {KEY} from './keys.js?v=3';
+export {KEY, JOYPAD_KEYS} from './keys.js?v=3';
 
 import {joystick} from './joystick.js?v=3';
 import {keyboard} from './keyboard.js?v=3'
@@ -44,7 +44,7 @@ export const input = {
         toggle(on = true) {
             if (on === input_state.retropad) return
             input_state.retropad = on
-            on ? retropad.enable() : retropad.disable()
+            retropad.toggle(on)
         }
     },
     set kbm(v) {
