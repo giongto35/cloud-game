@@ -66,7 +66,7 @@ const controls = async (locked = false) => {
 rootEl.addEventListener('fullscreenchange', async () => {
     const fs = document.fullscreenElement !== null
 
-    cursor.autoHide(!fs)
+    cursor(!fs)
     gui.toggle(footerEl, fs)
     await controls(fs)
     state.current?.onFullscreen?.(fs)
