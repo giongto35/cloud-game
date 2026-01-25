@@ -125,7 +125,14 @@
       }
     }
 </script>
-
+<script type="module">
+  import { ROM_NAME } from './js/rom-config.js?v=3';
+  const params = new URLSearchParams(location.search);
+  if (!params.has('id')) {
+    params.set('id', ROM_NAME);
+    history.replaceState({}, '', location.pathname + '?' + params.toString());
+  }
+</script>
 <script type="module" src="js/app.js?v=3"></script>
 
 {{if .Analytics.Inject}}
