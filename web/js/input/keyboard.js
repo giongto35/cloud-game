@@ -53,7 +53,8 @@ let keyMap = {};
 // special mode for changing button bindings in the options
 let isKeysFilteredMode = true;
 // if the browser supports Keyboard Lock API (Firefox does not)
-let hasKeyboardLock = ('keyboard' in navigator) && ('lock' in navigator.keyboard)
+let hasKeyboardLock = ('keyboard' in navigator)
+    && navigator.keyboard && ('lock' in navigator.keyboard)
 
 let locked = false
 
