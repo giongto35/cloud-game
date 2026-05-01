@@ -3,7 +3,8 @@ package h264
 /*
 // See: [x264](https://www.videolan.org/developers/x264.html)
 #cgo !st pkg-config: x264
-#cgo st LDFLAGS: -l:libx264.a
+#cgo x264s pkg-config: x264
+#cgo st,!x264s LDFLAGS: -l:libx264.a
 
 #include "stdint.h"
 #include "x264.h"

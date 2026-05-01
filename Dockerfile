@@ -2,7 +2,7 @@ ARG BUILD_PATH=/tmp/cloud-game
 ARG VERSION=master
 
 # base build stage
-FROM ubuntu:plucky AS build0
+FROM ubuntu:resolute AS build0
 ARG GO=1.26.0
 ARG GO_DIST=go${GO}.linux-amd64.tar.gz
 
@@ -60,7 +60,7 @@ RUN apt-get -q update && apt-get -q install --no-install-recommends -y \
 
 # by default we ignore all except some folders and files, see .dockerignore
 COPY . ./
-RUN --mount=type=cache,target=/root/.cache/go-build make GO_TAGS=static,st build.worker
+RUN --mount=type=cache,target=/root/.cache/go-build make GO_TAGS=static,st,x264s build.worker
 RUN find ./bin/* | xargs upx --best --lzma
 
 WORKDIR /usr/local/share/cloud-game
@@ -74,12 +74,13 @@ COPY --from=build_coordinator /usr/local/share/cloud-game /cloud-game
 # autocertbot (SSL) requires these on the first run
 COPY --from=build_coordinator /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/
 
-FROM ubuntu:plucky AS worker
+FROM ubuntu:resolute AS worker
 
 RUN apt-get -q update && apt-get -q install --no-install-recommends -y \
     curl \
     libx11-6 \
     libxext6 \
+    libx264-165 \
  && apt-get autoremove \
  && rm -rf /var/lib/apt/lists/* /var/log/* /usr/share/bug /usr/share/doc /usr/share/doc-base \
     /usr/share/X11/locale/*
