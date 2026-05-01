@@ -3,49 +3,42 @@ ARG VERSION=master
 
 # base build stage
 FROM ubuntu:resolute AS build0
-ARG GO=1.26.0
+ARG GO=1.26.2
 ARG GO_DIST=go${GO}.linux-amd64.tar.gz
 
 ADD https://go.dev/dl/$GO_DIST ./
-RUN tar -C /usr/local -xzf $GO_DIST && \
-    rm $GO_DIST
-ENV PATH="${PATH}:/usr/local/go/bin"
-
-RUN apt-get -q update && apt-get -q install --no-install-recommends -y \
+RUN tar -C /usr/local -xzf $GO_DIST && rm $GO_DIST && \
+    apt-get -q update && apt-get -q install --no-install-recommends -y \
     ca-certificates \
     make \
     upx \
-&& rm -rf /var/lib/apt/lists/*
+    && rm -rf /var/lib/apt/lists/*
+ENV PATH="${PATH}:/usr/local/go/bin"
 
-# next conditional build stage
+# coordinator build stage
 FROM build0 AS build_coordinator
 ARG BUILD_PATH
 ARG VERSION
 ENV GIT_VERSION=${VERSION}
 
 WORKDIR ${BUILD_PATH}
-
-# by default we ignore all except some folders and files, see .dockerignore
 COPY . ./
-RUN --mount=type=cache,target=/root/.cache/go-build make build.coordinator
-RUN find ./bin/* | xargs upx --best --lzma
+RUN --mount=type=cache,target=/root/.cache/go-build make build.coordinator && \
+    find ./bin/* | xargs upx --best --lzma
 
 WORKDIR /usr/local/share/cloud-game
 RUN mv ${BUILD_PATH}/bin/* ./ && \
     mv ${BUILD_PATH}/web ./web && \
-    mv ${BUILD_PATH}/LICENSE ./
-RUN ${BUILD_PATH}/scripts/version.sh ./web/index.html ${VERSION} && \
+    mv ${BUILD_PATH}/LICENSE ./ && \
+    ${BUILD_PATH}/scripts/version.sh ./web/index.html ${VERSION} && \
     ${BUILD_PATH}/scripts/mkdirs.sh
 
-# next worker build stage
+# worker build stage
 FROM build0 AS build_worker
 ARG BUILD_PATH
 ARG VERSION
 ENV GIT_VERSION=${VERSION}
 
-WORKDIR ${BUILD_PATH}
-
-# install deps
 RUN apt-get -q update && apt-get -q install --no-install-recommends -y \
     build-essential \
     libopus-dev \
@@ -56,24 +49,26 @@ RUN apt-get -q update && apt-get -q install --no-install-recommends -y \
     libx264-dev \
     libspeexdsp-dev \
     pkg-config \
-&& rm -rf /var/lib/apt/lists/*
+    && rm -rf /var/lib/apt/lists/*
 
-# by default we ignore all except some folders and files, see .dockerignore
+WORKDIR ${BUILD_PATH}
 COPY . ./
-RUN --mount=type=cache,target=/root/.cache/go-build make GO_TAGS=static,st,x264s build.worker
-RUN find ./bin/* | xargs upx --best --lzma
+RUN --mount=type=cache,target=/root/.cache/go-build make GO_TAGS=static,st,x264s build.worker && \
+    find ./bin/* | xargs upx --best --lzma
 
 WORKDIR /usr/local/share/cloud-game
 RUN mv ${BUILD_PATH}/bin/* ./ && \
-    mv ${BUILD_PATH}/LICENSE ./
-RUN ${BUILD_PATH}/scripts/mkdirs.sh worker
+    mv ${BUILD_PATH}/LICENSE ./ && \
+    ${BUILD_PATH}/scripts/mkdirs.sh worker
 
+# coordinator runtime
 FROM scratch AS coordinator
 
 COPY --from=build_coordinator /usr/local/share/cloud-game /cloud-game
 # autocertbot (SSL) requires these on the first run
 COPY --from=build_coordinator /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/
 
+# worker runtime
 FROM ubuntu:resolute AS worker
 
 RUN apt-get -q update && apt-get -q install --no-install-recommends -y \
@@ -81,8 +76,8 @@ RUN apt-get -q update && apt-get -q install --no-install-recommends -y \
     libx11-6 \
     libxext6 \
     libx264-165 \
- && apt-get autoremove \
- && rm -rf /var/lib/apt/lists/* /var/log/* /usr/share/bug /usr/share/doc /usr/share/doc-base \
+    && apt-get autoremove \
+    && rm -rf /var/lib/apt/lists/* /var/log/* /usr/share/bug /usr/share/doc /usr/share/doc-base \
     /usr/share/X11/locale/*
 
 COPY --from=build_worker /usr/local/share/cloud-game /cloud-game
@@ -90,10 +85,9 @@ COPY --from=build_worker /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/
 
 ADD https://github.com/sergystepanov/mesa-llvmpipe/releases/download/v1.0.0/libGL.so.1.5.0 \
     /usr/lib/x86_64-linux-gnu/
-RUN cd /usr/lib/x86_64-linux-gnu && \
-    ln -s libGL.so.1.5.0 libGL.so.1 && \
-    ln -s libGL.so.1 libGL.so
+RUN cd /usr/lib/x86_64-linux-gnu && ln -s libGL.so.1.5.0 libGL.so.1 && ln -s libGL.so.1 libGL.so
 
+# final image
 FROM worker AS cloud-game
 
 WORKDIR /usr/local/share/cloud-game

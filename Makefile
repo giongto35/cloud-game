@@ -5,6 +5,7 @@ ROOT = ${REPO_ROOT}/${PROJECT}
 CGO_CFLAGS='-g -O3'
 CGO_LDFLAGS='-g -O3'
 GO_TAGS=
+TRIMPATH=-trimpath
 
 .PHONY: clean test
 
@@ -23,12 +24,12 @@ clean:
 
 build.coordinator:
 	mkdir -p bin/
-	go build -ldflags "-w -s -X 'main.Version=$(GIT_VERSION)'" -o bin/ ./cmd/coordinator
+	go build $(TRIMPATH) -ldflags "-w -s -X 'main.Version=$(GIT_VERSION)'" -o bin/ ./cmd/coordinator
 
 build.worker:
 	mkdir -p bin/
 	CGO_CFLAGS=${CGO_CFLAGS} CGO_LDFLAGS=${CGO_LDFLAGS} \
-		go build -pgo=auto -buildmode=exe $(if $(GO_TAGS),-tags $(GO_TAGS),) \
+		go build $(TRIMPATH) -pgo=auto -buildmode=exe $(if $(GO_TAGS),-tags $(GO_TAGS),) \
 		-ldflags "-w -s -X 'main.Version=$(GIT_VERSION)'" $(EXT_WFLAGS) \
 		-o bin/ ./cmd/worker
 
