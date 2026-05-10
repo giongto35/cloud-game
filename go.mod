@@ -5,7 +5,7 @@ go 1.26
 require (
 	github.com/VictoriaMetrics/metrics v1.43.2
 	github.com/cavaliergopher/grab/v3 v3.0.1
-	github.com/fsnotify/fsnotify v1.10.0
+	github.com/fsnotify/fsnotify v1.10.1
 	github.com/goccy/go-json v0.10.6
 	github.com/gofrs/flock v0.13.0
 	github.com/gorilla/websocket v1.5.3
@@ -19,7 +19,7 @@ require (
 	github.com/rs/xid v1.6.0
 	github.com/rs/zerolog v1.35.1
 	github.com/veandco/go-sdl2 v0.4.40
-	golang.org/x/crypto v0.50.0
+	golang.org/x/crypto v0.51.0
 	golang.org/x/image v0.38.0
 	gopkg.in/yaml.v3 v3.0.1
 )
@@ -45,7 +45,7 @@ require (
 	github.com/pion/mdns/v2 v2.1.0 // indirect
 	github.com/pion/randutil v0.1.0 // indirect
 	github.com/pion/rtcp v1.2.16 // indirect
-	github.com/pion/rtp v1.10.1 // indirect
+	github.com/pion/rtp v1.10.2 // indirect
 	github.com/pion/sctp v1.9.5 // indirect
 	github.com/pion/sdp/v3 v3.0.18 // indirect
 	github.com/pion/srtp/v3 v3.0.10 // indirect
@@ -59,8 +59,8 @@ require (
 	github.com/wlynxg/anet v0.0.5 // indirect
 	github.com/zeebo/xxh3 v1.1.0 // indirect
 	go.yaml.in/yaml/v3 v3.0.4 // indirect
-	golang.org/x/net v0.53.0 // indirect
-	golang.org/x/sys v0.43.0 // indirect
-	golang.org/x/text v0.36.0 // indirect
+	golang.org/x/net v0.54.0 // indirect
+	golang.org/x/sys v0.44.0 // indirect
+	golang.org/x/text v0.37.0 // indirect
 	golang.org/x/time v0.15.0 // indirect
 )
