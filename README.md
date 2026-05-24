@@ -172,3 +172,4 @@ Authors:
 Maintainers:
 
 - Sergey Stepanov (https://github.com/sergystepanov)
+Thank you for reading this document
