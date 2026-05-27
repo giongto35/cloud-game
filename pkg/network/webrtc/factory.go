@@ -75,6 +75,16 @@ func NewApiFactory(conf config.Webrtc, log *logger.Logger, mod ModApiFun) (api *
 
 	s.SetICEMulticastDNSMode(ice.MulticastDNSModeDisabled)
 	s.EnableSCTPZeroChecksum(true)
+	if len(conf.IpFilter) > 0 {
+		s.SetIPFilter(func(i net.IP) (keep bool) {
+			return filterIP(i, conf.IpFilter)
+		})
+	}
+	if len(conf.IpFilterRemote) > 0 {
+		s.SetRemoteIPFilter(func(i net.IP) (keep bool) {
+			return filterIP(i, conf.IpFilterRemote)
+		})
+	}
 
 	if mod != nil {
 		mod(m, i, &s)
@@ -97,4 +107,19 @@ func NewApiFactory(conf config.Webrtc, log *logger.Logger, mod ModApiFun) (api *
 
 func (a *ApiFactory) NewPeer() (*webrtc.PeerConnection, error) {
 	return a.api.NewPeerConnection(a.conf)
+}
+
+func filterIP(i net.IP, filter []string) bool {
+	for _, ip := range filter {
+		if i.String() == ip {
+			return false
+		}
+		if ip == "local" && i.IsLoopback() {
+			return false
+		}
+		if ip == "private" && i.IsPrivate() {
+			return false
+		}
+	}
+	return true
 }
