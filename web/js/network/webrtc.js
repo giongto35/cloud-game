@@ -173,12 +173,13 @@ export const webrtc = {
         if (isFlushing || !isAnswered) return;
         isFlushing = true;
         log.debug('[rtc] flushing candidates', candidates);
-        candidates.forEach(data => {
+        let data = undefined;
+        while (typeof (data = candidates.shift()) !== "undefined") {
             const candidate = new RTCIceCandidate(JSON.parse(atob(data)))
             connection.addIceCandidate(candidate).catch(e => {
                 log.error('[rtc] candidate add failed', e.name);
             });
-        });
+        }
         isFlushing = false;
     },
     keyboard: (data) => keyboardChannel?.send(data),
