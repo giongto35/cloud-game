@@ -23,7 +23,7 @@ let inputReady = false;
 let onData;
 
 const start = (iceservers) => {
-    log.info('[rtc] <- ICE servers', iceservers);
+    log.debug('[rtc] <- ICE servers', iceservers);
     const servers = iceservers || [];
     connection = new RTCPeerConnection({iceServers: servers});
     mediaStream = new MediaStream();
@@ -44,7 +44,7 @@ const start = (iceservers) => {
 
         dataChannel = e.channel;
         dataChannel.onopen = () => {
-            log.info('[rtc] the input channel has been opened');
+            log.debug('[rtc] the input channel has been opened');
             inputReady = true;
             pub(WEBRTC_CONNECTION_READY)
         };
@@ -53,12 +53,16 @@ const start = (iceservers) => {
         }
         dataChannel.onclose = () => {
             inputReady = false
-            log.info('[rtc] the input channel has been closed')
+            log.debug('[rtc] the input channel has been closed')
         }
     }
     connection.oniceconnectionstatechange = ice.onIceConnectionStateChange;
     connection.onicegatheringstatechange = ice.onIceStateChange;
-    connection.onicecandidate = ice.onIcecandidate;
+    connection.onicecandidate = ice.onIceCandidate;
+    connection.onicecandidateerror = ice.onIceCandidateError;
+    connection.onconnectionstatechange = _ => {
+        console.debug(`[rtc] connection state -> ${connection.connectionState}`)
+    }
     connection.ontrack = event => {
         mediaStream.addTrack(event.track);
     }
@@ -93,33 +97,36 @@ const stop = () => {
 }
 
 const ice = (() => {
-    const ICE_TIMEOUT = 2000;
+    const ICE_TIMEOUT = 3000;
     let timeForIceGathering;
 
     return {
-        onIcecandidate: data => {
+        onIceCandidate: data => {
             if (!data.candidate) return;
-            log.info('[rtc] user candidate', data.candidate);
+            log.debug('[rtc] user candidate', data.candidate);
             pub(WEBRTC_ICE_CANDIDATE_FOUND, {candidate: data.candidate})
+        },
+        onIceCandidateError: event => {
+            log.debug('[rtc] ice candidate error', event)
         },
         onIceStateChange: event => {
             switch (event.target.iceGatheringState) {
                 case 'gathering':
-                    log.info('[rtc] ice gathering');
+                    log.debug('[rtc] ice gathering');
                     timeForIceGathering = setTimeout(() => {
                         log.warn(`[rtc] ice gathering was aborted due to timeout ${ICE_TIMEOUT}ms`);
                         // sendCandidates();
                     }, ICE_TIMEOUT);
                     break;
                 case 'complete':
-                    log.info('[rtc] ice gathering has been completed');
+                    log.debug('[rtc] ice gathering has been completed');
                     if (timeForIceGathering) {
                         clearTimeout(timeForIceGathering);
                     }
             }
         },
         onIceConnectionStateChange: () => {
-            log.info('[rtc] <- iceConnectionState', connection.iceConnectionState);
+            log.debug('[rtc] <- iceConnectionState', connection.iceConnectionState);
             switch (connection.iceConnectionState) {
                 case 'connected':
                     log.info('[rtc] connected...');
@@ -151,19 +158,32 @@ export const webrtc = {
     start,
     setRemoteDescription: async (data, media) => {
         log.debug('[rtc] remote SDP', data)
-        const offer = new RTCSessionDescription(JSON.parse(atob(data)));
-        await connection.setRemoteDescription(offer);
+        const decodedSDP = JSON.parse(atob(data))
+        const offer = new RTCSessionDescription(decodedSDP);
 
-        const answer = await connection.createAnswer();
-        // Chrome bug https://bugs.chromium.org/p/chromium/issues/detail?id=818180 workaround
-        // force stereo params for Opus tracks (a=fmtp:111 ...)
-        answer.sdp = answer.sdp.replace(/(a=fmtp:111 .*)/g, '$1;stereo=1');
-        await connection.setLocalDescription(answer);
-        log.debug("[rtc] local SDP", answer)
+        try {
+            await connection.setRemoteDescription(offer);
+        } catch (e) {
+            log.error('[rtc] remote SDP error', e)
+        }
 
-        isAnswered = true;
-        pub(WEBRTC_ICE_CANDIDATES_FLUSH);
-        pub(WEBRTC_SDP_ANSWER, {sdp: answer});
+        log.debug(`[rtc] remote Trickle ICE support: ${connection.canTrickleIceCandidates}`)
+
+        try {
+            const answer = await connection.createAnswer();
+            // Chrome bug https://bugs.chromium.org/p/chromium/issues/detail?id=818180 workaround
+            // force stereo params for Opus tracks (a=fmtp:111 ...)
+            answer.sdp = answer.sdp.replace(/(a=fmtp:111 .*)/g, '$1;stereo=1');
+            await connection.setLocalDescription(answer);
+            log.debug("[rtc] local SDP", answer)
+
+            isAnswered = true;
+            pub(WEBRTC_ICE_CANDIDATES_FLUSH);
+            pub(WEBRTC_SDP_ANSWER, {sdp: answer});
+        } catch (e) {
+            log.error('[rtc] answer/local SDP error', e)
+        }
+
         media.srcObject = mediaStream;
     },
     addCandidate: (data) => {
