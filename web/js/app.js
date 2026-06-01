@@ -154,11 +154,6 @@ const startGame = () => {
         return;
     }
 
-    if (!webrtc.isInputReady()) {
-        message.show('Game is not ready yet. Please wait');
-        return;
-    }
-
     log.info('[control] game start');
 
     setState(app.state.game);
@@ -493,15 +488,22 @@ sub(GAME_PLAYER_IDX_SET, idx => {
 sub(GAME_ERROR_NO_FREE_SLOTS, () => message.show("No free slots :(", 2500));
 sub(WEBRTC_NEW_CONNECTION, (data) => {
     workerManager.whoami(data.wid);
-    webrtc.onData = (x) => onMessage(api.decode(x.data))
     webrtc.start(data.ice);
+    webrtc.modDataChannel = (ch) => {
+        ch.binaryType = "arraybuffer";
+        if (ch.label === "data") {
+            ch.onmessage = (x) => onMessage(api.decode(x.data));
+            pub(WEBRTC_CONNECTION_READY);
+        }
+        return ch
+    }
     api.server.initWebrtc()
     gameList.set(data.games);
 });
 sub(WEBRTC_ICE_CANDIDATE_FOUND, (data) => api.server.sendIceCandidate(data.candidate));
 sub(WEBRTC_SDP_ANSWER, (data) => api.server.sendSdp(data.sdp));
 sub(WEBRTC_SDP_OFFER, (data) => webrtc.setRemoteDescription(api.decodeB64(data.sdp), stream.video.el));
-sub(WEBRTC_ICE_CANDIDATE_RECEIVED, (data) =>  {
+sub(WEBRTC_ICE_CANDIDATE_RECEIVED, (data) => {
     const candidate = data.candidate ? api.decodeB64(data.candidate) : ''
     webrtc.addCandidate(candidate)
 });
@@ -528,7 +530,7 @@ sub(KEY_RELEASED, onKeyRelease);
 
 sub(SETTINGS_CHANGED, () => message.show('Settings have been updated'));
 sub(AXIS_CHANGED, onAxisChanged);
-sub(CONTROLLER_UPDATED, data => webrtc.input(data));
+sub(CONTROLLER_UPDATED, data => webrtc.send("data", data));
 sub(RECORDING_TOGGLED, handleRecording);
 sub(RECORDING_STATUS_CHANGED, handleRecordingStatus);
 
@@ -552,8 +554,8 @@ const wid = new URLSearchParams(document.location.search).get('wid');
 socket.init(roomId, wid, zone);
 api.transport = {
     send: socket.send,
-    keyboard: webrtc.keyboard,
-    mouse: webrtc.mouse,
+    keyboard: (data) => webrtc.send("keyboard", data),
+    mouse: (data) => webrtc.send("mouse", data),
 }
 
 // stats

@@ -15,9 +15,8 @@ let /** @type {RTCLocalIceCandidateInit[]} */ candidates = [];
 let isAnswered = false;
 let isFlushing = false;
 let connected = false;
-let inputReady = false;
 
-let /** @type {(MessageEvent) => void} */ onData;
+let /** @type {(channel: RTCDataChannel) => RTCDataChannel} */ modDataChannel;
 
 const ice = ((timeout = 3000) => {
     let timeoutId;
@@ -93,6 +92,12 @@ const ice = ((timeout = 3000) => {
     };
 })();
 
+// readyChan - wraps an RTCDataChannel to ensure it is ready before sending
+const readyChan = (/** @type {RTCDataChannel} */ dc) => ({
+    send: (/** @type {string} */ data) =>
+        dc.readyState === "open" && dc.send(data),
+});
+
 const flushCandidates = () => {
     if (isFlushing || !isAnswered) return;
     isFlushing = true;
@@ -120,26 +125,9 @@ export const webrtc = {
         mediaStream = new MediaStream();
 
         pc.ondatachannel = (ev) => {
-            const chan = ev.channel;
-            chan.binaryType = "arraybuffer";
+            let chan = modDataChannel ? modDataChannel(ev.channel) : ev.channel;
+            channels.set(chan.label, readyChan(chan));
             log.debug(`[rtc] [data-ch] push: ${chan.label}`);
-
-            channels.set(chan.label, chan);
-
-            if (chan.label === "data") {
-                chan.onopen = () => {
-                    log.debug("[rtc] [data-ch] input channel has been opened");
-                    inputReady = true;
-                    pub(WEBRTC_CONNECTION_READY);
-                };
-                if (onData) {
-                    chan.onmessage = onData;
-                }
-                chan.onclose = () => {
-                    inputReady = false;
-                    log.debug("[rtc] [data-ch] input channel has been closed");
-                };
-            }
         };
         pc.oniceconnectionstatechange = ice.onIceConnectionStateChange;
         pc.onicegatheringstatechange = ice.onIceGatheringStateChange;
@@ -165,9 +153,7 @@ export const webrtc = {
             log.error(`[rtc] [sdp] remote offer error: ${e}`);
         }
 
-        log.debug(
-            `[rtc] [sdp] remote Trickle ICE support: ${pc.canTrickleIceCandidates}`,
-        );
+        log.debug(`[rtc] [sdp] Trickle ICE: ${pc.canTrickleIceCandidates}`);
 
         try {
             const answer = await pc.createAnswer();
@@ -193,11 +179,8 @@ export const webrtc = {
         }
         candidates.push(candidate);
     },
-    keyboard: (data) => channels.get("keyboard")?.send(data),
-    mouse: (data) => channels.get("mouse")?.send(data),
-    input: (data) => inputReady && channels.get("data")?.send(data),
+    send: (chan, data) => channels.get(chan)?.send(data),
     isConnected: () => connected,
-    isInputReady: () => inputReady,
     stats: async () => {
         if (!connected) return Promise.resolve();
         return await pc.getStats();
@@ -223,7 +206,7 @@ export const webrtc = {
         candidates = [];
         log.info("[rtc] WebRTC has been closed");
     },
-    set onData(/** @type {(MessageEvent) => void} */ fn) {
-        onData = fn;
+    set modDataChannel(fn) {
+        modDataChannel = fn;
     },
 };
