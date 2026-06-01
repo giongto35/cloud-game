@@ -33,7 +33,7 @@ const ice = (() => {
             pub(WEBRTC_ICE_CANDIDATE_FOUND, {candidate: data.candidate})
         },
         onIceCandidateError: event => {
-            let {address, errorCode, errorText, url } = event;
+            let {address, errorCode, errorText, url} = event;
 
             if (errorCode === 701) {
                 errorText = 'couldn\'t reach the server'
@@ -131,13 +131,11 @@ export const webrtc = {
             mediaStream.addTrack(event.track);
         }
     },
-    setRemoteDescription: async (data, media) => {
-        const decodedSDP = JSON.parse(atob(data))
-        log.debug('[rtc] [sdp] remote offer', decodedSDP)
-
-        const offer = new RTCSessionDescription(decodedSDP);
+    setRemoteDescription: async (sdp, media) => {
+        log.debug('[rtc] [sdp] remote offer', sdp)
 
         try {
+            const offer = new RTCSessionDescription(sdp);
             await connection.setRemoteDescription(offer);
         } catch (e) {
             log.error(`[rtc] [sdp] remote offer error: ${e}`)
@@ -172,11 +170,12 @@ export const webrtc = {
     flushCandidates: () => {
         if (isFlushing || !isAnswered) return;
         isFlushing = true;
-        log.debug('[rtc] flushing candidates', candidates);
+        if (log.level >= log.DEBUG) {
+            log.debug(`[rtc] [ice] set local candidates (${candidates.length}): ${candidates.map(c => c.candidate)}`)
+        }
         let data = undefined;
         while (typeof (data = candidates.shift()) !== "undefined") {
-            const candidate = new RTCIceCandidate(JSON.parse(atob(data)))
-            connection.addIceCandidate(candidate).catch(e => {
+            connection.addIceCandidate(new RTCIceCandidate(data)).catch(e => {
                 log.error('[rtc] candidate add failed', e.name);
             });
         }

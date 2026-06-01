@@ -501,8 +501,11 @@ sub(WEBRTC_NEW_CONNECTION, (data) => {
 });
 sub(WEBRTC_ICE_CANDIDATE_FOUND, (data) => api.server.sendIceCandidate(data.candidate));
 sub(WEBRTC_SDP_ANSWER, (data) => api.server.sendSdp(data.sdp));
-sub(WEBRTC_SDP_OFFER, (data) => webrtc.setRemoteDescription(data.sdp, stream.video.el));
-sub(WEBRTC_ICE_CANDIDATE_RECEIVED, (data) => webrtc.addCandidate(data.candidate));
+sub(WEBRTC_SDP_OFFER, (data) => webrtc.setRemoteDescription(api.decodeB64(data.sdp), stream.video.el));
+sub(WEBRTC_ICE_CANDIDATE_RECEIVED, (data) =>  {
+    const candidate = data.candidate ? api.decodeB64(data.candidate) : ''
+    webrtc.addCandidate(candidate)
+});
 sub(WEBRTC_ICE_CANDIDATES_FLUSH, () => webrtc.flushCandidates());
 sub(WEBRTC_CONNECTION_READY, onConnectionReady);
 sub(WEBRTC_CONNECTION_CLOSED, () => {

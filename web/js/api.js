@@ -305,6 +305,7 @@ export const api = {
     endpoint: endpoints,
     endpointName: endpointName,
     decode: (b) => JSON.parse(decodeBytes(b)),
+    decodeB64: (b64) => JSON.parse(atob(b64)),
     server: {
         initWebrtc: () => packet(endpoints.INIT_WEBRTC),
         sendIceCandidate: (candidate) => packet(endpoints.ICE_CANDIDATE, btoa(JSON.stringify(candidate))),
