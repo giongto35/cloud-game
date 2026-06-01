@@ -64,7 +64,6 @@ export const WEBRTC_CONNECTION_CLOSED = 'webrtcConnectionClosed';
 export const WEBRTC_CONNECTION_READY = 'webrtcConnectionReady';
 export const WEBRTC_ICE_CANDIDATE_FOUND = 'webrtcIceCandidateFound'
 export const WEBRTC_ICE_CANDIDATE_RECEIVED = 'webrtcIceCandidateReceived';
-export const WEBRTC_ICE_CANDIDATES_FLUSH = 'webrtcIceCandidatesFlush';
 export const WEBRTC_NEW_CONNECTION = 'webrtcNewConnection';
 export const WEBRTC_SDP_ANSWER = 'webrtcSdpAnswer'
 export const WEBRTC_SDP_OFFER = 'webrtcSdpOffer';

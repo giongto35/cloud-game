@@ -33,7 +33,6 @@ import {
     WEBRTC_CONNECTION_READY,
     WEBRTC_ICE_CANDIDATE_FOUND,
     WEBRTC_ICE_CANDIDATE_RECEIVED,
-    WEBRTC_ICE_CANDIDATES_FLUSH,
     WEBRTC_NEW_CONNECTION,
     WEBRTC_SDP_ANSWER,
     WEBRTC_SDP_OFFER,
@@ -506,7 +505,6 @@ sub(WEBRTC_ICE_CANDIDATE_RECEIVED, (data) =>  {
     const candidate = data.candidate ? api.decodeB64(data.candidate) : ''
     webrtc.addCandidate(candidate)
 });
-sub(WEBRTC_ICE_CANDIDATES_FLUSH, () => webrtc.flushCandidates());
 sub(WEBRTC_CONNECTION_READY, onConnectionReady);
 sub(WEBRTC_CONNECTION_CLOSED, () => {
     input.retropad.toggle(false)

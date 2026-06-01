@@ -3,7 +3,6 @@ import {
     WEBRTC_CONNECTION_CLOSED,
     WEBRTC_CONNECTION_READY,
     WEBRTC_ICE_CANDIDATE_FOUND,
-    WEBRTC_ICE_CANDIDATES_FLUSH,
     WEBRTC_SDP_ANSWER,
 } from "event";
 import { log } from "log";
@@ -94,6 +93,23 @@ const ice = ((timeout = 3000) => {
     };
 })();
 
+const flushCandidates = () => {
+    if (isFlushing || !isAnswered) return;
+    isFlushing = true;
+    if (log.level >= log.DEBUG) {
+        log.debug(
+            `[rtc] [ice] set local candidates (${candidates.length}): ${candidates.map((c) => c.candidate)}`,
+        );
+    }
+    let data = undefined;
+    while (typeof (data = candidates.shift()) !== "undefined") {
+        pc.addIceCandidate(new RTCIceCandidate(data)).catch((e) => {
+            log.error("[rtc] candidate add failed", e.name);
+        });
+    }
+    isFlushing = false;
+};
+
 /**
  * WebRTC connection module.
  */
@@ -136,7 +152,10 @@ export const webrtc = {
             mediaStream.addTrack(event.track);
         };
     },
-    setRemoteDescription: async (sdp, media) => {
+    setRemoteDescription: async (
+        /** @type {RTCSessionDescriptionInit} */ sdp,
+        /** @type {HTMLMediaElement} */ media,
+    ) => {
         log.debug("[rtc] [sdp] remote offer", sdp);
 
         try {
@@ -159,7 +178,7 @@ export const webrtc = {
             log.debug("[rtc] [sdp] local answer", answer);
 
             isAnswered = true;
-            pub(WEBRTC_ICE_CANDIDATES_FLUSH);
+            flushCandidates();
             pub(WEBRTC_SDP_ANSWER, { sdp: answer });
         } catch (e) {
             log.error(`[rtc] [sdp] local answer error: ${e}`);
@@ -169,26 +188,10 @@ export const webrtc = {
     },
     addCandidate: (/** @type {RTCLocalIceCandidateInit} */ candidate) => {
         if (candidate === "") {
-            pub(WEBRTC_ICE_CANDIDATES_FLUSH);
+            flushCandidates();
             return;
         }
         candidates.push(candidate);
-    },
-    flushCandidates: () => {
-        if (isFlushing || !isAnswered) return;
-        isFlushing = true;
-        if (log.level >= log.DEBUG) {
-            log.debug(
-                `[rtc] [ice] set local candidates (${candidates.length}): ${candidates.map((c) => c.candidate)}`,
-            );
-        }
-        let data = undefined;
-        while (typeof (data = candidates.shift()) !== "undefined") {
-            pc.addIceCandidate(new RTCIceCandidate(data)).catch((e) => {
-                log.error("[rtc] candidate add failed", e.name);
-            });
-        }
-        isFlushing = false;
     },
     keyboard: (data) => channels.get("keyboard")?.send(data),
     mouse: (data) => channels.get("mouse")?.send(data),
