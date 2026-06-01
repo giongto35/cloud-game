@@ -29,7 +29,6 @@ const init = (roomId, wid, zone) => {
     conn.onclose = (event) => log.info(`[ws] closed (${event.code})`);
     conn.onmessage = response => {
         const data = JSON.parse(response.data);
-        log.debug('[ws] <- ', data);
         pub(MESSAGE, data);
     };
 };
