@@ -8,93 +8,89 @@ import {
 } from "event";
 import { log } from "log";
 
-let connection;
-let dataChannel;
-let keyboardChannel;
-let mouseChannel;
-let mediaStream;
-let candidates = [];
+let /** @type {RTCPeerConnection} */ pc;
+let /** @type {Map<string, RTCDataChannel>} */ channels = new Map();
+let /** @type {MediaStream} */ mediaStream;
+let /** @type {RTCLocalIceCandidateInit[]} */ candidates = [];
+
 let isAnswered = false;
 let isFlushing = false;
-
 let connected = false;
 let inputReady = false;
 
-let onData;
+let /** @type {(MessageEvent) => void} */ onData;
 
-const ice = (() => {
-    const ICE_TIMEOUT = 3000;
-    let timeForIceGathering;
+const ice = ((timeout = 3000) => {
+    let timeoutId;
+
+    const onIceCandidate = (/** @type {RTCPeerConnectionIceEvent} */ ev) => {
+        if (!ev.candidate) return;
+        log.debug(`[rtc] [ice] local: ${ev.candidate.candidate}`);
+        pub(WEBRTC_ICE_CANDIDATE_FOUND, { candidate: ev.candidate });
+    };
+
+    const onIceCandidateError = (
+        /** @type {RTCPeerConnectionIceErrorEvent} */ ev,
+    ) => {
+        let { address, errorCode, errorText, url } = ev;
+
+        if (errorCode === 701) {
+            errorText = "couldn't reach the server";
+        }
+
+        log.debug(
+            `[rtc] [ice] candidate error: ${address || ""} ${errorCode}: ${errorText} / ${url}`,
+        );
+    };
+
+    const onIceGatheringStateChange = (event) => {
+        const /** @type {RTCPeerConnection} */ t = event.target;
+        log.debug(`[rtc] [ice] state: ${t.iceGatheringState}`);
+
+        switch (t.iceGatheringState) {
+            case "gathering":
+                timeoutId = setTimeout(() => {
+                    log.warn(`[rtc] [ice] stopped due to timeout ${timeout}ms`);
+                }, timeout);
+                break;
+            case "complete":
+                clearTimeout(timeoutId);
+                break;
+        }
+    };
+
+    const onIceConnectionStateChange = () => {
+        log.debug(`[rtc] [ice] connection state: ${pc.iceConnectionState}`);
+        switch (pc.iceConnectionState) {
+            case "connected":
+                connected = true;
+                break;
+            case "disconnected":
+                log.info(
+                    `[rtc] [ice] disconnected... ` +
+                        `connection: ${pc.connectionState}, ice: ${pc.iceConnectionState}, ` +
+                        `gathering: ${pc.iceGatheringState}, signalling: ${pc.signalingState}`,
+                );
+                connected = false;
+                pub(WEBRTC_CONNECTION_CLOSED);
+                break;
+            case "failed":
+                log.error("[rtc] [ice] failed establish connection, retry...");
+                connected = false;
+                pc.createOffer({ iceRestart: true })
+                    .then((description) =>
+                        pc.setLocalDescription(description).catch(log.error),
+                    )
+                    .catch(log.error);
+                break;
+        }
+    };
 
     return {
-        onIceCandidate: (data) => {
-            if (!data.candidate) return;
-            log.debug(`[rtc] [ice] local: ${data.candidate?.candidate}`);
-            pub(WEBRTC_ICE_CANDIDATE_FOUND, { candidate: data.candidate });
-        },
-        onIceCandidateError: (event) => {
-            let { address, errorCode, errorText, url } = event;
-
-            if (errorCode === 701) {
-                errorText = "couldn't reach the server";
-            }
-
-            log.debug(
-                `[rtc] [ice] candidate error: ${address || ""} ${errorCode}: ${errorText} / ${url}`,
-            );
-        },
-        onIceStateChange: (event) => {
-            const t = event.target;
-            log.debug(`[rtc] [ice] state: ${t.iceGatheringState}`);
-
-            switch (event.target.iceGatheringState) {
-                case "gathering":
-                    timeForIceGathering = setTimeout(() => {
-                        log.warn(
-                            `[rtc] ice gathering was aborted due to timeout ${ICE_TIMEOUT}ms`,
-                        );
-                        // sendCandidates();
-                    }, ICE_TIMEOUT);
-                    break;
-                case "complete":
-                    if (timeForIceGathering) {
-                        clearTimeout(timeForIceGathering);
-                    }
-            }
-        },
-        onIceConnectionStateChange: () => {
-            log.debug(
-                `[rtc] [ice] connection state: ${connection.iceConnectionState}`,
-            );
-            switch (connection.iceConnectionState) {
-                case "connected":
-                    connected = true;
-                    break;
-                case "disconnected":
-                    log.info(
-                        `[rtc] [ice] disconnected... ` +
-                            `connection: ${connection.connectionState}, ice: ${connection.iceConnectionState}, ` +
-                            `gathering: ${connection.iceGatheringState}, signalling: ${connection.signalingState}`,
-                    );
-                    connected = false;
-                    pub(WEBRTC_CONNECTION_CLOSED);
-                    break;
-                case "failed":
-                    log.error(
-                        "[rtc] [ice] failed establish connection, retry...",
-                    );
-                    connected = false;
-                    connection
-                        .createOffer({ iceRestart: true })
-                        .then((description) =>
-                            connection
-                                .setLocalDescription(description)
-                                .catch(log.error),
-                        )
-                        .catch(log.error);
-                    break;
-            }
-        },
+        onIceCandidate,
+        onIceCandidateError,
+        onIceGatheringStateChange,
+        onIceConnectionStateChange,
     };
 })();
 
@@ -104,47 +100,39 @@ const ice = (() => {
 export const webrtc = {
     start: (iceServers = []) => {
         log.debug("[rtc] got remote ICE servers", iceServers);
-        connection = new RTCPeerConnection({ iceServers: iceServers });
+        pc = new RTCPeerConnection({ iceServers });
         mediaStream = new MediaStream();
 
-        connection.ondatachannel = (e) => {
-            log.debug(`[rtc] [data-ch] push: ${e.channel.label}`);
-            e.channel.binaryType = "arraybuffer";
+        pc.ondatachannel = (ev) => {
+            const chan = ev.channel;
+            chan.binaryType = "arraybuffer";
+            log.debug(`[rtc] [data-ch] push: ${chan.label}`);
 
-            if (e.channel.label === "keyboard") {
-                keyboardChannel = e.channel;
-                return;
-            }
+            channels.set(chan.label, chan);
 
-            if (e.channel.label === "mouse") {
-                mouseChannel = e.channel;
-                return;
+            if (chan.label === "data") {
+                chan.onopen = () => {
+                    log.debug("[rtc] [data-ch] input channel has been opened");
+                    inputReady = true;
+                    pub(WEBRTC_CONNECTION_READY);
+                };
+                if (onData) {
+                    chan.onmessage = onData;
+                }
+                chan.onclose = () => {
+                    inputReady = false;
+                    log.debug("[rtc] [data-ch] input channel has been closed");
+                };
             }
-
-            dataChannel = e.channel;
-            dataChannel.onopen = () => {
-                log.debug("[rtc] [data-ch] input channel has been opened");
-                inputReady = true;
-                pub(WEBRTC_CONNECTION_READY);
-            };
-            if (onData) {
-                dataChannel.onmessage = onData;
-            }
-            dataChannel.onclose = () => {
-                inputReady = false;
-                log.debug("[rtc] [data-ch] input channel has been closed");
-            };
         };
-        connection.oniceconnectionstatechange = ice.onIceConnectionStateChange;
-        connection.onicegatheringstatechange = ice.onIceStateChange;
-        connection.onicecandidate = ice.onIceCandidate;
-        connection.onicecandidateerror = ice.onIceCandidateError;
-        connection.onconnectionstatechange = (_) => {
-            console.debug(
-                `[rtc] connection state: ${connection.connectionState}`,
-            );
+        pc.oniceconnectionstatechange = ice.onIceConnectionStateChange;
+        pc.onicegatheringstatechange = ice.onIceGatheringStateChange;
+        pc.onicecandidate = ice.onIceCandidate;
+        pc.onicecandidateerror = ice.onIceCandidateError;
+        pc.onconnectionstatechange = () => {
+            console.debug(`[rtc] connection state: ${pc.connectionState}`);
         };
-        connection.ontrack = (event) => {
+        pc.ontrack = (event) => {
             mediaStream.addTrack(event.track);
         };
     },
@@ -153,21 +141,21 @@ export const webrtc = {
 
         try {
             const offer = new RTCSessionDescription(sdp);
-            await connection.setRemoteDescription(offer);
+            await pc.setRemoteDescription(offer);
         } catch (e) {
             log.error(`[rtc] [sdp] remote offer error: ${e}`);
         }
 
         log.debug(
-            `[rtc] [sdp] remote Trickle ICE support: ${connection.canTrickleIceCandidates}`,
+            `[rtc] [sdp] remote Trickle ICE support: ${pc.canTrickleIceCandidates}`,
         );
 
         try {
-            const answer = await connection.createAnswer();
+            const answer = await pc.createAnswer();
             // Chrome bug https://bugs.chromium.org/p/chromium/issues/detail?id=818180 workaround
             // force stereo params for Opus tracks (a=fmtp:111 ...)
             answer.sdp = answer.sdp.replace(/(a=fmtp:111 .*)/g, "$1;stereo=1");
-            await connection.setLocalDescription(answer);
+            await pc.setLocalDescription(answer);
             log.debug("[rtc] [sdp] local answer", answer);
 
             isAnswered = true;
@@ -179,12 +167,12 @@ export const webrtc = {
 
         media.srcObject = mediaStream;
     },
-    addCandidate: (data) => {
-        if (data === "") {
+    addCandidate: (/** @type {RTCLocalIceCandidateInit} */ candidate) => {
+        if (candidate === "") {
             pub(WEBRTC_ICE_CANDIDATES_FLUSH);
-        } else {
-            candidates.push(data);
+            return;
         }
+        candidates.push(candidate);
     },
     flushCandidates: () => {
         if (isFlushing || !isAnswered) return;
@@ -196,20 +184,20 @@ export const webrtc = {
         }
         let data = undefined;
         while (typeof (data = candidates.shift()) !== "undefined") {
-            connection.addIceCandidate(new RTCIceCandidate(data)).catch((e) => {
+            pc.addIceCandidate(new RTCIceCandidate(data)).catch((e) => {
                 log.error("[rtc] candidate add failed", e.name);
             });
         }
         isFlushing = false;
     },
-    keyboard: (data) => keyboardChannel?.send(data),
-    mouse: (data) => mouseChannel?.send(data),
-    input: (data) => inputReady && dataChannel.send(data),
+    keyboard: (data) => channels.get("keyboard")?.send(data),
+    mouse: (data) => channels.get("mouse")?.send(data),
+    input: (data) => inputReady && channels.get("data")?.send(data),
     isConnected: () => connected,
     isInputReady: () => inputReady,
     stats: async () => {
         if (!connected) return Promise.resolve();
-        return await connection.getStats();
+        return await pc.getStats();
     },
     stop: () => {
         if (mediaStream) {
@@ -219,26 +207,20 @@ export const webrtc = {
             });
             mediaStream = null;
         }
-        if (connection) {
-            connection.close();
-            connection = null;
+        if (pc) {
+            pc.close();
+            pc = null;
         }
-        if (dataChannel) {
-            dataChannel.close();
-            dataChannel = null;
+
+        for (const [, channel] of channels) {
+            channel.close();
         }
-        if (keyboardChannel) {
-            keyboardChannel?.close();
-            keyboardChannel = null;
-        }
-        if (mouseChannel) {
-            mouseChannel?.close();
-            mouseChannel = null;
-        }
+        channels.clear();
+
         candidates = [];
         log.info("[rtc] WebRTC has been closed");
     },
-    set onData(fn) {
+    set onData(/** @type {(MessageEvent) => void} */ fn) {
         onData = fn;
     },
 };
