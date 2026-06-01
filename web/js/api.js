@@ -20,6 +20,8 @@ const endpoints = {
     APP_VIDEO_CHANGE: 150,
 }
 
+const endpointName = Object.fromEntries(Object.entries(endpoints).map(([k, v]) => [v, k]));
+
 let transport = {
     send: (packet) => {
         log.warn('Default transport is used! Change it with the api.transport variable.', packet)
@@ -301,6 +303,7 @@ export const api = {
         transport = t;
     },
     endpoint: endpoints,
+    endpointName: endpointName,
     decode: (b) => JSON.parse(decodeBytes(b)),
     server: {
         initWebrtc: () => packet(endpoints.INIT_WEBRTC),

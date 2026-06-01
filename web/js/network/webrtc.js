@@ -29,15 +29,21 @@ const ice = (() => {
     return {
         onIceCandidate: data => {
             if (!data.candidate) return;
-            log.debug('[rtc] user candidate', data.candidate);
+            log.debug(`[rtc] [ice] local: ${data.candidate?.candidate}`);
             pub(WEBRTC_ICE_CANDIDATE_FOUND, {candidate: data.candidate})
         },
         onIceCandidateError: event => {
-            log.debug('[rtc] ice candidate error', event)
+            let {address, errorCode, errorText, url } = event;
+
+            if (errorCode === 701) {
+                errorText = 'couldn\'t reach the server'
+            }
+
+            log.debug(`[rtc] [ice] candidate error: ${address || ''} ${errorCode}: ${errorText} / ${url}`)
         },
         onIceStateChange: event => {
             const t = event.target;
-            log.debug(`[rtc] ICE state: ${t.iceGatheringState}`)
+            log.debug(`[rtc] [ice] state: ${t.iceGatheringState}`)
 
             switch (event.target.iceGatheringState) {
                 case 'gathering':
@@ -53,20 +59,20 @@ const ice = (() => {
             }
         },
         onIceConnectionStateChange: () => {
-            log.debug(`[rtc] ICE connection state: ${connection.iceConnectionState}`);
+            log.debug(`[rtc] [ice] connection state: ${connection.iceConnectionState}`);
             switch (connection.iceConnectionState) {
                 case 'connected':
                     connected = true;
                     break;
                 case 'disconnected':
-                    log.info(`[rtc] disconnected... ` +
+                    log.info(`[rtc] [ice] disconnected... ` +
                         `connection: ${connection.connectionState}, ice: ${connection.iceConnectionState}, ` +
                         `gathering: ${connection.iceGatheringState}, signalling: ${connection.signalingState}`)
                     connected = false;
                     pub(WEBRTC_CONNECTION_CLOSED);
                     break;
                 case 'failed':
-                    log.error('[rtc] failed establish connection, retry...');
+                    log.error('[rtc] [ice] failed establish connection, retry...');
                     connected = false;
                     connection.createOffer({iceRestart: true})
                         .then(description => connection.setLocalDescription(description).catch(log.error))
@@ -81,14 +87,13 @@ const ice = (() => {
  * WebRTC connection module.
  */
 export const webrtc = {
-    start: (iceservers) => {
-        log.debug('[rtc] <- ICE servers', iceservers);
-        const servers = iceservers || [];
-        connection = new RTCPeerConnection({iceServers: servers});
+    start: (iceServers = []) => {
+        log.debug('[rtc] got remote ICE servers', iceServers);
+        connection = new RTCPeerConnection({iceServers: iceServers});
         mediaStream = new MediaStream();
 
         connection.ondatachannel = e => {
-            log.debug('[rtc] ondatachannel', e.channel.label)
+            log.debug(`[rtc] [data-ch] push: ${e.channel.label}`)
             e.channel.binaryType = "arraybuffer";
 
             if (e.channel.label === 'keyboard') {
@@ -103,7 +108,7 @@ export const webrtc = {
 
             dataChannel = e.channel;
             dataChannel.onopen = () => {
-                log.debug('[rtc] the input channel has been opened');
+                log.debug('[rtc] [data-ch] input channel has been opened');
                 inputReady = true;
                 pub(WEBRTC_CONNECTION_READY)
             };
@@ -112,7 +117,7 @@ export const webrtc = {
             }
             dataChannel.onclose = () => {
                 inputReady = false
-                log.debug('[rtc] the input channel has been closed')
+                log.debug('[rtc] [data-ch] input channel has been closed')
             }
         }
         connection.oniceconnectionstatechange = ice.onIceConnectionStateChange;
@@ -127,17 +132,18 @@ export const webrtc = {
         }
     },
     setRemoteDescription: async (data, media) => {
-        log.debug('[rtc] remote SDP', data)
         const decodedSDP = JSON.parse(atob(data))
+        log.debug('[rtc] [sdp] remote offer', decodedSDP)
+
         const offer = new RTCSessionDescription(decodedSDP);
 
         try {
             await connection.setRemoteDescription(offer);
         } catch (e) {
-            log.error('[rtc] remote SDP error', e)
+            log.error(`[rtc] [sdp] remote offer error: ${e}`)
         }
 
-        log.debug(`[rtc] remote Trickle ICE support: ${connection.canTrickleIceCandidates}`)
+        log.debug(`[rtc] [sdp] remote Trickle ICE support: ${connection.canTrickleIceCandidates}`)
 
         try {
             const answer = await connection.createAnswer();
@@ -145,13 +151,13 @@ export const webrtc = {
             // force stereo params for Opus tracks (a=fmtp:111 ...)
             answer.sdp = answer.sdp.replace(/(a=fmtp:111 .*)/g, '$1;stereo=1');
             await connection.setLocalDescription(answer);
-            log.debug("[rtc] local SDP", answer)
+            log.debug("[rtc] [sdp] local answer", answer)
 
             isAnswered = true;
             pub(WEBRTC_ICE_CANDIDATES_FLUSH);
             pub(WEBRTC_SDP_ANSWER, {sdp: answer});
         } catch (e) {
-            log.error('[rtc] answer/local SDP error', e)
+            log.error(`[rtc] [sdp] local answer error: ${e}`)
         }
 
         media.srcObject = mediaStream;

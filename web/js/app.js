@@ -186,6 +186,7 @@ const loadGame = debounce(() => api.game.load(), 1000);
 
 const onMessage = (m) => {
     const {id, t, p: payload} = m;
+    log.debug(`[msg] ${api.endpointName[t] || t}`)
     switch (t) {
         case api.endpoint.INIT:
             pub(WEBRTC_NEW_CONNECTION, payload);
