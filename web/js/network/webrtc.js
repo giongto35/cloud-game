@@ -36,26 +36,26 @@ const ice = (() => {
             log.debug('[rtc] ice candidate error', event)
         },
         onIceStateChange: event => {
+            const t = event.target;
+            log.debug(`[rtc] ICE state: ${t.iceGatheringState}`)
+
             switch (event.target.iceGatheringState) {
                 case 'gathering':
-                    log.debug('[rtc] ice gathering');
                     timeForIceGathering = setTimeout(() => {
                         log.warn(`[rtc] ice gathering was aborted due to timeout ${ICE_TIMEOUT}ms`);
                         // sendCandidates();
                     }, ICE_TIMEOUT);
                     break;
                 case 'complete':
-                    log.debug('[rtc] ice gathering has been completed');
                     if (timeForIceGathering) {
                         clearTimeout(timeForIceGathering);
                     }
             }
         },
         onIceConnectionStateChange: () => {
-            log.debug('[rtc] <- iceConnectionState', connection.iceConnectionState);
+            log.debug(`[rtc] ICE connection state: ${connection.iceConnectionState}`);
             switch (connection.iceConnectionState) {
                 case 'connected':
-                    log.info('[rtc] connected...');
                     connected = true;
                     break;
                 case 'disconnected':
@@ -120,7 +120,7 @@ export const webrtc = {
         connection.onicecandidate = ice.onIceCandidate;
         connection.onicecandidateerror = ice.onIceCandidateError;
         connection.onconnectionstatechange = _ => {
-            console.debug(`[rtc] connection state -> ${connection.connectionState}`)
+            console.debug(`[rtc] connection state: ${connection.connectionState}`)
         }
         connection.ontrack = event => {
             mediaStream.addTrack(event.track);
