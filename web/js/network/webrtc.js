@@ -22,80 +22,6 @@ let inputReady = false;
 
 let onData;
 
-const start = (iceservers) => {
-    log.debug('[rtc] <- ICE servers', iceservers);
-    const servers = iceservers || [];
-    connection = new RTCPeerConnection({iceServers: servers});
-    mediaStream = new MediaStream();
-
-    connection.ondatachannel = e => {
-        log.debug('[rtc] ondatachannel', e.channel.label)
-        e.channel.binaryType = "arraybuffer";
-
-        if (e.channel.label === 'keyboard') {
-            keyboardChannel = e.channel
-            return
-        }
-
-        if (e.channel.label === 'mouse') {
-            mouseChannel = e.channel
-            return
-        }
-
-        dataChannel = e.channel;
-        dataChannel.onopen = () => {
-            log.debug('[rtc] the input channel has been opened');
-            inputReady = true;
-            pub(WEBRTC_CONNECTION_READY)
-        };
-        if (onData) {
-            dataChannel.onmessage = onData;
-        }
-        dataChannel.onclose = () => {
-            inputReady = false
-            log.debug('[rtc] the input channel has been closed')
-        }
-    }
-    connection.oniceconnectionstatechange = ice.onIceConnectionStateChange;
-    connection.onicegatheringstatechange = ice.onIceStateChange;
-    connection.onicecandidate = ice.onIceCandidate;
-    connection.onicecandidateerror = ice.onIceCandidateError;
-    connection.onconnectionstatechange = _ => {
-        console.debug(`[rtc] connection state -> ${connection.connectionState}`)
-    }
-    connection.ontrack = event => {
-        mediaStream.addTrack(event.track);
-    }
-};
-
-const stop = () => {
-    if (mediaStream) {
-        mediaStream.getTracks().forEach(t => {
-            t.stop();
-            mediaStream.removeTrack(t);
-        });
-        mediaStream = null;
-    }
-    if (connection) {
-        connection.close();
-        connection = null;
-    }
-    if (dataChannel) {
-        dataChannel.close()
-        dataChannel = null
-    }
-    if (keyboardChannel) {
-        keyboardChannel?.close()
-        keyboardChannel = null
-    }
-    if (mouseChannel) {
-        mouseChannel?.close()
-        mouseChannel = null
-    }
-    candidates = [];
-    log.info('[rtc] WebRTC has been closed');
-}
-
 const ice = (() => {
     const ICE_TIMEOUT = 3000;
     let timeForIceGathering;
@@ -155,7 +81,51 @@ const ice = (() => {
  * WebRTC connection module.
  */
 export const webrtc = {
-    start,
+    start: (iceservers) => {
+        log.debug('[rtc] <- ICE servers', iceservers);
+        const servers = iceservers || [];
+        connection = new RTCPeerConnection({iceServers: servers});
+        mediaStream = new MediaStream();
+
+        connection.ondatachannel = e => {
+            log.debug('[rtc] ondatachannel', e.channel.label)
+            e.channel.binaryType = "arraybuffer";
+
+            if (e.channel.label === 'keyboard') {
+                keyboardChannel = e.channel
+                return
+            }
+
+            if (e.channel.label === 'mouse') {
+                mouseChannel = e.channel
+                return
+            }
+
+            dataChannel = e.channel;
+            dataChannel.onopen = () => {
+                log.debug('[rtc] the input channel has been opened');
+                inputReady = true;
+                pub(WEBRTC_CONNECTION_READY)
+            };
+            if (onData) {
+                dataChannel.onmessage = onData;
+            }
+            dataChannel.onclose = () => {
+                inputReady = false
+                log.debug('[rtc] the input channel has been closed')
+            }
+        }
+        connection.oniceconnectionstatechange = ice.onIceConnectionStateChange;
+        connection.onicegatheringstatechange = ice.onIceStateChange;
+        connection.onicecandidate = ice.onIceCandidate;
+        connection.onicecandidateerror = ice.onIceCandidateError;
+        connection.onconnectionstatechange = _ => {
+            console.debug(`[rtc] connection state -> ${connection.connectionState}`)
+        }
+        connection.ontrack = event => {
+            mediaStream.addTrack(event.track);
+        }
+    },
     setRemoteDescription: async (data, media) => {
         log.debug('[rtc] remote SDP', data)
         const decodedSDP = JSON.parse(atob(data))
@@ -214,7 +184,33 @@ export const webrtc = {
         if (!connected) return Promise.resolve();
         return await connection.getStats()
     },
-    stop,
+    stop: () => {
+        if (mediaStream) {
+            mediaStream.getTracks().forEach(t => {
+                t.stop();
+                mediaStream.removeTrack(t);
+            });
+            mediaStream = null;
+        }
+        if (connection) {
+            connection.close();
+            connection = null;
+        }
+        if (dataChannel) {
+            dataChannel.close()
+            dataChannel = null
+        }
+        if (keyboardChannel) {
+            keyboardChannel?.close()
+            keyboardChannel = null
+        }
+        if (mouseChannel) {
+            mouseChannel?.close()
+            mouseChannel = null
+        }
+        candidates = [];
+        log.info('[rtc] WebRTC has been closed');
+    },
     set onData(fn) {
         onData = fn
     }
