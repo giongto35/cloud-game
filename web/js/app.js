@@ -500,7 +500,7 @@ sub(GAME_PLAYER_IDX_SET, (idx) => {
 sub(GAME_ERROR_NO_FREE_SLOTS, () => message.show("No free slots :(", 2500));
 sub(WEBRTC_NEW_CONNECTION, (data) => {
     workerManager.whoami(data.wid);
-    webrtc.start(data.ice);
+    webrtc.start(data.ice, stream.video.el);
     webrtc.modDataChannel = (ch) => {
         ch.binaryType = "arraybuffer";
         if (ch.label === "data") {
@@ -517,7 +517,7 @@ sub(WEBRTC_ICE_CANDIDATE_FOUND, (data) =>
 );
 sub(WEBRTC_SDP_ANSWER, (data) => api.server.sendSdp(data.sdp));
 sub(WEBRTC_SDP_OFFER, (data) =>
-    webrtc.setRemoteDescription(api.decodeB64(data.sdp), stream.video.el),
+    webrtc.setRemoteDescription(api.decodeB64(data.sdp)),
 );
 sub(WEBRTC_ICE_CANDIDATE_RECEIVED, (data) => {
     const candidate = data.candidate ? api.decodeB64(data.candidate) : "";

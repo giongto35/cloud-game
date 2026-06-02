@@ -123,10 +123,11 @@ const flushRemoteCandidates = () => {
  * WebRTC connection module.
  */
 export const webrtc = {
-    start: (iceServers = []) => {
+    start: (iceServers = [], media) => {
         log.debug("[rtc] got remote ICE servers", iceServers);
         pc = new RTCPeerConnection({ iceServers });
         stream = new MediaStream();
+        media.srcObject = stream;
 
         pc.addTransceiver("video", { direction: "recvonly" });
         pc.addTransceiver("audio", { direction: "recvonly" });
@@ -175,8 +176,6 @@ export const webrtc = {
         } catch (e) {
             log.error(`[rtc] [sdp] local answer error: ${e}`);
         }
-
-        media.srcObject = stream;
     },
     addCandidate: (/** @type {RTCLocalIceCandidateInit} */ candidate) => {
         if (candidate === "") {
