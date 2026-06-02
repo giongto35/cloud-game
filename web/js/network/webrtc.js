@@ -78,11 +78,7 @@ const ice = ((timeout = 3000) => {
             case "failed":
                 log.error("[rtc] [ice] failed establish connection, retry...");
                 connected = false;
-                pc.createOffer({ iceRestart: true })
-                    .then((description) =>
-                        pc.setLocalDescription(description).catch(log.error),
-                    )
-                    .catch(log.error);
+                pc.restartIce();
                 break;
         }
     };
@@ -142,7 +138,16 @@ export const webrtc = {
         pc.onicecandidate = ice.onIceCandidate;
         pc.onicecandidateerror = ice.onIceCandidateError;
         pc.onconnectionstatechange = () => {
-            console.debug(`[rtc] connection state: ${pc.connectionState}`);
+            log.debug(`[rtc] connection state: ${pc.connectionState}`);
+        };
+        pc.onnegotiationneeded = () => {
+            log.debug("[rtc] negotiation needed");
+            // todo implement
+            pc.createOffer()
+                .then((description) =>
+                    pc.setLocalDescription(description).catch(log.error),
+                )
+                .catch(log.error);
         };
         pc.ontrack = (event) => {
             stream.addTrack(event.track);
