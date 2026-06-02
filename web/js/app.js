@@ -1,6 +1,6 @@
-import {log} from 'log';
-import {opts, settings} from 'settings';
-import {api} from 'api';
+import { log } from "log";
+import { opts, settings } from "settings";
+import { api } from "api";
 import {
     APP_VIDEO_CHANGED,
     AXIS_CHANGED,
@@ -39,21 +39,21 @@ import {
     WORKER_LIST_FETCHED,
     pub,
     sub,
-} from 'event';
-import {gui} from 'gui';
-import {input, KEY} from 'input';
-import {socket, webrtc} from 'network';
-import {debounce} from 'utils';
+} from "event";
+import { gui } from "gui";
+import { input, KEY } from "input";
+import { socket, webrtc } from "network";
+import { debounce } from "utils";
 
-import {gameList} from './gameList.js?v=3';
-import {menu} from './menu.js?v=3';
-import {message} from './message.js?v=3';
-import {recording} from './recording.js?v=3';
-import {room} from './room.js?v=3';
-import {screen} from './screen.js?v=3';
-import {stats} from './stats.js?v=3';
-import {stream} from './stream.js?v=3';
-import {workerManager} from "./workerManager.js?v=3";
+import { gameList } from "./gameList.js?v=3";
+import { menu } from "./menu.js?v=3";
+import { message } from "./message.js?v=3";
+import { recording } from "./recording.js?v=3";
+import { room } from "./room.js?v=3";
+import { screen } from "./screen.js?v=3";
+import { stats } from "./stats.js?v=3";
+import { stream } from "./stream.js?v=3";
+import { workerManager } from "./workerManager.js?v=3";
 
 settings.init();
 log.level = settings.loadOr(opts.LOG_LEVEL, log.DEFAULT);
@@ -65,15 +65,15 @@ let lastState;
 // first user interaction
 let interacted = false;
 
-const helpOverlay = document.getElementById('help-overlay');
-const playerIndex = document.getElementById('playeridx');
+const helpOverlay = document.getElementById("help-overlay");
+const playerIndex = document.getElementById("playeridx");
 
 // screen init
 screen.add(menu, stream);
 
 // keymap
 const keyButtons = {};
-Object.keys(KEY).forEach(button => {
+Object.keys(KEY).forEach((button) => {
     keyButtons[KEY[button]] = document.getElementById(`btn-${KEY[button]}`);
 });
 
@@ -94,26 +94,26 @@ const setState = (newState = app.state.eden) => {
         if (lastState === newState) state = newState;
         lastState = newState;
     } else {
-        lastState = state
+        lastState = state;
         state = newState;
     }
 
     if (log.level === log.DEBUG) {
-        const previous = prevState ? prevState.name : '???';
-        const current = state ? state.name : '???';
-        const kept = lastState ? lastState.name : '???';
+        const previous = prevState ? prevState.name : "???";
+        const current = state ? state.name : "???";
+        const kept = lastState ? lastState.name : "???";
 
         log.debug(`[state] ${previous} -> ${current} [${kept}]`);
     }
 };
 
-const onConnectionReady = () => room.id ? startGame() : state.menuReady()
+const onConnectionReady = () => (room.id ? startGame() : state.menuReady());
 
 const onLatencyCheck = async (data) => {
-    message.show('Connecting to fastest server...');
+    message.show("Connecting to fastest server...");
     const servers = await workerManager.checkLatencies(data);
     const latencies = Object.assign({}, ...servers);
-    log.info('[ping] <->', latencies);
+    log.info("[ping] <->", latencies);
     api.server.latencyCheck(data.packetId, latencies);
 };
 
@@ -122,22 +122,22 @@ const helpScreen = {
     show: function (show, event) {
         if (this.shown === show) return;
 
-        const isGameScreen = state === app.state.game
+        const isGameScreen = state === app.state.game;
         screen.toggle(undefined, !show);
 
         gui.toggle(keyButtons[KEY.SAVE], show || isGameScreen);
         gui.toggle(keyButtons[KEY.LOAD], show || isGameScreen);
 
-        gui.toggle(helpOverlay, show)
+        gui.toggle(helpOverlay, show);
 
         this.shown = show;
 
-        if (event) pub(HELP_OVERLAY_TOGGLED, {shown: show});
-    }
+        if (event) pub(HELP_OVERLAY_TOGGLED, { shown: show });
+    },
 };
 
 const showMenuScreen = () => {
-    log.debug('[control] loading menu screen');
+    log.debug("[control] loading menu screen");
 
     gui.hide(keyButtons[KEY.SAVE]);
     gui.hide(keyButtons[KEY.LOAD]);
@@ -150,15 +150,15 @@ const showMenuScreen = () => {
 
 const startGame = () => {
     if (!webrtc.isConnected()) {
-        message.show('Game cannot load. Please refresh');
+        message.show("Game cannot load. Please refresh");
         return;
     }
 
-    log.info('[control] game start');
+    log.info("[control] game start");
 
     setState(app.state.game);
 
-    screen.toggle(stream)
+    screen.toggle(stream);
 
     api.game.start(
         gameList.selected,
@@ -166,35 +166,35 @@ const startGame = () => {
         recording.isActive(),
         recording.getUser(),
         +playerIndex.value - 1,
-    )
+    );
 
-    gameList.disable()
-    input.retropad.toggle(false)
+    gameList.disable();
+    input.retropad.toggle(false);
     gui.show(keyButtons[KEY.SAVE]);
     gui.show(keyButtons[KEY.LOAD]);
-    input.retropad.toggle(true)
+    input.retropad.toggle(true);
 };
 
 const saveGame = debounce(() => api.game.save(), 1000);
 const loadGame = debounce(() => api.game.load(), 1000);
 
 const onMessage = (m) => {
-    const {id, t, p: payload} = m;
-    log.debug(`[msg] ${api.endpointName[t] || t}`)
+    const { id, t, p: payload } = m;
+    log.debug(`[msg] ${api.endpointName[t] || t}`);
     switch (t) {
         case api.endpoint.INIT:
             pub(WEBRTC_NEW_CONNECTION, payload);
             break;
         case api.endpoint.OFFER:
-            pub(WEBRTC_SDP_OFFER, {sdp: payload});
+            pub(WEBRTC_SDP_OFFER, { sdp: payload });
             break;
         case api.endpoint.ICE_CANDIDATE:
-            pub(WEBRTC_ICE_CANDIDATE_RECEIVED, {candidate: payload});
+            pub(WEBRTC_ICE_CANDIDATE_RECEIVED, { candidate: payload });
             break;
         case api.endpoint.GAME_START:
-            payload.av && pub(APP_VIDEO_CHANGED, payload.av)
-            payload.kb_mouse && pub(KB_MOUSE_FLAG)
-            pub(GAME_ROOM_AVAILABLE, {roomId: payload.roomId});
+            payload.av && pub(APP_VIDEO_CHANGED, payload.av);
+            payload.kb_mouse && pub(KB_MOUSE_FLAG);
+            pub(GAME_ROOM_AVAILABLE, { roomId: payload.roomId });
             break;
         case api.endpoint.GAME_SAVE:
             pub(GAME_SAVED);
@@ -208,7 +208,7 @@ const onMessage = (m) => {
             pub(WORKER_LIST_FETCHED, payload);
             break;
         case api.endpoint.LATENCY_CHECK:
-            pub(LATENCY_CHECK_REQUESTED, {packetId: id, addresses: payload});
+            pub(LATENCY_CHECK_REQUESTED, { packetId: id, addresses: payload });
             break;
         case api.endpoint.GAME_RECORDING:
             pub(RECORDING_STATUS_CHANGED, payload);
@@ -217,10 +217,10 @@ const onMessage = (m) => {
             pub(GAME_ERROR_NO_FREE_SLOTS);
             break;
         case api.endpoint.APP_VIDEO_CHANGE:
-            pub(APP_VIDEO_CHANGED, {...payload})
+            pub(APP_VIDEO_CHANGED, { ...payload });
             break;
     }
-}
+};
 
 const _dpadArrowKeys = [KEY.UP, KEY.DOWN, KEY.LEFT, KEY.RIGHT];
 
@@ -229,26 +229,26 @@ const onKeyPress = (data) => {
     const button = keyButtons[data.key];
 
     if (_dpadArrowKeys.includes(data.key)) {
-        button.classList.add('dpad-pressed');
+        button.classList.add("dpad-pressed");
     } else {
-        if (button) button.classList.add('pressed');
+        if (button) button.classList.add("pressed");
     }
 
     if (state !== app.state.settings) {
         if (KEY.HELP === data.key) helpScreen.show(true, event);
     }
 
-    state.keyPress(data.key, data.code)
+    state.keyPress(data.key, data.code);
 };
 
 // pre-state key release handler
-const onKeyRelease = data => {
+const onKeyRelease = (data) => {
     const button = keyButtons[data.key];
 
     if (_dpadArrowKeys.includes(data.key)) {
-        button.classList.remove('dpad-pressed');
+        button.classList.remove("dpad-pressed");
     } else {
-        if (button) button.classList.remove('pressed');
+        if (button) button.classList.remove("pressed");
     }
 
     if (state !== app.state.settings) {
@@ -274,7 +274,9 @@ const updatePlayerIndex = (idx, not_game = false) => {
 };
 
 // noop function for the state
-const _nil = () => ({/*_*/})
+const _nil = () => ({
+    /*_*/
+});
 
 const onAxisChanged = (data) => {
     // maybe move it somewhere
@@ -288,66 +290,68 @@ const onAxisChanged = (data) => {
 };
 
 const handleToggle = (force = false) => {
-    const toggle = document.getElementById('dpad-toggle');
+    const toggle = document.getElementById("dpad-toggle");
 
-    force && toggle.setAttribute('checked', '')
+    force && toggle.setAttribute("checked", "");
     toggle.checked = !toggle.checked;
-    pub(DPAD_TOGGLE, {checked: toggle.checked});
+    pub(DPAD_TOGGLE, { checked: toggle.checked });
 };
 
 const handleRecording = (data) => {
-    const {recording, userName} = data;
+    const { recording, userName } = data;
     api.game.toggleRecording(recording, userName);
-}
+};
 
 const handleRecordingStatus = (data) => {
-    if (data === 'ok') {
-        message.show(`Recording ${recording.isActive() ? 'on' : 'off'}`)
+    if (data === "ok") {
+        message.show(`Recording ${recording.isActive() ? "on" : "off"}`);
         if (recording.isActive()) {
-            recording.setIndicator(true)
+            recording.setIndicator(true);
         }
     } else {
-        message.show(`Recording failed ):`)
-        recording.setIndicator(false)
+        message.show(`Recording failed ):`);
+        recording.setIndicator(false);
     }
-    log.debug("recording is ", recording.isActive())
-}
+    log.debug("recording is ", recording.isActive());
+};
 
 const _default = {
-    name: 'default',
+    name: "default",
     axisChanged: _nil,
     keyPress: _nil,
     keyRelease: _nil,
     menuReady: _nil,
-}
+};
 const app = {
     state: {
         eden: {
             ..._default,
-            name: 'eden',
-            menuReady: showMenuScreen
+            name: "eden",
+            menuReady: showMenuScreen,
         },
 
         settings: {
             ..._default,
             _uber: true,
-            name: 'settings',
+            name: "settings",
             keyRelease: (() => {
                 settings.ui.onToggle = (o) => !o && setState(lastState);
-                return (key) => key === KEY.SETTINGS && settings.ui.toggle()
+                return (key) => key === KEY.SETTINGS && settings.ui.toggle();
             })(),
-            menuReady: showMenuScreen
+            menuReady: showMenuScreen,
         },
 
         menu: {
             ..._default,
-            name: 'menu',
-            axisChanged: (id, val) => id === 1 && gameList.scroll(val < -.5 ? -1 : val > .5 ? 1 : 0),
+            name: "menu",
+            axisChanged: (id, val) =>
+                id === 1 &&
+                gameList.scroll(val < -0.5 ? -1 : val > 0.5 ? 1 : 0),
             keyPress: (key) => {
                 switch (key) {
                     case KEY.UP:
                     case KEY.DOWN:
-                        gameList.scroll(key === KEY.UP ? -1 : 1)
+                        gameList.scroll(key === KEY.UP ? -1 : 1);
                         break;
                 }
             },
@@ -367,13 +371,13 @@ const app = {
                         startGame();
                         break;
                     case KEY.QUIT:
-                        message.show('You are already in menu screen!');
+                        message.show("You are already in menu screen!");
                         break;
                     case KEY.LOAD:
-                        message.show('Loading the game.');
+                        message.show("Loading the game.");
                         break;
                     case KEY.SAVE:
-                        message.show('Saving the game.');
+                        message.show("Saving the game.");
                         break;
                     case KEY.STATS:
                         stats.toggle();
@@ -389,9 +393,11 @@ const app = {
 
         game: {
             ..._default,
-            name: 'game',
-            axisChanged: (id, value) => input.retropad.setAxisChanged(id, value),
-            keyboardInput: (pressed, e) => api.game.input.keyboard.press(pressed, e),
+            name: "game",
+            axisChanged: (id, value) =>
+                input.retropad.setAxisChanged(id, value),
+            keyboardInput: (pressed, e) =>
+                api.game.input.keyboard.press(pressed, e),
             mouseMove: (e) => api.game.input.mouse.move(e.dx, e.dy),
             mousePress: (e) => api.game.input.mouse.press(e.b, e.p),
             keyPress: (key) => input.retropad.setKeyState(key, true),
@@ -403,7 +409,7 @@ const app = {
                         // save when click share
                         saveGame();
                         room.copyToClipboard();
-                        message.show('Shared link copied to the clipboard!');
+                        message.show("Shared link copied to the clipboard!");
                         break;
                     case KEY.SAVE:
                         saveGame();
@@ -427,13 +433,13 @@ const app = {
                         updatePlayerIndex(3);
                         break;
                     case KEY.QUIT:
-                        input.retropad.toggle(false)
-                        api.game.quit(room.id)
+                        input.retropad.toggle(false);
+                        api.game.quit(room.id);
                         room.reset();
                         window.location = window.location.pathname;
                         break;
                     case KEY.RESET:
-                        api.game.reset(room.id)
+                        api.game.reset(room.id);
                         break;
                     case KEY.STATS:
                         stats.toggle();
@@ -443,46 +449,52 @@ const app = {
                         break;
                 }
             },
-        }
-    }
+        },
+    },
 };
 
 // switch keyboard+mouse / retropad
-const kbmEl = document.getElementById('kbm')
-const kbmEl2 = document.getElementById('kbm2')
-let kbmSkip = false
+const kbmEl = document.getElementById("kbm");
+const kbmEl2 = document.getElementById("kbm2");
+let kbmSkip = false;
 const kbmCb = () => {
-    input.kbm = kbmSkip
-    kbmSkip = !kbmSkip
-    pub(REFRESH_INPUT)
-}
+    input.kbm = kbmSkip;
+    kbmSkip = !kbmSkip;
+    pub(REFRESH_INPUT);
+};
 gui.multiToggle([kbmEl, kbmEl2], {
     list: [
-        {caption: '⌨️+🖱️', cb: kbmCb},
-        {caption: ' 🎮 ', cb: kbmCb}
-    ]
-})
+        { caption: "⌨️+🖱️", cb: kbmCb },
+        { caption: " 🎮 ", cb: kbmCb },
+    ],
+});
 sub(KB_MOUSE_FLAG, () => {
-    gui.show(kbmEl, kbmEl2)
-    handleToggle(true)
-    message.show('Keyboard and mouse work in fullscreen')
-})
+    gui.show(kbmEl, kbmEl2);
+    handleToggle(true);
+    message.show("Keyboard and mouse work in fullscreen");
+});
 
 // Browser lock API
-document.onpointerlockchange = () => pub(POINTER_LOCK_CHANGE, document.pointerLockElement)
-document.onfullscreenchange = () => pub(FULLSCREEN_CHANGE, document.fullscreenElement)
+document.onpointerlockchange = () =>
+    pub(POINTER_LOCK_CHANGE, document.pointerLockElement);
+document.onfullscreenchange = () =>
+    pub(FULLSCREEN_CHANGE, document.fullscreenElement);
 
 // subscriptions
 sub(MESSAGE, onMessage);
 
-sub(GAME_ROOM_AVAILABLE, async () => {
-    stream.play()
-}, 2)
-sub(GAME_SAVED, () => message.show('Saved'));
-sub(GAME_PLAYER_IDX, data => {
+sub(
+    GAME_ROOM_AVAILABLE,
+    async () => {
+        stream.play();
+    },
+    2,
+);
+sub(GAME_SAVED, () => message.show("Saved"));
+sub(GAME_PLAYER_IDX, (data) => {
     updatePlayerIndex(+data.index, state !== app.state.game);
 });
-sub(GAME_PLAYER_IDX_SET, idx => {
+sub(GAME_PLAYER_IDX_SET, (idx) => {
     if (!isNaN(+idx)) message.show(+idx + 1);
 });
 sub(GAME_ERROR_NO_FREE_SLOTS, () => message.show("No free slots :(", 2500));
@@ -495,42 +507,46 @@ sub(WEBRTC_NEW_CONNECTION, (data) => {
             ch.onmessage = (x) => onMessage(api.decode(x.data));
             pub(WEBRTC_CONNECTION_READY);
         }
-        return ch
-    }
-    api.server.initWebrtc()
+        return ch;
+    };
+    api.server.initWebrtc();
     gameList.set(data.games);
 });
-sub(WEBRTC_ICE_CANDIDATE_FOUND, (data) => api.server.sendIceCandidate(data.candidate));
+sub(WEBRTC_ICE_CANDIDATE_FOUND, (data) =>
+    api.server.sendIceCandidate(data.candidate),
+);
 sub(WEBRTC_SDP_ANSWER, (data) => api.server.sendSdp(data.sdp));
-sub(WEBRTC_SDP_OFFER, (data) => webrtc.setRemoteDescription(api.decodeB64(data.sdp), stream.video.el));
+sub(WEBRTC_SDP_OFFER, (data) =>
+    webrtc.setRemoteDescription(api.decodeB64(data.sdp), stream.video.el),
+);
 sub(WEBRTC_ICE_CANDIDATE_RECEIVED, (data) => {
-    const candidate = data.candidate ? api.decodeB64(data.candidate) : ''
-    webrtc.addCandidate(candidate)
+    const candidate = data.candidate ? api.decodeB64(data.candidate) : "";
+    webrtc.addCandidate(candidate);
 });
 sub(WEBRTC_CONNECTION_READY, onConnectionReady);
 sub(WEBRTC_CONNECTION_CLOSED, () => {
-    input.retropad.toggle(false)
+    input.retropad.toggle(false);
     webrtc.stop();
 });
 sub(LATENCY_CHECK_REQUESTED, onLatencyCheck);
-sub(GAMEPAD_CONNECTED, () => message.show('Gamepad connected'));
-sub(GAMEPAD_DISCONNECTED, () => message.show('Gamepad disconnected'));
+sub(GAMEPAD_CONNECTED, () => message.show("Gamepad connected"));
+sub(GAMEPAD_DISCONNECTED, () => message.show("Gamepad disconnected"));
 
 // keyboard handler in the Screen Lock mode
-sub(KEYBOARD_KEY_DOWN, (v) => state.keyboardInput?.(true, v))
-sub(KEYBOARD_KEY_UP, (v) => state.keyboardInput?.(false, v))
+sub(KEYBOARD_KEY_DOWN, (v) => state.keyboardInput?.(true, v));
+sub(KEYBOARD_KEY_UP, (v) => state.keyboardInput?.(false, v));
 
 // mouse handler in the Screen Lock mode
-sub(MOUSE_MOVED, (e) => state.mouseMove?.(e))
-sub(MOUSE_PRESSED, (e) => state.mousePress?.(e))
+sub(MOUSE_MOVED, (e) => state.mouseMove?.(e));
+sub(MOUSE_PRESSED, (e) => state.mousePress?.(e));
 
 // general keyboard handler
 sub(KEY_PRESSED, onKeyPress);
 sub(KEY_RELEASED, onKeyRelease);
 
-sub(SETTINGS_CHANGED, () => message.show('Settings have been updated'));
+sub(SETTINGS_CHANGED, () => message.show("Settings have been updated"));
 sub(AXIS_CHANGED, onAxisChanged);
-sub(CONTROLLER_UPDATED, data => webrtc.send("data", data));
+sub(CONTROLLER_UPDATED, (data) => webrtc.send("data", data));
 sub(RECORDING_TOGGLED, handleRecording);
 sub(RECORDING_STATUS_CHANGED, handleRecordingStatus);
 
@@ -542,21 +558,21 @@ sub(SETTINGS_CHANGED, () => {
 // initial app state
 setState(app.state.eden);
 
-input.init()
+input.init();
 
 stream.init();
 screen.init();
 
 let [roomId, zone] = room.loadMaybe();
 // find worker id if present
-const wid = new URLSearchParams(document.location.search).get('wid');
+const wid = new URLSearchParams(document.location.search).get("wid");
 // if from URL -> start game immediately!
 socket.init(roomId, wid, zone);
 api.transport = {
     send: socket.send,
     keyboard: (data) => webrtc.send("keyboard", data),
     mouse: (data) => webrtc.send("mouse", data),
-}
+};
 
 // stats
 let WEBRTC_STATS_RTT;
@@ -564,59 +580,68 @@ let VIDEO_BITRATE;
 let GET_V_CODEC, SET_CODEC;
 
 const bitrate = (() => {
-    let bytesPrev, timestampPrev
-    const w = [0, 0, 0, 0, 0, 0]
-    const n = w.length
-    let i = 0
+    let bytesPrev, timestampPrev;
+    const w = [0, 0, 0, 0, 0, 0];
+    const n = w.length;
+    let i = 0;
     return (now, bytes) => {
-        w[i++ % n] = timestampPrev ? Math.floor(8 * (bytes - bytesPrev) / (now - timestampPrev)) : 0
-        bytesPrev = bytes
-        timestampPrev = now
-        return Math.floor(w.reduce((a, b) => a + b) / n)
-    }
-})()
+        w[i++ % n] = timestampPrev
+            ? Math.floor((8 * (bytes - bytesPrev)) / (now - timestampPrev))
+            : 0;
+        bytesPrev = bytes;
+        timestampPrev = now;
+        return Math.floor(w.reduce((a, b) => a + b) / n);
+    };
+})();
 
 stats.modules = [
     {
-        mui: stats.mui('', '<1'),
+        mui: stats.mui("", "<1"),
         init() {
-            WEBRTC_STATS_RTT = (v) => (this.val = v)
+            WEBRTC_STATS_RTT = (v) => (this.val = v);
         },
     },
     {
-        mui: stats.mui('', '', false, () => ''),
+        mui: stats.mui("", "", false, () => ""),
         init() {
-            GET_V_CODEC = (v) => (this.val = v + ' @ ')
-        }
-    },
-    {
-        mui: stats.mui('', '', false, () => ''),
-        init() {
-            sub(APP_VIDEO_CHANGED, ({s = 1, w, h}) => (this.val = `${w * s}x${h * s}`))
+            GET_V_CODEC = (v) => (this.val = v + " @ ");
         },
     },
     {
-        mui: stats.mui('', '', false, () => ' kb/s', 'stats-bitrate'),
+        mui: stats.mui("", "", false, () => ""),
         init() {
-            VIDEO_BITRATE = (v) => (this.val = v)
-        }
+            sub(
+                APP_VIDEO_CHANGED,
+                ({ s = 1, w, h }) => (this.val = `${w * s}x${h * s}`),
+            );
+        },
+    },
+    {
+        mui: stats.mui("", "", false, () => " kb/s", "stats-bitrate"),
+        init() {
+            VIDEO_BITRATE = (v) => (this.val = v);
+        },
     },
     {
         async stats() {
             const stats = await webrtc.stats();
             if (!stats) return;
 
-            stats.forEach(report => {
-                if (!SET_CODEC && report.mimeType?.startsWith('video/')) {
-                    GET_V_CODEC(report.mimeType.replace('video/', '').toLowerCase())
-                    SET_CODEC = 1
+            stats.forEach((report) => {
+                if (!SET_CODEC && report.mimeType?.startsWith("video/")) {
+                    GET_V_CODEC(
+                        report.mimeType.replace("video/", "").toLowerCase(),
+                    );
+                    SET_CODEC = 1;
                 }
-                const {nominated, currentRoundTripTime, type, kind} = report;
+                const { nominated, currentRoundTripTime, type, kind } = report;
                 if (nominated && currentRoundTripTime !== undefined) {
                     WEBRTC_STATS_RTT(currentRoundTripTime * 1000);
                 }
-                if (type === 'inbound-rtp' && kind === 'video') {
-                    VIDEO_BITRATE(bitrate(report.timestamp, report.bytesReceived))
+                if (type === "inbound-rtp" && kind === "video") {
+                    VIDEO_BITRATE(
+                        bitrate(report.timestamp, report.bytesReceived),
+                    );
                 }
             });
         },
@@ -626,6 +651,7 @@ stats.modules = [
         disable() {
             window.clearInterval(this.interval);
         },
-    }]
+    },
+];
 
-stats.toggle()
+stats.toggle();
