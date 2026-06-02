@@ -143,11 +143,11 @@ export const webrtc = {
         pc.onnegotiationneeded = () => {
             log.debug("[rtc] negotiation needed");
             // todo implement
-            pc.createOffer()
-                .then((description) =>
-                    pc.setLocalDescription(description).catch(log.error),
-                )
-                .catch(log.error);
+            // pc.createOffer()
+            //     .then((description) =>
+            //         pc.setLocalDescription(description).catch(log.error),
+            //     )
+            //     .catch(log.error);
         };
         pc.ontrack = (event) => {
             stream.addTrack(event.track);
@@ -155,7 +155,6 @@ export const webrtc = {
     },
     setRemoteDescription: async (
         /** @type {RTCSessionDescriptionInit} */ sdp,
-        /** @type {HTMLMediaElement} */ media,
     ) => {
         log.debug("[rtc] [sdp] remote offer", sdp);
 
