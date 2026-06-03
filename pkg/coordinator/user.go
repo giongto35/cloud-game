@@ -46,6 +46,8 @@ func (u *User) Disconnect() {
 func (u *User) HandleRequests(info HasServerInfo, conf config.CoordinatorConfig) chan struct{} {
 	return u.ProcessPackets(func(x api.In[com.Uid]) (err error) {
 		switch x.T {
+		case api.InitWebrtcStream:
+			err = api.Do(x, u.HandleInitWebrtcStream)
 		case api.WebrtcInit:
 			if u.w != nil {
 				u.HandleWebrtcInit()

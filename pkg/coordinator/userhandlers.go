@@ -9,6 +9,27 @@ import (
 )
 
 func (u *User) HandleWebrtcInit() {
+	return
+	uid := u.Id().String()
+	resp, err := u.w.WebrtcInit(uid)
+	if err != nil || resp == nil || *resp == api.EMPTY {
+		u.log.Error().Err(err).Msg("malformed WebRTC init response")
+		return
+	}
+	u.SendWebrtcOffer(string(*resp))
+}
+
+func (u *User) HandleInitWebrtcStream(rq api.InitWebrtcStreamRequest) {
+	if rq.Initiator {
+		u.log.Warn().Msg("active initiator is not supported")
+		return
+	}
+
+	if u.w == nil {
+		u.log.Warn().Msg("no worker assigned")
+		return
+	}
+
 	uid := u.Id().String()
 	resp, err := u.w.WebrtcInit(uid)
 	if err != nil || resp == nil || *resp == api.EMPTY {

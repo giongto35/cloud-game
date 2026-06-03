@@ -195,8 +195,8 @@ const onMessage = (m) => {
             );
             break;
         case api.endpoint.GAME_START:
-            payload.av && pub(APP_VIDEO_CHANGED, payload.av);
-            payload.kb_mouse && pub(KB_MOUSE_FLAG);
+            if (payload.av) pub(APP_VIDEO_CHANGED, payload.av);
+            if (payload.kb_mouse) pub(KB_MOUSE_FLAG);
             pub(GAME_ROOM_AVAILABLE, { roomId: payload.roomId });
             break;
         case api.endpoint.GAME_SAVE:
@@ -508,7 +508,7 @@ sub(WEBRTC_NEW_CONNECTION, (data) => {
         }
         return ch;
     };
-    api.server.initWebrtc();
+    api.server.initWebrtcStream(false, "");
     gameList.set(data.games);
 });
 sub(WEBRTC_SDP_OFFER, webrtc.setRemoteDescription);
