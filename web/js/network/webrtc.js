@@ -212,6 +212,13 @@ export const webrtc = {
             stream = null;
         }
         if (pc) {
+            pc.oniceconnectionstatechange = null;
+            pc.onicegatheringstatechange = null;
+            pc.onicecandidate = null;
+            pc.onicecandidateerror = null;
+            pc.onconnectionstatechange = null;
+            pc.ondatachannel = null;
+            pc.ontrack = null;
             pc.close();
             pc = null;
         }
