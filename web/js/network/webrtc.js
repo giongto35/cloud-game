@@ -98,20 +98,22 @@ const readyChan = (/** @type {RTCDataChannel} */ dc) => ({
     close: () => dc.close(),
 });
 
+const addRemoteCandidate = (data) => {
+    if (!data) return;
+    pc.addIceCandidate(new RTCIceCandidate(data)).catch((e) => {
+        log.error("[rtc] [ice] remote candidate add failed", e.name);
+    });
+    log.debug(`[rtc] [ice] added remote: ${data.candidate}`);
+};
+
 const flushRemoteCandidates = () => {
     // this will work only when the remote description is set
-    if (!pc.remoteDescription) return;
+    if (!pc.remoteDescription || candidateBuf.length === 0) return;
 
-    if (log.level >= log.DEBUG) {
-        log.debug(
-            `[rtc] [ice] remote candidates (${candidateBuf.length}): ${candidateBuf.map((c) => c.candidate)}`,
-        );
-    }
+    log.debug(`[rtc] [ice] remote candidate buf (${candidateBuf.length})`);
     let data = undefined;
     while (typeof (data = candidateBuf.shift()) !== "undefined") {
-        pc.addIceCandidate(new RTCIceCandidate(data)).catch((e) => {
-            log.error("[rtc] remote candidate add failed", e.name);
-        });
+        addRemoteCandidate(data);
     }
 };
 
@@ -182,11 +184,17 @@ export const webrtc = {
         }
     },
     addCandidate: (/** @type {RTCLocalIceCandidateInit} */ candidate) => {
+        const allowed = pc.remoteDescription !== null;
+
+        if (allowed) {
+            addRemoteCandidate(candidate);
+        } else {
+            candidateBuf.push(candidate);
+        }
+
         if (candidate === "") {
             flushRemoteCandidates();
-            return;
         }
-        candidateBuf.push(candidate);
     },
     send: (chan, data) => channels.get(chan)?.send(data),
     isConnected: () => connected,
