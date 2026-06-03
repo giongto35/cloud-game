@@ -34,7 +34,7 @@ type (
 	WebrtcAnswerUserRequest string
 	WebrtcUserIceCandidate  string
 
-	InitWebrtcStreamRequest struct {
+	InitUserWebrtcStreamRequest struct {
 		Initiator bool   `json:"initiator"`
 		Sdp       string `json:"sdp,omitempty"`
 	}

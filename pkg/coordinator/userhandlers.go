@@ -8,18 +8,7 @@ import (
 	"github.com/giongto35/cloud-game/v3/pkg/config"
 )
 
-func (u *User) HandleWebrtcInit() {
-	return
-	uid := u.Id().String()
-	resp, err := u.w.WebrtcInit(uid)
-	if err != nil || resp == nil || *resp == api.EMPTY {
-		u.log.Error().Err(err).Msg("malformed WebRTC init response")
-		return
-	}
-	u.SendWebrtcOffer(string(*resp))
-}
-
-func (u *User) HandleInitWebrtcStream(rq api.InitWebrtcStreamRequest) {
+func (u *User) HandleInitWebrtcStream(rq api.InitUserWebrtcStreamRequest) {
 	if rq.Initiator {
 		u.log.Warn().Msg("active initiator is not supported")
 		return
@@ -31,7 +20,7 @@ func (u *User) HandleInitWebrtcStream(rq api.InitWebrtcStreamRequest) {
 	}
 
 	uid := u.Id().String()
-	resp, err := u.w.WebrtcInit(uid)
+	resp, err := u.w.InitWebrtcStream(uid)
 	if err != nil || resp == nil || *resp == api.EMPTY {
 		u.log.Error().Err(err).Msg("malformed WebRTC init response")
 		return

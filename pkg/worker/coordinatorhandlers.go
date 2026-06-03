@@ -28,7 +28,7 @@ func buildConnQuery(id com.Uid, conf config.Worker, address string) (string, err
 	})
 }
 
-func (c *coordinator) HandleWebrtcInit(rq api.WebrtcInitRequest, w *Worker, factory *webrtc.ApiFactory) api.Out {
+func (c *coordinator) HandleInitWebrtcStream(rq api.InitWebrtcStreamRequest, w *Worker, factory *webrtc.ApiFactory) api.Out {
 	peer := webrtc.New(c.log, factory)
 	localSDP, err := peer.NewCall(w.conf.Encoder.Video.Codec, "opus", func(data any) {
 		candidate, err := toBase64Json(data)

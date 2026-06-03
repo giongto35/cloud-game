@@ -3,8 +3,7 @@ import { log } from "log";
 const endpoints = {
     LATENCY_CHECK: 3,
     INIT: 4,
-    INIT_WEBRTC_STREAM: 114,
-    INIT_WEBRTC: 100,
+    INIT_WEBRTC_STREAM: 100,
     OFFER: 101,
     ANSWER: 102,
     ICE_CANDIDATE: 103,
@@ -338,8 +337,6 @@ export const api = {
     fromBytes,
     fromBase64,
     server: {
-        /** @deprecated use initWebrtcStream instead */
-        initWebrtc: () => packet(endpoints.INIT_WEBRTC),
         /** Initializes the stream with the given config.
          * @property {boolean} initiator - whether the user is an initiator or not.
          * @property {string} sdpOffer - optional SDP offer, just to make negotiation a bit faster.

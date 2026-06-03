@@ -72,8 +72,8 @@ func (c *coordinator) HandleRequests(w *Worker) chan struct{} {
 		var out api.Out
 
 		switch x.T {
-		case api.WebrtcInit:
-			err = api.Do(x, func(d api.WebrtcInitRequest) { out = c.HandleWebrtcInit(d, w, ap) })
+		case api.InitWebrtcStream:
+			err = api.Do(x, func(d api.InitWebrtcStreamRequest) { out = c.HandleInitWebrtcStream(d, w, ap) })
 		case api.StartGame:
 			err = api.Do(x, func(d api.StartGameRequest) { out = c.HandleGameStart(d, w) })
 		case api.SaveGame:

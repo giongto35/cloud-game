@@ -69,8 +69,7 @@ func (o *Out) GetPayload() any         { return o.Payload }
 const (
 	CheckLatency     PT = 3
 	InitSession      PT = 4
-	InitWebrtcStream PT = 114
-	WebrtcInit       PT = 100
+	InitWebrtcStream PT = 100
 	WebrtcOffer      PT = 101
 	WebrtcAnswer     PT = 102
 	WebrtcIce        PT = 103
@@ -100,8 +99,6 @@ func (p PT) String() string {
 		return "InitSession"
 	case InitWebrtcStream:
 		return "InitWebrtcStream"
-	case WebrtcInit:
-		return "WebrtcInit"
 	case WebrtcOffer:
 		return "WebrtcOffer"
 	case WebrtcAnswer:
