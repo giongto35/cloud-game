@@ -1,5 +1,6 @@
 import {
     pub,
+    WEBRTC_CONNECTION_READY,
     WEBRTC_CONNECTION_CLOSED,
     WEBRTC_ICE_CANDIDATE_FOUND,
     WEBRTC_SDP_ANSWER,
@@ -67,7 +68,7 @@ const ice = ((timeout = 3000) => {
                 connected = true;
                 break;
             case "disconnected":
-                log.info(
+                log.debug(
                     `[rtc] [ice] disconnected... ` +
                         `connection: ${pc.connectionState}, ice: ${pc.iceConnectionState}, ` +
                         `gathering: ${pc.iceGatheringState}, signalling: ${pc.signalingState}`,
@@ -141,6 +142,9 @@ export const webrtc = {
         pc.onicecandidateerror = ice.onIceCandidateError;
         pc.onconnectionstatechange = () => {
             log.debug(`[rtc] connection state: ${pc.connectionState}`);
+            if (pc.connectionState === "connected") {
+                pub(WEBRTC_CONNECTION_READY);
+            }
         };
         pc.onnegotiationneeded = () => {
             log.debug("[rtc] negotiation needed");
@@ -220,7 +224,7 @@ export const webrtc = {
         }
         channels.clear();
         candidateBuf = [];
-        log.info("[rtc] WebRTC has been closed");
+        log.debug("[rtc] WebRTC has been closed");
     },
     set modDataChannel(fn) {
         modDataChannel = fn;

@@ -504,7 +504,6 @@ sub(WEBRTC_NEW_CONNECTION, (data) => {
         ch.binaryType = "arraybuffer";
         if (ch.label === "data") {
             ch.onmessage = (x) => onMessage(api.fromBytes(x.data));
-            pub(WEBRTC_CONNECTION_READY);
         }
         return ch;
     };
