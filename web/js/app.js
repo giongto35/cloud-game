@@ -154,7 +154,7 @@ const startGame = () => {
         return;
     }
 
-    log.info("[control] game start");
+    log.debug("[control] game start");
 
     setState(app.state.game);
 
@@ -499,7 +499,7 @@ sub(GAME_ERROR_NO_FREE_SLOTS, () => message.show("No free slots :(", 2500));
 // WebRTC connection handling
 sub(WEBRTC_NEW_CONNECTION, (data) => {
     workerManager.whoami(data.wid);
-    webrtc.start(data.ice, stream.video.el);
+    webrtc.start({ iceServers: data.ice, media: stream.video.el });
     webrtc.modDataChannel = (ch) => {
         ch.binaryType = "arraybuffer";
         if (ch.label === "data") {
@@ -507,7 +507,7 @@ sub(WEBRTC_NEW_CONNECTION, (data) => {
         }
         return ch;
     };
-    api.server.initWebrtcStream(false, "");
+    api.server.initWebrtcStream();
     gameList.set(data.games);
 });
 sub(WEBRTC_SDP_OFFER, webrtc.setRemoteDescription);

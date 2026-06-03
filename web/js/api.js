@@ -341,7 +341,7 @@ export const api = {
          * @property {boolean} initiator - whether the user is an initiator or not.
          * @property {string} sdpOffer - optional SDP offer, just to make negotiation a bit faster.
          */
-        initWebrtcStream: (initiator = false, sdpOffer = "") =>
+        initWebrtcStream: ({ initiator = false, sdpOffer = "" } = {}) =>
             packet(endpoints.INIT_WEBRTC_STREAM, {
                 initiator,
                 ...(sdpOffer && { sdp: toBase64(sdpOffer) }),

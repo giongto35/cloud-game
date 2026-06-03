@@ -8,18 +8,9 @@ import {
 import { log } from "log";
 
 let /** @type {RTCPeerConnection} */ pc;
-let /** @type {Map<string, DataChannelWrapper>} */ channels = new Map();
+let /** @type {Map<string, RTCDataChannel>} */ channels = new Map();
 let /** @type {MediaStream} */ stream;
 let /** @type {RTCLocalIceCandidateInit[]} */ candidateBuf = [];
-
-/**
- * @typedef {Object} DataChannelWrapper
- * @property {(data: string) => void} send - sends data if channel is open.
- * @property {() => void} close - closes the underlying channel.
- */
-
-let connected = false;
-
 let /** @type {(channel: RTCDataChannel) => RTCDataChannel} */ modDataChannel;
 
 const ice = ((timeout = 3000) => {
@@ -64,21 +55,16 @@ const ice = ((timeout = 3000) => {
     const onIceConnectionStateChange = () => {
         log.debug(`[rtc] [ice] connection state: ${pc.iceConnectionState}`);
         switch (pc.iceConnectionState) {
-            case "connected":
-                connected = true;
-                break;
             case "disconnected":
                 log.debug(
                     `[rtc] [ice] disconnected... ` +
                         `connection: ${pc.connectionState}, ice: ${pc.iceConnectionState}, ` +
                         `gathering: ${pc.iceGatheringState}, signalling: ${pc.signalingState}`,
                 );
-                connected = false;
                 pub(WEBRTC_CONNECTION_CLOSED);
                 break;
             case "failed":
                 log.error("[rtc] [ice] failed establish connection, retry...");
-                connected = false;
                 pc.restartIce();
                 break;
         }
@@ -91,13 +77,6 @@ const ice = ((timeout = 3000) => {
         onIceConnectionStateChange,
     };
 })();
-
-// readyChan - wraps an RTCDataChannel to ensure it is ready before sending
-const readyChan = (/** @type {RTCDataChannel} */ dc) => ({
-    send: (/** @type {string} */ data) =>
-        dc.readyState === "open" && dc.send(data),
-    close: () => dc.close(),
-});
 
 const addRemoteCandidate = (data) => {
     if (!data) return;
@@ -118,22 +97,37 @@ const flushRemoteCandidates = () => {
     }
 };
 
+const isConnected = () => pc?.connectionState === "connected";
+
+// hacks
+// Chrome bug https://bugs.chromium.org/p/chromium/issues/detail?id=818180 workaround
+// force stereo params for Opus tracks (a=fmtp:111 ...)
+const enableOpusStereo = (sdp) =>
+    sdp.replace(/(a=fmtp:111 .*)/g, "$1;stereo=1");
+
 /**
  * WebRTC connection module.
  */
 export const webrtc = {
-    start: (iceServers = [], media) => {
+    start: ({ iceServers = [], media } = {}) => {
         log.debug("[rtc] got remote ICE servers", iceServers);
-        pc = new RTCPeerConnection({ iceServers });
+        pc = new RTCPeerConnection(...(iceServers && [{ iceServers }]));
         stream = new MediaStream();
-        media.srcObject = stream;
+
+        if (media) {
+            media.srcObject = stream;
+        } else {
+            log.warn(
+                "[rtc] no media provided, stream will not be attached to any element",
+            );
+        }
 
         pc.addTransceiver("video", { direction: "recvonly" });
         pc.addTransceiver("audio", { direction: "recvonly" });
 
         pc.ondatachannel = (ev) => {
             let chan = modDataChannel ? modDataChannel(ev.channel) : ev.channel;
-            channels.set(chan.label, readyChan(chan));
+            channels.set(chan.label, chan);
             log.debug(`[rtc] [data-ch] push: ${chan.label}`);
         };
         pc.oniceconnectionstatechange = ice.onIceConnectionStateChange;
@@ -142,9 +136,8 @@ export const webrtc = {
         pc.onicecandidateerror = ice.onIceCandidateError;
         pc.onconnectionstatechange = () => {
             log.debug(`[rtc] connection state: ${pc.connectionState}`);
-            if (pc.connectionState === "connected") {
+            if (pc.connectionState === "connected")
                 pub(WEBRTC_CONNECTION_READY);
-            }
         };
         pc.onnegotiationneeded = () => {
             log.debug("[rtc] negotiation needed");
@@ -177,9 +170,7 @@ export const webrtc = {
 
         try {
             const answer = await pc.createAnswer();
-            // Chrome bug https://bugs.chromium.org/p/chromium/issues/detail?id=818180 workaround
-            // force stereo params for Opus tracks (a=fmtp:111 ...)
-            answer.sdp = answer.sdp.replace(/(a=fmtp:111 .*)/g, "$1;stereo=1");
+            answer.sdp = enableOpusStereo(answer.sdp);
             await pc.setLocalDescription(answer);
             log.debug("[rtc] [sdp] local answer", answer);
             pub(WEBRTC_SDP_ANSWER, answer);
@@ -187,7 +178,9 @@ export const webrtc = {
             log.error(`[rtc] [sdp] local answer error: ${e}`);
         }
     },
-    addCandidate: (/** @type {RTCLocalIceCandidateInit} */ candidate) => {
+    addCandidate: (
+        /** @type {RTCLocalIceCandidateInit | string} */ candidate,
+    ) => {
         const allowed = pc.remoteDescription !== null;
 
         if (allowed) {
@@ -200,18 +193,22 @@ export const webrtc = {
             flushRemoteCandidates();
         }
     },
-    send: (chan, data) => channels.get(chan)?.send(data),
-    isConnected: () => connected,
+    send: (chan, data) => {
+        const ch = channels.get(chan);
+        if (ch?.readyState === "open") ch.send(data);
+    },
+    isConnected,
     stats: async () => {
-        if (!connected) return Promise.resolve();
+        if (!isConnected()) return Promise.resolve();
         return await pc.getStats();
     },
     stop: () => {
         if (stream) {
-            stream.getTracks().forEach((t) => {
+            while (stream.getTracks().length > 0) {
+                const t = stream.getTracks()[0];
                 t.stop();
                 stream.removeTrack(t);
-            });
+            }
             stream = null;
         }
         if (pc) {
