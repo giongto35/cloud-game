@@ -34,8 +34,8 @@ import {
     WEBRTC_ICE_CANDIDATE_FOUND,
     WEBRTC_ICE_CANDIDATE_RECEIVED,
     WEBRTC_NEW_CONNECTION,
-    WEBRTC_SDP_ANSWER,
-    WEBRTC_SDP_OFFER,
+    WEBRTC_SDP_LOCAL,
+    WEBRTC_SDP_REMOTE,
     WORKER_LIST_FETCHED,
     pub,
     sub,
@@ -186,7 +186,7 @@ const onMessage = (m) => {
             pub(WEBRTC_NEW_CONNECTION, payload);
             break;
         case api.endpoint.OFFER:
-            pub(WEBRTC_SDP_OFFER, api.fromBase64(payload));
+            pub(WEBRTC_SDP_REMOTE, api.fromBase64(payload));
             break;
         case api.endpoint.ICE_CANDIDATE:
             pub(
@@ -510,8 +510,8 @@ sub(WEBRTC_NEW_CONNECTION, (data) => {
     api.server.initWebrtcStream();
     gameList.set(data.games);
 });
-sub(WEBRTC_SDP_OFFER, webrtc.setRemoteDescription);
-sub(WEBRTC_SDP_ANSWER, api.server.sendSdp);
+sub(WEBRTC_SDP_REMOTE, webrtc.setRemoteDescription);
+sub(WEBRTC_SDP_LOCAL, api.server.sendSdp);
 sub(WEBRTC_ICE_CANDIDATE_FOUND, api.server.sendIceCandidate);
 sub(WEBRTC_ICE_CANDIDATE_RECEIVED, webrtc.addCandidate);
 sub(WEBRTC_CONNECTION_READY, onConnectionReady);

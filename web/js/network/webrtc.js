@@ -3,7 +3,7 @@ import {
     WEBRTC_CONNECTION_READY,
     WEBRTC_CONNECTION_CLOSED,
     WEBRTC_ICE_CANDIDATE_FOUND,
-    WEBRTC_SDP_ANSWER,
+    WEBRTC_SDP_LOCAL,
 } from "event";
 import { log } from "log";
 
@@ -12,6 +12,7 @@ let /** @type {Map<string, RTCDataChannel>} */ channels = new Map();
 let /** @type {MediaStream} */ stream;
 let /** @type {RTCLocalIceCandidateInit[]} */ candidateBuf = [];
 let /** @type {(channel: RTCDataChannel) => RTCDataChannel} */ modDataChannel;
+let _initiator = false;
 
 const ice = ((timeout = 3000) => {
     let timeoutId;
@@ -101,10 +102,13 @@ const enableOpusStereo = (sdp) =>
  * WebRTC connection module.
  */
 export const webrtc = {
-    start: ({ iceServers = [], media } = {}) => {
+    start: ({ iceServers = [], media, initiator = false } = {}) => {
         log.debug("[rtc] got remote ICE servers", iceServers);
         pc = new RTCPeerConnection({ iceCandidatePoolSize: 16, iceServers });
         stream = new MediaStream();
+
+        _initiator = initiator;
+        log.debug(`[rtc] you will be: ${_initiator ? "caller" : "callee"}`);
 
         if (media) {
             media.srcObject = stream;
@@ -173,7 +177,7 @@ export const webrtc = {
             answer.sdp = enableOpusStereo(answer.sdp);
             await pc.setLocalDescription(answer);
             log.debug("[rtc] [sdp] local answer", answer);
-            pub(WEBRTC_SDP_ANSWER, answer);
+            pub(WEBRTC_SDP_LOCAL, answer);
         } catch (e) {
             log.error(`[rtc] [sdp] local answer error: ${e}`);
         }
