@@ -103,7 +103,7 @@ const enableOpusStereo = (sdp) =>
 export const webrtc = {
     start: ({ iceServers = [], media } = {}) => {
         log.debug("[rtc] got remote ICE servers", iceServers);
-        pc = new RTCPeerConnection(...(iceServers && [{ iceServers }]));
+        pc = new RTCPeerConnection({ iceCandidatePoolSize: 16, iceServers });
         stream = new MediaStream();
 
         if (media) {
