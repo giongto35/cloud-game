@@ -52,8 +52,6 @@ const packet = (type, payload, id) => {
     transport.send(packet);
 };
 
-const decodeBytes = (b) => String.fromCharCode.apply(null, new Uint8Array(b));
-
 const keyboardPress = (() => {
     // 0 1 2 3 4 5 6
     // [CODE ] P MOD
@@ -319,6 +317,12 @@ const libretro = (function () {
     };
 })();
 
+// data type converters
+const toBase64 = (val) => btoa(JSON.stringify(val));
+const fromBase64 = (val) => JSON.parse(atob(val));
+const fromBytes = (val) =>
+    JSON.parse(String.fromCharCode.apply(null, new Uint8Array(val)));
+
 /**
  * Server API.
  *
@@ -330,13 +334,14 @@ export const api = {
     },
     endpoint: endpoints,
     endpointName: endpointName,
-    decode: (b) => JSON.parse(decodeBytes(b)),
-    decodeB64: (b64) => JSON.parse(atob(b64)),
+    fromBytes,
+    fromBase64,
     server: {
+        /** @deprecated use initWebrtcStream instead */
         initWebrtc: () => packet(endpoints.INIT_WEBRTC),
         sendIceCandidate: (candidate) =>
-            packet(endpoints.ICE_CANDIDATE, btoa(JSON.stringify(candidate))),
-        sendSdp: (sdp) => packet(endpoints.ANSWER, btoa(JSON.stringify(sdp))),
+            packet(endpoints.ICE_CANDIDATE, toBase64(candidate)),
+        sendSdp: (sdp) => packet(endpoints.ANSWER, toBase64(sdp)),
         latencyCheck: (id, list) => packet(endpoints.LATENCY_CHECK, list, id),
         getWorkerList: () => packet(endpoints.GET_WORKER_LIST),
     },

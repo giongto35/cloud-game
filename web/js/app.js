@@ -186,10 +186,13 @@ const onMessage = (m) => {
             pub(WEBRTC_NEW_CONNECTION, payload);
             break;
         case api.endpoint.OFFER:
-            pub(WEBRTC_SDP_OFFER, { sdp: payload });
+            pub(WEBRTC_SDP_OFFER, api.fromBase64(payload));
             break;
         case api.endpoint.ICE_CANDIDATE:
-            pub(WEBRTC_ICE_CANDIDATE_RECEIVED, { candidate: payload });
+            pub(
+                WEBRTC_ICE_CANDIDATE_RECEIVED,
+                payload ? api.fromBase64(payload) : "",
+            );
             break;
         case api.endpoint.GAME_START:
             payload.av && pub(APP_VIDEO_CHANGED, payload.av);
@@ -270,7 +273,7 @@ const onKeyRelease = (data) => {
 
 const updatePlayerIndex = (idx, not_game = false) => {
     playerIndex.value = idx + 1;
-    !not_game && api.game.setPlayerIndex(idx);
+    if (!not_game) api.game.setPlayerIndex(idx);
 };
 
 // noop function for the state
@@ -292,7 +295,7 @@ const onAxisChanged = (data) => {
 const handleToggle = (force = false) => {
     const toggle = document.getElementById("dpad-toggle");
 
-    force && toggle.setAttribute("checked", "");
+    if (force) toggle.setAttribute("checked", "");
     toggle.checked = !toggle.checked;
     pub(DPAD_TOGGLE, { checked: toggle.checked });
 };
@@ -483,13 +486,7 @@ document.onfullscreenchange = () =>
 // subscriptions
 sub(MESSAGE, onMessage);
 
-sub(
-    GAME_ROOM_AVAILABLE,
-    async () => {
-        stream.play();
-    },
-    2,
-);
+sub(GAME_ROOM_AVAILABLE, stream.play, 2);
 sub(GAME_SAVED, () => message.show("Saved"));
 sub(GAME_PLAYER_IDX, (data) => {
     updatePlayerIndex(+data.index, state !== app.state.game);
@@ -498,13 +495,15 @@ sub(GAME_PLAYER_IDX_SET, (idx) => {
     if (!isNaN(+idx)) message.show(+idx + 1);
 });
 sub(GAME_ERROR_NO_FREE_SLOTS, () => message.show("No free slots :(", 2500));
+
+// WebRTC connection handling
 sub(WEBRTC_NEW_CONNECTION, (data) => {
     workerManager.whoami(data.wid);
     webrtc.start(data.ice, stream.video.el);
     webrtc.modDataChannel = (ch) => {
         ch.binaryType = "arraybuffer";
         if (ch.label === "data") {
-            ch.onmessage = (x) => onMessage(api.decode(x.data));
+            ch.onmessage = (x) => onMessage(api.fromBytes(x.data));
             pub(WEBRTC_CONNECTION_READY);
         }
         return ch;
@@ -512,22 +511,16 @@ sub(WEBRTC_NEW_CONNECTION, (data) => {
     api.server.initWebrtc();
     gameList.set(data.games);
 });
-sub(WEBRTC_ICE_CANDIDATE_FOUND, (data) =>
-    api.server.sendIceCandidate(data.candidate),
-);
-sub(WEBRTC_SDP_ANSWER, (data) => api.server.sendSdp(data.sdp));
-sub(WEBRTC_SDP_OFFER, (data) =>
-    webrtc.setRemoteDescription(api.decodeB64(data.sdp)),
-);
-sub(WEBRTC_ICE_CANDIDATE_RECEIVED, (data) => {
-    const candidate = data.candidate ? api.decodeB64(data.candidate) : "";
-    webrtc.addCandidate(candidate);
-});
+sub(WEBRTC_SDP_OFFER, webrtc.setRemoteDescription);
+sub(WEBRTC_SDP_ANSWER, api.server.sendSdp);
+sub(WEBRTC_ICE_CANDIDATE_FOUND, api.server.sendIceCandidate);
+sub(WEBRTC_ICE_CANDIDATE_RECEIVED, webrtc.addCandidate);
 sub(WEBRTC_CONNECTION_READY, onConnectionReady);
 sub(WEBRTC_CONNECTION_CLOSED, () => {
     input.retropad.toggle(false);
     webrtc.stop();
 });
+
 sub(LATENCY_CHECK_REQUESTED, onLatencyCheck);
 sub(GAMEPAD_CONNECTED, () => message.show("Gamepad connected"));
 sub(GAMEPAD_DISCONNECTED, () => message.show("Gamepad disconnected"));

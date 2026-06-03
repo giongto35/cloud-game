@@ -27,7 +27,7 @@ const ice = ((timeout = 3000) => {
     const onIceCandidate = (/** @type {RTCPeerConnectionIceEvent} */ ev) => {
         if (!ev.candidate) return;
         log.debug(`[rtc] [ice] local: ${ev.candidate.candidate}`);
-        pub(WEBRTC_ICE_CANDIDATE_FOUND, { candidate: ev.candidate });
+        pub(WEBRTC_ICE_CANDIDATE_FOUND, ev.candidate);
     };
 
     const onIceCandidateError = (
@@ -176,7 +176,7 @@ export const webrtc = {
             answer.sdp = answer.sdp.replace(/(a=fmtp:111 .*)/g, "$1;stereo=1");
             await pc.setLocalDescription(answer);
             log.debug("[rtc] [sdp] local answer", answer);
-            pub(WEBRTC_SDP_ANSWER, { sdp: answer });
+            pub(WEBRTC_SDP_ANSWER, answer);
         } catch (e) {
             log.error(`[rtc] [sdp] local answer error: ${e}`);
         }
