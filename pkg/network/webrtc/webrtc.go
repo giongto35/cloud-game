@@ -92,8 +92,9 @@ func (p *Peer) NewCall(vCodec, aCodec string, onICECandidate func(ice any)) (sdp
 	}
 
 	p.conn.OnICEConnectionStateChange(p.handleICEState(func() { p.log.Info().Msg("Connected") }))
-	// Stream provider supposes to send offer
-	offer, err := p.conn.CreateOffer(nil)
+	offer, err := p.conn.CreateOffer(&webrtc.OfferOptions{
+		OfferAnswerOptions: webrtc.OfferAnswerOptions{ICETricklingSupported: true},
+	})
 	if err != nil {
 		return "", err
 	}
