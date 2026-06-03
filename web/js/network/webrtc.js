@@ -55,14 +55,6 @@ const ice = ((timeout = 3000) => {
     const onIceConnectionStateChange = () => {
         log.debug(`[rtc] [ice] connection state: ${pc.iceConnectionState}`);
         switch (pc.iceConnectionState) {
-            case "disconnected":
-                log.debug(
-                    `[rtc] [ice] disconnected... ` +
-                        `connection: ${pc.connectionState}, ice: ${pc.iceConnectionState}, ` +
-                        `gathering: ${pc.iceGatheringState}, signalling: ${pc.signalingState}`,
-                );
-                pub(WEBRTC_CONNECTION_CLOSED);
-                break;
             case "failed":
                 log.error("[rtc] [ice] failed establish connection, retry...");
                 pc.restartIce();
@@ -136,8 +128,16 @@ export const webrtc = {
         pc.onicecandidateerror = ice.onIceCandidateError;
         pc.onconnectionstatechange = () => {
             log.debug(`[rtc] connection state: ${pc.connectionState}`);
-            if (pc.connectionState === "connected")
-                pub(WEBRTC_CONNECTION_READY);
+
+            switch (pc.connectionState) {
+                case "connected":
+                    pub(WEBRTC_CONNECTION_READY);
+                    break;
+                case "failed":
+                case "closed":
+                    pub(WEBRTC_CONNECTION_CLOSED);
+                    break;
+            }
         };
         pc.onnegotiationneeded = () => {
             log.debug("[rtc] negotiation needed");
