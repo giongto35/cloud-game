@@ -95,7 +95,7 @@ const ice = ((timeout = 3000) => {
 const readyChan = (/** @type {RTCDataChannel} */ dc) => ({
     send: (/** @type {string} */ data) =>
         dc.readyState === "open" && dc.send(data),
-    close: dc.close,
+    close: () => dc.close(),
 });
 
 const flushRemoteCandidates = () => {
