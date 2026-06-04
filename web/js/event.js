@@ -60,14 +60,6 @@ export const GAME_PLAYER_IDX = "gamePlayerIndex";
 export const GAME_PLAYER_IDX_SET = "gamePlayerIndexSet";
 export const GAME_ERROR_NO_FREE_SLOTS = "gameNoFreeSlots";
 
-export const WEBRTC_CONNECTION_CLOSED = "webrtcConnectionClosed";
-export const WEBRTC_CONNECTION_READY = "webrtcConnectionReady";
-export const WEBRTC_ICE_CANDIDATE_FOUND = "webrtcIceCandidateFound";
-export const WEBRTC_ICE_CANDIDATE_RECEIVED = "webrtcIceCandidateReceived";
-export const WEBRTC_NEW_CONNECTION = "webrtcNewConnection";
-export const WEBRTC_SDP_LOCAL = "webrtcSdpLocal";
-export const WEBRTC_SDP_REMOTE = "webrtcSdpRemote";
-
 export const MESSAGE = "message";
 
 export const GAMEPAD_CONNECTED = "gamepadConnected";

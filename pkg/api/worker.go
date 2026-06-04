@@ -49,7 +49,12 @@ type (
 		Stateful
 		Candidate string `json:"candidate"` // Base64-encoded ICE candidate
 	}
-	InitWebrtcStreamRequest  Stateful
+	InitWebrtcStreamRequest struct {
+		// Stateful
+		Id        string `json:"id"`
+		Initiator bool   `json:"initiator"`
+		Sdp       string `json:"sdp,omitempty"`
+	}
 	InitWebrtcStreamResponse string
 
 	AppVideoInfo struct {

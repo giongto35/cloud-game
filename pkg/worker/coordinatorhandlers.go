@@ -30,7 +30,7 @@ func buildConnQuery(id com.Uid, conf config.Worker, address string) (string, err
 
 func (c *coordinator) HandleInitWebrtcStream(rq api.InitWebrtcStreamRequest, w *Worker, factory *webrtc.ApiFactory) api.Out {
 	peer := webrtc.New(c.log, factory)
-	localSDP, err := peer.NewCall(w.conf.Encoder.Video.Codec, "opus", func(data any) {
+	err := peer.NewCall(w.conf.Encoder.Video.Codec, "opus", func(data any) {
 		candidate, err := toBase64Json(data)
 		if err != nil {
 			c.log.Error().Err(err).Msgf("ICE candidate encode fail for [%v]", data)
@@ -42,6 +42,36 @@ func (c *coordinator) HandleInitWebrtcStream(rq api.InitWebrtcStreamRequest, w *
 		c.log.Error().Err(err).Msg("cannot create new webrtc session")
 		return api.EmptyPacket
 	}
+
+	var localSDP any
+	if rq.Initiator {
+
+		err := peer.SetRemoteSDP(rq.Sdp, fromBase64Json)
+		if err != nil {
+			c.log.Error().Err(err).Msgf("cannot set remote SDP of peer [%v]", rq.Id)
+			return api.EmptyPacket
+		}
+		lsdp, err := peer.Answer()
+		if err != nil {
+			c.log.Error().Err(err).Msgf("cannot create answer for peer [%v]", rq.Id)
+			return api.EmptyPacket
+		}
+		localSDP = lsdp
+	} else {
+		err = peer.AddDataChannel()
+		if err != nil {
+			c.log.Error().Err(err).Msgf("cannot add data channel for peer [%v]", rq.Id)
+			return api.EmptyPacket
+		}
+
+		lsdp, err := peer.Offer()
+		if err != nil {
+			c.log.Error().Err(err).Msgf("cannot create offer for peer [%v]", rq.Id)
+			return api.EmptyPacket
+		}
+		localSDP = lsdp
+	}
+
 	sdp, err := toBase64Json(localSDP)
 	if err != nil {
 		c.log.Error().Err(err).Msgf("SDP encode fail fro [%v]", localSDP)
@@ -221,7 +251,6 @@ func (c *coordinator) HandleGameStart(rq api.StartGameRequest, w *Worker) api.Ou
 func (c *coordinator) HandleTerminateSession(rq api.TerminateSessionRequest, w *Worker) {
 	if user := w.router.FindUser(rq.Id); user != nil {
 		w.router.Remove(user)
-		c.log.Debug().Msgf(">>> users: %v", w.router.Users())
 		user.Disconnect()
 	}
 }
@@ -230,7 +259,6 @@ func (c *coordinator) HandleTerminateSession(rq api.TerminateSessionRequest, w *
 func (c *coordinator) HandleQuitGame(rq api.GameQuitRequest, w *Worker) {
 	if user := w.router.FindUser(rq.Id); user != nil {
 		w.router.Remove(user)
-		c.log.Debug().Msgf(">>> users: %v", w.router.Users())
 	}
 }
 

@@ -29,13 +29,6 @@ import {
     RECORDING_TOGGLED,
     REFRESH_INPUT,
     SETTINGS_CHANGED,
-    WEBRTC_CONNECTION_CLOSED,
-    WEBRTC_CONNECTION_READY,
-    WEBRTC_ICE_CANDIDATE_FOUND,
-    WEBRTC_ICE_CANDIDATE_RECEIVED,
-    WEBRTC_NEW_CONNECTION,
-    WEBRTC_SDP_LOCAL,
-    WEBRTC_SDP_REMOTE,
     WORKER_LIST_FETCHED,
     pub,
     sub,
@@ -148,8 +141,10 @@ const showMenuScreen = () => {
     setState(app.state.menu);
 };
 
+const isConnected = () => webrtc.isConnected();
+
 const startGame = () => {
-    if (!webrtc.isConnected()) {
+    if (!isConnected()) {
         message.show("Game cannot load. Please refresh");
         return;
     }
@@ -183,16 +178,13 @@ const onMessage = (m) => {
     log.debug(`[msg] ${api.endpointName[t] || t}`);
     switch (t) {
         case api.endpoint.INIT:
-            pub(WEBRTC_NEW_CONNECTION, payload);
+            handleWebrtcStart({ data: payload, initiator: true });
             break;
         case api.endpoint.OFFER:
-            pub(WEBRTC_SDP_REMOTE, api.fromBase64(payload));
+            webrtc.setRemoteDescription(api.fromBase64(payload));
             break;
         case api.endpoint.ICE_CANDIDATE:
-            pub(
-                WEBRTC_ICE_CANDIDATE_RECEIVED,
-                payload ? api.fromBase64(payload) : "",
-            );
+            webrtc.addCandidate(payload ? api.fromBase64(payload) : "");
             break;
         case api.endpoint.GAME_START:
             if (payload.av) pub(APP_VIDEO_CHANGED, payload.av);
@@ -486,6 +478,56 @@ document.onfullscreenchange = () =>
 // subscriptions
 sub(MESSAGE, onMessage);
 
+// webrtc
+function handleWebrtcStart({ data, initiator }) {
+    workerManager.whoami(data.wid);
+
+    let makingOffer = false;
+
+    const negotiate = () => {
+        if (makingOffer) return;
+        makingOffer = true;
+        webrtc
+            .offerSdp()
+            .then((offer) => {
+                if (!offer) return;
+                log.debug("> offer", offer);
+                api.server.initWebrtcStream({ initiator, sdpOffer: offer });
+            })
+            .finally(() => (makingOffer = false));
+    };
+
+    const datachannel = (ch) => {
+        log.debug("> datachannel", ch.label);
+        if (ch.label === "data") {
+            // we'll handle ws and webrtc server messages in one place
+            ch.onmessage = (x) => onMessage(api.fromBytes(x.data));
+        }
+        return ch;
+    };
+
+    webrtc.start({
+        initiator,
+        iceServers: data.ice,
+        media: stream.video.el,
+        onNegotiationNeeded: negotiate,
+        onDataChannel: datachannel,
+        onConnect: onConnectionReady,
+        onDisconnect: () => input.retropad.toggle(false),
+        onIceCandidate: api.server.sendIceCandidate,
+        onSdpAnswer: api.server.sendSdp,
+    });
+
+    if (initiator) {
+        negotiate();
+        webrtc.createDataChannel({ onChannel: datachannel });
+    } else {
+        api.server.initWebrtcStream();
+    }
+
+    gameList.set(data.games);
+}
+
 sub(GAME_ROOM_AVAILABLE, stream.play, 2);
 sub(GAME_SAVED, () => message.show("Saved"));
 sub(GAME_PLAYER_IDX, (data) => {
@@ -495,30 +537,6 @@ sub(GAME_PLAYER_IDX_SET, (idx) => {
     if (!isNaN(+idx)) message.show(+idx + 1);
 });
 sub(GAME_ERROR_NO_FREE_SLOTS, () => message.show("No free slots :(", 2500));
-
-// WebRTC connection handling
-sub(WEBRTC_NEW_CONNECTION, (data) => {
-    workerManager.whoami(data.wid);
-    webrtc.start({ iceServers: data.ice, media: stream.video.el });
-    webrtc.modDataChannel = (ch) => {
-        ch.binaryType = "arraybuffer";
-        if (ch.label === "data") {
-            ch.onmessage = (x) => onMessage(api.fromBytes(x.data));
-        }
-        return ch;
-    };
-    api.server.initWebrtcStream();
-    gameList.set(data.games);
-});
-sub(WEBRTC_SDP_REMOTE, webrtc.setRemoteDescription);
-sub(WEBRTC_SDP_LOCAL, api.server.sendSdp);
-sub(WEBRTC_ICE_CANDIDATE_FOUND, api.server.sendIceCandidate);
-sub(WEBRTC_ICE_CANDIDATE_RECEIVED, webrtc.addCandidate);
-sub(WEBRTC_CONNECTION_READY, onConnectionReady);
-sub(WEBRTC_CONNECTION_CLOSED, () => {
-    input.retropad.toggle(false);
-    webrtc.stop();
-});
 
 sub(LATENCY_CHECK_REQUESTED, onLatencyCheck);
 sub(GAMEPAD_CONNECTED, () => message.show("Gamepad connected"));

@@ -2,9 +2,9 @@ package coordinator
 
 import "github.com/giongto35/cloud-game/v3/pkg/api"
 
-func (w *Worker) InitWebrtcStream(id string) (*api.InitWebrtcStreamResponse, error) {
+func (w *Worker) InitWebrtcStream(id string, initiator bool, sdp string) (*api.InitWebrtcStreamResponse, error) {
 	return api.UnwrapChecked[api.InitWebrtcStreamResponse](
-		w.Send(api.InitWebrtcStream, api.InitWebrtcStreamRequest{Id: id}))
+		w.Send(api.InitWebrtcStream, api.InitWebrtcStreamRequest{Id: id, Initiator: initiator, Sdp: sdp}))
 }
 
 func (w *Worker) WebrtcAnswer(id string, sdp string) {
