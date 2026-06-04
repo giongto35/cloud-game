@@ -203,6 +203,8 @@ export const webrtc = {
     ) => {
         log.debug("[rtc] [sdp] remote SDP", sdp);
 
+        if (!pc) return;
+
         try {
             await pc.setRemoteDescription(new RTCSessionDescription(sdp));
         } catch (e) {
@@ -230,6 +232,8 @@ export const webrtc = {
     addCandidate: (
         /** @type {RTCLocalIceCandidateInit | string} */ candidate,
     ) => {
+        if (!pc) return;
+
         if (hasRemoteDescription()) {
             addRemoteCandidate(candidate);
         } else {
