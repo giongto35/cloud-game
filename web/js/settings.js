@@ -3,10 +3,10 @@ import {
     sub,
     SETTINGS_CHANGED,
     KEYBOARD_KEY_PRESSED,
-    KEYBOARD_TOGGLE_FILTER_MODE
-} from 'event';
-import {gui} from 'gui';
-import {log} from 'log';
+    KEYBOARD_TOGGLE_FILTER_MODE,
+} from "event";
+import { gui } from "gui";
+import { log } from "log";
 
 /**
  * Stores app wide option names.
@@ -17,14 +17,13 @@ import {log} from 'log';
  * @version 1
  */
 export const opts = {
-    _VERSION: '_version',
-    LOG_LEVEL: 'log.level',
-    INPUT_KEYBOARD_MAP: 'input.keyboard.map',
-    MIRROR_SCREEN: 'mirror.screen',
-    VOLUME: 'volume',
-    FORCE_FULLSCREEN: 'force.fullscreen',
-}
-
+    _VERSION: "_version",
+    LOG_LEVEL: "log.level",
+    INPUT_KEYBOARD_MAP: "input.keyboard.map",
+    MIRROR_SCREEN: "mirror.screen",
+    VOLUME: "volume",
+    FORCE_FULLSCREEN: "force.fullscreen",
+};
 
 // internal structure version
 const revision = 1.6;
@@ -43,8 +42,8 @@ _defaults[opts._VERSION] = revision;
  */
 let store = {
     settings: {
-        ..._defaults
-    }
+        ..._defaults,
+    },
 };
 let provider;
 
@@ -54,7 +53,13 @@ let provider;
  * @readonly
  * @enum {number}
  */
-const option = Object.freeze({undefined: 0, string: 1, number: 2, object: 3, list: 4});
+const option = Object.freeze({
+    undefined: 0,
+    string: 1,
+    number: 2,
+    object: 3,
+    list: 4,
+});
 
 const exportFileName = `cloud-game.settings.v${revision}.txt`;
 
@@ -63,18 +68,18 @@ const getStore = () => store.settings;
 /**
  * The NullObject provider if everything else fails.
  */
-const voidProvider = (store_ = {settings: {}}) => {
-    const nil = () => ({})
+const voidProvider = (store_ = { settings: {} }) => {
+    const nil = () => ({});
 
     return {
-        get: key => store_.settings[key],
+        get: (key) => store_.settings[key],
         set: nil,
         remove: nil,
         save: nil,
         loadSettings: nil,
         reset: nil,
-    }
-}
+    };
+};
 
 /**
  * The LocalStorage backend for our settings (store).
@@ -82,17 +87,17 @@ const voidProvider = (store_ = {settings: {}}) => {
  * For simplicity it will rewrite all the settings on every store change.
  * If you want to roll your own, then use its "interface".
  */
-const localStorageProvider = ((store_ = {settings: {}}) => {
+const localStorageProvider = (store_ = { settings: {} }) => {
     if (!_isSupported()) return;
 
-    const root = 'settings';
+    const root = "settings";
 
-    const _serialize = data => JSON.stringify(data, null, 2);
+    const _serialize = (data) => JSON.stringify(data, null, 2);
 
     const save = () => localStorage.setItem(root, _serialize(store_.settings));
 
     function _isSupported() {
-        const testKey = '_test_42';
+        const testKey = "_test_42";
         try {
             // check if it's writable and isn't full
             localStorage.setItem(testKey, testKey);
@@ -104,7 +109,7 @@ const localStorageProvider = ((store_ = {settings: {}}) => {
         }
     }
 
-    const get = key => JSON.parse(localStorage.getItem(key));
+    const get = (key) => JSON.parse(localStorage.getItem(key));
 
     const set = () => save();
 
@@ -113,12 +118,12 @@ const localStorageProvider = ((store_ = {settings: {}}) => {
     const loadSettings = () => {
         if (!localStorage.getItem(root)) save();
         store_.settings = JSON.parse(localStorage.getItem(root));
-    }
+    };
 
     const reset = () => {
         localStorage.removeItem(root);
         localStorage.setItem(root, _serialize(store_.settings));
-    }
+    };
 
     return {
         get,
@@ -128,56 +133,59 @@ const localStorageProvider = ((store_ = {settings: {}}) => {
         save,
         loadSettings,
         reset,
-    }
-});
+    };
+};
 
 /**
  * Nuke existing settings with provided data.
  * @param text The text to extract data from.
  * @private
  */
-const _import = text => {
+const _import = (text) => {
     try {
-        for (const property of Object.getOwnPropertyNames(store.settings)) delete store.settings[property];
+        for (const property of Object.getOwnPropertyNames(store.settings))
+            delete store.settings[property];
         Object.assign(store.settings, JSON.parse(text).settings);
         provider.save();
         pub(SETTINGS_CHANGED);
     } catch (e) {
-        log.error(`Your import file is broken!`);
+        log.error(`Your import file is broken!`, e);
     }
 
     _render();
-}
+};
 
 const _export = () => {
-    let el = document.createElement('a');
+    let el = document.createElement("a");
     el.setAttribute(
-        'href',
-        `data:text/plain;charset=utf-8,${encodeURIComponent(JSON.stringify(store, null, 2))}`
+        "href",
+        `data:text/plain;charset=utf-8,${encodeURIComponent(JSON.stringify(store, null, 2))}`,
     );
-    el.setAttribute('download', exportFileName);
-    el.style.display = 'none';
+    el.setAttribute("download", exportFileName);
+    el.style.display = "none";
     document.body.appendChild(el);
     el.click();
     document.body.removeChild(el);
-}
+};
 
 const init = () => {
     // try to load settings from the localStorage with fallback to null-object
     provider = localStorageProvider(store) || voidProvider(store);
     provider.loadSettings();
 
-    const lastRev = (store.settings || {_version: 0})._version
+    const lastRev = (store.settings || { _version: 0 })._version;
 
     if (revision > lastRev) {
-        log.warn(`Your settings are in older format (v${lastRev}) and will be reset to (v${revision})!`);
+        log.warn(
+            `Your settings are in older format (v${lastRev}) and will be reset to (v${revision})!`,
+        );
         _reset();
     }
-}
+};
 
 const get = () => store.settings;
 
-const _isLoaded = key => store.settings.hasOwnProperty(key);
+const _isLoaded = (key) => store.settings.hasOwnProperty(key);
 
 /**
  * Tries to load settings by some key.
@@ -199,7 +207,7 @@ const loadOr = (key, default_) => {
     }
 
     return store.settings[key];
-}
+};
 
 const set = (key, value, updateProvider = true) => {
     const type = _getType(value);
@@ -211,7 +219,9 @@ const set = (key, value, updateProvider = true) => {
             break;
         case option.object:
             for (let option of Object.keys(value)) {
-                log.debug(`Change key [${option}] from ${store.settings[key][option]} to ${value[option]}`);
+                log.debug(
+                    `Change key [${option}] from ${store.settings[key][option]} to ${value[option]}`,
+                );
                 store.settings[key][option] = value[option];
             }
             break;
@@ -226,15 +236,15 @@ const set = (key, value, updateProvider = true) => {
         provider.set(key, value);
         pub(SETTINGS_CHANGED);
     }
-}
+};
 
 const changed = (key, obj, key2) => {
-    if (!store.settings.hasOwnProperty(key)) return
-    const newValue = store.settings[key]
-    const changed = newValue !== obj[key2]
-    changed && (obj[key2] = newValue)
-    return changed
-}
+    if (!store.settings.hasOwnProperty(key)) return;
+    const newValue = store.settings[key];
+    const changed = newValue !== obj[key2];
+    if (changed) obj[key2] = newValue;
+    return changed;
+};
 
 const _reset = () => {
     for (let _option of Object.keys(_defaults)) {
@@ -245,7 +255,9 @@ const _reset = () => {
             for (let opt of Object.keys(store.settings[_option])) {
                 const prev = store.settings[_option][opt];
                 const isDeleted = delete store.settings[_option][opt];
-                log.debug(`User option [${opt}=${prev}] has been deleted (${isDeleted}) from the [${_option}]`);
+                log.debug(
+                    `User option [${opt}=${prev}] has been deleted (${isDeleted}) from the [${_option}]`,
+                );
             }
         }
 
@@ -254,33 +266,50 @@ const _reset = () => {
 
     provider.reset();
     pub(SETTINGS_CHANGED);
-}
+};
 
 const remove = (key, subKey) => {
-    const isRemoved = subKey !== undefined ? delete store.settings[key][subKey] : delete store.settings[key];
-    if (!isRemoved) log.warn(`The key: ${key + (subKey ? '.' + subKey : '')} wasn't deleted!`);
+    const isRemoved =
+        subKey !== undefined
+            ? delete store.settings[key][subKey]
+            : delete store.settings[key];
+    if (!isRemoved)
+        log.warn(
+            `The key: ${key + (subKey ? "." + subKey : "")} wasn't deleted!`,
+        );
     provider.remove(key, subKey);
-}
+};
 
 const _render = () => {
     renderer.data = panel.contentEl;
-    renderer.render()
-}
+    renderer.render();
+};
 
-const panel = gui.panel(document.getElementById('settings'), '> OPTIONS', 'settings', null, [
-        {caption: 'Export', handler: () => _export(), title: 'Save',},
-        {caption: 'Import', handler: () => _fileReader.read(onFileLoad), title: 'Load',},
+const panel = gui.panel(
+    document.getElementById("settings"),
+    "> OPTIONS",
+    "settings",
+    null,
+    [
+        { caption: "Export", handler: () => _export(), title: "Save" },
         {
-            caption: 'Reset',
+            caption: "Import",
+            handler: () => _fileReader.read(onFileLoad),
+            title: "Load",
+        },
+        {
+            caption: "Reset",
             handler: () => {
-                if (window.confirm("Are you sure want to reset your settings?")) {
+                if (
+                    window.confirm("Are you sure want to reset your settings?")
+                ) {
                     _reset();
                     pub(SETTINGS_CHANGED);
                 }
             },
-            title: 'Reset',
+            title: "Reset",
         },
-        {}
+        {},
     ],
     (show) => {
         if (show) {
@@ -289,44 +318,47 @@ const panel = gui.panel(document.getElementById('settings'), '> OPTIONS', 'setti
         }
 
         // to make sure it's disabled, but it's a tad verbose
-        pub(KEYBOARD_TOGGLE_FILTER_MODE, {mode: true});
-    })
+        pub(KEYBOARD_TOGGLE_FILTER_MODE, { mode: true });
+    },
+);
 
 function _getType(value) {
-    if (value === undefined) return option.undefined
-    else if (Array.isArray(value)) return option.list
-    else if (typeof value === 'object' && value !== null) return option.object
-    else if (typeof value === 'string') return option.string
-    else if (typeof value === 'number') return option.number
+    if (value === undefined) return option.undefined;
+    else if (Array.isArray(value)) return option.list;
+    else if (typeof value === "object" && value !== null) return option.object;
+    else if (typeof value === "string") return option.string;
+    else if (typeof value === "number") return option.number;
     else return option.undefined;
 }
 
 const _fileReader = (() => {
-    let callback_ = () => ({})
+    let callback_ = () => ({});
 
-    const el = document.createElement('input');
+    const el = document.createElement("input");
     const reader = new FileReader();
 
-    el.type = 'file';
-    el.accept = '.txt';
-    el.onchange = event => event.target.files.length && reader.readAsBinaryString(event.target.files[0]);
-    reader.onload = event => callback_(event.target.result);
+    el.type = "file";
+    el.accept = ".txt";
+    el.onchange = (event) =>
+        event.target.files.length &&
+        reader.readAsBinaryString(event.target.files[0]);
+    reader.onload = (event) => callback_(event.target.result);
 
     return {
-        read: callback => {
+        read: (callback) => {
             callback_ = callback;
             el.click();
         },
-    }
+    };
 })();
 
-const onFileLoad = text => {
+const onFileLoad = (text) => {
     try {
         _import(text);
     } catch (e) {
         log.error(`Couldn't read your settings!`, e);
     }
-}
+};
 
 sub(SETTINGS_CHANGED, _render);
 
@@ -357,86 +389,92 @@ export const settings = {
         },
         toggle: () => panel.toggle(),
     },
-}
+};
 
 // don't show these options (i.e. ignored = {'_version': 1})
-const ignored = {'_version': 1};
+const ignored = { _version: 1 };
 
 // the main display data holder element
 let data = null;
 
 const scrollState = ((sx = 0, sy = 0, el) => ({
     track(_el) {
-        el = _el
-        el.addEventListener("scroll", () => ({scrollTop: sx, scrollLeft: sy} = el), {passive: true})
+        el = _el;
+        el.addEventListener(
+            "scroll",
+            () => ({ scrollTop: sx, scrollLeft: sy } = el),
+            { passive: true },
+        );
     },
     restore() {
-        el.scrollTop = sx
-        el.scrollLeft = sy
-    }
-}))()
+        el.scrollTop = sx;
+        el.scrollLeft = sy;
+    },
+}))();
 
 // a fast way to clear data holder.
 const clearData = () => {
-    while (data.firstChild) data.removeChild(data.firstChild)
+    while (data.firstChild) data.removeChild(data.firstChild);
 };
 
 const _option = (holderEl) => {
-    const wrapperEl = document.createElement('div');
-    wrapperEl.classList.add('settings__option');
+    const wrapperEl = document.createElement("div");
+    wrapperEl.classList.add("settings__option");
 
-    const titleEl = document.createElement('div');
-    titleEl.classList.add('settings__option-title');
+    const titleEl = document.createElement("div");
+    titleEl.classList.add("settings__option-title");
     wrapperEl.append(titleEl);
 
-    const nameEl = document.createElement('div');
+    const nameEl = document.createElement("div");
 
-    const valueEl = document.createElement('div');
-    valueEl.classList.add('settings__option-value');
+    const valueEl = document.createElement("div");
+    valueEl.classList.add("settings__option-value");
     wrapperEl.append(valueEl);
 
     return {
-        withName: function (name = '') {
-            if (name === '') return this;
-            nameEl.classList.add('settings__option-name');
+        withName: function (name = "") {
+            if (name === "") return this;
+            nameEl.classList.add("settings__option-name");
             nameEl.textContent = name;
             titleEl.append(nameEl);
             return this;
         },
-        withClass: function (name = '') {
+        withClass: function (name = "") {
             wrapperEl.classList.add(name);
             return this;
         },
-        withDescription(text = '') {
-            if (text === '') return this;
-            const descEl = document.createElement('div');
-            descEl.classList.add('settings__option-desc');
+        withDescription(text = "") {
+            if (text === "") return this;
+            const descEl = document.createElement("div");
+            descEl.classList.add("settings__option-desc");
             descEl.textContent = text;
             titleEl.append(descEl);
             return this;
         },
         restartNeeded: function () {
-            nameEl.classList.add('restart-needed-asterisk');
+            nameEl.classList.add("restart-needed-asterisk");
             return this;
         },
         add: function (...elements) {
-            if (elements.length) for (let _el of elements.flat()) valueEl.append(_el);
+            if (elements.length)
+                for (let _el of elements.flat()) valueEl.append(_el);
             return this;
         },
         build: () => holderEl.append(wrapperEl),
     };
-}
+};
 
 const onKeyChange = (key, oldValue, newValue, handler) => {
-
-    if (newValue !== 'Escape') {
+    if (newValue !== "Escape") {
         const _settings = settings.get()[opts.INPUT_KEYBOARD_MAP];
 
         if (_settings[newValue] !== undefined) {
-            log.warn(`There are old settings for key: ${_settings[newValue]}, won't change!`);
+            log.warn(
+                `There are old settings for key: ${_settings[newValue]}, won't change!`,
+            );
         } else {
             settings.remove(opts.INPUT_KEYBOARD_MAP, oldValue);
-            settings.set(opts.INPUT_KEYBOARD_MAP, {[newValue]: key});
+            settings.set(opts.INPUT_KEYBOARD_MAP, { [newValue]: key });
         }
     }
 
@@ -444,17 +482,19 @@ const onKeyChange = (key, oldValue, newValue, handler) => {
 
     pub(KEYBOARD_TOGGLE_FILTER_MODE);
     pub(SETTINGS_CHANGED);
-}
+};
 
 const _keyChangeOverlay = (keyName, oldValue) => {
-    const wrapperEl = document.createElement('div');
-    wrapperEl.classList.add('settings__key-wait');
+    const wrapperEl = document.createElement("div");
+    wrapperEl.classList.add("settings__key-wait");
     wrapperEl.textContent = `Let's choose a ${keyName} key...`;
 
-    let handler = sub(KEYBOARD_KEY_PRESSED, button => onKeyChange(keyName, oldValue, button.key, handler));
+    let handler = sub(KEYBOARD_KEY_PRESSED, (button) =>
+        onKeyChange(keyName, oldValue, button.key, handler),
+    );
 
     return wrapperEl;
-}
+};
 
 /**
  * Handles a normal option change.
@@ -465,13 +505,13 @@ const _keyChangeOverlay = (keyName, oldValue) => {
 const onChange = (key, newValue) => {
     settings.set(key, newValue);
     scrollState.restore(data);
-}
+};
 
 const onKeyBindingChange = (key, oldValue) => {
     clearData();
     data.append(_keyChangeOverlay(key, oldValue));
     pub(KEYBOARD_TOGGLE_FILTER_MODE);
-}
+};
 
 const render = function () {
     const _settings = settings.getStore();
@@ -483,42 +523,84 @@ const render = function () {
         const value = _settings[k];
         switch (k) {
             case opts._VERSION:
-                _option(data).withName('Options format version').add(value).build();
+                _option(data)
+                    .withName("Options format version")
+                    .add(value)
+                    .build();
                 break;
             case opts.LOG_LEVEL:
-                _option(data).withName('Log level')
-                    .add(gui.select(k, onChange, {
-                        labels: ['trace', 'debug', 'warning', 'info'],
-                        values: [log.TRACE, log.DEBUG, log.WARN, log.INFO].map(String)
-                    }, value))
+                _option(data)
+                    .withName("Log level")
+                    .add(
+                        gui.select(
+                            k,
+                            onChange,
+                            {
+                                labels: ["trace", "debug", "warning", "info"],
+                                values: [
+                                    log.TRACE,
+                                    log.DEBUG,
+                                    log.WARN,
+                                    log.INFO,
+                                ].map(String),
+                            },
+                            value,
+                        ),
+                    )
                     .build();
                 break;
             case opts.INPUT_KEYBOARD_MAP:
-                _option(data).withName('Keyboard bindings')
-                    .withClass('keyboard-bindings')
+                _option(data)
+                    .withName("Keyboard bindings")
+                    .withClass("keyboard-bindings")
                     .withDescription(
-                        'Bindings for RetroPad. There is an alternate ESC key [Shift+`] (tilde) for cores with keyboard+mouse controls (DosBox)')
-                    .add(Object.keys(value).map(k => gui.binding(value[k], k, onKeyBindingChange)))
+                        "Bindings for RetroPad. There is an alternate ESC key [Shift+`] (tilde) for cores with keyboard+mouse controls (DosBox)",
+                    )
+                    .add(
+                        Object.keys(value).map((k) =>
+                            gui.binding(value[k], k, onKeyBindingChange),
+                        ),
+                    )
                     .build();
                 break;
             case opts.MIRROR_SCREEN:
-                _option(data).withName('Video mirroring')
-                    .add(gui.select(k, onChange, {values: ['mirror'], labels: []}, value))
-                    .withDescription('Disables video image smoothing by rendering the video on a canvas (much more demanding for browser)')
+                _option(data)
+                    .withName("Video mirroring")
+                    .add(
+                        gui.select(
+                            k,
+                            onChange,
+                            { values: ["mirror"], labels: [] },
+                            value,
+                        ),
+                    )
+                    .withDescription(
+                        "Disables video image smoothing by rendering the video on a canvas (much more demanding for browser)",
+                    )
                     .build();
                 break;
             case opts.VOLUME:
-                _option(data).withName('Volume (%)')
+                _option(data)
+                    .withName("Volume (%)")
                     .add(gui.inputN(k, onChange, value))
-                    .build()
+                    .build();
                 break;
             case opts.FORCE_FULLSCREEN:
-                _option(data).withName('Force fullscreen')
+                _option(data)
+                    .withName("Force fullscreen")
                     .withDescription(
-                        'Whether games should open in full-screen mode after starting up (excluding mobile devices)'
+                        "Whether games should open in full-screen mode after starting up (excluding mobile devices)",
                     )
-                    .add(gui.checkbox(k, onChange, value, 'Enabled', 'settings__option-checkbox'))
-                    .build()
+                    .add(
+                        gui.checkbox(
+                            k,
+                            onChange,
+                            value,
+                            "Enabled",
+                            "settings__option-checkbox",
+                        ),
+                    )
+                    .build();
                 break;
             default:
                 _option(data).withName(k).add(value).build();
@@ -526,22 +608,22 @@ const render = function () {
     }
 
     data.append(
-        gui.create('br'),
-        gui.create('div', (el) => {
-            el.classList.add('settings__info', 'restart-needed-asterisk-b');
-            el.innerText = ' -- applied after page reload'
+        gui.create("br"),
+        gui.create("div", (el) => {
+            el.classList.add("settings__info", "restart-needed-asterisk-b");
+            el.innerText = " -- applied after page reload";
         }),
-        gui.create('div', (el) => {
-            el.classList.add('settings__info');
+        gui.create("div", (el) => {
+            el.classList.add("settings__info");
             el.innerText = `Options format version: ${_settings?._version}`;
-        })
+        }),
     );
-}
+};
 
 const renderer = {
     render,
     set data(el) {
         data = el;
-        scrollState.track(el)
-    }
-}
+        scrollState.track(el);
+    },
+};
