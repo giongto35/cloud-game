@@ -569,6 +569,7 @@ api.transport = {
 // stats
 let WEBRTC_STATS_RTT;
 let VIDEO_BITRATE;
+let VIDEO_FRAMERATE;
 let GET_V_CODEC, SET_CODEC;
 
 const bitrate = (() => {
@@ -609,6 +610,12 @@ stats.modules = [
         },
     },
     {
+        mui: stats.mui("", "0", false, () => " fps"),
+        init() {
+            VIDEO_FRAMERATE = (v) => (this.val = v);
+        },
+    },
+    {
         mui: stats.mui("", "", false, () => " kb/s", "stats-bitrate"),
         init() {
             VIDEO_BITRATE = (v) => (this.val = v);
@@ -634,6 +641,7 @@ stats.modules = [
                     VIDEO_BITRATE(
                         bitrate(report.timestamp, report.bytesReceived),
                     );
+                    VIDEO_FRAMERATE(report.framesPerSecond);
                 }
             });
         },
