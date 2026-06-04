@@ -51,7 +51,7 @@ import { workerManager } from "./workerManager.js?v=3";
 settings.init();
 log.level = settings.loadOr(opts.LOG_LEVEL, log.DEFAULT);
 const options = {
-    webrtcWaitOffer: settings.loadOr(opts.WEBRTC_INIT_OFFER, false),
+    webrtcWaitOffer: settings.loadOr(opts.WEBRTC_INIT_OFFER, true),
 };
 
 // application display state
