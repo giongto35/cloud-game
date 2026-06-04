@@ -30,7 +30,7 @@ func buildConnQuery(id com.Uid, conf config.Worker, address string) (string, err
 
 func (c *coordinator) HandleInitWebrtcStream(rq api.InitWebrtcStreamRequest, w *Worker, factory *webrtc.ApiFactory) api.Out {
 	peer := webrtc.New(c.log, factory)
-	err := peer.NewCall(w.conf.Encoder.Video.Codec, "opus", func(data any) {
+	err := peer.NewConnection(w.conf.Encoder.Video.Codec, "opus", func(data any) {
 		candidate, err := toBase64Json(data)
 		if err != nil {
 			c.log.Error().Err(err).Msgf("ICE candidate encode fail for [%v]", data)
@@ -43,38 +43,27 @@ func (c *coordinator) HandleInitWebrtcStream(rq api.InitWebrtcStreamRequest, w *
 		return api.EmptyPacket
 	}
 
-	var localSDP any
 	if rq.Initiator {
-
-		err := peer.SetRemoteSDP(rq.Sdp, fromBase64Json)
-		if err != nil {
+		if err := peer.SetRemoteSDP(rq.Sdp, fromBase64Json); err != nil {
 			c.log.Error().Err(err).Msgf("cannot set remote SDP of peer [%v]", rq.Id)
 			return api.EmptyPacket
 		}
-		lsdp, err := peer.Answer()
-		if err != nil {
-			c.log.Error().Err(err).Msgf("cannot create answer for peer [%v]", rq.Id)
-			return api.EmptyPacket
-		}
-		localSDP = lsdp
 	} else {
-		err = peer.AddDataChannel()
-		if err != nil {
+		if err := peer.AddDataChannel(); err != nil {
 			c.log.Error().Err(err).Msgf("cannot add data channel for peer [%v]", rq.Id)
 			return api.EmptyPacket
 		}
-
-		lsdp, err := peer.Offer()
-		if err != nil {
-			c.log.Error().Err(err).Msgf("cannot create offer for peer [%v]", rq.Id)
-			return api.EmptyPacket
-		}
-		localSDP = lsdp
 	}
 
-	sdp, err := toBase64Json(localSDP)
+	lsdp, err := peer.OfferAnswer(!rq.Initiator)
 	if err != nil {
-		c.log.Error().Err(err).Msgf("SDP encode fail fro [%v]", localSDP)
+		c.log.Error().Err(err).Msgf("cannot create SDP for peer [%v]", rq.Id)
+		return api.EmptyPacket
+	}
+
+	sdp, err := toBase64Json(*lsdp)
+	if err != nil {
+		c.log.Error().Err(err).Msgf("SDP encode fail for [%v]", *lsdp)
 		return api.EmptyPacket
 	}
 

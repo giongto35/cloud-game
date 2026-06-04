@@ -28,7 +28,7 @@ type Decoder func(data string, obj any) error
 
 func New(log *logger.Logger, api *ApiFactory) *Peer { return &Peer{api: api, log: log} }
 
-func (p *Peer) NewCall(vCodec, aCodec string, onICECandidate func(ice any)) (err error) {
+func (p *Peer) NewConnection(vCodec, aCodec string, onICECandidate func(ice any)) (err error) {
 	if p.conn != nil && p.conn.ConnectionState() == webrtc.PeerConnectionStateConnected {
 		return
 	}
@@ -40,112 +40,83 @@ func (p *Peer) NewCall(vCodec, aCodec string, onICECandidate func(ice any)) (err
 		p.log.Debug().Msgf("WebRTC state change: %v", pcs)
 	})
 	p.conn.OnICECandidate(p.handleICECandidate(onICECandidate))
+
 	// plug in the [video] track (out)
-	video, err := newTrack("video", "video", vCodec)
-	if err != nil {
+	if p.v, err = p.AddTrack("video", "video", vCodec); err != nil {
 		return err
 	}
-	vs, err := p.conn.AddTrack(video)
-	if err != nil {
-		return err
-	}
-	// Read incoming RTCP packets
-	go func() {
-		rtcpBuf := make([]byte, 1500)
-		for {
-			_, _, rtcpErr := vs.Read(rtcpBuf)
-			if rtcpErr != nil {
-				return
-			}
-		}
-	}()
-	p.v = video
-	p.log.Debug().Msgf("Added [%s] track", video.Codec().MimeType)
 
 	// plug in the [audio] track (out)
-	audio, err := newTrack("audio", "audio", aCodec)
-	if err != nil {
+	if p.a, err = p.AddTrack("audio", "audio", aCodec); err != nil {
 		return err
 	}
-	as, err := p.conn.AddTrack(audio)
-	if err != nil {
-		return err
-	}
-	// Read incoming RTCP packets
-	go func() {
-		rtcpBuf := make([]byte, 1500)
-		for {
-			_, _, rtcpErr := as.Read(rtcpBuf)
-			if rtcpErr != nil {
-				return
-			}
-		}
-	}()
-	p.log.Debug().Msgf("Added [%s] track", audio.Codec().MimeType)
-	p.a = audio
 
 	p.conn.OnICEConnectionStateChange(p.handleICEState(func() { p.log.Info().Msg("Connected") }))
 
 	p.conn.OnDataChannel(func(dc *webrtc.DataChannel) {
-		p.log.Debug().Msgf(">>>>> Added [%s] track", dc.Label())
-
+		p.log.Debug().Msgf("Added [%s] datachannel", dc.Label())
 		if dc.Label() == "data" {
-			err := p.AddDataChannel()
-			if err != nil {
+			if err := p.AddDataChannel(); err != nil {
 				p.log.Error().Msgf("Failed to add data channel: %v", err)
 			}
 		}
-
 	})
 
 	return nil
 }
 
+func (p *Peer) AddTrack(id, label, codec string) (*webrtc.TrackLocalStaticSample, error) {
+	track, err := newTrack(id, label, codec)
+	if err != nil {
+		return nil, err
+	}
+	as, err := p.conn.AddTrack(track)
+	if err != nil {
+		return nil, err
+	}
+	// Read incoming RTCP packets
+	go func() {
+		buf := make([]byte, 1500)
+		for {
+			if _, _, err := as.Read(buf); err != nil {
+				return
+			}
+		}
+	}()
+	p.log.Debug().Msgf("Added [%s] track", track.Codec().MimeType)
+	return track, nil
+}
+
 func (p *Peer) AddDataChannel() error {
-	err := p.AddChannel("data", func(data []byte) {
+	return p.AddChannel("data", func(data []byte) {
 		if len(data) == 0 || p.OnMessage == nil {
 			return
 		}
 		p.OnMessage(data)
 	})
-	if err != nil {
-		return err
-	}
-	return nil
 }
 
-func (p *Peer) Answer() (sdp any, err error) {
-	answer, err := p.conn.CreateAnswer(&webrtc.AnswerOptions{
-		OfferAnswerOptions: webrtc.OfferAnswerOptions{ICETricklingSupported: true},
-	})
-	if err != nil {
-		return "", err
+func (p *Peer) OfferAnswer(offer bool) (*webrtc.SessionDescription, error) {
+	opts := webrtc.OfferAnswerOptions{ICETricklingSupported: true}
+
+	var sdp webrtc.SessionDescription
+	var err error
+
+	if offer {
+		sdp, err = p.conn.CreateOffer(&webrtc.OfferOptions{OfferAnswerOptions: opts})
+	} else {
+		sdp, err = p.conn.CreateAnswer(&webrtc.AnswerOptions{OfferAnswerOptions: opts})
 	}
-	p.log.Debug().Msg("Created answer")
-
-	err = p.conn.SetLocalDescription(answer)
 	if err != nil {
-		return "", err
+		return nil, err
 	}
+	p.log.Debug().Str("type", sdp.Type.String()).Msg("SDP")
 
-	return answer, nil
-}
-
-func (p *Peer) Offer() (sdp any, err error) {
-	offer, err := p.conn.CreateOffer(&webrtc.OfferOptions{
-		OfferAnswerOptions: webrtc.OfferAnswerOptions{ICETricklingSupported: true},
-	})
-	if err != nil {
-		return "", err
-	}
-	p.log.Debug().Msg("Created Offer")
-
-	err = p.conn.SetLocalDescription(offer)
-	if err != nil {
-		return "", err
+	if err = p.conn.SetLocalDescription(sdp); err != nil {
+		return nil, err
 	}
 
-	return offer, nil
+	return &sdp, nil
 }
 
 func (p *Peer) SendAudio(dat []byte, dur int32) {

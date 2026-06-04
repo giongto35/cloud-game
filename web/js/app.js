@@ -50,6 +50,9 @@ import { workerManager } from "./workerManager.js?v=3";
 
 settings.init();
 log.level = settings.loadOr(opts.LOG_LEVEL, log.DEFAULT);
+const options = {
+    webrtcWaitOffer: settings.loadOr(opts.WEBRTC_INIT_OFFER, false),
+};
 
 // application display state
 let state;
@@ -178,7 +181,8 @@ const onMessage = (m) => {
     log.debug(`[msg] ${api.endpointName[t] || t}`);
     switch (t) {
         case api.endpoint.INIT:
-            handleWebrtcStart({ data: payload, initiator: true });
+            const initiator = !options.webrtcWaitOffer;
+            handleWebrtcStart({ data: payload, initiator });
             break;
         case api.endpoint.OFFER:
             webrtc.setRemoteDescription(api.fromBase64(payload));
@@ -563,6 +567,7 @@ sub(RECORDING_STATUS_CHANGED, handleRecordingStatus);
 sub(SETTINGS_CHANGED, () => {
     const s = settings.get();
     log.level = s[opts.LOG_LEVEL];
+    options.webrtcWaitOffer = s[opts.WEBRTC_INIT_OFFER];
 });
 
 // initial app state

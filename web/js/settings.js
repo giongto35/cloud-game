@@ -23,10 +23,11 @@ export const opts = {
     MIRROR_SCREEN: "mirror.screen",
     VOLUME: "volume",
     FORCE_FULLSCREEN: "force.fullscreen",
+    WEBRTC_INIT_OFFER: "webrtc.init.offer",
 };
 
 // internal structure version
-const revision = 1.6;
+const revision = 1.7;
 
 // default settings
 // keep them for revert to defaults option
@@ -591,6 +592,24 @@ const render = function () {
                     .withDescription(
                         "Whether games should open in full-screen mode after starting up (excluding mobile devices)",
                     )
+                    .add(
+                        gui.checkbox(
+                            k,
+                            onChange,
+                            value,
+                            "Enabled",
+                            "settings__option-checkbox",
+                        ),
+                    )
+                    .build();
+                break;
+            case opts.WEBRTC_INIT_OFFER:
+                _option(data)
+                    .withName("WebRTC: wait offer")
+                    .withDescription(
+                        "Switch to wait for the remote offer before connecting",
+                    )
+                    .restartNeeded()
                     .add(
                         gui.checkbox(
                             k,

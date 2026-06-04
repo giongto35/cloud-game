@@ -204,8 +204,7 @@ export const webrtc = {
         log.debug("[rtc] [sdp] remote SDP", sdp);
 
         try {
-            const offer = new RTCSessionDescription(sdp);
-            await pc.setRemoteDescription(offer);
+            await pc.setRemoteDescription(new RTCSessionDescription(sdp));
         } catch (e) {
             log.error(`[rtc] [sdp] remote offer error: ${e}`);
         }
