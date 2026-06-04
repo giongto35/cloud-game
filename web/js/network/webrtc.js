@@ -207,6 +207,7 @@ export const webrtc = {
             await pc.setRemoteDescription(new RTCSessionDescription(sdp));
         } catch (e) {
             log.error(`[rtc] [sdp] remote offer error: ${e}`);
+            return;
         }
 
         log.debug(`[rtc] [sdp] Trickle ICE: ${pc.canTrickleIceCandidates}`);
