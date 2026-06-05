@@ -38,6 +38,9 @@ func (p *Peer) NewConnection(vCodec, aCodec string, onICECandidate func(ice any)
 	}
 	p.conn.OnConnectionStateChange(func(pcs webrtc.PeerConnectionState) {
 		p.log.Debug().Msgf("WebRTC state change: %v", pcs)
+		if pcs == webrtc.PeerConnectionStateConnected {
+			p.log.Info().Msg("Connected")
+		}
 	})
 	p.conn.OnICECandidate(p.handleICECandidate(onICECandidate))
 
@@ -51,14 +54,24 @@ func (p *Peer) NewConnection(vCodec, aCodec string, onICECandidate func(ice any)
 		return err
 	}
 
-	p.conn.OnICEConnectionStateChange(p.handleICEState(func() { p.log.Info().Msg("Connected") }))
+	p.conn.OnICEConnectionStateChange(p.handleICEState(func() {}))
 
-	p.conn.OnDataChannel(func(dc *webrtc.DataChannel) {
-		p.log.Debug().Msgf("Added [%s] datachannel", dc.Label())
-		if dc.Label() == "data" {
-			if err := p.AddDataChannel(); err != nil {
-				p.log.Error().Msgf("Failed to add data channel: %v", err)
-			}
+	p.conn.OnDataChannel(func(ch *webrtc.DataChannel) {
+		p.log.Debug().Msgf("Added [%s] datachannel", ch.Label())
+
+		if ch.Label() == "data" {
+			p.d = ch
+			ch.OnMessage(func(m webrtc.DataChannelMessage) {
+				if len(m.Data) == 0 || p.OnMessage == nil {
+					return
+				}
+				p.OnMessage(m.Data)
+			})
+			ch.OnOpen(func() {
+				p.log.Debug().Uint16("id", *ch.ID()).Msgf("Data channel [%v] opened", ch.Label())
+			})
+			ch.OnError(p.logx)
+			ch.OnClose(func() { p.log.Debug().Msgf("Data channel [%v] has been closed", ch.Label()) })
 		}
 	})
 
@@ -212,9 +225,9 @@ func (p *Peer) handleICEState(onConnect func()) func(webrtc.ICEConnectionState) 
 			p.log.Error().Msgf("WebRTC connection fail! connection: %v, ice: %v, gathering: %v, signalling: %v",
 				p.conn.ConnectionState(), p.conn.ICEConnectionState(), p.conn.ICEGatheringState(),
 				p.conn.SignalingState())
-			p.Disconnect()
-		case webrtc.ICEConnectionStateClosed,
-			webrtc.ICEConnectionStateDisconnected:
+			// make ICE restart
+		case webrtc.ICEConnectionStateDisconnected:
+		case webrtc.ICEConnectionStateClosed:
 			p.Disconnect()
 		default:
 			p.log.Debug().Msg("ICE state is not handled!")

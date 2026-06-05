@@ -490,15 +490,13 @@ function handleWebrtcStart({ data, initiator }) {
 
     const negotiate = () => {
         if (makingOffer) return;
-        makingOffer = true;
-        webrtc
-            .offerSdp()
-            .then((offer) => {
-                if (!offer) return;
-                log.debug("> offer", offer);
-                api.server.initWebrtcStream({ initiator, sdpOffer: offer });
-            })
-            .finally(() => (makingOffer = false));
+        // makingOffer = true;
+        // webrtc
+        //     .offerSdp()
+        //     .then((offer) => {
+        //         if (!offer) return;
+        //     })
+        // .finally(() => (makingOffer = false));
     };
 
     const datachannel = (ch) => {
@@ -523,8 +521,12 @@ function handleWebrtcStart({ data, initiator }) {
     });
 
     if (initiator) {
-        negotiate();
+        // negotiate();
         webrtc.createDataChannel({ onChannel: datachannel });
+        webrtc.offerSdp().then((offer) => {
+            if (!offer) return;
+            api.server.initWebrtcStream({ initiator, sdpOffer: offer });
+        });
     } else {
         api.server.initWebrtcStream();
     }

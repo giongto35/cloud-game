@@ -3,12 +3,14 @@ import { log } from "log";
 let /** @type {RTCPeerConnection} */ pc;
 let /** @type {Map<string, RTCDataChannel>} */ channels = new Map();
 let /** @type {MediaStream} */ stream;
-let /** @type {RTCLocalIceCandidateInit[]} */ candidateBuf = [];
 let handleSdpAnswer;
 let _initiator = false;
 
 const ice = (() => {
+    let /** @type {RTCIceCandidateInit[]} */ buf = [];
     let handleIceCandidate;
+
+    const END_OF_CANDIDATES = null;
 
     const onIceCandidate = (/** @type {RTCPeerConnectionIceEvent} */ ev) => {
         if (!ev.candidate) return;
@@ -50,6 +52,12 @@ const ice = (() => {
         onIceCandidateError,
         onIceGatheringStateChange,
         onIceConnectionStateChange,
+        buf,
+        new: (/** @type RTCIceCandidateInit */ candidate) => {
+            return candidate
+                ? new RTCIceCandidate(candidate)
+                : END_OF_CANDIDATES;
+        },
         set handleIceCandidate(cb) {
             handleIceCandidate = cb;
         },
@@ -59,22 +67,33 @@ const ice = (() => {
 const isConnected = () => pc?.connectionState === "connected";
 const hasRemoteDescription = () => pc?.remoteDescription !== null;
 
-const addRemoteCandidate = (data) => {
-    if (!data) return;
-    const candidate = new RTCIceCandidate(data);
+const addIceCandidate = (data) => {
+    const candidate = ice.new(data);
     pc.addIceCandidate(candidate).catch((e) => {
-        log.error("[rtc] [ice] remote candidate add failed", e.name);
+        log.error("[rtc] [ice] remote add", e.name);
     });
-    log.debug(`[rtc] [ice] added remote`, candidate);
+    log.debug("[rtc] [ice] add", candidate);
 };
 
-const flushRemoteCandidates = () => {
-    if (!hasRemoteDescription() || candidateBuf.length === 0) return;
+const flushIceCandidates = () => {
+    if (ice.buf.length === 0) return;
 
-    log.debug(`[rtc] [ice] remote candidate buf (${candidateBuf.length})`);
+    log.debug(`[rtc] [ice] buf (${ice.buf.length}) flush`);
     let data = undefined;
-    while (typeof (data = candidateBuf.shift()) !== "undefined") {
-        addRemoteCandidate(data);
+    while (typeof (data = ice.buf.shift()) !== "undefined") {
+        addIceCandidate(data);
+    }
+};
+
+const _setRemoteDescription = async (sdp) => {
+    try {
+        await pc.setRemoteDescription(new RTCSessionDescription(sdp));
+        log.debug(`[rtc] [sdp] Trickle ICE: ${pc.canTrickleIceCandidates}`);
+        flushIceCandidates();
+        return true;
+    } catch (e) {
+        log.error(`[rtc] [sdp] set remote error: ${e}`);
+        return false;
     }
 };
 
@@ -100,6 +119,7 @@ const stop = () => {
     }
     if (pc) {
         ice.handleIceCandidate = null;
+        ice.buf = [];
         handleSdpAnswer = null;
         pc.oniceconnectionstatechange = null;
         pc.onicegatheringstatechange = null;
@@ -116,7 +136,6 @@ const stop = () => {
         channel.close();
     }
     channels.clear();
-    candidateBuf = [];
     log.debug("[rtc] WebRTC has been closed");
 };
 
@@ -135,8 +154,9 @@ export const webrtc = {
         onIceCandidate,
         onSdpAnswer,
     } = {}) => {
-        log.debug("[rtc] got remote ICE servers", iceServers);
-        pc = new RTCPeerConnection({ iceCandidatePoolSize: 1, iceServers });
+        iceServers = iceServers || [];
+        log.debug("[rtc] ICE servers", iceServers);
+        pc = new RTCPeerConnection({ iceServers });
         stream = new MediaStream();
 
         _initiator = initiator;
@@ -203,18 +223,9 @@ export const webrtc = {
     ) => {
         log.debug("[rtc] [sdp] remote SDP", sdp);
 
-        if (!pc) return;
-
-        try {
-            await pc.setRemoteDescription(new RTCSessionDescription(sdp));
-        } catch (e) {
-            log.error(`[rtc] [sdp] remote offer error: ${e}`);
+        if (!pc || !_setRemoteDescription(sdp)) {
             return;
         }
-
-        log.debug(`[rtc] [sdp] Trickle ICE: ${pc.canTrickleIceCandidates}`);
-
-        flushRemoteCandidates();
 
         if (_initiator) return;
 
@@ -229,20 +240,17 @@ export const webrtc = {
         }
     },
     pushChannel,
-    addCandidate: (
-        /** @type {RTCLocalIceCandidateInit | string} */ candidate,
-    ) => {
+    addCandidate: (/** @type {RTCIceCandidateInit | string} */ candidate) => {
+        log.debug(`[rtc] [ice] remote`, candidate);
+
         if (!pc) return;
 
-        if (hasRemoteDescription()) {
-            addRemoteCandidate(candidate);
-        } else {
-            candidateBuf.push(candidate);
+        if (!hasRemoteDescription()) {
+            ice.buf.push(candidate);
+            return;
         }
 
-        if (candidate === "") {
-            flushRemoteCandidates();
-        }
+        addIceCandidate(candidate);
     },
     send: (chan, data) => {
         const ch = channels.get(chan);
