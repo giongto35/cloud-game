@@ -486,39 +486,28 @@ sub(MESSAGE, onMessage);
 function handleWebrtcStart({ data, initiator }) {
     workerManager.whoami(data.wid);
 
-    const datachannel = (ch) => {
-        if (ch.label === "data") {
-            // we'll handle ws and webrtc server messages in one place
-            ch.onmessage = (x) => onMessage(api.fromBytes(x.data));
-        }
-        return ch;
-    };
-
     webrtc.start({
         initiator,
         iceServers: data.ice,
         media: stream.video.el,
-        onDataChannel: datachannel,
+        onDataChannel: (ch) => {
+            if (ch.label === "data") {
+                // we'll handle ws and webrtc server messages in one place
+                ch.onmessage = (x) => onMessage(api.fromBytes(x.data));
+            }
+            return ch;
+        },
         onConnect: onConnectionReady,
         onDisconnect: () => {
             input.retropad.toggle(false);
             webrtc.stop();
         },
         signalling: {
+            init: api.server.initWebrtcStream,
             sendIceCandidate: api.server.sendIceCandidate,
             sendSdp: api.server.sendSdp,
         },
     });
-
-    if (initiator) {
-        webrtc.createDataChannel({ onChannel: datachannel });
-        webrtc.offer().then((offer) => {
-            if (!offer) return;
-            api.server.initWebrtcStream({ initiator, sdpOffer: offer });
-        });
-    } else {
-        api.server.initWebrtcStream();
-    }
 
     gameList.set(data.games);
 }

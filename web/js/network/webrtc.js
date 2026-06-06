@@ -17,7 +17,7 @@ const ice = ((signaller) => {
     const onCandidate = (/** @type {RTCPeerConnectionIceEvent} */ ev) => {
         if (!ev.candidate) return;
         log.debug(`[rtc] [ice] local`, ev.candidate);
-        signaller?.sendIceCandiadte(ev.candidate);
+        signaller()?.sendIceCandidate(ev.candidate);
     };
 
     const onCandidateError = (
@@ -78,7 +78,7 @@ const ice = ((signaller) => {
         flush,
         close: () => (buf = []),
     };
-})(signal);
+})(() => signal);
 
 const isConnected = () => pc?.connectionState === "connected";
 
@@ -89,6 +89,20 @@ const mung = (sdp) =>
     sdp.replace(/(a=fmtp:111 .*)/g, "$1;stereo=1");
 
 const stub = () => {};
+
+const offer = async () => {
+    if (!pc || !caller) return;
+
+    try {
+        const offer = await pc.createOffer();
+        offer.sdp = mung(offer.sdp);
+        await pc.setLocalDescription(offer);
+        log.debug("[rtc] [sdp] local:", offer);
+        return offer;
+    } catch (e) {
+        log.error("[rtc] [sdp] local:", e);
+    }
+};
 
 /**
  * WebRTC connection module.
@@ -151,20 +165,31 @@ export const webrtc = {
             log.debug("[rtc] negotiation");
         };
         pc.ontrack = (event) => stream.addTrack(event.track);
-    },
-    offer: async () => {
-        if (!pc || !caller) return;
 
-        try {
-            const offer = await pc.createOffer();
-            offer.sdp = mung(offer.sdp);
-            await pc.setLocalDescription(offer);
-            log.debug("[rtc] [sdp] local:", offer);
-            return offer;
-        } catch (e) {
-            log.error("[rtc] [sdp] local:", e);
+        if (initiator) {
+            // push datachannel
+            try {
+                let ch = pc.createDataChannel("data", {
+                    ordered: false,
+                    maxRetransmits: 0,
+                });
+                ch = onDataChannel ? onDataChannel(ch) : ch;
+                if (!ch) throw new Error("null channel");
+                channels.set(ch.label, ch);
+            } catch (e) {
+                log.error("[rtc] failed to create data channel", e);
+                return;
+            }
+
+            offer().then((offer) => {
+                if (!offer) return;
+                signalling.init({ initiator, sdpOffer: offer });
+            });
+        } else {
+            signalling.init();
         }
     },
+    offer,
     answer: async (/** @type {RTCSessionDescriptionInit} */ sdp) => {
         log.debug("[rtc] [sdp] remote:", sdp);
 
@@ -202,19 +227,6 @@ export const webrtc = {
     stats: async () => {
         if (!isConnected()) return Promise.resolve();
         return await pc.getStats();
-    },
-    createDataChannel: ({ onChannel }) => {
-        try {
-            let ch = pc.createDataChannel("data", {
-                ordered: false,
-                maxRetransmits: 0,
-            });
-            ch = onChannel ? onChannel(ch) : ch;
-            if (!ch) throw new Error("null channel");
-            channels.set(ch.label, ch);
-        } catch (e) {
-            log.error("[rtc] failed to create data channel", e);
-        }
     },
     stop: () => {
         if (stream) {
