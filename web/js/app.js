@@ -185,10 +185,10 @@ const onMessage = (m) => {
             handleWebrtcStart({ data: payload, initiator });
             break;
         case api.endpoint.OFFER:
-            webrtc.setRemoteDescription(api.fromBase64(payload));
+            webrtc.answer(api.fromBase64(payload));
             break;
         case api.endpoint.ICE_CANDIDATE:
-            webrtc.addCandidate(payload ? api.fromBase64(payload) : "");
+            webrtc.candidate(payload ? api.fromBase64(payload) : "");
             break;
         case api.endpoint.GAME_START:
             if (payload.av) pub(APP_VIDEO_CHANGED, payload.av);
@@ -486,21 +486,7 @@ sub(MESSAGE, onMessage);
 function handleWebrtcStart({ data, initiator }) {
     workerManager.whoami(data.wid);
 
-    let makingOffer = false;
-
-    const negotiate = () => {
-        if (makingOffer) return;
-        // makingOffer = true;
-        // webrtc
-        //     .offerSdp()
-        //     .then((offer) => {
-        //         if (!offer) return;
-        //     })
-        // .finally(() => (makingOffer = false));
-    };
-
     const datachannel = (ch) => {
-        log.debug("> datachannel", ch.label);
         if (ch.label === "data") {
             // we'll handle ws and webrtc server messages in one place
             ch.onmessage = (x) => onMessage(api.fromBytes(x.data));
@@ -512,18 +498,21 @@ function handleWebrtcStart({ data, initiator }) {
         initiator,
         iceServers: data.ice,
         media: stream.video.el,
-        onNegotiationNeeded: negotiate,
         onDataChannel: datachannel,
         onConnect: onConnectionReady,
-        onDisconnect: () => input.retropad.toggle(false),
-        onIceCandidate: api.server.sendIceCandidate,
-        onSdpAnswer: api.server.sendSdp,
+        onDisconnect: () => {
+            input.retropad.toggle(false);
+            webrtc.stop();
+        },
+        signalling: {
+            sendIceCandidate: api.server.sendIceCandidate,
+            sendSdp: api.server.sendSdp,
+        },
     });
 
     if (initiator) {
-        // negotiate();
         webrtc.createDataChannel({ onChannel: datachannel });
-        webrtc.offerSdp().then((offer) => {
+        webrtc.offer().then((offer) => {
             if (!offer) return;
             api.server.initWebrtcStream({ initiator, sdpOffer: offer });
         });
