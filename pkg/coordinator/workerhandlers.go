@@ -11,9 +11,9 @@ func (w *Worker) HandleCloseRoom(rq api.CloseRoomRequest) {
 	}
 }
 
-func (w *Worker) HandleIceCandidate(rq api.WebrtcIceCandidateRequest, users HasUserRegistry) error {
+func (w *Worker) HandleIceCandidate(rq api.WebrtcSignalRequest, users HasUserRegistry) error {
 	if usr := users.Find(rq.Id); usr != nil {
-		usr.SendWebrtcIceCandidate(rq.Candidate)
+		usr.SendWebrtcIceCandidate(*rq.Ice)
 	} else {
 		w.log.Warn().Str("id", rq.Id).Msg("unknown session")
 	}

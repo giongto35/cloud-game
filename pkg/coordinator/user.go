@@ -48,10 +48,8 @@ func (u *User) HandleRequests(info HasServerInfo, conf config.CoordinatorConfig)
 		switch x.T {
 		case api.InitWebrtcStream:
 			err = api.Do(x, u.HandleInitWebrtcStream)
-		case api.WebrtcAnswer:
-			err = api.Do(x, u.HandleWebrtcAnswer)
-		case api.WebrtcIce:
-			err = api.Do(x, u.HandleWebrtcIceCandidate)
+		case api.WebrtcSignal:
+			err = api.Do(x, u.HandleWebrtcSignal)
 		case api.StartGame:
 			err = api.Do(x, func(d api.GameStartUserRequest) { u.HandleStartGame(d, conf) })
 		case api.QuitGame:

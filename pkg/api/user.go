@@ -31,9 +31,10 @@ type (
 		Title  string `json:"title"`
 		System string `json:"system"`
 	}
-	WebrtcAnswerUserRequest string
-	WebrtcUserIceCandidate  string
-
+	WebrtcSignalUser struct {
+		Ice *string `json:"ice,omitempty"`
+		Sdp *string `json:"sdp,omitempty"`
+	}
 	InitUserWebrtcStreamRequest struct {
 		Initiator bool   `json:"initiator"`
 		Sdp       string `json:"sdp,omitempty"`

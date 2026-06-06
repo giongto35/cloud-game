@@ -41,13 +41,10 @@ type (
 	}
 	RecordGameResponse      string
 	TerminateSessionRequest Stateful
-	WebrtcAnswerRequest     struct {
+	WebrtcSignalRequest     struct {
 		Stateful
-		Sdp string `json:"sdp"`
-	}
-	WebrtcIceCandidateRequest struct {
-		Stateful
-		Candidate string `json:"candidate"`
+		Sdp *string `json:"sdp,omitempty"`
+		Ice *string `json:"ice,omitempty"`
 	}
 	InitWebrtcStreamRequest struct {
 		// Stateful

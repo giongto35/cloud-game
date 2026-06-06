@@ -7,14 +7,10 @@ func (w *Worker) InitWebrtcStream(id string, initiator bool, sdp string) (*api.I
 		w.Send(api.InitWebrtcStream, api.InitWebrtcStreamRequest{Id: id, Initiator: initiator, Sdp: sdp}))
 }
 
-func (w *Worker) WebrtcAnswer(id string, sdp string) {
-	w.Notify(api.WebrtcAnswer,
-		api.WebrtcAnswerRequest{Stateful: api.Stateful{Id: id}, Sdp: sdp})
-}
-
-func (w *Worker) WebrtcIceCandidate(id string, candidate string) {
-	w.Notify(api.WebrtcIce,
-		api.WebrtcIceCandidateRequest{Stateful: api.Stateful{Id: id}, Candidate: candidate})
+func (w *Worker) WebrtcSignal(id string, sdp, ice *string) {
+	w.Notify(api.WebrtcSignal, api.WebrtcSignalRequest{
+		Stateful: api.Stateful{Id: id}, Ice: ice, Sdp: sdp,
+	})
 }
 
 func (w *Worker) StartGame(id string, req api.GameStartUserRequest) (*api.StartGameResponse, error) {

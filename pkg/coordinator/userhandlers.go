@@ -21,12 +21,8 @@ func (u *User) HandleInitWebrtcStream(rq api.InitUserWebrtcStreamRequest) {
 	u.SendWebrtcOffer(string(*resp))
 }
 
-func (u *User) HandleWebrtcAnswer(rq api.WebrtcAnswerUserRequest) {
-	u.w.WebrtcAnswer(u.Id().String(), string(rq))
-}
-
-func (u *User) HandleWebrtcIceCandidate(rq api.WebrtcUserIceCandidate) {
-	u.w.WebrtcIceCandidate(u.Id().String(), string(rq))
+func (u *User) HandleWebrtcSignal(rq api.WebrtcSignalUser) {
+	u.w.WebrtcSignal(u.Id().String(), rq.Sdp, rq.Ice)
 }
 
 func (u *User) HandleStartGame(rq api.GameStartUserRequest, conf config.CoordinatorConfig) {

@@ -184,11 +184,17 @@ const onMessage = (m) => {
             const initiator = !options.webrtcWaitOffer;
             handleWebrtcStart({ data: payload, initiator });
             break;
-        case api.endpoint.OFFER:
-            webrtc.answer(api.fromJson(payload));
-            break;
-        case api.endpoint.ICE_CANDIDATE:
-            webrtc.candidate(payload ? api.fromJson(payload) : "");
+        case api.endpoint.WEBRTC_SIGNAL:
+            const data = payload;
+            // it is eaither sdp or ice
+            if (Object.hasOwn(data, "ice")) {
+                webrtc.candidate(data.ice ? api.fromJson(data.ice) : "");
+                return;
+            }
+            if (Object.hasOwn(data, "sdp")) {
+                webrtc.answer(api.fromJson(data.sdp));
+                return;
+            }
             break;
         case api.endpoint.GAME_START:
             if (payload.av) pub(APP_VIDEO_CHANGED, payload.av);

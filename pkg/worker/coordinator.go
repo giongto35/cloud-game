@@ -84,10 +84,8 @@ func (c *coordinator) HandleRequests(w *Worker) chan struct{} {
 			err = api.Do(x, func(d api.ChangePlayerRequest) { out = c.HandleChangePlayer(d, w) })
 		case api.RecordGame:
 			err = api.Do(x, func(d api.RecordGameRequest) { out = c.HandleRecordGame(d, w) })
-		case api.WebrtcAnswer:
-			err = api.Do(x, func(d api.WebrtcAnswerRequest) { c.HandleWebrtcAnswer(d, w) })
-		case api.WebrtcIce:
-			err = api.Do(x, func(d api.WebrtcIceCandidateRequest) { c.HandleWebrtcIceCandidate(d, w) })
+		case api.WebrtcSignal:
+			err = api.Do(x, func(d api.WebrtcSignalRequest) { c.HandleWebrtcSignal(d, w) })
 		case api.TerminateSession:
 			err = api.Do(x, func(d api.TerminateSessionRequest) { c.HandleTerminateSession(d, w) })
 		case api.QuitGame:
@@ -110,9 +108,9 @@ func (c *coordinator) RegisterRoom(id string) { c.Notify(api.RegisterRoom, id) }
 // CloseRoom sends a signal to coordinator which will remove that room from its list.
 func (c *coordinator) CloseRoom(id string) { c.Notify(api.CloseRoom, id) }
 func (c *coordinator) IceCandidate(candidate string, sessionId string) {
-	c.Notify(api.WebrtcIce, api.WebrtcIceCandidateRequest{
-		Stateful:  api.Stateful{Id: sessionId},
-		Candidate: candidate,
+	c.Notify(api.WebrtcSignal, api.WebrtcSignalRequest{
+		Stateful: api.Stateful{Id: sessionId},
+		Ice:      &candidate,
 	})
 }
 

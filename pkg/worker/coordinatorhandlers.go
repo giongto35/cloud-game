@@ -72,18 +72,22 @@ func (c *coordinator) HandleInitWebrtcStream(rq api.InitWebrtcStreamRequest, w *
 	return api.Out{Payload: sdp}
 }
 
-func (c *coordinator) HandleWebrtcAnswer(rq api.WebrtcAnswerRequest, w *Worker) {
-	if user := w.router.FindUser(rq.Id); user != nil {
-		if err := room.WithWebRTC(user.Session).SetRemoteSDP(rq.Sdp, fromJson); err != nil {
+func (c *coordinator) HandleWebrtcSignal(rq api.WebrtcSignalRequest, w *Worker) {
+	user := w.router.FindUser(rq.Id)
+
+	if user == nil {
+		return
+	}
+
+	if rq.Sdp != nil {
+		if err := room.WithWebRTC(user.Session).SetRemoteSDP(*rq.Sdp, fromJson); err != nil {
 			c.log.Error().Err(err).Msgf("cannot set remote SDP of client [%v]", rq.Id)
 		}
 	}
-}
 
-func (c *coordinator) HandleWebrtcIceCandidate(rs api.WebrtcIceCandidateRequest, w *Worker) {
-	if user := w.router.FindUser(rs.Id); user != nil {
-		if err := room.WithWebRTC(user.Session).AddCandidate(rs.Candidate, fromJson); err != nil {
-			c.log.Error().Err(err).Msgf("cannot add ICE candidate of the client [%v]", rs.Id)
+	if rq.Ice != nil {
+		if err := room.WithWebRTC(user.Session).AddCandidate(*rq.Ice, fromJson); err != nil {
+			c.log.Error().Err(err).Msgf("cannot add ICE candidate of the client [%v]", rq.Id)
 		}
 	}
 }
