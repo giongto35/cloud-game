@@ -642,8 +642,12 @@ stats.modules = [
                     );
                     SET_CODEC = 1;
                 }
-                const { selected, currentRoundTripTime, type, kind } = report;
-                if (selected && currentRoundTripTime !== undefined) {
+                const { selected, state, currentRoundTripTime, type, kind } =
+                    report;
+                if (
+                    (selected || state === "succeeded") &&
+                    currentRoundTripTime !== undefined
+                ) {
                     WEBRTC_STATS_RTT(currentRoundTripTime * 1000);
                 }
                 if (type === "inbound-rtp" && kind === "video") {
