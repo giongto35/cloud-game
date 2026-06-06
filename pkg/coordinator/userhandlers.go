@@ -59,11 +59,12 @@ func (u *User) HandleStartGame(rq api.GameStartUserRequest, conf config.Coordina
 			u.Notify(api.ErrNoFreeSlots, "")
 			return
 		}
-		if rq.RoomId == "" {
-			// No room id but worker is busy -> assume user wants to continue
-			// the existing room instead of starting a parallel game.
-			rq.RoomId = u.w.RoomId
-		} else if rq.RoomId != u.w.RoomId {
+		// if rq.RoomId == "" {
+		// 	// No room id but worker is busy -> assume user wants to continue
+		// 	// the existing room instead of starting a parallel game.
+		// 	rq.RoomId = u.w.RoomId
+		// } else
+		if rq.RoomId != u.w.RoomId {
 			u.Notify(api.ErrNoFreeSlots, "")
 			return
 		}
