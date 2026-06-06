@@ -318,8 +318,8 @@ const libretro = (function () {
 })();
 
 // data type converters
-const toBase64 = (val) => btoa(JSON.stringify(val));
-const fromBase64 = (val) => JSON.parse(atob(val));
+const toJson = (val) => JSON.stringify(val);
+const fromJson = (val) => JSON.parse(val);
 const fromBytes = (val) =>
     JSON.parse(String.fromCharCode.apply(null, new Uint8Array(val)));
 
@@ -335,7 +335,7 @@ export const api = {
     endpoint: endpoints,
     endpointName: endpointName,
     fromBytes,
-    fromBase64,
+    fromJson,
     server: {
         /** Initializes the stream with the given config.
          * @property {boolean} initiator - whether the user is an initiator or not.
@@ -344,11 +344,11 @@ export const api = {
         initWebrtcStream: ({ initiator = false, sdpOffer = "" } = {}) =>
             packet(endpoints.INIT_WEBRTC_STREAM, {
                 initiator,
-                ...(sdpOffer && { sdp: toBase64(sdpOffer) }),
+                ...(sdpOffer && { sdp: toJson(sdpOffer) }),
             }),
         sendIceCandidate: (candidate) =>
-            packet(endpoints.ICE_CANDIDATE, toBase64(candidate)),
-        sendSdp: (sdp) => packet(endpoints.ANSWER, toBase64(sdp)),
+            packet(endpoints.ICE_CANDIDATE, toJson(candidate)),
+        sendSdp: (sdp) => packet(endpoints.ANSWER, toJson(sdp)),
         latencyCheck: (id, list) => packet(endpoints.LATENCY_CHECK, list, id),
         getWorkerList: () => packet(endpoints.GET_WORKER_LIST),
     },

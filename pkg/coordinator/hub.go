@@ -2,7 +2,6 @@ package coordinator
 
 import (
 	"bytes"
-	"encoding/base64"
 	"fmt"
 	"net/http"
 	"net/url"
@@ -92,7 +91,7 @@ func RequestToHandshake(data string) (*api.ConnectionRequest[com.Uid], error) {
 	if data == "" {
 		return nil, api.ErrMalformed
 	}
-	handshake, err := api.UnwrapChecked[api.ConnectionRequest[com.Uid]](base64.URLEncoding.DecodeString(data))
+	handshake, err := api.UnwrapChecked[api.ConnectionRequest[com.Uid]]([]byte(data), nil)
 	if err != nil || handshake == nil {
 		return nil, fmt.Errorf("%w (%v)", err, handshake)
 	}

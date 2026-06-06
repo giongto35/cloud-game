@@ -185,10 +185,10 @@ const onMessage = (m) => {
             handleWebrtcStart({ data: payload, initiator });
             break;
         case api.endpoint.OFFER:
-            webrtc.answer(api.fromBase64(payload));
+            webrtc.answer(api.fromJson(payload));
             break;
         case api.endpoint.ICE_CANDIDATE:
-            webrtc.candidate(payload ? api.fromBase64(payload) : "");
+            webrtc.candidate(payload ? api.fromJson(payload) : "");
             break;
         case api.endpoint.GAME_START:
             if (payload.av) pub(APP_VIDEO_CHANGED, payload.av);

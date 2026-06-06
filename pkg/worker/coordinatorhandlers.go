@@ -1,8 +1,6 @@
 package worker
 
 import (
-	"encoding/base64"
-
 	"github.com/giongto35/cloud-game/v3/pkg/api"
 	"github.com/giongto35/cloud-game/v3/pkg/com"
 	"github.com/giongto35/cloud-game/v3/pkg/config"
@@ -17,7 +15,7 @@ import (
 // buildConnQuery builds initial connection data query to a coordinator.
 func buildConnQuery(id com.Uid, conf config.Worker, address string) (string, error) {
 	addr := conf.GetPingAddr(address)
-	return toBase64Json(api.ConnectionRequest[com.Uid]{
+	return toJson(api.ConnectionRequest[com.Uid]{
 		Addr:    addr.Hostname(),
 		Id:      id,
 		IsHTTPS: conf.Server.Https,
@@ -31,7 +29,7 @@ func buildConnQuery(id com.Uid, conf config.Worker, address string) (string, err
 func (c *coordinator) HandleInitWebrtcStream(rq api.InitWebrtcStreamRequest, w *Worker, factory *webrtc.ApiFactory) api.Out {
 	peer := webrtc.New(c.log, factory)
 	err := peer.NewConnection(w.conf.Encoder.Video.Codec, "opus", func(data any) {
-		candidate, err := toBase64Json(data)
+		candidate, err := toJson(data)
 		if err != nil {
 			c.log.Error().Err(err).Msgf("ICE candidate encode fail for [%v]", data)
 			return
@@ -44,7 +42,7 @@ func (c *coordinator) HandleInitWebrtcStream(rq api.InitWebrtcStreamRequest, w *
 	}
 
 	if rq.Initiator {
-		if err := peer.SetRemoteSDP(rq.Sdp, fromBase64Json); err != nil {
+		if err := peer.SetRemoteSDP(rq.Sdp, fromJson); err != nil {
 			c.log.Error().Err(err).Msgf("cannot set remote SDP of peer [%v]", rq.Id)
 			return api.EmptyPacket
 		}
@@ -61,7 +59,7 @@ func (c *coordinator) HandleInitWebrtcStream(rq api.InitWebrtcStreamRequest, w *
 		return api.EmptyPacket
 	}
 
-	sdp, err := toBase64Json(*lsdp)
+	sdp, err := toJson(*lsdp)
 	if err != nil {
 		c.log.Error().Err(err).Msgf("SDP encode fail for [%v]", *lsdp)
 		return api.EmptyPacket
@@ -76,7 +74,7 @@ func (c *coordinator) HandleInitWebrtcStream(rq api.InitWebrtcStreamRequest, w *
 
 func (c *coordinator) HandleWebrtcAnswer(rq api.WebrtcAnswerRequest, w *Worker) {
 	if user := w.router.FindUser(rq.Id); user != nil {
-		if err := room.WithWebRTC(user.Session).SetRemoteSDP(rq.Sdp, fromBase64Json); err != nil {
+		if err := room.WithWebRTC(user.Session).SetRemoteSDP(rq.Sdp, fromJson); err != nil {
 			c.log.Error().Err(err).Msgf("cannot set remote SDP of client [%v]", rq.Id)
 		}
 	}
@@ -84,7 +82,7 @@ func (c *coordinator) HandleWebrtcAnswer(rq api.WebrtcAnswerRequest, w *Worker) 
 
 func (c *coordinator) HandleWebrtcIceCandidate(rs api.WebrtcIceCandidateRequest, w *Worker) {
 	if user := w.router.FindUser(rs.Id); user != nil {
-		if err := room.WithWebRTC(user.Session).AddCandidate(rs.Candidate, fromBase64Json); err != nil {
+		if err := room.WithWebRTC(user.Session).AddCandidate(rs.Candidate, fromJson); err != nil {
 			c.log.Error().Err(err).Msgf("cannot add ICE candidate of the client [%v]", rs.Id)
 		}
 	}
@@ -305,21 +303,11 @@ func (c *coordinator) HandleRecordGame(rq api.RecordGameRequest, w *Worker) api.
 	return api.OkPacket
 }
 
-// fromBase64Json decodes data from a URL-encoded Base64+JSON string.
-func fromBase64Json(data string, obj any) error {
-	b, err := base64.URLEncoding.DecodeString(data)
-	if err != nil {
-		return err
-	}
-	err = json.Unmarshal(b, obj)
-	if err != nil {
-		return err
-	}
-	return nil
+func fromJson(data string, obj any) error {
+	return json.Unmarshal([]byte(data), obj)
 }
 
-// toBase64Json encodes data to a URL-encoded Base64+JSON string.
-func toBase64Json(data any) (string, error) {
+func toJson(data any) (string, error) {
 	if data == nil {
 		return "", nil
 	}
@@ -327,5 +315,5 @@ func toBase64Json(data any) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	return base64.URLEncoding.EncodeToString(b), nil
+	return string(b), nil
 }
