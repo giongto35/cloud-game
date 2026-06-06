@@ -647,8 +647,8 @@ stats.modules = [
                     );
                     SET_CODEC = 1;
                 }
-                const { nominated, currentRoundTripTime, type, kind } = report;
-                if (nominated && currentRoundTripTime !== undefined) {
+                const { selected, currentRoundTripTime, type, kind } = report;
+                if (selected && currentRoundTripTime !== undefined) {
                     WEBRTC_STATS_RTT(currentRoundTripTime * 1000);
                 }
                 if (type === "inbound-rtp" && kind === "video") {
