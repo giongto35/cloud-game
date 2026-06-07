@@ -123,6 +123,22 @@ export const webrtc = {
         log.debug("[rtc] [config] ICE:", iceServers);
         pc = new RTCPeerConnection({ iceServers });
 
+        // push datachannel
+        try {
+            let ch = pc.createDataChannel("data", {
+                negotiated: true,
+                id: 0,
+                ordered: false,
+                maxRetransmits: 0,
+            });
+            ch = onDataChannel ? onDataChannel(ch) : ch;
+            if (!ch) throw new Error("null channel");
+            channels.set(ch.label, ch);
+        } catch (e) {
+            log.error("[rtc] failed to create data channel", e);
+            return;
+        }
+
         caller = initiator;
         log.debug(`[rtc] ${caller ? "caller" : "callee"}`);
 
@@ -173,20 +189,6 @@ export const webrtc = {
 
         connectionTime = performance.now();
         if (initiator) {
-            // push datachannel
-            try {
-                let ch = pc.createDataChannel("data", {
-                    ordered: false,
-                    maxRetransmits: 0,
-                });
-                ch = onDataChannel ? onDataChannel(ch) : ch;
-                if (!ch) throw new Error("null channel");
-                channels.set(ch.label, ch);
-            } catch (e) {
-                log.error("[rtc] failed to create data channel", e);
-                return;
-            }
-
             offer().then((offer) => {
                 if (!offer) return;
                 signalling.init({ initiator, sdpOffer: offer });

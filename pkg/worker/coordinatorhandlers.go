@@ -46,11 +46,6 @@ func (c *coordinator) HandleInitWebrtcStream(rq api.InitWebrtcStreamRequest, w *
 			c.log.Error().Err(err).Msgf("cannot set remote SDP of peer [%v]", rq.Id)
 			return api.EmptyPacket
 		}
-	} else {
-		if err := peer.AddDataChannel(); err != nil {
-			c.log.Error().Err(err).Msgf("cannot add data channel for peer [%v]", rq.Id)
-			return api.EmptyPacket
-		}
 	}
 
 	lsdp, err := peer.OfferAnswer(!rq.Initiator)
@@ -219,8 +214,8 @@ func (c *coordinator) HandleGameStart(rq api.StartGameRequest, w *Worker) api.Ou
 	s := room.WithWebRTC(user.Session)
 	s.OnMessage = func(data []byte) { r.App().Input(user.Index, byte(caged.RetroPad), data) }
 	if needsKbMouse {
-		_ = s.AddChannel("keyboard", func(data []byte) { r.App().Input(user.Index, byte(caged.Keyboard), data) })
-		_ = s.AddChannel("mouse", func(data []byte) { r.App().Input(user.Index, byte(caged.Mouse), data) })
+		_, _ = s.AddChannel("keyboard", nil, func(data []byte) { r.App().Input(user.Index, byte(caged.Keyboard), data) })
+		_, _ = s.AddChannel("mouse", nil, func(data []byte) { r.App().Input(user.Index, byte(caged.Mouse), data) })
 	}
 
 	c.RegisterRoom(r.Id())
