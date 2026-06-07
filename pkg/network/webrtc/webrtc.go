@@ -29,14 +29,20 @@ var samplePool sync.Pool
 type Decoder func(data string, obj any) error
 
 func New(log *logger.Logger, api *ApiFactory) *Peer {
-	return &Peer{api: api, log: log, icb: &IceCandidateBuffer{}}
+	// hide directions (->) and clients (w, c, ...)
+	custom := log.Extend(
+		log.With().
+			Str(logger.DirectionField, "").
+			Str(logger.ClientField, ""),
+	)
+	return &Peer{api: api, log: custom, icb: &IceCandidateBuffer{}}
 }
 
 func (p *Peer) NewConnection(vCodec, aCodec string, onICECandidate func(ice any)) (err error) {
 	if p.conn != nil && p.conn.ConnectionState() == webrtc.PeerConnectionStateConnected {
 		return
 	}
-	p.log.Debug().Msg("WebRTC start")
+	p.log.Debug().Msg("rtc start")
 	if p.conn, err = p.api.NewPeer(); err != nil {
 		return
 	}
@@ -63,15 +69,22 @@ func (p *Peer) NewConnection(vCodec, aCodec string, onICECandidate func(ice any)
 	}
 
 	p.conn.OnConnectionStateChange(func(pcs webrtc.PeerConnectionState) {
-		p.log.Debug().Msgf("WebRTC state change: %v", pcs)
+		p.log.Debug().
+			Str("state", pcs.String()).
+			Msg("rtc [connection] state change")
 		if pcs == webrtc.PeerConnectionStateConnected {
-			p.log.Info().Msg("Connected")
+			p.log.Info().
+				Str(logger.DirectionField, "rtc").
+				Str(logger.ClientField, "").
+				Msg("(connected)")
 		}
 	})
 	p.conn.OnICECandidate(p.handleICECandidate(onICECandidate))
 
 	p.conn.OnSignalingStateChange(func(ss webrtc.SignalingState) {
-		p.log.Debug().Msgf("[rtc] [sig] %s", ss.Get())
+		p.log.Debug().
+			Str("state", ss.String()).
+			Msg("rtc [signal] state change")
 		if ss == webrtc.SignalingStateStable {
 			p.flushPendingCandidates()
 		}
@@ -90,7 +103,11 @@ func (p *Peer) NewConnection(vCodec, aCodec string, onICECandidate func(ice any)
 	p.conn.OnICEConnectionStateChange(p.handleICEState(func() {}))
 
 	p.conn.OnDataChannel(func(ch *webrtc.DataChannel) {
-		p.log.Debug().Msgf("Added [%s] datachannel", ch.Label())
+		p.log.Debug().Msgf("rtc [chan] [%s] remote", ch.Label())
+	})
+
+	p.conn.OnNegotiationNeeded(func() {
+		p.log.Debug().Msg("rtc [negotiation] needed")
 	})
 
 	return nil
@@ -114,7 +131,7 @@ func (p *Peer) AddTrack(id, label, codec string) (*webrtc.TrackLocalStaticSample
 			}
 		}
 	}()
-	p.log.Debug().Msgf("Added [%s] track", track.Codec().MimeType)
+	p.log.Debug().Msgf("rtc [media] added [%s] track", track.Codec().MimeType)
 	return track, nil
 }
 
@@ -132,7 +149,9 @@ func (p *Peer) OfferAnswer(offer bool) (*webrtc.SessionDescription, error) {
 	if err != nil {
 		return nil, err
 	}
-	p.log.Debug().Str("type", sdp.Type.String()).Msg("SDP")
+	p.log.Debug().
+		Str("type", sdp.Type.String()).
+		Msg("rtc [sdp]")
 
 	if err = p.conn.SetLocalDescription(sdp); err != nil {
 		return nil, err
@@ -180,7 +199,7 @@ func (p *Peer) SetRemoteSDP(sdp string, decoder Decoder) error {
 		return err
 	}
 	p.flushPendingCandidates()
-	p.log.Debug().Msg("Set Remote Description")
+	p.log.Debug().Msg("rtc [sdp] set (remote)")
 	return nil
 }
 
@@ -214,18 +233,18 @@ func (p *Peer) handleICECandidate(callback func(any)) func(*webrtc.ICECandidate)
 		// ICE gathering finish condition
 		if ice == nil {
 			callback(nil)
-			p.log.Debug().Msg("ICE gathering was complete probably")
+			p.log.Debug().Msg("rtc [ice] gathering (complete)")
 			return
 		}
 		candidate := ice.ToJSON()
-		p.log.Debug().Str("candidate", candidate.Candidate).Msg("ICE")
+		p.log.Debug().Str("local", candidate.Candidate).Msg("rtc [ice] candidate")
 		callback(&candidate)
 	}
 }
 
 func (p *Peer) handleICEState(onConnect func()) func(webrtc.ICEConnectionState) {
 	return func(state webrtc.ICEConnectionState) {
-		p.log.Debug().Str(".state", state.String()).Msg("ICE")
+		p.log.Debug().Str("state", state.String()).Msg("rtc [ice] connection state change")
 		switch state {
 		case webrtc.ICEConnectionStateChecking:
 			// nothing
@@ -251,9 +270,8 @@ func (p *Peer) AddCandidate(candidate string, decoder Decoder) error {
 		return err
 	}
 	p.log.Debug().
-		Str("x", "[ice]").
 		Str("remote", iceCandidate.Candidate).
-		Msg("[rtc]")
+		Msg("rtc [ice] candidate")
 	buffered := p.conn.RemoteDescription() == nil ||
 		p.conn.SignalingState() != webrtc.SignalingStateStable
 	return p.addCandidate(iceCandidate, buffered)
@@ -273,14 +291,16 @@ func (p *Peer) AddChannel(label string, conf *webrtc.DataChannelInit, onMessage 
 	}
 
 	ch.OnOpen(func() {
-		p.log.Debug().Uint16("id", *ch.ID()).Msgf("Data channel [%v] opened", ch.Label())
+		p.log.Debug().
+			Uint16("id", *ch.ID()).
+			Msgf("rtc [chan] [%v] opened", ch.Label())
 	})
 	ch.OnMessage(func(m webrtc.DataChannelMessage) { onMessage(m.Data) })
 	ch.OnError(p.logx)
 	ch.OnClose(func() {
-		p.log.Debug().Msgf("Data channel [%v] has been closed", ch.Label())
+		p.log.Debug().Msgf("rtc [chan] [%v] has been closed", ch.Label())
 	})
-	p.log.Debug().Msgf("Added [%v] chan", label)
+	p.log.Debug().Msgf("rtc [chan] [%v] added", label)
 
 	return ch, nil
 }
@@ -294,7 +314,7 @@ func (p *Peer) Disconnect() {
 		_ = p.conn.Close()
 	}
 	p.icb.Clear()
-	p.log.Debug().Msg("WebRTC stop")
+	p.log.Debug().Msg("rtc stopped")
 }
 
 func (p *Peer) addCandidate(candidate webrtc.ICECandidateInit, wait bool) error {
@@ -314,17 +334,14 @@ func (p *Peer) flushPendingCandidates() {
 		return
 	}
 
-	p.log.Debug().
-		Str("x", "[ice]").
-		Msg(fmt.Sprintf("[rtc] buf (%d) flush", len(prev)))
+	p.log.Debug().Msg(fmt.Sprintf("rtc [ice] buf (%d) flush", len(prev)))
 
 	for _, candidate := range prev {
 		if err := p.addCandidate(candidate, false); err != nil {
 			p.log.Error().
-				Str("x", "[ice]").
 				Str("remote", candidate.Candidate).
 				Err(err).
-				Msg("[rtc]")
+				Msg("rtc [ice] add")
 		}
 	}
 	clear(prev)
