@@ -72,10 +72,13 @@ tests/
 *.exe
 
 .dockerignore
+deploy.sh
+config.yaml
 
 ### Libretro
 fbneo/
 hi/
 nvram/
 *.mcd
-
+assets/
+libretro/
