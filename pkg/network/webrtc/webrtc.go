@@ -149,13 +149,14 @@ func (p *Peer) OfferAnswer(offer bool) (*webrtc.SessionDescription, error) {
 	if err != nil {
 		return nil, err
 	}
-	p.log.Debug().
-		Str("type", sdp.Type.String()).
-		Msg("rtc [sdp]")
 
 	if err = p.conn.SetLocalDescription(sdp); err != nil {
 		return nil, err
 	}
+
+	p.log.Debug().
+		Str("type", sdp.Type.String()).
+		Msg("rtc [sdp] set (local)")
 
 	return &sdp, nil
 }
@@ -199,7 +200,9 @@ func (p *Peer) SetRemoteSDP(sdp string, decoder Decoder) error {
 		return err
 	}
 	p.flushPendingCandidates()
-	p.log.Debug().Msg("rtc [sdp] set (remote)")
+	p.log.Debug().
+		Str("type", answer.Type.String()).
+		Msg("rtc [sdp] set (remote)")
 	return nil
 }
 
