@@ -36,6 +36,28 @@ func (p *Peer) NewConnection(vCodec, aCodec string, onICECandidate func(ice any)
 	if p.conn, err = p.api.NewPeer(); err != nil {
 		return
 	}
+
+	id := uint16(0)
+	negotiated := true
+	ordered := false
+	maxRetransmits := uint16(0)
+
+	p.d, err = p.AddChannel("data", &webrtc.DataChannelInit{
+		ID:             &id,
+		Negotiated:     &negotiated,
+		Ordered:        &ordered,
+		MaxRetransmits: &maxRetransmits,
+	},
+		func(data []byte) {
+			if len(data) == 0 || p.OnMessage == nil {
+				return
+			}
+			p.OnMessage(data)
+		})
+	if err != nil {
+		return err
+	}
+
 	p.conn.OnConnectionStateChange(func(pcs webrtc.PeerConnectionState) {
 		p.log.Debug().Msgf("WebRTC state change: %v", pcs)
 		if pcs == webrtc.PeerConnectionStateConnected {
@@ -58,21 +80,6 @@ func (p *Peer) NewConnection(vCodec, aCodec string, onICECandidate func(ice any)
 
 	p.conn.OnDataChannel(func(ch *webrtc.DataChannel) {
 		p.log.Debug().Msgf("Added [%s] datachannel", ch.Label())
-
-		if ch.Label() == "data" {
-			p.d = ch
-			ch.OnMessage(func(m webrtc.DataChannelMessage) {
-				if len(m.Data) == 0 || p.OnMessage == nil {
-					return
-				}
-				p.OnMessage(m.Data)
-			})
-			ch.OnOpen(func() {
-				p.log.Debug().Uint16("id", *ch.ID()).Msgf("Data channel [%v] opened", ch.Label())
-			})
-			ch.OnError(p.logx)
-			ch.OnClose(func() { p.log.Debug().Msgf("Data channel [%v] has been closed", ch.Label()) })
-		}
 	})
 
 	return nil
@@ -98,15 +105,6 @@ func (p *Peer) AddTrack(id, label, codec string) (*webrtc.TrackLocalStaticSample
 	}()
 	p.log.Debug().Msgf("Added [%s] track", track.Codec().MimeType)
 	return track, nil
-}
-
-func (p *Peer) AddDataChannel() error {
-	return p.AddChannel("data", func(data []byte) {
-		if len(data) == 0 || p.OnMessage == nil {
-			return
-		}
-		p.OnMessage(data)
-	})
 }
 
 func (p *Peer) OfferAnswer(offer bool) (*webrtc.SessionDescription, error) {
@@ -250,17 +248,30 @@ func (p *Peer) AddCandidate(candidate string, decoder Decoder) error {
 	return nil
 }
 
-func (p *Peer) AddChannel(label string, onMessage func([]byte)) error {
-	ch, err := p.addDataChannel(label)
+func (p *Peer) AddChannel(label string, conf *webrtc.DataChannelInit, onMessage func([]byte)) (*webrtc.DataChannel, error) {
+	config := conf
+	if conf == nil {
+		ordered := false
+		maxRetransmits := uint16(0)
+		config = &webrtc.DataChannelInit{Ordered: &ordered, MaxRetransmits: &maxRetransmits}
+	}
+
+	ch, err := p.conn.CreateDataChannel(label, config)
 	if err != nil {
-		return err
+		return nil, err
 	}
-	if label == "data" {
-		p.d = ch
-	}
+
+	ch.OnOpen(func() {
+		p.log.Debug().Uint16("id", *ch.ID()).Msgf("Data channel [%v] opened", ch.Label())
+	})
 	ch.OnMessage(func(m webrtc.DataChannelMessage) { onMessage(m.Data) })
+	ch.OnError(p.logx)
+	ch.OnClose(func() {
+		p.log.Debug().Msgf("Data channel [%v] has been closed", ch.Label())
+	})
 	p.log.Debug().Msgf("Added [%v] chan", label)
-	return nil
+
+	return ch, nil
 }
 
 func (p *Peer) Disconnect() {
@@ -272,24 +283,6 @@ func (p *Peer) Disconnect() {
 		_ = p.conn.Close()
 	}
 	p.log.Debug().Msg("WebRTC stop")
-}
-
-// addDataChannel creates new WebRTC data channel.
-// Default params -- ordered: true, negotiated: false.
-func (p *Peer) addDataChannel(label string) (*webrtc.DataChannel, error) {
-	ch, err := p.conn.CreateDataChannel(label, &webrtc.DataChannelInit{
-		Ordered:        new(bool),
-		MaxRetransmits: new(uint16),
-	})
-	if err != nil {
-		return nil, err
-	}
-	ch.OnOpen(func() {
-		p.log.Debug().Uint16("id", *ch.ID()).Msgf("Data channel [%v] opened", ch.Label())
-	})
-	ch.OnError(p.logx)
-	ch.OnClose(func() { p.log.Debug().Msgf("Data channel [%v] has been closed", ch.Label()) })
-	return ch, nil
 }
 
 func (p *Peer) logx(err error) { p.log.Error().Err(err) }
