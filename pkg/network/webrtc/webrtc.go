@@ -1,6 +1,7 @@
 package webrtc
 
 import (
+	"encoding/json"
 	"fmt"
 	"strings"
 	"sync"
@@ -21,12 +22,16 @@ type Peer struct {
 	v *webrtc.TrackLocalStaticSample
 	d *webrtc.DataChannel
 
-	icb *IceCandidateBuffer
+	// flags
+	makingOffer                  bool
+	ignoreOffer                  bool
+	isSettingRemoteAnswerPending bool
+	polite                       bool
+
+	signaller func(ice, sdp *string)
 }
 
 var samplePool sync.Pool
-
-type Decoder func(data string, obj any) error
 
 func New(log *logger.Logger, api *ApiFactory) *Peer {
 	// hide directions (->) and clients (w, c, ...)
@@ -35,16 +40,108 @@ func New(log *logger.Logger, api *ApiFactory) *Peer {
 			Str(logger.DirectionField, "").
 			Str(logger.ClientField, ""),
 	)
-	return &Peer{api: api, log: custom, icb: &IceCandidateBuffer{}}
+	return &Peer{api: api, log: custom}
 }
 
-func (p *Peer) NewConnection(vCodec, aCodec string, onICECandidate func(ice any)) (err error) {
-	if p.conn != nil && p.conn.ConnectionState() == webrtc.PeerConnectionStateConnected {
+func (p *Peer) NewConnection(vCodec, aCodec string, signal func(*string, *string)) (err error) {
+	p.log.Debug().Msg("rtc start")
+
+	pc := p.conn
+	p.signaller = signal
+
+	if pc != nil && pc.ConnectionState() == webrtc.PeerConnectionStateConnected {
 		return
 	}
-	p.log.Debug().Msg("rtc start")
+
 	if p.conn, err = p.api.NewPeer(); err != nil {
 		return
+	}
+	pc = p.conn
+
+	pc.OnConnectionStateChange(func(pcs webrtc.PeerConnectionState) {
+		p.log.Debug().
+			Str("state", pcs.String()).
+			Msg("rtc [connection] state change")
+		if pcs == webrtc.PeerConnectionStateConnected {
+			p.log.Info().
+				Str(logger.DirectionField, "rtc").
+				Str(logger.ClientField, "").
+				Msg("(connected)")
+		}
+	})
+	pc.OnICECandidate(func(ice *webrtc.ICECandidate) {
+		if ice == nil {
+			signal(new(string), nil)
+			p.log.Debug().Msg("rtc [ice] gathering (complete)")
+			return
+		}
+		candidate := ice.ToJSON()
+		p.log.Debug().Str("local", candidate.Candidate).Msg("rtc [ice] candidate")
+
+		encoded, err := toJson(candidate)
+		if err != nil {
+			p.log.Error().Err(err).Msg("rtc [ice] candidate encoding failed")
+			return
+		}
+
+		signal(&encoded, nil)
+	})
+	pc.OnSignalingStateChange(func(ss webrtc.SignalingState) {
+		p.log.Debug().Str("state", ss.String()).Msg("rtc [signal] state change")
+	})
+	pc.OnICEConnectionStateChange(p.handleICEState(func() {}))
+	pc.OnDataChannel(func(ch *webrtc.DataChannel) {
+		p.log.Debug().Msgf("rtc [chan] [%s] remote", ch.Label())
+	})
+
+	p.makingOffer = false
+
+	pc.OnNegotiationNeeded(func() {
+		p.log.Debug().Msg("rtc [negotiation] needed")
+		defer func() { p.makingOffer = false }()
+
+		p.makingOffer = true
+		offer, err := p.Offer()
+		if err != nil {
+			p.log.Error().Err(err).Msg("rtc [negotiation] failed")
+			return
+		}
+
+		// if p.conn.SignalingState() != webrtc.SignalingStateStable {
+		// p.log.Debug().Msg("rtc [negotiation] waiting for signaling state stable")
+		// return
+		// }
+
+		sdp, err := toJson(offer)
+		if err != nil {
+			p.log.Error().Err(err).Msg("rtc [negotiation] failed")
+			return
+		}
+
+		signal(nil, &sdp)
+	})
+
+	if p.v, err = NewTrack("video", "video", vCodec); err != nil {
+		return err
+	}
+	p.log.Debug().Msgf("rtc [media] added [%s] track", p.v.Codec().MimeType)
+
+	if p.a, err = NewTrack("audio", "audio", aCodec); err != nil {
+		return err
+	}
+	p.log.Debug().Msgf("rtc [media] added [%s] track", p.a.Codec().MimeType)
+
+	sendOnly := webrtc.RTPTransceiverInit{Direction: webrtc.RTPTransceiverDirectionSendonly}
+
+	if _, err = p.conn.AddTransceiverFromTrack(p.v, sendOnly); err != nil {
+		panic(err)
+	}
+	if _, err = p.conn.AddTransceiverFromTrack(p.a, sendOnly); err != nil {
+		panic(err)
+	}
+
+	for _, rtpSender := range p.conn.GetSenders() {
+		go processRTCP(rtpSender)
 	}
 
 	id := uint16(0)
@@ -68,95 +165,20 @@ func (p *Peer) NewConnection(vCodec, aCodec string, onICECandidate func(ice any)
 		return err
 	}
 
-	p.conn.OnConnectionStateChange(func(pcs webrtc.PeerConnectionState) {
-		p.log.Debug().
-			Str("state", pcs.String()).
-			Msg("rtc [connection] state change")
-		if pcs == webrtc.PeerConnectionStateConnected {
-			p.log.Info().
-				Str(logger.DirectionField, "rtc").
-				Str(logger.ClientField, "").
-				Msg("(connected)")
-		}
-	})
-	p.conn.OnICECandidate(p.handleICECandidate(onICECandidate))
-
-	p.conn.OnSignalingStateChange(func(ss webrtc.SignalingState) {
-		p.log.Debug().
-			Str("state", ss.String()).
-			Msg("rtc [signal] state change")
-		if ss == webrtc.SignalingStateStable {
-			p.flushPendingCandidates()
-		}
-	})
-
-	// plug in the [video] track (out)
-	if p.v, err = p.AddTrack("video", "video", vCodec); err != nil {
-		return err
-	}
-
-	// plug in the [audio] track (out)
-	if p.a, err = p.AddTrack("audio", "audio", aCodec); err != nil {
-		return err
-	}
-
-	p.conn.OnICEConnectionStateChange(p.handleICEState(func() {}))
-
-	p.conn.OnDataChannel(func(ch *webrtc.DataChannel) {
-		p.log.Debug().Msgf("rtc [chan] [%s] remote", ch.Label())
-	})
-
-	p.conn.OnNegotiationNeeded(func() {
-		p.log.Debug().Msg("rtc [negotiation] needed")
-	})
-
 	return nil
 }
 
-func (p *Peer) AddTrack(id, label, codec string) (*webrtc.TrackLocalStaticSample, error) {
-	track, err := newTrack(id, label, codec)
-	if err != nil {
-		return nil, err
-	}
-	as, err := p.conn.AddTrack(track)
-	if err != nil {
-		return nil, err
-	}
-	// Read incoming RTCP packets
-	go func() {
-		buf := make([]byte, 1500)
-		for {
-			if _, _, err := as.Read(buf); err != nil {
-				return
-			}
-		}
-	}()
-	p.log.Debug().Msgf("rtc [media] added [%s] track", track.Codec().MimeType)
-	return track, nil
-}
-
-func (p *Peer) OfferAnswer(offer bool) (*webrtc.SessionDescription, error) {
+func (p *Peer) Offer() (*webrtc.SessionDescription, error) {
 	opts := webrtc.OfferAnswerOptions{ICETricklingSupported: true}
 
-	var sdp webrtc.SessionDescription
-	var err error
-
-	if offer {
-		sdp, err = p.conn.CreateOffer(&webrtc.OfferOptions{OfferAnswerOptions: opts})
-	} else {
-		sdp, err = p.conn.CreateAnswer(&webrtc.AnswerOptions{OfferAnswerOptions: opts})
-	}
+	sdp, err := p.conn.CreateOffer(&webrtc.OfferOptions{OfferAnswerOptions: opts})
 	if err != nil {
 		return nil, err
 	}
-
 	if err = p.conn.SetLocalDescription(sdp); err != nil {
 		return nil, err
 	}
-
-	p.log.Debug().
-		Str("type", sdp.Type.String()).
-		Msg("rtc [sdp] set (local)")
+	p.log.Debug().Str("type", sdp.Type.String()).Msg("rtc [sdp] set (local)")
 
 	return &sdp, nil
 }
@@ -190,23 +212,47 @@ func (p *Peer) send(data []byte, duration int64, fn func(media.Sample) error) er
 	return nil
 }
 
-func (p *Peer) SetRemoteSDP(sdp string, decoder Decoder) error {
+func (p *Peer) SetDescription(sdp string) error {
 	var answer webrtc.SessionDescription
-	if err := decoder(sdp, &answer); err != nil {
+	if err := fromJson(sdp, &answer); err != nil {
 		return err
 	}
+
+	readyForOffer := !p.makingOffer &&
+		(p.conn.SignalingState() == webrtc.SignalingStateStable || p.isSettingRemoteAnswerPending)
+
+	offerCollision := answer.Type == webrtc.SDPTypeOffer && !readyForOffer
+
+	ignoreOffer := !p.polite && offerCollision
+	if ignoreOffer {
+		return nil
+	}
+	p.isSettingRemoteAnswerPending = answer.Type == webrtc.SDPTypeAnswer
 	if err := p.conn.SetRemoteDescription(answer); err != nil {
 		p.log.Error().Err(err).Msg("Set remote description from peer failed")
 		return err
 	}
-	p.flushPendingCandidates()
-	p.log.Debug().
-		Str("type", answer.Type.String()).
-		Msg("rtc [sdp] set (remote)")
+	p.isSettingRemoteAnswerPending = false
+	if answer.Type == webrtc.SDPTypeOffer {
+		err := p.conn.SetLocalDescription(answer)
+		if err != nil {
+			p.log.Error().Err(err).Msg("Set remote description from peer failed")
+			return err
+		}
+
+		sdp, err := toJson(answer)
+		if err != nil {
+			return err
+		}
+
+		p.signaller(nil, &sdp)
+	}
+	p.log.Debug().Str("type", answer.Type.String()).Msg("rtc [sdp] set (remote)")
+
 	return nil
 }
 
-func newTrack(id string, label string, codec string) (*webrtc.TrackLocalStaticSample, error) {
+func NewTrack(id string, label string, codec string) (*webrtc.TrackLocalStaticSample, error) {
 	codec = strings.ToLower(codec)
 	var mime string
 	switch id {
@@ -231,20 +277,6 @@ func newTrack(id string, label string, codec string) (*webrtc.TrackLocalStaticSa
 	return webrtc.NewTrackLocalStaticSample(webrtc.RTPCodecCapability{MimeType: mime}, id, label)
 }
 
-func (p *Peer) handleICECandidate(callback func(any)) func(*webrtc.ICECandidate) {
-	return func(ice *webrtc.ICECandidate) {
-		// ICE gathering finish condition
-		if ice == nil {
-			callback(nil)
-			p.log.Debug().Msg("rtc [ice] gathering (complete)")
-			return
-		}
-		candidate := ice.ToJSON()
-		p.log.Debug().Str("local", candidate.Candidate).Msg("rtc [ice] candidate")
-		callback(&candidate)
-	}
-}
-
 func (p *Peer) handleICEState(onConnect func()) func(webrtc.ICEConnectionState) {
 	return func(state webrtc.ICEConnectionState) {
 		p.log.Debug().Str("state", state.String()).Msg("rtc [ice] connection state change")
@@ -267,17 +299,18 @@ func (p *Peer) handleICEState(onConnect func()) func(webrtc.ICEConnectionState) 
 	}
 }
 
-func (p *Peer) AddCandidate(candidate string, decoder Decoder) error {
+func (p *Peer) AddCandidate(candidate string) error {
 	var iceCandidate webrtc.ICECandidateInit
-	if err := decoder(candidate, &iceCandidate); err != nil {
+	if err := fromJson(candidate, &iceCandidate); err != nil {
 		return err
 	}
-	p.log.Debug().
-		Str("remote", iceCandidate.Candidate).
-		Msg("rtc [ice] candidate")
-	buffered := p.conn.RemoteDescription() == nil ||
-		p.conn.SignalingState() != webrtc.SignalingStateStable
-	return p.addCandidate(iceCandidate, buffered)
+	p.log.Debug().Str("remote", iceCandidate.Candidate).Msg("rtc [ice] candidate")
+
+	err := p.conn.AddICECandidate(iceCandidate)
+	if p.ignoreOffer {
+		err = nil
+	}
+	return err
 }
 
 func (p *Peer) AddChannel(label string, conf *webrtc.DataChannelInit, onMessage func([]byte)) (*webrtc.DataChannel, error) {
@@ -316,38 +349,34 @@ func (p *Peer) Disconnect() {
 		// ignore this due to DTLS fatal: conn is closed
 		_ = p.conn.Close()
 	}
-	p.icb.Clear()
 	p.log.Debug().Msg("rtc stopped")
 }
 
-func (p *Peer) addCandidate(candidate webrtc.ICECandidateInit, wait bool) error {
-	if wait {
-		p.icb.push(candidate)
-		return nil
-	}
-	if err := p.conn.AddICECandidate(candidate); err != nil {
-		return err
-	}
-	return nil
-}
-
-func (p *Peer) flushPendingCandidates() {
-	prev := p.icb.FlushAll()
-	if len(prev) == 0 {
-		return
-	}
-
-	p.log.Debug().Msg(fmt.Sprintf("rtc [ice] buf (%d) flush", len(prev)))
-
-	for _, candidate := range prev {
-		if err := p.addCandidate(candidate, false); err != nil {
-			p.log.Error().
-				Str("remote", candidate.Candidate).
-				Err(err).
-				Msg("rtc [ice] add")
+// Read incoming RTCP packets
+// Before these packets are returned they are processed by interceptors. For things
+// like NACK this needs to be called.
+func processRTCP(rtpSender *webrtc.RTPSender) {
+	rtcpBuf := make([]byte, 1500)
+	for {
+		if _, _, rtcpErr := rtpSender.Read(rtcpBuf); rtcpErr != nil {
+			return
 		}
 	}
-	clear(prev)
+}
+
+func fromJson(data string, obj any) error {
+	return json.Unmarshal([]byte(data), obj)
+}
+
+func toJson(data any) (string, error) {
+	if data == nil {
+		return "", nil
+	}
+	b, err := json.Marshal(data)
+	if err != nil {
+		return "", err
+	}
+	return string(b), nil
 }
 
 func (p *Peer) logx(err error) { p.log.Error().Err(err) }

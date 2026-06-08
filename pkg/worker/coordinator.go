@@ -107,10 +107,12 @@ func (c *coordinator) RegisterRoom(id string) { c.Notify(api.RegisterRoom, id) }
 
 // CloseRoom sends a signal to coordinator which will remove that room from its list.
 func (c *coordinator) CloseRoom(id string) { c.Notify(api.CloseRoom, id) }
-func (c *coordinator) IceCandidate(candidate string, sessionId string) {
+
+func (c *coordinator) Signal(ice *string, sdp *string, id string) {
 	c.Notify(api.WebrtcSignal, api.WebrtcSignalRequest{
-		Stateful: api.Stateful{Id: sessionId},
-		Ice:      &candidate,
+		Stateful: api.Stateful{Id: id},
+		Ice:      ice,
+		Sdp:      sdp,
 	})
 }
 

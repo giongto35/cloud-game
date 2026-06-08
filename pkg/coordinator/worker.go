@@ -87,10 +87,7 @@ func (w *Worker) HandleRequests(users HasUserRegistry) chan struct{} {
 			err = api.Do(p, w.HandleCloseRoom)
 		case api.WebrtcSignal:
 			err = api.DoE(p, func(rq api.WebrtcSignalRequest) error {
-				if rq.Ice == nil {
-					return fmt.Errorf("ice candidate is missing")
-				}
-				return w.HandleIceCandidate(rq, users)
+				return w.HandleSignal(rq, users)
 			})
 		case api.LibNewGameList:
 			err = api.DoE(p, w.HandleLibGameList)

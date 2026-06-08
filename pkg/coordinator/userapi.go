@@ -26,14 +26,9 @@ func (u *User) InitSession(wid string, ice []config.IceServer, games []api.AppMe
 	})
 }
 
-// SendWebrtcOffer sends SDP offer back to the user.
-func (u *User) SendWebrtcOffer(sdp string) {
-	u.Notify(api.WebrtcSignal, api.WebrtcSignalUser{Sdp: &sdp})
-}
-
-// SendWebrtcIceCandidate sends remote ICE candidate back to the user.
-func (u *User) SendWebrtcIceCandidate(candidate string) {
-	u.Notify(api.WebrtcSignal, api.WebrtcSignalUser{Ice: &candidate})
+// SendSignal sends webrtc signal back to the user.
+func (u *User) SendSignal(sdp *string, ice *string) {
+	u.Notify(api.WebrtcSignal, api.WebrtcSignalUser{Sdp: sdp, Ice: ice})
 }
 
 // StartGame signals the user that everything is ready to start a game.

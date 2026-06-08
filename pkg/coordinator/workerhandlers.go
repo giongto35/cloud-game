@@ -1,6 +1,10 @@
 package coordinator
 
-import "github.com/giongto35/cloud-game/v3/pkg/api"
+import (
+	"fmt"
+
+	"github.com/giongto35/cloud-game/v3/pkg/api"
+)
 
 func (w *Worker) HandleRegisterRoom(rq api.RegisterRoomRequest) { w.RoomId = string(rq) }
 
@@ -11,12 +15,17 @@ func (w *Worker) HandleCloseRoom(rq api.CloseRoomRequest) {
 	}
 }
 
-func (w *Worker) HandleIceCandidate(rq api.WebrtcSignalRequest, users HasUserRegistry) error {
-	if usr := users.Find(rq.Id); usr != nil {
-		usr.SendWebrtcIceCandidate(*rq.Ice)
-	} else {
-		w.log.Warn().Str("id", rq.Id).Msg("unknown session")
+func (w *Worker) HandleSignal(rq api.WebrtcSignalRequest, users HasUserRegistry) error {
+	if rq.Ice == nil && rq.Sdp == nil {
+		return fmt.Errorf("ice candidate or SDP are missing")
 	}
+
+	user := users.Find(rq.Id)
+	if user == nil {
+		w.log.Warn().Str("id", rq.Id).Msg("unknown session")
+		return fmt.Errorf("unknown session")
+	}
+	user.SendSignal(rq.Sdp, rq.Ice)
 	return nil
 }
 

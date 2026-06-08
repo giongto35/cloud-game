@@ -18,7 +18,6 @@ func (u *User) HandleInitWebrtcStream(rq api.InitUserWebrtcStreamRequest) {
 		u.log.Error().Err(err).Msg("malformed WebRTC init response")
 		return
 	}
-	u.SendWebrtcOffer(string(*resp))
 }
 
 func (u *User) HandleWebrtcSignal(rq api.WebrtcSignalUser) {

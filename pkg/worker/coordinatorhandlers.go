@@ -1,6 +1,8 @@
 package worker
 
 import (
+	"encoding/json"
+
 	"github.com/giongto35/cloud-game/v3/pkg/api"
 	"github.com/giongto35/cloud-game/v3/pkg/com"
 	"github.com/giongto35/cloud-game/v3/pkg/config"
@@ -9,7 +11,6 @@ import (
 	"github.com/giongto35/cloud-game/v3/pkg/worker/caged"
 	"github.com/giongto35/cloud-game/v3/pkg/worker/media"
 	"github.com/giongto35/cloud-game/v3/pkg/worker/room"
-	"github.com/goccy/go-json"
 )
 
 // buildConnQuery builds initial connection data query to a coordinator.
@@ -28,35 +29,11 @@ func buildConnQuery(id com.Uid, conf config.Worker, address string) (string, err
 
 func (c *coordinator) HandleInitWebrtcStream(rq api.InitWebrtcStreamRequest, w *Worker, factory *webrtc.ApiFactory) api.Out {
 	peer := webrtc.New(c.log, factory)
-	err := peer.NewConnection(w.conf.Encoder.Video.Codec, "opus", func(data any) {
-		candidate, err := toJson(data)
-		if err != nil {
-			c.log.Error().Err(err).Msgf("ICE candidate encode fail for [%v]", data)
-			return
-		}
-		c.IceCandidate(candidate, rq.Id)
+	err := peer.NewConnection(w.conf.Encoder.Video.Codec, "opus", func(ice, sdp *string) {
+		c.Signal(ice, sdp, rq.Id)
 	})
 	if err != nil {
 		c.log.Error().Err(err).Msg("cannot create new webrtc session")
-		return api.EmptyPacket
-	}
-
-	if rq.Initiator {
-		if err := peer.SetRemoteSDP(rq.Sdp, fromJson); err != nil {
-			c.log.Error().Err(err).Msgf("cannot set remote SDP of peer [%v]", rq.Id)
-			return api.EmptyPacket
-		}
-	}
-
-	lsdp, err := peer.OfferAnswer(!rq.Initiator)
-	if err != nil {
-		c.log.Error().Err(err).Msgf("cannot create SDP for peer [%v]", rq.Id)
-		return api.EmptyPacket
-	}
-
-	sdp, err := toJson(*lsdp)
-	if err != nil {
-		c.log.Error().Err(err).Msgf("SDP encode fail for [%v]", *lsdp)
 		return api.EmptyPacket
 	}
 
@@ -64,7 +41,7 @@ func (c *coordinator) HandleInitWebrtcStream(rq api.InitWebrtcStreamRequest, w *
 	c.log.Info().Msgf("Peer connection: %s", user.Id())
 	w.router.AddUser(user)
 
-	return api.Out{Payload: sdp}
+	return api.OkPacket
 }
 
 func (c *coordinator) HandleWebrtcSignal(rq api.WebrtcSignalRequest, w *Worker) {
@@ -75,13 +52,13 @@ func (c *coordinator) HandleWebrtcSignal(rq api.WebrtcSignalRequest, w *Worker) 
 	}
 
 	if rq.Sdp != nil {
-		if err := room.WithWebRTC(user.Session).SetRemoteSDP(*rq.Sdp, fromJson); err != nil {
+		if err := room.WithWebRTC(user.Session).SetDescription(*rq.Sdp); err != nil {
 			c.log.Error().Err(err).Msgf("cannot set remote SDP of client [%v]", rq.Id)
 		}
 	}
 
 	if rq.Ice != nil {
-		if err := room.WithWebRTC(user.Session).AddCandidate(*rq.Ice, fromJson); err != nil {
+		if err := room.WithWebRTC(user.Session).AddCandidate(*rq.Ice); err != nil {
 			c.log.Error().Err(err).Msgf("cannot add ICE candidate of the client [%v]", rq.Id)
 		}
 	}
@@ -300,10 +277,6 @@ func (c *coordinator) HandleRecordGame(rq api.RecordGameRequest, w *Worker) api.
 	}
 	room.WithRecorder(r.App()).ToggleRecording(rq.Active, rq.User)
 	return api.OkPacket
-}
-
-func fromJson(data string, obj any) error {
-	return json.Unmarshal([]byte(data), obj)
 }
 
 func toJson(data any) (string, error) {
