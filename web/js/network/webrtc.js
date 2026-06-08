@@ -117,6 +117,8 @@ export const webrtc = {
         onDisconnect = stub,
         signalling,
     } = {}) => {
+        let connectionTime;
+
         iceServers = iceServers || [];
         log.debug("[rtc] [config] ICE:", iceServers);
         pc = new RTCPeerConnection({ iceServers });
@@ -154,6 +156,9 @@ export const webrtc = {
             switch (pc.connectionState) {
                 case "connected":
                     onConnect();
+                    log.debug(
+                        `[rtc] connection time: ${performance.now() - connectionTime}ms`,
+                    );
                     break;
                 case "failed":
                 case "closed":
@@ -166,6 +171,7 @@ export const webrtc = {
         };
         pc.ontrack = (event) => stream.addTrack(event.track);
 
+        connectionTime = performance.now();
         if (initiator) {
             // push datachannel
             try {
