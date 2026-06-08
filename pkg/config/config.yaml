@@ -436,6 +436,7 @@ webrtc:
   icePorts:
     min:
     max:
+  includeLoopbackCandidate: false
   #  2. select a single port to forward all ICE connections there
   singlePort:
   # override ICE candidate IP, see: https://github.com/pion/webrtc/issues/835,

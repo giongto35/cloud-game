@@ -38,7 +38,7 @@ func NewApiFactory(conf config.Webrtc, log *logger.Logger, mod ModApiFun) (api *
 	}
 	customLogger := NewPionLogger(log, conf.LogLevel)
 	s := webrtc.SettingEngine{LoggerFactory: customLogger}
-	s.SetIncludeLoopbackCandidate(true)
+	s.SetIncludeLoopbackCandidate(conf.IncludeLoopbackCandidate)
 	if conf.HasDtlsRole() {
 		log.Info().Msgf("A custom DTLS role [%v]", conf.DtlsRole)
 		err = s.SetAnsweringDTLSRole(webrtc.DTLSRole(conf.DtlsRole))
