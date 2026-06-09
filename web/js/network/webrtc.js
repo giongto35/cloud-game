@@ -186,6 +186,13 @@ export const webrtc = {
             log.debug("[rtc] negotiation");
         };
         pc.ontrack = (event) => stream.addTrack(event.track);
+        pc.onsignalingstatechange = () => {
+            log.debug(`[rtc] [sig] state: ${pc.signalingState}`);
+
+            if (pc.signalingState === "stable") {
+                ice.flush(pc);
+            }
+        };
 
         connectionTime = performance.now();
         if (initiator) {
@@ -225,7 +232,9 @@ export const webrtc = {
     },
     candidate: (/** @type {RTCIceCandidateInit | string} */ candidate) => {
         log.debug(`[rtc] [ice] remote`, candidate);
-        if (pc) ice.add(pc, candidate, !pc.remoteDescription);
+        const buffered =
+            !pc.remoteDescription || pc.signalingState !== "stable";
+        if (pc) ice.add(pc, candidate, buffered);
     },
     send: (chan, data) => {
         const ch = channels.get(chan);
