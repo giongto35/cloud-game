@@ -80,5 +80,5 @@ fbneo/
 hi/
 nvram/
 *.mcd
-assets/
-libretro/
+/assets/
+/libretro/
