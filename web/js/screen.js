@@ -68,8 +68,8 @@ rootEl.addEventListener("fullscreenchange", async () => {
 
     cursor(!fs);
     gui.toggle(footerEl, fs);
-    await controls(fs);
     state.current?.onFullscreen?.(fs);
+    setTimeout(() => controls(fs), 199);
 });
 
 sub(REFRESH_INPUT, async () => {
