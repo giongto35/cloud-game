@@ -1,6 +1,8 @@
 package worker
 
 import (
+	"encoding/json"
+
 	"github.com/giongto35/cloud-game/v3/pkg/api"
 	"github.com/giongto35/cloud-game/v3/pkg/com"
 	"github.com/giongto35/cloud-game/v3/pkg/config"
@@ -9,7 +11,6 @@ import (
 	"github.com/giongto35/cloud-game/v3/pkg/worker/caged"
 	"github.com/giongto35/cloud-game/v3/pkg/worker/media"
 	"github.com/giongto35/cloud-game/v3/pkg/worker/room"
-	"github.com/goccy/go-json"
 )
 
 // buildConnQuery builds initial connection data query to a coordinator.
@@ -27,36 +28,32 @@ func buildConnQuery(id com.Uid, conf config.Worker, address string) (string, err
 }
 
 func (c *coordinator) HandleInitWebrtcStream(rq api.InitWebrtcStreamRequest, w *Worker, factory *webrtc.ApiFactory) api.Out {
-	peer := webrtc.New(c.log, factory)
-	err := peer.NewConnection(w.conf.Encoder.Video.Codec, "opus", func(data any) {
-		candidate, err := toJson(data)
+	var err error
+	defer func() {
 		if err != nil {
-			c.log.Error().Err(err).Msgf("ICE candidate encode fail for [%v]", data)
-			return
+			c.log.Error().Err(err).Str("peer", rq.Id).Msg("")
 		}
-		c.IceCandidate(candidate, rq.Id)
-	})
-	if err != nil {
-		c.log.Error().Err(err).Msg("cannot create new webrtc session")
+	}()
+
+	peer := webrtc.New(c.log, factory)
+
+	if err = peer.NewConnection(
+		w.conf.Encoder.Video.Codec,
+		"opus",
+		func(ice *string) { c.IceCandidate(*ice, rq.Id) },
+	); err != nil {
 		return api.EmptyPacket
 	}
 
 	if rq.Initiator {
-		if err := peer.SetRemoteSDP(rq.Sdp, fromJson); err != nil {
-			c.log.Error().Err(err).Msgf("cannot set remote SDP of peer [%v]", rq.Id)
+		if err = peer.HandleSignal(nil, &rq.Sdp); err != nil {
 			return api.EmptyPacket
 		}
 	}
 
-	lsdp, err := peer.OfferAnswer(!rq.Initiator)
+	var sdp string
+	sdp, err = peer.OfferAnswer(!rq.Initiator)
 	if err != nil {
-		c.log.Error().Err(err).Msgf("cannot create SDP for peer [%v]", rq.Id)
-		return api.EmptyPacket
-	}
-
-	sdp, err := toJson(*lsdp)
-	if err != nil {
-		c.log.Error().Err(err).Msgf("SDP encode fail for [%v]", *lsdp)
 		return api.EmptyPacket
 	}
 
@@ -69,20 +66,13 @@ func (c *coordinator) HandleInitWebrtcStream(rq api.InitWebrtcStreamRequest, w *
 
 func (c *coordinator) HandleWebrtcSignal(rq api.WebrtcSignalRequest, w *Worker) {
 	user := w.router.FindUser(rq.Id)
-
 	if user == nil {
 		return
 	}
 
-	if rq.Sdp != nil {
-		if err := room.WithWebRTC(user.Session).SetRemoteSDP(*rq.Sdp, fromJson); err != nil {
-			c.log.Error().Err(err).Msgf("cannot set remote SDP of client [%v]", rq.Id)
-		}
-	}
-
-	if rq.Ice != nil {
-		if err := room.WithWebRTC(user.Session).AddCandidate(*rq.Ice, fromJson); err != nil {
-			c.log.Error().Err(err).Msgf("cannot add ICE candidate of the client [%v]", rq.Id)
+	if webrtc := room.WithWebRTC(user.Session); webrtc != nil {
+		if err := webrtc.HandleSignal(rq.Ice, rq.Sdp); err != nil {
+			c.log.Error().Err(err).Msgf("cannot handle the signal from [%v]", rq.Id)
 		}
 	}
 }
@@ -212,10 +202,10 @@ func (c *coordinator) HandleGameStart(rq api.StartGameRequest, w *Worker) api.Ou
 	needsKbMouse := r.App().KbMouseSupport()
 
 	s := room.WithWebRTC(user.Session)
-	s.OnMessage = func(data []byte) { r.App().Input(user.Index, byte(caged.RetroPad), data) }
+	s.OnMessage(func(data []byte) { r.App().Input(user.Index, byte(caged.RetroPad), data) })
 	if needsKbMouse {
-		_, _ = s.AddChannel("keyboard", nil, func(data []byte) { r.App().Input(user.Index, byte(caged.Keyboard), data) })
-		_, _ = s.AddChannel("mouse", nil, func(data []byte) { r.App().Input(user.Index, byte(caged.Mouse), data) })
+		_, _ = s.Channel("keyboard", nil, func(data []byte) { r.App().Input(user.Index, byte(caged.Keyboard), data) })
+		_, _ = s.Channel("mouse", nil, func(data []byte) { r.App().Input(user.Index, byte(caged.Mouse), data) })
 	}
 
 	c.RegisterRoom(r.Id())
@@ -300,10 +290,6 @@ func (c *coordinator) HandleRecordGame(rq api.RecordGameRequest, w *Worker) api.
 	}
 	room.WithRecorder(r.App()).ToggleRecording(rq.Active, rq.User)
 	return api.OkPacket
-}
-
-func fromJson(data string, obj any) error {
-	return json.Unmarshal([]byte(data), obj)
 }
 
 func toJson(data any) (string, error) {
