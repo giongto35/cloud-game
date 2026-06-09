@@ -232,9 +232,11 @@ export const webrtc = {
     },
     candidate: (/** @type {RTCIceCandidateInit | string} */ candidate) => {
         log.debug(`[rtc] [ice] remote`, candidate);
-        const buffered =
-            !pc.remoteDescription || pc.signalingState !== "stable";
-        if (pc) ice.add(pc, candidate, buffered);
+        if (pc) {
+            const buffered =
+                !pc.remoteDescription || pc.signalingState !== "stable";
+            ice.add(pc, candidate, buffered);
+        }
     },
     send: (chan, data) => {
         const ch = channels.get(chan);
