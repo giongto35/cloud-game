@@ -71,6 +71,9 @@ type Video struct {
 	Vpx struct {
 		Bitrate          uint
 		KeyframeInterval uint
+		CpuUsed          int
+		TileColumns      int
+		Tune             string
 	}
 }
 

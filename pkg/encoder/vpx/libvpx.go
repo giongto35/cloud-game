@@ -14,6 +14,10 @@ package vpx
 #define VP8_FOURCC 0x30385056
 #define VP9_FOURCC 0x30395056
 
+#ifndef VP9E_TUNE_SCREEN
+#define VP9E_TUNE_SCREEN 1
+#endif
+
 typedef struct VpxInterface {
   const char *const name;
   const uint32_t fourcc;
@@ -41,6 +45,30 @@ FrameBuffer get_frame_buffer(vpx_codec_ctx_t *codec, vpx_codec_iter_t *iter) {
 		fb.size = pkt->data.frame.sz;
 	}
     return fb;
+}
+
+vpx_codec_err_t set_vpx_cpu_used(vpx_codec_ctx_t *ctx, int value) {
+	return vpx_codec_control_(ctx, VP8E_SET_CPUUSED, value);
+}
+
+vpx_codec_err_t set_vp9_tile_columns(vpx_codec_ctx_t *ctx, int value) {
+	return vpx_codec_control_(ctx, VP9E_SET_TILE_COLUMNS, value);
+}
+
+vpx_codec_err_t set_vp9_tune_content(vpx_codec_ctx_t *ctx, int value) {
+	return vpx_codec_control_(ctx, VP9E_SET_TUNE_CONTENT, value);
+}
+
+vpx_codec_err_t set_vp9_row_mt(vpx_codec_ctx_t *ctx, int value) {
+	return vpx_codec_control_(ctx, VP9E_SET_ROW_MT, value);
+}
+
+vpx_codec_err_t set_vp8_auto_alt_ref(vpx_codec_ctx_t *ctx, int value) {
+	return vpx_codec_control_(ctx, VP8E_SET_ENABLEAUTOALTREF, value);
+}
+
+vpx_codec_err_t set_vp8_noise_sensitivity(vpx_codec_ctx_t *ctx, int value) {
+	return vpx_codec_control_(ctx, VP8E_SET_NOISE_SENSITIVITY, value);
 }
 
 const VpxInterface vpx_encoders[] = {
@@ -80,6 +108,7 @@ void vpx_img_read(vpx_image_t *dst, void *src) {
 import "C"
 import (
 	"fmt"
+	"runtime"
 	"unsafe"
 )
 
@@ -94,11 +123,32 @@ type Vpx struct {
 
 func (vpx *Vpx) SetFlip(b bool) { vpx.flipped = b }
 
+func autoThreads(configured, cpus int) int {
+	if configured != 0 {
+		return configured
+	}
+	reserve := cpus / 4
+	if reserve < 1 {
+		reserve = 1
+	}
+	if t := cpus - reserve; t > 0 {
+		return t
+	}
+	return 1
+}
+
 type Options struct {
 	// Target bandwidth to use for this stream, in kilobits per second.
 	Bitrate uint
 	// Force keyframe interval.
 	KeyframeInterval uint
+	// Speed/quality tradeoff (0=auto, 1–8 manual). Defaults to 0.
+	// Applies to both VP8 and VP9.
+	CpuUsed int
+	// Log2 of tile columns for VP9 frame-level parallelism (0–6). VP9 only.
+	TileColumns int
+	// Content tuning: "screen" for game/screen content. VP9 only.
+	Tune string
 }
 
 func NewEncoder(w, h int, th int, version int, opts *Options) (*Vpx, error) {
@@ -114,7 +164,9 @@ func NewEncoder(w, h int, th int, version int, opts *Options) (*Vpx, error) {
 	if opts == nil {
 		opts = &Options{
 			Bitrate:          1200,
-			KeyframeInterval: 5,
+			KeyframeInterval: 120,
+			TileColumns:      2,
+			Tune:             "screen",
 		}
 	}
 
@@ -135,15 +187,54 @@ func NewEncoder(w, h int, th int, version int, opts *Options) (*Vpx, error) {
 
 	cfg.g_w = C.uint(w)
 	cfg.g_h = C.uint(h)
-	if th != 0 {
-		cfg.g_threads = C.uint(th)
-	}
+	cfg.g_threads = C.uint(autoThreads(th, runtime.NumCPU()))
 	cfg.g_lag_in_frames = 0
 	cfg.rc_target_bitrate = C.uint(opts.Bitrate)
-	cfg.g_error_resilient = C.VPX_ERROR_RESILIENT_DEFAULT
+	cfg.g_error_resilient = 0
 
 	if C.call_vpx_codec_enc_init(&vpx.codecCtx, encoder, &cfg) != 0 {
 		return nil, fmt.Errorf("failed to initialize encoder")
+	}
+
+	// Speed/quality tradeoff: higher = faster, lower = better quality.
+	if opts.CpuUsed == 0 {
+		thr := autoThreads(th, runtime.NumCPU())
+		switch {
+		case thr <= 2:
+			opts.CpuUsed = 8
+		case thr <= 4:
+			opts.CpuUsed = 7
+		default:
+			opts.CpuUsed = 6
+		}
+	}
+	C.set_vpx_cpu_used(&vpx.codecCtx, C.int(opts.CpuUsed))
+
+	// VP9-specific tuning.
+	if version == 9 {
+		if opts.TileColumns == 0 {
+			thr := autoThreads(th, runtime.NumCPU())
+			if thr >= 4 {
+				opts.TileColumns = 2
+			} else if thr >= 2 {
+				opts.TileColumns = 1
+			}
+		}
+		if opts.TileColumns > 0 {
+			C.set_vp9_tile_columns(&vpx.codecCtx, C.int(opts.TileColumns))
+		}
+		if opts.Tune == "screen" {
+			C.set_vp9_tune_content(&vpx.codecCtx, C.VP9E_TUNE_SCREEN)
+		}
+		C.set_vp9_row_mt(&vpx.codecCtx, 1)
+	}
+
+	// VP8 real-time tuning: disable features that add latency.
+	if version == 8 {
+		// No alt-ref frames for zero-latency.
+		C.set_vp8_auto_alt_ref(&vpx.codecCtx, 0)
+		// Reduce noise sensitivity — game content is low-noise.
+		C.set_vp8_noise_sensitivity(&vpx.codecCtx, 0)
 	}
 
 	return &vpx, nil
