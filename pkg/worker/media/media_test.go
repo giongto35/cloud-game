@@ -58,6 +58,9 @@ func run(w, h int, cod encoder.VideoCodec, count int, a *image.RGBA, b *image.RG
 		Vpx: struct {
 			Bitrate          uint
 			KeyframeInterval uint
+			CpuUsed          int
+			TileColumns      int
+			Tune             string
 		}{
 			Bitrate:          1000,
 			KeyframeInterval: 5,
