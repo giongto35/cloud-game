@@ -78,6 +78,10 @@ void input_cache_clear(void) {
     memset(&input_cache, 0, sizeof(input_cache));
 }
 
+void input_cache_set_keyboard_bulk(const uint8_t *keys, size_t count) {
+    memcpy(input_cache.keyboard, keys, count);
+}
+
 void core_log_cgo(enum retro_log_level level, const char *fmt, ...) {
     char msg[2048] = {0};
     va_list va;

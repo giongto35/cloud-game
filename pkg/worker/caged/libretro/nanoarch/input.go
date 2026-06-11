@@ -13,6 +13,7 @@ void input_cache_set_port(unsigned port, uint32_t buttons,
                           int16_t lx, int16_t ly, int16_t rx, int16_t ry,
                           int16_t l2, int16_t r2);
 void input_cache_set_keyboard_key(unsigned id, uint8_t pressed);
+void input_cache_set_keyboard_bulk(const uint8_t *keys, size_t count);
 void input_cache_set_mouse(int16_t dx, int16_t dy, uint8_t buttons);
 void input_cache_clear(void);
 */
@@ -131,10 +132,16 @@ func (ks *KeyboardState) SetKey(data []byte) (pressed bool, key uint, mod uint16
 
 // SyncToCache syncs keyboard state to C-side cache.
 func (ks *KeyboardState) SyncToCache() {
-	for id := 0; id < RetrokLast; id++ {
-		pressed := (ks.keys[id/64].Load() >> (id % 64)) & 1
-		C.input_cache_set_keyboard_key(C.uint(id), C.uint8_t(pressed))
+	// Unpack 6 atomic uint64s into a local byte buffer and send in one CGO call.
+	var buf [RetrokLast]byte
+	for i := range ks.keys {
+		v := ks.keys[i].Load()
+		base := i << 6
+		for b := 0; b < 64 && base+b < RetrokLast; b++ {
+			buf[base+b] = byte((v >> b) & 1)
+		}
 	}
+	C.input_cache_set_keyboard_bulk((*C.uint8_t)(&buf[0]), C.size_t(RetrokLast))
 }
 
 // MouseState tracks mouse delta and buttons.
