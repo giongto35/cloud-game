@@ -1,9 +1,7 @@
-import { pub, MOUSE_PRESSED, MOUSE_MOVED } from 'event';
-import { browser, env } from 'env';
+import { pub, MOUSE_PRESSED, MOUSE_MOVED } from "event";
 
-const hasRawPointer = 'onpointerrawupdate' in window;
-const isFirefox = env.getBrowser === browser.firefox;
-const moveEvent = hasRawPointer ? 'pointerrawupdate' : 'pointermove';
+const hasRawPointer = "onpointerrawupdate" in window;
+const moveEvent = hasRawPointer ? "pointerrawupdate" : "pointermove";
 
 // Reusable event data objects to avoid allocations
 const move = { dx: 0, dy: 0 };
@@ -27,8 +25,16 @@ const scaleDpi = (dx, dy, srcW, srcH) => {
     return move;
 };
 
-const onDown = (e) => { btn.b = e.button; btn.p = true; pub(MOUSE_PRESSED, btn); };
-const onUp = (e) => { btn.b = e.button; btn.p = false; pub(MOUSE_PRESSED, btn); };
+const onDown = (e) => {
+    btn.b = e.button;
+    btn.p = true;
+    pub(MOUSE_PRESSED, btn);
+};
+const onUp = (e) => {
+    btn.b = e.button;
+    btn.p = false;
+    pub(MOUSE_PRESSED, btn);
+};
 
 /*
  * Tracks pointer movement and publishes events.
@@ -39,8 +45,7 @@ const track = (el, getDisplay) => {
     let off = null;
 
     const handle = (e) => {
-        // Firefox workaround: skip coalesced events
-        const events = isFirefox ? [e] : (e.getCoalescedEvents?.() || [e]);
+        const events = e.getCoalescedEvents?.() || [e];
         const { w, h, s } = getDisplay();
 
         for (const ev of events) {
@@ -74,16 +79,19 @@ const autoHide = (el, timeout = 3000) => {
     let timer;
     const cl = el.classList;
     const reset = () => {
-        cl.remove('no-pointer');
+        cl.remove("no-pointer");
         clearTimeout(timer);
-        timer = setTimeout(() => cl.add('no-pointer'), timeout);
+        timer = setTimeout(() => cl.add("no-pointer"), timeout);
     };
 
     return (on) => {
         clearTimeout(timer);
-        el.removeEventListener('pointermove', reset);
-        cl.remove('no-pointer');
-        on || (el.addEventListener('pointermove', reset), reset());
+        el.removeEventListener("pointermove", reset);
+        cl.remove("no-pointer");
+        if (on) {
+            el.addEventListener("pointermove", reset);
+            reset();
+        }
     };
 };
 
