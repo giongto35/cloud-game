@@ -36,14 +36,16 @@ vpx_codec_err_t call_vpx_codec_enc_init(vpx_codec_ctx_t *codec, const VpxInterfa
 	return vpx_codec_enc_init(codec, encoder->codec_interface(), cfg, 0);
 }
 
+// Drains all encoded packets, returning the first frame found.
 FrameBuffer get_frame_buffer(vpx_codec_ctx_t *codec, vpx_codec_iter_t *iter) {
-    // iter has set to NULL when after add new image
     FrameBuffer fb = {NULL, 0};
-    const vpx_codec_cx_pkt_t *pkt = vpx_codec_get_cx_data(codec, iter);
-	if (pkt != NULL && pkt->kind == VPX_CODEC_CX_FRAME_PKT) {
-		fb.ptr = pkt->data.frame.buf;
-		fb.size = pkt->data.frame.sz;
-	}
+    const vpx_codec_cx_pkt_t *pkt;
+    while ((pkt = vpx_codec_get_cx_data(codec, iter)) != NULL) {
+        if (pkt->kind == VPX_CODEC_CX_FRAME_PKT && fb.ptr == NULL) {
+            fb.ptr = pkt->data.frame.buf;
+            fb.size = pkt->data.frame.sz;
+        }
+    }
     return fb;
 }
 
@@ -237,7 +239,7 @@ func NewEncoder(w, h int, th int, kfi int, version int, opts *Options) (*Vpx, er
 // Encode encodes yuv image with the VPX8 encoder.
 // see: https://chromium.googlesource.com/webm/libvpx/+/master/examples/simple_encoder.c
 func (vpx *Vpx) Encode(yuv []byte) []byte {
-	C.vpx_img_read(&vpx.image, unsafe.Pointer(&yuv[0]))
+	C.vpx_img_read(&vpx.image, unsafe.Pointer(unsafe.SliceData(yuv)))
 	if vpx.flipped {
 		C.vpx_img_flip(&vpx.image)
 	}
@@ -246,17 +248,21 @@ func (vpx *Vpx) Encode(yuv []byte) []byte {
 	if vpx.kfi > 0 && vpx.frameCount%vpx.kfi == 0 {
 		flags |= C.VPX_EFLAG_FORCE_KF
 	}
+	// VPX_DL_REALTIME: deadline is 1 (return as fast as possible, may drop frames).
 	if C.vpx_codec_encode(&vpx.codecCtx, &vpx.image, C.vpx_codec_pts_t(vpx.frameCount), 1, C.vpx_enc_frame_flags_t(flags), C.VPX_DL_REALTIME) != 0 {
-		fmt.Println("Failed to encode frame")
+		vpx.frameCount++
+		return nil
 	}
 	vpx.frameCount++
 
 	var iter C.vpx_codec_iter_t
 	fb := C.get_frame_buffer(&vpx.codecCtx, &iter)
 	if fb.ptr == nil {
-		return []byte{}
+		return nil
 	}
-	return C.GoBytes(fb.ptr, fb.size)
+
+	// zero-copy slice view into the encoder's internal buffer
+	return unsafe.Slice((*byte)(fb.ptr), fb.size)
 }
 
 func (vpx *Vpx) Info() string {
@@ -270,6 +276,5 @@ func (vpx *Vpx) IntraRefresh() {
 func (vpx *Vpx) Shutdown() error {
 	C.vpx_img_free(&vpx.image)
 	C.vpx_codec_destroy(&vpx.codecCtx)
-	vpx.flipped = false
 	return nil
 }
