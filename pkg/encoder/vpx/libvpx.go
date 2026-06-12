@@ -239,20 +239,16 @@ func NewEncoder(w, h int, th int, kfi int, version int, opts *Options) (*Vpx, er
 // Encode encodes yuv image with the VPX8 encoder.
 // see: https://chromium.googlesource.com/webm/libvpx/+/master/examples/simple_encoder.c
 func (vpx *Vpx) Encode(yuv []byte) []byte {
-	C.vpx_img_read(&vpx.image, unsafe.Pointer(unsafe.SliceData(yuv)))
+	C.vpx_img_read(&vpx.image, unsafe.Pointer(&yuv[0]))
 	if vpx.flipped {
 		C.vpx_img_flip(&vpx.image)
 	}
 
 	var flags C.int
-	if vpx.kfi > 0 && vpx.frameCount%vpx.kfi == 0 {
+	if vpx.frameCount < 3 || (vpx.kfi > 0 && vpx.frameCount%vpx.kfi == 0) {
 		flags |= C.VPX_EFLAG_FORCE_KF
 	}
-	// VPX_DL_REALTIME: deadline is 1 (return as fast as possible, may drop frames).
-	if C.vpx_codec_encode(&vpx.codecCtx, &vpx.image, C.vpx_codec_pts_t(vpx.frameCount), 1, C.vpx_enc_frame_flags_t(flags), C.VPX_DL_REALTIME) != 0 {
-		vpx.frameCount++
-		return nil
-	}
+	C.vpx_codec_encode(&vpx.codecCtx, &vpx.image, C.vpx_codec_pts_t(vpx.frameCount), 1, C.vpx_enc_frame_flags_t(flags), C.VPX_DL_REALTIME)
 	vpx.frameCount++
 
 	var iter C.vpx_codec_iter_t
