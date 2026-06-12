@@ -73,7 +73,7 @@ tests/
 
 .dockerignore
 deploy.sh
-config.yaml
+/config.yaml
 
 ### Libretro
 fbneo/
