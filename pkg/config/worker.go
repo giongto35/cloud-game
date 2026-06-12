@@ -56,9 +56,10 @@ type Audio struct {
 }
 
 type Video struct {
-	Codec   string
-	Threads int
-	H264    struct {
+	Codec            string
+	KeyframeInterval int
+	Threads          int
+	H264             struct {
 		Mode     string
 		Crf      uint8
 		MaxRate  int
@@ -69,11 +70,10 @@ type Video struct {
 		Tune     string
 	}
 	Vpx struct {
-		Bitrate          uint
-		KeyframeInterval uint
-		CpuUsed          int
-		TileColumns      int
-		Tune             string
+		Bitrate     uint
+		CpuUsed     int
+		TileColumns int
+		Tune        string
 	}
 }
 

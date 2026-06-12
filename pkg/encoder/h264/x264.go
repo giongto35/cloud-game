@@ -98,7 +98,7 @@ type Options struct {
 	Tune string
 }
 
-func NewEncoder(w, h int, th int, opts *Options) (encoder *H264, err error) {
+func NewEncoder(w, h int, th int, kfi int, opts *Options) (encoder *H264, err error) {
 	ver := Version()
 
 	if ver < 150 {
@@ -146,7 +146,11 @@ func NewEncoder(w, h int, th int, opts *Options) (encoder *H264, err error) {
 	param.i_width = C.int(w)
 	param.i_height = C.int(h)
 	param.i_log_level = C.int(opts.LogLevel)
-	param.i_keyint_max = 120
+	if kfi > 0 {
+		param.i_keyint_max = C.int(kfi)
+	} else {
+		param.i_keyint_max = 120
+	}
 	param.i_sync_lookahead = 0
 	param.i_threads = C.int(th)
 	if th != 1 {

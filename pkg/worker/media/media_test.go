@@ -37,8 +37,9 @@ func BenchmarkVP8(b *testing.B)  { run(1920, 1080, encoder.VP8, b.N, nil, nil, b
 
 func run(w, h int, cod encoder.VideoCodec, count int, a *image.RGBA, b *image.RGBA, backend testing.TB) {
 	conf := config.Video{
-		Codec:   string(cod),
-		Threads: 0,
+		Codec:            string(cod),
+		Threads:          0,
+		KeyframeInterval: 120,
 		H264: struct {
 			Mode     string
 			Crf      uint8
@@ -56,14 +57,12 @@ func run(w, h int, cod encoder.VideoCodec, count int, a *image.RGBA, b *image.RG
 			Tune:     "zerolatency",
 		},
 		Vpx: struct {
-			Bitrate          uint
-			KeyframeInterval uint
-			CpuUsed          int
-			TileColumns      int
-			Tune             string
+			Bitrate     uint
+			CpuUsed     int
+			TileColumns int
+			Tune        string
 		}{
-			Bitrate:          1000,
-			KeyframeInterval: 5,
+			Bitrate: 1000,
 		},
 	}
 

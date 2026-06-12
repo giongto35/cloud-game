@@ -127,10 +127,7 @@ func autoThreads(configured, cpus int) int {
 	if configured != 0 {
 		return configured
 	}
-	reserve := cpus / 4
-	if reserve < 1 {
-		reserve = 1
-	}
+	reserve := max(cpus/4, 1)
 	if t := cpus - reserve; t > 0 {
 		return t
 	}
@@ -140,8 +137,6 @@ func autoThreads(configured, cpus int) int {
 type Options struct {
 	// Target bandwidth to use for this stream, in kilobits per second.
 	Bitrate uint
-	// Force keyframe interval.
-	KeyframeInterval uint
 	// Speed/quality tradeoff (0=auto, 1–8 manual). Defaults to 0.
 	// Applies to both VP8 and VP9.
 	CpuUsed int
@@ -151,34 +146,33 @@ type Options struct {
 	Tune string
 }
 
-func NewEncoder(w, h int, th int, version int, opts *Options) (*Vpx, error) {
-	idx := 0
-	if version == 9 {
-		idx = 1
-	}
-	encoder := &C.vpx_encoders[idx]
-	if encoder == nil {
-		return nil, fmt.Errorf("couldn't get the encoder")
-	}
-
+func NewEncoder(w, h int, th int, kfi int, version int, opts *Options) (*Vpx, error) {
 	if opts == nil {
 		opts = &Options{
-			Bitrate:          1200,
-			KeyframeInterval: 120,
-			TileColumns:      2,
-			Tune:             "screen",
+			Bitrate:     1200,
+			TileColumns: 2,
+			Tune:        "screen",
 		}
+	}
+	if kfi == 0 {
+		kfi = 120
 	}
 
 	vpx := Vpx{
 		frameCount: C.int(0),
-		kfi:        C.int(opts.KeyframeInterval),
+		kfi:        C.int(kfi),
 		v:          version,
 	}
 
 	if C.vpx_img_alloc(&vpx.image, C.VPX_IMG_FMT_I420, C.uint(w), C.uint(h), 1) == nil {
 		return nil, fmt.Errorf("vpx_img_alloc failed")
 	}
+
+	idx := 0
+	if version == 9 {
+		idx = 1
+	}
+	encoder := &C.vpx_encoders[idx]
 
 	var cfg C.vpx_codec_enc_cfg_t
 	if C.call_vpx_codec_enc_config_default(encoder, &cfg) != 0 {
@@ -274,9 +268,7 @@ func (vpx *Vpx) IntraRefresh() {
 }
 
 func (vpx *Vpx) Shutdown() error {
-	//if &vpx.image != nil {
 	C.vpx_img_free(&vpx.image)
-	//}
 	C.vpx_codec_destroy(&vpx.codecCtx)
 	vpx.flipped = false
 	return nil

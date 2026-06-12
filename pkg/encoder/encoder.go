@@ -53,14 +53,14 @@ func NewVideoEncoder(w, h, dw, dh int, scale float64, conf config.Video, log *lo
 	switch codec {
 	case H264:
 		opts := h264.Options(conf.H264)
-		enc, err = h264.NewEncoder(dw, dh, conf.Threads, &opts)
+		enc, err = h264.NewEncoder(dw, dh, conf.Threads, conf.KeyframeInterval, &opts)
 	case VP8, VP9, VPX:
 		opts := vpx.Options(conf.Vpx)
 		v := 8
 		if codec == VP9 {
 			v = 9
 		}
-		enc, err = vpx.NewEncoder(dw, dh, conf.Threads, v, &opts)
+		enc, err = vpx.NewEncoder(dw, dh, conf.Threads, conf.KeyframeInterval, v, &opts)
 	default:
 		err = fmt.Errorf("unsupported codec: %v", conf.Codec)
 	}
