@@ -119,11 +119,8 @@ type Vpx struct {
 	image      C.vpx_image_t
 	codecCtx   C.vpx_codec_ctx_t
 	kfi        C.int
-	flipped    bool
 	v          int
 }
-
-func (vpx *Vpx) SetFlip(b bool) { vpx.flipped = b }
 
 func autoThreads(configured, cpus int) int {
 	if configured != 0 {
@@ -240,9 +237,6 @@ func NewEncoder(w, h int, th int, kfi int, version int, opts *Options) (*Vpx, er
 // see: https://chromium.googlesource.com/webm/libvpx/+/master/examples/simple_encoder.c
 func (vpx *Vpx) Encode(yuv []byte) []byte {
 	C.vpx_img_read(&vpx.image, unsafe.Pointer(&yuv[0]))
-	if vpx.flipped {
-		C.vpx_img_flip(&vpx.image)
-	}
 
 	var flags C.int
 	if vpx.frameCount < 3 || (vpx.kfi > 0 && vpx.frameCount%vpx.kfi == 0) {

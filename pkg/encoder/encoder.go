@@ -18,7 +18,6 @@ type (
 		Encode([]byte) []byte
 		IntraRefresh()
 		Info() string
-		SetFlip(bool)
 		Shutdown() error
 	}
 )
@@ -117,14 +116,6 @@ func (v *Video) SetRot(a uint) {
 	if a > 0 {
 		v.rot = (a + 180) % 360
 	}
-}
-
-// SetFlip tells the encoder to flip the frames vertically.
-func (v *Video) SetFlip(b bool) {
-	if v == nil {
-		return
-	}
-	v.codec.SetFlip(b)
 }
 
 func (v *Video) Stop() {

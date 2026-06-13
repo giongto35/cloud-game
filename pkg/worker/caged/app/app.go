@@ -4,6 +4,7 @@ type App interface {
 	AudioSampleRate() int
 	AspectRatio() float32
 	AspectEnabled() bool
+	Flipped() bool
 	Init() error
 	ViewportSize() (int, int)
 	Scale() float64

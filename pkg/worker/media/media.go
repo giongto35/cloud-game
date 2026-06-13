@@ -54,9 +54,8 @@ type WebrtcMediaPipe struct {
 	initialized bool
 
 	// keep the old settings for reinit
-	oldPf   uint32
-	oldRot  uint
-	oldFlip bool
+	oldPf  uint32
+	oldRot uint
 }
 
 func NewWebRtcMediaPipe(ac config.Audio, vc config.Video, log *logger.Logger) *WebrtcMediaPipe {
@@ -160,13 +159,11 @@ func (wmp *WebrtcMediaPipe) Reinit() error {
 	// restore old
 	wmp.SetPixFmt(wmp.oldPf)
 	wmp.SetRot(wmp.oldRot)
-	wmp.SetVideoFlip(wmp.oldFlip)
 	return nil
 }
 
 func (wmp *WebrtcMediaPipe) IsInitialized() bool { return wmp.initialized }
 func (wmp *WebrtcMediaPipe) SetPixFmt(f uint32)  { wmp.oldPf = f; wmp.v.SetPixFormat(f) }
-func (wmp *WebrtcMediaPipe) SetVideoFlip(b bool) { wmp.oldFlip = b; wmp.v.SetFlip(b) }
 func (wmp *WebrtcMediaPipe) SetRot(r uint)       { wmp.oldRot = r; wmp.v.SetRot(r) }
 
 func (wmp *WebrtcMediaPipe) Video() *encoder.Video {

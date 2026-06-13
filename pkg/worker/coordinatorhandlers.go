@@ -154,10 +154,11 @@ func (c *coordinator) HandleGameStart(rq api.StartGameRequest, w *Worker) api.Ou
 			data, err := api.Wrap(api.Out{
 				T: uint8(api.AppVideoChange),
 				Payload: api.AppVideoInfo{
-					W: m.VideoW,
-					H: m.VideoH,
-					A: app.AspectRatio(),
-					S: int(app.Scale()),
+					W:    m.VideoW,
+					H:    m.VideoH,
+					A:    app.AspectRatio(),
+					S:    int(app.Scale()),
+					Flip: app.Flipped(),
 				}})
 			if err != nil {
 				c.log.Error().Err(err).Msgf("wrap")
@@ -187,9 +188,6 @@ func (c *coordinator) HandleGameStart(rq api.StartGameRequest, w *Worker) api.Ou
 			return api.EmptyPacket
 		}
 
-		if app.Flipped() {
-			m.SetVideoFlip(true)
-		}
 		m.SetPixFmt(app.PixFormat())
 		m.SetRot(app.Rotation())
 
@@ -217,7 +215,13 @@ func (c *coordinator) HandleGameStart(rq api.StartGameRequest, w *Worker) api.Ou
 	}
 	if r.App().AspectEnabled() {
 		ww, hh := r.App().ViewportSize()
-		response.AV = &api.AppVideoInfo{W: ww, H: hh, A: r.App().AspectRatio(), S: int(r.App().Scale())}
+		response.AV = &api.AppVideoInfo{
+			W:    ww,
+			H:    hh,
+			A:    r.App().AspectRatio(),
+			S:    int(r.App().Scale()),
+			Flip: r.App().Flipped(),
+		}
 	}
 
 	return api.Out{Payload: response}

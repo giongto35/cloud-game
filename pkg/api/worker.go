@@ -55,10 +55,11 @@ type (
 	InitWebrtcStreamResponse string
 
 	AppVideoInfo struct {
-		W int     `json:"w"`
-		H int     `json:"h"`
-		S int     `json:"s"`
-		A float32 `json:"a"`
+		W    int     `json:"w"`
+		H    int     `json:"h"`
+		S    int     `json:"s"`
+		A    float32 `json:"a"`
+		Flip bool    `json:"flip,omitempty"`
 	}
 
 	LibGameListInfo struct {

@@ -193,14 +193,6 @@ func (e *H264) IntraRefresh() {
 
 func (e *H264) Info() string { return fmt.Sprintf("x264: v%v", Version()) }
 
-func (e *H264) SetFlip(b bool) {
-	if b {
-		(*e.h).pic.img.i_csp |= C.X264_CSP_VFLIP
-	} else {
-		(*e.h).pic.img.i_csp &= ^C.X264_CSP_VFLIP
-	}
-}
-
 func (e *H264) Shutdown() error {
 	if e.h != nil {
 		C.h264_destroy(e.h)
