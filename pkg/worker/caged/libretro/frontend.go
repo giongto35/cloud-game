@@ -62,6 +62,7 @@ type Frontend struct {
 	onVideo func(app.Video)
 	storage Storage
 	scale   float64
+	isGL    bool
 	th      int // draw threads
 	vw, vh  int // out frame size
 
@@ -186,6 +187,7 @@ func (f *Frontend) LoadCore(emu string) {
 	}
 	f.storage.SetNonBlocking(conf.NonBlockingSave)
 	f.scale = scale
+	f.isGL = conf.IsGlAllowed
 	f.nano.CoreLoad(meta)
 	f.mu.Unlock()
 }
@@ -268,9 +270,11 @@ func (f *Frontend) Start() {
 		return
 	}
 
-	// don't jump between threads
-	runtime.LockOSThread()
-	defer runtime.UnlockOSThread()
+	if f.isGL {
+		// don't jump between threads
+		runtime.LockOSThread()
+		defer runtime.UnlockOSThread()
+	}
 
 	f.mui.Lock()
 	f.done = make(chan struct{})
