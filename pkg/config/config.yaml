@@ -340,7 +340,6 @@ encoder:
         # dynamic frames for Opus encoder
         frames:
             - 10
-            - 5
         # speex (2), linear (1) or nearest neighbour (0) audio resampler
         # linear should sound slightly better than 0
         resampler: 2
