@@ -5,7 +5,9 @@ import (
 	"embed"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
+	"unicode"
 
 	"github.com/knadh/koanf/maps"
 	"github.com/knadh/koanf/v2"
@@ -106,10 +108,73 @@ func (e *Env) Read() (Kv, error) {
 			key = strings.Replace(n[:x+1], "_", ".", -1) + n[x+2:]
 		}
 		if len(parts) > 1 {
-			mp[key] = parts[1]
+			mp[replaceArrayNotation(key)] = parts[1]
 		}
 	}
-	return maps.Unflatten(mp, "."), nil
+	return arrayify(maps.Unflatten(mp, ".")).(Kv), nil
+}
+
+// replaceArrayNotation converts array index notation like frames[0] into
+// the delimiter-separated form frames.0. This allows maps.Unflatten to
+// produce maps with numeric string keys, which are then converted to slices
+// by arrayify.
+func replaceArrayNotation(s string) string {
+	var b strings.Builder
+	b.Grow(len(s))
+	for i := 0; i < len(s); i++ {
+		c := s[i]
+		if c == '[' && i+1 < len(s) && unicode.IsDigit(rune(s[i+1])) {
+			b.WriteByte('.')
+		} else if c != ']' {
+			b.WriteByte(c)
+		}
+	}
+	return b.String()
+}
+
+// arrayify recursively walks a nested map and converts any
+// map[string]any whose keys are all numeric strings into a []any.
+func arrayify(v any) any {
+	switch val := v.(type) {
+	case map[string]any:
+		for k, sub := range val {
+			val[k] = arrayify(sub)
+		}
+		if isNumericMap(val) {
+			return mapToSlice(val)
+		}
+		return val
+	default:
+		return v
+	}
+}
+
+func isNumericMap(m map[string]any) bool {
+	if len(m) == 0 {
+		return false
+	}
+	for k := range m {
+		if _, err := strconv.Atoi(k); err != nil {
+			return false
+		}
+	}
+	return true
+}
+
+func mapToSlice(m map[string]any) []any {
+	max := 0
+	for k := range m {
+		n, _ := strconv.Atoi(k)
+		if n > max {
+			max = n
+		}
+	}
+	out := make([]any, max+1)
+	for k, v := range m {
+		n, _ := strconv.Atoi(k)
+		out[n] = v
+	}
+	return out
 }
 
 // LoadConfig loads a configuration file into the given struct.
