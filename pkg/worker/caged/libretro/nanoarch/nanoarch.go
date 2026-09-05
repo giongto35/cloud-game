@@ -162,7 +162,12 @@ func (n *Nanoarch) WaitReady()                       { <-n.reserved }
 func (n *Nanoarch) Close()                           { n.Stopped.Store(true); n.reserved <- struct{}{} }
 func (n *Nanoarch) SetLogger(log *logger.Logger)     { n.log = log }
 func (n *Nanoarch) SetVideoDebounce(t time.Duration) { n.limiter = NewLimit(t) }
-func (n *Nanoarch) SaveDir() string                  { return C.GoString(n.cSaveDirectory) }
+func (n *Nanoarch) SaveDir() string {
+	if n.cSaveDirectory == nil {
+		return ""
+	}
+	return C.GoString(n.cSaveDirectory)
+}
 func (n *Nanoarch) SetSaveDirSuffix(sx string) {
 	dir := C.GoString(n.cSaveDirectory) + "/" + sx
 	err := os.CheckCreateDir(dir)
@@ -181,6 +186,21 @@ func (n *Nanoarch) DeleteSaveDir() error {
 
 	dir := C.GoString(n.cSaveDirectory)
 	return os.RemoveAll(dir)
+}
+
+func (n *Nanoarch) freeCStrings() {
+	if n.cUserName != nil {
+		C.free(unsafe.Pointer(n.cUserName))
+		n.cUserName = nil
+	}
+	if n.cSaveDirectory != nil {
+		C.free(unsafe.Pointer(n.cSaveDirectory))
+		n.cSaveDirectory = nil
+	}
+	if n.cSystemDirectory != nil {
+		C.free(unsafe.Pointer(n.cSystemDirectory))
+		n.cSystemDirectory = nil
+	}
 }
 
 func (n *Nanoarch) CoreLoad(meta Metadata) {
@@ -392,9 +412,7 @@ func (n *Nanoarch) Shutdown() {
 	n.options = nil
 	n.options4rom = nil
 	Nan0.audioBuffCb = nil
-	C.free(unsafe.Pointer(n.cUserName))
-	C.free(unsafe.Pointer(n.cSaveDirectory))
-	C.free(unsafe.Pointer(n.cSystemDirectory))
+	n.freeCStrings()
 }
 
 func (n *Nanoarch) Reset() {
