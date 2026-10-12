@@ -63,6 +63,7 @@ export const GAME_ERROR_NO_FREE_SLOTS = "gameNoFreeSlots";
 export const MESSAGE = "message";
 
 export const GAMEPAD_CONNECTED = "gamepadConnected";
+export const GAMEPAD_BUTTON_CAPTURED = "gamepadButtonCaptured";
 export const GAMEPAD_DISCONNECTED = "gamepadDisconnected";
 
 export const MENU_HANDLER_ATTACHED = "menuHandlerAttached";

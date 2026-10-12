@@ -77,6 +77,8 @@ type LibretroCoreConfig struct {
 	Hacks           []string
 	Height          int
 	Hid             map[int][]int
+	// Hid4rom overrides Hid for ROMs whose name contains the key (case-insensitive).
+	Hid4rom         map[string]map[int][]int
 	IsGlAllowed     bool
 	KbMouseSupport  bool
 	Lib             string

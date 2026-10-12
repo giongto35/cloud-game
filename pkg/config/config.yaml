@@ -40,6 +40,41 @@ library:
     watchMode: false
 
 coordinator:
+    # accounts and access control
+    auth:
+        # SQLite database file
+        dbPath: ./data/belko.db
+        # the primary administrator (cannot be demoted or blocked)
+        adminEmail: wenderson@belko.com.br
+        # initial admin password, used only when the admin account is created;
+        # prefer the CLOUD_GAME_COORDINATOR_AUTH_ADMINPASSWORD env variable,
+        # if empty, a random password is generated and printed to the log once
+        adminPassword:
+        # enables the moderator role that can approve new users
+        moderators: false
+        # session lifetime in days
+        sessionDays: 30
+        # force Secure cookies (when TLS is terminated by a reverse proxy)
+        secureCookie: false
+        # seconds a freed server stays reserved for the next user in the queue
+        queueReserveSec: 30
+    # game cover art: downloaded once from the free libretro-thumbnails
+    # service (https://thumbnails.libretro.com) and stored on the server
+    covers:
+        enabled: true
+        # where the images are kept
+        dir: ./data/covers
+        url: https://thumbnails.libretro.com
+        # days before a game without a cover is looked up again
+        retryDays: 7
+    # automated single elimination tournaments with replays
+    tournaments:
+        enabled: true
+        # matches played at the same time (each one needs a free worker)
+        maxConcurrent: 2
+        # seconds the players have to join a called match (walkover after it)
+        joinTimeoutSec: 180
+        replayDir: ./data/replays
     # debugging switch
     #   - shows debug logs
     #   - allows selecting worker instances
@@ -66,7 +101,9 @@ coordinator:
     # HTTP(S) server config
     server:
         address: :8000
-        cacheControl: "max-age=259200, must-revalidate"
+        # static files are revalidated on every load (Last-Modified),
+        # so new deployments are picked up without renaming files
+        cacheControl: "no-cache"
         frameOptions: ""
         https: false
         # Letsencrypt or self cert config
@@ -306,11 +343,15 @@ emulator:
                 snes:
                     lib: snes9x_libretro
                     roms: ["smc", "sfc", "swc", "fig", "bs"]
-                    hid:
-                        # set the 2nd port to RETRO_DEVICE_JOYPAD_MULTITAP ((1<<8) | 1) as SNES9x requires it
-                        # in order to support up to 5-player games
-                        # see: https://nintendo.fandom.com/wiki/Super_Multitap
-                        1: 257
+                    # The multitap is only plugged for games that support it:
+                    # it breaks player 2 in regular 2-player games (e.g. Super Mario Kart).
+                    # Keys are case-insensitive fragments of the ROM name.
+                    hid4rom:
+                        bomberman:
+                            # set the 2nd port to RETRO_DEVICE_JOYPAD_MULTITAP ((1<<8) | 1) as SNES9x requires it
+                            # in order to support up to 5-player games
+                            # see: https://nintendo.fandom.com/wiki/Super_Multitap
+                            1: [257]
                 n64:
                     lib: mupen64plus_next_libretro
                     roms: ["n64", "v64", "z64"]

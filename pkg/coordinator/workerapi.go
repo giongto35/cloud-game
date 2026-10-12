@@ -24,6 +24,18 @@ func (w *Worker) StartGame(id string, req api.GameStartUserRequest) (*api.StartG
 		}))
 }
 
+// StartSpecial starts a tournament match room or a replay playback room.
+func (w *Worker) StartSpecial(id string, req api.GameStartUserRequest, t *api.TournamentRoom, replay []byte) (*api.StartGameResponse, error) {
+	return api.UnwrapChecked[api.StartGameResponse](
+		w.Send(api.StartGame, api.StartGameRequest{
+			StatefulRoom: api.StatefulRoom{Id: id, Rid: req.RoomId},
+			Game:         req.GameName,
+			PlayerIndex:  req.PlayerIndex,
+			Tournament:   t,
+			Replay:       replay,
+		}))
+}
+
 func (w *Worker) QuitGame(id string) {
 	w.Notify(api.QuitGame, api.GameQuitRequest{Id: id, Rid: w.RoomId})
 }
@@ -59,6 +71,8 @@ func (w *Worker) RecordGame(id string, rec bool, recUser string) (*api.RecordGam
 		}))
 }
 
+// TerminateSession drops the user session on the worker.
+// The worker never answers this packet, so it is sent without waiting.
 func (w *Worker) TerminateSession(id string) {
-	_, _ = w.Send(api.TerminateSession, api.TerminateSessionRequest{Id: id})
+	w.Notify(api.TerminateSession, api.TerminateSessionRequest{Id: id})
 }

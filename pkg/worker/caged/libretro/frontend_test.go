@@ -135,6 +135,7 @@ func (emu *TestFrontend) loadRom(game string) {
 		Hacks:           conf.Hacks,
 		HasVFR:          conf.VFR,
 		Hid:             conf.Hid,
+		Hid4rom:         conf.Hid4rom,
 		IsGlAllowed:     conf.IsGlAllowed,
 		LibPath:         emu.corePath,
 		Options:         conf.Options,

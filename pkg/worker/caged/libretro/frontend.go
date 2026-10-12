@@ -82,6 +82,12 @@ type Frontend struct {
 	mu  sync.Mutex
 	mui sync.Mutex
 
+	// per-frame hooks (tournaments, replays), guarded by mu
+	frame     uint64
+	frameHook FrameHook
+	inputSrc  InputSource
+	srcBuf    [nanoarch.MaxPort]uint32
+
 	DisableCanvasPool bool
 	SaveOnClose       bool
 	UniqueSaveDir     bool
@@ -173,6 +179,7 @@ func (f *Frontend) LoadCore(emu string) {
 		Hacks:           conf.Hacks,
 		HasVFR:          conf.VFR,
 		Hid:             conf.Hid,
+		Hid4rom:         conf.Hid4rom,
 		IsGlAllowed:     conf.IsGlAllowed,
 		LibPath:         conf.Lib,
 		Options:         conf.Options,
@@ -421,7 +428,77 @@ func (f *Frontend) SetAudioCb(cb func(app.Audio)) { f.onAudio = cb }
 func (f *Frontend) SetSessionId(name string)      { f.storage.SetMainSaveName(name) }
 func (f *Frontend) SetDataCb(cb func([]byte))     { f.onData = cb }
 func (f *Frontend) SetVideoCb(ff func(app.Video)) { f.onVideo = ff }
-func (f *Frontend) Tick()                         { f.mu.Lock(); f.nano.Run(); f.mu.Unlock() }
+// FrameHook is called after every emulated frame with the frame number,
+// the retropad buttons applied in that frame and a live view of the work RAM.
+// It runs on the emulation thread while the emulator is locked: keep it fast and
+// never call Frontend methods from it.
+type FrameHook func(frame uint64, input [nanoarch.MaxPort]uint16, ram []byte)
+
+// InputSource provides the buttons for a frame instead of the live input (replays).
+// ok=false means the source is exhausted: the controllers are released.
+type InputSource func(frame uint64) (keys [nanoarch.MaxPort]uint16, ok bool)
+
+func (f *Frontend) Tick() {
+	f.mu.Lock()
+	if f.inputSrc != nil {
+		keys, ok := f.inputSrc(f.frame)
+		for i := range keys {
+			f.srcBuf[i] = 0
+			if ok {
+				f.srcBuf[i] = uint32(keys[i])
+			}
+		}
+		f.nano.SetInputOverride(&f.srcBuf)
+	}
+	f.nano.Run()
+	if f.frameHook != nil {
+		applied := f.nano.AppliedInput()
+		var input [nanoarch.MaxPort]uint16
+		for i, v := range applied {
+			input[i] = uint16(v)
+		}
+		f.frameHook(f.frame, input, nanoarch.SystemRAM())
+	}
+	f.frame++
+	f.mu.Unlock()
+}
+
+// SetFrameHook installs (or removes with nil) the per-frame hook.
+func (f *Frontend) SetFrameHook(h FrameHook) { f.mu.Lock(); f.frameHook = h; f.mu.Unlock() }
+
+// SetInputSource replaces the live input with a scripted one (nil restores the live input).
+func (f *Frontend) SetInputSource(src InputSource) {
+	f.mu.Lock()
+	f.inputSrc = src
+	if src == nil {
+		f.nano.SetInputOverride(nil)
+	}
+	f.mu.Unlock()
+}
+
+// Frame returns the number of frames emulated since the game was loaded (or since ResetFrames).
+func (f *Frontend) Frame() uint64 { f.mu.Lock(); defer f.mu.Unlock(); return f.frame }
+
+// ResetFrames sets the frame counter to zero (start of a recording or a playback).
+func (f *Frontend) ResetFrames() { f.mu.Lock(); f.frame = 0; f.mu.Unlock() }
+
+// SnapshotState serializes the whole emulator state between frames.
+func (f *Frontend) SnapshotState() ([]byte, error) {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	return nanoarch.SaveState()
+}
+
+// RestoreSnapshot restores a state made by SnapshotState.
+func (f *Frontend) RestoreSnapshot(st []byte) error {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	return nanoarch.RestoreSaveState(st)
+}
+
+// SystemRAM returns a live view of the emulated work RAM. Use it only between frames
+// on the emulation thread (e.g. from a frame hook).
+func (f *Frontend) SystemRAM() []byte { return nanoarch.SystemRAM() }
 func (f *Frontend) ViewportRecalculate()          { f.mu.Lock(); f.vw, f.vh = f.ViewportCalc(); f.mu.Unlock() }
 func (f *Frontend) ViewportSize() (int, int)      { return f.vw, f.vh }
 

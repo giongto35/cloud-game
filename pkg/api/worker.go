@@ -19,6 +19,23 @@ type (
 		RecordUser  string
 		Game        string `json:"game"`
 		PlayerIndex int    `json:"player_index"`
+		// Tournament makes a recorded match room with automatic result detection.
+		Tournament *TournamentRoom `json:"tournament,omitempty"`
+		// Replay makes a playback room for the given recorded match.
+		Replay []byte `json:"replay,omitempty"`
+	}
+	TournamentRoom struct {
+		Match int64  `json:"match"`
+		Rule  string `json:"rule"`
+	}
+	// MatchResultRequest is sent by a worker when a tournament match is over.
+	MatchResultRequest struct {
+		Room   string `json:"room"`
+		Match  int64  `json:"match"`
+		Winner int    `json:"winner"` // 0 = player 1, 1 = player 2
+		Score  [2]int `json:"score"`
+		Frame  uint64 `json:"frame"`
+		Replay []byte `json:"replay,omitempty"`
 	}
 	GameInfo struct {
 		Alias  string `json:"alias"`

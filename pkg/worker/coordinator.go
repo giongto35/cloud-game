@@ -8,7 +8,6 @@ import (
 	"github.com/giongto35/cloud-game/v3/pkg/config"
 	"github.com/giongto35/cloud-game/v3/pkg/games"
 	"github.com/giongto35/cloud-game/v3/pkg/logger"
-	"github.com/giongto35/cloud-game/v3/pkg/network/webrtc"
 )
 
 type Connection interface {
@@ -64,7 +63,7 @@ func newCoordinatorConnection(host string, conf config.Worker, addr string, log 
 }
 
 func (c *coordinator) HandleRequests(w *Worker) chan struct{} {
-	ap, err := webrtc.NewApiFactory(w.conf.Webrtc, c.log, nil)
+	ap, err := w.webrtcFactory()
 	if err != nil {
 		c.log.Panic().Err(err).Msg("WebRTC API creation has been failed")
 	}

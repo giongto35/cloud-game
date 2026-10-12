@@ -80,12 +80,24 @@ const (
 	GetWorkerList    PT = 111
 	ErrNoFreeSlots   PT = 112
 	ResetGame        PT = 113
+	LobbyState       PT = 120
+	QueueJoin        PT = 121
+	QueueLeave       PT = 122
+	QueueState       PT = 123
+	RoomState        PT = 125
+	ChatSend         PT = 126
+	ChatMessage      PT = 127
+	RoomKick         PT = 128
+	RoomAssign       PT = 129
+	Kicked           PT = 130
+	Notice           PT = 131
 	RegisterRoom     PT = 201
 	CloseRoom        PT = 202
 	TerminateSession PT = 204
 	AppVideoChange   PT = 150
 	LibNewGameList   PT = 205
 	PrevSessions     PT = 206
+	MatchResult      PT = 207
 )
 
 func (p PT) String() string {
@@ -116,6 +128,28 @@ func (p PT) String() string {
 		return "NoFreeSlots"
 	case ResetGame:
 		return "ResetGame"
+	case LobbyState:
+		return "LobbyState"
+	case QueueJoin:
+		return "QueueJoin"
+	case QueueLeave:
+		return "QueueLeave"
+	case QueueState:
+		return "QueueState"
+	case RoomState:
+		return "RoomState"
+	case ChatSend:
+		return "ChatSend"
+	case ChatMessage:
+		return "ChatMessage"
+	case RoomKick:
+		return "RoomKick"
+	case RoomAssign:
+		return "RoomAssign"
+	case Kicked:
+		return "Kicked"
+	case Notice:
+		return "Notice"
 	case RegisterRoom:
 		return "RegisterRoom"
 	case CloseRoom:
@@ -128,6 +162,8 @@ func (p PT) String() string {
 		return "LibNewGameList"
 	case PrevSessions:
 		return "PrevSessions"
+	case MatchResult:
+		return "MatchResult"
 	default:
 		return "Unknown"
 	}

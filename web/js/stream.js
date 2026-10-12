@@ -13,7 +13,7 @@ const playEl = document.getElementById("play-stream");
 
 const options = {
     volume: 0.5,
-    poster: "/img/screen_loading.gif",
+    poster: "",
     mirrorMode: null,
     mirrorUpdateRate: 1 / 60,
 };
@@ -67,8 +67,8 @@ const resize = (w, h, aspect, fit) => {
 
     state.screen.setAttribute("width", "" + w);
     state.screen.setAttribute("height", "" + h);
-    if (aspect !== undefined) {
-        state.screen.style.aspectRatio = "" + aspect;
+    if (aspect !== undefined && aspect > 0) {
+        state.screen.style.setProperty("--ar", "" + aspect);
     }
     if (fit !== undefined) {
         state.screen.style["object-fit"] = fit;
@@ -129,46 +129,19 @@ videoEl.addEventListener("resize", () => {
 
 videoEl.addEventListener("loadstart", () => {
     videoEl.volume = options.volume / 100;
-    videoEl.poster = options.poster;
 });
 
 videoEl.onfocus = () => videoEl.blur();
 videoEl.onerror = (e) => log.error("Playback error", e);
 
 const onFullscreen = (fullscreen) => {
-    const el = document.fullscreenElement;
-
-    state.screen.parentElement.style.overflow = fullscreen ? "visible" : "";
-
-    if (fullscreen) {
-        // timeout is due to a chrome bug
-        setTimeout(() => {
-            // aspect ratio calc (skip for rotated - resize handles it)
-            if (!(state.rot && Math.abs(state.rot % 180) > 1)) {
-                const w = window.screen.width ?? window.innerWidth;
-                const hh = el.innerHeight || el.clientHeight || 0;
-                const dw = (w - hh * state.aspect) / 2;
-                state.screen.style.padding = `0 ${dw}px`;
-            } else {
-                // clear any leftover padding for rotated content
-                state.screen.style.padding = "0";
-            }
-            state.screen.classList.toggle("with-footer");
-            // re-apply transform in case fullscreen transition reset it
-            applyTransform();
-            resize(state.w, state.h, state.aspect, state.fit);
-        }, 1);
-    } else {
-        state.screen.style.padding = "0";
-        state.screen.classList.toggle("with-footer");
-        applyTransform();
-        resize(state.w, state.h, state.aspect, state.fit);
-    }
-
-    if (el === videoEl) {
+    if (document.fullscreenElement === videoEl) {
         videoEl.classList.toggle("no-media-controls", !fullscreen);
         videoEl.blur();
     }
+    applyTransform();
+    resize(state.w, state.h, state.aspect, state.fit);
+    recalculateSize();
 };
 
 const vs = { w: 1, h: 1 };
@@ -178,15 +151,10 @@ const recalculateSize = () => {
     const { aspect, screen } = state;
 
     let width, height;
-    if (fullscreen) {
-        // we can't get the real <video> size on the screen without the black bars,
-        // so we're using one side (without the bar) for the length calc of another
-        const horizontal = videoEl.videoWidth > videoEl.videoHeight;
-        width = horizontal ? aspect * screen.offsetHeight : screen.offsetWidth;
-        height = horizontal ? screen.offsetHeight : aspect * screen.offsetWidth;
-    } else {
-        ({ width, height } = screen.getBoundingClientRect());
-    }
+    // the element keeps the video aspect ratio, so its box is the picture
+    ({ width, height } = screen.getBoundingClientRect());
+    void fullscreen;
+    void aspect;
 
     vs.w = width;
     vs.h = height;
@@ -253,6 +221,14 @@ const init = () => {
     });
 };
 
+const reset = () => {
+    state.ready = false;
+    state.autoplayWait = false;
+    playEl.setAttribute("hidden", "");
+    useCustomScreen(false);
+    videoEl.srcObject = null;
+};
+
 sub(APP_VIDEO_CHANGED, (payload) => {
     const { w, h, a, s, flip, rot } = payload;
 
@@ -302,4 +278,6 @@ export const stream = {
     hasDisplay: true,
     init,
     onFullscreen,
+    reset,
+    recalculateSize,
 };

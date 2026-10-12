@@ -1,331 +1,154 @@
-import {env} from 'env';
-import {
-    pub,
-    sub,
-    AXIS_CHANGED,
-    KEY_PRESSED,
-    KEY_RELEASED,
-    GAME_PLAYER_IDX,
-    DPAD_TOGGLE,
-    MENU_HANDLER_ATTACHED,
-    MENU_PRESSED,
-    MENU_RELEASED
-} from 'event';
+import {pub, sub, AXIS_CHANGED, DPAD_TOGGLE, KEY_PRESSED, KEY_RELEASED} from 'event';
 import {KEY} from 'input';
 import {log} from 'log';
 
-const MAX_DIFF = 20; // radius of circle boundary
-
-// vpad state, use for mouse button down
-let vpadState = {[KEY.UP]: false, [KEY.DOWN]: false, [KEY.LEFT]: false, [KEY.RIGHT]: false};
-let analogState = [0, 0];
-
-let vpadTouchIdx = null;
-let vpadTouchDrag = null;
-let vpadHolder = document.getElementById('circle-pad-holder');
-let vpadCircle = document.getElementById('circle-pad');
-
-const buttons = Array.from(document.getElementsByClassName('btn'));
-const playerSlider = document.getElementById('playeridx');
-const dpad = Array.from(document.getElementsByClassName('dpad'));
-
-const dpadToggle = document.getElementById('dpad-toggle')
-dpadToggle.addEventListener('change', (e) => {
-    pub(DPAD_TOGGLE, {checked: e.target.checked});
-});
-
-const getKey = (el) => el.dataset.key
-
-let dpadMode = true;
-const deadZone = 0.1;
-
-let enabled = false
-
-function onDpadToggle(checked) {
-    if (dpadMode === checked) {
-        return //error?
-    }
-    if (dpadMode) {
-        dpadMode = false;
-        vpadHolder.classList.add('dpad-empty');
-        vpadCircle.classList.add('bong-full');
-        // reset dpad keys pressed before moving to analog stick mode
-        resetVpadState()
-    } else {
-        dpadMode = true;
-        vpadHolder.classList.remove('dpad-empty');
-        vpadCircle.classList.remove('bong-full');
-    }
-}
-
-function resetVpadState() {
-    if (dpadMode) {
-        // trigger up event?
-        checkVpadState(KEY.UP, false);
-        checkVpadState(KEY.DOWN, false);
-        checkVpadState(KEY.LEFT, false);
-        checkVpadState(KEY.RIGHT, false);
-    } else {
-        checkAnalogState(0, 0);
-        checkAnalogState(1, 0);
-    }
-
-    vpadTouchDrag = null;
-    vpadTouchIdx = null;
-
-    dpad.forEach(arrow => arrow.classList.remove('pressed'));
-}
-
-function checkVpadState(axis, state) {
-    if (state !== vpadState[axis]) {
-        vpadState[axis] = state;
-        pub(state ? KEY_PRESSED : KEY_RELEASED, {key: axis});
-    }
-}
-
-function checkAnalogState(axis, value) {
-    if (-deadZone < value && value < deadZone) value = 0;
-    if (analogState[axis] !== value) {
-        analogState[axis] = value;
-        pub(AXIS_CHANGED, {id: axis, value: value});
-    }
-}
-
-function handleVpadJoystickDown(event) {
-    vpadCircle.style['transition'] = '0s';
-
-    if (event.changedTouches) {
-        resetVpadState();
-        vpadTouchIdx = event.changedTouches[0].identifier;
-        event.clientX = event.changedTouches[0].clientX;
-        event.clientY = event.changedTouches[0].clientY;
-    }
-
-    vpadTouchDrag = {x: event.clientX, y: event.clientY};
-}
-
-function handleVpadJoystickUp() {
-    if (vpadTouchDrag === null) return;
-
-    vpadCircle.style['transition'] = '.2s';
-    vpadCircle.style['transform'] = 'translate3d(0px, 0px, 0px)';
-
-    resetVpadState();
-}
-
-function handleVpadJoystickMove(event) {
-    if (vpadTouchDrag === null) return;
-
-    if (event.changedTouches) {
-        // check if moving source is from other touch?
-        for (let i = 0; i < event.changedTouches.length; i++) {
-            if (event.changedTouches[i].identifier === vpadTouchIdx) {
-                event.clientX = event.changedTouches[i].clientX;
-                event.clientY = event.changedTouches[i].clientY;
-            }
-        }
-        if (event.clientX === undefined || event.clientY === undefined)
-            return;
-    }
-
-    let xDiff = event.clientX - vpadTouchDrag.x;
-    let yDiff = event.clientY - vpadTouchDrag.y;
-    let angle = Math.atan2(yDiff, xDiff);
-    let distance = Math.min(MAX_DIFF, Math.hypot(xDiff, yDiff));
-    let xNew = distance * Math.cos(angle);
-    let yNew = distance * Math.sin(angle);
-
-    if (env.display().isLayoutSwitched) {
-        let tmp = xNew;
-        xNew = yNew;
-        yNew = -tmp;
-    }
-
-    vpadCircle.style['transform'] = `translate(${xNew}px, ${yNew}px)`;
-
-    let xRatio = xNew / MAX_DIFF;
-    let yRatio = yNew / MAX_DIFF;
-
-    if (dpadMode) {
-        checkVpadState(KEY.LEFT, xRatio <= -0.5);
-        checkVpadState(KEY.RIGHT, xRatio >= 0.5);
-        checkVpadState(KEY.UP, yRatio <= -0.5);
-        checkVpadState(KEY.DOWN, yRatio >= 0.5);
-    } else {
-        checkAnalogState(0, xRatio);
-        checkAnalogState(1, yRatio);
-    }
-}
-
-// right side - control buttons
-const _handleButton = (key, state) => checkVpadState(key, state)
-
-function handleButtonDown() {
-    _handleButton(getKey(this), true);
-}
-
-function handleButtonUp() {
-    _handleButton(getKey(this), false);
-}
-
-function handleButtonClick() {
-    _handleButton(getKey(this), true);
-    setTimeout(() => {
-        _handleButton(getKey(this), false);
-    }, 30);
-}
-
-function handlePlayerSlider() {
-    pub(GAME_PLAYER_IDX, {index: this.value - 1});
-}
-
-// Touch menu
-let menuTouchIdx = null;
-let menuTouchDrag = null;
-let menuTouchTime = null;
-
-function handleMenuDown(event) {
-    // Identify of touch point
-    if (event.changedTouches) {
-        menuTouchIdx = event.changedTouches[0].identifier;
-        event.clientX = event.changedTouches[0].clientX;
-        event.clientY = event.changedTouches[0].clientY;
-    }
-
-    menuTouchDrag = {x: event.clientX, y: event.clientY,};
-    menuTouchTime = Date.now();
-}
-
-function handleMenuMove(evt) {
-    if (menuTouchDrag === null) return;
-
-    if (evt.changedTouches) {
-        // check if moving source is from other touch?
-        for (let i = 0; i < evt.changedTouches.length; i++) {
-            if (evt.changedTouches[i].identifier === menuTouchIdx) {
-                evt.clientX = evt.changedTouches[i].clientX;
-                evt.clientY = evt.changedTouches[i].clientY;
-            }
-        }
-        if (evt.clientX === undefined || evt.clientY === undefined)
-            return;
-    }
-
-    const pos = env.display().isLayoutSwitched ? evt.clientX - menuTouchDrag.x : menuTouchDrag.y - evt.clientY;
-    pub(MENU_PRESSED, pos);
-}
-
-function handleMenuUp(evt) {
-    if (menuTouchDrag === null) return;
-    if (evt.changedTouches) {
-        if (evt.changedTouches[0].identifier !== menuTouchIdx)
-            return;
-        evt.clientX = evt.changedTouches[0].clientX;
-        evt.clientY = evt.changedTouches[0].clientY;
-    }
-
-    let newY = env.display().isLayoutSwitched ? -menuTouchDrag.x + evt.clientX : menuTouchDrag.y - evt.clientY;
-
-    let interval = Date.now() - menuTouchTime; // 100ms?
-    if (interval < 200) {
-        // calc velocity
-        newY = newY / interval * 250;
-    }
-
-    // current item?
-    pub(MENU_RELEASED, newY);
-    menuTouchDrag = null;
-}
-
-// Common events
-function handleWindowMove(event) {
-    if (!enabled) return
-
-    event.preventDefault();
-    handleVpadJoystickMove(event);
-    handleMenuMove(event);
-
-    // moving touch
-    if (event.changedTouches) {
-        for (let i = 0; i < event.changedTouches.length; i++) {
-            if (event.changedTouches[i].identifier !== menuTouchIdx && event.changedTouches[i].identifier !== vpadTouchIdx) {
-                // check class
-
-                let elem = document.elementFromPoint(event.changedTouches[i].clientX, event.changedTouches[i].clientY);
-
-                if (elem.classList.contains('btn')) {
-                    elem.dispatchEvent(new Event('touchstart'));
-                } else {
-                    elem.dispatchEvent(new Event('touchend'));
-                }
-            }
-        }
-    }
-}
-
-function handleWindowUp(ev) {
-    handleVpadJoystickUp(ev);
-    handleMenuUp(ev);
-    buttons.forEach((btn) => {
-        btn.dispatchEvent(new Event('touchend'));
-    });
-}
-
-// touch/mouse events for control buttons. mouseup events is bound to window.
-buttons.forEach((btn) => {
-    btn.addEventListener('mousedown', handleButtonDown);
-    btn.addEventListener('touchstart', handleButtonDown, {passive: true});
-    btn.addEventListener('touchend', handleButtonUp);
-});
-
-// touch/mouse events for dpad. mouseup events is bound to window.
-vpadHolder.addEventListener('mousedown', handleVpadJoystickDown);
-vpadHolder.addEventListener('touchstart', handleVpadJoystickDown, {passive: true});
-vpadHolder.addEventListener('touchend', handleVpadJoystickUp);
-
-dpad.forEach((arrow) => {
-    arrow.addEventListener('click', handleButtonClick);
-});
-
-// touch/mouse events for player slider.
-playerSlider.addEventListener('oninput', handlePlayerSlider);
-playerSlider.addEventListener('onchange', handlePlayerSlider);
-playerSlider.addEventListener('click', handlePlayerSlider);
-playerSlider.addEventListener('touchend', handlePlayerSlider);
-playerSlider.onkeydown = (e) => {
-    e.preventDefault();
-}
-
 /**
- * Touch controls.
- *
- * Virtual Gamepad / Joystick
- * Left panel - Dpad
- *
- * @link https://jsfiddle.net/aa0et7tr/5/
- * @version 1
+ * On-screen (touch) gamepad.
+ * Multi-touch through pointer events; the stick works as a d-pad or as an analog stick.
  */
+
+let root = null;
+let dpadMode = true;
+let enabled = true;
+const deadZone = 0.12;
+
+const held = new Set();
+const press = (key, down) => {
+    if (!enabled && down) return;
+    if (down === held.has(key)) return;
+    down ? held.add(key) : held.delete(key);
+    pub(down ? KEY_PRESSED : KEY_RELEASED, {key, touch: true});
+};
+
+const stickDirs = {[KEY.LEFT]: false, [KEY.RIGHT]: false, [KEY.UP]: false, [KEY.DOWN]: false};
+let axes = [0, 0];
+
+const setDir = (key, on) => {
+    if (stickDirs[key] === on) return;
+    stickDirs[key] = on;
+    press(key, on);
+};
+
+const setAxis = (id, v) => {
+    if (Math.abs(v) < deadZone) v = 0;
+    if (axes[id] === v) return;
+    axes[id] = v;
+    pub(AXIS_CHANGED, {id, value: v});
+};
+
+const resetStick = () => {
+    Object.keys(stickDirs).forEach((k) => setDir(k, false));
+    setAxis(0, 0);
+    setAxis(1, 0);
+};
+
+const markup = `
+    <div class="tp-stick" data-stick><div class="knob"></div></div>
+    <div class="tp-shoulder left"><div class="tp-pill" data-key="l2">L2</div><div class="tp-pill" data-key="l">L</div></div>
+    <div class="tp-shoulder right"><div class="tp-pill" data-key="r">R</div><div class="tp-pill" data-key="r2">R2</div></div>
+    <div class="tp-buttons">
+        <div class="tp-btn" data-key="x">X</div>
+        <div class="tp-btn" data-key="y">Y</div>
+        <div class="tp-btn" data-key="a">A</div>
+        <div class="tp-btn" data-key="b">B</div>
+    </div>
+    <div class="tp-center"><div class="tp-pill" data-key="select">SELECT</div><div class="tp-pill" data-key="start">START</div></div>`;
+
+const bindButton = (el) => {
+    const key = el.dataset.key;
+    const down = (e) => {
+        e.preventDefault();
+        el.setPointerCapture?.(e.pointerId);
+        el.classList.add('pressed');
+        press(key, true);
+        navigator.vibrate?.(8);
+    };
+    const up = () => {
+        el.classList.remove('pressed');
+        press(key, false);
+    };
+    el.addEventListener('pointerdown', down);
+    el.addEventListener('pointerup', up);
+    el.addEventListener('pointercancel', up);
+    el.addEventListener('lostpointercapture', up);
+};
+
+const bindStick = (el) => {
+    const knob = el.querySelector('.knob');
+    let pid = null;
+
+    const update = (e) => {
+        const r = el.getBoundingClientRect();
+        const max = r.width * 0.32;
+        let dx = e.clientX - (r.left + r.width / 2);
+        let dy = e.clientY - (r.top + r.height / 2);
+        const dist = Math.hypot(dx, dy);
+        if (dist > max) {
+            dx = dx / dist * max;
+            dy = dy / dist * max;
+        }
+        knob.style.transform = `translate(${dx}px, ${dy}px)`;
+        const x = dx / max, y = dy / max;
+        if (dpadMode) {
+            setDir(KEY.LEFT, x <= -0.45);
+            setDir(KEY.RIGHT, x >= 0.45);
+            setDir(KEY.UP, y <= -0.45);
+            setDir(KEY.DOWN, y >= 0.45);
+        } else {
+            setAxis(0, x);
+            setAxis(1, y);
+        }
+    };
+
+    el.addEventListener('pointerdown', (e) => {
+        e.preventDefault();
+        pid = e.pointerId;
+        el.setPointerCapture?.(pid);
+        knob.style.transition = 'none';
+        update(e);
+    });
+    el.addEventListener('pointermove', (e) => e.pointerId === pid && update(e));
+    const end = (e) => {
+        if (e.pointerId !== pid) return;
+        pid = null;
+        knob.style.transition = 'transform .15s';
+        knob.style.transform = '';
+        resetStick();
+    };
+    el.addEventListener('pointerup', end);
+    el.addEventListener('pointercancel', end);
+};
+
+sub(DPAD_TOGGLE, (data) => {
+    if (dpadMode === data.checked) return;
+    resetStick();
+    dpadMode = data.checked;
+});
+
+export const isTouchDevice = () => matchMedia('(pointer: coarse)').matches || navigator.maxTouchPoints > 0;
+
 export const touch = {
-    init: () => {
-        enabled = true
-        // Bind events for menu
-        // TODO change this flow
-        pub(MENU_HANDLER_ATTACHED, {event: 'mousedown', handler: handleMenuDown});
-        pub(MENU_HANDLER_ATTACHED, {event: 'touchstart', handler: handleMenuDown});
-        pub(MENU_HANDLER_ATTACHED, {event: 'touchend', handler: handleMenuUp});
-
-        sub(DPAD_TOGGLE, (data) => onDpadToggle(data.checked));
-
-        // add buttons into the state 🤦
-        Array.from(document.querySelectorAll('.btn,.btn-big')).forEach((el) => {
-            vpadState[getKey(el)] = false;
-        });
-
-        window.addEventListener('pointermove', handleWindowMove);
-        window.addEventListener('touchmove', handleWindowMove, {passive: false});
-        window.addEventListener('mouseup', handleWindowUp);
-
+    /** Builds the on-screen gamepad inside the container. */
+    init: (container) => {
+        if (!container || root) return;
+        root = container;
+        root.innerHTML = markup;
+        root.querySelectorAll('[data-key]').forEach(bindButton);
+        bindStick(root.querySelector('[data-stick]'));
+        root.addEventListener('contextmenu', (e) => e.preventDefault());
         log.info('[input] touch input has been initialized');
     },
-    toggle: (v) => v === undefined ? (enabled = !enabled) : (enabled = v)
-}
+    show: (v) => root && (root.hidden = !v),
+    style: ({opacity, scale}) => {
+        if (!root) return;
+        opacity !== undefined && root.style.setProperty('--tp-opacity', opacity);
+        scale !== undefined && root.style.setProperty('--tp-scale', scale);
+    },
+    toggle: (v) => {
+        enabled = v === undefined ? !enabled : v;
+        if (!enabled) {
+            [...held].forEach((k) => press(k, false));
+            resetStick();
+        }
+    },
+};

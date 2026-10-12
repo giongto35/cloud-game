@@ -14,6 +14,17 @@ const endpoints = {
     GET_WORKER_LIST: 111,
     GAME_ERROR_NO_FREE_SLOTS: 112,
     GAME_RESET: 113,
+    LOBBY_STATE: 120,
+    QUEUE_JOIN: 121,
+    QUEUE_LEAVE: 122,
+    QUEUE_STATE: 123,
+    ROOM_STATE: 125,
+    CHAT_SEND: 126,
+    CHAT_MESSAGE: 127,
+    ROOM_KICK: 128,
+    ROOM_ASSIGN: 129,
+    KICKED: 130,
+    NOTICE: 131,
 
     APP_VIDEO_CHANGE: 150,
 };
@@ -364,13 +375,14 @@ export const api = {
         reset: (roomId) => packet(endpoints.GAME_RESET, { room_id: roomId }),
         save: () => packet(endpoints.GAME_SAVE),
         setPlayerIndex: (i) => packet(endpoints.GAME_SET_PLAYER_INDEX, i),
-        start: (game, roomId, record, recordUser, player) =>
+        start: ({game = "", roomId = "", player = -1, spectator = false, matchId = 0, replayId = 0} = {}) =>
             packet(endpoints.GAME_START, {
                 game_name: game,
                 room_id: roomId,
                 player_index: player,
-                record: record,
-                record_user: recordUser,
+                spectator,
+                ...(matchId && {match_id: matchId}),
+                ...(replayId && {replay_id: replayId}),
             }),
         toggleRecording: (active = false, userName = "") =>
             packet(endpoints.GAME_RECORDING, {
@@ -378,5 +390,14 @@ export const api = {
                 user: userName,
             }),
         quit: (roomId) => packet(endpoints.GAME_QUIT, { room_id: roomId }),
+    },
+    queue: {
+        join: (game) => packet(endpoints.QUEUE_JOIN, { game }),
+        leave: () => packet(endpoints.QUEUE_LEAVE),
+    },
+    room: {
+        chat: (text) => packet(endpoints.CHAT_SEND, { text }),
+        kick: (user) => packet(endpoints.ROOM_KICK, { user }),
+        assign: (user, slot) => packet(endpoints.ROOM_ASSIGN, { user, slot }),
     },
 };

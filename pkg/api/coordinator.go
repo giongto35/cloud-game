@@ -22,6 +22,8 @@ const (
 	RoomIdQueryParam = "room_id"
 	ZoneQueryParam   = "zone"
 	WorkerIdParam    = "wid"
+	MatchIdParam     = "match"
+	ReplayIdParam    = "replay"
 )
 
 // Server contains a list of server groups.

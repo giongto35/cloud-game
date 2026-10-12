@@ -1,648 +1,134 @@
-import {
-    pub,
-    sub,
-    SETTINGS_CHANGED,
-    KEYBOARD_KEY_PRESSED,
-    KEYBOARD_TOGGLE_FILTER_MODE,
-} from "event";
-import { gui } from "gui";
-import { log } from "log";
+import {pub, SETTINGS_CHANGED} from 'event';
+import {log} from 'log';
 
 /**
- * Stores app wide option names.
- *
- * Use the following format:
- * UPPERCASE_NAME: 'uppercase.name'
- *
- * @version 1
+ * App-wide option names.
  */
 export const opts = {
-    _VERSION: "_version",
-    LOG_LEVEL: "log.level",
-    INPUT_KEYBOARD_MAP: "input.keyboard.map",
-    MIRROR_SCREEN: "mirror.screen",
-    VOLUME: "volume",
-    FORCE_FULLSCREEN: "force.fullscreen",
-    WEBRTC_INIT_OFFER: "webrtc.init.offer",
+    _VERSION: '_version',
+    LOG_LEVEL: 'log.level',
+    INPUT_KEYBOARD_MAP: 'input.keyboard.map',
+    INPUT_GAMEPAD_MAP: 'input.gamepad.map',
+    INPUT_DEADZONE: 'input.deadzone',
+    INPUT_DPAD_MODE: 'input.dpad',
+    TOUCH_MODE: 'touch.mode',
+    TOUCH_OPACITY: 'touch.opacity',
+    TOUCH_SCALE: 'touch.scale',
+    MIRROR_SCREEN: 'mirror.screen',
+    VIDEO_PIXEL: 'video.pixel',
+    VOLUME: 'volume',
+    FORCE_FULLSCREEN: 'force.fullscreen',
+    WEBRTC_INIT_OFFER: 'webrtc.init.offer',
+    SHOW_STATS: 'hud.stats',
+    LIB_FAVORITES: 'library.favorites',
+    LIB_RECENT: 'library.recent',
 };
 
-// internal structure version
-const revision = 1.7;
+// options that are not synced with the account (device specific)
+const localOnly = new Set([opts.LOG_LEVEL, opts.WEBRTC_INIT_OFFER, opts.TOUCH_MODE]);
 
-// default settings
-// keep them for revert to defaults option
-const _defaults = Object.create(null);
-_defaults[opts._VERSION] = revision;
+// internal structure version: a bump resets the stored settings
+const revision = 2;
+const storageKey = 'belko.settings';
 
-/**
- * The main store with settings passed around by reference
- * (because of that we need a wrapper object)
- * don't do this at work (it's faster to write than immutable code).
- *
- * @type {{settings: {_version: number}}}
- */
-let store = {
-    settings: {
-        ..._defaults,
-    },
-};
-let provider;
+let store = {[opts._VERSION]: revision};
+const defaults = {};
+let remote = null;
+let pushTimer = null;
 
-/**
- * Enum for settings types (the explicit type of a key-value pair).
- *
- * @readonly
- * @enum {number}
- */
-const option = Object.freeze({
-    undefined: 0,
-    string: 1,
-    number: 2,
-    object: 3,
-    list: 4,
-});
+const clone = (v) => (v === undefined ? v : JSON.parse(JSON.stringify(v)));
 
-const exportFileName = `cloud-game.settings.v${revision}.txt`;
-
-const getStore = () => store.settings;
-
-/**
- * The NullObject provider if everything else fails.
- */
-const voidProvider = (store_ = { settings: {} }) => {
-    const nil = () => ({});
-
-    return {
-        get: (key) => store_.settings[key],
-        set: nil,
-        remove: nil,
-        save: nil,
-        loadSettings: nil,
-        reset: nil,
-    };
-};
-
-/**
- * The LocalStorage backend for our settings (store).
- *
- * For simplicity it will rewrite all the settings on every store change.
- * If you want to roll your own, then use its "interface".
- */
-const localStorageProvider = (store_ = { settings: {} }) => {
-    if (!_isSupported()) return;
-
-    const root = "settings";
-
-    const _serialize = (data) => JSON.stringify(data, null, 2);
-
-    const save = () => localStorage.setItem(root, _serialize(store_.settings));
-
-    function _isSupported() {
-        const testKey = "_test_42";
-        try {
-            // check if it's writable and isn't full
-            localStorage.setItem(testKey, testKey);
-            localStorage.removeItem(testKey);
-            return true;
-        } catch (e) {
-            log.error(e);
-            return false;
-        }
-    }
-
-    const get = (key) => JSON.parse(localStorage.getItem(key));
-
-    const set = () => save();
-
-    const remove = () => save();
-
-    const loadSettings = () => {
-        if (!localStorage.getItem(root)) save();
-        store_.settings = JSON.parse(localStorage.getItem(root));
-    };
-
-    const reset = () => {
-        localStorage.removeItem(root);
-        localStorage.setItem(root, _serialize(store_.settings));
-    };
-
-    return {
-        get,
-        clear: () => localStorage.removeItem(root),
-        set,
-        remove,
-        save,
-        loadSettings,
-        reset,
-    };
-};
-
-/**
- * Nuke existing settings with provided data.
- * @param text The text to extract data from.
- * @private
- */
-const _import = (text) => {
+const persist = () => {
     try {
-        for (const property of Object.getOwnPropertyNames(store.settings))
-            delete store.settings[property];
-        Object.assign(store.settings, JSON.parse(text).settings);
-        provider.save();
-        pub(SETTINGS_CHANGED);
+        localStorage.setItem(storageKey, JSON.stringify(store));
     } catch (e) {
-        log.error(`Your import file is broken!`, e);
+        log.warn('[settings] cannot persist', e);
     }
-
-    _render();
 };
 
-const _export = () => {
-    let el = document.createElement("a");
-    el.setAttribute(
-        "href",
-        `data:text/plain;charset=utf-8,${encodeURIComponent(JSON.stringify(store, null, 2))}`,
-    );
-    el.setAttribute("download", exportFileName);
-    el.style.display = "none";
-    document.body.appendChild(el);
-    el.click();
-    document.body.removeChild(el);
+const syncedSnapshot = () => {
+    const out = {[opts._VERSION]: revision};
+    for (const k of Object.keys(store)) if (!localOnly.has(k) && k !== opts._VERSION) out[k] = store[k];
+    return out;
+};
+
+const schedulePush = () => {
+    if (!remote) return;
+    clearTimeout(pushTimer);
+    pushTimer = setTimeout(() => remote.save(syncedSnapshot()).catch((e) => log.warn('[settings] sync fail', e)), 1500);
 };
 
 const init = () => {
-    // try to load settings from the localStorage with fallback to null-object
-    provider = localStorageProvider(store) || voidProvider(store);
-    provider.loadSettings();
-
-    const lastRev = (store.settings || { _version: 0 })._version;
-
-    if (revision > lastRev) {
-        log.warn(
-            `Your settings are in older format (v${lastRev}) and will be reset to (v${revision})!`,
-        );
-        _reset();
-    }
-};
-
-const get = () => store.settings;
-
-const _isLoaded = (key) => store.settings.hasOwnProperty(key);
-
-/**
- * Tries to load settings by some key.
- *
- * @param key A key to find values with.
- * @param default_ The default values to set if none exist.
- * @returns A slice of the settings with the given key or a copy of the value.
- */
-const loadOr = (key, default_) => {
-    // preserve defaults
-    _defaults[key] = default_;
-
-    if (!_isLoaded(key)) {
-        store.settings[key] = {};
-        set(key, default_);
-    } else {
-        // !to check if settings do have new properties from default & update
-        // or it have ones that defaults doesn't
-    }
-
-    return store.settings[key];
-};
-
-const set = (key, value, updateProvider = true) => {
-    const type = _getType(value);
-
-    // mutate settings w/o changing the reference
-    switch (type) {
-        case option.list:
-            store.settings[key].splice(0, Infinity, ...value);
-            break;
-        case option.object:
-            for (let option of Object.keys(value)) {
-                log.debug(
-                    `Change key [${option}] from ${store.settings[key][option]} to ${value[option]}`,
-                );
-                store.settings[key][option] = value[option];
-            }
-            break;
-        case option.string:
-        case option.number:
-        case option.undefined:
-        default:
-            store.settings[key] = value;
-    }
-
-    if (updateProvider) {
-        provider.set(key, value);
-        pub(SETTINGS_CHANGED);
-    }
-};
-
-const changed = (key, obj, key2) => {
-    if (!store.settings.hasOwnProperty(key)) return;
-    const newValue = store.settings[key];
-    const changed = newValue !== obj[key2];
-    if (changed) obj[key2] = newValue;
-    return changed;
-};
-
-const _reset = () => {
-    for (let _option of Object.keys(_defaults)) {
-        const value = _defaults[_option];
-
-        // delete all sub-options not in defaults
-        if (_getType(value) === option.object) {
-            for (let opt of Object.keys(store.settings[_option])) {
-                const prev = store.settings[_option][opt];
-                const isDeleted = delete store.settings[_option][opt];
-                log.debug(
-                    `User option [${opt}=${prev}] has been deleted (${isDeleted}) from the [${_option}]`,
-                );
-            }
-        }
-
-        set(_option, value, false);
-    }
-
-    provider.reset();
-    pub(SETTINGS_CHANGED);
-};
-
-const remove = (key, subKey) => {
-    const isRemoved =
-        subKey !== undefined
-            ? delete store.settings[key][subKey]
-            : delete store.settings[key];
-    if (!isRemoved)
-        log.warn(
-            `The key: ${key + (subKey ? "." + subKey : "")} wasn't deleted!`,
-        );
-    provider.remove(key, subKey);
-};
-
-const _render = () => {
-    renderer.data = panel.contentEl;
-    renderer.render();
-};
-
-const panel = gui.panel(
-    document.getElementById("settings"),
-    "> OPTIONS",
-    "settings",
-    null,
-    [
-        { caption: "Export", handler: () => _export(), title: "Save" },
-        {
-            caption: "Import",
-            handler: () => _fileReader.read(onFileLoad),
-            title: "Load",
-        },
-        {
-            caption: "Reset",
-            handler: () => {
-                if (
-                    window.confirm("Are you sure want to reset your settings?")
-                ) {
-                    _reset();
-                    pub(SETTINGS_CHANGED);
-                }
-            },
-            title: "Reset",
-        },
-        {},
-    ],
-    (show) => {
-        if (show) {
-            _render();
-            return;
-        }
-
-        // to make sure it's disabled, but it's a tad verbose
-        pub(KEYBOARD_TOGGLE_FILTER_MODE, { mode: true });
-    },
-);
-
-function _getType(value) {
-    if (value === undefined) return option.undefined;
-    else if (Array.isArray(value)) return option.list;
-    else if (typeof value === "object" && value !== null) return option.object;
-    else if (typeof value === "string") return option.string;
-    else if (typeof value === "number") return option.number;
-    else return option.undefined;
-}
-
-const _fileReader = (() => {
-    let callback_ = () => ({});
-
-    const el = document.createElement("input");
-    const reader = new FileReader();
-
-    el.type = "file";
-    el.accept = ".txt";
-    el.onchange = (event) =>
-        event.target.files.length &&
-        reader.readAsBinaryString(event.target.files[0]);
-    reader.onload = (event) => callback_(event.target.result);
-
-    return {
-        read: (callback) => {
-            callback_ = callback;
-            el.click();
-        },
-    };
-})();
-
-const onFileLoad = (text) => {
     try {
-        _import(text);
-    } catch (e) {
-        log.error(`Couldn't read your settings!`, e);
+        const raw = JSON.parse(localStorage.getItem(storageKey) || 'null');
+        if (raw && raw[opts._VERSION] === revision) store = raw;
+    } catch {
+        // broken storage, start over
     }
+    // the previous (v1) format is obsolete
+    try {
+        localStorage.removeItem('settings');
+    } catch {
+        // ignore
+    }
+    persist();
 };
 
-sub(SETTINGS_CHANGED, _render);
+/** Returns the value or registers and returns the default. */
+const loadOr = (key, value) => {
+    defaults[key] = clone(value);
+    if (!(key in store)) {
+        store[key] = clone(value);
+        persist();
+    }
+    return clone(store[key]);
+};
+
+const get = (key) => (key === undefined ? store : clone(store[key] ?? defaults[key]));
+
+const set = (key, value, notify = true) => {
+    store[key] = clone(value);
+    persist();
+    if (!localOnly.has(key)) schedulePush();
+    notify && pub(SETTINGS_CHANGED, {key});
+};
+
+const reset = (key) => set(key, clone(defaults[key]));
+
+const resetAll = () => {
+    store = {[opts._VERSION]: revision};
+    for (const k of Object.keys(defaults)) store[k] = clone(defaults[k]);
+    persist();
+    schedulePush();
+    pub(SETTINGS_CHANGED, {});
+};
 
 /**
- * App settings module.
- *
- * So the basic idea is to let app modules request their settings
- * from an abstract store first, and if the store doesn't contain such settings yet,
- * then let the store to take default values from the module to save them before that.
- * The return value with the settings is gonna be a slice of in-memory structure
- * backed by a data provider (localStorage).
- * Doing it this way allows us to considerably simplify the code and make sure that
- * exposed settings will have the latest values without additional update/get calls.
+ * Connects the settings to the account storage.
+ * The account copy wins over the local one on load.
  */
-export const settings = {
-    init,
-    loadOr,
-    getStore,
-    get,
-    set,
-    changed,
-    remove,
-    import: _import,
-    export: _export,
-    ui: {
-        set onToggle(fn) {
-            panel.onToggle(fn);
-        },
-        toggle: () => panel.toggle(),
-    },
-};
-
-// don't show these options (i.e. ignored = {'_version': 1})
-const ignored = { _version: 1 };
-
-// the main display data holder element
-let data = null;
-
-const scrollState = ((sx = 0, sy = 0, el) => ({
-    track(_el) {
-        el = _el;
-        el.addEventListener(
-            "scroll",
-            () => ({ scrollTop: sx, scrollLeft: sy } = el),
-            { passive: true },
-        );
-    },
-    restore() {
-        el.scrollTop = sx;
-        el.scrollLeft = sy;
-    },
-}))();
-
-// a fast way to clear data holder.
-const clearData = () => {
-    while (data.firstChild) data.removeChild(data.firstChild);
-};
-
-const _option = (holderEl) => {
-    const wrapperEl = document.createElement("div");
-    wrapperEl.classList.add("settings__option");
-
-    const titleEl = document.createElement("div");
-    titleEl.classList.add("settings__option-title");
-    wrapperEl.append(titleEl);
-
-    const nameEl = document.createElement("div");
-
-    const valueEl = document.createElement("div");
-    valueEl.classList.add("settings__option-value");
-    wrapperEl.append(valueEl);
-
-    return {
-        withName: function (name = "") {
-            if (name === "") return this;
-            nameEl.classList.add("settings__option-name");
-            nameEl.textContent = name;
-            titleEl.append(nameEl);
-            return this;
-        },
-        withClass: function (name = "") {
-            wrapperEl.classList.add(name);
-            return this;
-        },
-        withDescription(text = "") {
-            if (text === "") return this;
-            const descEl = document.createElement("div");
-            descEl.classList.add("settings__option-desc");
-            descEl.textContent = text;
-            titleEl.append(descEl);
-            return this;
-        },
-        restartNeeded: function () {
-            nameEl.classList.add("restart-needed-asterisk");
-            return this;
-        },
-        add: function (...elements) {
-            if (elements.length)
-                for (let _el of elements.flat()) valueEl.append(_el);
-            return this;
-        },
-        build: () => holderEl.append(wrapperEl),
-    };
-};
-
-const onKeyChange = (key, oldValue, newValue, handler) => {
-    if (newValue !== "Escape") {
-        const _settings = settings.get()[opts.INPUT_KEYBOARD_MAP];
-
-        if (_settings[newValue] !== undefined) {
-            log.warn(
-                `There are old settings for key: ${_settings[newValue]}, won't change!`,
-            );
+const attachRemote = async ({load, save}) => {
+    remote = {save};
+    try {
+        const data = await load();
+        if (data && data[opts._VERSION] === revision) {
+            for (const [k, v] of Object.entries(data)) if (!localOnly.has(k)) store[k] = v;
+            persist();
+            pub(SETTINGS_CHANGED, {});
         } else {
-            settings.remove(opts.INPUT_KEYBOARD_MAP, oldValue);
-            settings.set(opts.INPUT_KEYBOARD_MAP, { [newValue]: key });
+            schedulePush();
         }
+    } catch (e) {
+        log.warn('[settings] cannot load account preferences', e);
     }
-
-    handler?.unsub();
-
-    pub(KEYBOARD_TOGGLE_FILTER_MODE);
-    pub(SETTINGS_CHANGED);
 };
 
-const _keyChangeOverlay = (keyName, oldValue) => {
-    const wrapperEl = document.createElement("div");
-    wrapperEl.classList.add("settings__key-wait");
-    wrapperEl.textContent = `Let's choose a ${keyName} key...`;
-
-    let handler = sub(KEYBOARD_KEY_PRESSED, (button) =>
-        onKeyChange(keyName, oldValue, button.key, handler),
-    );
-
-    return wrapperEl;
+/** Copies a changed option into obj[field]; returns true if it was changed. */
+const changed = (key, obj, field) => {
+    const v = store[key];
+    if (JSON.stringify(v) === JSON.stringify(obj[field])) return false;
+    obj[field] = clone(v);
+    return true;
 };
 
-/**
- * Handles a normal option change.
- *
- * @param key The name (id) of an option.
- * @param newValue A new value to set.
- */
-const onChange = (key, newValue) => {
-    settings.set(key, newValue);
-    scrollState.restore(data);
-};
-
-const onKeyBindingChange = (key, oldValue) => {
-    clearData();
-    data.append(_keyChangeOverlay(key, oldValue));
-    pub(KEYBOARD_TOGGLE_FILTER_MODE);
-};
-
-const render = function () {
-    const _settings = settings.getStore();
-
-    clearData();
-    for (let k of Object.keys(_settings).sort()) {
-        if (ignored[k]) continue;
-
-        const value = _settings[k];
-        switch (k) {
-            case opts._VERSION:
-                _option(data)
-                    .withName("Options format version")
-                    .add(value)
-                    .build();
-                break;
-            case opts.LOG_LEVEL:
-                _option(data)
-                    .withName("Log level")
-                    .add(
-                        gui.select(
-                            k,
-                            onChange,
-                            {
-                                labels: ["trace", "debug", "warning", "info"],
-                                values: [
-                                    log.TRACE,
-                                    log.DEBUG,
-                                    log.WARN,
-                                    log.INFO,
-                                ].map(String),
-                            },
-                            value,
-                        ),
-                    )
-                    .build();
-                break;
-            case opts.INPUT_KEYBOARD_MAP:
-                _option(data)
-                    .withName("Keyboard bindings")
-                    .withClass("keyboard-bindings")
-                    .withDescription(
-                        "Bindings for RetroPad. There is an alternate ESC key [Shift+`] (tilde) for cores with keyboard+mouse controls (DosBox)",
-                    )
-                    .add(
-                        Object.keys(value).map((k) =>
-                            gui.binding(value[k], k, onKeyBindingChange),
-                        ),
-                    )
-                    .build();
-                break;
-            case opts.MIRROR_SCREEN:
-                _option(data)
-                    .withName("Video mirroring")
-                    .add(
-                        gui.select(
-                            k,
-                            onChange,
-                            { values: ["mirror"], labels: [] },
-                            value,
-                        ),
-                    )
-                    .withDescription(
-                        "Disables video image smoothing by rendering the video on a canvas (much more demanding for browser)",
-                    )
-                    .build();
-                break;
-            case opts.VOLUME:
-                _option(data)
-                    .withName("Volume (%)")
-                    .add(gui.inputN(k, onChange, value))
-                    .build();
-                break;
-            case opts.FORCE_FULLSCREEN:
-                _option(data)
-                    .withName("Force fullscreen")
-                    .withDescription(
-                        "Whether games should open in full-screen mode after starting up (excluding mobile devices)",
-                    )
-                    .add(
-                        gui.checkbox(
-                            k,
-                            onChange,
-                            value,
-                            "Enabled",
-                            "settings__option-checkbox",
-                        ),
-                    )
-                    .build();
-                break;
-            case opts.WEBRTC_INIT_OFFER:
-                _option(data)
-                    .withName("WebRTC: wait offer")
-                    .withDescription(
-                        "Switch to wait for the remote offer before connecting",
-                    )
-                    .restartNeeded()
-                    .add(
-                        gui.checkbox(
-                            k,
-                            onChange,
-                            value,
-                            "Enabled",
-                            "settings__option-checkbox",
-                        ),
-                    )
-                    .build();
-                break;
-            default:
-                _option(data).withName(k).add(value).build();
-        }
-    }
-
-    data.append(
-        gui.create("br"),
-        gui.create("div", (el) => {
-            el.classList.add("settings__info", "restart-needed-asterisk-b");
-            el.innerText = " -- applied after page reload";
-        }),
-        gui.create("div", (el) => {
-            el.classList.add("settings__info");
-            el.innerText = `Options format version: ${_settings?._version}`;
-        }),
-    );
-};
-
-const renderer = {
-    render,
-    set data(el) {
-        data = el;
-        scrollState.track(el);
-    },
-};
+export const settings = {init, loadOr, get, set, reset, resetAll, attachRemote, changed};

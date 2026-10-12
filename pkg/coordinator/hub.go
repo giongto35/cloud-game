@@ -2,14 +2,20 @@ package coordinator
 
 import (
 	"bytes"
+	"context"
 	"fmt"
 	"net/http"
 	"net/url"
+	"strconv"
+	"sync"
 
 	"github.com/giongto35/cloud-game/v3/pkg/api"
+	"github.com/giongto35/cloud-game/v3/pkg/auth"
 	"github.com/giongto35/cloud-game/v3/pkg/com"
 	"github.com/giongto35/cloud-game/v3/pkg/config"
+	"github.com/giongto35/cloud-game/v3/pkg/covers"
 	"github.com/giongto35/cloud-game/v3/pkg/logger"
+	"github.com/giongto35/cloud-game/v3/pkg/tournament"
 )
 
 type Connection interface {
@@ -26,15 +32,54 @@ type Hub struct {
 	log     *logger.Logger
 	users   com.NetMap[com.Uid, *User]
 	workers com.NetMap[com.Uid, *Worker]
+
+	auth   *auth.Service
+	covers *covers.Service     // optional cover art cache
+	tm     *tournament.Manager // optional tournaments
+
+	// lobby state, see lobby.go
+	mu          sync.Mutex
+	queue       []*queueEntry
+	rooms       map[string]*roomMeta
+	special     map[*Worker]*special // servers reserved for tournament matches and replays
+	syncPending bool
+	done        chan struct{}
 }
 
-func NewHub(conf config.CoordinatorConfig, log *logger.Logger) *Hub {
-	return &Hub{
+func NewHub(conf config.CoordinatorConfig, authSvc *auth.Service, log *logger.Logger) *Hub {
+	h := &Hub{
 		conf:    conf,
 		users:   com.NewNetMap[com.Uid, *User](),
 		workers: com.NewNetMap[com.Uid, *Worker](),
 		log:     log,
+		auth:    authSvc,
+		rooms:   map[string]*roomMeta{},
+		special: map[*Worker]*special{},
+		done:    make(chan struct{}),
 	}
+	authSvc.SetEvents(auth.Events{
+		PendingChanged: h.onPendingChanged,
+		AccountChanged: h.onAccountChanged,
+	})
+	go h.lobbyLoop()
+	return h
+}
+
+func (h *Hub) Stop() { close(h.done) }
+
+// allGames returns the merged game library of all connected workers.
+func (h *Hub) allGames() []api.AppMeta {
+	seen := map[string]bool{}
+	list := []api.AppMeta{}
+	for _, w := range h.workerList() {
+		for _, g := range w.AppNames() {
+			if !seen[g.Name] {
+				seen[g.Name] = true
+				list = append(list, api.AppMeta{Alias: g.Alias, Title: g.Name, System: g.System})
+			}
+		}
+	}
+	return list
 }
 
 // handleUserConnection handles all connections from user/frontend.
@@ -50,41 +95,82 @@ func (h *Hub) handleUserConnection() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		h.log.Debug().Msgf("Handshake %v", r.Host)
 
+		acc, _ := accountFromRequest(r, h.auth)
+		if acc == nil {
+			http.Error(w, "unauthorized", http.StatusUnauthorized)
+			return
+		}
+		if !acc.Can(auth.PermPlay) {
+			http.Error(w, "forbidden", http.StatusForbidden)
+			return
+		}
+
 		conn, err := connector.Connect(w, r)
 		if err != nil {
 			h.log.Error().Err(err).Msg("user connection fail")
 			return
 		}
 
-		user := NewUser(conn, log)
-		defer h.users.RemoveDisconnect(user)
+		user := NewUser(conn, acc, log)
+		defer func() {
+			h.users.RemoveDisconnect(user)
+			h.detach(user)
+		}()
 		done := user.HandleRequests(h, h.conf)
 		params := r.URL.Query()
 
 		worker := h.findWorkerFor(user, params, h.log.Extend(h.log.With().Str("cid", user.Id().Short())))
-		if worker == nil {
-			user.Notify(api.ErrNoFreeSlots, "")
-			h.log.Info().Msg("no free workers")
-			return
-		}
-
 		// Link the user to the selected worker. Slot reservation is handled later
 		// on game start; this keeps connections lightweight and lets deep-link
 		// joins share a worker without consuming its single game slot.
 		user.w = worker
-
 		h.users.Add(user)
+		h.attach(user)
 
-		apps := worker.AppNames()
-		list := make([]api.AppMeta, len(apps))
-		for i := range apps {
-			list[i] = api.AppMeta{Alias: apps[i].Alias, Title: apps[i].Name, System: apps[i].System}
+		if worker == nil {
+			// no free servers: the user stays in the lobby (library, live rooms, queue)
+			user.InitSession("", h.conf.Webrtc.IceServers, h.allGames())
+			h.log.Info().Msg("no free workers, user is in the lobby")
+		} else {
+			apps := worker.AppNames()
+			list := make([]api.AppMeta, len(apps))
+			for i := range apps {
+				list[i] = api.AppMeta{Alias: apps[i].Alias, Title: apps[i].Name, System: apps[i].System}
+			}
+			user.InitSession(worker.Id().String(), h.conf.Webrtc.IceServers, list)
 		}
-
-		user.InitSession(worker.Id().String(), h.conf.Webrtc.IceServers, list)
-		log.Info().Str(logger.DirectionField, logger.MarkPlus).Msgf("user %s", user.Id())
+		// a tournament call made while the player was (re)connecting
+		if h.tm != nil {
+			if id, text, ok := h.tm.CallFor(acc.Id); ok {
+				user.Notify(api.Notice, api.NoticeResponse{Kind: "match_ready", Text: text, Match: id})
+			}
+		}
+		if acc.Can(auth.PermUsersApprove) {
+			if n := h.auth.PendingCount(r.Context()); n > 0 {
+				user.Notify(api.Notice, api.NoticeResponse{Kind: "pending_users", Count: n})
+			}
+		}
+		h.scheduleSync()
+		log.Info().Str(logger.DirectionField, logger.MarkPlus).Msgf("user %s (%s)", user.Id(), acc.Email)
 		<-done
 	}
+}
+
+// onAccountChanged refreshes or disconnects live sessions of a changed account.
+func (h *Hub) onAccountChanged(id int64) {
+	acc, err := h.auth.AccountById(context.Background(), id)
+	for _, u := range h.userList() {
+		if u.Account().Id != id {
+			continue
+		}
+		if err != nil || !acc.Can(auth.PermPlay) {
+			h.Kick(u, "Sua conta foi desativada pelo administrador.")
+			continue
+		}
+		u.SetAccount(acc)
+		u.notice("account_updated", "")
+	}
+	h.scheduleSync()
 }
 
 func RequestToHandshake(data string) (*api.ConnectionRequest[com.Uid], error) {
@@ -140,9 +226,33 @@ func (h *Hub) handleWorkerConnection() http.HandlerFunc {
 		conn.SetMaxReadSize(h.conf.Coordinator.MaxWsSize)
 
 		worker := NewWorker(conn, *handshake, log)
-		defer h.workers.RemoveDisconnect(worker)
+		worker.OnLibrary = func(list []api.GameInfo) {
+			if h.covers == nil {
+				return
+			}
+			games := make(map[string]string, len(list))
+			for _, g := range list {
+				games[g.Name] = g.System
+			}
+			h.covers.Warm(games)
+		}
+		worker.OnMatchResult = func(rq api.MatchResultRequest) { h.onMatchResult(worker, rq) }
+		worker.OnRoomChange = func(rid string, closed bool) {
+			if closed {
+				h.releaseSpecial(worker, rid)
+				h.onRoomClosed(rid)
+			} else {
+				h.scheduleSync()
+			}
+		}
+		defer func() {
+			h.workers.RemoveDisconnect(worker)
+			h.releaseSpecial(worker, "")
+			h.dispatch()
+		}()
 		done := worker.HandleRequests(&h.users)
 		h.workers.Add(worker)
+		h.dispatch()
 		log.Info().
 			Str(logger.DirectionField, logger.MarkPlus).
 			Msgf("worker %s", worker.PrintInfo())
@@ -175,6 +285,7 @@ func (h *Hub) GetServerList() (r []api.Server) {
 // various conditions.
 func (h *Hub) findWorkerFor(usr *User, q url.Values, log *logger.Logger) *Worker {
 	log.Debug().Msg("Search available workers")
+	acc := usr.Account().Id
 	roomIdRaw := q.Get(api.RoomIdQueryParam)
 	sessionId, deepRoomId := api.ExplodeDeepLink(roomIdRaw)
 	roomId := roomIdRaw
@@ -186,30 +297,39 @@ func (h *Hub) findWorkerFor(usr *User, q url.Values, log *logger.Logger) *Worker
 
 	var worker *Worker
 
-	if wid != "" {
-		if worker = h.findWorkerById(wid, h.conf.Coordinator.Debug); worker != nil {
+	// explicit server selection is reserved for moderators
+	if wid != "" && usr.Account().Can(auth.PermRoomsModerate) {
+		if worker = h.findWorkerById(wid, h.conf.Coordinator.Debug, acc); worker != nil {
 			log.Debug().Msgf("Worker with id: %v has been found", wid)
-			return worker
-		} else {
-			return nil
 		}
+		return worker
+	}
+
+	// tournament matches and replays run on their reserved servers
+	if id, _ := strconv.ParseInt(q.Get(api.MatchIdParam), 10, 64); id > 0 {
+		return h.specialWorker(specialMatch, id)
+	}
+	if id, _ := strconv.ParseInt(q.Get(api.ReplayIdParam), 10, 64); id > 0 {
+		return h.specialWorker(specialReplay, id)
 	}
 
 	if worker = h.findWorkerByRoom(roomIdRaw, roomId, zone); worker != nil {
 		log.Debug().Str("room", roomId).Msg("An existing worker has been found")
-	} else if worker = h.findWorkerByPreviousRoom(sessionId); worker != nil {
+	} else if worker = h.reservedWorkerFor(acc); worker != nil {
+		log.Debug().Msg("A worker reserved in the queue has been found")
+	} else if worker = h.findWorkerByPreviousRoom(sessionId, acc); worker != nil {
 		log.Debug().Msgf("Worker %v with the previous room: %v is found", wid, roomId)
 	} else {
 		switch h.conf.Coordinator.Selector {
 		case config.SelectByPing:
 			log.Debug().Msgf("Searching fastest free worker...")
-			if worker = h.findFastestWorker(zone,
+			if worker = h.findFastestWorker(zone, acc,
 				func(servers []string) (map[string]int64, error) { return usr.CheckLatency(servers) }); worker != nil {
 				log.Debug().Msg("The fastest worker has been found")
 			}
 		default:
 			log.Debug().Msgf("Searching any free worker...")
-			if worker = h.find1stFreeWorker(zone); worker != nil {
+			if worker = h.find1stFreeWorker(zone, acc); worker != nil {
 				log.Debug().Msgf("Found next free worker")
 			}
 		}
@@ -217,15 +337,17 @@ func (h *Hub) findWorkerFor(usr *User, q url.Values, log *logger.Logger) *Worker
 	return worker
 }
 
-func (h *Hub) findWorkerByPreviousRoom(id string) *Worker {
+func (h *Hub) findWorkerByPreviousRoom(id string, acc int64) *Worker {
 	if id == "" {
 		return nil
 	}
-	w, _ := h.workers.FindBy(func(w *Worker) bool {
+	for _, w := range h.workerList() {
 		// session and room id are the same
-		return w.HadSession(id) && w.HasSlot()
-	})
-	return w
+		if w.HadSession(id) && h.isAvailableFor(w, acc) {
+			return w
+		}
+	}
+	return nil
 }
 
 func (h *Hub) findWorkerByRoom(id string, deepId string, region string) *Worker {
@@ -244,18 +366,18 @@ func (h *Hub) findWorkerByRoom(id string, deepId string, region string) *Worker 
 	return w
 }
 
-func (h *Hub) getAvailableWorkers(region string) []*Worker {
+func (h *Hub) getAvailableWorkers(region string, acc int64) []*Worker {
 	var workers []*Worker
-	for w := range h.workers.Values() {
-		if w.HasSlot() && w.In(region) {
+	for _, w := range h.workerList() {
+		if w.In(region) && h.isAvailableFor(w, acc) {
 			workers = append(workers, w)
 		}
 	}
 	return workers
 }
 
-func (h *Hub) find1stFreeWorker(region string) *Worker {
-	workers := h.getAvailableWorkers(region)
+func (h *Hub) find1stFreeWorker(region string, acc int64) *Worker {
+	workers := h.getAvailableWorkers(region, acc)
 	if len(workers) > 0 {
 		return workers[0]
 	}
@@ -265,8 +387,8 @@ func (h *Hub) find1stFreeWorker(region string) *Worker {
 // findFastestWorker returns the best server for a session.
 // All workers addresses are sent to user and user will ping to get latency.
 // !to rewrite
-func (h *Hub) findFastestWorker(region string, fn func(addresses []string) (map[string]int64, error)) *Worker {
-	workers := h.getAvailableWorkers(region)
+func (h *Hub) findFastestWorker(region string, acc int64, fn func(addresses []string) (map[string]int64, error)) *Worker {
+	workers := h.getAvailableWorkers(region, acc)
 	if len(workers) == 0 {
 		return nil
 	}
@@ -285,7 +407,7 @@ func (h *Hub) findFastestWorker(region string, fn func(addresses []string) (map[
 		return nil
 	}
 
-	workers = h.getAvailableWorkers(region)
+	workers = h.getAvailableWorkers(region, acc)
 	if len(workers) == 0 {
 		return nil
 	}
@@ -306,7 +428,7 @@ func (h *Hub) findFastestWorker(region string, fn func(addresses []string) (map[
 	return bestWorker
 }
 
-func (h *Hub) findWorkerById(id string, useAllWorkers bool) *Worker {
+func (h *Hub) findWorkerById(id string, useAllWorkers bool, acc int64) *Worker {
 	if id == "" {
 		return nil
 	}
@@ -316,7 +438,7 @@ func (h *Hub) findWorkerById(id string, useAllWorkers bool) *Worker {
 		return nil
 	}
 
-	for _, w := range h.getAvailableWorkers("") {
+	for _, w := range h.getAvailableWorkers("", acc) {
 		if w.Id() == com.NilUid {
 			continue
 		}

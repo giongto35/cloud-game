@@ -83,12 +83,18 @@ func (s *InputState) SetInput(port int, data []byte) {
 	}
 }
 
-// SyncToCache syncs input state to C-side cache before Run().
-func (s *InputState) SyncToCache() {
+// SyncToCache syncs input state to C-side cache before Run() and returns
+// the buttons that were applied to each port for this frame.
+// With a non-nil override, the given buttons replace the live input (replays).
+func (s *InputState) SyncToCache(override *[maxPort]uint32) (applied [maxPort]uint32) {
 	for p := range uint(maxPort) {
 		keys := atomic.LoadUint32(&s[p].keys)
 		axes := atomic.LoadInt64(&s[p].axes)
 		triggers := atomic.LoadInt32(&s[p].triggers)
+		if override != nil {
+			keys, axes, triggers = override[p], 0, 0
+		}
+		applied[p] = keys
 
 		C.input_cache_set_port(C.uint(p), C.uint32_t(keys),
 			C.int16_t(axes),
@@ -98,6 +104,7 @@ func (s *InputState) SyncToCache() {
 			C.int16_t(triggers),
 			C.int16_t(triggers>>16))
 	}
+	return
 }
 
 // KeyboardState tracks keys of the keyboard.

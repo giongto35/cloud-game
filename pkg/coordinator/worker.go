@@ -27,6 +27,13 @@ type Worker struct {
 	Lib      []api.GameInfo
 	Sessions map[string]struct{}
 
+	// OnRoomChange is called when the worker opens (closed=false) or closes a room.
+	OnRoomChange func(rid string, closed bool)
+	// OnLibrary is called when the worker sends its game list.
+	OnLibrary func([]api.GameInfo)
+	// OnMatchResult is called when a tournament match is over.
+	OnMatchResult func(api.MatchResultRequest)
+
 	log *logger.Logger
 }
 
@@ -96,6 +103,12 @@ func (w *Worker) HandleRequests(users HasUserRegistry) chan struct{} {
 			err = api.DoE(p, w.HandleLibGameList)
 		case api.PrevSessions:
 			err = api.DoE(p, w.HandlePrevSessionList)
+		case api.MatchResult:
+			err = api.Do(p, func(rq api.MatchResultRequest) {
+				if w.OnMatchResult != nil {
+					go w.OnMatchResult(rq) // never block the socket reader
+				}
+			})
 		default:
 			w.log.Warn().Msgf("Unknown packet: %+v", p)
 		}

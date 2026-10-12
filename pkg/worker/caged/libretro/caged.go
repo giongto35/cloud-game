@@ -57,6 +57,9 @@ func (c *Caged) ReloadFrontend() {
 	c.base = frontend
 }
 
+// Frontend returns the concrete emulator frontend (hooks, snapshots).
+func (c *Caged) Frontend() *Frontend { return c.base }
+
 // VideoChangeCb adds a callback when video params are changed by the app.
 func (c *Caged) VideoChangeCb(fn func()) { c.base.SetVideoChangeCb(fn) }
 

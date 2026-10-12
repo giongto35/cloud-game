@@ -6,6 +6,7 @@ echo Making application runtime directories
 mkdir -p ./assets/cache
 mkdir -p ./assets/games
 mkdir -p ./.cr
+mkdir -p ./data
 if [ "$app" = "worker" ]; then
   mkdir -p ./assets/cores
   mkdir -p ./libretro

@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"github.com/giongto35/cloud-game/v3/pkg/api"
+	"github.com/giongto35/cloud-game/v3/pkg/auth"
 	"github.com/giongto35/cloud-game/v3/pkg/config"
 )
 
@@ -22,71 +23,73 @@ func (u *User) HandleInitWebrtcStream(rq api.InitUserWebrtcStreamRequest) {
 }
 
 func (u *User) HandleWebrtcSignal(rq api.WebrtcSignalUser) {
+	if u.w == nil {
+		return
+	}
 	u.w.WebrtcSignal(u.Id().String(), rq.Sdp, rq.Ice)
 }
 
-func (u *User) HandleStartGame(rq api.GameStartUserRequest, conf config.CoordinatorConfig) {
+func (u *User) HandleStartGame(rq api.GameStartUserRequest, conf config.CoordinatorConfig, h *Hub) {
+	if u.w == nil {
+		u.Notify(api.ErrNoFreeSlots, "")
+		return
+	}
+	if rq.MatchId != 0 || rq.ReplayId != 0 {
+		u.startSpecial(rq, h)
+		return
+	}
 	// Worker slot / room gating:
-	// - If the worker is BUSY (no free slot), we must not create another room.
-	//   * If the worker has already reported a room id, only allow requests
-	//     for that same room (deep-link joins / reloads).
-	//   * If the worker hasn't reported a room yet, deny any new StartGame to
-	//     avoid racing concurrent room creation on the worker.
-	//   * When the user is starting a NEW game (empty room id), we give the
-	//     worker a short grace period to close the previous room and free the
-	//     slot before rejecting with "no slots".
-	// - If the worker is FREE, reserve the slot lazily before starting the
-	//   game; the room id (if any) comes from the request / worker.
-
-	// Grace period: when there's no room id in the request (new game) but the
-	// worker still appears busy, wait a bit for the previous room to close.
+	// - A BUSY worker (no free slot) only accepts joins into its current room.
+	// - A FREE worker reserves its single slot for the new room, respecting
+	//   queue reservations made for other accounts.
+	// - When starting a NEW game on a worker that still looks busy, give the
+	//   previous room a short grace period to close.
 	if rq.RoomId == "" && !u.w.HasSlot() {
 		const waitTotal = 3 * time.Second
 		const step = 100 * time.Millisecond
-		waited := time.Duration(0)
-		for waited < waitTotal {
-			if u.w.HasSlot() {
-				break
-			}
+		for waited := time.Duration(0); waited < waitTotal && !u.w.HasSlot(); waited += step {
 			time.Sleep(step)
-			waited += step
 		}
 	}
 
-	busy := !u.w.HasSlot()
-	if busy {
-		if u.w.RoomId == "" {
+	acc := u.Account()
+	joining := !u.w.HasSlot()
+	if joining {
+		if u.w.RoomId == "" || rq.RoomId != u.w.RoomId {
 			u.Notify(api.ErrNoFreeSlots, "")
 			return
 		}
-		// if rq.RoomId == "" {
-		// 	// No room id but worker is busy -> assume user wants to continue
-		// 	// the existing room instead of starting a parallel game.
-		// 	rq.RoomId = u.w.RoomId
-		// } else
-		if rq.RoomId != u.w.RoomId {
-			u.Notify(api.ErrNoFreeSlots, "")
+		if h.isBanned(rq.RoomId, acc.Id) {
+			u.Notify(api.Kicked, api.KickedResponse{Reason: "Você foi removido desta sala pelo anfitrião."})
 			return
 		}
+		rq.PlayerIndex = h.pickSlot(rq.RoomId, rq.PlayerIndex, rq.Spectator)
 	} else {
-		// Worker is free: try to reserve the single slot for this new room.
-		if !u.w.TryReserve() {
+		if rq.Spectator {
+			// there is nothing to watch on a free worker: the room is over
+			u.notice("room_gone", "Essa partida já terminou.")
+			return
+		}
+		if !h.claimWorker(u) {
 			u.Notify(api.ErrNoFreeSlots, "")
 			return
 		}
+		rq.PlayerIndex = 0
 	}
 
 	startGameResp, err := u.w.StartGame(u.Id().String(), rq)
-	if err != nil || startGameResp == nil {
+	if err != nil || startGameResp == nil || startGameResp.Rid == "" {
 		u.log.Error().Err(err).Msg("malformed game start response")
+		if !joining {
+			u.w.FreeSlots()
+			h.dispatch()
+		}
+		u.notice("error", "Não foi possível iniciar o jogo. Tente novamente.")
 		return
 	}
-	if startGameResp.Rid == "" {
-		u.log.Error().Msg("there is no room")
-		return
-	}
-	u.log.Info().Str("id", startGameResp.Rid).Msg("Received room response from worker")
-	u.StartGame(startGameResp.AV, startGameResp.KbMouse)
+	u.log.Info().Str("id", startGameResp.Rid).Int("slot", rq.PlayerIndex).Msg("Received room response from worker")
+	h.joinRoom(u, startGameResp.Rid, rq.PlayerIndex, !joining)
+	u.StartGame(startGameResp.Rid, startGameResp.AV, startGameResp.KbMouse, rq.PlayerIndex, h.isHost(u))
 
 	// send back recording status
 	if conf.Recording.Enabled && rq.Record {
@@ -94,20 +97,36 @@ func (u *User) HandleStartGame(rq api.GameStartUserRequest, conf config.Coordina
 	}
 }
 
-func (u *User) HandleQuitGame(rq api.GameQuitRequest) {
+func (u *User) HandleQuitGame(rq api.GameQuitRequest, h *Hub) {
+	if u.w == nil {
+		return
+	}
 	if rq.Rid == u.w.RoomId {
 		u.w.QuitGame(u.Id().String())
 	}
+	h.leaveRoom(u, "saiu da sala")
 }
 
-func (u *User) HandleResetGame(rq api.ResetGameRequest) {
-	if rq.Rid != u.w.RoomId {
+func (u *User) HandleResetGame(rq api.ResetGameRequest, h *Hub) {
+	if u.w == nil || rq.Rid != u.w.RoomId {
+		return
+	}
+	if !h.canControl(u) {
+		u.notice("error", "Somente o anfitrião pode reiniciar o jogo.")
 		return
 	}
 	u.w.ResetGame(u.Id().String())
+	h.systemChat(h.roomOf(u), u.Account().Name+" reiniciou o jogo")
 }
 
-func (u *User) HandleSaveGame() error {
+func (u *User) HandleSaveGame(h *Hub) error {
+	if u.w == nil {
+		return nil
+	}
+	if !h.canControl(u) {
+		u.notice("error", "Somente o anfitrião pode salvar o jogo.")
+		return nil
+	}
 	resp, err := u.w.SaveGame(u.Id().String())
 	if err != nil {
 		return err
@@ -117,37 +136,115 @@ func (u *User) HandleSaveGame() error {
 		if id, _ := api.ExplodeDeepLink(u.w.RoomId); id != "" {
 			u.w.AddSession(id)
 		}
+		h.systemChat(h.roomOf(u), u.Account().Name+" salvou o jogo")
 	}
 
 	u.Notify(api.SaveGame, resp)
 	return nil
 }
 
-func (u *User) HandleLoadGame() error {
+func (u *User) HandleLoadGame(h *Hub) error {
+	if u.w == nil {
+		return nil
+	}
+	if !h.canControl(u) {
+		u.notice("error", "Somente o anfitrião pode carregar o jogo salvo.")
+		return nil
+	}
 	resp, err := u.w.LoadGame(u.Id().String())
 	if err != nil {
 		return err
+	}
+	if *resp == api.OK {
+		h.systemChat(h.roomOf(u), u.Account().Name+" carregou o jogo salvo")
 	}
 	u.Notify(api.LoadGame, resp)
 	return nil
 }
 
-func (u *User) HandleChangePlayer(rq api.ChangePlayerUserRequest) {
-	resp, err := u.w.ChangePlayer(u.Id().String(), int(rq))
-	// !to make it a little less convoluted
-	if err != nil || resp == nil || *resp == -1 {
-		u.log.Error().Err(err).Msgf("player select fail, req: %v", rq)
+// moveToSlot changes the slot of a room member (validated) and informs the worker.
+func (h *Hub) moveToSlot(target *User, slot int) bool {
+	if target.w == nil {
+		return false
+	}
+	prev, ok := h.setSlot(target, slot)
+	if !ok {
+		return false
+	}
+	if prev == slot {
+		return true
+	}
+	resp, err := target.w.ChangePlayer(target.Id().String(), slot)
+	if err != nil || resp == nil || int(*resp) != slot {
+		target.log.Error().Err(err).Msgf("player select fail, req: %v", slot)
+		h.restoreSlot(target, prev)
+		return false
+	}
+	target.Notify(api.ChangePlayer, slot)
+	name := target.Account().Name
+	if slot == SpectatorSlot {
+		h.systemChat(h.roomOf(target), name+" agora está assistindo")
+	} else {
+		h.systemChat(h.roomOf(target), name+" agora é o Jogador "+itoa(slot+1))
+	}
+	h.scheduleSync()
+	return true
+}
+
+func (u *User) HandleChangePlayer(rq api.ChangePlayerUserRequest, h *Hub) {
+	if !h.moveToSlot(u, int(rq)) {
+		u.notice("error", "Essa vaga não está disponível.")
+	}
+}
+
+// findMember finds another member of the same room by connection id.
+func (h *Hub) findMember(u *User, id string) *User {
+	t := h.users.Find(id)
+	if t == nil {
+		return nil
+	}
+	h.mu.Lock()
+	defer h.mu.Unlock()
+	if u.room == "" || t.room != u.room {
+		return nil
+	}
+	return t
+}
+
+func (u *User) HandleRoomAssign(rq api.RoomAssignRequest, h *Hub) {
+	if !h.canControl(u) {
+		u.notice("error", "Somente o anfitrião pode mover jogadores.")
 		return
 	}
-	u.Notify(api.ChangePlayer, rq)
+	t := h.findMember(u, rq.User)
+	if t == nil || !h.moveToSlot(t, rq.Slot) {
+		u.notice("error", "Não foi possível mover esse jogador.")
+	}
+}
+
+func (u *User) HandleRoomKick(rq api.RoomKickRequest, h *Hub) {
+	if !h.canControl(u) && !(h.isLocked(u) && u.Account().Can(auth.PermRoomsModerate)) {
+		u.notice("error", "Somente o anfitrião pode remover pessoas da sala.")
+		return
+	}
+	t := h.findMember(u, rq.User)
+	if t == nil || t == u {
+		return
+	}
+	if t.Account().Can(auth.PermRoomsModerate) && !u.Account().Can(auth.PermRoomsModerate) {
+		u.notice("error", "Você não pode remover um moderador.")
+		return
+	}
+	rid := h.roomOf(t)
+	h.ban(rid, t.Account().Id)
+	h.leaveRoom(t, "foi removido da sala")
+	h.Kick(t, "Você foi removido da sala por "+u.Account().Name+".")
 }
 
 func (u *User) HandleRecordGame(rq api.RecordGameRequest) {
 	if u.w == nil {
 		return
 	}
-
-	u.log.Debug().Msgf("??? room: %v, rec: %v user: %v", u.w.RoomId, rq.Active, rq.User)
 
 	if u.w.RoomId == "" {
 		u.log.Error().Msg("Recording in the empty room is not allowed!")

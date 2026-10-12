@@ -82,3 +82,12 @@ nvram/
 *.mcd
 /assets/
 /libretro/
+
+### Belko Arcade
+
+# local database and secrets
+data/
+*.db
+*.db-shm
+*.db-wal
+.env

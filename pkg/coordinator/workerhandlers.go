@@ -2,12 +2,20 @@ package coordinator
 
 import "github.com/giongto35/cloud-game/v3/pkg/api"
 
-func (w *Worker) HandleRegisterRoom(rq api.RegisterRoomRequest) { w.RoomId = string(rq) }
+func (w *Worker) HandleRegisterRoom(rq api.RegisterRoomRequest) {
+	w.RoomId = string(rq)
+	if w.OnRoomChange != nil {
+		w.OnRoomChange("", false)
+	}
+}
 
 func (w *Worker) HandleCloseRoom(rq api.CloseRoomRequest) {
 	if string(rq) == w.RoomId {
 		w.RoomId = ""
 		w.FreeSlots()
+	}
+	if w.OnRoomChange != nil {
+		w.OnRoomChange(string(rq), true)
 	}
 }
 
@@ -22,6 +30,9 @@ func (w *Worker) HandleIceCandidate(rq api.WebrtcSignalRequest, users HasUserReg
 
 func (w *Worker) HandleLibGameList(inf api.LibGameListInfo) error {
 	w.SetLib(inf.List)
+	if w.OnLibrary != nil {
+		w.OnLibrary(inf.List)
+	}
 	return nil
 }
 

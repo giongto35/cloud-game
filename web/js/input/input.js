@@ -5,36 +5,30 @@ import {
     sub
 } from 'event';
 
-export {KEY, JOYPAD_KEYS} from './keys.js?v=3';
+export {KEY, JOYPAD_KEYS, BINDABLE} from './keys.js?v=4';
 
-import {joystick} from './joystick.js?v=3';
-import {keyboard} from './keyboard.js?v=3'
-import {pointer} from './pointer.js?v=3';
-import {retropad} from './retropad.js?v=3';
-import {touch} from './touch.js?v=3';
+import {joystick, defaultGamepadMap, padType} from './joystick.js?v=4';
+import {keyboard, defaultKeyboardMap} from './keyboard.js?v=4';
+import {pointer} from './pointer.js?v=4';
+import {retropad} from './retropad.js?v=4';
+import {touch, isTouchDevice} from './touch.js?v=4';
 
-export {joystick, keyboard, pointer, retropad, touch};
+export {joystick, keyboard, pointer, retropad, touch, isTouchDevice, defaultGamepadMap, defaultKeyboardMap, padType};
 
 const input_state = {
-    joystick: true,
-    keyboard: false,
-    pointer: true, // aka mouse
-    retropad: true,
-    touch: true,
-
+    retropad: false,
     kbm: false,
-}
+};
 
 const init = () => {
-    keyboard.init()
-    joystick.init()
-    touch.init()
-}
+    keyboard.init();
+    joystick.init();
+};
 
 sub(KB_MOUSE_FLAG, () => {
-    input_state.kbm = true
-    pub(REFRESH_INPUT)
-})
+    input_state.kbm = true;
+    pub(REFRESH_INPUT);
+});
 
 export const input = {
     state: input_state,
@@ -42,15 +36,15 @@ export const input = {
     retropad: {
         ...retropad,
         toggle(on = true) {
-            if (on === input_state.retropad) return
-            input_state.retropad = on
-            retropad.toggle(on)
+            if (on === input_state.retropad) return;
+            input_state.retropad = on;
+            retropad.toggle(on);
         }
     },
     set kbm(v) {
-        input_state.kbm = v
+        input_state.kbm = v;
     },
     get kbm() {
-        return input_state.kbm
+        return input_state.kbm;
     }
-}
+};

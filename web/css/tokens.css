@@ -1,0 +1,79 @@
+/* Belko Arcade — design tokens */
+:root {
+    color-scheme: dark;
+
+    --bg: #0b0d14;
+    --bg-glow-1: rgba(124, 92, 255, 0.16);
+    --bg-glow-2: rgba(34, 211, 238, 0.10);
+    --surface-1: #121521;
+    --surface-2: #181c2b;
+    --surface-3: #20253a;
+    --surface-4: #2a3049;
+    --overlay: rgba(6, 8, 14, 0.72);
+    --border: #2a3048;
+    --border-strong: #3a4263;
+
+    --text: #eef0f8;
+    --text-2: #a7adc4;
+    --text-3: #6e7591;
+    --text-on-accent: #ffffff;
+
+    --accent: #7c5cff;
+    --accent-hover: #8f74ff;
+    --accent-press: #6a48f5;
+    --accent-soft: rgba(124, 92, 255, 0.16);
+    --accent-2: #22d3ee;
+    --accent-2-soft: rgba(34, 211, 238, 0.14);
+    --gradient: linear-gradient(135deg, #7c5cff 0%, #5b8cff 50%, #22d3ee 100%);
+
+    --success: #22c55e;
+    --success-soft: rgba(34, 197, 94, 0.14);
+    --warning: #f59e0b;
+    --warning-soft: rgba(245, 158, 11, 0.14);
+    --danger: #ef4444;
+    --danger-soft: rgba(239, 68, 68, 0.14);
+
+    --font: "Inter", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    --font-display: "Space Grotesk", "Inter", system-ui, sans-serif;
+    --font-mono: ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
+
+    --fs-xs: 12px;
+    --fs-s: 13px;
+    --fs-m: 14px;
+    --fs-l: 16px;
+    --fs-xl: 20px;
+    --fs-2xl: 28px;
+    --fs-3xl: 40px;
+
+    --sp-1: 4px;
+    --sp-2: 8px;
+    --sp-3: 12px;
+    --sp-4: 16px;
+    --sp-5: 24px;
+    --sp-6: 32px;
+    --sp-7: 48px;
+
+    --radius-s: 8px;
+    --radius-m: 12px;
+    --radius-l: 20px;
+    --radius-full: 999px;
+
+    --shadow-1: 0 1px 2px rgba(0, 0, 0, 0.3), 0 2px 8px rgba(0, 0, 0, 0.2);
+    --shadow-2: 0 8px 24px rgba(0, 0, 0, 0.35), 0 2px 6px rgba(0, 0, 0, 0.25);
+    --shadow-3: 0 24px 64px rgba(0, 0, 0, 0.5);
+    --ring: 0 0 0 2px var(--bg), 0 0 0 4px var(--accent-2);
+
+    --ease: cubic-bezier(0.2, 0.8, 0.2, 1);
+    --t-fast: 150ms;
+    --t-med: 250ms;
+
+    --topbar-h: 64px;
+    --content-w: 1360px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    :root {
+        --t-fast: 0ms;
+        --t-med: 0ms;
+    }
+}

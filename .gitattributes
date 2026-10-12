@@ -1,0 +1,3 @@
+# shell scripts run inside Linux containers: always LF
+*.sh text eol=lf
+Dockerfile text eol=lf

@@ -3,6 +3,7 @@ package worker
 import (
 	"errors"
 	"fmt"
+	"sync"
 	"time"
 
 	"github.com/giongto35/cloud-game/v3/pkg/config"
@@ -10,6 +11,7 @@ import (
 	"github.com/giongto35/cloud-game/v3/pkg/logger"
 	"github.com/giongto35/cloud-game/v3/pkg/monitoring"
 	"github.com/giongto35/cloud-game/v3/pkg/network/httpx"
+	"github.com/giongto35/cloud-game/v3/pkg/network/webrtc"
 	"github.com/giongto35/cloud-game/v3/pkg/worker/caged"
 	"github.com/giongto35/cloud-game/v3/pkg/worker/cloud"
 	"github.com/giongto35/cloud-game/v3/pkg/worker/room"
@@ -29,6 +31,18 @@ type Worker struct {
 		Stop() error
 	}
 	storage cloud.Storage
+
+	// the WebRTC API (and its single UDP port) lives as long as the worker:
+	// recreating it on every coordinator reconnect leaked the port and moved
+	// the media to the next (unpublished) one
+	rtcOnce    sync.Once
+	rtcFactory *webrtc.ApiFactory
+	rtcErr     error
+}
+
+func (w *Worker) webrtcFactory() (*webrtc.ApiFactory, error) {
+	w.rtcOnce.Do(func() { w.rtcFactory, w.rtcErr = webrtc.NewApiFactory(w.conf.Webrtc, w.log, nil) })
+	return w.rtcFactory, w.rtcErr
 }
 
 func New(conf config.WorkerConfig, log *logger.Logger) (*Worker, error) {

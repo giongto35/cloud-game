@@ -13,6 +13,17 @@ import (
 	"github.com/giongto35/cloud-game/v3/pkg/worker/room"
 )
 
+// maxPlayers is the number of emulator input ports.
+const maxPlayers = 4
+
+// clampPlayer maps invalid player indexes to -1 (spectator, no input).
+func clampPlayer(i int) int {
+	if i < 0 || i >= maxPlayers {
+		return -1
+	}
+	return i
+}
+
 // buildConnQuery builds initial connection data query to a coordinator.
 func buildConnQuery(id com.Uid, conf config.Worker, address string) (string, error) {
 	addr := conf.GetPingAddr(address)
@@ -80,7 +91,7 @@ func (c *coordinator) HandleGameStart(rq api.StartGameRequest, w *Worker) api.Ou
 		c.log.Error().Msgf("no user [%v]", rq.Id)
 		return api.EmptyPacket
 	}
-	user.Index = rq.PlayerIndex
+	user.Index = clampPlayer(rq.PlayerIndex)
 
 	r := w.router.FindRoom(rq.Rid)
 
@@ -192,16 +203,34 @@ func (c *coordinator) HandleGameStart(rq api.StartGameRequest, w *Worker) api.Ou
 		}
 
 		r.InitMedia()
+
+		if rq.Tournament != nil || len(rq.Replay) > 0 {
+			if err := c.setupMatchRoom(app.Frontend(), rq, uid, gameName, game.System); err != nil {
+				c.log.Error().Err(err).Msg("couldn't prepare the tournament room")
+				r.Close()
+				w.router.SetRoom(nil)
+				return api.EmptyPacket
+			}
+		}
+
 		r.StartApp()
 	}
 
 	needsKbMouse := r.App().KbMouseSupport()
 
+	// spectators (index -1) and out-of-range indexes never reach the emulator
+	input := func(device byte) func([]byte) {
+		return func(data []byte) {
+			if idx := user.Index; idx >= 0 && idx < maxPlayers {
+				r.App().Input(idx, device, data)
+			}
+		}
+	}
 	s := room.WithWebRTC(user.Session)
-	s.OnMessage(func(data []byte) { r.App().Input(user.Index, byte(caged.RetroPad), data) })
+	s.OnMessage(input(byte(caged.RetroPad)))
 	if needsKbMouse {
-		_, _ = s.Channel("keyboard", nil, func(data []byte) { r.App().Input(user.Index, byte(caged.Keyboard), data) })
-		_, _ = s.Channel("mouse", nil, func(data []byte) { r.App().Input(user.Index, byte(caged.Mouse), data) })
+		_, _ = s.Channel("keyboard", nil, input(byte(caged.Keyboard)))
+		_, _ = s.Channel("mouse", nil, input(byte(caged.Mouse)))
 	}
 
 	c.RegisterRoom(r.Id())
@@ -281,9 +310,9 @@ func (c *coordinator) HandleChangePlayer(rq api.ChangePlayerRequest, w *Worker) 
 	if user == nil || w.router.FindRoom(rq.Rid) == nil {
 		return api.Out{Payload: -1} // semi-predicates
 	}
-	user.Index = rq.Index
-	w.log.Info().Msgf("Updated player index to: %d", rq.Index)
-	return api.Out{Payload: rq.Index}
+	user.Index = clampPlayer(rq.Index)
+	w.log.Info().Msgf("Updated player index to: %d", user.Index)
+	return api.Out{Payload: user.Index}
 }
 
 func (c *coordinator) HandleRecordGame(rq api.RecordGameRequest, w *Worker) api.Out {

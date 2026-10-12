@@ -47,3 +47,17 @@ func TestGetEmulator(t *testing.T) {
 		}
 	}
 }
+
+func TestSnesMultitapOnlyForBomberman(t *testing.T) {
+	var conf WorkerConfig
+	if _, err := LoadConfig(&conf, ""); err != nil {
+		t.Fatal(err)
+	}
+	snes := conf.Emulator.GetLibretroCoreConfig("snes")
+	if len(snes.Hid) != 0 {
+		t.Fatalf("SNES must use plain joypads by default (multitap breaks 2P games), got %v", snes.Hid)
+	}
+	if got := snes.Hid4rom["bomberman"][1]; len(got) != 1 || got[0] != 257 {
+		t.Fatalf("Bomberman games must get the multitap on port 2, got %v", snes.Hid4rom)
+	}
+}

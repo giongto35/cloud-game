@@ -49,6 +49,8 @@ type Nanoarch struct {
 	reserved      chan struct{} // limits concurrent use
 	Rot           uint
 	serializeSize C.size_t
+	applied       [maxPort]uint32  // retropad buttons applied in the last frame
+	override      *[maxPort]uint32 // replay input (replaces the live input)
 	Stopped       atomic.Bool
 	sys           struct {
 		av  C.struct_retro_system_av_info
@@ -104,6 +106,7 @@ type Metadata struct {
 	Options4rom     map[string]map[string]string
 	Hacks           []string
 	Hid             map[int][]int
+	Hid4rom         map[string]map[int][]int
 	CoreAspectRatio bool
 	KbMouseSupport  bool
 	LibExt          string
@@ -360,8 +363,17 @@ func (n *Nanoarch) LoadGame(path string) error {
 		C.bridge_retro_set_controller_port_device(retroSetControllerPortDevice, C.uint(i), C.RETRO_DEVICE_JOYPAD)
 	}
 
-	// map custom devices to ports
-	for k, v := range n.meta.Hid {
+	// map custom devices to ports (a ROM specific setup wins)
+	hid := n.meta.Hid
+	romLower := strings.ToLower(filepath.Base(path))
+	for frag, h := range n.meta.Hid4rom {
+		if frag != "" && strings.Contains(romLower, strings.ToLower(frag)) {
+			hid = h
+			n.log.Debug().Msgf("controller setup for %q: %v", frag, h)
+			break
+		}
+	}
+	for k, v := range hid {
 		for _, device := range v {
 			C.bridge_retro_set_controller_port_device(retroSetControllerPortDevice, C.uint(k), C.unsigned(device))
 			n.log.Debug().Msgf("set custom port-device: %v:%v", k, device)
@@ -419,8 +431,18 @@ func (n *Nanoarch) Reset() {
 	C.bridge_call(retroReset)
 }
 
+// MaxPort is the number of emulated controller ports.
+const MaxPort = maxPort
+
+// AppliedInput returns the retropad buttons applied to each port in the last frame.
+func (n *Nanoarch) AppliedInput() [maxPort]uint32 { return n.applied }
+
+// SetInputOverride replaces the live retropad input with the given buttons
+// for the next frames (nil restores the live input). Used to play back replays.
+func (n *Nanoarch) SetInputOverride(keys *[maxPort]uint32) { n.override = keys }
+
 func (n *Nanoarch) syncInputToCache() {
-	n.retropad.SyncToCache()
+	n.applied = n.retropad.SyncToCache(n.override)
 	if n.keyboardCb != nil {
 		n.keyboard.SyncToCache()
 	}
@@ -455,7 +477,12 @@ func (n *Nanoarch) NotifyFrameTime(usec int64) {
 func (n *Nanoarch) IsSupported() error                  { return graphics.RGFWTryInit() }
 func (n *Nanoarch) IsGL() bool                          { return n.Video.gl.enabled }
 func (n *Nanoarch) IsStopped() bool                     { return n.Stopped.Load() }
-func (n *Nanoarch) InputRetropad(port int, data []byte) { n.retropad.SetInput(port, data) }
+func (n *Nanoarch) InputRetropad(port int, data []byte) {
+	if port < 0 || port >= maxPort {
+		return
+	}
+	n.retropad.SetInput(port, data)
+}
 func (n *Nanoarch) InputKeyboard(_ int, data []byte) {
 	if n.keyboardCb == nil {
 		return
@@ -594,6 +621,17 @@ func RestoreSaveRAM(st State) {
 			copy(unsafe.Slice((*byte)(memory.ptr), memory.size), st)
 		}
 	}
+}
+
+// SystemRAM returns a live (zero-copy) view of the emulated work RAM
+// (WRAM on SNES, $7E0000-$7FFFFF) or nil if the core doesn't expose it.
+// Read it only from the emulation thread, between frames.
+func SystemRAM() []byte {
+	ptr, size := memoryData(C.RETRO_MEMORY_SYSTEM_RAM), memorySize(C.RETRO_MEMORY_SYSTEM_RAM)
+	if ptr == nil || size == 0 {
+		return nil
+	}
+	return unsafe.Slice((*byte)(ptr), size)
 }
 
 // memorySize returns memory region size.

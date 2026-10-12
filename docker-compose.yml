@@ -9,10 +9,19 @@ services:
             - DISPLAY=:99
             - MESA_GL_VERSION_OVERRIDE=4.5
             - CLOUD_GAME_WEBRTC_SINGLEPORT=8443
-            # - CLOUD_GAME_WEBRTC_ICEIPMAP=127.0.0.1
+            # local development: announce the published UDP port on localhost
+            - CLOUD_GAME_WEBRTC_ICEIPMAP=127.0.0.1
             - CLOUD_GAME_COORDINATOR_DEBUG=true
             - CLOUD_GAME_WORKER_DEBUG=true
             - CLOUD_GAME_ENCODER_VIDEO_CODEC=vp8
+            # accounts database (persisted in the belko-data volume)
+            - CLOUD_GAME_COORDINATOR_AUTH_DBPATH=/data/belko.db
+            # downloaded game covers (kept in the same persistent volume)
+            - CLOUD_GAME_COORDINATOR_COVERS_DIR=/data/covers
+            - CLOUD_GAME_COORDINATOR_TOURNAMENTS_REPLAYDIR=/data/replays
+            # initial password of wenderson@belko.com.br (first start only),
+            # set it in the .env file; if empty it is generated and printed to the log
+            - CLOUD_GAME_COORDINATOR_AUTH_ADMINPASSWORD=${BELKO_ADMIN_PASSWORD:-}
             # - PION_LOG_TRACE=all
         ports:
             - "8000:8000"
@@ -23,7 +32,10 @@ services:
         volumes:
             - ./assets/cores:/usr/local/share/cloud-game/assets/cores
             - ./assets/games:/usr/local/share/cloud-game/assets/games
+            # live frontend files for development (remove in production)
+            - ./web:/usr/local/share/cloud-game/web
             - x11:/tmp/.X11-unix
+            - belko-data:/data
 
     xvfb:
         image: kcollins/xvfb:latest
@@ -37,3 +49,4 @@ services:
 
 volumes:
     x11:
+    belko-data:

@@ -30,6 +30,8 @@ export const KEY = {
     R3: 'r3',
     REC: 'rec',
     RESET: 'reset',
+    MENU: 'menu',
+    CHAT: 'chat',
 };
 
 // Keys match libretro RETRO_DEVICE_ID_JOYPAD_*
@@ -38,4 +40,13 @@ export const JOYPAD_KEYS = [
     KEY.UP, KEY.DOWN, KEY.LEFT, KEY.RIGHT,
     KEY.A, KEY.X, KEY.L, KEY.R,
     KEY.L2, KEY.R2, KEY.L3, KEY.R3
-]
+];
+
+/** Bindable keys shown in the settings, in display order. */
+export const BINDABLE = [
+    KEY.UP, KEY.DOWN, KEY.LEFT, KEY.RIGHT,
+    KEY.A, KEY.B, KEY.X, KEY.Y,
+    KEY.L, KEY.R, KEY.L2, KEY.R2, KEY.L3, KEY.R3,
+    KEY.START, KEY.SELECT,
+    KEY.MENU, KEY.SAVE, KEY.LOAD, KEY.FULL, KEY.STATS, KEY.CHAT,
+];

@@ -17,7 +17,11 @@ func main() {
 	log.Info().Msgf("version %s", Version)
 	log.Info().Msgf("conf: v%v, loaded: %v", conf.Version, paths)
 	if log.GetLevel() < logger.InfoLevel {
-		log.Debug().Msgf("conf: %+v", conf)
+		printable := conf
+		if printable.Coordinator.Auth.AdminPassword != "" {
+			printable.Coordinator.Auth.AdminPassword = "***"
+		}
+		log.Debug().Msgf("conf: %+v", printable)
 	}
 	c, err := coordinator.New(conf, log)
 	if err != nil {

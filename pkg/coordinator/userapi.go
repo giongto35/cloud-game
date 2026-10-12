@@ -23,6 +23,8 @@ func (u *User) InitSession(wid string, ice []config.IceServer, games []api.AppMe
 		Ice:   *(*[]api.IceServer)(unsafe.Pointer(&ice)), // don't do this at home
 		Games: games,
 		Wid:   wid,
+		You:   u.Info(),
+		Busy:  wid == "",
 	})
 }
 
@@ -37,6 +39,6 @@ func (u *User) SendWebrtcIceCandidate(candidate string) {
 }
 
 // StartGame signals the user that everything is ready to start a game.
-func (u *User) StartGame(av *api.AppVideoInfo, kbMouse bool) {
-	u.Notify(api.StartGame, api.GameStartUserResponse{RoomId: u.w.RoomId, Av: av, KbMouse: kbMouse})
+func (u *User) StartGame(rid string, av *api.AppVideoInfo, kbMouse bool, slot int, host bool) {
+	u.Notify(api.StartGame, api.GameStartUserResponse{RoomId: rid, Av: av, KbMouse: kbMouse, Slot: slot, Host: host})
 }

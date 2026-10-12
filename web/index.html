@@ -1,132 +1,66 @@
 <!doctype html>
-<html lang="en">
+<html lang="pt-BR">
 <head>
     <meta charset="utf-8"/>
-    <meta name="viewport" content="user-scalable=0">
-    <meta name="mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-capable" content="yes">
-
-    <meta property="og:type" content="cloud-game"/>
-    <meta property="og:title" content="Web-based Cloud Gaming for Retro Games"/>
-    <meta property="og:description" content="Play and share cloud gaming experience with your friends"/>
-    <meta property="og:url" content=""/>
-    <meta property="og:site_name" content="Cloud Retro"/>
-    <meta property="og:author" content="giongto35 trichimtrich"/>
-
-    <link rel="icon" href="data:,">
-
-    <link href="css/main.css?v=3" rel="stylesheet">
-    <link href="css/ui.css?v=3" rel="stylesheet">
-    <title>Cloud Retro</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover"/>
+    <meta name="theme-color" content="#0b0d14"/>
+    <meta name="mobile-web-app-capable" content="yes"/>
+    <meta name="apple-mobile-web-app-capable" content="yes"/>
+    <meta name="robots" content="noindex"/>
+    <meta name="description" content="Belko Arcade — jogos retrô na nuvem, com os amigos."/>
+    <title>Belko Arcade</title>
+    <link rel="icon" href="img/favicon.svg" type="image/svg+xml"/>
+    <link rel="preconnect" href="https://fonts.googleapis.com"/>
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet"/>
+    <link href="css/tokens.css?v=4" rel="stylesheet"/>
+    <link href="css/base.css?v=4" rel="stylesheet"/>
+    <link href="css/app.css?v=4" rel="stylesheet"/>
+    <link href="css/game.css?v=4" rel="stylesheet"/>
 </head>
 <body>
-<div id="gamebody">
-    <div class="app-button" id="w" title="Workers">W</div>
-
-    <div id="circle-pad-holder">
-        <div id="btn-up" class="dpad" data-key="up"></div>
-        <div id="btn-down" class="dpad" data-key="down"></div>
-        <div id="btn-left" class="dpad" data-key="left"></div>
-        <div id="btn-right" class="dpad" data-key="right"></div>
-        <div id="circle-pad"></div>
+<header class="topbar">
+    <a class="logo" href="#/biblioteca" id="logo" aria-label="Belko Arcade — início"></a>
+    <nav class="topnav" id="topnav" aria-label="Navegação principal"></nav>
+    <div class="topbar-right">
+        <button class="queue-pill" id="queue-pill" hidden></button>
+        <span class="server-status" id="server-status" title="Servidores de jogo"></span>
+        <button class="user-button" id="user-button" aria-haspopup="menu"></button>
     </div>
+</header>
 
-    <div id="screen">
+<main>
+    <section id="view-library" class="view" data-route="biblioteca"></section>
+    <section id="view-live" class="view" data-route="ao-vivo" hidden></section>
+    <section id="view-tournaments" class="view" data-route="torneios" hidden></section>
+    <section id="view-admin" class="view" data-route="admin" hidden></section>
+</main>
+
+<section id="view-game" class="game" hidden aria-label="Partida">
+    <div id="stage" class="stage" tabindex="-1">
         <video id="stream" class="game-screen" hidden muted playsinline preload="none"></video>
         <canvas id="mirror-stream" class="game-screen" hidden></canvas>
-        <div id="menu-screen">
-            <div id="menu-container"></div>
-            <div id="menu-item-choice" class="hidden"></div>
-        </div>
-        <div class="screen__footer hover hidden">
-            <div>cloudretro</div>
-            <div class="app-button fs kbm-button-fs hidden" id="kbm2"
-                 title="Switch from keyboard/mouse to retropad">🎮+⌨️+🖱️
-            </div>
-            <div id="stats-overlay"></div>
-        </div>
-        <div id="play-stream" hidden>
-            <span>⏵</span>
-            <span>Click to play</span>
+        <div id="play-stream" class="play-stream" hidden>
+            <span class="btn primary lg">Clique para começar</span>
         </div>
     </div>
-
-    <div id="servers"></div>
-    <div id="settings"></div>
-
-    <div id="guide-txt">
-        <b>Arrows</b> (move), <b>ZXCVAS;'./</b> (game ABXYL1-L3R1-R3),
-        <b>Shift/Enter/K/L</b> (select/start/save/load), <b>F</b> (fullscreen), <b>share</b> (copy the link)
-    </div>
-    <div id="btn-join" class="btn big" data-key="join"></div>
-    <div id="slider-playeridx" class="slidecontainer">
-        <span>player choice</span>
-        <input type="range" aria-label="" min="1" max="4" value="1" class="slider" id="playeridx">
-    </div>
-    <div id="btn-quit" class="btn big" data-key="quit"></div>
-
-    <div class="app-button kbm-button hidden" id="kbm" title="Switch from keyboard/mouse to retropad">
-        C🎮+K⌨️+M🖱️</div>
-
-    <div id="controls-right">
-        <div id="btn-load" class="btn big hidden" data-key="load"></div>
-        <div id="btn-save" class="btn big hidden" data-key="save"></div>
-        <div id="btn-select" class="btn big" data-key="select"></div>
-        <div id="btn-start" class="btn big" data-key="start"></div>
-
-        <div id="color-button-holder">
-            <div id="btn-a" class="btn" data-key="a"></div>
-            <div id="btn-b" class="btn" data-key="b"></div>
-            <div id="btn-x" class="btn" data-key="x"></div>
-            <div id="btn-y" class="btn" data-key="y"></div>
-        </div>
-    </div>
-
-    <div id="btn-settings" class="btn" data-key="settings"></div>
-
-    <input id="room-txt" type="text" aria-label="" placeholder="room id..." disabled>
-
-    <label class="dpad-toggle-label" title="D-pad toggle">
-        <input type="checkbox" id="dpad-toggle" checked>
-        <span class="dpad-toggle-slider"></span>
-    </label>
-
-    <div id="noti-box">Oh my god</div>
-
-    <div id="help-overlay" class="hidden">
-        <div id="help-overlay-background"></div>
-        <div id="help-overlay-detail"></div>
-    </div>
-    <div id="btn-help" class="btn" data-key="help"></div>
-    {{if .Recording.Enabled}}
-    <input id="user-name" type="text" data-lpignore="true" spellcheck="false" placeholder="user"
-           class="record-user" aria-label="">
-    <div id="btn-rec" class="btn" data-key="rec"></div>
-    {{end}}
-</div>
-<div class="source"><span>Cloudretro (ɔ) 2026</span>
-    <a rel="noopener noreferrer" target="_blank" href="https://github.com/giongto35/cloud-game">
-        <span id="v">69ff8ae</span>
-    </a>
-</div>
+</section>
 
 <script type="importmap">
     {
       "imports": {
-        "api": "./js/api.js?v=3",
-        "env": "./js/env.js?v=3",
-        "event": "./js/event.js?v=3",
-        "gui": "./js/gui.js?v=3",
-        "input": "./js/input/input.js?v=3",
-        "log": "./js/log.js?v=3",
-        "network": "./js/network/network.js?v=3",
-        "settings": "./js/settings.js?v=3",
-        "utils": "./js/utils.js?v=3"
+        "api": "./js/api.js?v=4",
+        "event": "./js/event.js?v=4",
+        "input": "./js/input/input.js?v=4",
+        "log": "./js/log.js?v=4",
+        "network": "./js/network/network.js?v=4",
+        "settings": "./js/settings.js?v=4",
+        "utils": "./js/utils.js?v=4"
       }
     }
 </script>
 
-<script type="module" src="js/app.js?v=3"></script>
+<script type="module" src="js/app.js?v=4"></script>
 
 {{if .Analytics.Inject}}
 <script async src="https://www.googletagmanager.com/gtag/js?id={{.Analytics.Gtag}}"></script>

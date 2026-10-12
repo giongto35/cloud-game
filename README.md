@@ -1,3 +1,21 @@
+# Belko Arcade
+
+Plataforma privada de jogos retrô na nuvem — em português, com contas aprovadas pelo administrador,
+multijogador online com papéis (anfitrião, jogadores 1–4, espectadores), fila de espera com
+transmissão ao vivo e suporte a controle, teclado, mouse e toque.
+
+- **Plano e documentação:** [`docs/plano/`](docs/plano/README.md)
+- **Como rodar e administrar:** [`docs/plano/05-operacao.md`](docs/plano/05-operacao.md)
+
+```bash
+echo "BELKO_ADMIN_PASSWORD=troque-esta-senha" > .env
+docker compose up --build    # http://localhost:8000 — entre com wenderson@belko.com.br
+```
+
+Baseado no projeto de código aberto CloudRetro (documentação original abaixo).
+
+---
+
 # CloudRetro
 
 [![Build](https://github.com/giongto35/cloud-game/workflows/build/badge.svg)](https://github.com/giongto35/cloud-game/actions?query=workflow:build)
