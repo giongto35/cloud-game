@@ -15,6 +15,7 @@ type Coordinator struct {
 	Analytics   Analytics
 	Auth        Auth
 	Covers      Covers
+	Meta        Meta
 	Tournaments Tournaments
 	Debug       bool
 	Library     Library
@@ -45,6 +46,17 @@ type Auth struct {
 	SecureCookie bool
 	// QueueReserveSec is how long a freed server waits for the called user.
 	QueueReserveSec int
+}
+
+// Meta configures the game catalog data (genre, year, developer, players).
+type Meta struct {
+	Enabled bool
+	// Dir caches the downloaded databases.
+	Dir string
+	// Url is the raw libretro-database metadat folder.
+	Url string
+	// RetryDays is how long a "not found" result is kept before trying again.
+	RetryDays int
 }
 
 // Covers configures the game cover art cache.

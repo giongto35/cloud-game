@@ -1,49 +1,58 @@
-/* Belko Arcade — design tokens */
+/* Arcade — design tokens
+   Pixel-art arcade cabinet: flat colours, hard edges, chunky borders, pixel fonts. */
 :root {
     color-scheme: dark;
 
-    --bg: #0b0d14;
-    --bg-glow-1: rgba(124, 92, 255, 0.16);
-    --bg-glow-2: rgba(34, 211, 238, 0.10);
-    --surface-1: #121521;
-    --surface-2: #181c2b;
-    --surface-3: #20253a;
-    --surface-4: #2a3049;
-    --overlay: rgba(6, 8, 14, 0.72);
-    --border: #2a3048;
-    --border-strong: #3a4263;
+    --bg: #0b0b16;
+    --bg-glow-1: transparent;
+    --bg-glow-2: transparent;
+    --surface-1: #12122b;
+    --surface-2: #1a1a3c;
+    --surface-3: #24244f;
+    --surface-4: #30306a;
+    --overlay: rgba(5, 5, 14, 0.82);
+    --border: #35357a;
+    --border-strong: #5b5bb8;
 
-    --text: #eef0f8;
-    --text-2: #a7adc4;
-    --text-3: #6e7591;
-    --text-on-accent: #ffffff;
+    --text: #f6f6ff;
+    --text-2: #bcbce6;
+    --text-3: #8f8fc4;
+    --text-on-accent: #1a1400;
 
-    --accent: #7c5cff;
-    --accent-hover: #8f74ff;
-    --accent-press: #6a48f5;
-    --accent-soft: rgba(124, 92, 255, 0.16);
-    --accent-2: #22d3ee;
-    --accent-2-soft: rgba(34, 211, 238, 0.14);
-    --gradient: linear-gradient(135deg, #7c5cff 0%, #5b8cff 50%, #22d3ee 100%);
+    /* arcade palette */
+    --yellow: #ffd400;
+    --red: #ff3b4e;
+    --cyan: #00e5ff;
+    --green: #4dff88;
+    --orange: #ff9f1c;
+    --pink: #ff5fd2;
 
-    --success: #22c55e;
-    --success-soft: rgba(34, 197, 94, 0.14);
-    --warning: #f59e0b;
-    --warning-soft: rgba(245, 158, 11, 0.14);
-    --danger: #ef4444;
-    --danger-soft: rgba(239, 68, 68, 0.14);
+    --accent: var(--yellow);
+    --accent-hover: #ffe34d;
+    --accent-press: #e0b800;
+    --accent-soft: rgba(255, 212, 0, 0.16);
+    --accent-2: var(--cyan);
+    --accent-2-soft: rgba(0, 229, 255, 0.14);
+    --gradient: var(--yellow);
 
-    --font: "Inter", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
-    --font-display: "Space Grotesk", "Inter", system-ui, sans-serif;
-    --font-mono: ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
+    --success: var(--green);
+    --success-soft: rgba(77, 255, 136, 0.15);
+    --warning: var(--orange);
+    --warning-soft: rgba(255, 159, 28, 0.16);
+    --danger: var(--red);
+    --danger-soft: rgba(255, 59, 78, 0.16);
 
-    --fs-xs: 12px;
-    --fs-s: 13px;
-    --fs-m: 14px;
-    --fs-l: 16px;
-    --fs-xl: 20px;
-    --fs-2xl: 28px;
-    --fs-3xl: 40px;
+    --font: "VT323", "Courier New", ui-monospace, monospace;
+    --font-display: "Press Start 2P", "VT323", monospace;
+    --font-mono: "VT323", ui-monospace, Consolas, monospace;
+
+    --fs-xs: 15px;
+    --fs-s: 17px;
+    --fs-m: 20px;
+    --fs-l: 23px;
+    --fs-xl: 27px;
+    --fs-2xl: 34px;
+    --fs-3xl: 46px;
 
     --sp-1: 4px;
     --sp-2: 8px;
@@ -53,22 +62,25 @@
     --sp-6: 32px;
     --sp-7: 48px;
 
-    --radius-s: 8px;
-    --radius-m: 12px;
-    --radius-l: 20px;
-    --radius-full: 999px;
+    /* pixel art has no rounded corners */
+    --radius-s: 0;
+    --radius-m: 0;
+    --radius-l: 0;
+    --radius-full: 0;
 
-    --shadow-1: 0 1px 2px rgba(0, 0, 0, 0.3), 0 2px 8px rgba(0, 0, 0, 0.2);
-    --shadow-2: 0 8px 24px rgba(0, 0, 0, 0.35), 0 2px 6px rgba(0, 0, 0, 0.25);
-    --shadow-3: 0 24px 64px rgba(0, 0, 0, 0.5);
-    --ring: 0 0 0 2px var(--bg), 0 0 0 4px var(--accent-2);
+    --shadow-1: 4px 4px 0 #000;
+    --shadow-2: 6px 6px 0 #000;
+    --shadow-3: 8px 8px 0 #000;
+    --glow-magenta: none;
+    --glow-cyan: none;
+    --ring: 0 0 0 3px var(--bg), 0 0 0 6px var(--yellow);
 
-    --ease: cubic-bezier(0.2, 0.8, 0.2, 1);
-    --t-fast: 150ms;
-    --t-med: 250ms;
+    --ease: steps(4, end);
+    --t-fast: 80ms;
+    --t-med: 120ms;
 
     --topbar-h: 64px;
-    --content-w: 1360px;
+    --content-w: 1400px;
 }
 
 @media (prefers-reduced-motion: reduce) {

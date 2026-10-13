@@ -16,6 +16,7 @@ import (
 	"github.com/giongto35/cloud-game/v3/pkg/covers"
 	"github.com/giongto35/cloud-game/v3/pkg/games"
 	"github.com/giongto35/cloud-game/v3/pkg/logger"
+	"github.com/giongto35/cloud-game/v3/pkg/meta"
 	"github.com/giongto35/cloud-game/v3/pkg/network/httpx"
 	"github.com/giongto35/cloud-game/v3/pkg/store"
 	"github.com/giongto35/cloud-game/v3/pkg/tournament"
@@ -29,6 +30,7 @@ type API struct {
 	store  *store.Store
 	tm     *tournament.Manager
 	covers *covers.Service
+	meta   *meta.Service
 	hub    *Hub
 	secure bool
 	log    *logger.Logger
@@ -82,8 +84,11 @@ func (a *API) Routes(mux *httpx.Mux) {
 	mux.HandleFunc("GET /api/admin/audit", a.admin(a.audit))
 	mux.HandleFunc("POST /api/admin/covers/retry", a.mutating(a.admin(a.coversRetry)))
 
+	mux.HandleFunc("POST /api/admin/meta/retry", a.mutating(a.admin(a.metaRetry)))
 	mux.HandleFunc("GET /api/covers", a.authed(a.cover))
+	mux.HandleFunc("GET /api/meta", a.authed(a.catalog))
 	a.tournamentRoutes(mux)
+	a.uploadRoutes(mux)
 
 	mux.HandleFunc("/api/", func(w http.ResponseWriter, r *http.Request) {
 		writeErr(w, &auth.Error{Status: 404, Code: "not_found", Message: "Recurso não encontrado."})
@@ -421,6 +426,10 @@ func (a *API) overview(w http.ResponseWriter, r *http.Request, acc *auth.Account
 		found, missing, _ := a.covers.Stats(r.Context())
 		out["covers"] = map[string]int{"found": found, "missing": missing}
 	}
+	if a.meta != nil {
+		found, missing, _ := a.meta.Stats(r.Context())
+		out["meta"] = map[string]int{"found": found, "missing": missing}
+	}
 	writeJson(w, http.StatusOK, out)
 }
 
@@ -489,8 +498,42 @@ func (a *API) cover(w http.ResponseWriter, r *http.Request, _ *auth.Account, _ s
 		return
 	}
 	w.Header().Set("Content-Type", "image/png")
-	w.Header().Set("Cache-Control", "private, max-age=2592000")
+	w.Header().Set("Cache-Control", "private, no-cache") // revalidated: the admin can replace covers
 	http.ServeFile(w, r, path)
+}
+
+// catalog lists the stored catalog data (genre, year, developer, players) of the games.
+func (a *API) catalog(w http.ResponseWriter, r *http.Request, _ *auth.Account, _ string) {
+	if a.meta == nil {
+		writeJson(w, http.StatusOK, map[string]any{"entries": []any{}, "categories": meta.Categories})
+		return
+	}
+	list, err := a.meta.All(r.Context())
+	if err != nil {
+		writeErr(w, err)
+		return
+	}
+	w.Header().Set("Cache-Control", "no-cache")
+	writeJson(w, http.StatusOK, map[string]any{"entries": list, "categories": meta.Categories})
+}
+
+func (a *API) metaRetry(w http.ResponseWriter, r *http.Request, acc *auth.Account, _ string) {
+	if !acc.Can(auth.PermUsersManage) {
+		writeErr(w, auth.ErrForbidden)
+		return
+	}
+	if a.meta == nil {
+		writeErr(w, &auth.Error{Status: 400, Code: "meta_disabled", Message: "O catálogo online está desativado na configuração."})
+		return
+	}
+	if err := a.meta.Retry(r.Context()); err != nil {
+		writeErr(w, err)
+		return
+	}
+	// look every game up again in the background
+	a.hub.warmMeta()
+	a.auth.Audit(r.Context(), acc, "meta.retry", "")
+	writeJson(w, http.StatusOK, map[string]any{"ok": true})
 }
 
 func (a *API) coversRetry(w http.ResponseWriter, r *http.Request, acc *auth.Account, _ string) {

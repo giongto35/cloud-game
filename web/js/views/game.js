@@ -126,7 +126,7 @@ const showHud = () => {
 
 const renderHud = () => {
     const {title} = gameTitle(state.game);
-    $('[data-title]').textContent = title || 'Belko Arcade';
+    $('[data-title]').textContent = title || 'Arcade';
     $('[data-subtitle]').textContent = state.system ? systemName(state.system) : '';
     const role = $('[data-role]');
     if (state.slot < 0) {
@@ -195,7 +195,7 @@ const renderRoster = () => {
                 <button class="btn outline sm" data-take="${i}">Ocupar</button></div>`;
         }
         return `<div class="slot ${m.you ? 'me' : ''}"><span class="num p${i + 1}">${i + 1}</span>
-            ${avatar(m.name, 'sm')}
+            ${avatar(m.name, 'sm', m.account)}
             <div class="who"><b>${esc(m.name)}${m.host ? `<span class="host-star" title="Anfitrião">${icon('star')}</span>` : ''}</b>
             <small>${m.you ? 'Você' : `Jogador ${i + 1}`}${m.host ? ' · anfitrião' : ''}</small></div>
             ${m.you ? `<button class="btn ghost sm" data-take="-1" title="Deixar a vaga e assistir">${icon('eye')}</button>` : memberActions(m)}
@@ -205,7 +205,7 @@ const renderRoster = () => {
     const watchers = state.members.filter((m) => m.slot < 0);
     $('[data-spectators]').innerHTML = watchers.length ? `
         <div class="section-title" style="margin:8px 4px">${icon('eye')}Assistindo (${watchers.length})</div>
-        ${watchers.map((m) => `<div class="spectator-row">${avatar(m.name, 'sm')}
+        ${watchers.map((m) => `<div class="spectator-row">${avatar(m.name, 'sm', m.account)}
             <span class="name">${esc(m.name)}${m.you ? ' <span class="subtle">(você)</span>' : ''}${m.host ? ` <span class="host-star">${icon('star')}</span>` : ''}</span>
             ${memberActions(m)}</div>`).join('')}` : '';
 };

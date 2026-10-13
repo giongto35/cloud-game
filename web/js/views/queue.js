@@ -97,7 +97,7 @@ const openCall = () => {
     h.rumble();
     if (document.hidden && 'Notification' in window && Notification.permission === 'granted') {
         try {
-            new Notification('Sua vez chegou!', {body: `Volte ao Belko Arcade para jogar ${title}.`});
+            new Notification('Sua vez chegou!', {body: `Volte ao Arcade para jogar ${title}.`});
         } catch {
             // ignore
         }

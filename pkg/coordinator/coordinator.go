@@ -13,6 +13,7 @@ import (
 	"github.com/giongto35/cloud-game/v3/pkg/config"
 	"github.com/giongto35/cloud-game/v3/pkg/covers"
 	"github.com/giongto35/cloud-game/v3/pkg/logger"
+	"github.com/giongto35/cloud-game/v3/pkg/meta"
 	"github.com/giongto35/cloud-game/v3/pkg/monitoring"
 	"github.com/giongto35/cloud-game/v3/pkg/network/httpx"
 	"github.com/giongto35/cloud-game/v3/pkg/store"
@@ -71,6 +72,12 @@ func New(conf config.CoordinatorConfig, log *logger.Logger) (*Coordinator, error
 		api.covers = covers.New(st, conf.Coordinator.Covers, log)
 		coordinator.hub.covers = api.covers
 		log.Info().Msgf("covers: %s -> %s", conf.Coordinator.Covers.Url, conf.Coordinator.Covers.Dir)
+	}
+
+	if conf.Coordinator.Meta.Enabled {
+		api.meta = meta.New(st, conf.Coordinator.Meta, log)
+		coordinator.hub.meta = api.meta
+		log.Info().Msgf("catalog: %s -> %s", conf.Coordinator.Meta.Url, conf.Coordinator.Meta.Dir)
 	}
 
 	h, err := NewHTTPServer(conf, log, api, func(mux *httpx.Mux) *httpx.Mux {

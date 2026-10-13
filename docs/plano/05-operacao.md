@@ -33,6 +33,10 @@ para `assets/cores`.
 | `coordinator.covers.enabled` | `CLOUD_GAME_COORDINATOR_COVERS_ENABLED` | `true` | Busca capas dos jogos |
 | `coordinator.covers.dir` | `CLOUD_GAME_COORDINATOR_COVERS_DIR` | `./data/covers` | Onde as capas ficam salvas (no Docker: `/data/covers`) |
 | `coordinator.covers.url` | `CLOUD_GAME_COORDINATOR_COVERS_URL` | `https://thumbnails.libretro.com` | Acervo gratuito libretro-thumbnails |
+| `coordinator.meta.enabled` | `CLOUD_GAME_COORDINATOR_META_ENABLED` | `true` | Catálogo online (gênero, ano, desenvolvedora, jogadores) |
+| `coordinator.meta.dir` | `CLOUD_GAME_COORDINATOR_META_DIR` | `./data/meta` | Cache dos bancos baixados |
+| `coordinator.meta.url` | `CLOUD_GAME_COORDINATOR_META_URL` | `libretro-database/metadat` | Fonte pública, sem chave de API |
+| `coordinator.meta.retryDays` | `CLOUD_GAME_COORDINATOR_META_RETRYDAYS` | `7` | Dias até procurar de novo um jogo sem dados |
 | `coordinator.covers.retryDays` | `CLOUD_GAME_COORDINATOR_COVERS_RETRYDAYS` | `7` | Dias até procurar de novo um jogo sem capa |
 
 | `coordinator.tournaments.enabled` | `CLOUD_GAME_COORDINATOR_TOURNAMENTS_ENABLED` | `true` | Módulo de torneios |
@@ -58,6 +62,8 @@ mantêm a arte gerada e são procurados de novo após `retryDays` (ou na hora, p
 **Admin › Servidores › Buscar capas faltantes**).
 
 ## Produção
+
+Passo a passo com Coolify e auto deploy: [07-coolify.md](07-coolify.md).
 
 1. **VPS Linux** (o worker precisa de CPU dedicada; cada worker roda 1 jogo por vez).
    Para mais partidas simultâneas, rode mais workers apontando para o mesmo coordinator.

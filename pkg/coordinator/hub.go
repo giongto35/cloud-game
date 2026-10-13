@@ -15,6 +15,7 @@ import (
 	"github.com/giongto35/cloud-game/v3/pkg/config"
 	"github.com/giongto35/cloud-game/v3/pkg/covers"
 	"github.com/giongto35/cloud-game/v3/pkg/logger"
+	"github.com/giongto35/cloud-game/v3/pkg/meta"
 	"github.com/giongto35/cloud-game/v3/pkg/tournament"
 )
 
@@ -35,6 +36,7 @@ type Hub struct {
 
 	auth   *auth.Service
 	covers *covers.Service     // optional cover art cache
+	meta   *meta.Service       // optional catalog data (genre, year...)
 	tm     *tournament.Manager // optional tournaments
 
 	// lobby state, see lobby.go
@@ -80,6 +82,18 @@ func (h *Hub) allGames() []api.AppMeta {
 		}
 	}
 	return list
+}
+
+// warmMeta looks up again the catalog data of every game currently available.
+func (h *Hub) warmMeta() {
+	if h.meta == nil {
+		return
+	}
+	games := map[string]string{}
+	for _, g := range h.allGames() {
+		games[g.Title] = g.System
+	}
+	h.meta.Warm(games)
 }
 
 // handleUserConnection handles all connections from user/frontend.
@@ -227,14 +241,19 @@ func (h *Hub) handleWorkerConnection() http.HandlerFunc {
 
 		worker := NewWorker(conn, *handshake, log)
 		worker.OnLibrary = func(list []api.GameInfo) {
-			if h.covers == nil {
+			if h.covers == nil && h.meta == nil {
 				return
 			}
 			games := make(map[string]string, len(list))
 			for _, g := range list {
 				games[g.Name] = g.System
 			}
-			h.covers.Warm(games)
+			if h.covers != nil {
+				h.covers.Warm(games)
+			}
+			if h.meta != nil {
+				h.meta.Warm(games)
+			}
 		}
 		worker.OnMatchResult = func(rq api.MatchResultRequest) { h.onMatchResult(worker, rq) }
 		worker.OnRoomChange = func(rid string, closed bool) {

@@ -244,12 +244,10 @@ sub(APP_VIDEO_CHANGED, (payload) => {
 
     state.h = hh;
     state.w = Math.floor(hh * a);
-    resize(
-        ww,
-        hh,
-        state.aspect,
-        a > 1 && a.toFixed(6) !== (ww / hh).toFixed(6) ? "fill" : "contain",
-    );
+    // keep the chosen fit: fullscreen changes re-apply it via state.fit
+    state.fit =
+        a > 1 && a.toFixed(6) !== (ww / hh).toFixed(6) ? "fill" : "contain";
+    resize(ww, hh, state.aspect, state.fit);
     recalculateSize();
 });
 

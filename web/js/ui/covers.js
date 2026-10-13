@@ -31,8 +31,17 @@ export const cover = (title, system, extra = '') => {
 };
 
 /** Server URL of the stored cover art (fetched once from libretro-thumbnails). */
+const versions = new Map();
 export const coverUrl = (title, system) =>
-    `/api/covers?system=${encodeURIComponent(system || '')}&game=${encodeURIComponent(title)}`;
+    `/api/covers?system=${encodeURIComponent(system || '')}&game=${encodeURIComponent(title)}${versions.has(`${system}|${title}`) ? `&v=${versions.get(`${system}|${title}`)}` : ''}`;
+
+/** Makes every view fetch the cover of a game again (after the administration changed it). */
+export const bumpCover = (title, system) => {
+    const old = coverUrl(title, system);
+    loaded.delete(old);
+    failed.delete(old);
+    versions.set(`${system}|${title}`, Date.now());
+};
 
 // remember results so re-rendered cards don't flash or retry missing pictures
 const loaded = new Set();

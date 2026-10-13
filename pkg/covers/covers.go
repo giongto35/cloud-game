@@ -325,3 +325,29 @@ func writeFile(path string, data []byte) error {
 	}
 	return os.Rename(tmp.Name(), path)
 }
+
+// SetCustom replaces (or adds) the cover of a game with an uploaded picture (already a validated PNG).
+// It is kept like any other cover: automatic lookups never overwrite it.
+func (s *Service) SetCustom(ctx context.Context, system, title string, png []byte) error {
+	key := Key(system, title)
+	name := filepath.Join(strings.ToLower(system), fileName(key))
+	if err := writeFile(filepath.Join(s.dir, name), png); err != nil {
+		return err
+	}
+	return s.store.SetCover(ctx, store.Cover{Key: key, System: system, Title: title, File: name, Source: "custom", Status: store.CoverFound})
+}
+
+// Reset drops the cover of a game (custom or not) so the automatic lookup runs again.
+func (s *Service) Reset(ctx context.Context, system, title string) error {
+	key := Key(system, title)
+	if c, err := s.store.Cover(ctx, key); err == nil && c.File != "" {
+		_ = os.Remove(filepath.Join(s.dir, c.File))
+	}
+	return s.store.DeleteCover(ctx, key)
+}
+
+// IsCustom tells whether the cover of a game was uploaded by the administration.
+func (s *Service) IsCustom(ctx context.Context, system, title string) bool {
+	c, err := s.store.Cover(ctx, Key(system, title))
+	return err == nil && c.Source == "custom"
+}

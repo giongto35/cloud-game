@@ -77,7 +77,7 @@ const userById = (id) => users.find((u) => u.id === +id);
 const actions = {
     approve: (u) => act(u.id, 'approve', `${u.name} foi aprovado.`),
     reject: async (u) => {
-        if (await confirmDialog({title: `Recusar ${u.name}?`, text: 'A pessoa não poderá acessar o Belko Arcade com esta conta.', confirm: 'Recusar', danger: true, iconName: 'x'}))
+        if (await confirmDialog({title: `Recusar ${u.name}?`, text: 'A pessoa não poderá acessar o Arcade com esta conta.', confirm: 'Recusar', danger: true, iconName: 'x'}))
             act(u.id, 'reject', 'Cadastro recusado.');
     },
     block: async (u) => {
@@ -121,6 +121,15 @@ const actions = {
             toast.error(e.message);
         }
     },
+    retryMeta: async () => {
+        try {
+            await http.post('/api/admin/meta/retry');
+            toast.success('Atualizando o catálogo em segundo plano. Os dados aparecem na biblioteca em instantes.');
+            await refresh('servers');
+        } catch (e) {
+            toast.error(e.message);
+        }
+    },
     closeRoom: async (id, game) => {
         if (!await confirmDialog({title: 'Encerrar sala?', text: `Todos em “${gameTitle(game).title}” serão desconectados. O progresso não salvo será perdido.`, confirm: 'Encerrar', danger: true, iconName: 'door'})) return;
         try {
@@ -155,7 +164,7 @@ const renderPending = () => {
             <p>Quando alguém criar uma conta, ela aparece aqui e você recebe um aviso.</p></div>`;
     }
     return `<div class="list">${list.map((u) => `<div class="pending-card">
-        ${avatar(u.name, 'lg')}
+        ${avatar(u.name, 'lg', u.id)}
         <div class="grow"><b>${esc(u.name)}</b><small>${esc(u.email)} · cadastrou-se ${esc(ago(u.created_at))}</small></div>
         <button class="btn danger" data-act="reject" data-id="${u.id}">${icon('x')}Recusar</button>
         <button class="btn success" data-act="approve" data-id="${u.id}">${icon('check')}Aprovar</button>
@@ -193,7 +202,7 @@ const renderUsers = () => {
         <div class="table-wrap"><table class="table">
             <thead><tr><th>Pessoa</th><th>Situação</th><th>Papel</th><th>Cadastro</th><th>Último acesso</th><th></th></tr></thead>
             <tbody>${list.length ? list.map((u) => `<tr>
-                <td><div class="cell-user">${avatar(u.name)}<div><b>${esc(u.name)}${u.primary ? ` <span class="badge accent">${icon('shield')}Principal</span>` : ''}</b>
+                <td><div class="cell-user">${avatar(u.name, '', u.id)}<div><b>${esc(u.name)}${u.primary ? ` <span class="badge accent">${icon('shield')}Principal</span>` : ''}</b>
                     <small>${esc(u.email)}</small></div>${u.online ? '<span class="dot success" title="Online agora"></span>' : ''}</div></td>
                 <td>${statusBadge(u.status)}</td>
                 <td>${roleSelect(u)}</td>
@@ -238,16 +247,23 @@ const renderServers = () => {
     const ws = overview.workers || [];
     const free = ws.filter((w) => !w.busy && !w.reserved).length;
     const cv = overview.covers;
+    const mt = overview.meta;
     return `<div class="stat-row">
             <div class="stat"><span>Servidores</span><b>${ws.length}</b></div>
             <div class="stat"><span>Livres</span><b>${free}</b></div>
             <div class="stat"><span>Ocupados</span><b>${ws.filter((w) => w.busy).length}</b></div>
+            ${mt ? `<div class="stat"><span>Jogos catalogados</span><b>${mt.found}<small class="subtle" style="font-size:14px"> · ${mt.missing} sem dados</small></b></div>` : ''}
             ${cv ? `<div class="stat"><span>Capas salvas</span><b>${cv.found}<small class="subtle" style="font-size:14px"> · ${cv.missing} sem capa</small></b></div>` : ''}
         </div>
         ${cv && can('users.manage') ? `<div class="card" style="display:flex;align-items:center;gap:16px;padding:16px">
             ${icon('library', 'lg')}
             <div style="flex:1"><b>Capas dos jogos</b><p class="muted" style="font-size:13px">Baixadas uma única vez do acervo gratuito libretro-thumbnails e guardadas neste servidor. Jogos sem capa são verificados de novo a cada 7 dias.</p></div>
             <button class="btn outline" data-retry-covers>${icon('refresh')}Buscar capas faltantes</button>
+        </div>` : ''}
+        ${mt && can('users.manage') ? `<div class="card" style="display:flex;align-items:center;gap:16px;padding:16px">
+            ${icon('library', 'lg')}
+            <div style="flex:1"><b>Catálogo dos jogos</b><p class="muted" style="font-size:13px">Gênero, ano, desenvolvedora e número de jogadores vêm do banco público libretro-database e ficam guardados neste servidor. Atualizar busca tudo de novo.</p></div>
+            <button class="btn outline" data-retry-meta>${icon('refresh')}Atualizar catálogo</button>
         </div>` : ''}
         ${ws.length ? `<div class="table-wrap"><table class="table"><thead><tr><th>Servidor</th><th>Endereço</th><th>Região</th><th>Jogos</th><th>Situação</th></tr></thead><tbody>
             ${ws.map((w) => `<tr><td class="mono">${esc(w.tag || w.id.slice(-8))}</td><td class="mono">${esc(w.addr)}</td><td>${esc(w.zone || '—')}</td><td>${w.games}</td>
@@ -308,6 +324,7 @@ export const admin = {
             if (u) actions.role(u, s.value);
         });
         on(root, 'click', '[data-retry-covers]', () => actions.retryCovers());
+        on(root, 'click', '[data-retry-meta]', () => actions.retryMeta());
         on(root, 'click', '[data-close-room]', (e, b) => actions.closeRoom(b.dataset.closeRoom, b.dataset.game));
         on(root, 'click', '[data-sfilter]', (e, b) => {
             statusFilter = b.dataset.sfilter;

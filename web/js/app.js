@@ -23,14 +23,14 @@ import {
 import {input, isTouchDevice, joystick, JOYPAD_KEYS, KEY, keyboard, pointer, touch} from 'input';
 import {ajax, socket, webrtc} from 'network';
 
-import {stream} from './stream.js?v=4';
+import {stream} from './stream.js?v=5';
 import {http} from './http.js?v=4';
 import {icon} from './ui/icons.js?v=4';
 import {avatar, copyText, esc, html, isTyping} from './ui/dom.js?v=4';
 import {toast} from './ui/toast.js?v=4';
 import {confirmDialog, infoDialog, modal} from './ui/modal.js?v=4';
 import {nav} from './ui/nav.js?v=4';
-import {library, rememberGame} from './views/library.js?v=4';
+import {library, rememberGame} from './views/library.js?v=8';
 import {live} from './views/live.js?v=4';
 import {admin} from './views/admin.js?v=4';
 import {tournaments} from './views/tournaments.js?v=4';
@@ -85,7 +85,7 @@ const navEl = document.getElementById('topnav');
 const serverEl = document.getElementById('server-status');
 const userBtn = document.getElementById('user-button');
 
-logoEl.innerHTML = `<span class="logo-mark">${icon('gamepad')}</span><b>Belko</b><span>Arcade</span>`;
+logoEl.innerHTML = `<span class="logo-mark">${icon('gamepad')}</span><b>Arcade</b>`;
 
 const renderNav = () => {
     const rooms = app.lobby.rooms?.length || 0;
@@ -119,7 +119,7 @@ const renderServer = () => {
 };
 
 const renderUser = () => {
-    userBtn.innerHTML = `${avatar(app.me.name, 'sm')}<span class="name">${esc(app.me.name)}</span>${icon('chevronDown')}`;
+    userBtn.innerHTML = `${avatar(app.me.name, 'sm', app.me.id)}<span class="name">${esc(app.me.name)}</span>${icon('chevronDown')}`;
 };
 
 userBtn.addEventListener('click', () => {
@@ -974,7 +974,9 @@ const boot = async () => {
 
     renderUser();
     renderServer();
+    document.addEventListener('avatar-changed', renderUser);
 
+    library.configure({canEditCovers: !!can('users.manage')});
     library.mount(views.biblioteca, {onPlay: play});
     live.mount(views['ao-vivo'], {onWatch: watch, onJoin: join});
     tournaments.configure({user: app.me});

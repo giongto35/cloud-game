@@ -307,6 +307,10 @@ func (g *GstMediaPipe) Destroy() {
 
 func (g *GstMediaPipe) ProcessAudio(audio []byte, cb func([]byte, time.Duration)) {
 	g.onAudio = cb
+	// some cores (PS1 while changing video mode) deliver empty audio batches
+	if len(audio) == 0 {
+		return
+	}
 	buf := audioBufPool.Get().(*[]byte)
 	if cap(*buf) < len(audio) {
 		*buf = make([]byte, len(audio))
@@ -322,6 +326,9 @@ func (g *GstMediaPipe) ProcessAudio(audio []byte, cb func([]byte, time.Duration)
 
 func (g *GstMediaPipe) pushAudio() {
 	for data := range g.audioCh {
+		if len(data) == 0 {
+			continue // &data[0] below would panic
+		}
 		if g.reinit.Load() || g.a == nil {
 			audioBufPool.Put(&data)
 			continue
@@ -353,7 +360,7 @@ func (g *GstMediaPipe) pullAudio(_ *app.Sink) gst.FlowReturn {
 func (g *GstMediaPipe) videoWorker(v *pipe, vidFmt uint32, ch <-chan videoJob, done chan<- struct{}) {
 	defer close(done)
 	for job := range ch {
-		if v.stale.Load() {
+		if v.stale.Load() || len(job.data) == 0 {
 			continue
 		}
 		C.pushVideoBuf(v.src(),

@@ -92,7 +92,7 @@ const openCreate = async () => {
         title: 'Criar torneio',
         body: `<form class="list" data-form>
             <div class="field"><label for="t-name">Nome do torneio</label>
-                <input class="input" id="t-name" maxlength="60" required placeholder="Ex.: Copa Belko de Kombat" autofocus></div>
+                <input class="input" id="t-name" maxlength="60" required placeholder="Ex.: Copa Arcade de Kombat" autofocus></div>
             <div class="field"><label for="t-game">Jogo</label>
                 <select class="input" id="t-game">${games.map((g, i) => `<option value="${i}">${esc(gameTitle(g.title).title)} — ${esc(g.name)}</option>`).join('')}</select></div>
             <div class="banner" style="margin:0;border-color:var(--border)">${icon('info', 'lg')}<div class="grow"><p data-hint>${esc(games[0].hint)}</p></div></div>
@@ -125,17 +125,26 @@ const openCreate = async () => {
 
 // Detail
 
-const player = (p, winner, mine) => {
+// "2-0" -> [2, 0]; anything else has no per-player score
+const scoreOf = (mt) => {
+    const m = /^\s*(\d+)\s*[-x:–]\s*(\d+)\s*$/.exec(mt.score || '');
+    return m ? [m[1], m[2]] : [null, null];
+};
+
+const player = (p, winner, mine, score) => {
     if (!p) return '<div class="t-player empty"><span class="subtle">A definir</span></div>';
     const won = winner && winner === p.id;
     const lost = winner && winner !== p.id;
     return `<div class="t-player ${won ? 'won' : ''} ${lost ? 'lost' : ''} ${p.id === mine ? 'me' : ''}">
-        ${avatar(p.name, 'sm')}<span class="ellipsis">${esc(p.name)}</span>${won ? icon('crown') : ''}</div>`;
+        ${avatar(p.name, 'sm', p.id)}<span class="ellipsis">${esc(p.name)}</span>
+        ${won ? `<span class="crown">${icon('crown')}</span>` : ''}
+        ${score !== null && score !== undefined ? `<b class="t-score">${esc(score)}</b>` : ''}</div>`;
 };
 
 const matchCard = (mt, manage) => {
     const st = mStatus[mt.status] || [mt.status, ''];
     const bye = mt.source === 'walkover' && (!mt.p1 || !mt.p2);
+    const [s1, s2] = scoreOf(mt);
     const acts = [];
     if (mt.live) acts.push(`<button class="btn sm primary" data-watch="${mt.id}">${icon('eye')}Assistir</button>`);
     if (mt.replay) acts.push(`<button class="btn sm outline" data-replay="${mt.replay}">${icon('play')}Replay</button>`);
@@ -144,12 +153,27 @@ const matchCard = (mt, manage) => {
     }
     return `<div class="t-match ${mt.status}">
         <div class="t-match-head">${bye ? '<span class="badge">Avanço direto</span>' : badge(st)}
-            ${mt.score ? `<span class="mono subtle">${esc(mt.score)}</span>` : ''}</div>
-        ${player(mt.p1, mt.winner, me?.id)}${player(mt.p2, mt.winner, me?.id)}
+            ${mt.score && s1 === null ? `<span class="mono subtle">${esc(mt.score)}</span>` : ''}</div>
+        ${player(mt.p1, mt.winner, me?.id, s1)}${player(mt.p2, mt.winner, me?.id, s2)}
         ${mt.source && mt.status === 'finished' && !bye ? `<small class="subtle">${esc(sourceName[mt.source] || mt.source)}</small>` : ''}
         ${acts.length ? `<div class="t-match-actions">${acts.join('')}</div>` : ''}
     </div>`;
 };
+
+/** The bracket as a tree: one column per round, matches joined by lines up to the champion. */
+const tree = (rounds, manage, champion) => `<div class="tree-scroll"><div class="tree">
+    ${rounds.map((r, ri) => `<div class="tree-col">
+        <div class="tree-head">${esc(r.name)}</div>
+        <div class="tree-matches">${r.matches.map((mt, i) => `<div class="tree-slot ${i % 2 ? 'odd' : 'even'} ${ri === rounds.length - 1 ? 'last' : ''}">${matchCard(mt, manage)}</div>`).join('')}</div>
+    </div>`).join('')}
+    <div class="tree-col champion-col">
+        <div class="tree-head">Campeão</div>
+        <div class="tree-matches"><div class="tree-slot last champion">
+            ${champion ? `<div class="champ won">${icon('crown', 'xl')}${avatar(champion.name, 'lg', champion.id)}<b>${esc(champion.name)}</b></div>`
+            : `<div class="champ">${icon('crown', 'xl')}<small class="subtle">A definir</small></div>`}
+        </div></div>
+    </div>
+</div></div>`;
 
 const renderDetail = () => {
     if (!data) return;
@@ -178,12 +202,10 @@ const renderDetail = () => {
             <p>${esc(mine.p1?.name || '')} × ${esc(mine.p2?.name || '')} — entre agora; se não entrar a tempo, a vitória vai para o adversário.</p></div>
             <button class="btn primary lg" data-play="${mine.id}">${icon('play')}Entrar na partida</button></div>` : ''}
         <div class="banner" style="border-color:var(--border);background:var(--surface-1)">${icon('info', 'lg')}<div class="grow"><b>Como funciona</b><p>${esc(t.hint)}</p></div>
-            ${t.status === 'running' ? `<span class="badge cyan">${sch.running.length}/${sch.max} partidas em andamento · ${sch.queued.length} na fila</span>` : ''}</div>
-        ${data.rounds.length ? `<div class="bracket">${data.rounds.map((r) => `
-            <div class="bracket-col"><div class="section-title">${esc(r.name)}</div>
-                <div class="bracket-matches">${r.matches.map((mt) => matchCard(mt, manage)).join('')}</div></div>`).join('')}</div>`
+            ${t.status === 'running' ? `<span class="badge cyan">${(sch.running || []).length}/${sch.max} partidas em andamento · ${(sch.queued || []).length} na fila</span>` : ''}</div>
+        ${data.rounds.length ? tree(data.rounds, manage, t.winner)
         : `<div class="section-title">${icon('users')}Inscritos</div>
-            ${data.players.length ? `<div class="chips">${data.players.map((p) => `<span class="chip">${avatar(p.name, 'sm')}${esc(p.name)}</span>`).join('')}</div>`
+            ${data.players.length ? `<div class="chips">${data.players.map((p) => `<span class="chip">${avatar(p.name, 'sm', p.id)}${esc(p.name)}</span>`).join('')}</div>`
             : '<p class="muted">Ninguém se inscreveu ainda.</p>'}`}
     </div>`;
 };
@@ -220,7 +242,7 @@ const decide = (matchId) => {
     const m = modal({
         title: 'Definir vencedor',
         body: `<p class="muted">Use quando a detecção automática não for possível (desconexão, problema técnico ou ausência).</p>
-            <div class="list" style="margin-top:16px">${[mt.p1, mt.p2].map((p) => `<button class="btn outline lg block" data-win="${p.id}">${avatar(p.name, 'sm')}${esc(p.name)} venceu</button>`).join('')}</div>`,
+            <div class="list" style="margin-top:16px">${[mt.p1, mt.p2].map((p) => `<button class="btn outline lg block" data-win="${p.id}">${avatar(p.name, 'sm', p.id)}${esc(p.name)} venceu</button>`).join('')}</div>`,
     });
     m.el.addEventListener('click', async (e) => {
         const b = e.target.closest('[data-win]');

@@ -1,4 +1,4 @@
-# Belko Arcade
+# Arcade
 
 Plataforma privada de jogos retrô na nuvem — em português, com contas aprovadas pelo administrador,
 multijogador online com papéis (anfitrião, jogadores 1–4, espectadores), fila de espera com

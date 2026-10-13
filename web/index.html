@@ -3,24 +3,26 @@
 <head>
     <meta charset="utf-8"/>
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover"/>
-    <meta name="theme-color" content="#0b0d14"/>
+    <meta name="theme-color" content="#0b0b16"/>
     <meta name="mobile-web-app-capable" content="yes"/>
     <meta name="apple-mobile-web-app-capable" content="yes"/>
     <meta name="robots" content="noindex"/>
-    <meta name="description" content="Belko Arcade — jogos retrô na nuvem, com os amigos."/>
-    <title>Belko Arcade</title>
+    <meta name="description" content="Arcade — jogos retrô na nuvem, com os amigos."/>
+    <title>Arcade</title>
     <link rel="icon" href="img/favicon.svg" type="image/svg+xml"/>
     <link rel="preconnect" href="https://fonts.googleapis.com"/>
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet"/>
-    <link href="css/tokens.css?v=4" rel="stylesheet"/>
-    <link href="css/base.css?v=4" rel="stylesheet"/>
-    <link href="css/app.css?v=4" rel="stylesheet"/>
-    <link href="css/game.css?v=4" rel="stylesheet"/>
+    <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=VT323&display=swap" rel="stylesheet"/>
+    <link href="css/tokens.css?v=8" rel="stylesheet"/>
+    <link href="css/base.css?v=8" rel="stylesheet"/>
+    <link href="css/app.css?v=8" rel="stylesheet"/>
+    <link href="css/game.css?v=8" rel="stylesheet"/>
+    <link href="css/retro.css?v=8" rel="stylesheet"/>
+    <link href="css/catalog.css?v=9" rel="stylesheet"/>
 </head>
 <body>
 <header class="topbar">
-    <a class="logo" href="#/biblioteca" id="logo" aria-label="Belko Arcade — início"></a>
+    <a class="logo" href="#/biblioteca" id="logo" aria-label="Arcade — início"></a>
     <nav class="topnav" id="topnav" aria-label="Navegação principal"></nav>
     <div class="topbar-right">
         <button class="queue-pill" id="queue-pill" hidden></button>
@@ -49,18 +51,18 @@
 <script type="importmap">
     {
       "imports": {
-        "api": "./js/api.js?v=4",
-        "event": "./js/event.js?v=4",
-        "input": "./js/input/input.js?v=4",
-        "log": "./js/log.js?v=4",
-        "network": "./js/network/network.js?v=4",
-        "settings": "./js/settings.js?v=4",
-        "utils": "./js/utils.js?v=4"
+        "api": "./js/api.js?v=8",
+        "event": "./js/event.js?v=8",
+        "input": "./js/input/input.js?v=8",
+        "log": "./js/log.js?v=8",
+        "network": "./js/network/network.js?v=8",
+        "settings": "./js/settings.js?v=8",
+        "utils": "./js/utils.js?v=8"
       }
     }
 </script>
 
-<script type="module" src="js/app.js?v=4"></script>
+<script type="module" src="js/app.js?v=8"></script>
 
 {{if .Analytics.Inject}}
 <script async src="https://www.googletagmanager.com/gtag/js?id={{.Analytics.Gtag}}"></script>

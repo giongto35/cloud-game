@@ -216,6 +216,26 @@ var migrations = []string{
 		file       TEXT    NOT NULL,
 		created_at INTEGER NOT NULL
 	);`,
+	`CREATE TABLE game_meta (
+		key         TEXT    PRIMARY KEY,
+		system      TEXT    NOT NULL,
+		title       TEXT    NOT NULL,
+		genre       TEXT    NOT NULL DEFAULT '',
+		genre_raw   TEXT    NOT NULL DEFAULT '',
+		year        INTEGER NOT NULL DEFAULT 0,
+		developer   TEXT    NOT NULL DEFAULT '',
+		publisher   TEXT    NOT NULL DEFAULT '',
+		players     INTEGER NOT NULL DEFAULT 0,
+		description TEXT    NOT NULL DEFAULT '',
+		source      TEXT    NOT NULL DEFAULT '',
+		status      TEXT    NOT NULL,
+		updated_at  INTEGER NOT NULL
+	);`,
+	`CREATE TABLE user_avatars (
+		user_id    INTEGER PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,
+		data       BLOB    NOT NULL,
+		updated_at INTEGER NOT NULL
+	);`,
 }
 
 func (s *Store) migrate(ctx context.Context) error {
@@ -551,5 +571,132 @@ func (s *Store) CoverStats(ctx context.Context) (found, missing int, err error) 
 // ForgetMissingCovers drops negative results so they are looked up again.
 func (s *Store) ForgetMissingCovers(ctx context.Context) error {
 	_, err := s.db.ExecContext(ctx, `DELETE FROM covers WHERE status = 'missing'`)
+	return err
+}
+
+// Game catalog metadata
+
+const (
+	MetaFound   = "found"
+	MetaMissing = "missing"
+)
+
+// GameMeta is the catalog data of a game (genre, year, developer, players).
+type GameMeta struct {
+	Key         string    `json:"-"`
+	System      string    `json:"system"`
+	Title       string    `json:"title"`
+	Genre       string    `json:"genre"`
+	GenreRaw    string    `json:"genreRaw,omitempty"`
+	Year        int       `json:"year,omitempty"`
+	Developer   string    `json:"developer,omitempty"`
+	Publisher   string    `json:"publisher,omitempty"`
+	Players     int       `json:"players,omitempty"`
+	Description string    `json:"description,omitempty"`
+	Source      string    `json:"source,omitempty"`
+	Status      string    `json:"-"`
+	UpdatedAt   time.Time `json:"-"`
+}
+
+const metaCols = `key, system, title, genre, genre_raw, year, developer, publisher, players, description, source, status, updated_at`
+
+func scanMeta(sc interface{ Scan(...any) error }) (*GameMeta, error) {
+	var m GameMeta
+	var updated int64
+	if err := sc.Scan(&m.Key, &m.System, &m.Title, &m.Genre, &m.GenreRaw, &m.Year, &m.Developer,
+		&m.Publisher, &m.Players, &m.Description, &m.Source, &m.Status, &updated); err != nil {
+		return nil, err
+	}
+	m.UpdatedAt = fromUnix(updated)
+	return &m, nil
+}
+
+func (s *Store) GameMeta(ctx context.Context, key string) (*GameMeta, error) {
+	m, err := scanMeta(s.db.QueryRowContext(ctx, `SELECT `+metaCols+` FROM game_meta WHERE key = ?`, key))
+	if errors.Is(err, sql.ErrNoRows) {
+		return nil, ErrNotFound
+	}
+	return m, err
+}
+
+func (s *Store) SetGameMeta(ctx context.Context, m GameMeta) error {
+	_, err := s.db.ExecContext(ctx,
+		`INSERT INTO game_meta(`+metaCols+`) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+		 ON CONFLICT(key) DO UPDATE SET genre = excluded.genre, genre_raw = excluded.genre_raw,
+		   year = excluded.year, developer = excluded.developer, publisher = excluded.publisher,
+		   players = excluded.players, description = excluded.description, source = excluded.source,
+		   status = excluded.status, updated_at = excluded.updated_at`,
+		m.Key, m.System, m.Title, m.Genre, m.GenreRaw, m.Year, m.Developer, m.Publisher,
+		m.Players, m.Description, m.Source, m.Status, unix(time.Now()))
+	return err
+}
+
+// AllGameMeta lists every game that has catalog data.
+func (s *Store) AllGameMeta(ctx context.Context) ([]GameMeta, error) {
+	rows, err := s.db.QueryContext(ctx, `SELECT `+metaCols+` FROM game_meta WHERE status = 'found' ORDER BY system, title`)
+	if err != nil {
+		return nil, err
+	}
+	defer func() { _ = rows.Close() }()
+	var out []GameMeta
+	for rows.Next() {
+		m, err := scanMeta(rows)
+		if err != nil {
+			return nil, err
+		}
+		out = append(out, *m)
+	}
+	return out, rows.Err()
+}
+
+func (s *Store) GameMetaStats(ctx context.Context) (found, missing int, err error) {
+	err = s.db.QueryRowContext(ctx,
+		`SELECT COALESCE(SUM(status = 'found'), 0), COALESCE(SUM(status = 'missing'), 0) FROM game_meta`).Scan(&found, &missing)
+	return
+}
+
+// ForgetGameMeta drops negative results (and, when all is set, everything) so they are looked up again.
+func (s *Store) ForgetGameMeta(ctx context.Context, all bool) error {
+	q := `DELETE FROM game_meta WHERE status = 'missing'`
+	if all {
+		q = `DELETE FROM game_meta`
+	}
+	_, err := s.db.ExecContext(ctx, q)
+	return err
+}
+
+// Avatars
+
+// SetAvatar stores the profile picture (a PNG already validated and resized) of a user.
+func (s *Store) SetAvatar(ctx context.Context, userId int64, png []byte) error {
+	_, err := s.db.ExecContext(ctx,
+		`INSERT INTO user_avatars(user_id, data, updated_at) VALUES (?, ?, ?)
+		 ON CONFLICT(user_id) DO UPDATE SET data = excluded.data, updated_at = excluded.updated_at`,
+		userId, png, unix(time.Now()))
+	return err
+}
+
+// Avatar returns the profile picture of a user (ErrNotFound when there is none).
+func (s *Store) Avatar(ctx context.Context, userId int64) ([]byte, time.Time, error) {
+	var data []byte
+	var updated int64
+	err := s.db.QueryRowContext(ctx, `SELECT data, updated_at FROM user_avatars WHERE user_id = ?`, userId).Scan(&data, &updated)
+	if errors.Is(err, sql.ErrNoRows) {
+		return nil, time.Time{}, ErrNotFound
+	}
+	if err != nil {
+		return nil, time.Time{}, err
+	}
+	return data, fromUnix(updated), nil
+}
+
+func (s *Store) DeleteAvatar(ctx context.Context, userId int64) error {
+	_, err := s.db.ExecContext(ctx, `DELETE FROM user_avatars WHERE user_id = ?`, userId)
+	return err
+}
+
+// DeleteCover forgets one cover, so the next request looks it up again.
+func (s *Store) DeleteCover(ctx context.Context, key string) error {
+	_, err := s.db.ExecContext(ctx, `DELETE FROM covers WHERE key = ?`, key)
 	return err
 }

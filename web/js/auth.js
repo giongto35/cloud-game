@@ -6,7 +6,7 @@ import {toast} from './ui/toast.js?v=4';
 const card = document.getElementById('card');
 
 document.getElementById('art-logo').innerHTML =
-    `<span class="logo-mark">${icon('gamepad')}</span><b>Belko</b><span>Arcade</span>`;
+    `<span class="logo-mark">${icon('gamepad')}</span><b>Arcade</b>`;
 document.getElementById('features').innerHTML = [
     ['zap', 'Baixa latência'], ['users', 'Até 4 jogadores'], ['tv', 'Assista ao vivo'], ['gamepad', 'Controle, teclado e toque'],
 ].map(([i, t]) => `<span>${icon(i)}${t}</span>`).join('');
@@ -198,7 +198,7 @@ const check = async (manual = false) => {
     try {
         const {user} = await http.get('/api/auth/me');
         if (user.status === 'approved') {
-            toast.success('Acesso aprovado! Boas-vindas ao Belko Arcade.');
+            toast.success('Acesso aprovado! Boas-vindas ao Arcade.');
             setTimeout(goApp, 600);
         } else if (manual) {
             toast('Seu cadastro ainda está em análise.');

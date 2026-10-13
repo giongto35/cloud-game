@@ -12,7 +12,7 @@ import {log} from 'log';
 import {opts, settings} from 'settings';
 import {http} from '../http.js?v=4';
 import {icon} from '../ui/icons.js?v=4';
-import {esc, on} from '../ui/dom.js?v=4';
+import {avatar, bumpAvatar, esc, on} from '../ui/dom.js?v=4';
 import {confirmDialog, modal} from '../ui/modal.js?v=4';
 import {toast} from '../ui/toast.js?v=4';
 import {buttons, keyName, padButtonName, roles} from '../i18n.js?v=4';
@@ -25,6 +25,25 @@ let ctx = {me: null, onLogout: () => ({}), onNameChanged: () => ({})};
 let current = null; // open modal
 let tab = 'controls';
 let capture = null; // {kind: 'kb'|'pad', key, sub}
+
+/** Crops the picture to a centered square and scales it down in the browser (smaller upload). */
+const squareBlob = (file, side) => new Promise((resolve, reject) => {
+    const url = URL.createObjectURL(file);
+    const img = new Image();
+    img.onload = () => {
+        const s = Math.min(img.naturalWidth, img.naturalHeight);
+        const c = document.createElement('canvas');
+        c.width = c.height = Math.min(side, s);
+        c.getContext('2d').drawImage(img, (img.naturalWidth - s) / 2, (img.naturalHeight - s) / 2, s, s, 0, 0, c.width, c.height);
+        URL.revokeObjectURL(url);
+        c.toBlob((b) => (b ? resolve(b) : reject(new Error('Não foi possível processar a imagem.'))), 'image/png');
+    };
+    img.onerror = () => {
+        URL.revokeObjectURL(url);
+        reject(new Error('Esse arquivo não é uma imagem válida.'));
+    };
+    img.src = url;
+});
 
 const codesFor = (map, key) => Object.keys(map).filter((c) => map[c] === key);
 
@@ -104,6 +123,15 @@ const paneAccount = () => {
     const me = ctx.me || {};
     return `
     <div class="pane-title"><h3>${icon('user')} Perfil</h3></div>
+    <div class="setting avatar-setting">
+        <div data-avatar-preview>${avatar(me.name || '?', 'xl', me.id)}</div>
+        <div class="label"><b>Foto de perfil</b><small>Aparece na barra, nas salas e nos torneios. PNG, JPEG ou GIF; ela é cortada em quadrado.</small></div>
+        <div class="control">
+            <input type="file" accept="image/png,image/jpeg,image/gif" data-avatar-file hidden>
+            <button class="btn outline" data-avatar-pick>${icon('upload')}Enviar foto</button>
+            <button class="btn ghost" data-avatar-remove>${icon('trash')}Remover</button>
+        </div>
+    </div>
     <form class="setting" data-form="name" style="align-items:flex-end">
         <div class="field" style="flex:1"><label for="s-name">Nome de exibição</label>
         <input class="input" id="s-name" maxlength="40" value="${esc(me.name || '')}" required></div>
@@ -249,6 +277,36 @@ const wire = (root) => {
         }
     });
     on(root, 'click', '[data-logout]', () => ctx.onLogout());
+    on(root, 'click', '[data-avatar-pick]', () => root.querySelector('[data-avatar-file]').click());
+    on(root, 'change', '[data-avatar-file]', async (e, input) => {
+        const file = input.files?.[0];
+        input.value = '';
+        if (!file) return;
+        try {
+            const blob = await squareBlob(file, 256);
+            await fetch('/api/account/avatar', {method: 'PUT', credentials: 'same-origin', headers: {'Content-Type': 'image/png'}, body: blob})
+                .then(async (r) => {
+                    if (!r.ok) throw new Error((await r.json().catch(() => ({})))?.error?.message || 'Não foi possível enviar a foto.');
+                });
+            bumpAvatar(ctx.me.id);
+            document.dispatchEvent(new Event('avatar-changed'));
+            toast.success('Foto de perfil atualizada!');
+            render();
+        } catch (err) {
+            toast.error(err.message || 'Não foi possível usar essa imagem.');
+        }
+    });
+    on(root, 'click', '[data-avatar-remove]', async () => {
+        try {
+            await http.del('/api/account/avatar');
+            bumpAvatar(ctx.me.id);
+            document.dispatchEvent(new Event('avatar-changed'));
+            toast.success('Foto removida.');
+            render();
+        } catch (err) {
+            toast.error(err.message);
+        }
+    });
     on(root, 'submit', '[data-form]', async (e, form) => {
         e.preventDefault();
         const btn = form.querySelector('[type=submit]');

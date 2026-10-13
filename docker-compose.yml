@@ -32,6 +32,8 @@ services:
         volumes:
             - ./assets/cores:/usr/local/share/cloud-game/assets/cores
             - ./assets/games:/usr/local/share/cloud-game/assets/games
+            # PS1 BIOS (scph5501.bin etc.) -- the libretro system directory
+            - ./assets/bios:/usr/local/share/cloud-game/libretro/system
             # live frontend files for development (remove in production)
             - ./web:/usr/local/share/cloud-game/web
             - x11:/tmp/.X11-unix

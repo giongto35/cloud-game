@@ -117,3 +117,17 @@ func bestMatch(title string, names []string) (match, bool) {
 	}
 	return best, found
 }
+
+// MatchTitle picks the best entry of names for a game title (index into names).
+func MatchTitle(title string, names []string) (int, bool) {
+	m, ok := bestMatch(title, names)
+	if !ok {
+		return 0, false
+	}
+	for i, n := range names {
+		if n == m.name {
+			return i, true
+		}
+	}
+	return 0, false
+}

@@ -35,8 +35,20 @@ export const initials = (name = '') => {
     return (parts[0][0] + (parts.length > 1 ? parts[parts.length - 1][0] : '')).toUpperCase();
 };
 
-export const avatar = (name, cls = '') =>
-    `<span class="avatar ${cls}" style="--hue:${hue(name)}" title="${esc(name)}">${esc(initials(name))}</span>`;
+// profile pictures live on the server (/api/avatars/<account id>); users without one keep their initials
+const avatarVersions = new Map();
+export const avatarUrl = (id) => `/api/avatars/${id}${avatarVersions.has(id) ? `?v=${avatarVersions.get(id)}` : ''}`;
+/** Forces the browser to fetch a new picture of an account (after an upload). */
+export const bumpAvatar = (id) => avatarVersions.set(id, Date.now());
+
+export const avatar = (name, cls = '', id = null) =>
+    `<span class="avatar ${cls}" style="--hue:${hue(name)}" title="${esc(name)}">${esc(initials(name))}${id ? `<img src="${esc(avatarUrl(id))}" alt="" loading="lazy" decoding="async">` : ''}</span>`;
+
+// no picture (404): fall back to the initials
+document.addEventListener('error', (e) => {
+    const img = e.target;
+    if (img instanceof HTMLImageElement && img.parentElement?.classList.contains('avatar')) img.remove();
+}, true);
 
 /** Relative time in pt-BR ("há 5 min"). */
 export const ago = (date) => {

@@ -65,6 +65,23 @@ Legenda: ☐ pendente · ☑ concluído
 - ☑ 8.3 `GET /api/covers` (contas aprovadas), pré-carregamento ao conectar worker
 - ☑ 8.4 Capas na biblioteca e no "Ao vivo"; estatísticas e "buscar faltantes" no admin
 
+## Fase 9 — Visual retrô e catálogo
+- ☑ 9.1 Visual synthwave / Outrun 1984 igual ao belko.com.br: paleta, Orbitron + Rajdhani + Share Tech Mono, grade em perspectiva, scanlines, brilho neon (`tokens.css`, `retro.css`)
+- ☑ 9.2 `pkg/meta`: gênero, ano, desenvolvedora, publicadora e nº de jogadores vindos do banco público libretro-database (sem chave de API), guardados na tabela `game_meta`
+- ☑ 9.3 Categorias em pt-BR (Ação, RPG, Luta, Corrida…), palpite por título e dados manuais para homebrew e DOS
+- ☑ 9.4 `GET /api/meta`; carga em segundo plano ao conectar um worker; "Atualizar catálogo" no painel admin
+- ☑ 9.5 Biblioteca: filtros por sistema, categoria, década e jogadores; ordenação; busca por nome, gênero, ano e desenvolvedora; visão em grade ou por categoria; filtros lembrados no navegador
+- ☑ 9.6 PS1: pasta de BIOS (`assets/bios`) e overscan; correção do ajuste de tela ao sair da tela cheia
+
+## Fase 10 — Redesenho pixel-art e catálogo estilo streaming
+- ☑ 10.1 Nome do produto passa a ser apenas **Arcade**
+- ☑ 10.2 Novo visual de fliperama em pixel-art (Press Start 2P + VT323, bordas grossas, sombras duras, sem cantos arredondados) — `tokens.css`, `retro.css`
+- ☑ 10.3 Catálogo estilo streaming: destaque do dia, carrosséis (continue jogando, minha lista, multijogador, um por gênero e por console), menu enxuto com Gêneros e Consoles, busca e página de resultados — `catalog.css`, `views/library.js`
+- ☑ 10.4 Torneios em árvore: rodadas em colunas ligadas por linhas, placar por jogador, vencedor destacado e campeão no fim
+- ☑ 10.5 Foto de perfil por conta (`PUT/DELETE /api/account/avatar`, `GET /api/avatars/{id}`); imagens são validadas, cortadas em quadrado e recodificadas em PNG (`pkg/imgutil`)
+- ☑ 10.6 Administração troca ou adiciona a capa de qualquer jogo (`PUT/DELETE /api/admin/covers`) e volta à capa automática quando quiser
+- ☑ 10.7 Correção: o número de jogadores do catálogo vinha sem aspas nos bancos de SNES e era ignorado
+
 ## Verificação (11/10/2026)
 
 - Testes Go: `pkg/auth`, `pkg/coordinator` (fila, reservas, vagas, anfitrião, fim de sala sem jogadores — também com `-race`), `pkg/config`, `pkg/com`, `pkg/games`, `pkg/network`.

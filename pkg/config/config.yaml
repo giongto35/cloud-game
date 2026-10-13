@@ -67,6 +67,13 @@ coordinator:
         url: https://thumbnails.libretro.com
         # days before a game without a cover is looked up again
         retryDays: 7
+    # game catalog data (genre, year, developer, players): taken once from the
+    # free libretro-database (https://github.com/libretro/libretro-database)
+    meta:
+        enabled: true
+        dir: ./data/meta
+        url: https://raw.githubusercontent.com/libretro/libretro-database/master/metadat
+        retryDays: 7
     # automated single elimination tournaments with replays
     tournaments:
         enabled: true
@@ -326,6 +333,8 @@ emulator:
                         pcsx_rearmed_frameskip_type: auto
                         pcsx_rearmed_spu_interpolation: gaussian
                         pcsx_rearmed_rgb32_output: enabled
+                        # show the full picture instead of cropping the edges (overscan)
+                        pcsx_rearmed_show_overscan: enabled
                 # MAME core requires additional manual setup, please read:
                 # https://docs.libretro.com/library/fbneo/
                 mame:

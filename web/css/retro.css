@@ -1,0 +1,201 @@
+/* Arcade — pixel-art arcade layer. Loaded after base/app/game: restyles every component
+   with hard edges, chunky borders and offset shadows. */
+
+/* ---------- Screen: dot grid + scanlines ---------- */
+body {
+    background-color: var(--bg);
+    background-image: radial-gradient(rgba(91, 91, 184, 0.28) 1px, transparent 1.5px);
+    background-size: 24px 24px;
+    background-attachment: fixed;
+    font-size: var(--fs-m);
+    line-height: 1.25;
+    letter-spacing: 0.02em;
+    -webkit-font-smoothing: none;
+}
+
+/* CRT scanlines (under the game view, so the picture stays clean) */
+body::after {
+    content: "";
+    position: fixed;
+    inset: 0;
+    z-index: 90;
+    pointer-events: none;
+    background: repeating-linear-gradient(to bottom, rgba(0, 0, 0, 0) 0, rgba(0, 0, 0, 0) 3px, rgba(0, 0, 0, 0.14) 4px);
+}
+
+/* ---------- Typography ---------- */
+h1, h2, h3, h4 {
+    font-family: var(--font-display);
+    font-weight: 400;
+    line-height: 1.5;
+    letter-spacing: 0;
+    text-transform: uppercase;
+}
+h1 { font-size: 20px; color: var(--yellow); text-shadow: 3px 3px 0 #000; }
+h2 { font-size: 15px; }
+h3 { font-size: 12px; }
+
+a { color: var(--cyan); }
+a:hover { color: var(--yellow); text-decoration: none; }
+
+.page-head p, .muted { color: var(--text-2); }
+
+.section-title {
+    font-family: var(--font-display);
+    font-size: 11px;
+    font-weight: 400;
+    text-transform: uppercase;
+    letter-spacing: 0;
+    color: var(--cyan);
+    border-bottom: 3px dashed var(--border);
+    padding-bottom: var(--sp-2);
+}
+.section-title::before { content: "► "; color: var(--yellow); }
+.section-title .icon { display: none; }
+
+/* ---------- Logo ---------- */
+.logo { font-family: var(--font-display); font-size: 14px; letter-spacing: 0; text-transform: uppercase; color: var(--yellow); text-shadow: 3px 3px 0 #000; }
+.logo-mark {
+    width: 34px;
+    height: 34px;
+    border-radius: 0;
+    background: var(--red);
+    border: 3px solid #000;
+    box-shadow: inset -3px -3px 0 rgba(0, 0, 0, 0.35), inset 3px 3px 0 rgba(255, 255, 255, 0.35);
+}
+.logo-mark svg { stroke: #fff; }
+.logo b { color: var(--yellow); font-weight: 400; }
+.logo::after { content: "_"; margin-left: 2px; color: var(--green); animation: blink 1s steps(1) infinite; }
+@keyframes blink { 50% { opacity: 0; } }
+@media (prefers-reduced-motion: reduce) { .logo::after { animation: none; } }
+
+/* ---------- Top bar ---------- */
+.topbar {
+    background: #07070f;
+    border-bottom: 4px solid var(--border);
+    box-shadow: 0 4px 0 #000;
+    backdrop-filter: none;
+}
+.topnav a {
+    border-radius: 0;
+    font-family: var(--font-display);
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0;
+    color: var(--text-2);
+}
+.topnav a:hover { background: var(--surface-3); color: var(--yellow); }
+.topnav a.active { background: transparent; color: var(--yellow); }
+.topnav a.active::after { background: var(--yellow); height: 4px; bottom: -14px; border-radius: 0; }
+
+/* ---------- Buttons ---------- */
+.btn {
+    --btn-bg: var(--surface-3);
+    --btn-bg-hover: var(--surface-4);
+    height: 42px;
+    border: 3px solid #000;
+    border-radius: 0;
+    font-family: var(--font-display);
+    font-size: 10px;
+    font-weight: 400;
+    letter-spacing: 0;
+    text-transform: uppercase;
+    box-shadow: inset -3px -3px 0 rgba(0, 0, 0, 0.35), inset 3px 3px 0 rgba(255, 255, 255, 0.22), 4px 4px 0 #000;
+    transition: none;
+}
+.btn:hover { color: var(--btn-fg); filter: brightness(1.15); text-decoration: none; }
+.btn:active { transform: translate(3px, 3px); box-shadow: inset 3px 3px 0 rgba(0, 0, 0, 0.35), 1px 1px 0 #000; }
+.btn.primary { --btn-bg: var(--yellow); --btn-bg-hover: var(--accent-hover); --btn-fg: var(--text-on-accent); box-shadow: inset -3px -3px 0 rgba(0, 0, 0, 0.3), inset 3px 3px 0 rgba(255, 255, 255, 0.45), 4px 4px 0 #000; }
+.btn.outline { --btn-bg: transparent; --btn-fg: var(--cyan); border-color: var(--cyan); box-shadow: 4px 4px 0 #000; }
+.btn.outline:hover { background: var(--accent-2-soft); color: var(--cyan); }
+.btn.ghost { --btn-bg: transparent; border-color: transparent; box-shadow: none; color: var(--text-2); }
+.btn.ghost:hover { color: var(--yellow); }
+.btn.danger { --btn-bg: var(--red); --btn-fg: #fff; }
+.btn.success { --btn-bg: var(--green); --btn-fg: #06210f; }
+.btn.sm { height: 34px; font-size: 9px; }
+.btn.lg { height: 52px; font-size: 12px; }
+.btn.icon-only { padding: 0; }
+
+/* ---------- Inputs ---------- */
+.input, select.input, textarea.input {
+    border: 3px solid var(--border-strong);
+    border-radius: 0;
+    background: #07070f;
+    font-family: var(--font);
+    font-size: var(--fs-m);
+    box-shadow: inset 3px 3px 0 rgba(0, 0, 0, 0.5);
+}
+.input:focus { border-color: var(--yellow); box-shadow: inset 3px 3px 0 rgba(0, 0, 0, 0.5); }
+.field label { font-family: var(--font-display); font-size: 9px; text-transform: uppercase; color: var(--text-2); }
+
+/* ---------- Chips, badges, tabs ---------- */
+.chip {
+    border: 3px solid var(--border);
+    border-radius: 0;
+    background: var(--surface-1);
+    font-family: var(--font);
+    font-size: var(--fs-s);
+    text-transform: uppercase;
+    height: 34px;
+}
+.chip:hover { border-color: var(--cyan); color: var(--cyan); }
+.chip.active { background: var(--accent-soft); border-color: var(--yellow); color: var(--yellow); box-shadow: none; }
+
+.badge {
+    border-radius: 0;
+    font-family: var(--font);
+    font-size: var(--fs-xs);
+    font-weight: 400;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    padding: 0 6px;
+    border: 2px solid currentColor;
+    background: transparent;
+}
+.badge.accent { color: var(--pink); background: transparent; }
+.badge.cyan { color: var(--cyan); background: transparent; }
+.badge.sunset, .badge.warning { color: var(--orange); background: transparent; }
+.badge.success { color: var(--green); background: transparent; }
+.badge.danger { color: var(--red); background: transparent; }
+
+.avatar { border-radius: 0; background: var(--surface-4); border: 3px solid #000; color: var(--yellow); font-family: var(--font-display); font-size: 10px; position: relative; overflow: hidden; }
+.avatar img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+.avatar.sm { font-size: 7px; border-width: 2px; }
+.avatar.xl { width: 84px; height: 84px; font-size: 22px; }
+
+/* ---------- Cards, panels, modals ---------- */
+.card, .stat, .banner, .room-card, .t-card, .setting, .table-wrap {
+    border: 3px solid var(--border);
+    border-radius: 0;
+    background: var(--surface-1);
+    box-shadow: 4px 4px 0 #000;
+}
+.banner { border-color: var(--cyan); background: var(--accent-2-soft); }
+.stat b { font-family: var(--font-display); font-size: 18px; font-weight: 400; color: var(--yellow); }
+.stat span { font-family: var(--font-display); font-size: 8px; text-transform: uppercase; color: var(--text-2); }
+.room-card:hover, .t-card:hover { border-color: var(--yellow); }
+
+.modal, .menu-pop, .toast {
+    border: 4px solid var(--border-strong);
+    border-radius: 0;
+    background: var(--surface-1);
+    box-shadow: 8px 8px 0 #000;
+}
+.modal-head h2, .modal-head h3 { color: var(--yellow); }
+
+.table th { font-family: var(--font-display); font-size: 8px; text-transform: uppercase; color: var(--cyan); }
+
+.avatar-setting { display: flex; align-items: center; gap: var(--sp-4); flex-wrap: wrap; }
+.avatar-setting .control { display: flex; gap: var(--sp-2); flex-wrap: wrap; }
+
+.tab { font-family: var(--font-display); font-size: 9px; text-transform: uppercase; border-radius: 0; }
+.tab.active { color: var(--yellow); }
+.empty h3 { color: var(--yellow); }
+
+/* focus ring: chunky and always visible */
+:focus-visible, .nav-focus { box-shadow: var(--ring) !important; }
+::selection { background: var(--yellow); color: #000; }
+
+@media (max-width: 720px) {
+    h1 { font-size: 15px; }
+}

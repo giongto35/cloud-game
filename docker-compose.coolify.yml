@@ -1,0 +1,66 @@
+# Belko Arcade -- produção (Coolify). Veja docs/plano/07-coolify.md
+services:
+    cloud-game:
+        build:
+            context: .
+            dockerfile: Dockerfile
+            args:
+                VERSION: ${SOURCE_COMMIT:-master}
+        restart: unless-stopped
+        depends_on:
+            - xvfb
+        environment:
+            # domínio público (Coolify liga o proxy HTTPS à porta 8000)
+            - SERVICE_FQDN_ARCADE_8000
+            - DISPLAY=:99
+            - MESA_GL_VERSION_OVERRIDE=4.5
+            - CLOUD_GAME_WEBRTC_SINGLEPORT=8443
+            # IP público do servidor (obrigatório para o vídeo/áudio WebRTC)
+            - CLOUD_GAME_WEBRTC_ICEIPMAP=${PUBLIC_IP:?defina PUBLIC_IP}
+            - CLOUD_GAME_COORDINATOR_DEBUG=false
+            - CLOUD_GAME_WORKER_DEBUG=false
+            - CLOUD_GAME_ENCODER_VIDEO_CODEC=vp8
+            - CLOUD_GAME_COORDINATOR_AUTH_SECURECOOKIE=true
+            - CLOUD_GAME_COORDINATOR_ORIGIN_USERWS=${PUBLIC_DOMAIN:?defina PUBLIC_DOMAIN}
+            - CLOUD_GAME_COORDINATOR_AUTH_DBPATH=/data/belko.db
+            - CLOUD_GAME_COORDINATOR_COVERS_DIR=/data/covers
+            - CLOUD_GAME_COORDINATOR_META_DIR=/data/meta
+            - CLOUD_GAME_COORDINATOR_TOURNAMENTS_REPLAYDIR=/data/replays
+            - CLOUD_GAME_COORDINATOR_AUTH_ADMINPASSWORD=${BELKO_ADMIN_PASSWORD:-}
+        expose:
+            - "8000"
+        ports:
+            # WebRTC (UDP) vai direto ao servidor, não passa pelo proxy HTTPS
+            - "8443:8443/udp"
+        command: >
+            bash -c "./coordinator & while [ ! -S /tmp/.X11-unix/X99 ]; do sleep 0.1; done; ./worker"
+        healthcheck:
+            test: ["CMD", "curl", "-fs", "http://localhost:8000/"]
+            interval: 30s
+            timeout: 5s
+            retries: 5
+            start_period: 60s
+        volumes:
+            - x11:/tmp/.X11-unix
+            - belko-data:/data
+            - belko-games:/usr/local/share/cloud-game/assets/games
+            - belko-cores:/usr/local/share/cloud-game/assets/cores
+            - belko-bios:/usr/local/share/cloud-game/libretro/system
+
+    xvfb:
+        image: kcollins/xvfb:latest
+        restart: unless-stopped
+        entrypoint: ["sh", "-c"]
+        command:
+            [
+                "rm -f /tmp/.X99-lock /tmp/.X11-unix/X99 && exec Xvfb :99 -screen 0 320x240x16",
+            ]
+        volumes:
+            - x11:/tmp/.X11-unix
+
+volumes:
+    x11:
+    belko-data:
+    belko-games:
+    belko-cores:
+    belko-bios:
