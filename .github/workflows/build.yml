@@ -20,9 +20,9 @@ jobs:
                 os: [ubuntu-latest, windows-latest]
         runs-on: ${{ matrix.os }}
         steps:
-            - uses: actions/checkout@v4
+            - uses: actions/checkout@v7
 
-            - uses: actions/setup-go@v5
+            - uses: actions/setup-go@v7
               with:
                   go-version: "stable"
 
@@ -76,7 +76,7 @@ jobs:
 
                   make build test verify-cores
 
-            - uses: actions/upload-artifact@v4
+            - uses: actions/upload-artifact@v7
               if: always()
               with:
                   name: emulator-test-frames-${{ matrix.os }}
